@@ -1,5 +1,5 @@
-import Fuse from 'fuse.js';
-import { cloneDeep, debounce } from 'lodash';
+import Fuse from "fuse.js";
+import { cloneDeep, debounce } from "lodash";
 import {
   createContext,
   memo,
@@ -9,58 +9,58 @@ import {
   useMemo,
   useRef,
   useState,
-} from 'react';
-import { useHotkeys } from 'react-hotkeys-hook';
-import { useShallow } from 'zustand/react/shallow';
-import ForwardedIconComponent from '@/components/common/genericIconComponent';
-import { Button } from '@/components/ui/button';
+} from "react";
+import { useHotkeys } from "react-hotkeys-hook";
+import { useShallow } from "zustand/react/shallow";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   useSidebar,
-} from '@/components/ui/sidebar';
-import SkeletonGroup from '@/components/ui/skeletonGroup';
-import { useGetMCPServers } from '@/controllers/API/queries/mcp/use-get-mcp-servers';
+} from "@/components/ui/sidebar";
+import SkeletonGroup from "@/components/ui/skeletonGroup";
+import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
 import {
   ENABLE_KNOWLEDGE_BASES,
   ENABLE_NEW_SIDEBAR,
-} from '@/customization/feature-flags';
-import { useAddComponent } from '@/hooks/use-add-component';
-import { useShortcutsStore } from '@/stores/shortcuts';
-import { setLocalStorage } from '@/utils/local-storage-util';
+} from "@/customization/feature-flags";
+import { useAddComponent } from "@/hooks/use-add-component";
+import { useShortcutsStore } from "@/stores/shortcuts";
+import { setLocalStorage } from "@/utils/local-storage-util";
 import {
   nodeColors,
   SIDEBAR_BUNDLES,
   SIDEBAR_CATEGORIES,
-} from '@/utils/styleUtils';
-import { cn, getBooleanFromStorage } from '@/utils/utils';
-import useFlowStore from '../../../../stores/flowStore';
-import { useTypesStore } from '../../../../stores/typesStore';
-import type { APIClassType } from '../../../../types/api';
-import isWrappedWithClass from '../PageComponent/utils/is-wrapped-with-class';
-import { CategoryGroup } from './components/categoryGroup';
-import NoResultsMessage from './components/emptySearchComponent';
-import McpSidebarGroup from './components/McpSidebarGroup';
-import MemoizedSidebarGroup from './components/sidebarBundles';
-import SidebarMenuButtons from './components/sidebarFooterButtons';
-import { SidebarHeaderComponent } from './components/sidebarHeader';
-import FlowHistorySidebarContent from './components/FlowHistorySidebarContent';
-import SidebarSegmentedNav from './components/sidebarSegmentedNav';
-import { applyBetaFilter } from './helpers/apply-beta-filter';
-import { applyComponentFilter } from './helpers/apply-component-filter';
-import { applyEdgeFilter } from './helpers/apply-edge-filter';
-import { applyLegacyFilter } from './helpers/apply-legacy-filter';
-import { combinedResultsFn } from './helpers/combined-results';
-import { computeSectionVisibility } from './helpers/compute-section-visibility';
-import { filteredDataFn } from './helpers/filtered-data';
-import { normalizeString } from './helpers/normalize-string';
-import sensitiveSort from './helpers/sensitive-sort';
-import { traditionalSearchMetadata } from './helpers/traditional-search-metadata';
+} from "@/utils/styleUtils";
+import { cn, getBooleanFromStorage } from "@/utils/utils";
+import useFlowStore from "../../../../stores/flowStore";
+import { useTypesStore } from "../../../../stores/typesStore";
+import type { APIClassType } from "../../../../types/api";
+import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
+import { CategoryGroup } from "./components/categoryGroup";
+import NoResultsMessage from "./components/emptySearchComponent";
+import FlowHistorySidebarContent from "./components/FlowHistorySidebarContent";
+import McpSidebarGroup from "./components/McpSidebarGroup";
+import MemoizedSidebarGroup from "./components/sidebarBundles";
+import SidebarMenuButtons from "./components/sidebarFooterButtons";
+import { SidebarHeaderComponent } from "./components/sidebarHeader";
+import SidebarSegmentedNav from "./components/sidebarSegmentedNav";
+import { applyBetaFilter } from "./helpers/apply-beta-filter";
+import { applyComponentFilter } from "./helpers/apply-component-filter";
+import { applyEdgeFilter } from "./helpers/apply-edge-filter";
+import { applyLegacyFilter } from "./helpers/apply-legacy-filter";
+import { combinedResultsFn } from "./helpers/combined-results";
+import { computeSectionVisibility } from "./helpers/compute-section-visibility";
+import { filteredDataFn } from "./helpers/filtered-data";
+import { normalizeString } from "./helpers/normalize-string";
+import sensitiveSort from "./helpers/sensitive-sort";
+import { traditionalSearchMetadata } from "./helpers/traditional-search-metadata";
 
 const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
-const MCP_COMPONENT_CATEGORY = 'models_and_agents';
+const MCP_COMPONENT_CATEGORY = "models_and_agents";
 
 // Search context for the sidebar
 export type SearchContextType = {
@@ -80,7 +80,7 @@ export const SearchContext = createContext<SearchContextType | null>(null);
 export function useSearchContext() {
   const context = useContext(SearchContext);
   if (!context) {
-    throw new Error('useSearchContext must be used within SearchProvider');
+    throw new Error("useSearchContext must be used within SearchProvider");
   }
   return context;
 }
@@ -91,7 +91,7 @@ export function FlowSearchProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [isInputFocused, setIsInputFocused] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -113,7 +113,7 @@ export function FlowSearchProvider({
     (event: React.ChangeEvent<HTMLInputElement>) => {
       setSearch(event.target.value);
     },
-    []
+    [],
   );
 
   const searchContextValue = useMemo(
@@ -135,7 +135,7 @@ export function FlowSearchProvider({
       handleInputFocus,
       handleInputBlur,
       handleInputChange,
-    ]
+    ],
   );
 
   return (
@@ -152,7 +152,7 @@ interface FlowSidebarComponentProps {
 }
 
 export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
-  const rawData = useTypesStore(state => state.data);
+  const rawData = useTypesStore((state) => state.data);
 
   // Filter out knowledge components from files_and_knowledge category when ENABLE_KNOWLEDGE_BASES is OFF
   const data = useMemo(() => {
@@ -161,8 +161,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     }
 
     const knowledgeComponentNames = [
-      'KnowledgeIngestion',
-      'KnowledgeRetrieval',
+      "KnowledgeIngestion",
+      "KnowledgeRetrieval",
     ];
 
     // Create a deep copy to avoid mutating the original
@@ -172,8 +172,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       // Filter out knowledge components by creating a new object without them
       const filteredCategory = Object.fromEntries(
         Object.entries(filteredData.files_and_knowledge).filter(
-          ([componentName]) => !knowledgeComponentNames.includes(componentName)
-        )
+          ([componentName]) => !knowledgeComponentNames.includes(componentName),
+        ),
       );
 
       filteredData.files_and_knowledge = filteredCategory;
@@ -189,13 +189,13 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     getFilterComponent,
     setFilterComponent,
   } = useFlowStore(
-    useShallow(state => ({
+    useShallow((state) => ({
       getFilterEdge: state.getFilterEdge,
       setFilterEdge: state.setFilterEdge,
       filterType: state.filterType,
       getFilterComponent: state.getFilterComponent,
       setFilterComponent: state.setFilterComponent,
-    }))
+    })),
   );
 
   const {
@@ -218,7 +218,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   // Unconditional fallback ref to satisfy Rules of Hooks
   const fallbackSearchInputRef = useRef<HTMLInputElement | null>(null);
   const {
-    search = '',
+    search = "",
     setSearch = () => {},
     searchInputRef = fallbackSearchInputRef,
     isSearchFocused = false,
@@ -232,21 +232,21 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       originalHandleInputChange(event);
       // Set active section to search when user first enters text
       if (event.target.value.length > 0 && search.length === 0) {
-        setActiveSection('search');
+        setActiveSection("search");
       }
     },
-    [originalHandleInputChange, search, setActiveSection]
+    [originalHandleInputChange, search, setActiveSection],
   );
 
-  const showBetaStorage = getBooleanFromStorage('showBeta', true);
-  const showLegacyStorage = getBooleanFromStorage('showLegacy', false);
+  const showBetaStorage = getBooleanFromStorage("showBeta", true);
+  const showLegacyStorage = getBooleanFromStorage("showLegacy", false);
 
   // Debounced search value for filtering
   const [debouncedSearch, setDebouncedSearch] = useState(search);
 
   const debouncedSetSearch = useMemo(
     () => debounce((value: string) => setDebouncedSearch(value), 300),
-    []
+    [],
   );
 
   useEffect(() => {
@@ -264,12 +264,12 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   // Functions to handle state changes with localStorage persistence
   const handleSetShowBeta = useCallback((value: boolean) => {
     setShowBeta(value);
-    setLocalStorage('showBeta', value.toString());
+    setLocalStorage("showBeta", value.toString());
   }, []);
 
   const handleSetShowLegacy = useCallback((value: boolean) => {
     setShowLegacy(value);
-    setLocalStorage('showLegacy', value.toString());
+    setLocalStorage("showLegacy", value.toString());
   }, []);
   const [mcpSearchData, setMcpSearchData] = useState<any[]>([]);
 
@@ -278,14 +278,14 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     if (
       mcpSuccess &&
       mcpServers &&
-      data[MCP_COMPONENT_CATEGORY]?.['MCPTools']
+      data[MCP_COMPONENT_CATEGORY]?.["MCPTools"]
     ) {
-      const mcpComponent = data[MCP_COMPONENT_CATEGORY]['MCPTools'];
-      const newMcpSearchData = mcpServers.map(mcpServer => ({
+      const mcpComponent = data[MCP_COMPONENT_CATEGORY]["MCPTools"];
+      const newMcpSearchData = mcpServers.map((mcpServer) => ({
         ...mcpComponent,
         display_name: mcpServer.name,
         description: `MCP Server: ${mcpServer.name}`,
-        category: 'MCP',
+        category: "MCP",
         key: `mcp_${mcpServer.name}`,
         template: {
           ...mcpComponent.template,
@@ -297,7 +297,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       }));
 
       const mcpCategoryData: Record<string, any> = {};
-      newMcpSearchData.forEach(mcp => {
+      newMcpSearchData.forEach((mcp) => {
         mcpCategoryData[mcp.display_name] = mcp;
       });
 
@@ -312,19 +312,19 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const [dataFilter, setFilterData] = useState(baseData);
 
   const customComponent = useMemo(() => {
-    return data?.['custom_component']?.['CustomComponent'] ?? null;
+    return data?.["custom_component"]?.["CustomComponent"] ?? null;
   }, [data]);
 
   const searchResults = useMemo(() => {
     if (!debouncedSearch || !fuse) return null;
 
     const searchTerm = normalizeString(debouncedSearch);
-    const fuseResults = fuse.search(debouncedSearch).map(result => ({
+    const fuseResults = fuse.search(debouncedSearch).map((result) => ({
       ...result,
       item: { ...result.item, score: result.score },
     }));
 
-    const fuseCategories = fuseResults.map(result => result.item.category);
+    const fuseCategories = fuseResults.map((result) => result.item.category);
     const combinedResults = combinedResultsFn(fuseResults, baseData);
     const traditionalResults = traditionalSearchMetadata(baseData, searchTerm);
 
@@ -342,7 +342,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     const filteredData = filteredDataFn(
       baseData,
       searchResults.combinedResults,
-      searchResults.traditionalResults
+      searchResults.traditionalResults,
     );
 
     return filteredData;
@@ -355,7 +355,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       searchResults.fuseCategories.indexOf(b) <
       searchResults.fuseCategories.indexOf(a)
         ? 1
-        : -1
+        : -1,
     );
   }, [searchResults, searchFilteredData, CATEGORIES, BUNDLES]);
 
@@ -366,7 +366,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       filteredData = applyEdgeFilter(filteredData, getFilterEdge);
     }
 
-    if (getFilterComponent !== '') {
+    if (getFilterComponent !== "") {
       filteredData = applyComponentFilter(filteredData, getFilterComponent);
     }
 
@@ -391,36 +391,36 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     return Object.entries(dataFilter).some(
       ([category, items]) =>
         (Object.keys(items).length > 0 &&
-          (CATEGORIES.find(c => c.name === category) ||
-            BUNDLES.find(b => b.name === category))) ||
-        (dataFilter['MCP'] && Object.keys(dataFilter['MCP']).length > 0)
+          (CATEGORIES.find((c) => c.name === category) ||
+            BUNDLES.find((b) => b.name === category))) ||
+        (dataFilter["MCP"] && Object.keys(dataFilter["MCP"]).length > 0),
     );
   }, [dataFilter]);
 
   const handleKeyDownInput = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>, name: string) => {
-      if (e.key === 'Enter' || e.key === ' ') {
+      if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        setOpenCategories(prev =>
+        setOpenCategories((prev) =>
           prev.includes(name)
-            ? prev.filter(cat => cat !== name)
-            : [...prev, name]
+            ? prev.filter((cat) => cat !== name)
+            : [...prev, name],
         );
       }
     },
-    []
+    [],
   );
 
   const handleClearSearch = useCallback(() => {
-    setSearch('');
+    setSearch("");
     setFilterData(baseData);
     setOpenCategories([]);
   }, [baseData, setSearch]);
 
   useEffect(() => {
-    if (filterType || getFilterComponent !== '') {
+    if (filterType || getFilterComponent !== "") {
       setOpen(true);
-      setActiveSection('search');
+      setActiveSection("search");
     }
   }, [filterType, getFilterComponent, setOpen]);
 
@@ -428,13 +428,13 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     setFilterData(finalFilteredData);
 
     if (
-      debouncedSearch !== '' ||
+      debouncedSearch !== "" ||
       filterType ||
       getFilterEdge.length > 0 ||
-      getFilterComponent !== ''
+      getFilterComponent !== ""
     ) {
       const newOpenCategories = Object.keys(finalFilteredData).filter(
-        cat => Object.keys(finalFilteredData[cat]).length > 0
+        (cat) => Object.keys(finalFilteredData[cat]).length > 0,
       );
       setOpenCategories(newOpenCategories);
     }
@@ -450,11 +450,11 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   useEffect(() => {
     const options = {
       keys: [
-        'display_name',
-        'description',
-        'type',
-        'category',
-        'mcpServerName',
+        "display_name",
+        "description",
+        "type",
+        "category",
+        "mcpServerName",
       ],
       threshold: 0.2,
       includeScore: true,
@@ -465,20 +465,20 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
         ...value,
         category,
         key,
-      }))
+      })),
     );
 
     // MCP data is already included in baseData, but we still need mcpSearchData for non-search display
     if (
       mcpSuccess &&
       mcpServers &&
-      data[MCP_COMPONENT_CATEGORY]?.['MCPTools']
+      data[MCP_COMPONENT_CATEGORY]?.["MCPTools"]
     ) {
-      const mcpComponent = data[MCP_COMPONENT_CATEGORY]['MCPTools'];
-      const newMcpSearchData = mcpServers.map(mcpServer => ({
+      const mcpComponent = data[MCP_COMPONENT_CATEGORY]["MCPTools"];
+      const newMcpSearchData = mcpServers.map((mcpServer) => ({
         ...mcpComponent,
         mcpServerName: mcpServer.name, // adds this field and makes it searchable
-        category: 'MCP',
+        category: "MCP",
         key: `mcp_${mcpServer.name}`,
         template: {
           ...mcpComponent.template,
@@ -498,72 +498,72 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   }, [baseData, mcpSuccess, mcpServers]);
 
   useEffect(() => {
-    if (getFilterEdge.length !== 0 || getFilterComponent !== '') {
-      setSearch('');
+    if (getFilterEdge.length !== 0 || getFilterComponent !== "") {
+      setSearch("");
     }
   }, [getFilterEdge, getFilterComponent, baseData]);
 
   useEffect(() => {
     if (
-      debouncedSearch === '' &&
+      debouncedSearch === "" &&
       getFilterEdge.length === 0 &&
-      getFilterComponent === ''
+      getFilterComponent === ""
     ) {
       setOpenCategories([]);
     }
   }, [debouncedSearch, getFilterEdge, getFilterComponent]);
 
   const searchComponentsSidebar = useShortcutsStore(
-    state => state.searchComponentsSidebar
+    (state) => state.searchComponentsSidebar,
   );
 
   useHotkeys(
     searchComponentsSidebar,
     (e: KeyboardEvent) => {
-      if (isWrappedWithClass(e, 'noflow')) return;
+      if (isWrappedWithClass(e, "noflow")) return;
       e.preventDefault();
       searchInputRef.current?.focus();
       setOpen(true);
     },
     {
       preventDefault: true,
-    }
+    },
   );
 
   useHotkeys(
-    'esc',
-    event => {
+    "esc",
+    (event) => {
       event.preventDefault();
       searchInputRef.current?.blur();
     },
     {
       enableOnFormTags: true,
       enabled: isSearchFocused,
-    }
+    },
   );
 
   const onDragStart = useCallback(
     (
       event: React.DragEvent<any>,
-      data: { type: string; node?: APIClassType }
+      data: { type: string; node?: APIClassType },
     ) => {
       var crt = event.currentTarget.cloneNode(true);
-      crt.style.position = 'absolute';
-      crt.style.width = '215px';
-      crt.style.top = '-500px';
-      crt.style.right = '-500px';
-      crt.classList.add('cursor-grabbing');
+      crt.style.position = "absolute";
+      crt.style.width = "215px";
+      crt.style.top = "-500px";
+      crt.style.right = "-500px";
+      crt.classList.add("cursor-grabbing");
       document.body.appendChild(crt);
       event.dataTransfer.setDragImage(crt, 0, 0);
-      event.dataTransfer.setData('genericNode', JSON.stringify(data));
+      event.dataTransfer.setData("genericNode", JSON.stringify(data));
     },
-    []
+    [],
   );
 
   const hasCoreComponents = useMemo(() => {
     const categoriesWithItems = CATEGORIES.filter(
-      item =>
-        dataFilter[item.name] && Object.keys(dataFilter[item.name]).length > 0
+      (item) =>
+        dataFilter[item.name] && Object.keys(dataFilter[item.name]).length > 0,
     );
     const result = categoriesWithItems.length > 0;
     return result;
@@ -571,23 +571,23 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   const hasBundleItems = useMemo(() => {
     const bundlesWithItems = BUNDLES.filter(
-      item =>
-        dataFilter[item.name] && Object.keys(dataFilter[item.name]).length > 0
+      (item) =>
+        dataFilter[item.name] && Object.keys(dataFilter[item.name]).length > 0,
     );
     const result = bundlesWithItems.length > 0;
     return result;
   }, [dataFilter]);
 
   const hasMcpComponents = useMemo(() => {
-    return dataFilter['MCP'] && Object.keys(dataFilter['MCP']).length > 0;
+    return dataFilter["MCP"] && Object.keys(dataFilter["MCP"]).length > 0;
   }, [dataFilter]);
 
   const hasMcpServers = Boolean(mcpServers && mcpServers.length > 0);
 
   const hasSearchInput =
-    debouncedSearch !== '' ||
+    debouncedSearch !== "" ||
     filterType !== undefined ||
-    getFilterComponent !== '';
+    getFilterComponent !== "";
 
   const { showComponents, showBundles, showMcp, isMcpTabActive } =
     computeSectionVisibility({
@@ -599,29 +599,29 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       hasBundleItems,
     });
   const showHistory =
-    ENABLE_NEW_SIDEBAR && activeSection === 'history' && sidebarOpen;
+    ENABLE_NEW_SIDEBAR && activeSection === "history" && sidebarOpen;
 
-  const currentFlowForHistory = useFlowStore(state => state.currentFlow);
+  const currentFlowForHistory = useFlowStore((state) => state.currentFlow);
 
-  const [category, component] = getFilterComponent?.split('.') ?? ['', ''];
+  const [category, component] = getFilterComponent?.split(".") ?? ["", ""];
 
   const filterDescription =
-    getFilterComponent !== ''
-      ? (baseData[category][component]?.display_name ?? '')
-      : (filterType?.type ?? '');
+    getFilterComponent !== ""
+      ? (baseData[category][component]?.display_name ?? "")
+      : (filterType?.type ?? "");
 
   const filterName =
-    getFilterComponent !== ''
-      ? 'Component'
+    getFilterComponent !== ""
+      ? "Component"
       : filterType
         ? filterType.source
-          ? 'Input'
-          : 'Output'
-        : '';
+          ? "Input"
+          : "Output"
+        : "";
 
   const resetFilters = useCallback(() => {
     setFilterEdge([]);
-    setFilterComponent('');
+    setFilterComponent("");
     setFilterData(baseData);
   }, [setFilterEdge, setFilterComponent, setFilterData, baseData]);
 
@@ -635,8 +635,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
         {ENABLE_NEW_SIDEBAR && <SidebarSegmentedNav />}
         <div
           className={cn(
-            'flex flex-col h-full w-full group-data-[collapsible=icon]:hidden',
-            ENABLE_NEW_SIDEBAR && 'sidebar-segmented'
+            "flex flex-col h-full w-full group-data-[collapsible=icon]:hidden",
+            ENABLE_NEW_SIDEBAR && "sidebar-segmented",
           )}
         >
           {showHistory && currentFlowForHistory?.id ? (
@@ -698,7 +698,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                           <McpSidebarGroup
                             mcpComponents={
                               hasSearchInput
-                                ? Object.values(dataFilter['MCP'] || {})
+                                ? Object.values(dataFilter["MCP"] || {})
                                 : mcpSearchData
                             }
                             nodeColors={nodeColors}
@@ -709,7 +709,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                             search={debouncedSearch}
                             hasMcpServers={hasMcpServers}
                             showSearchConfigTrigger={
-                              activeSection !== 'mcp' &&
+                              activeSection !== "mcp" &&
                               !showComponents &&
                               showBundles
                             }
@@ -730,7 +730,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                             setOpenCategories={setOpenCategories}
                             handleKeyDownInput={handleKeyDownInput}
                             showSearchConfigTrigger={
-                              activeSection === 'bundles' ||
+                              activeSection === "bundles" ||
                               (!showComponents && !showMcp)
                             }
                             showConfig={showConfig}
@@ -739,7 +739,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                         )}
                         {showComponents && (
                           <Button
-                            onClick={() => setActiveSection('bundles')}
+                            onClick={() => setActiveSection("bundles")}
                             variant="ghost"
                             className="bg-muted hover:bg-muted/70 mx-3 px-2.5 !text-[13px] font-normal line-height-[16px] mb-3 group -mt-3 h-[34px]"
                           >
@@ -764,7 +764,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                 )}
               </SidebarContent>
               {ENABLE_NEW_SIDEBAR &&
-              activeSection === 'mcp' &&
+              activeSection === "mcp" &&
               !hasMcpServers ? null : (
                 <SidebarFooter className="border-t group-data-[collapsible=icon]:hidden p-1 gap-1">
                   <SidebarMenuButtons
@@ -782,17 +782,17 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   );
 }
 
-FlowSidebarComponent.displayName = 'FlowSidebarComponent';
+FlowSidebarComponent.displayName = "FlowSidebarComponent";
 
 export default memo(
   FlowSidebarComponent,
   (
     prevProps: FlowSidebarComponentProps,
-    nextProps: FlowSidebarComponentProps
+    nextProps: FlowSidebarComponentProps,
   ) => {
     return (
       prevProps.showLegacy === nextProps.showLegacy &&
       prevProps.setShowLegacy === nextProps.setShowLegacy
     );
-  }
+  },
 );
