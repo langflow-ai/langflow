@@ -137,7 +137,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
     async def test_get_models_success(self, mock_get, mock_post):
         component = ChatOllamaComponent()
         mock_get_response = AsyncMock()
-        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.raise_for_status = MagicMock(return_value=None)
         mock_get_response.json.return_value = {
             component.JSON_MODELS_KEY: [
                 {component.JSON_NAME_KEY: "model1"},
@@ -147,7 +147,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         mock_get.return_value = mock_get_response
 
         mock_post_response = AsyncMock()
-        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.raise_for_status = MagicMock(return_value=None)
         mock_post_response.json.side_effect = [
             {component.JSON_CAPABILITIES_KEY: [component.DESIRED_CAPABILITY]},
             {component.JSON_CAPABILITIES_KEY: []},
@@ -170,7 +170,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         """
         component = ChatOllamaComponent()
         mock_get_response = AsyncMock()
-        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.raise_for_status = MagicMock(return_value=None)
         mock_get_response.json.return_value = {
             component.JSON_MODELS_KEY: [
                 {component.JSON_NAME_KEY: "old-model-1"},
@@ -181,7 +181,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
 
         # Simulate older Ollama API that doesn't return capabilities field
         mock_post_response = AsyncMock()
-        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.raise_for_status = MagicMock(return_value=None)
         mock_post_response.json.side_effect = [
             {},  # No capabilities field
             {},  # No capabilities field
@@ -203,7 +203,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         """Test that models without capabilities field are excluded when tool_model_enabled=True."""
         component = ChatOllamaComponent()
         mock_get_response = AsyncMock()
-        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.raise_for_status = MagicMock(return_value=None)
         mock_get_response.json.return_value = {
             component.JSON_MODELS_KEY: [
                 {component.JSON_NAME_KEY: "old-model-1"},
@@ -214,7 +214,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
 
         # Simulate older Ollama API that doesn't return capabilities field
         mock_post_response = AsyncMock()
-        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.raise_for_status = MagicMock(return_value=None)
         mock_post_response.json.side_effect = [
             {},  # No capabilities field
             {},  # No capabilities field
@@ -236,7 +236,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         """Test mixed scenario: some models have capabilities, some don't."""
         component = ChatOllamaComponent()
         mock_get_response = AsyncMock()
-        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.raise_for_status = MagicMock(return_value=None)
         mock_get_response.json.return_value = {
             component.JSON_MODELS_KEY: [
                 {component.JSON_NAME_KEY: "new-model"},
@@ -247,7 +247,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         mock_get.return_value = mock_get_response
 
         mock_post_response = AsyncMock()
-        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.raise_for_status = MagicMock(return_value=None)
         mock_post_response.json.side_effect = [
             {component.JSON_CAPABILITIES_KEY: [component.DESIRED_CAPABILITY]},  # new-model has completion
             {},  # old-model has no capabilities field
@@ -567,7 +567,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         """Test that get_models strips /v1 suffix when fetching models."""
         component = ChatOllamaComponent()
         mock_get_response = AsyncMock()
-        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.raise_for_status = MagicMock(return_value=None)
         mock_get_response.json.return_value = {
             component.JSON_MODELS_KEY: [
                 {component.JSON_NAME_KEY: "model1"},
@@ -576,7 +576,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         mock_get.return_value = mock_get_response
 
         mock_post_response = AsyncMock()
-        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.raise_for_status = MagicMock(return_value=None)
         mock_post_response.json.return_value = {component.JSON_CAPABILITIES_KEY: [component.DESIRED_CAPABILITY]}
         mock_post.return_value = mock_post_response
 
@@ -1048,7 +1048,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         component.api_key = "test-cloud-api-key"
 
         mock_get_response = AsyncMock()
-        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.raise_for_status = MagicMock(return_value=None)
         mock_get_response.json.return_value = {
             component.JSON_MODELS_KEY: [
                 {component.JSON_NAME_KEY: "deepseek-v3.1:671b-cloud"},
@@ -1058,7 +1058,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         mock_get.return_value = mock_get_response
 
         mock_post_response = AsyncMock()
-        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.raise_for_status = MagicMock(return_value=None)
         mock_post_response.json.side_effect = [
             {component.JSON_CAPABILITIES_KEY: [component.DESIRED_CAPABILITY]},
             {component.JSON_CAPABILITIES_KEY: [component.DESIRED_CAPABILITY]},
@@ -1090,7 +1090,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         component.api_key = None
 
         mock_get_response = AsyncMock()
-        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.raise_for_status = MagicMock(return_value=None)
         mock_get_response.json.return_value = {
             component.JSON_MODELS_KEY: [
                 {component.JSON_NAME_KEY: "llama3.1"},
@@ -1099,7 +1099,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         mock_get.return_value = mock_get_response
 
         mock_post_response = AsyncMock()
-        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.raise_for_status = MagicMock(return_value=None)
         mock_post_response.json.return_value = {component.JSON_CAPABILITIES_KEY: [component.DESIRED_CAPABILITY]}
         mock_post.return_value = mock_post_response
 
