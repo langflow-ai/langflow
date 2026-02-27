@@ -63,6 +63,7 @@ from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.services.auth.utils import api_key_security
 from langflow.services.database.models.flow.model import FlowRead
+from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_job_service, get_task_service
 
@@ -381,9 +382,9 @@ async def execute_sync_workflow(
     try:
         task_result, execution_session_id = await job_service.execute_with_status(
             job_id=job_id,
-            flow_id=UUID(flow_id_str),
-            run_graph_func=run_graph_internal,
+            run_coro_func=run_graph_internal,
             graph=graph,
+            flow_id=flow_id_str,
             session_id=session_id,
             inputs=None,
             outputs=terminal_node_ids,
@@ -471,9 +472,9 @@ async def execute_workflow_background(
         await task_service.fire_and_forget_task(
             job_service.execute_with_status,
             job_id=job_id,
-            flow_id=UUID(flow_id_str),
-            run_graph_func=run_graph_internal,
+            run_coro_func=run_graph_internal,
             graph=graph,
+            flow_id=flow_id_str,
             session_id=session_id,
             inputs=None,
             outputs=terminal_node_ids,
@@ -547,9 +548,21 @@ async def get_workflow_status(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={
-                "error": "Job resource not found",
+                "error": "Workflow job not found",
                 "code": "JOB_NOT_FOUND",
-                "message": f"Job {job_id} not found",
+                "message": f"Workflow job {job_id} not found",
+                "job_id": str(job_id),
+            },
+        )
+
+    # Verify this is a workflow job
+    if job.type != JobType.WORKFLOW:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "Workflow job not found",
+                "code": "JOB_NOT_FOUND",
+                "message": f"Job {job_id} is not a workflow job (type: {job.type})",
                 "job_id": str(job_id),
             },
         )
@@ -583,17 +596,22 @@ async def get_workflow_status(
             )
 
         if job.status == JobStatus.TIMED_OUT:
-            raise WorkflowTimeoutError
+            raise HTTPException(
+                status_code=status.HTTP_408_REQUEST_TIMEOUT,
+                detail={
+                    "error": "Execution timeout",
+                    "code": "EXECUTION_TIMEOUT",
+                    "message": "Workflow execution timed out",
+                    "job_id": job_id_str,
+                    "flow_id": flow_id_str,
+                },
+            )
 
         # Default response for active statuses (QUEUED, IN_PROGRESS, etc.)
-        return WorkflowExecutionResponse(
+        return WorkflowJobResponse(
             flow_id=flow_id_str,
             job_id=job_id_str,
             status=job.status,
-            outputs={},
-            errors=[],
-            inputs={},
-            metadata={},
         )
 
     except HTTPException:

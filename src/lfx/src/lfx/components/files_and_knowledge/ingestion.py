@@ -19,6 +19,7 @@ from langflow.services.database.models.user.crud import get_user_by_id
 
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
+from lfx.base.models.unified_models import get_api_key_for_provider
 from lfx.components.processing.converter import convert_to_dataframe
 from lfx.custom import Component
 from lfx.io import (
@@ -560,16 +561,20 @@ class KnowledgeIngestionComponent(Component):
                 msg = "Knowledge base path is not set. Please create a new knowledge base first."
                 raise ValueError(msg)
             metadata_path = kb_path / "embedding_metadata.json"
+            api_key = None
+            embedding_model = None
 
             # If the API key is not provided, try to read it from the metadata file
             if metadata_path.exists():
                 settings_service = get_settings_service()
                 metadata = json.loads(metadata_path.read_text())
                 embedding_model = metadata.get("embedding_model")
-                try:
-                    api_key = decrypt_api_key(metadata["api_key"], settings_service)
-                except (InvalidToken, TypeError, ValueError) as e:
-                    self.log(f"Could not decrypt API key. Please provide it manually. Error: {e}")
+                encrypted_key = metadata.get("api_key")
+                if encrypted_key:
+                    try:
+                        api_key = decrypt_api_key(encrypted_key, settings_service)
+                    except (InvalidToken, TypeError, ValueError) as e:
+                        self.log(f"Could not decrypt API key. Please provide it manually. Error: {e}")
 
             # Check if a custom API key was provided, update metadata if so
             if self.api_key:
@@ -579,6 +584,11 @@ class KnowledgeIngestionComponent(Component):
                     embedding_model=embedding_model,
                     api_key=api_key,
                 )
+
+            # Fallback: retrieve API key from provider's stored global variables
+            if not api_key and embedding_model:
+                provider = self._get_embedding_provider(embedding_model)
+                api_key = get_api_key_for_provider(self.user_id, provider)
 
             # Create vector store following Local DB component pattern
             await self._create_vector_store(df_source, config_list, embedding_model=embedding_model, api_key=api_key)

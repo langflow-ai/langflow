@@ -28,6 +28,7 @@ import LoginPage from "./pages/LoginPage";
 import FilesPage from "./pages/MainPage/pages/filesPage";
 import HomePage from "./pages/MainPage/pages/homePage";
 import KnowledgePage from "./pages/MainPage/pages/knowledgePage";
+import SourceChunksPage from "./pages/MainPage/pages/knowledgePage/sourceChunksPage/SourceChunksPage";
 import CollectionPage from "./pages/MainPage/pages/main-page";
 import SettingsPage from "./pages/SettingsPage";
 import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
@@ -92,10 +93,16 @@ const router = createBrowserRouter(
                       />
                       <Route path="files" element={<FilesPage />} />
                       {ENABLE_KNOWLEDGE_BASES && (
-                        <Route
-                          path="knowledge-bases"
-                          element={<KnowledgePage />}
-                        />
+                        <>
+                          <Route
+                            path="knowledge-bases"
+                            element={<KnowledgePage />}
+                          />
+                          <Route
+                            path="knowledge-bases/:sourceId/chunks"
+                            element={<SourceChunksPage />}
+                          />
+                        </>
                       )}
                     </Route>
                   )}

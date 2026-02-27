@@ -6,6 +6,7 @@ import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { RECEIVING_INPUT_VALUE, SELECT_AN_OPTION } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
+import KnowledgeBaseUploadModal from "@/modals/knowledgeBaseUploadModal/KnowledgeBaseUploadModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useTypesStore } from "@/stores/typesStore";
@@ -83,6 +84,7 @@ export default function Dropdown({
   });
   const [filteredMetadata, setFilteredMetadata] = useState(optionsMetaData);
   const [refreshOptions, setRefreshOptions] = useState(false);
+  const [pendingSelect, setPendingSelect] = useState<string | null>(null);
   const refButton = useRef<HTMLButtonElement>(null);
 
   value = useMemo(() => {
@@ -254,6 +256,14 @@ export default function Dropdown({
       ? `${firstWord}: ${option}\n${metadataEntries.join("\n")}`
       : option;
   };
+
+  // Auto-select a newly created option (e.g. knowledge base) once it appears in the options list
+  useEffect(() => {
+    if (pendingSelect && options.includes(pendingSelect)) {
+      onSelect(pendingSelect);
+      setPendingSelect(null);
+    }
+  }, [options, pendingSelect, onSelect]);
 
   // Effects
   useEffect(() => {
@@ -601,17 +611,39 @@ export default function Dropdown({
               </div>
             </CommandItem>
           )}
-          <NodeDialog
-            open={openDialog}
-            dialogInputs={dialogInputs}
-            onClose={() => {
-              setOpenDialog(false);
-              setOpen(false);
-            }}
-            nodeId={nodeId!}
-            name={name!}
-            nodeClass={nodeClass!}
-          />
+          {dialogInputs?.fields?.data?.node?.display_name ===
+            "Create Knowledge" ||
+          dialogInputs?.fields?.data?.node?.name === "create_knowledge_base" ? (
+            <KnowledgeBaseUploadModal
+              open={openDialog}
+              setOpen={(isOpen) => {
+                setOpenDialog(isOpen);
+                if (!isOpen) setOpen(false);
+              }}
+              onSubmit={(data) => {
+                setOpenDialog(false);
+                setOpen(false);
+                setPendingSelect(data.sourceName);
+                handleRefreshButtonPress();
+              }}
+              hideAdvanced
+            />
+          ) : (
+            <NodeDialog
+              open={openDialog}
+              dialogInputs={dialogInputs}
+              onClose={() => {
+                setOpenDialog(false);
+                setOpen(false);
+              }}
+              onCreated={(createdValue) => {
+                setPendingSelect(createdValue);
+              }}
+              nodeId={nodeId!}
+              name={name!}
+              nodeClass={nodeClass!}
+            />
+          )}
         </CommandGroup>
       )}
     </CommandList>

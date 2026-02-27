@@ -771,7 +771,7 @@
   },
   "KnowledgeIngestion": {
     "versions": {
-      "0.3.0": "52a451e4f053"
+      "0.3.0": "c37fd1b357d1"
     }
   },
   "KnowledgeRetrieval": {

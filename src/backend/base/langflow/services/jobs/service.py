@@ -3,15 +3,22 @@
 from __future__ import annotations
 
 import asyncio
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 from datetime import datetime, timezone
 from uuid import UUID
 
 from langflow.services.base import Service
-from langflow.services.database.models.jobs.crud import get_job_by_job_id, get_jobs_by_flow_id, update_job_status
-from langflow.services.database.models.jobs.model import Job, JobStatus
+from langflow.services.database.models.jobs.crud import (
+    get_job_by_job_id,
+    get_jobs_by_flow_id,
+    get_latest_jobs_by_asset_ids,
+    update_job_status,
+)
+from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
 from langflow.services.deps import session_scope
-
-# if TYPE_CHECKING:
 
 
 class JobService(Service):
@@ -55,12 +62,22 @@ class JobService(Service):
         async with session_scope() as session:
             return await get_job_by_job_id(session, job_id)
 
-    async def create_job(self, job_id: UUID, flow_id: UUID) -> Job:
+    async def create_job(
+        self,
+        job_id: UUID,
+        flow_id: UUID,
+        job_type: JobType = JobType.WORKFLOW,
+        asset_id: UUID | None = None,
+        asset_type: str | None = None,
+    ) -> Job:
         """Create a new job record with QUEUED status.
 
         Args:
             job_id: The job ID
             flow_id: The flow ID
+            job_type: The job type
+            asset_id: The asset ID
+            asset_type: The asset type
 
         Returns:
             Created Job object
@@ -72,7 +89,14 @@ class JobService(Service):
             flow_id = UUID(flow_id)
 
         async with session_scope() as session:
-            job = Job(job_id=job_id, flow_id=flow_id, status=JobStatus.QUEUED)
+            job = Job(
+                job_id=job_id,
+                flow_id=flow_id,
+                status=JobStatus.QUEUED,
+                type=job_type,
+                asset_id=asset_id,
+                asset_type=asset_type,
+            )
             session.add(job)
             await session.flush()
             return job
@@ -98,44 +122,64 @@ class JobService(Service):
                 await session.flush()
             return job
 
-    async def execute_with_status(self, job_id: UUID, flow_id: UUID, run_graph_func, *args, **kwargs):
-        """Wrapper that manages job status lifecycle around run_graph_internal.
+    async def get_latest_jobs_by_asset_ids(self, asset_ids: Sequence[UUID | str]) -> dict[UUID, Job]:
+        """Get the latest job for each asset ID in a single batch query.
+
+        Args:
+            asset_ids: List of asset IDs (UUID or string) to fetch jobs for
+
+        Returns:
+            Dictionary mapping asset_id (UUID) to the latest Job object
+        """
+        # Convert all asset_ids to UUID
+        uuid_asset_ids = [UUID(aid) if isinstance(aid, str) else aid for aid in asset_ids]
+
+        async with session_scope() as session:
+            return await get_latest_jobs_by_asset_ids(session, uuid_asset_ids)
+
+    async def execute_with_status(self, job_id: UUID, run_coro_func, *args, **kwargs):
+        """Wrapper that manages job status lifecycle around a coroutine.
 
         This function:
-        1. Creates a job record with QUEUED status
-        2. Updates status to IN_PROGRESS before execution
-        3. Executes the wrapped function
-        4. Updates status to COMPLETED on success or FAILED on error
-        5. Sets finished_timestamp when done
+        1. Updates status to IN_PROGRESS before execution
+        2. Executes the wrapped function
+        3. Updates status to COMPLETED on success or FAILED on error
+        4. Sets finished_timestamp when done
 
         Args:
             job_id: The job ID
-            flow_id: The flow ID
-            run_graph_func: The function to wrap (typically run_graph_internal)
-            *args: Positional arguments to pass to run_graph_func
-            **kwargs: Keyword arguments to pass to run_graph_func
+            run_coro_func: The coroutine function to wrap
+            *args: Positional arguments to pass to run_coro_func
+            **kwargs: Keyword arguments to pass to run_coro_func
 
         Returns:
-            The result from run_graph_func
+            The result from run_coro_func
 
         Raises:
-            Exception: Re-raises any exception from run_graph_func after updating status
+            Exception: Re-raises any exception from run_coro_func after updating status
         """
+        from lfx.log import logger
+
+        await logger.ainfo(f"Starting job execution: job_id={job_id}")
+
         try:
             # Update to IN_PROGRESS
+            await logger.adebug(f"Updating job {job_id} status to IN_PROGRESS")
             await self.update_job_status(job_id, JobStatus.IN_PROGRESS)
 
             # Execute the wrapped function
-            kwargs["flow_id"] = str(flow_id)
-            result = await run_graph_func(*args, **kwargs)
+            await logger.ainfo(f"Executing job function for job_id={job_id}")
+            result = await run_coro_func(*args, **kwargs)
 
-        except AssertionError:
+        except AssertionError as e:
             # Handle missing required arguments
+            await logger.aerror(f"Job {job_id} failed with AssertionError: {e}")
             await self.update_job_status(job_id, JobStatus.FAILED, finished_timestamp=True)
             raise
 
-        except asyncio.TimeoutError:
+        except asyncio.TimeoutError as e:
             # Handle timeout specifically
+            await logger.aerror(f"Job {job_id} timed out: {e}")
             await self.update_job_status(job_id, JobStatus.TIMED_OUT, finished_timestamp=True)
             raise
 
@@ -143,17 +187,21 @@ class JobService(Service):
             # Check the message code to determine if this was user-initiated or system-initiated
             if exc.args and exc.args[0] == "LANGFLOW_USER_CANCELLED":
                 # User-initiated cancellation, update status to CANCELLED
+                await logger.awarning(f"Job {job_id} was cancelled by user")
                 await self.update_job_status(job_id, JobStatus.CANCELLED, finished_timestamp=True)
             else:
                 # System-initiated cancellation - update status to FAILED
+                await logger.aerror(f"Job {job_id} was cancelled by system")
                 await self.update_job_status(job_id, JobStatus.FAILED, finished_timestamp=True)
             raise
 
-        except Exception:
+        except Exception as e:
             # Handle any other error
+            await logger.aexception(f"Job {job_id} failed with unexpected error: {e}")
             await self.update_job_status(job_id, JobStatus.FAILED, finished_timestamp=True)
             raise
         else:
             # Update to COMPLETED
+            await logger.ainfo(f"Job {job_id} completed successfully")
             await self.update_job_status(job_id, JobStatus.COMPLETED, finished_timestamp=True)
             return result
