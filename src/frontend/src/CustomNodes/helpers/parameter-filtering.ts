@@ -47,6 +47,8 @@ export function shouldRenderInspectionPanelField(
   if (isToolModeEnabled(template) && isToolMode) return false;
   // Only show advanced fields in the inspector panel
   if (!template?.advanced) return false;
+  // Hide readonly fields
+  if (template?.readonly) return false;
 
   return true;
 }
