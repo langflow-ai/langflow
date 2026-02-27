@@ -72,7 +72,6 @@ async def fetch_trace_summary_data(session: AsyncSession, trace_ids: list[UUID])
     ).where(col(SpanTable.trace_id).in_(trace_ids))
     rows = (await session.execute(all_spans_stmt)).all()
 
-    # Determine which span IDs are parents so leaf spans can be identified.
     parent_ids = {row[3] for row in rows if row[3] is not None}
 
     rows_by_trace: dict[str, list[Any]] = {}
@@ -88,8 +87,6 @@ async def fetch_trace_summary_data(session: AsyncSession, trace_ids: list[UUID])
                 token_val = attrs.get("llm.usage.total_tokens") or attrs.get("total_tokens") or 0
                 total_tokens += safe_int_tokens(token_val)
 
-        # Row layout for extract_trace_io_from_rows:
-        # (trace_id, name, parent_span_id, end_time, inputs, outputs)
         io_rows = [(r[0], r[2], r[3], r[4], r[5], r[6]) for r in trace_rows]
         io_data = extract_trace_io_from_rows(io_rows)
 

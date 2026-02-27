@@ -51,7 +51,7 @@ async def get_traces(
     query: Annotated[str | None, Query()] = None,
     start_time: Annotated[datetime | None, Query()] = None,
     end_time: Annotated[datetime | None, Query()] = None,
-    page: Annotated[int, Query(ge=1)] = 1,
+    page: Annotated[int, Query(ge=0)] = 1,
     size: Annotated[int, Query(ge=1, le=200)] = 50,
 ) -> TraceListResponse:
     """Get list of traces for a flow.
@@ -72,9 +72,19 @@ async def get_traces(
     """
     try:
         sanitized_query = sanitize_query_string(query)
+        # Frontend uses 0-based pages; repository expects 1-based.
+        effective_page = max(page, 1)
         return await asyncio.wait_for(
             fetch_traces(
-                current_user.id, flow_id, session_id, status, sanitized_query, start_time, end_time, page, size
+                current_user.id,
+                flow_id,
+                session_id,
+                status,
+                sanitized_query,
+                start_time,
+                end_time,
+                effective_page,
+                size,
             ),
             timeout=DB_TIMEOUT,
         )

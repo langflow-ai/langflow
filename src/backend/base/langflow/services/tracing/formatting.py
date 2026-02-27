@@ -79,7 +79,6 @@ def safe_int_tokens(value: Any) -> int:
         except ValueError:
             try:
                 parsed = float(value)
-                # Reject NaN (NaN != NaN) and ±infinity (not finite).
                 return int(parsed) if math.isfinite(parsed) else 0
             except (ValueError, TypeError, OverflowError):
                 return 0
