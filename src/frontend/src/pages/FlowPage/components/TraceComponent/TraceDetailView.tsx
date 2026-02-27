@@ -5,7 +5,7 @@ import Loading from "@/components/ui/loading";
 import { useGetTraceQuery } from "@/controllers/API/queries/traces";
 import { SpanDetail } from "./SpanDetail";
 import { SpanTree } from "./SpanTree";
-import { formatTotalLatency, getStatusIconProps } from "./traceViewHelpers";
+import { formatTotalLatency } from "./traceViewHelpers";
 import { TraceDetailViewProps } from "./traceViewTypes";
 import { Span } from "./types";
 
@@ -110,7 +110,6 @@ export function TraceDetailView({ traceId, flowName }: TraceDetailViewProps) {
   }
 
   const headerTitle = `${trace.name || flowName || "Trace"}`;
-  const { colorClass, iconName, shouldSpin } = getStatusIconProps(trace.status);
 
   return (
     <div

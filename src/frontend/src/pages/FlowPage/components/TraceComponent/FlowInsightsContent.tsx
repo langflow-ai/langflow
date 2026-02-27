@@ -29,37 +29,9 @@ import { useGetTracesQuery } from "@/controllers/API/queries/traces";
 import { TraceListItem } from "@/controllers/API/queries/traces/types";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
-import { createFlowTracesColumns } from "../config/flowTraceColumns";
-import { TraceView } from "./TraceView";
-import { TraceDetailView } from "./TraceView/TraceDetailView";
-
-const downloadJson = (fileName: string, value: unknown) => {
-  const blob = new Blob([JSON.stringify(value, null, 2)], {
-    type: "application/json;charset=utf-8",
-  });
-  const url = URL.createObjectURL(blob);
-
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = fileName;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-
-  URL.revokeObjectURL(url);
-};
-
-const startOfDay = (date: Date) => {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-};
-
-const endOfDay = (date: Date) => {
-  const d = new Date(date);
-  d.setHours(23, 59, 59, 999);
-  return d;
-};
+import { createFlowTracesColumns } from "./config/flowTraceColumns";
+import { TraceDetailView } from "./TraceDetailView";
+import { downloadJson, endOfDay, startOfDay } from "./traceViewHelpers";
 
 export function FlowInsightsContent({
   flowId,
@@ -247,7 +219,7 @@ export function FlowInsightsContent({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="success">Success</SelectItem>
+                <SelectItem value="ok">Success</SelectItem>
                 <SelectItem value="error">Error</SelectItem>
               </SelectContent>
             </Select>
@@ -387,19 +359,10 @@ export function FlowInsightsContent({
         >
           <div className="flex h-full flex-col overflow-hidden">
             <div className="flex-1 overflow-hidden">
-              {tracePanelTraceId ? (
-                <TraceDetailView
-                  traceId={tracePanelTraceId}
-                  flowName={resolvedFlowName}
-                />
-              ) : (
-                <TraceView
-                  flowId={resolvedFlowId}
-                  onTraceClick={(traceId) => {
-                    setTracePanelTraceId(traceId);
-                  }}
-                />
-              )}
+              <TraceDetailView
+                traceId={tracePanelTraceId}
+                flowName={resolvedFlowName}
+              />
             </div>
           </div>
         </DialogContent>

@@ -1,7 +1,7 @@
 import type { ColDef } from "ag-grid-community";
 import IconComponent from "@/components/common/genericIconComponent";
 import { formatSmartTimestamp } from "@/utils/dateTime";
-import { getStatusIconProps } from "../components/TraceView/traceViewHelpers";
+import { getStatusIconProps } from "../traceViewHelpers";
 import {
   formatLatency,
   formatObjectValue,

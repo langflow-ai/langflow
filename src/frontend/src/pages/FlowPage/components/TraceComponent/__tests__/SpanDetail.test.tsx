@@ -26,7 +26,7 @@ const buildSpan = (overrides: Partial<Span> = {}): Span => ({
   id: "span-1",
   name: "Test Span",
   type: "llm",
-  status: "success",
+  status: "ok",
   startTime: "2024-01-01T00:00:00Z",
   endTime: "2024-01-01T00:00:01Z",
   latencyMs: 1200,

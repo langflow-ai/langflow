@@ -1,4 +1,6 @@
 import {
+  downloadJson,
+  endOfDay,
   formatCost,
   formatIOPreview,
   formatJsonData,
@@ -13,6 +15,7 @@ import {
   getSpanTypeLabel,
   getStatusIconProps,
   getStatusVariant,
+  startOfDay,
 } from "../traceViewHelpers";
 
 jest.mock("@/utils/dateTime", () => ({
@@ -20,6 +23,123 @@ jest.mock("@/utils/dateTime", () => ({
 }));
 
 describe("traceViewHelpers", () => {
+  describe("downloadJson", () => {
+    const originalCreateObjectURL = (
+      URL as unknown as { createObjectURL?: unknown }
+    ).createObjectURL;
+    const originalRevokeObjectURL = (
+      URL as unknown as { revokeObjectURL?: unknown }
+    ).revokeObjectURL;
+
+    beforeEach(() => {
+      (URL as unknown as { createObjectURL: unknown }).createObjectURL = jest
+        .fn()
+        .mockReturnValue("blob:mock-url");
+      (URL as unknown as { revokeObjectURL: unknown }).revokeObjectURL = jest
+        .fn()
+        .mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+      if (originalCreateObjectURL === undefined) {
+        delete (URL as unknown as { createObjectURL?: unknown })
+          .createObjectURL;
+      } else {
+        (URL as unknown as { createObjectURL?: unknown }).createObjectURL =
+          originalCreateObjectURL;
+      }
+
+      if (originalRevokeObjectURL === undefined) {
+        delete (URL as unknown as { revokeObjectURL?: unknown })
+          .revokeObjectURL;
+      } else {
+        (URL as unknown as { revokeObjectURL?: unknown }).revokeObjectURL =
+          originalRevokeObjectURL;
+      }
+
+      jest.restoreAllMocks();
+    });
+
+    it("creates a JSON blob and triggers a download", async () => {
+      const clickSpy = jest
+        .spyOn(HTMLAnchorElement.prototype, "click")
+        .mockImplementation(() => undefined);
+      const appendSpy = jest.spyOn(document.body, "appendChild");
+      const createSpy = (URL as unknown as { createObjectURL: jest.Mock })
+        .createObjectURL;
+      const revokeSpy = (URL as unknown as { revokeObjectURL: jest.Mock })
+        .revokeObjectURL;
+
+      downloadJson("trace.json", { a: 1 });
+
+      expect(createSpy).toHaveBeenCalledTimes(1);
+      const blobArg = createSpy.mock.calls[0]?.[0] as Blob;
+      expect(blobArg).toBeInstanceOf(Blob);
+
+      const reader = new FileReader();
+      const textPromise = new Promise<string>((resolve) => {
+        reader.onload = () => resolve(reader.result as string);
+      });
+      reader.readAsText(blobArg);
+      await expect(textPromise).resolves.toBe('{\n  "a": 1\n}');
+      expect(blobArg.type).toBe("application/json;charset=utf-8");
+
+      expect(appendSpy).toHaveBeenCalledTimes(1);
+      const appended = appendSpy.mock.calls[0]?.[0] as HTMLAnchorElement;
+      expect(appended).toBeInstanceOf(HTMLAnchorElement);
+      expect(appended.download).toBe("trace.json");
+      expect(appended.href).toBe("blob:mock-url");
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+      expect(revokeSpy).toHaveBeenCalledWith("blob:mock-url");
+
+      const clickOrder = clickSpy.mock.invocationCallOrder[0];
+      const revokeOrder = revokeSpy.mock.invocationCallOrder[0];
+      expect(revokeOrder).toBeGreaterThan(clickOrder);
+    });
+  });
+
+  describe("startOfDay", () => {
+    it("returns a new Date at 00:00:00.000 and does not mutate input", () => {
+      const original = new Date(2026, 1, 27, 15, 30, 45, 123);
+      const result = startOfDay(original);
+
+      expect(result).not.toBe(original);
+      expect(result.getFullYear()).toBe(original.getFullYear());
+      expect(result.getMonth()).toBe(original.getMonth());
+      expect(result.getDate()).toBe(original.getDate());
+      expect(result.getHours()).toBe(0);
+      expect(result.getMinutes()).toBe(0);
+      expect(result.getSeconds()).toBe(0);
+      expect(result.getMilliseconds()).toBe(0);
+
+      expect(original.getHours()).toBe(15);
+      expect(original.getMinutes()).toBe(30);
+      expect(original.getSeconds()).toBe(45);
+      expect(original.getMilliseconds()).toBe(123);
+    });
+  });
+
+  describe("endOfDay", () => {
+    it("returns a new Date at 23:59:59.999 and does not mutate input", () => {
+      const original = new Date(2026, 1, 27, 15, 30, 45, 123);
+      const result = endOfDay(original);
+
+      expect(result).not.toBe(original);
+      expect(result.getFullYear()).toBe(original.getFullYear());
+      expect(result.getMonth()).toBe(original.getMonth());
+      expect(result.getDate()).toBe(original.getDate());
+      expect(result.getHours()).toBe(23);
+      expect(result.getMinutes()).toBe(59);
+      expect(result.getSeconds()).toBe(59);
+      expect(result.getMilliseconds()).toBe(999);
+
+      expect(original.getHours()).toBe(15);
+      expect(original.getMinutes()).toBe(30);
+      expect(original.getSeconds()).toBe(45);
+      expect(original.getMilliseconds()).toBe(123);
+    });
+  });
+
   describe("getSpanIcon", () => {
     it("returns icon names for known types", () => {
       expect(getSpanIcon("agent")).toBe("Bot");

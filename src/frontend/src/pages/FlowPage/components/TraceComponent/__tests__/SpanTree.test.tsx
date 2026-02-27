@@ -33,7 +33,7 @@ const buildSpan = (overrides: Partial<Span> = {}): Span => ({
   id: "root-1",
   name: "Root Span",
   type: "chain",
-  status: "success",
+  status: "ok",
   startTime: "2024-01-01T00:00:00Z",
   endTime: "2024-01-01T00:00:01Z",
   latencyMs: 120,

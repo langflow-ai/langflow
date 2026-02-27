@@ -14,7 +14,6 @@ import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import { useWebhookEvents } from "@/hooks/use-webhook-events";
-import { FlowInsightsContent } from "@/modals/flowLogsModal/components/FlowInsightsContent";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
@@ -28,6 +27,7 @@ import {
   FlowSidebarComponent,
 } from "./components/flowSidebarComponent";
 import Page from "./components/PageComponent";
+import { FlowInsightsContent } from "./components/TraceComponent/FlowInsightsContent";
 
 function FlowPageMainContent({
   flowId,
