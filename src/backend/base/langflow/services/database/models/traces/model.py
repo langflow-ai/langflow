@@ -3,8 +3,9 @@ from enum import Enum
 from typing import Any, Optional
 from uuid import UUID, uuid4
 
-from pydantic import ConfigDict, field_serializer, field_validator
+from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
 from pydantic import Field as PydanticField
+from pydantic.alias_generators import to_camel
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, Text
 
 from langflow.serialization.serialization import serialize
@@ -89,11 +90,91 @@ class TraceTable(TraceBase, table=True):  # type: ignore[call-arg]
     )
 
 
-class TraceRead(TraceBase):
-    """Read model for traces with spans."""
+class SpanReadResponse(BaseModel):
+    """Response model for a single span, with nested children.
+
+    Serializes to camelCase JSON to match the frontend API contract.
+    """
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
     id: UUID
-    spans: list["SpanRead"] = PydanticField(default_factory=list)
+    name: str
+    type: SpanType
+    status: SpanStatus
+    start_time: datetime | None
+    end_time: datetime | None
+    latency_ms: int
+    inputs: dict[str, Any] | None
+    outputs: dict[str, Any] | None
+    error: str | None
+    model_name: str | None
+    token_usage: dict[str, Any] | None
+    children: list["SpanReadResponse"] = PydanticField(default_factory=list)
+
+
+class TraceRead(BaseModel):
+    """Response model for a single trace with its hierarchical span tree.
+
+    Serializes to camelCase JSON to match the frontend API contract.
+    """
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+
+    id: UUID
+    name: str
+    status: SpanStatus
+    start_time: datetime | None
+    end_time: datetime | None
+    total_latency_ms: int
+    total_tokens: int
+    total_cost: float
+    flow_id: UUID
+    session_id: str
+    input: dict[str, Any] | None = None
+    output: dict[str, Any] | None = None
+    spans: list[SpanReadResponse] = PydanticField(default_factory=list)
+
+
+class TraceSummaryRead(BaseModel):
+    """Lightweight trace model for list endpoint.
+
+    Serializes to camelCase JSON to match the frontend API contract.
+    """
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+
+    id: UUID
+    name: str
+    status: SpanStatus
+    start_time: datetime | None
+    total_latency_ms: int
+    total_tokens: int
+    total_cost: float
+    flow_id: UUID
+    session_id: str
+    input: dict[str, Any] | None = None
+    output: dict[str, Any] | None = None
+
+
+class TraceListResponse(BaseModel):
+    """Paginated list response for traces."""
+
+    traces: list[TraceSummaryRead]
+    total: int
+    pages: int
 
 
 class TraceCreate(SQLModel):
@@ -173,15 +254,6 @@ class SpanTable(SpanBase, table=True):  # type: ignore[call-arg]
     children: list["SpanTable"] = Relationship(back_populates="parent")
 
 
-class SpanRead(SpanBase):
-    """Read model for spans with nested children."""
-
-    id: UUID
-    trace_id: UUID
-    parent_span_id: UUID | None = None
-    children: list["SpanRead"] = PydanticField(default_factory=list)
-
-
 class SpanCreate(SQLModel):
     """Create model for spans."""
 
@@ -207,5 +279,5 @@ class SpanUpdate(SQLModel):
 
 
 # Update forward references
+SpanReadResponse.model_rebuild()
 TraceRead.model_rebuild()
-SpanRead.model_rebuild()
