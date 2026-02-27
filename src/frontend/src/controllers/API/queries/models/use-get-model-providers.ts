@@ -10,6 +10,7 @@ export interface ModelProviderInfo {
     metadata: Record<string, any>;
   }>;
   is_enabled: boolean;
+  is_configured?: boolean;
   api_docs_url?: string;
 }
 

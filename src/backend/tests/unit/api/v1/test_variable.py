@@ -380,6 +380,7 @@ async def test_create_variable__ollama_base_url_validation_success(client: Async
     # Mock successful Ollama API call
     with mock.patch("requests.get") as mock_get:
         mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {"models": []}
         response = await client.post("api/v1/variables/", json=ollama_variable, headers=logged_in_headers)
         result = response.json()
 

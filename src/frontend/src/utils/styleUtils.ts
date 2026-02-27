@@ -251,6 +251,7 @@ export const SIDEBAR_CATEGORIES = [
 
 export const SIDEBAR_BUNDLES = [
   { display_name: "AI/ML API", name: "aiml", icon: "AIML" },
+  { display_name: "Agentics", name: "agentics", icon: "Agentics" },
   { display_name: "AgentQL", name: "agentql", icon: "AgentQL" },
   { display_name: "ALTK", name: "altk", icon: "Zap" },
   {
@@ -304,6 +305,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "JigsawStack", name: "jigsawstack", icon: "JigsawStack" },
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
   { display_name: "LangWatch", name: "langwatch", icon: "Langwatch" },
+  { display_name: "LiteLLM", name: "litellm", icon: "LiteLLM" },
   { display_name: "LMStudio", name: "lmstudio", icon: "LMStudio" },
   { display_name: "MariTalk", name: "maritalk", icon: "Maritalk" },
   { display_name: "Mem0", name: "mem0", icon: "Mem0" },
@@ -491,6 +493,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   WolframAlphaAPI: "Wolfram",
   WolframAlphaAPIWrapper: "Wolfram",
   WolframAlphaQueryRun: "Wolfram",
+  Agentics: "Agentics",
 
   //Node Icons
   model_specs: "FileSliders",
