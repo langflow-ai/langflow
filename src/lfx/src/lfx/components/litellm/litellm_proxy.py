@@ -42,7 +42,7 @@ class LiteLLMProxyComponent(LCModelComponent):
             name="override_model_settings",
             display_name="Override Model Settings",
             value=False,
-            info="Enable to override temperature and max tokens set by the provider.",
+            info="Enable to override temperature and max tokens set by the provider or LiteLLM.",
             real_time_refresh=True,
         ),
         SliderInput(
@@ -58,7 +58,7 @@ class LiteLLMProxyComponent(LCModelComponent):
             display_name="Max Tokens",
             value=0,
             show=False,
-            info="Maximum number of tokens to generate. Set to 0 for using the LiteLLM setting.",
+            info="Maximum number of tokens to generate. Set to 0 to use LiteLLM defaults.",
             range_spec=RangeSpec(min=0, max=2000000),
         ),
         IntInput(
