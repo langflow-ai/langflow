@@ -1,12 +1,11 @@
 import type { ColDef } from "ag-grid-community";
 import IconComponent from "@/components/common/genericIconComponent";
 import { formatSmartTimestamp } from "@/utils/dateTime";
+import { getStatusIconProps } from "../components/TraceView/traceViewHelpers";
 import {
   formatLatency,
   formatObjectValue,
   formatRunValue,
-  isNegativeStatus,
-  isPositiveStatus,
   pickFirstNumber,
 } from "./flowTraceColumnsHelpers";
 
@@ -110,20 +109,13 @@ export function createFlowTracesColumns({
       editable: false,
       cellRenderer: (params: { value: string | null | undefined }) => {
         const status = params.value ?? "unknown";
-        const negative = isNegativeStatus(status);
-        const positive = !negative && isPositiveStatus(status);
-
-        const colorClass = negative
-          ? "text-status-red"
-          : positive
-            ? "text-status-green"
-            : "text-muted-foreground";
+        const { colorClass, iconName, shouldSpin } = getStatusIconProps(status);
 
         return (
           <div className="flex items-center">
             <IconComponent
-              name="CircleCheck"
-              className={`h-4 w-4 ${colorClass}`}
+              name={iconName}
+              className={`h-4 w-4 ${colorClass} ${shouldSpin ? "animate-spin" : ""}`}
               aria-label={status}
               dataTestId={`flow-log-status-${status}`}
               skipFallback

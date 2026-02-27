@@ -83,28 +83,37 @@ async def _fetch_trace_io_map(session, trace_ids: list[UUID]) -> dict[str, dict[
         spans_by_trace.setdefault(trace_id_str, []).append(span)
 
     for trace_id_str, spans in spans_by_trace.items():
-        chat_input_span = next((s for s in spans if "Chat Input" in s.name), None)
-        input_value = None
-        if chat_input_span and chat_input_span.inputs:
-            input_value = chat_input_span.inputs.get("input_value")
-
-        root_spans = [s for s in spans if s.parent_span_id is None and s.end_time]
-        output_value = None
-        if root_spans:
-            root_spans_sorted = sorted(
-                root_spans,
-                key=lambda s: s.end_time or datetime.min.replace(tzinfo=timezone.utc),
-                reverse=True,
-            )
-            if root_spans_sorted and root_spans_sorted[0].outputs:
-                output_value = root_spans_sorted[0].outputs
-
-        io_map[trace_id_str] = {
-            "input": {"input_value": input_value} if input_value else None,
-            "output": output_value,
-        }
+        io_map[trace_id_str] = _extract_trace_io_from_spans(spans)
 
     return io_map
+
+
+def _extract_trace_io_from_spans(spans: list[SpanTable]) -> dict[str, Any]:
+    """Extract a simplified input/output payload for a trace.
+
+    - Input: derived from the first span with a name containing "Chat Input" (if present)
+    - Output: derived from the most recently finished root span (if present)
+    """
+    chat_input_span = next((s for s in spans if "Chat Input" in (s.name or "")), None)
+    input_value = None
+    if chat_input_span and chat_input_span.inputs:
+        input_value = chat_input_span.inputs.get("input_value")
+
+    root_spans = [s for s in spans if s.parent_span_id is None and s.end_time]
+    output_value = None
+    if root_spans:
+        root_spans_sorted = sorted(
+            root_spans,
+            key=lambda s: s.end_time or datetime.min.replace(tzinfo=timezone.utc),
+            reverse=True,
+        )
+        if root_spans_sorted and root_spans_sorted[0].outputs:
+            output_value = root_spans_sorted[0].outputs
+
+    return {
+        "input": {"input_value": input_value} if input_value else None,
+        "output": output_value,
+    }
 
 
 async def _fetch_traces(
@@ -274,6 +283,8 @@ async def _fetch_single_trace(user_id: UUID, trace_id: UUID) -> dict[str, Any] |
         spans_stmt = spans_stmt.order_by(col(SpanTable.start_time).asc())
         spans = (await session.exec(spans_stmt)).all()
 
+        io_data = _extract_trace_io_from_spans(list(spans))
+
         # Build hierarchical span tree
         span_tree = _build_span_tree(list(spans))
 
@@ -293,6 +304,8 @@ async def _fetch_single_trace(user_id: UUID, trace_id: UUID) -> dict[str, Any] |
             "totalCost": trace.total_cost,
             "flowId": str(trace.flow_id),
             "sessionId": trace.session_id or str(trace.id),
+            "input": io_data.get("input"),
+            "output": io_data.get("output"),
             "spans": span_tree,
         }
 

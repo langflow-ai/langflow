@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Separator } from "@/components/ui/separator";
@@ -10,7 +9,6 @@ import {
   type SidebarSection,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { cn } from "@/utils/utils";
 import { useSearchContext } from "../index";
 
@@ -65,10 +63,11 @@ export const NAV_ITEMS: NavItem[] = [
 const SidebarSegmentedNav = () => {
   const { activeSection, setActiveSection, toggleSidebar, open } = useSidebar();
   const { focusSearch, setSearch } = useSearchContext();
-  const { id } = useParams();
-  const navigate = useCustomNavigate();
   const [isAddNoteActive, setIsAddNoteActive] = useState(false);
   const handleAddNote = () => {
+    if (activeSection === "traces") {
+      setActiveSection("components");
+    }
     window.dispatchEvent(new Event("lf:start-add-note"));
     setIsAddNoteActive(true);
   };
@@ -96,17 +95,17 @@ const SidebarSegmentedNav = () => {
                       return;
                     }
 
-                    if (item.id === "traces") {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (!id) return;
-                      navigate(`/flow/${id}/insights`);
-                      return;
+                    if (isAddNoteActive) {
+                      setIsAddNoteActive(false);
                     }
 
                     setSearch?.("");
                     if (activeSection === item.id && open) {
-                      toggleSidebar();
+                      if (item.id === "traces") {
+                        setActiveSection("components");
+                      } else {
+                        toggleSidebar();
+                      }
                     } else {
                       setActiveSection(item.id);
                       if (!open) {

@@ -6,6 +6,7 @@ from uuid import uuid4
 import pytest
 from langflow.api.v1.traces import (
     _build_span_tree,
+    _extract_trace_io_from_spans,
     _fetch_trace_io_map,
     _fetch_trace_token_totals,
     _sanitize_query_string,
@@ -211,3 +212,38 @@ async def test_fetch_trace_io_map(async_session):
 
     assert io_map[str(trace_id)]["input"] == {"input_value": "hello"}
     assert io_map[str(trace_id)]["output"] == {"output": "latest"}
+
+
+def test_extract_trace_io_from_spans():
+    trace_id = uuid4()
+    base_time = datetime(2024, 4, 1, tzinfo=timezone.utc)
+    spans = [
+        SpanTable(
+            trace_id=trace_id,
+            name="Chat Input",
+            span_type=SpanType.CHAIN,
+            status=SpanStatus.OK,
+            inputs={"input_value": "hello"},
+        ),
+        SpanTable(
+            trace_id=trace_id,
+            name="Root A",
+            span_type=SpanType.CHAIN,
+            status=SpanStatus.OK,
+            end_time=base_time,
+            outputs={"output": "first"},
+        ),
+        SpanTable(
+            trace_id=trace_id,
+            name="Root B",
+            span_type=SpanType.CHAIN,
+            status=SpanStatus.OK,
+            end_time=base_time.replace(minute=1),
+            outputs={"output": "latest"},
+        ),
+    ]
+
+    io_data = _extract_trace_io_from_spans(spans)
+
+    assert io_data["input"] == {"input_value": "hello"}
+    assert io_data["output"] == {"output": "latest"}

@@ -66,8 +66,8 @@ export function SpanNode({
         className={cn(
           "flex h-5 w-5 items-center justify-center rounded",
           span.status === "error" && "text-error-foreground",
-          span.status === "success" && "text-foreground",
-          span.status === "running" && "text-muted-foreground",
+          span.status === "ok" && "text-foreground",
+          span.status === "unset" && "text-muted-foreground",
         )}
       >
         <IconComponent name={getSpanIcon(span.type)} className="h-4 w-4" />

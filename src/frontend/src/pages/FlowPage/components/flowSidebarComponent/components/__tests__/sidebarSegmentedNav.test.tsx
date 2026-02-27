@@ -411,24 +411,26 @@ describe("SidebarSegmentedNav", () => {
     });
   });
 
-  it("navigates to logs insights page when clicking logs", () => {
-    render(<SidebarSegmentedNav />);
-
-    const logsButton = screen.getByTestId("sidebar-nav-traces");
-    fireEvent.click(logsButton);
-
-    expect(mockNavigate).toHaveBeenCalledWith("/flow/flow_123/insights");
-    expect(mockUseSidebar.setActiveSection).not.toHaveBeenCalled();
-  });
-
-  it("navigates to traces insights page when clicking traces", () => {
+  it("sets active section to traces when clicking traces", () => {
     render(<SidebarSegmentedNav />);
 
     const tracesButton = screen.getByTestId("sidebar-nav-traces");
     fireEvent.click(tracesButton);
 
-    expect(mockNavigate).toHaveBeenCalledWith("/flow/flow_123/insights");
-    expect(mockUseSidebar.setActiveSection).not.toHaveBeenCalled();
+    expect(mockUseSidebar.setActiveSection).toHaveBeenCalledWith("traces");
+    expect(mockUseSidebar.toggleSidebar).not.toHaveBeenCalled();
+  });
+
+  it("toggles back to components when clicking traces while already active and open", () => {
+    mockUseSidebar.activeSection = "traces";
+    mockUseSidebar.open = true;
+    render(<SidebarSegmentedNav />);
+
+    const tracesButton = screen.getByTestId("sidebar-nav-traces");
+    fireEvent.click(tracesButton);
+
+    expect(mockUseSidebar.setActiveSection).toHaveBeenCalledWith("components");
+    expect(mockUseSidebar.toggleSidebar).not.toHaveBeenCalled();
   });
 
   describe("Add Note Functionality", () => {
@@ -451,6 +453,42 @@ describe("SidebarSegmentedNav", () => {
         }),
       );
       expect(mockDispatchEvent).toHaveBeenCalledTimes(1);
+
+      // By default, we should not change sections (already on canvas)
+      expect(mockUseSidebar.setActiveSection).not.toHaveBeenCalled();
+    });
+
+    it("unhighlights add_note when another nav item is clicked", async () => {
+      render(<SidebarSegmentedNav />);
+
+      const addNoteButton = screen.getByTestId("sidebar-nav-add_note");
+      fireEvent.click(addNoteButton);
+      expect(addNoteButton).toHaveAttribute("data-active", "true");
+
+      const mcpButton = screen.getByTestId("sidebar-nav-mcp");
+      fireEvent.click(mcpButton);
+
+      await waitFor(() => {
+        expect(addNoteButton).toHaveAttribute("data-active", "false");
+      });
+      expect(mockUseSidebar.setActiveSection).toHaveBeenCalledWith("mcp");
+    });
+
+    it("exits traces and returns to canvas when add_note is clicked in traces", () => {
+      mockUseSidebar.activeSection = "traces";
+      render(<SidebarSegmentedNav />);
+
+      const addNoteButton = screen.getByTestId("sidebar-nav-add_note");
+      fireEvent.click(addNoteButton);
+
+      expect(mockUseSidebar.setActiveSection).toHaveBeenCalledWith(
+        "components",
+      );
+      expect(mockDispatchEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "lf:start-add-note",
+        }),
+      );
     });
 
     it("sets add_note as active when clicked", () => {

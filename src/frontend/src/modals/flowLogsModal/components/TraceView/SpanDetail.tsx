@@ -5,8 +5,10 @@ import {
   formatCost,
   formatJsonData,
   formatSpanDetailLatency,
+  getSpanStatusLabel,
   getSpanTypeLabel,
   getStatusIconProps,
+  getStatusVariant,
 } from "./traceViewHelpers";
 import type { SpanDetailProps } from "./traceViewTypes";
 
@@ -45,16 +47,7 @@ export function SpanDetail({ span }: SpanDetailProps) {
       <div className="border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
           <h3 className="text-lg font-semibold">{span.name}</h3>
-          <Badge
-            variant={
-              span.status === "success"
-                ? "successStatic"
-                : span.status === "error"
-                  ? "errorStatic"
-                  : "secondaryStatic"
-            }
-            size="sm"
-          >
+          <Badge variant={getStatusVariant(span.status)} size="sm">
             <IconComponent
               name={iconName}
               className={`mr-1 h-4 w-4 ${colorClass} ${shouldSpin ? "animate-spin" : ""}`}
@@ -62,7 +55,7 @@ export function SpanDetail({ span }: SpanDetailProps) {
               dataTestId={`flow-log-status-${span.status}`}
               skipFallback
             />
-            {span.status}
+            {getSpanStatusLabel(span.status)}
           </Badge>
         </div>
         <div className="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
