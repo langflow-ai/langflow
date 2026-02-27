@@ -22,8 +22,18 @@ def run_sed(input_line):
         fname = f.name
     try:
         # Use absolute path for sed
-        sed_path = subprocess.run(["which", "sed"], check=False, capture_output=True, text=True).stdout.strip()
-        result = subprocess.run([sed_path, SED_PATTERN, fname], capture_output=True, text=True, check=True)
+        sed_path = subprocess.run(
+            ["which", "sed"],  # noqa: S607
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        result = subprocess.run(
+            [sed_path, SED_PATTERN, fname],  # noqa: S603
+            capture_output=True,
+            text=True,
+            check=True,
+        )
         return result.stdout.strip()
     finally:
         Path(fname).unlink()
@@ -33,9 +43,12 @@ def test_all():
     for i, case in enumerate(TEST_CASES):
         output = run_sed(case)
         if output != EXPECTED:
-            raise AssertionError(f"Test case {i + 1} failed: {case} → {output}")
+            msg = f"Test case {i+1} failed: {case} → {output}"
+            raise AssertionError(msg)
     print("All sed constraint preservation tests passed.")
 
 
 if __name__ == "__main__":
     test_all()
+
+# Made with Bob
