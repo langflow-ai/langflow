@@ -1,6 +1,4 @@
 import subprocess
-import tempfile
-from pathlib import Path
 
 # Simulate the sed pattern from release.yml
 # The pattern should preserve trailing commas
@@ -21,7 +19,7 @@ def run_sed(input_line):
     """Run sed on input line and return the result."""
     # Use sed with stdin/stdout instead of file operations
     result = subprocess.run(
-        ["sed", SED_PATTERN],  # noqa: S603, S607
+        ["sed", SED_PATTERN],  # noqa: S607
         input=input_line,
         capture_output=True,
         text=True,
