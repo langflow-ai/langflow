@@ -201,12 +201,12 @@ async def test_list_history_supports_deployment_ids_filter_with_counts(
 ):
     from uuid import UUID, uuid4
 
-    from langflow.services.deps import session_scope
     from langflow.services.database.models.deployment.model import Deployment
     from langflow.services.database.models.flow_history_deployment_attachment.model import (
         FlowHistoryDeploymentAttachment,
     )
     from langflow.services.database.models.folder.model import Folder
+    from langflow.services.deps import session_scope
 
     provider_resp = await client.post(
         "api/v1/deployments/providers/",
