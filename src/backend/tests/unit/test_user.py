@@ -76,7 +76,7 @@ async def test_user_waiting_for_approval(client):
         existing_user = (await session.exec(stmt)).first()
         if existing_user:
             pytest.fail(
-                f"User {username} already exists before the test. Database URL: {get_db_service().database_url}"
+                f"User {username} already exists before the test. Database URL: {get_db_service().redacted_url}"
             )
 
     # Create a user that is not active and has never logged in

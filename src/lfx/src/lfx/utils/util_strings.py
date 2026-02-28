@@ -34,6 +34,32 @@ def truncate_long_strings(data, max_length=None):
     return data
 
 
+def redact_database_url(url: str) -> str:
+    """Return the database URL with the password replaced by ``***``.
+
+    This prevents credentials from leaking into log files and error messages.
+    If the URL cannot be parsed the entire authority section is masked.
+
+    Args:
+        url: A SQLAlchemy-compatible database connection URL.
+
+    Returns:
+        The URL with sensitive credentials replaced.
+    """
+    try:
+        from sqlalchemy.engine import make_url
+
+        parsed = make_url(url)
+        if parsed.password:
+            return str(parsed.set(password="***"))  # noqa: S106
+        return str(parsed)
+    except Exception:  # noqa: BLE001
+        # Fallback: mask anything between ``://`` and ``@``
+        import re
+
+        return re.sub(r"(://[^@]*@)", "://***:***@", url)
+
+
 def is_valid_database_url(url: str) -> bool:
     """Validate database connection URLs compatible with SQLAlchemy.
 
