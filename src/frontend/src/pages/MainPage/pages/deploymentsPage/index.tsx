@@ -523,7 +523,8 @@ const DeploymentsTab = () => {
         setCreatedDeploymentId(response.id);
         const resultSnapshotIds = Array.isArray(response.snapshot_ids)
           ? response.snapshot_ids.filter(
-              (id): id is string => typeof id === "string" && id.trim().length > 0,
+              (id): id is string =>
+                typeof id === "string" && id.trim().length > 0,
             )
           : [];
         setCreatedDeploymentUiMeta({

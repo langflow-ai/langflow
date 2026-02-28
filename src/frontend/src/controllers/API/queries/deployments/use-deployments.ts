@@ -210,13 +210,9 @@ export const usePostCreateDeployment: useMutationFunctionType<
     DeploymentCreateResponse,
     Error,
     DeploymentCreatePayload
-  > = mutate(
-    ["usePostCreateDeployment"],
-    createDeploymentFn,
-    {
-      ...options,
-    },
-  );
+  > = mutate(["usePostCreateDeployment"], createDeploymentFn, {
+    ...options,
+  });
 
   return mutation;
 };

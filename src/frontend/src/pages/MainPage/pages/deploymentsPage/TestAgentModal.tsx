@@ -99,7 +99,8 @@ export const TestAgentModal = ({
           item &&
           typeof item === "object" &&
           (typeof (item as Record<string, unknown>).text === "string" ||
-            typeof (item as Record<string, unknown>).response_type === "string"),
+            typeof (item as Record<string, unknown>).response_type ===
+              "string"),
       )
     );
   };
@@ -317,7 +318,9 @@ export const TestAgentModal = ({
                 typedToolCall.name || typedToolCall.tool_name || "Unknown Tool",
               ),
               toolCallId:
-                typeof typedToolCall.id === "string" ? typedToolCall.id : undefined,
+                typeof typedToolCall.id === "string"
+                  ? typedToolCall.id
+                  : undefined,
               args: parsePossibleJsonString(typedToolCall.args ?? null),
             });
           }
@@ -398,14 +401,24 @@ export const TestAgentModal = ({
   const normalizedMode = (deploymentMode || "").trim().toLowerCase();
   const showWatsonxModeBadge = isWatsonxProvider && Boolean(normalizedMode);
   const modeBadgeLabel =
-    normalizedMode === "live" ? "Live" : normalizedMode === "draft" ? "Draft" : null;
+    normalizedMode === "live"
+      ? "Live"
+      : normalizedMode === "draft"
+        ? "Draft"
+        : null;
   const modeBadgeClass =
     normalizedMode === "live"
       ? "border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400"
       : "border-yellow-500/30 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400";
   const modeLabelForMeta =
-    normalizedMode === "live" ? "Live" : normalizedMode === "draft" ? "Draft" : null;
-  const providerLabel = isWatsonxProvider ? "watsonx Orchestrate" : "Deployment";
+    normalizedMode === "live"
+      ? "Live"
+      : normalizedMode === "draft"
+        ? "Draft"
+        : null;
+  const providerLabel = isWatsonxProvider
+    ? "watsonx Orchestrate"
+    : "Deployment";
 
   const valueToMultilineText = (value: unknown): string => {
     if (value === undefined || value === null) {
@@ -439,7 +452,9 @@ export const TestAgentModal = ({
     const firstMatchingLine = outputText
       .split("\n")
       .map((line) => line.trim())
-      .find((line) => /(error|failed|exception|traceback|invalid|no result)/i.test(line));
+      .find((line) =>
+        /(error|failed|exception|traceback|invalid|no result)/i.test(line),
+      );
     if (!firstMatchingLine) {
       return null;
     }
@@ -499,11 +514,18 @@ export const TestAgentModal = ({
         return;
       }
 
-      if (existing.toolName === "Unknown Tool" && trace.toolName !== "Unknown Tool") {
+      if (
+        existing.toolName === "Unknown Tool" &&
+        trace.toolName !== "Unknown Tool"
+      ) {
         existing.toolName = trace.toolName;
       }
 
-      if (trace.kind === "tool_call" && trace.args !== undefined && trace.args !== null) {
+      if (
+        trace.kind === "tool_call" &&
+        trace.args !== undefined &&
+        trace.args !== null
+      ) {
         existing.input = trace.args;
       }
       if (trace.kind === "tool_response" && trace.content !== undefined) {
@@ -629,7 +651,8 @@ export const TestAgentModal = ({
 
       let finalResponse = initialResponse;
       const executionId = initialResponse.execution_id;
-      const hasExecutionId = typeof executionId === "string" && executionId.trim();
+      const hasExecutionId =
+        typeof executionId === "string" && executionId.trim();
 
       if (
         hasExecutionId &&
@@ -758,7 +781,9 @@ export const TestAgentModal = ({
                   }
                 >
                   {message.role === "user" ? (
-                    <span className="whitespace-pre-wrap">{message.content}</span>
+                    <span className="whitespace-pre-wrap">
+                      {message.content}
+                    </span>
                   ) : (
                     <>
                       <Markdown
@@ -770,12 +795,16 @@ export const TestAgentModal = ({
                           },
                           ul({ children }) {
                             return (
-                              <ul className="my-2 list-disc space-y-1 pl-5">{children}</ul>
+                              <ul className="my-2 list-disc space-y-1 pl-5">
+                                {children}
+                              </ul>
                             );
                           },
                           ol({ children }) {
                             return (
-                              <ol className="my-2 list-decimal space-y-1 pl-5">{children}</ol>
+                              <ol className="my-2 list-decimal space-y-1 pl-5">
+                                {children}
+                              </ol>
                             );
                           },
                           li({ children }) {
@@ -839,7 +868,9 @@ export const TestAgentModal = ({
                           className="mt-3 w-full overflow-hidden rounded-lg border border-border/40 bg-background/20"
                         >
                           {(() => {
-                            const toolGroups = groupToolTraces(message.toolTraces || []);
+                            const toolGroups = groupToolTraces(
+                              message.toolTraces || [],
+                            );
                             const hasToolErrors = toolGroups.some((group) =>
                               toolOutputIndicatesError(group.output),
                             );
@@ -865,18 +896,16 @@ export const TestAgentModal = ({
                                   <div className="px-3 pb-3 pt-1">
                                     <div className="space-y-2">
                                       {toolGroups.map((group) => {
-                                        const inputSnippet = toHighlightedSnippet(
-                                          group.input,
-                                        );
-                                        const outputSnippet = toHighlightedSnippet(
-                                          group.output,
-                                        );
-                                        const hasOutputError = toolOutputIndicatesError(
-                                          group.output,
-                                        );
-                                        const outputErrorSummary = extractToolErrorSummary(
-                                          group.output,
-                                        );
+                                        const inputSnippet =
+                                          toHighlightedSnippet(group.input);
+                                        const outputSnippet =
+                                          toHighlightedSnippet(group.output);
+                                        const hasOutputError =
+                                          toolOutputIndicatesError(
+                                            group.output,
+                                          );
+                                        const outputErrorSummary =
+                                          extractToolErrorSummary(group.output);
 
                                         return (
                                           <div
@@ -935,7 +964,9 @@ export const TestAgentModal = ({
                                                   Input
                                                 </div>
                                                 <SimplifiedCodeTabComponent
-                                                  language={inputSnippet.language}
+                                                  language={
+                                                    inputSnippet.language
+                                                  }
                                                   code={inputSnippet.code}
                                                 />
                                               </div>
@@ -951,7 +982,9 @@ export const TestAgentModal = ({
                                                   </div>
                                                 )}
                                                 <SimplifiedCodeTabComponent
-                                                  language={outputSnippet.language}
+                                                  language={
+                                                    outputSnippet.language
+                                                  }
                                                   code={outputSnippet.code}
                                                 />
                                               </div>

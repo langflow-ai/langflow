@@ -198,7 +198,12 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     })),
   );
 
-  const { activeSection, setOpen, setActiveSection, open: sidebarOpen } = useSidebar();
+  const {
+    activeSection,
+    setOpen,
+    setActiveSection,
+    open: sidebarOpen,
+  } = useSidebar();
   const addComponent = useAddComponent();
 
   // Get MCP servers for search functionality (only when new sidebar is enabled)
@@ -634,9 +639,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
           )}
         >
           {showHistory && currentFlowForHistory?.id ? (
-            <FlowHistorySidebarContent
-              flowId={currentFlowForHistory.id}
-            />
+            <FlowHistorySidebarContent flowId={currentFlowForHistory.id} />
           ) : (
             <>
               <SidebarHeaderComponent
