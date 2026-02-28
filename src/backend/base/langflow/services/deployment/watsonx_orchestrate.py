@@ -1616,7 +1616,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         flow_filename: str | None = None,
     ) -> bytes:
         filename = flow_filename or f"{tool.__tool_spec__.name}.json"
-        lfx_requirement = "lfx==0.3.0rc2"  # hack: lets figure out to handle dev environments
+        lfx_requirement = "lfx>=0.3.0rc3"  # hack: lets figure out to handle dev environments
         requirements = generate_requirements_from_flow(
             flow_definition,
             include_lfx=False,

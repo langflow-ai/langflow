@@ -5,7 +5,8 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { selectGptModel } from "../../utils/select-gpt-model";
 
-test(
+// Logs button being removed for now
+test.skip(
   "should able to see and interact with logs",
   { tag: ["@release", "@workspace", "@api"] },
 

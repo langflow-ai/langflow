@@ -56,6 +56,7 @@ import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
+import { filterSingletonComponent } from "./helpers/filter-singleton-component";
 import { useTweaksStore } from "./tweaksStore";
 import { useTypesStore } from "./typesStore";
 
@@ -118,6 +119,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   isBuilding: false,
   buildStartTime: null,
   buildDuration: null,
+  buildingFlowId: null,
+  buildingSessionId: null,
   stopBuilding: () => {
     get().buildController.abort();
     get().updateEdgesRunningByNodes(
@@ -170,11 +173,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   addDataToFlowPool: (data: VertexBuildTypeAPI, nodeId: string) => {
-    const newFlowPool = cloneDeep({ ...get().flowPool });
-    if (!newFlowPool[nodeId]) newFlowPool[nodeId] = [data];
-    else {
-      newFlowPool[nodeId].push(data);
-    }
+    const prevPool = get().flowPool;
+    const prevEntries = prevPool[nodeId];
+    const newFlowPool = {
+      ...prevPool,
+      [nodeId]: prevEntries ? [...prevEntries, data] : [data],
+    };
     get().setFlowPool(newFlowPool);
   },
   getNodePosition: (nodeId: string) => {
@@ -261,6 +265,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         isBuilding && !current.isBuilding ? null : current.buildStartTime,
       buildDuration:
         isBuilding && !current.isBuilding ? null : current.buildDuration,
+      // Clear building session when build ends
+      buildingFlowId: !isBuilding ? null : current.buildingFlowId,
+      buildingSessionId: !isBuilding ? null : current.buildingSessionId,
     });
   },
   setBuildStartTime: (time) => {
@@ -268,6 +275,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   setBuildDuration: (duration) => {
     set({ buildDuration: duration });
+  },
+  setBuildingSession: (flowId, sessionId) => {
+    set({ buildingFlowId: flowId, buildingSessionId: sessionId });
   },
   setFlowState: (flowState) => {
     const newFlowState =
@@ -979,6 +989,20 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       set({ edges: newEdges });
       resolve();
     });
+  },
+  clearAndSetEdgesRunning: (nextIds?: string[]) => {
+    const edges = get().edges;
+    const stopNodeId = get().stopNodeId;
+    const nextIdSet = nextIds ? new Set(nextIds) : null;
+
+    const newEdges = edges.map((edge) => {
+      const sourceId = edge.data?.sourceHandle?.id ?? "";
+      if (nextIdSet && nextIdSet.has(sourceId) && sourceId !== stopNodeId) {
+        return { ...edge, animated: true, className: "running" };
+      }
+      return { ...edge, animated: false, className: "" };
+    });
+    set({ edges: newEdges });
   },
   updateVerticesBuild: (
     vertices: {

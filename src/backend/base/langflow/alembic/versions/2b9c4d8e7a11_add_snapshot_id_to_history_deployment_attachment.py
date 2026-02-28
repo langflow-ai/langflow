@@ -14,7 +14,7 @@ from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
 revision: str = "2b9c4d8e7a11"
-down_revision: str | None = "0f6a9f8b2d31"
+down_revision: str | Sequence[str] | None = ("0f6a9f8b2d31", "c187c3b9bb94")
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

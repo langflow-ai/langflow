@@ -52,6 +52,7 @@ import { applyComponentFilter } from "./helpers/apply-component-filter";
 import { applyEdgeFilter } from "./helpers/apply-edge-filter";
 import { applyLegacyFilter } from "./helpers/apply-legacy-filter";
 import { combinedResultsFn } from "./helpers/combined-results";
+import { computeSectionVisibility } from "./helpers/compute-section-visibility";
 import { filteredDataFn } from "./helpers/filtered-data";
 import { normalizeString } from "./helpers/normalize-string";
 import sensitiveSort from "./helpers/sensitive-sort";
@@ -583,24 +584,18 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     filterType !== undefined ||
     getFilterComponent !== "";
 
-  const showComponents =
-    (ENABLE_NEW_SIDEBAR &&
-      hasCoreComponents &&
-      (activeSection === "components" || activeSection === "search")) ||
-    (hasSearchInput && hasCoreComponents && ENABLE_NEW_SIDEBAR) ||
-    !ENABLE_NEW_SIDEBAR;
-  const showBundles =
-    (hasBundleItems && ENABLE_NEW_SIDEBAR && activeSection === "bundles") ||
-    (hasSearchInput && hasBundleItems && ENABLE_NEW_SIDEBAR) ||
-    !ENABLE_NEW_SIDEBAR;
-  const showMcp =
-    (ENABLE_NEW_SIDEBAR && activeSection === "mcp") ||
-    (hasSearchInput && hasMcpComponents && ENABLE_NEW_SIDEBAR);
-  const showHistory = ENABLE_NEW_SIDEBAR && activeSection === "history" && sidebarOpen;
-
-  const currentFlowForHistory = useFlowStore(
-    (state) => state.currentFlow,
-  );
+  const { showComponents, showBundles, showMcp, isMcpTabActive } =
+    computeSectionVisibility({
+      enableNewSidebar: ENABLE_NEW_SIDEBAR,
+      activeSection,
+      hasSearchInput,
+      hasCoreComponents,
+      hasMcpComponents,
+      hasBundleItems,
+    });
+  const showHistory =
+    ENABLE_NEW_SIDEBAR && activeSection === "history" && sidebarOpen;
+  const currentFlowForHistory = useFlowStore((state) => state.currentFlow);
 
   const [category, component] = getFilterComponent?.split(".") ?? ["", ""];
 
@@ -651,7 +646,9 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                 setShowBeta={handleSetShowBeta}
                 showLegacy={showLegacy}
                 setShowLegacy={handleSetShowLegacy}
-                searchInputRef={searchInputRef}
+                searchInputRef={
+                  searchInputRef as React.RefObject<HTMLInputElement>
+                }
                 isInputFocused={isSearchFocused}
                 search={search}
                 handleInputFocus={handleInputFocus}
@@ -680,7 +677,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                   <>
                     {hasResults ? (
                       <>
-                        {showComponents && !showMcp && (
+                        {showComponents && !isMcpTabActive && (
                           <CategoryGroup
                             dataFilter={dataFilter}
                             sortedCategories={sortedCategories}

@@ -903,7 +903,7 @@ async def _sync_page_with_provider(
         resource_keys = [row.resource_key for row, _ in batch]
         list_params = DeploymentListParams(
             deployment_types=[deployment_type] if deployment_type is not None else None,
-            provider_params={"ids": resource_keys, "names": resource_keys},
+            provider_params={"ids": resource_keys},
         )
         provider_view = await deployment_adapter.list_deployments(
             user_id=user_id,

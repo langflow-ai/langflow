@@ -1,6 +1,10 @@
 // Export the lazy loading mapping for icons
 export const lazyIconsMapping = {
   AIML: () => import("@/icons/AIML").then((mod) => ({ default: mod.AIMLIcon })),
+  Agentics: () =>
+    import("@/icons/Agentics").then((mod) => ({
+      default: mod.AgenticsIcon,
+    })),
   AgentQL: () =>
     import("@/icons/AgentQL").then((mod) => ({ default: mod.AgentQLIcon })),
   Agiled: () =>
@@ -313,6 +317,8 @@ export const lazyIconsMapping = {
     import("@/icons/LangChain").then((mod) => ({ default: mod.LangChainIcon })),
   Langwatch: () =>
     import("@/icons/Langwatch").then((mod) => ({ default: mod.LangwatchIcon })),
+  LiteLLM: () =>
+    import("@/icons/LiteLLM").then((mod) => ({ default: mod.LiteLLMIcon })),
   LMStudio: () =>
     import("@/icons/LMStudio").then((mod) => ({ default: mod.LMStudioIcon })),
   Listennotes: () =>
