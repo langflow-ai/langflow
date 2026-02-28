@@ -15,13 +15,13 @@ export default function useRestoreVersion(flowId: string) {
   const [isRestoring, setIsRestoring] = useState(false);
 
   const restore = useCallback(
-    async (historyId: string, options?: { onSuccess?: () => void }) => {
+    async (versionId: string, options?: { onSuccess?: () => void }) => {
       setIsRestoring(true);
       try {
         // --- Phase 1: API call + canvas application ---
         // Errors here are shown to the user and abort the restore.
         const response = await api.post(
-          `${getURL("FLOWS")}/${flowId}/history/${historyId}/activate`,
+          `${getURL("FLOWS")}/${flowId}/history/${versionId}/activate`,
           null,
           { params: { save_draft: true } },
         );
@@ -31,7 +31,7 @@ export default function useRestoreVersion(flowId: string) {
           throw new Error("Restored version contains no flow data");
         }
 
-        queryClient.invalidateQueries({ queryKey: ["useGetFlowHistory"] });
+        queryClient.invalidateQueries({ queryKey: ["useGetFlowVersions"] });
         applyFlowToCanvas(updatedFlow);
       } catch (err: any) {
         const apiDetail = err?.response?.data?.detail;

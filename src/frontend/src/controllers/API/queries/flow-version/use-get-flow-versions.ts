@@ -4,19 +4,19 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-interface FlowHistoryParams {
+interface FlowVersionParams {
   flowId: string;
   limit?: number;
   offset?: number;
 }
 
-export const useGetFlowHistory: useQueryFunctionType<
-  FlowHistoryParams,
+export const useGetFlowVersions: useQueryFunctionType<
+  FlowVersionParams,
   FlowVersionListResponse
 > = ({ flowId, limit = 50, offset = 0 }, options) => {
   const { query } = UseRequestProcessor();
 
-  const getFlowHistoryFn = async (): Promise<FlowVersionListResponse> => {
+  const getFlowVersionsFn = async (): Promise<FlowVersionListResponse> => {
     const response = await api.get<FlowVersionListResponse>(
       `${getURL("FLOWS")}/${flowId}/history/`,
       { params: { limit, offset } },
@@ -25,8 +25,8 @@ export const useGetFlowHistory: useQueryFunctionType<
   };
 
   return query(
-    ["useGetFlowHistory", { flowId, limit, offset }],
-    getFlowHistoryFn,
+    ["useGetFlowVersions", { flowId, limit, offset }],
+    getFlowVersionsFn,
     options,
   );
 };

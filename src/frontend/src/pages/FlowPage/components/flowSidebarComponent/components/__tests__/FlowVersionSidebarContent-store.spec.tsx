@@ -24,7 +24,7 @@ jest.mock("@/controllers/API/helpers/constants", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Configurable history entry query mock — controls what selectedEntryFull returns
+// Configurable version entry query mock — controls what selectedEntryFull returns
 // ---------------------------------------------------------------------------
 
 let entryQueryData: any = null;
@@ -32,7 +32,7 @@ let entryQueryLoading = false;
 let entryQueryError = false;
 
 jest.mock("@/controllers/API/queries/flow-version", () => ({
-  useGetFlowHistory: () => ({
+  useGetFlowVersions: () => ({
     data: {
       entries: [
         {
@@ -50,12 +50,12 @@ jest.mock("@/controllers/API/queries/flow-version", () => ({
     isLoading: false,
     isError: false,
   }),
-  useGetFlowHistoryEntry: () => ({
+  useGetFlowVersionEntry: () => ({
     data: entryQueryData,
     isLoading: entryQueryLoading,
     isError: entryQueryError,
   }),
-  useDeleteHistoryEntry: () => ({ mutate: jest.fn(), isPending: false }),
+  useDeleteVersionEntry: () => ({ mutate: jest.fn(), isPending: false }),
 }));
 
 const applyFlowToCanvasMock = jest.fn();
@@ -301,17 +301,17 @@ describe("FlowVersionSidebarContent store behavior", () => {
   });
 
   it("syncs preview nodes/edges to flow store when entry data is available", () => {
-    const historyNodes = [{ id: "hist-node" }];
-    const historyEdges = [{ id: "hist-edge" }];
+    const versionNodes = [{ id: "version-node" }];
+    const versionEdges = [{ id: "version-edge" }];
     entryQueryData = {
       id: "entry-1",
       version_tag: "v1",
-      data: { nodes: historyNodes, edges: historyEdges },
+      data: { nodes: versionNodes, edges: versionEdges },
     };
 
     render(<FlowVersionSidebarContent flowId="flow-1" />);
 
-    // Click on a history entry to trigger selection
+    // Click on a version entry to trigger selection
     const user = userEvent.setup();
     const entryRow = screen.getByText("v1").closest("[class*=cursor-pointer]");
     if (entryRow) {
@@ -321,13 +321,13 @@ describe("FlowVersionSidebarContent store behavior", () => {
     }
 
     // The processedPreview should trigger store sync
-    // Since the mock useGetFlowHistoryEntry always returns entryQueryData,
+    // Since the mock useGetFlowVersionEntry always returns entryQueryData,
     // and we clicked the entry (setting selectedId), processedPreview should
     // be non-null and the store should be updated.
     expect(setStateMock).toHaveBeenCalledWith(
       expect.objectContaining({
         nodes: expect.arrayContaining([
-          expect.objectContaining({ id: "hist-node" }),
+          expect.objectContaining({ id: "version-node" }),
         ]),
       }),
     );
@@ -400,12 +400,12 @@ describe("FlowVersionSidebarContent store behavior", () => {
     entryQueryData = {
       id: "entry-1",
       version_tag: "v1",
-      data: { nodes: [{ id: "hist-node" }], edges: [] },
+      data: { nodes: [{ id: "version-node" }], edges: [] },
     };
 
     render(<FlowVersionSidebarContent flowId="flow-1" />);
 
-    // Click version entry — this sets store nodes to hist-node via layoutEffect
+    // Click version entry — this sets store nodes to version-node via layoutEffect
     const entryRow = screen.getByText("v1").closest("[class*=cursor-pointer]");
     if (entryRow) {
       act(() => {

@@ -10,9 +10,9 @@ import {
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import {
-  useDeleteHistoryEntry,
-  useGetFlowHistory,
-  useGetFlowHistoryEntry,
+  useDeleteVersionEntry,
+  useGetFlowVersions,
+  useGetFlowVersionEntry,
 } from "@/controllers/API/queries/flow-version";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -42,10 +42,10 @@ export function useFlowVersionSidebar(flowId: string) {
   const currentFlow = useFlowStore((s) => s.currentFlow);
 
   const { mutate: deleteEntry, isPending: isDeleting } =
-    useDeleteHistoryEntry();
+    useDeleteVersionEntry();
 
   const [animatingId, setAnimatingId] = useState<string | null>(null);
-  const prevHistoryLengthRef = useRef<number>(0);
+  const prevVersionCountRef = useRef<number>(0);
 
   const [deleteDialogEntry, setDeleteDialogEntry] =
     useState<FlowVersionEntry | null>(null);
@@ -65,33 +65,33 @@ export function useFlowVersionSidebar(flowId: string) {
   }
 
   const {
-    data: historyResponse,
+    data: versionResponse,
     isLoading,
     isError: isListError,
-  } = useGetFlowHistory({ flowId }, { refetchInterval: 10000 });
+  } = useGetFlowVersions({ flowId }, { refetchInterval: 10000 });
 
-  const history = historyResponse?.entries;
-  const maxEntries = historyResponse?.max_entries;
+  const versions = versionResponse?.entries;
+  const maxEntries = versionResponse?.max_entries;
 
   useEffect(() => {
-    const newLen = history?.length ?? 0;
-    if (newLen > prevHistoryLengthRef.current && history?.[0]) {
-      setAnimatingId(history[0].id);
+    const newLen = versions?.length ?? 0;
+    if (newLen > prevVersionCountRef.current && versions?.[0]) {
+      setAnimatingId(versions[0].id);
       const t = setTimeout(() => setAnimatingId(null), 500);
-      prevHistoryLengthRef.current = newLen;
+      prevVersionCountRef.current = newLen;
       return () => clearTimeout(t);
     }
-    prevHistoryLengthRef.current = newLen;
-  }, [history]);
+    prevVersionCountRef.current = newLen;
+  }, [versions]);
 
-  const selectedHistoryId = selectedId !== CURRENT_DRAFT_ID ? selectedId : "";
+  const selectedVersionId = selectedId !== CURRENT_DRAFT_ID ? selectedId : "";
   const {
     data: selectedEntryFull,
     isLoading: isLoadingEntry,
     isError: isEntryError,
-  } = useGetFlowHistoryEntry(
-    { flowId, historyId: selectedHistoryId },
-    { enabled: !!selectedHistoryId, gcTime: 0, staleTime: 0 },
+  } = useGetFlowVersionEntry(
+    { flowId, versionId: selectedVersionId },
+    { enabled: !!selectedVersionId, gcTime: 0, staleTime: 0 },
   );
 
   useEffect(() => {
@@ -280,14 +280,14 @@ export function useFlowVersionSidebar(flowId: string) {
   const handleDelete = useCallback(
     (entry: FlowVersionEntry) => {
       setDeleteDialogEntry(null);
-      const entries = history ?? [];
+      const entries = versions ?? [];
       const currentIndex = entries.findIndex((e) => e.id === entry.id);
       const nextEntry =
         currentIndex > 0
           ? entries[currentIndex - 1]
           : entries[currentIndex + 1];
       deleteEntry(
-        { flowId, historyId: entry.id },
+        { flowId, versionId: entry.id },
         {
           onSuccess: () => {
             setSuccessData({ title: "Version deleted" });
@@ -313,7 +313,7 @@ export function useFlowVersionSidebar(flowId: string) {
     },
     [
       flowId,
-      history,
+      versions,
       deleteEntry,
       setSuccessData,
       setErrorData,
@@ -328,7 +328,7 @@ export function useFlowVersionSidebar(flowId: string) {
     animatingId,
     deleteDialogEntry,
     setDeleteDialogEntry,
-    history,
+    versions,
     maxEntries,
     isLoading,
     isListError,

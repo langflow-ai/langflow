@@ -31,7 +31,7 @@ export default function VersionListItem({
     <SidebarMenuItem
       className={cn(
         "group/histitem relative flex items-center border-b border-border",
-        isAnimating ? "history-item-drop-in" : "",
+        isAnimating ? "version-item-drop-in" : "",
       )}
     >
       <SidebarMenuButton

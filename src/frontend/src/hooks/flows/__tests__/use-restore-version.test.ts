@@ -79,9 +79,9 @@ describe("useRestoreVersion", () => {
       { params: { save_draft: true } },
     );
 
-    // Should invalidate history queries
+    // Should invalidate version queries
     expect(invalidateQueriesMock).toHaveBeenCalledWith({
-      queryKey: ["useGetFlowHistory"],
+      queryKey: ["useGetFlowVersions"],
     });
 
     // Should apply the flow to canvas (without ?? [] fallback — uses real data)

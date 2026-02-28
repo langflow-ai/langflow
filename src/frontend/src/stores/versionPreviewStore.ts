@@ -5,9 +5,9 @@ interface VersionPreviewState {
   previewNodes: AllNodeType[] | null;
   previewEdges: EdgeType[] | null;
   previewLabel: string | null;
-  /** The history entry ID currently being previewed, or null for current draft. */
+  /** The version entry ID currently being previewed, or null for current draft. */
   previewId: string | null;
-  /** True while the sidebar is fetching a history entry to display. */
+  /** True while the sidebar is fetching a version entry to display. */
   isPreviewLoading: boolean;
   /** True after a version was activated via the restore hook. The sidebar
    *  unmount cleanup reads this to avoid overwriting the restored flow. */

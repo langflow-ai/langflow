@@ -19,7 +19,7 @@ export default function FlowVersionSidebarContent({
     deleteDialogEntry,
     setDeleteDialogEntry,
     animatingId,
-    history,
+    versions,
     maxEntries,
     isLoading,
     isListError,
@@ -37,9 +37,9 @@ export default function FlowVersionSidebarContent({
       <div className="flex h-full flex-col">
         <SidebarGroupLabel className="flex items-center justify-between px-3 pt-3">
           <span>Version History</span>
-          {history && history.length > 0 && (
+          {versions && versions.length > 0 && (
             <span className="font-normal text-foreground/50">
-              {history.length}
+              {versions.length}
               {maxEntries ? ` / ${maxEntries}` : ""}
             </span>
           )}
@@ -98,13 +98,13 @@ export default function FlowVersionSidebarContent({
             )}
             {!isLoading &&
               !isListError &&
-              (!history || history.length === 0) && (
+              (!versions || versions.length === 0) && (
                 <div className="px-2 py-6 text-center text-xs text-muted-foreground">
                   No saved versions yet
                 </div>
               )}
 
-            {history?.map((entry) => (
+            {versions?.map((entry) => (
               <VersionListItem
                 key={entry.id}
                 entry={entry}

@@ -14,7 +14,7 @@ export default function VersionPreviewOverlay() {
   if (previewLabel === null) return null;
 
   return (
-    <div className="history-preview-overlay pointer-events-none absolute inset-0 z-50">
+    <div className="version-preview-overlay pointer-events-none absolute inset-0 z-50">
       <CanvasBadge>
         <span className="h-2 w-2 shrink-0 rounded-lg bg-[#6366F1]" />
         <span className="text-sm">
@@ -46,7 +46,7 @@ export default function VersionPreviewOverlay() {
       {previewId && previewLabel && previewLabel !== "Current Draft" && (
         <RestoreVersionButton
           flowId={currentFlowId}
-          historyId={previewId}
+          versionId={previewId}
           versionTag={previewLabel}
         />
       )}

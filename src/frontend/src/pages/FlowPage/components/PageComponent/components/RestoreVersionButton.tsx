@@ -8,13 +8,13 @@ import CanvasBanner, { CanvasBannerButton } from "./CanvasBanner";
 
 interface RestoreVersionButtonProps {
   flowId: string;
-  historyId: string;
+  versionId: string;
   versionTag: string;
 }
 
 export default function RestoreVersionButton({
   flowId,
-  historyId,
+  versionId,
   versionTag,
 }: RestoreVersionButtonProps) {
   const { restore, isRestoring } = useRestoreVersion(flowId);
@@ -24,7 +24,7 @@ export default function RestoreVersionButton({
 
   const handleRestore = async () => {
     setShowConfirm(false);
-    await restore(historyId, {
+    await restore(versionId, {
       onSuccess: () => {
         // Switch sidebar away from "versions" to trigger the version sidebar's
         // unmount cleanup, which re-enables auto-save and restores the

@@ -32,7 +32,7 @@ export const usePostCreateSnapshot: useMutationFunctionType<
       ...options,
       onSettled: (_, __, variables) => {
         queryClient.refetchQueries({
-          queryKey: ["useGetFlowHistory", { flowId: variables?.flowId }],
+          queryKey: ["useGetFlowVersions", { flowId: variables?.flowId }],
         });
       },
     });

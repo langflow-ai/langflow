@@ -19,7 +19,7 @@ jest.mock("@/utils/reactflowUtils", () => ({
   removeApiKeys: (flow: any) => removeApiKeysMock(flow),
 }));
 
-// API mock — used by handleExportEntry to fetch the full history entry
+// API mock — used by handleExportEntry to fetch the full version entry
 const apiGetMock = jest.fn();
 jest.mock("@/controllers/API/api", () => ({
   api: { get: (...args: any[]) => apiGetMock(...args), post: jest.fn() },
@@ -28,8 +28,8 @@ jest.mock("@/controllers/API/helpers/constants", () => ({
   getURL: () => "/api/v1/flows",
 }));
 
-// Query-hook mocks — returns the FlowHistoryListResponse wrapper shape
-const mockHistory = [
+// Query-hook mocks — returns the FlowVersionListResponse wrapper shape
+const mockVersions = [
   {
     id: "entry-1",
     flow_id: "flow-1",
@@ -42,17 +42,17 @@ const mockHistory = [
 ];
 
 jest.mock("@/controllers/API/queries/flow-version", () => ({
-  useGetFlowHistory: () => ({
-    data: { entries: mockHistory, max_entries: 50 },
+  useGetFlowVersions: () => ({
+    data: { entries: mockVersions, max_entries: 50 },
     isLoading: false,
     isError: false,
   }),
-  useGetFlowHistoryEntry: () => ({
+  useGetFlowVersionEntry: () => ({
     data: null,
     isLoading: false,
     isError: false,
   }),
-  useDeleteHistoryEntry: () => ({ mutate: jest.fn(), isPending: false }),
+  useDeleteVersionEntry: () => ({ mutate: jest.fn(), isPending: false }),
 }));
 
 jest.mock("@/hooks/flows/use-apply-flow-to-canvas", () => ({
@@ -190,24 +190,24 @@ describe("FlowVersionSidebarContent export", () => {
     jest.clearAllMocks();
   });
 
-  it("exports a history entry using removeApiKeys + downloadFlow", async () => {
+  it("exports a version entry using removeApiKeys + downloadFlow", async () => {
     const user = userEvent.setup();
-    const historyData = {
-      nodes: [{ id: "hist-node", data: { node: { template: {} } } }],
+    const versionData = {
+      nodes: [{ id: "version-node", data: { node: { template: {} } } }],
       edges: [],
     };
 
     apiGetMock.mockResolvedValueOnce({
       data: {
-        ...mockHistory[0],
-        data: historyData,
+        ...mockVersions[0],
+        data: versionData,
         version_tag: "v1",
       },
     });
 
     render(<FlowVersionSidebarContent flowId="flow-1" />);
 
-    // Find the Export menu items — there's one for each history entry
+    // Find the Export menu items — there's one for each version entry
     const exportItems = screen.getAllByRole("menuitem", { name: /Export/i });
     expect(exportItems.length).toBeGreaterThan(0);
 
@@ -223,7 +223,7 @@ describe("FlowVersionSidebarContent export", () => {
       expect(removeApiKeysMock).toHaveBeenCalledWith(
         expect.objectContaining({
           id: "flow-1",
-          data: historyData,
+          data: versionData,
           name: "Test Flow_v1",
           description: "A test flow",
           is_component: false,
@@ -233,22 +233,22 @@ describe("FlowVersionSidebarContent export", () => {
 
     await waitFor(() => {
       expect(downloadFlowMock).toHaveBeenCalledWith(
-        expect.objectContaining({ data: historyData }),
+        expect.objectContaining({ data: versionData }),
         "Test Flow_v1",
         expect.any(String),
       );
     });
   });
 
-  it("exports a history entry with the correct flow name and description", async () => {
+  it("exports a version entry with the correct flow name and description", async () => {
     const user = userEvent.setup();
-    const historyData = {
+    const versionData = {
       nodes: [{ id: "v1-node" }],
       edges: [],
     };
 
     apiGetMock.mockResolvedValueOnce({
-      data: { ...mockHistory[0], data: historyData, version_tag: "v1" },
+      data: { ...mockVersions[0], data: versionData, version_tag: "v1" },
     });
 
     render(<FlowVersionSidebarContent flowId="flow-1" />);
