@@ -115,7 +115,7 @@ export function useFlowVersionSidebar(flowId: string) {
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : String(err);
-      console.error("Failed to process historical flow data for preview:", err);
+      console.error("Failed to process version flow data for preview:", err);
       return { nodes: [], edges: [], error: true, errorMessage };
     }
   }, [selectedId, selectedEntryFull?.data]);
