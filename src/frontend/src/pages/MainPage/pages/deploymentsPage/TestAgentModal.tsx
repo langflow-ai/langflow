@@ -74,9 +74,7 @@ export const TestAgentModal = ({
   const activePollTokenRef = useRef(0);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const copiedToolDetailTimerRef = useRef<number | null>(null);
-  const createExecutionMutation = usePostCreateDeploymentExecution({
-    providerId,
-  });
+  const createExecutionMutation = usePostCreateDeploymentExecution();
   const getExecutionStatusMutation = useGetDeploymentExecutionById({
     providerId,
   });
@@ -606,6 +604,7 @@ export const TestAgentModal = ({
 
     try {
       const initialResponse = await createExecutionMutation.mutateAsync({
+        provider_id: providerId,
         deployment_id: deploymentId,
         deployment_type: deploymentType,
         input: prompt,

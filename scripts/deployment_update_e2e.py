@@ -149,7 +149,7 @@ class DeploymentUpdateE2E:
         try:
             response = await self._request(
                 "GET",
-                "/api/v1/deployments/providers/?page=1&page_size=100",
+                "/api/v1/deployments/providers/?page=1&size=100",
             )
         except httpx.HTTPError as exc:
             print(f"[warning] provider lookup failed; will attempt provider create: {exc}")
@@ -193,8 +193,11 @@ class DeploymentUpdateE2E:
 
         config_resp_a = await self._request(
             "POST",
-            f"/api/v1/deployments/configs?provider_id={provider_id}",
-            json_body=self._build_config_payload(label="cfg-ref-a"),
+            "/api/v1/deployments/configs",
+            json_body={
+                "provider_id": provider_id,
+                **self._build_config_payload(label="cfg-ref-a"),
+            },
         )
         self._expect_status(config_resp_a, {HTTP_CREATED}, "create reference config A")
         self.reference_config_id = str(config_resp_a.json()["id"])
@@ -202,8 +205,11 @@ class DeploymentUpdateE2E:
 
         config_resp_b = await self._request(
             "POST",
-            f"/api/v1/deployments/configs?provider_id={provider_id}",
-            json_body=self._build_config_payload(label="cfg-ref-b"),
+            "/api/v1/deployments/configs",
+            json_body={
+                "provider_id": provider_id,
+                **self._build_config_payload(label="cfg-ref-b"),
+            },
         )
         self._expect_status(config_resp_b, {HTTP_CREATED}, "create reference config B")
         self.alternate_config_id = str(config_resp_b.json()["id"])
@@ -232,6 +238,7 @@ class DeploymentUpdateE2E:
         self._require_reference_ids()
         deployment_name = self._mk_name("dep-update-ref")
         payload = {
+            "provider_id": self.provider_id,
             "spec": {
                 "name": deployment_name,
                 "description": "reference deployment for update e2e scenarios",
@@ -247,7 +254,7 @@ class DeploymentUpdateE2E:
         }
         response = await self._request(
             "POST",
-            f"/api/v1/deployments?provider_id={self.provider_id}",
+            "/api/v1/deployments",
             json_body=payload,
         )
         self._expect_status(response, {HTTP_CREATED}, "create reference deployment")
@@ -264,10 +271,8 @@ class DeploymentUpdateE2E:
             msg = "Reference deployment name has not been set."
             raise RuntimeError(msg)
 
-        provider_id = self.provider_id
         deployment_id = self.reference_deployment_id
         missing_deployment_id = "00000000-0000-0000-0000-000000000000"
-        missing_provider_id = "11111111-1111-1111-1111-111111111111"
         out_of_scope_checkpoint_id = self.out_of_scope_checkpoint_id
         if out_of_scope_checkpoint_id is None:
             msg = "Out-of-scope checkpoint setup is missing."
@@ -278,49 +283,42 @@ class DeploymentUpdateE2E:
                 "name": "update_spec_name_only",
                 "expected": {HTTP_OK},
                 "deployment_id": deployment_id,
-                "provider_id": provider_id,
                 "payload": {"spec": {"name": self._mk_name("dep-renamed")}},
             },
             {
                 "name": "update_spec_description_only",
                 "expected": {HTTP_OK},
                 "deployment_id": deployment_id,
-                "provider_id": provider_id,
                 "payload": {"spec": {"description": "updated description"}},
             },
             {
                 "name": "update_history_add",
                 "expected": {HTTP_OK},
                 "deployment_id": deployment_id,
-                "provider_id": provider_id,
                 "payload": {"history": {"add": [self.alternate_checkpoint_id]}},
             },
             {
                 "name": "update_history_add_from_other_project_rejected",
                 "expected": {HTTP_NOT_FOUND},
                 "deployment_id": deployment_id,
-                "provider_id": provider_id,
                 "payload": {"history": {"add": [out_of_scope_checkpoint_id]}},
             },
             {
                 "name": "update_history_add_mixed_project_reference_ids_rejected",
                 "expected": {HTTP_NOT_FOUND},
                 "deployment_id": deployment_id,
-                "provider_id": provider_id,
                 "payload": {"history": {"add": [self.alternate_checkpoint_id, out_of_scope_checkpoint_id]}},
             },
             {
                 "name": "update_history_remove",
                 "expected": {HTTP_OK},
                 "deployment_id": deployment_id,
-                "provider_id": provider_id,
                 "payload": {"history": {"remove": [self.alternate_checkpoint_id]}},
             },
             {
                 "name": "update_history_add_remove_disjoint",
                 "expected": {HTTP_OK},
                 "deployment_id": deployment_id,
-                "provider_id": provider_id,
                 "payload": {
                     "history": {
                         "add": [self.alternate_checkpoint_id],
@@ -332,7 +330,6 @@ class DeploymentUpdateE2E:
                 "name": "update_history_add_remove_overlap",
                 "expected": {HTTP_UNPROCESSABLE_CONTENT},
                 "deployment_id": deployment_id,
-                "provider_id": provider_id,
                 "payload": {
                     "history": {
                         "add": [self.reference_checkpoint_id],
@@ -344,7 +341,6 @@ class DeploymentUpdateE2E:
                 "name": "update_history_duplicate_ids",
                 "expected": {HTTP_OK},
                 "deployment_id": deployment_id,
-                "provider_id": provider_id,
                 "payload": {
                     "history": {
                         "add": [self.reference_checkpoint_id, self.reference_checkpoint_id],
@@ -355,49 +351,42 @@ class DeploymentUpdateE2E:
                 "name": "update_config_set_new_reference",
                 "expected": {HTTP_CONFLICT},
                 "deployment_id": deployment_id,
-                "provider_id": provider_id,
                 "payload": {"config": {"config_id": self.alternate_config_id}},
             },
             {
                 "name": "update_config_unbind",
                 "expected": {HTTP_CONFLICT},
                 "deployment_id": deployment_id,
-                "provider_id": provider_id,
                 "payload": {"config": {"config_id": None}},
             },
             {
                 "name": "update_config_bind_current_reference_again",
                 "expected": {HTTP_CONFLICT},
                 "deployment_id": deployment_id,
-                "provider_id": provider_id,
                 "payload": {"config": {"config_id": self.alternate_config_id}},
             },
             {
                 "name": "update_config_unknown_reference",
                 "expected": {HTTP_CONFLICT},
                 "deployment_id": deployment_id,
-                "provider_id": provider_id,
                 "payload": {"config": {"config_id": missing_deployment_id}},
             },
             {
                 "name": "update_empty_payload",
                 "expected": {HTTP_OK},
                 "deployment_id": deployment_id,
-                "provider_id": provider_id,
                 "payload": {},
             },
             {
                 "name": "update_config_object_without_config_id",
                 "expected": {HTTP_OK},
                 "deployment_id": deployment_id,
-                "provider_id": provider_id,
                 "payload": {"config": {}},
             },
             {
                 "name": "update_combined_spec_history_config",
                 "expected": {HTTP_CONFLICT},
                 "deployment_id": deployment_id,
-                "provider_id": provider_id,
                 "payload": {
                     "spec": {
                         "name": self._mk_name("dep-combined"),
@@ -408,45 +397,21 @@ class DeploymentUpdateE2E:
                 },
             },
             {
-                "name": "update_missing_provider_query_param",
-                "expected": {HTTP_UNPROCESSABLE_CONTENT},
-                "deployment_id": deployment_id,
-                "provider_id": None,
-                "payload": {"spec": {"name": self._mk_name("dep-no-provider")}},
-            },
-            {
-                "name": "update_invalid_provider_query_format",
-                "expected": {HTTP_UNPROCESSABLE_CONTENT},
-                "deployment_id": deployment_id,
-                "provider_id": "not-a-uuid",
-                "payload": {"spec": {"name": self._mk_name("dep-invalid-provider-format")}},
-            },
-            {
-                "name": "update_unknown_provider_query_value",
-                "expected": {HTTP_NOT_FOUND},
-                "deployment_id": deployment_id,
-                "provider_id": missing_provider_id,
-                "payload": {"spec": {"name": self._mk_name("dep-missing-provider")}},
-            },
-            {
                 "name": "update_unknown_deployment_id",
                 "expected": {HTTP_NOT_FOUND},
                 "deployment_id": missing_deployment_id,
-                "provider_id": provider_id,
                 "payload": {"spec": {"name": self._mk_name("dep-missing")}},
             },
             {
                 "name": "update_invalid_body_shape",
                 "expected": {HTTP_UNPROCESSABLE_CONTENT},
                 "deployment_id": deployment_id,
-                "provider_id": provider_id,
                 "payload": {"history": {"add": "not-a-list"}},
             },
             {
                 "name": "update_history_invalid_id_value",
                 "expected": {HTTP_UNPROCESSABLE_CONTENT},
                 "deployment_id": deployment_id,
-                "provider_id": provider_id,
                 "payload": {"history": {"add": ["   "]}},
             },
         ]
@@ -455,10 +420,6 @@ class DeploymentUpdateE2E:
         for index, scenario in enumerate(scenarios, start=1):
             print(f"[{index}/{len(scenarios)}] Running {scenario['name']} ...")
             path = f"/api/v1/deployments/{scenario['deployment_id']}"
-            scenario_provider_id = scenario["provider_id"]
-            if scenario_provider_id is not None:
-                path = f"{path}?provider_id={scenario_provider_id}"
-
             response = await self._request("PATCH", path, json_body=scenario["payload"])
             status_code = response.status_code
             ok = status_code in scenario["expected"]
@@ -614,7 +575,7 @@ class DeploymentUpdateE2E:
         if provider_id:
             for deployment_id in sorted(self.created_deployment_ids):
                 await self._best_effort_delete(
-                    path=f"/api/v1/deployments/{deployment_id}?provider_id={provider_id}",
+                    path=f"/api/v1/deployments/{deployment_id}",
                     resource_type="DEPLOYMENT",
                     resource_id=deployment_id,
                 )

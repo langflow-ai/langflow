@@ -60,7 +60,7 @@ from lfx.services.deployment.schema import (
     DeploymentExecutionStatus,
     DeploymentItem,
     DeploymentList,
-    DeploymentListFilterOptions,
+    DeploymentListParams,
     DeploymentRedeploymentResult,
     DeploymentStatusResult,
     DeploymentType,
@@ -84,7 +84,7 @@ from lfx.utils.flow_requirements import generate_requirements_from_flow
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.deployment_provider_account.crud import (
-    get_provider_account_by_id_for_user,
+    get_provider_account_by_id,
 )
 from langflow.services.deps import get_variable_service
 from langflow.utils.version import get_version_info
@@ -194,6 +194,11 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 deployment_name=deployment_spec.name,
                 config=deployment.config,
             )
+            created_config_id = (
+                app_id
+                if deployment.config is not None and deployment.config.raw_payload is not None
+                else None
+            )
 
             tool_ids: list[str] = []
             created_snapshot_ids: list[str] = []
@@ -229,44 +234,40 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 )
                 raise InvalidDeploymentTypeError(message=msg)
 
-        # except (ClientAPIException, HTTPException) as exc:
-        #     if isinstance(exc, ClientAPIException):
-        #         status_code = exc.response.status_code
-        #         error_detail = self._extract_error_detail(exc.response.text)
-        #     else:
-        #         status_code = exc.status_code
-        #         error_detail = self._extract_error_detail(str(exc.detail))
-        #     if status_code == status.HTTP_409_CONFLICT:
-        #         msg = (
-        #             f"{ErrorPrefix.CREATE.value}. "
-        #             "One or more resources already exist. "
-        #             "Please ensure the names and/or ids of the "
-        #             "following resources to be unique: "
-        #             "(1) The deployment specification, "
-        #             "(2) The deployment configuration, "
-        #             "(3) The deployment snapshot. "
-        #             f"error details: {error_detail}"
-        #         )
-        #         raise DeploymentConflictError(message=msg) from None
-        #     if status_code == status.HTTP_422_UNPROCESSABLE_CONTENT:
-        #         msg = (
-        #             f"{ErrorPrefix.CREATE.value}. "
-        #             "The deployment request entity is unprocessable. "
-        #             "Please ensure the request entity is valid and complete. "
-        #             f"error details: {error_detail}"
-        #         )
-        #         raise InvalidContentError(message=msg) from None
-        #     msg = (
-        #         f"{ErrorPrefix.CREATE.value}. "
-        #         "An unexpected error occurred while "
-        #         "creating a deployment in Watsonx Orchestrate. "
-        #         f"error details: {error_detail}"
-        #     )
-        #     raise DeploymentError(message=msg) from None
-        # except InvalidDeploymentTypeError:
-        #     raise
-        # except DeploymentError:
-        #     raise
+        except (ClientAPIException, HTTPException) as exc:
+            if isinstance(exc, ClientAPIException):
+                status_code = exc.response.status_code
+                error_detail = self._extract_error_detail(exc.response.text)
+            else:
+                status_code = exc.status_code
+                error_detail = self._extract_error_detail(str(exc.detail))
+            if status_code == status.HTTP_409_CONFLICT:
+                msg = (
+                    f"{ErrorPrefix.CREATE.value}. "
+                    "One or more resources already exist. "
+                    "Please ensure the names and/or ids of the "
+                    "following resources to be unique: "
+                    "(1) The deployment specification, "
+                    "(2) The deployment configuration, "
+                    "(3) The deployment snapshot. "
+                    f"error details: {error_detail}"
+                )
+                raise DeploymentConflictError(message=msg) from None
+            if status_code == status.HTTP_422_UNPROCESSABLE_CONTENT:
+                msg = (
+                    f"{ErrorPrefix.CREATE.value}. "
+                    "The deployment request entity is unprocessable. "
+                    "Please ensure the request entity is valid and complete. "
+                    f"error details: {error_detail}"
+                )
+                raise InvalidContentError(message=msg) from None
+            msg = (
+                f"{ErrorPrefix.CREATE.value}. "
+                "An unexpected error occurred while "
+                "creating a deployment in Watsonx Orchestrate. "
+                f"error details: {error_detail}"
+            )
+            raise DeploymentError(message=msg) from None
         except (
             DeploymentConflictError,
             DeploymentError,
@@ -286,12 +287,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         return DeploymentCreateResult(
             id=deployment_response.id,
-            provider_result={
-                "created_config_id": app_id,
-                "created_snapshot_ids": created_snapshot_ids,
-                "bound_config_id": app_id,
-                "bound_snapshot_ids": tool_ids,
-            },
+            config_id=created_config_id,
+            snapshot_ids=created_snapshot_ids,
             **deployment_spec.model_dump(exclude_unset=True),
         )
 
@@ -308,104 +305,34 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         self,
         *,
         user_id: UUID | str,
-        deployment_type: DeploymentType | None = None,  # TODO: remove this argument
         db: Any,
-        filter_options: DeploymentListFilterOptions | None = None,
+        params: DeploymentListParams | None = None,
     ) -> DeploymentList:
         """List deployments from Watsonx Orchestrate."""
         client_manager = await self._get_provider_clients(user_id=user_id, db=db)
         try:
-            # Shape source:
-            # - SDK: AgentClient.get() proxies GET /agents?include_hidden=true.
-            # - API: list endpoint returns list of agent objects.
             deployments: list[DeploymentItem] = []
-
-            if deployment_type in {DeploymentType.AGENT, None}:
-                provider_filter = (filter_options.provider_filter or {}) if filter_options else {}
-                ids = provider_filter.get("ids")
-                names = provider_filter.get("names")
-                normalized_ids = [str(item) for item in ids if str(item).strip()] if isinstance(ids, list) else []
-                normalized_names = [str(item) for item in names if str(item).strip()] if isinstance(names, list) else []
-                if normalized_ids and normalized_names:
-                    by_ids = client_manager.agent.get_drafts_by_ids(normalized_ids)
-                    by_names = client_manager.agent.get_drafts_by_names(normalized_names)
-                    seen_agent_ids: set[str] = set()
-                    data = []
-                    for agent in [*by_ids, *by_names]:
-                        agent_id = str(agent.get("id") or "").strip()
-                        if not agent_id or agent_id in seen_agent_ids:
-                            continue
-                        seen_agent_ids.add(agent_id)
-                        data.append(agent)
-                elif normalized_ids:
-                    data = client_manager.agent.get_drafts_by_ids(normalized_ids)
-                elif normalized_names:
-                    data = client_manager.agent.get_drafts_by_names(normalized_names)
-                else:
-                    data = client_manager.agent.get()
-                # if not filter_options:
-                deployments = [
-                    self._get_deployment_metadata(
-                        data=agent,
-                        deployment_type=DeploymentType.AGENT,
-                        provider_data={
-                            "snapshot_ids": self._extract_agent_tool_ids(agent),
-                            "mode": self._derive_agent_mode(agent),
-                        },
-                    )
-                    for agent in data
-                ]
-                # return DeploymentList(
-                #     deployments=deployments,
-                #     deployment_type=deployment_type,
-                # )
-
-                # by_flow_id = getattr(filter_options, "flow_id", None)
-                # by_project_id = getattr(filter_options, "project_id", None)
-                # normalized_flow_id = str(by_flow_id).strip() if by_flow_id else None
-                # normalized_project_id = str(by_project_id).strip() if by_project_id else None
-
-                # # Build the candidate tool-id set from a single tools list call.
-                # tools = client_manager.tool.get()
-                # matching_tool_ids = {
-                #     str(tool.get("id", "")).strip()
-                #     for tool in tools
-                #     if isinstance(tool.get("binding"), dict)
-                #     and isinstance(tool.get("binding", {}).get("langflow"), dict)
-                #     and (
-                #         not normalized_flow_id
-                #         or str(tool.get("binding", {}).get("langflow", {}).get("langflow_id") or "").strip()
-                #         == normalized_flow_id
-                #     )
-                #     and (
-                #         not normalized_project_id
-                #         or str(tool.get("binding", {}).get("langflow", {}).get("project_id") or "").strip()
-                #         == normalized_project_id
-                #     )
-                #     and str(tool.get("id", "")).strip()
-                # }
-                # # print(f"tool_metadata: {sorted(matching_tool_ids)}")
-
-                # # Keep agents that reference at least one matching tool id.
-                # for agent in data:
-                #     # print(f"resolving agent {agent.get('name')}")
-                #     agent_tool_ids = set(self._extract_agent_tool_ids(agent))
-                #     # print(f"agent_tool_ids: {sorted(agent_tool_ids)}")
-                #     if not agent_tool_ids.intersection(matching_tool_ids):
-                #         continue
-                #     deployments.append(
-                #         self._get_deployment_metadata(
-                #             data=agent,
-                #             deployment_type=DeploymentType.AGENT,
-                #             provider_data={
-                #                 "snapshot_ids": self._extract_agent_tool_ids(agent),
-                #                 "mode": self._derive_agent_mode(agent),
-                #             },
-                #         )
-                #     )
-            else:
-                msg = f"{ErrorPrefix.LIST.value}watsonx Orchestrate has no such deployment type '{deployment_type}'."
+            deployment_types = params.deployment_types or [] if params else []
+            unsupported_types = [dtype for dtype in deployment_types if dtype is not DeploymentType.AGENT]
+            if unsupported_types:
+                invalid_values = ", ".join(dtype.value for dtype in unsupported_types)
+                msg = f"{ErrorPrefix.LIST.value}watsonx Orchestrate has no such deployment type(s): '{invalid_values}'."
                 raise InvalidDeploymentTypeError(message=msg)
+
+            deployments = [
+                self._get_deployment_metadata(
+                    data=agent,
+                    deployment_type=DeploymentType.AGENT,
+                    provider_data={
+                        "snapshot_ids": self._extract_agent_tool_ids(agent),
+                        "mode": self._derive_agent_mode(agent),
+                    },
+                )
+                for agent in client_manager.agent._get(  # noqa: SLF001
+                    "/agents",
+                    params=params.provider_params if params else None,
+                )
+            ]
         except (ClientAPIException, HTTPException) as exc:
             if isinstance(exc, ClientAPIException):
                 error_detail = self._extract_error_detail(getattr(exc.response, "text", ""))
@@ -427,7 +354,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         return DeploymentList(
             deployments=deployments,
-            deployment_type=deployment_type,
         )
 
     async def get_deployment(
@@ -1096,7 +1022,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     ) -> WxOCredentials:
         """Resolve Watsonx Orchestrate client credentials from deployment provider account."""
         try:
-            provider_account = await get_provider_account_by_id_for_user(
+            provider_account = await get_provider_account_by_id(
                 db,
                 provider_id=provider_id,
                 user_id=user_id,

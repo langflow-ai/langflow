@@ -156,7 +156,7 @@ class DeploymentCreateE2E:
         try:
             response = await self._request(
                 "GET",
-                "/api/v1/deployments/providers/?page=1&page_size=100",
+                "/api/v1/deployments/providers/?page=1&size=100",
             )
         except httpx.HTTPError as exc:
             print(f"[warning] provider lookup failed; will attempt provider create: {exc}")
@@ -198,13 +198,14 @@ class DeploymentCreateE2E:
         self._require_provider_id()
         config_name = self._mk_name("cfg-ref")
         payload = {
+            "provider_id": self.provider_id,
             "name": config_name,
             "description": "reference config for deployment create scenarios",
             "environment_variables": {},
         }
         response = await self._request(
             "POST",
-            f"/api/v1/deployments/configs?provider_id={self.provider_id}",
+            "/api/v1/deployments/configs",
             json_body=payload,
         )
         self._expect_status(response, {201}, "create reference config")
@@ -260,6 +261,7 @@ class DeploymentCreateE2E:
                 "name": "snapshot_create_single_raw_payload",
                 "expected": {HTTP_CREATED},
                 "payload": {
+                    "provider_id": provider_id,
                     "artifact_type": "flow",
                     "raw_payloads": [self._build_flow_payload(label="snapshot-single")],
                 },
@@ -268,6 +270,7 @@ class DeploymentCreateE2E:
                 "name": "snapshot_create_multiple_raw_payloads",
                 "expected": {HTTP_CREATED},
                 "payload": {
+                    "provider_id": provider_id,
                     "artifact_type": "flow",
                     "raw_payloads": [
                         self._build_flow_payload(label="snapshot-multi-a"),
@@ -282,7 +285,7 @@ class DeploymentCreateE2E:
             print(f"[snapshot {index}/{len(scenarios)}] Running {scenario['name']} ...")
             response = await self._request(
                 "POST",
-                f"/api/v1/deployments/snapshots?provider_id={provider_id}",
+                "/api/v1/deployments/snapshots",
                 json_body=scenario["payload"],
             )
             status_code = response.status_code
@@ -318,7 +321,6 @@ class DeploymentCreateE2E:
         reference_checkpoint_ids: list[str],
     ) -> list[ScenarioResult]:
         self._require_provider_id()
-        provider_id = self.provider_id
         reference_checkpoint_id = reference_checkpoint_ids[0]
         reference_checkpoint_id_2 = reference_checkpoint_ids[1]
         out_of_scope_checkpoint_id = self.out_of_scope_checkpoint_id
@@ -476,7 +478,7 @@ class DeploymentCreateE2E:
             print(f"[{index}/{len(scenarios)}] Running {scenario['name']} ...")
             response = await self._request(
                 "POST",
-                f"/api/v1/deployments?provider_id={provider_id}",
+                "/api/v1/deployments",
                 json_body=scenario["payload"],
             )
 
@@ -489,18 +491,18 @@ class DeploymentCreateE2E:
                     deployment_id = str(response_payload["id"])
                     self.created_deployment_ids.add(deployment_id)
 
-                    provider_result = response_payload.get("provider_result") or {}
-                    created_config_id = provider_result.get("created_config_id")
+                    created_config_id = response_payload.get("config_id")
                     if created_config_id:
                         self.created_config_ids.add(str(created_config_id))
 
-                    for snapshot_id in provider_result.get("created_snapshot_ids") or []:
+                    snapshot_ids = response_payload.get("snapshot_ids") or []
+                    for snapshot_id in snapshot_ids:
                         self.created_snapshot_ids.add(str(snapshot_id))
 
                     print(
                         f"[{scenario['name']}] tracked deployment_id={deployment_id}, "
                         f"created_config_id={created_config_id}, "
-                        f"created_snapshot_ids={provider_result.get('created_snapshot_ids') or []}"
+                        f"created_snapshot_ids={snapshot_ids}"
                     )
                 except Exception as exc:  # noqa: BLE001
                     print(f"[warning] created deployment missing id: {exc}")
@@ -526,6 +528,7 @@ class DeploymentCreateE2E:
         project_id: str | None = None,
     ) -> dict[str, Any]:
         payload: dict[str, Any] = {
+            "provider_id": self.provider_id,
             "spec": {
                 "name": self._mk_name(f"dep-{deployment_type}"),
                 "description": "e2e deployment create scenario",
@@ -644,7 +647,7 @@ class DeploymentCreateE2E:
         if provider_id:
             for deployment_id in sorted(self.created_deployment_ids):
                 await self._best_effort_delete(
-                    path=f"/api/v1/deployments/{deployment_id}?provider_id={provider_id}",
+                    path=f"/api/v1/deployments/{deployment_id}",
                     resource_type="DEPLOYMENT",
                     resource_id=deployment_id,
                 )

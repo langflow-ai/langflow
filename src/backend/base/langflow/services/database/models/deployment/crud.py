@@ -51,6 +51,28 @@ async def get_deployment_row_by_resource_key(
     return (await db.exec(stmt)).first()
 
 
+async def get_deployment_row(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment_id: str,
+) -> Deployment | None:
+    normalized_deployment_id = deployment_id.strip()
+    if not normalized_deployment_id:
+        return None
+
+    try:
+        deployment_uuid = UUID(normalized_deployment_id)
+    except ValueError:
+        return None
+
+    by_id_stmt = select(Deployment).where(
+        Deployment.user_id == user_id,
+        Deployment.id == deployment_uuid,
+    )
+    return (await db.exec(by_id_stmt)).first()
+
+
 async def list_deployment_rows_page(
     db: AsyncSession,
     *,
@@ -118,9 +140,13 @@ async def delete_deployment_row_by_resource_key(
 async def delete_deployment_row_by_id(
     db: AsyncSession,
     *,
+    user_id: UUID,
     deployment_id: UUID | str,
 ) -> int:
     deployment_uuid = UUID(deployment_id) if isinstance(deployment_id, str) else deployment_id
-    stmt = delete(Deployment).where(Deployment.id == deployment_uuid)
+    stmt = delete(Deployment).where(
+        Deployment.user_id == user_id,
+        Deployment.id == deployment_uuid,
+    )
     result = await db.exec(stmt)
     return int(result.rowcount or 0)

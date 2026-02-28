@@ -31,7 +31,6 @@ async def test_deployment_provider_account_crud(client: AsyncClient, logged_in_h
     assert created["account_id"] == "tenant-1"
     assert created["provider_key"] == "watsonx-orchestrate"
     assert created["backend_url"] == "https://example.ibm.com"
-    assert created["has_api_key"] is True
     assert "api_key" not in created
 
     list_response = await client.get("api/v1/deployments/providers/", headers=logged_in_headers)
@@ -51,7 +50,7 @@ async def test_deployment_provider_account_crud(client: AsyncClient, logged_in_h
     assert update_response.status_code == status.HTTP_200_OK
     updated = update_response.json()
     assert updated["backend_url"] == "https://updated.example.ibm.com"
-    assert updated["has_api_key"] is True
+    assert "api_key" not in updated
 
     delete_response = await client.delete(f"api/v1/deployments/providers/{created['id']}", headers=logged_in_headers)
     assert delete_response.status_code == status.HTTP_204_NO_CONTENT

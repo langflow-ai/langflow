@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
 if TYPE_CHECKING:
@@ -14,6 +15,9 @@ if TYPE_CHECKING:
 
 class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
     __tablename__ = "deployment"
+    __table_args__ = (
+        UniqueConstraint("provider_account_id", "name", name="uq_deployment_name_in_provider"),
+    )
 
     id: UUID | None = Field(default_factory=uuid4, primary_key=True, description="Unique ID for the deployment")
     resource_key: str = Field(index=True, description="ID assigned by Langflow or the deployment provider")
@@ -24,7 +28,7 @@ class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
         index=True,
         description="Deployment provider account used by this deployment",
     )
-    name: str = Field(unique=True, index=True, description="User-defined deployment name")
+    name: str = Field(index=True, description="User-defined deployment name unique within a provider account")
     created_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),

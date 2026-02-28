@@ -86,13 +86,6 @@ export const ConfigureDeploymentProviderModal = ({
       return;
     }
 
-    if (!provider.has_api_key && !apiKey.trim()) {
-      setErrorData({
-        title: "API key is required to reconnect this provider.",
-      });
-      return;
-    }
-
     if (!hasChanges) {
       setErrorData({ title: "No changes to save." });
       return;
@@ -187,19 +180,12 @@ export const ConfigureDeploymentProviderModal = ({
 
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium">
-              API Key{" "}
-              {!provider?.has_api_key && (
-                <span className="text-destructive">*</span>
-              )}
+              API Key
             </label>
             <Input
               value={apiKey}
               onChange={(event) => setApiKey(event.target.value)}
-              placeholder={
-                provider?.has_api_key
-                  ? "Leave empty to keep existing API key"
-                  : "Paste provider API key"
-              }
+              placeholder="Leave empty to keep existing API key"
               type="password"
             />
           </div>

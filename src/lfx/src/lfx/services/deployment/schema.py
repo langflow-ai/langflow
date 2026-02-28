@@ -329,6 +329,14 @@ class DeploymentCreateResult(BaseDeploymentData):
     """Model representing a result for a deployment creation operation."""
 
     id: UUID | str = Field(description="The id of the created deployment")
+    config_id: UUID | str | None = Field(
+        default=None,
+        description="Config id produced or bound during deployment creation.",
+    )
+    snapshot_ids: list[UUID] | list[str] = Field(
+        default_factory=list,
+        description="Snapshot ids produced during deployment creation.",
+    )
     provider_result: dict | None = Field(
         None, description="The result of the deployment creation operation from the provider"
     )
@@ -360,46 +368,60 @@ class DeploymentDetailItem(DeploymentItem):
     description: str | None = Field(None, description="The description of the deployment")
 
 
-class DeploymentListPaginationOptions(BaseModel):
-    """Provider-agnostic pagination request options for deployment lists."""
-
-    page_number: int = Field(default=1, ge=1, description="1-based page number to request.")
-    page_size: int = Field(default=20, ge=1, description="Maximum number of items to request per page.")
 
 
 class DeploymentList(BaseModel):
     """Model representing a result for a deployment list operation."""
 
     deployments: list[DeploymentItem] = Field(description="The list of deployments")
-    deployment_type: DeploymentType | None = Field(None, description="The type of the deployment")
-    page: int = Field(default=1, ge=1, description="Current page number (1-based).")
-    page_size: int = Field(default=20, ge=1, description="Requested page size.")
-    total: int | None = Field(default=None, ge=0, description="Total known rows for the query.")
     provider_result: dict | None = Field(
         None, description="The result of the deployment list operation from the provider"
     )
 
 
-class DeploymentListFilterOptions(BaseModel):
-    """Filter options for deployment list operations."""
+class DeploymentListParams(BaseModel):
+    """Query params for deployment list operations."""
 
-    provider_filter: dict[str, Any] | None = Field(
+    provider_params: dict[str, Any] | None = Field(
         None,
-        description="Provider-specific list filter payload.",
+        description="Provider-specific query params payload.",
     )
-    deployment_type: DeploymentType | None = Field(None, description="The type of the deployment")
-    snapshot_id: UUID | str | None = Field(None, description="The id of the snapshot being used by the deployment")
-    config_id: UUID | str | None = Field(None, description="The id of the config being used by the deployment")
-    flow_id: UUID | str | None = Field(None, description="The id of the flow being used by the deployment")
-    project_id: UUID | str | None = Field(None, description="The id of the project associated with the deployment")
+    deployment_types: list[DeploymentType] | None = Field(
+        None,
+        description="Deployment types to include in the result set.",
+    )
+    deployment_ids: list[UUID | str] | None = Field(
+        None,
+        description="Deployment ids to include in the result set.",
+    )
+    snapshot_ids: list[UUID | str] | None = Field(
+        None,
+        description="Snapshot ids to include in the result set.",
+    )
+    config_ids: list[UUID | str] | None = Field(
+        None,
+        description="Config ids to include in the result set.",
+    )
 
-    @field_validator("snapshot_id", "config_id", "flow_id", "project_id")
+    @field_validator("deployment_types")
     @classmethod
-    def validate_filter_ids(cls, value: UUID | str | None, info) -> str | None:
+    def validate_deployment_types(cls, value: list[DeploymentType] | None) -> list[DeploymentType] | None:
         if value is None:
             return None
-        return _normalize_and_validate_id(str(value), field_name=info.field_name)
+        # Keep first occurrence order while removing duplicates.
+        return list(dict.fromkeys(value))
 
+    @field_validator("deployment_ids", "snapshot_ids", "config_ids")
+    @classmethod
+    def validate_filter_ids(cls, value: list[UUID | str] | None, info) -> list[str] | None:
+        if value is None:
+            return None
+        normalized_ids = _normalize_and_validate_id_list(
+            [str(item) for item in value],
+            field_name=info.field_name,
+        )
+        # Keep first occurrence order while removing duplicates.
+        return list(dict.fromkeys(normalized_ids))
 
 class SnapshotResult(BaseModel):
     """Model representing a result for a snapshot creation operation."""

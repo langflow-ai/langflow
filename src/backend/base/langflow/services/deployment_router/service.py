@@ -87,10 +87,10 @@ class DeploymentRouterService(BaseDeploymentRouterService):
         db: AsyncSession,
     ) -> str:
         from langflow.services.database.models.deployment_provider_account.crud import (
-            get_provider_account_by_id_for_user,
+            get_provider_account_by_id,
         )
 
-        provider_account = await get_provider_account_by_id_for_user(
+        provider_account = await get_provider_account_by_id(
             db,
             provider_id=provider_id,
             user_id=user_id,

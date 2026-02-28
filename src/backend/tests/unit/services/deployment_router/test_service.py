@@ -204,12 +204,12 @@ async def test_resolve_adapter_key_requires_owned_provider_account(monkeypatch):
     )
     service = DeploymentRouterService(DummySettingsService())
 
-    async def mock_get_provider_account_by_id_for_user(db, *, provider_id, user_id):  # noqa: ARG001
+    async def mock_get_provider_account_by_id(db, *, provider_id, user_id):  # noqa: ARG001
         return None
 
     monkeypatch.setattr(
-        "langflow.services.database.models.deployment_provider_account.crud.get_provider_account_by_id_for_user",
-        mock_get_provider_account_by_id_for_user,
+        "langflow.services.database.models.deployment_provider_account.crud.get_provider_account_by_id",
+        mock_get_provider_account_by_id,
     )
 
     with pytest.raises(DeploymentAccountNotFoundError, match="not found"):
@@ -224,12 +224,12 @@ async def test_resolve_adapter_key_returns_provider_key(monkeypatch):
     )
     service = DeploymentRouterService(DummySettingsService())
 
-    async def mock_get_provider_account_by_id_for_user(db, *, provider_id, user_id):  # noqa: ARG001
+    async def mock_get_provider_account_by_id(db, *, provider_id, user_id):  # noqa: ARG001
         return SimpleNamespace(provider_key="  watsonx-orchestrate  ")
 
     monkeypatch.setattr(
-        "langflow.services.database.models.deployment_provider_account.crud.get_provider_account_by_id_for_user",
-        mock_get_provider_account_by_id_for_user,
+        "langflow.services.database.models.deployment_provider_account.crud.get_provider_account_by_id",
+        mock_get_provider_account_by_id,
     )
 
     adapter_key = await service._resolve_adapter_key(provider_id=uuid4(), user_id=uuid4(), db=object())

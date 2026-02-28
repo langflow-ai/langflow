@@ -16,6 +16,10 @@ from lfx.services.deployment.exceptions import (
     InvalidDeploymentOperationError,
     InvalidDeploymentTypeError,
 )
+
+# TODO: Import these schemas as Adapter[Original Schema Name]
+# this will improve readability and the separation
+# between API schemas and deployment service schemas
 from lfx.services.deployment.schema import (
     ArtifactType,
     BaseConfigData,
@@ -34,7 +38,7 @@ from lfx.services.deployment.schema import (
     DeploymentExecutionResult,
     DeploymentExecutionStatus,
     DeploymentItem,
-    DeploymentListFilterOptions,
+    DeploymentListParams,
     DeploymentProviderId,
     DeploymentRedeploymentResult,
     DeploymentStatusResult,
@@ -49,6 +53,9 @@ from lfx.services.deployment.schema import (
 )
 from lfx.services.deployment.schema import (
     DeploymentCreate as AdapterDeploymentCreate,
+)
+from lfx.services.deployment.schema import (
+    DeploymentCreateResult as AdapterDeploymentCreateResult,
 )
 from lfx.services.deployment.schema import (
     DeploymentUpdate as AdapterDeploymentUpdate,
@@ -68,17 +75,27 @@ from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.database.models.deployment.crud import (
     count_deployment_rows,
     create_deployment_row,
+    delete_deployment_row_by_id,
     delete_deployment_row_by_resource_key,
+    get_deployment_row,
     get_deployment_row_by_resource_key,
     list_deployment_rows_page,
 )
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment_provider_account.crud import (
-    create_provider_account_for_user,
-    delete_provider_account_for_user,
-    get_provider_account_by_id_for_user,
-    list_provider_accounts_for_user,
-    update_provider_account_for_user,
+    create_provider_account as create_provider_account_row,
+)
+from langflow.services.database.models.deployment_provider_account.crud import (
+    delete_provider_account as delete_provider_account_row,
+)
+from langflow.services.database.models.deployment_provider_account.crud import (
+    get_provider_account_by_id as get_provider_account_row_by_id,
+)
+from langflow.services.database.models.deployment_provider_account.crud import (
+    list_provider_accounts as list_provider_account_rows,
+)
+from langflow.services.database.models.deployment_provider_account.crud import (
+    update_provider_account as update_provider_account_row,
 )
 from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 from langflow.services.database.models.flow.model import Flow
@@ -102,6 +119,11 @@ ProviderIdQuery = Annotated[
     DeploymentProviderId,
     Query(description="The registered deployment provider account id used for adapter routing."),
 ]
+
+# API provider-context contract matrix:
+# - Query provider_id: list/provider-capability/runtime-status GET endpoints.
+# - Body provider_id: POST create operations that cannot derive provider context.
+# - Derived provider_id: deployment-scoped endpoints using persisted deployment relationships.
 
 
 class DeploymentTypesResponse(BaseModel):
@@ -177,8 +199,6 @@ class DeploymentProviderAccountResponse(BaseModel):
     provider_key: str
     backend_url: str
     registered_at: datetime | None
-    updated_at: datetime | None
-    has_api_key: bool
 
 
 
@@ -338,13 +358,17 @@ class DeploymentCreateRequest(BaseModel):
     spec: BaseDeploymentData = Field(description="The base metadata of the deployment.")
     project_id: UUID | None = Field(
         default=None,
-        description="Project id to persist the deployment under. Defaults to user's Starter Project.",
+        description="Langflow Project id to persist the deployment under. Defaults to user's Starter Project.",
     )
     history: DeploymentHistoryItemsRequest | None = Field(
         default=None,
         description="Langflow history checkpoint references used to build provider snapshots.",
     )
     config: ConfigItem | None = Field(default=None, description="Deployment config binding/create payload.")
+
+
+class DeploymentCreateApiRequest(DeploymentCreateRequest):
+    provider_id: DeploymentProviderId = Field(description="Deployment provider account id for adapter routing.")
 
 
 class DeploymentUpdateRequest(BaseModel):
@@ -356,6 +380,18 @@ class DeploymentUpdateRequest(BaseModel):
     config: ConfigDeploymentBindingUpdate | None = Field(default=None, description="Deployment config binding patch.")
 
 
+class SnapshotItemsCreateApiRequest(SnapshotItemsCreate):
+    provider_id: DeploymentProviderId = Field(description="Deployment provider account id for adapter routing.")
+
+
+class BaseConfigDataApiRequest(BaseConfigData):
+    provider_id: DeploymentProviderId = Field(description="Deployment provider account id for adapter routing.")
+
+
+class DeploymentExecutionApiRequest(DeploymentExecution):
+    provider_id: DeploymentProviderId = Field(description="Deployment provider account id for adapter routing.")
+
+
 def _to_provider_account_response(provider_account: DeploymentProviderAccount) -> DeploymentProviderAccountResponse:
     return DeploymentProviderAccountResponse(
         id=provider_account.id,
@@ -363,8 +399,6 @@ def _to_provider_account_response(provider_account: DeploymentProviderAccount) -
         provider_key=provider_account.provider_key,
         backend_url=provider_account.backend_url,
         registered_at=provider_account.registered_at,
-        updated_at=provider_account.updated_at,
-        has_api_key=bool(provider_account.api_key),
     )
 
 
@@ -409,7 +443,7 @@ async def create_provider_account(
         backend_url=payload.backend_url,
         account_id=payload.account_id,
     )
-    provider_account = await create_provider_account_for_user(
+    provider_account = await create_provider_account_row(
         db,
         user_id=user.id,
         account_id=resolved_account_id,
@@ -426,7 +460,7 @@ async def list_provider_accounts(
     db: DbSession,
     params: Annotated[Params, Depends(_deployment_pagination_params)],
 ):
-    provider_accounts = await list_provider_accounts_for_user(db, user_id=user.id)
+    provider_accounts = await list_provider_account_rows(db, user_id=user.id)
     total = len(provider_accounts)
     start = _page_offset(params.page, params.size)
     end = start + params.size
@@ -449,7 +483,7 @@ async def get_provider_account(
     user: CurrentActiveUser,
     db: DbSession,
 ):
-    provider_account = await get_provider_account_by_id_for_user(db, provider_id=provider_id, user_id=user.id)
+    provider_account = await get_provider_account_row_by_id(db, provider_id=provider_id, user_id=user.id)
     if provider_account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment provider account not found.")
     return _to_provider_account_response(provider_account)
@@ -465,10 +499,10 @@ async def delete_provider_account(
     user: CurrentActiveUser,
     db: DbSession,
 ):
-    provider_account = await get_provider_account_by_id_for_user(db, provider_id=provider_id, user_id=user.id)
+    provider_account = await get_provider_account_row_by_id(db, provider_id=provider_id, user_id=user.id)
     if provider_account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment provider account not found.")
-    await delete_provider_account_for_user(db, provider_account=provider_account)
+    await delete_provider_account_row(db, provider_account=provider_account)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -483,7 +517,7 @@ async def update_provider_account(
     user: CurrentActiveUser,
     db: DbSession,
 ):
-    provider_account = await get_provider_account_by_id_for_user(db, provider_id=provider_id, user_id=user.id)
+    provider_account = await get_provider_account_row_by_id(db, provider_id=provider_id, user_id=user.id)
     if provider_account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment provider account not found.")
 
@@ -492,7 +526,7 @@ async def update_provider_account(
         backend_url=payload.backend_url or provider_account.backend_url,
         account_id=payload.account_id if payload.account_id is not None else provider_account.account_id,
     )
-    updated = await update_provider_account_for_user(
+    updated = await update_provider_account_row(
         db,
         provider_account=provider_account,
         account_id=resolved_account_id if payload.account_id is not None else None,
@@ -527,6 +561,41 @@ async def _resolve_deployment_adapter(
     except DeploymentRouterError as exc:
         status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         raise HTTPException(status_code=status_code, detail=exc.message) from exc
+
+
+async def _get_deployment_row_or_404(
+    *,
+    deployment_id: str,
+    user_id: UUID,
+    db,
+) -> Deployment:
+    deployment_row = await get_deployment_row(
+        db,
+        user_id=user_id,
+        deployment_id=deployment_id,
+    )
+    if deployment_row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found.")
+    return deployment_row
+
+
+async def _resolve_adapter_from_deployment(
+    *,
+    deployment_id: str,
+    user_id: UUID,
+    db,
+) -> tuple[Deployment, DeploymentServiceProtocol]:
+    deployment_row = await _get_deployment_row_or_404(
+        deployment_id=deployment_id,
+        user_id=user_id,
+        db=db,
+    )
+    deployment_adapter = await _resolve_deployment_adapter(
+        deployment_row.provider_account_id,
+        user_id=user_id,
+        db=db,
+    )
+    return deployment_row, deployment_adapter
 
 
 def _raise_http_for_value_error(exc: ValueError) -> None:
@@ -623,7 +692,7 @@ async def _resolve_project_id_for_deployment_create(
     *,
     payload: DeploymentCreateRequest,
     user_id: UUID,
-    db,
+    db: DbSession,
 ) -> UUID:
     if payload.project_id is not None:
         project = (
@@ -807,17 +876,6 @@ async def _build_flow_artifacts_from_history_references(
     ]
 
 
-def _extract_snapshot_ids_from_provider_result(provider_result: dict | None) -> list[str]:
-    if not isinstance(provider_result, dict):
-        return []
-    for key in ("created_snapshot_ids", "bound_snapshot_ids"):
-        value = provider_result.get(key)
-        if not isinstance(value, list):
-            continue
-        return [str(item).strip() for item in value if isinstance(item, str) and item.strip()]
-    return []
-
-
 async def _sync_page_with_provider(
     *,
     deployment_adapter: DeploymentServiceProtocol,
@@ -843,15 +901,14 @@ async def _sync_page_with_provider(
         if not batch:
             break
         resource_keys = [row.resource_key for row, _ in batch]
-        filter_options = DeploymentListFilterOptions(
-            deployment_type=deployment_type,
-            provider_filter={"ids": resource_keys, "names": resource_keys},
+        list_params = DeploymentListParams(
+            deployment_types=[deployment_type] if deployment_type is not None else None,
+            provider_params={"ids": resource_keys, "names": resource_keys},
         )
         provider_view = await deployment_adapter.list_deployments(
             user_id=user_id,
-            deployment_type=deployment_type,
             db=db,
-            filter_options=filter_options,
+            params=list_params,
         )
         provider_ids = {str(item.id) for item in provider_view.deployments if item.id}
         provider_names = {item.name for item in provider_view.deployments if item.name}
@@ -971,32 +1028,39 @@ async def detect_deployment_environment_variables(
 @router.post("", response_model=DeploymentCreateResult, status_code=status.HTTP_201_CREATED)
 async def create_deployment(
     user: CurrentActiveUser,
-    provider_id: ProviderIdQuery,
-    payload: DeploymentCreateRequest,
+    payload: DeploymentCreateApiRequest,
     db: DbSession,
 ):
     """Create a deployment for the selected provider account."""
+    provider_id = payload.provider_id
+    deployment_payload = DeploymentCreateRequest.model_validate(payload.model_dump(exclude={"provider_id"}))
     deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
-    provider_account = await get_provider_account_by_id_for_user(db, provider_id=provider_id, user_id=user.id)
+    provider_account = await get_provider_account_row_by_id(db, provider_id=provider_id, user_id=user.id)
     if provider_account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment provider account not found.")
-    project_id = await _resolve_project_id_for_deployment_create(
-        payload=payload,
+    project_id: UUID = await _resolve_project_id_for_deployment_create(
+        payload=deployment_payload,
         user_id=user.id,
         db=db,
     )
-    adapter_payload = await _build_adapter_deployment_create_payload(
-        payload=payload,
-        project_id=project_id,
-        user_id=user.id,
-        db=db,
-    )
-    try:
-        result = await deployment_adapter.create_deployment(
+    adapter_payload: AdapterDeploymentCreate  = (
+        await _build_adapter_deployment_create_payload(
+            payload=deployment_payload,
+            project_id=project_id,
             user_id=user.id,
-            deployment=adapter_payload,
             db=db,
         )
+    )
+    try:
+        result: AdapterDeploymentCreateResult = (
+            await deployment_adapter.create_deployment(
+                user_id=user.id,
+                deployment=adapter_payload,
+                db=db,
+            )
+        )
+    # TODO: Create functions that handle mapping
+    # from deployment erros to HTTP errors
     except DeploymentConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=exc.message) from exc
     except InvalidDeploymentOperationError as exc:
@@ -1012,11 +1076,13 @@ async def create_deployment(
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
-    deployment_row = await get_deployment_row_by_resource_key(
-        db,
-        user_id=user.id,
-        provider_account_id=provider_id,
-        resource_key=str(result.id),
+    deployment_row: Deployment | None = (
+        await get_deployment_row_by_resource_key(
+            db,
+            user_id=user.id,
+            provider_account_id=provider_id,
+            resource_key=str(result.id),
+        )
     )
     if deployment_row is None:
         deployment_row = await create_deployment_row(
@@ -1028,21 +1094,31 @@ async def create_deployment(
             name=result.name,
         )
     snapshot_id_by_history_id: dict[UUID, str] = {}
-    history_reference_ids = payload.history.reference_ids if payload.history else None
+    history_reference_ids = deployment_payload.history.reference_ids if deployment_payload.history else None
     if history_reference_ids:
-        created_snapshot_ids = _extract_snapshot_ids_from_provider_result(result.provider_result)
+        created_snapshot_ids = [
+            str(snapshot_id).strip()
+            for snapshot_id in result.snapshot_ids
+            if str(snapshot_id).strip()
+        ]
         history_uuid_ids = [_as_uuid(str(history_id)) for history_id in history_reference_ids]
         valid_history_uuid_ids = [history_id for history_id in history_uuid_ids if history_id is not None]
         snapshot_id_by_history_id = dict(zip(valid_history_uuid_ids, created_snapshot_ids, strict=False))
     await _attach_history_checkpoints(
-        payload=payload,
+        payload=deployment_payload,
         user_id=user.id,
         deployment_row_id=deployment_row.id,
         snapshot_id_by_history_id=snapshot_id_by_history_id,
         db=db,
     )
-
-    return DeploymentCreateResult(**result.model_dump(exclude_unset=True))
+    response_payload = result.model_dump(exclude_unset=True)
+    response_payload["id"] = str(deployment_row.id)
+    if isinstance(response_payload.get("provider_result"), dict):
+        response_payload["provider_result"] = {
+            **response_payload["provider_result"],
+            "resource_key": deployment_row.resource_key,
+        }
+    return DeploymentCreateResult(**response_payload)
 
 
 @router.get("/types", response_model=DeploymentTypesResponse)
@@ -1136,17 +1212,18 @@ async def list_snapshots(
 
 @router.post("/snapshots", response_model=SnapshotResult, status_code=status.HTTP_201_CREATED)
 async def create_snapshots(
-    provider_id: ProviderIdQuery,
-    payload: SnapshotItemsCreate,
+    payload: SnapshotItemsCreateApiRequest,
     db: DbSession,
     user: CurrentActiveUser,
 ):
     """Create snapshots for a provider account."""
+    provider_id = payload.provider_id
+    snapshot_payload = SnapshotItemsCreate.model_validate(payload.model_dump(exclude={"provider_id"}))
     deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
     try:
         create_result = await deployment_adapter.create_snapshots(
             user_id=user.id,
-            snapshot_items=payload,
+            snapshot_items=snapshot_payload,
             db=db,
         )
     except InvalidContentError as exc:
@@ -1214,16 +1291,17 @@ async def delete_snapshot(
 
 @router.post("/configs", response_model=ConfigResult, status_code=status.HTTP_201_CREATED)
 async def create_deployment_config(
-    provider_id: ProviderIdQuery,
-    payload: BaseConfigData,
+    payload: BaseConfigDataApiRequest,
     db: DbSession,
     user: CurrentActiveUser,
 ):
     """Create deployment config for a provider account."""
+    provider_id = payload.provider_id
+    config_payload = BaseConfigData.model_validate(payload.model_dump(exclude={"provider_id"}))
     deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
     try:
         create_result = await deployment_adapter.create_deployment_config(
-            config=payload,
+            config=config_payload,
             user_id=user.id,
             db=db,
         )
@@ -1290,16 +1368,25 @@ async def get_deployment_config(
 
 @router.post("/executions", response_model=DeploymentExecutionResult, status_code=status.HTTP_201_CREATED)
 async def create_deployment_execution(
-    provider_id: ProviderIdQuery,
-    payload: DeploymentExecution,
+    payload: DeploymentExecutionApiRequest,
     db: DbSession,
     user: CurrentActiveUser,
 ):
     """Create a provider-agnostic deployment execution."""
+    provider_id = payload.provider_id
+    execution_payload = DeploymentExecution.model_validate(payload.model_dump(exclude={"provider_id"}))
+    deployment_row = await _get_deployment_row_or_404(
+        deployment_id=str(execution_payload.deployment_id),
+        user_id=user.id,
+        db=db,
+    )
+    if deployment_row.provider_account_id != provider_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found for provider.")
+    execution_payload.deployment_id = deployment_row.resource_key
     deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
     try:
         execution_result = await deployment_adapter.create_execution(
-            execution=payload,
+            execution=execution_payload,
             user_id=user.id,
             db=db,
         )
@@ -1333,10 +1420,17 @@ async def get_deployment_execution(
     user: CurrentActiveUser,
 ):
     """Get provider-agnostic deployment execution state/output."""
+    deployment_row = await _get_deployment_row_or_404(
+        deployment_id=deployment_id,
+        user_id=user.id,
+        db=db,
+    )
+    if deployment_row.provider_account_id != provider_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found for provider.")
     deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
     execution_status = _build_execution_lookup(
         execution_id=execution_id,
-        deployment_id=deployment_id,
+        deployment_id=deployment_row.resource_key,
         deployment_type=deployment_type,
     )
     try:
@@ -1423,16 +1517,19 @@ async def delete_deployment_config(
 @router.get("/{deployment_id}", response_model=DeploymentDetailItem)
 async def get_deployment(
     deployment_id: str,
-    provider_id: ProviderIdQuery,
     user: CurrentActiveUser,
     db: DbSession,
 ):
-    """Get a deployment for a provider account."""
-    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
+    """Get a deployment and derive provider routing from persisted deployment metadata."""
+    deployment_row, deployment_adapter = await _resolve_adapter_from_deployment(
+        deployment_id=deployment_id,
+        user_id=user.id,
+        db=db,
+    )
     try:
         deployment = await deployment_adapter.get_deployment(
             user_id=user.id,
-            deployment_id=deployment_id,
+            deployment_id=deployment_row.resource_key,
             db=db,
         )
     except ValueError as exc:
@@ -1443,7 +1540,13 @@ async def get_deployment(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-    return DeploymentDetailItem(**deployment.model_dump(exclude_unset=True))
+    response_payload = deployment.model_dump(exclude_unset=True)
+    response_payload["id"] = str(deployment_row.id)
+    provider_data = (
+        response_payload.get("provider_data") if isinstance(response_payload.get("provider_data"), dict) else {}
+    )
+    response_payload["provider_data"] = {**provider_data, "resource_key": deployment_row.resource_key}
+    return DeploymentDetailItem(**response_payload)
 
 
 @router.patch(
@@ -1452,21 +1555,16 @@ async def get_deployment(
 )
 async def update_deployment(
     deployment_id: str,
-    provider_id: ProviderIdQuery,
     payload: DeploymentUpdateRequest,
     db: DbSession,
     user: CurrentActiveUser,
 ):
-    """Update a deployment for a provider account."""
-    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
-    deployment_row = await get_deployment_row_by_resource_key(
-        db,
+    """Update a deployment and derive provider routing from persisted deployment metadata."""
+    deployment_row, deployment_adapter = await _resolve_adapter_from_deployment(
+        deployment_id=deployment_id,
         user_id=user.id,
-        provider_account_id=provider_id,
-        resource_key=deployment_id,
+        db=db,
     )
-    if deployment_row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found in deployment table.")
 
     added_snapshot_bindings: list[tuple[UUID, str]] = []
     remove_history_ids: list[UUID] = []
@@ -1533,7 +1631,7 @@ async def update_deployment(
     )
     try:
         update_result = await deployment_adapter.update_deployment(
-            deployment_id=deployment_id,
+            deployment_id=deployment_row.resource_key,
             update_data=adapter_payload,
             user_id=user.id,
             db=db,
@@ -1567,15 +1665,18 @@ async def update_deployment(
 @router.delete("/{deployment_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_deployment(
     deployment_id: str,
-    provider_id: ProviderIdQuery,
     db: DbSession,
     user: CurrentActiveUser,
 ):
-    """Delete a deployment for a provider account."""
-    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
+    """Delete a deployment and derive provider routing from persisted deployment metadata."""
+    deployment_row, deployment_adapter = await _resolve_adapter_from_deployment(
+        deployment_id=deployment_id,
+        user_id=user.id,
+        db=db,
+    )
     try:
         await deployment_adapter.delete_deployment(
-            deployment_id=deployment_id,
+            deployment_id=deployment_row.resource_key,
             user_id=user.id,
             db=db,
         )
@@ -1585,11 +1686,10 @@ async def delete_deployment(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-    await delete_deployment_row_by_resource_key(
+    await delete_deployment_row_by_id(
         db,
         user_id=user.id,
-        provider_account_id=provider_id,
-        resource_key=deployment_id,
+        deployment_id=deployment_row.id,
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -1601,15 +1701,18 @@ async def delete_deployment(
 )
 async def redeploy_deployment(
     deployment_id: str,
-    provider_id: ProviderIdQuery,
     db: DbSession,
     user: CurrentActiveUser,
 ):
-    """Redeploy a deployment for a provider account."""
-    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
+    """Redeploy a deployment and derive provider routing from persisted deployment metadata."""
+    deployment_row, deployment_adapter = await _resolve_adapter_from_deployment(
+        deployment_id=deployment_id,
+        user_id=user.id,
+        db=db,
+    )
     try:
         redeploy_result = await deployment_adapter.redeploy_deployment(
-            deployment_id=deployment_id,
+            deployment_id=deployment_row.resource_key,
             user_id=user.id,
             db=db,
         )
@@ -1631,16 +1734,19 @@ async def redeploy_deployment(
 )
 async def duplicate_deployment(
     deployment_id: str,
-    provider_id: ProviderIdQuery,
     payload: DeploymentDuplicateRequest,
     db: DbSession,
     user: CurrentActiveUser,
 ):
-    """Duplicate a deployment for a provider account."""
-    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
+    """Duplicate a deployment and derive provider routing from persisted deployment metadata."""
+    deployment_row, deployment_adapter = await _resolve_adapter_from_deployment(
+        deployment_id=deployment_id,
+        user_id=user.id,
+        db=db,
+    )
     try:
         clone_result = await deployment_adapter.duplicate_deployment(
-            deployment_id=deployment_id,
+            deployment_id=deployment_row.resource_key,
             deployment_type=payload.deployment_type,
             user_id=user.id,
             db=db,
@@ -1662,15 +1768,18 @@ async def duplicate_deployment(
 )
 async def get_deployment_status(
     deployment_id: str,
-    provider_id: ProviderIdQuery,
     db: DbSession,
     user: CurrentActiveUser,
 ):
-    """Get deployment health for a provider account."""
-    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
+    """Get deployment health and derive provider routing from persisted deployment metadata."""
+    deployment_row, deployment_adapter = await _resolve_adapter_from_deployment(
+        deployment_id=deployment_id,
+        user_id=user.id,
+        db=db,
+    )
     try:
         health_result = await deployment_adapter.get_deployment_status(
-            deployment_id=deployment_id,
+            deployment_id=deployment_row.resource_key,
             user_id=user.id,
             db=db,
         )

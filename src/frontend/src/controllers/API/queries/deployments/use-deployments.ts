@@ -14,8 +14,6 @@ export type DeploymentProvider = {
   provider_key: string;
   backend_url: string;
   registered_at: string | null;
-  updated_at: string | null;
-  has_api_key: boolean;
 };
 
 export type DeploymentProviderCreatePayload = {
@@ -64,6 +62,7 @@ export type DeploymentListResponse = {
 };
 
 export type DeploymentCreatePayload = {
+  provider_id: string;
   spec: {
     name: string;
     description: string;
@@ -91,6 +90,8 @@ export type DeploymentCreatePayload = {
 
 export type DeploymentCreateResponse = {
   id: string;
+  config_id?: string | null;
+  snapshot_ids?: string[];
   name?: string;
   description?: string;
   type?: string;
@@ -98,6 +99,7 @@ export type DeploymentCreateResponse = {
 };
 
 export type DeploymentExecutionPayload = {
+  provider_id: string;
   deployment_id: string;
   deployment_type: "agent" | "mcp";
   input?: string | Record<string, unknown>;
@@ -132,9 +134,6 @@ type PaginationParams = {
   page?: number;
   pageSize?: number;
 };
-
-const addProviderId = (url: string, providerId: string): string =>
-  buildQueryStringUrl(url, { provider_id: providerId });
 
 export const useGetDeploymentProviders: useQueryFunctionType<
   undefined,
@@ -191,17 +190,19 @@ export const useGetDeployments: useQueryFunctionType<
 };
 
 export const usePostCreateDeployment: useMutationFunctionType<
-  ProviderScopedParams,
+  undefined,
   DeploymentCreatePayload,
   DeploymentCreateResponse
-> = (params, options) => {
+> = (options) => {
   const { mutate } = UseRequestProcessor();
 
   const createDeploymentFn = async (
     payload: DeploymentCreatePayload,
   ): Promise<DeploymentCreateResponse> => {
-    const url = addProviderId(getURL("DEPLOYMENTS"), params.providerId);
-    const { data } = await api.post<DeploymentCreateResponse>(url, payload);
+    const { data } = await api.post<DeploymentCreateResponse>(
+      getURL("DEPLOYMENTS"),
+      payload,
+    );
     return data;
   };
 
@@ -210,7 +211,7 @@ export const usePostCreateDeployment: useMutationFunctionType<
     Error,
     DeploymentCreatePayload
   > = mutate(
-    ["usePostCreateDeployment", params.providerId],
+    ["usePostCreateDeployment"],
     createDeploymentFn,
     {
       ...options,
@@ -249,20 +250,20 @@ export const usePostDetectDeploymentEnvVars: useMutationFunctionType<
 };
 
 export const useGetDeploymentById: useMutationFunctionType<
-  ProviderScopedParams,
+  undefined,
   {
     deploymentId: string;
   },
   DeploymentListItem
-> = (params, options) => {
+> = (options) => {
   const { mutate } = UseRequestProcessor();
 
   const getDeploymentByIdFn = async (payload: {
     deploymentId: string;
   }): Promise<DeploymentListItem> => {
-    const baseUrl = `${getURL("DEPLOYMENTS")}/${payload.deploymentId}`;
-    const url = addProviderId(baseUrl, params.providerId);
-    const { data } = await api.get<DeploymentListItem>(url);
+    const { data } = await api.get<DeploymentListItem>(
+      `${getURL("DEPLOYMENTS")}/${payload.deploymentId}`,
+    );
     return data;
   };
 
@@ -272,7 +273,7 @@ export const useGetDeploymentById: useMutationFunctionType<
     {
       deploymentId: string;
     }
-  > = mutate(["useGetDeploymentById", params.providerId], getDeploymentByIdFn, {
+  > = mutate(["useGetDeploymentById"], getDeploymentByIdFn, {
     ...options,
   });
 
@@ -280,20 +281,19 @@ export const useGetDeploymentById: useMutationFunctionType<
 };
 
 export const usePostCreateDeploymentExecution: useMutationFunctionType<
-  ProviderScopedParams,
+  undefined,
   DeploymentExecutionPayload,
   DeploymentExecutionResponse
-> = (params, options) => {
+> = (options) => {
   const { mutate } = UseRequestProcessor();
 
   const createDeploymentExecutionFn = async (
     payload: DeploymentExecutionPayload,
   ): Promise<DeploymentExecutionResponse> => {
-    const url = addProviderId(
+    const { data } = await api.post<DeploymentExecutionResponse>(
       `${getURL("DEPLOYMENTS")}/executions`,
-      params.providerId,
+      payload,
     );
-    const { data } = await api.post<DeploymentExecutionResponse>(url, payload);
     return data;
   };
 
@@ -302,7 +302,7 @@ export const usePostCreateDeploymentExecution: useMutationFunctionType<
     Error,
     DeploymentExecutionPayload
   > = mutate(
-    ["usePostCreateDeploymentExecution", params.providerId],
+    ["usePostCreateDeploymentExecution"],
     createDeploymentExecutionFn,
     {
       ...options,

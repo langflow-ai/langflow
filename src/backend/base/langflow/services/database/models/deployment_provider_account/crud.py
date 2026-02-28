@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
-async def get_provider_account_by_id_for_user(
+async def get_provider_account_by_id(
     db: AsyncSession,
     *,
     provider_id: UUID | str,
@@ -36,7 +36,7 @@ def get_uuid(value: UUID | str) -> UUID:
     return UUID(value) if isinstance(value, str) else value
 
 
-async def list_provider_accounts_for_user(
+async def list_provider_accounts(
     db: AsyncSession,
     *,
     user_id: UUID | str,
@@ -50,7 +50,7 @@ async def list_provider_accounts_for_user(
     return list((await db.exec(stmt)).all())
 
 
-async def create_provider_account_for_user(
+async def create_provider_account(
     db: AsyncSession,
     *,
     user_id: UUID | str,
@@ -76,7 +76,7 @@ async def create_provider_account_for_user(
     return provider_account
 
 
-async def update_provider_account_for_user(
+async def update_provider_account(
     db: AsyncSession,
     *,
     provider_account: DeploymentProviderAccount,
@@ -101,7 +101,7 @@ async def update_provider_account_for_user(
     return provider_account
 
 
-async def delete_provider_account_for_user(
+async def delete_provider_account(
     db: AsyncSession,
     *,
     provider_account: DeploymentProviderAccount,

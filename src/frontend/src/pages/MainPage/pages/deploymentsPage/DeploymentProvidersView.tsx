@@ -132,7 +132,7 @@ export const DeploymentProvidersView = ({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {providers.map((provider) => {
           const isSelected = selectedProviderId === provider.id;
-          const status = provider.has_api_key ? "Connected" : "Error";
+          const status = "Connected";
           const providerName = normalizeProviderLabel(provider.provider_key);
           const iconName =
             provider.provider_key === "watsonx-orchestrate"
@@ -207,7 +207,7 @@ export const DeploymentProvidersView = ({
                     Last Verified
                   </span>
                   <span className="text-sm">
-                    {formatDate(provider.updated_at || provider.registered_at)}
+                    {formatDate(provider.registered_at)}
                   </span>
                 </div>
                 <div className="flex flex-col gap-0.5 text-right">
@@ -237,31 +237,17 @@ export const DeploymentProvidersView = ({
                   />
                   Configure
                 </Button>
-                {status === "Error" ? (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="h-8 flex-1 gap-1.5 text-xs"
-                  >
-                    <ForwardedIconComponent
-                      name="RefreshCcw"
-                      className="h-3.5 w-3.5"
-                    />
-                    Reconnect
-                  </Button>
-                ) : (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="h-8 flex-1 gap-1.5 text-xs"
-                  >
-                    <ForwardedIconComponent
-                      name="CircleCheck"
-                      className="h-3.5 w-3.5"
-                    />
-                    Test Connection
-                  </Button>
-                )}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-8 flex-1 gap-1.5 text-xs"
+                >
+                  <ForwardedIconComponent
+                    name="CircleCheck"
+                    className="h-3.5 w-3.5"
+                  />
+                  Test Connection
+                </Button>
               </div>
             </button>
           );

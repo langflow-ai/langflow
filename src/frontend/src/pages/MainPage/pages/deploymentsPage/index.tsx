@@ -230,8 +230,8 @@ const DeploymentsTab = () => {
       enabled: Boolean(currentProjectId),
     },
   );
-  const createDeploymentMutation = usePostCreateDeployment({ providerId });
-  const getDeploymentByIdMutation = useGetDeploymentById({ providerId });
+  const createDeploymentMutation = usePostCreateDeployment();
+  const getDeploymentByIdMutation = useGetDeploymentById();
   const { mutateAsync: detectDeploymentEnvVars } =
     usePostDetectDeploymentEnvVars();
   const {
@@ -279,8 +279,9 @@ const DeploymentsTab = () => {
         deployment.resource_key.trim().length > 0
           ? deployment.resource_key
           : deployment.id;
+      const deploymentRowId = deployment.id;
       const createdMeta =
-        createdDeploymentUiMeta?.deploymentId === providerDeploymentId
+        createdDeploymentUiMeta?.deploymentId === deploymentRowId
           ? createdDeploymentUiMeta
           : null;
       const snapshotIds =
@@ -294,7 +295,7 @@ const DeploymentsTab = () => {
           : undefined;
 
       return {
-        id: providerDeploymentId,
+        id: deploymentRowId,
         name: deployment.name,
         url: `Deployment ID: ${providerDeploymentId}`,
         type: deployment.type.toUpperCase() === "MCP" ? "MCP" : "Agent",
@@ -468,6 +469,7 @@ const DeploymentsTab = () => {
     const trimmedDescription = deploymentDescription.trim();
 
     const payload: DeploymentCreatePayload = {
+      provider_id: providerId,
       spec: {
         name: trimmedDeploymentName,
         description: trimmedDescription,
@@ -519,30 +521,11 @@ const DeploymentsTab = () => {
     createDeploymentMutation.mutate(payload, {
       onSuccess: async (response: DeploymentCreateResponse) => {
         setCreatedDeploymentId(response.id);
-        const providerResult = response.provider_result;
-        const resultSnapshotIds = Array.isArray(
-          (providerResult as Record<string, unknown> | undefined)
-            ?.bound_snapshot_ids,
-        )
-          ? (
-              (providerResult as Record<string, unknown>)
-                .bound_snapshot_ids as unknown[]
-            ).filter(
-              (id): id is string =>
-                typeof id === "string" && id.trim().length > 0,
+        const resultSnapshotIds = Array.isArray(response.snapshot_ids)
+          ? response.snapshot_ids.filter(
+              (id): id is string => typeof id === "string" && id.trim().length > 0,
             )
-          : Array.isArray(
-                (providerResult as Record<string, unknown> | undefined)
-                  ?.created_snapshot_ids,
-              )
-            ? (
-                (providerResult as Record<string, unknown>)
-                  .created_snapshot_ids as unknown[]
-              ).filter(
-                (id): id is string =>
-                  typeof id === "string" && id.trim().length > 0,
-              )
-            : [];
+          : [];
         setCreatedDeploymentUiMeta({
           deploymentId: response.id,
           attachedCount: resultSnapshotIds.length || selectedFlowCount,

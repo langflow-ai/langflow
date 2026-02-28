@@ -92,18 +92,21 @@ class _FakeAdapter:
     def __init__(self) -> None:
         self.last_update_payload = None
 
-    async def list_deployments(self, *, deployment_type=None, filter_options=None, **_):
-        ids = ((filter_options.provider_filter or {}) if filter_options else {}).get("ids", [])
+    async def list_deployments(self, *, params=None, **_):
+        provider_params = params.provider_params if params else None
+        ids = provider_params.get("ids", []) if isinstance(provider_params, dict) else []
+        requested_types = params.deployment_types if params else None
+        resolved_type = requested_types[0] if requested_types else DeploymentType.AGENT
         kept = []
         if "keep-resource" in ids:
             kept.append(
                 DeploymentItem(
                     id="keep-resource",
                     name="Keep Deployment",
-                    type=deployment_type or DeploymentType.AGENT,
+                    type=resolved_type,
                 )
             )
-        return DeploymentList(deployments=kept, deployment_type=deployment_type)
+        return DeploymentList(deployments=kept, deployment_type=resolved_type if kept else None)
 
     async def update_deployment(self, *, deployment_id, **_) -> DeploymentUpdateResult:
         self.last_update_payload = _.get("update_data")
@@ -122,10 +125,10 @@ class _CreateCaptureAdapter:
         self.received_payload = deployment
         return DeploymentCreateResult(
             id="provider-deployment-1",
+            snapshot_ids=["provider-snapshot-1"],
             name=deployment.spec.name,
             description=deployment.spec.description,
             type=deployment.spec.type,
-            provider_result={"created_snapshot_ids": ["provider-snapshot-1"]},
         )
 
 
@@ -298,7 +301,7 @@ async def test_patch_deployment_history_updates_checkpoint_attachments(
         )
         session.add(deployment)
         await session.flush()
-        deployment_id = deployment.resource_key
+        deployment_id = str(deployment.id)
         history_id = str(flow_history.id)
 
     adapter = _FakeAdapter()
@@ -310,7 +313,6 @@ async def test_patch_deployment_history_updates_checkpoint_attachments(
 
     add_response = await client.patch(
         f"api/v1/deployments/{deployment_id}",
-        params={"provider_id": provider["id"]},
         json={"history": {"add": [history_id]}},
         headers=logged_in_headers,
     )
@@ -333,7 +335,6 @@ async def test_patch_deployment_history_updates_checkpoint_attachments(
 
     remove_response = await client.patch(
         f"api/v1/deployments/{deployment_id}",
-        params={"provider_id": provider["id"]},
         json={"history": {"remove": [history_id]}},
         headers=logged_in_headers,
     )
@@ -398,8 +399,8 @@ async def test_create_deployment_resolves_history_ids_to_raw_history_payloads(
 
     response = await client.post(
         "api/v1/deployments",
-        params={"provider_id": provider["id"]},
         json={
+            "provider_id": provider["id"],
             "spec": {
                 "name": f"deployment-{uuid4().hex[:8]}",
                 "description": "deployment with checkpoint references",
@@ -482,8 +483,8 @@ async def test_create_deployment_rejects_history_references_from_other_project_w
 
     response = await client.post(
         "api/v1/deployments",
-        params={"provider_id": provider["id"]},
         json={
+            "provider_id": provider["id"],
             "spec": {
                 "name": f"deployment-{uuid4().hex[:8]}",
                 "description": "deployment with explicit project mismatch",
@@ -542,8 +543,8 @@ async def test_create_deployment_rejects_history_references_not_in_default_proje
 
     response = await client.post(
         "api/v1/deployments",
-        params={"provider_id": provider["id"]},
         json={
+            "provider_id": provider["id"],
             "spec": {
                 "name": f"deployment-{uuid4().hex[:8]}",
                 "description": "deployment defaults to starter project",
@@ -575,8 +576,8 @@ async def test_create_deployment_falls_back_to_default_project_when_project_id_i
 
     response = await client.post(
         "api/v1/deployments",
-        params={"provider_id": provider["id"]},
         json={
+            "provider_id": provider["id"],
             "spec": {
                 "name": f"deployment-{uuid4().hex[:8]}",
                 "description": "deployment without explicit project id",
@@ -634,8 +635,8 @@ async def test_create_deployment_uses_explicit_project_id_from_request(
 
     response = await client.post(
         "api/v1/deployments",
-        params={"provider_id": provider["id"]},
         json={
+            "provider_id": provider["id"],
             "spec": {
                 "name": f"deployment-{uuid4().hex[:8]}",
                 "description": "deployment with explicit project id",
@@ -675,8 +676,8 @@ async def test_create_deployment_accepts_history_raw_payloads_from_api(client, l
 
     response = await client.post(
         "api/v1/deployments",
-        params={"provider_id": provider["id"]},
         json={
+            "provider_id": provider["id"],
             "spec": {
                 "name": f"deployment-{uuid4().hex[:8]}",
                 "description": "raw payload should be accepted",
@@ -831,8 +832,8 @@ async def test_deployment_config_endpoints_crud_cycle(client, logged_in_headers,
 
     create_response = await client.post(
         "api/v1/deployments/configs",
-        params={"provider_id": provider["id"]},
         json={
+            "provider_id": provider["id"],
             "name": "test-config",
             "description": "config for endpoint restore test",
             "environment_variables": {},

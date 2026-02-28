@@ -29,7 +29,7 @@ if TYPE_CHECKING:
         DeploymentExecutionStatus,
         DeploymentItem,
         DeploymentList,
-        DeploymentListFilterOptions,
+        DeploymentListParams,
         DeploymentRedeploymentResult,
         DeploymentStatusResult,
         DeploymentType,
@@ -94,9 +94,8 @@ class DeploymentService(BaseDeploymentService):
         self,
         *,
         user_id: UUID | str,
-        deployment_type: DeploymentType | None = None,
         db: Any,
-        filter_options: DeploymentListFilterOptions | None = None,
+        params: DeploymentListParams | None = None,
     ) -> DeploymentList:
         """List deployments visible to this adapter."""
         raise NotImplementedError
