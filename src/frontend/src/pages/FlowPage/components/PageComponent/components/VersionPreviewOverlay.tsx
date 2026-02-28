@@ -5,7 +5,7 @@ import { CanvasBadge } from "./CanvasBanner";
 import RestoreVersionButton from "./RestoreVersionButton";
 import SaveSnapshotButton from "./SaveSnapshotButton";
 
-export default function HistoryPreviewOverlay() {
+export default function VersionPreviewOverlay() {
   const previewLabel = useVersionPreviewStore((s) => s.previewLabel);
   const previewId = useVersionPreviewStore((s) => s.previewId);
   const isPreviewLoading = useVersionPreviewStore((s) => s.isPreviewLoading);

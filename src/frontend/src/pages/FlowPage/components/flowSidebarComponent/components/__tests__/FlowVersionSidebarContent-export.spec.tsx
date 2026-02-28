@@ -52,7 +52,6 @@ jest.mock("@/controllers/API/queries/flow-version", () => ({
     isLoading: false,
     isError: false,
   }),
-  usePostCreateSnapshot: () => ({ mutate: jest.fn(), isPending: false }),
   useDeleteHistoryEntry: () => ({ mutate: jest.fn(), isPending: false }),
 }));
 
@@ -132,6 +131,26 @@ jest.mock("@/components/ui/checkbox", () => ({
   Checkbox: () => <input type="checkbox" />,
 }));
 
+jest.mock("@/components/ui/sidebar", () => ({
+  useSidebar: () => ({ setActiveSection: jest.fn() }),
+  SidebarGroupLabel: ({ children, className }: any) => (
+    <div className={className}>{children}</div>
+  ),
+  SidebarMenu: ({ children, className }: any) => (
+    <div className={className}>{children}</div>
+  ),
+  SidebarMenuButton: ({ children, onClick, isActive, className }: any) => (
+    <div
+      role="button"
+      onClick={onClick}
+      className={`cursor-pointer ${className ?? ""} ${isActive ? "active" : ""}`}
+    >
+      {children}
+    </div>
+  ),
+  SidebarMenuItem: ({ children }: any) => <div>{children}</div>,
+}));
+
 jest.mock("lodash", () => ({
   cloneDeep: jest.fn((obj: any) =>
     obj === undefined ? undefined : JSON.parse(JSON.stringify(obj)),
@@ -139,21 +158,20 @@ jest.mock("lodash", () => ({
 }));
 
 jest.mock("@/stores/versionPreviewStore", () => {
-  const store: any = (selector: any) =>
-    selector({
-      previewNodes: null,
-      previewEdges: null,
-      previewLabel: null,
-      setPreview: jest.fn(),
-      clearPreview: jest.fn(),
-    });
-  store.getState = () => ({
+  const state = {
     previewNodes: null,
     previewEdges: null,
     previewLabel: null,
+    previewId: null,
+    isPreviewLoading: false,
+    didRestore: false,
     setPreview: jest.fn(),
     clearPreview: jest.fn(),
-  });
+    setPreviewLoading: jest.fn(),
+  };
+  const store: any = (selector: any) => selector(state);
+  store.getState = () => state;
+  store.setState = jest.fn();
   return { __esModule: true, default: store };
 });
 
@@ -167,7 +185,7 @@ import FlowVersionSidebarContent from "../FlowVersionSidebarContent";
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("FlowHistorySidebarContent export", () => {
+describe("FlowVersionSidebarContent export", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });

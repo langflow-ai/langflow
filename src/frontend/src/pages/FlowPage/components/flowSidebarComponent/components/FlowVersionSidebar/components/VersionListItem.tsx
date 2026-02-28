@@ -10,7 +10,7 @@ import type { FlowVersionEntry } from "@/types/flow/version";
 import { cn } from "@/utils/utils";
 import { formatTimestamp } from "../utils";
 
-interface HistoryListItemProps {
+interface VersionListItemProps {
   entry: FlowVersionEntry;
   isSelected: boolean;
   isAnimating: boolean;
@@ -19,14 +19,14 @@ interface HistoryListItemProps {
   onDeleteClick: (entry: FlowVersionEntry) => void;
 }
 
-export default function HistoryListItem({
+export default function VersionListItem({
   entry,
   isSelected,
   isAnimating,
   onSelect,
   onExport,
   onDeleteClick,
-}: HistoryListItemProps) {
+}: VersionListItemProps) {
   return (
     <SidebarMenuItem
       className={cn(

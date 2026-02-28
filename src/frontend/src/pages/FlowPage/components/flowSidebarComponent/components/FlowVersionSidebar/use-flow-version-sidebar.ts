@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { cloneDeep } from "lodash";
 import {
   useCallback,
@@ -14,9 +13,7 @@ import {
   useDeleteHistoryEntry,
   useGetFlowHistory,
   useGetFlowHistoryEntry,
-  usePostCreateSnapshot,
 } from "@/controllers/API/queries/flow-version";
-import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useVersionPreviewStore from "@/stores/versionPreviewStore";
@@ -28,8 +25,7 @@ import {
 } from "@/utils/reactflowUtils";
 import { CURRENT_DRAFT_ID } from "./constants";
 
-export function useFlowHistorySidebar(flowId: string) {
-  const queryClient = useQueryClient();
+export function useFlowVersionSidebar(flowId: string) {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setPreview = useVersionPreviewStore((s) => s.setPreview);
@@ -43,21 +39,30 @@ export function useFlowHistorySidebar(flowId: string) {
     setSelectedId(storePreviewId ?? CURRENT_DRAFT_ID);
   }, [storePreviewId]);
 
-  const applyFlowToCanvas = useApplyFlowToCanvas();
   const currentFlow = useFlowStore((s) => s.currentFlow);
 
   const { mutate: deleteEntry, isPending: isDeleting } =
     useDeleteHistoryEntry();
 
-  const [pruneWarning, setPruneWarning] = useState(false);
   const [animatingId, setAnimatingId] = useState<string | null>(null);
   const prevHistoryLengthRef = useRef<number>(0);
 
-  const [restoreDialogEntry, setRestoreDialogEntry] =
-    useState<FlowVersionEntry | null>(null);
   const [deleteDialogEntry, setDeleteDialogEntry] =
     useState<FlowVersionEntry | null>(null);
-  const [isRestoring, setIsRestoring] = useState(false);
+
+  // Capture original draft state on first render so we can restore it when
+  // switching back to "Current" or on unmount. Initialized during render (not
+  // in an effect) so the values are available before the preview layoutEffect.
+  // Falls back to empty arrays if the store is not yet initialized to prevent
+  // setting `undefined` into the store on cleanup.
+  const originalDraftNodesRef = useRef<any[] | null>(null);
+  const originalDraftEdgesRef = useRef<any[] | null>(null);
+  if (originalDraftNodesRef.current === null) {
+    originalDraftNodesRef.current =
+      cloneDeep(useFlowStore.getState().nodes) ?? [];
+    originalDraftEdgesRef.current =
+      cloneDeep(useFlowStore.getState().edges) ?? [];
+  }
 
   const {
     data: historyResponse,
@@ -79,9 +84,6 @@ export function useFlowHistorySidebar(flowId: string) {
     prevHistoryLengthRef.current = newLen;
   }, [history]);
 
-  const { mutate: createSnapshot, isPending: isCreating } =
-    usePostCreateSnapshot();
-
   const selectedHistoryId = selectedId !== CURRENT_DRAFT_ID ? selectedId : "";
   const {
     data: selectedEntryFull,
@@ -100,6 +102,7 @@ export function useFlowHistorySidebar(flowId: string) {
     nodes: any[];
     edges: any[];
     error?: boolean;
+    errorMessage?: string;
   } | null>(() => {
     if (selectedId === CURRENT_DRAFT_ID || !selectedEntryFull?.data)
       return null;
@@ -110,8 +113,10 @@ export function useFlowHistorySidebar(flowId: string) {
       processFlows([flow]);
       return { nodes: flow.data.nodes, edges: flow.data.edges };
     } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : String(err);
       console.error("Failed to process historical flow data for preview:", err);
-      return { nodes: [], edges: [], error: true };
+      return { nodes: [], edges: [], error: true, errorMessage };
     }
   }, [selectedId, selectedEntryFull?.data]);
 
@@ -123,8 +128,8 @@ export function useFlowHistorySidebar(flowId: string) {
       });
     } else if (selectedId === CURRENT_DRAFT_ID || processedPreview?.error) {
       useFlowStore.setState({
-        nodes: cloneDeep(useFlowStore.getState().nodes),
-        edges: cloneDeep(useFlowStore.getState().edges),
+        nodes: cloneDeep(originalDraftNodesRef.current),
+        edges: cloneDeep(originalDraftEdgesRef.current),
       });
     }
   }, [processedPreview, selectedId]);
@@ -133,9 +138,12 @@ export function useFlowHistorySidebar(flowId: string) {
     if (processedPreview?.error) {
       setErrorData({
         title: "This version's data could not be rendered for preview",
+        ...(processedPreview.errorMessage
+          ? { list: [processedPreview.errorMessage] }
+          : {}),
       });
     }
-  }, [processedPreview?.error, setErrorData]);
+  }, [processedPreview?.error, processedPreview?.errorMessage, setErrorData]);
 
   useEffect(() => {
     if (
@@ -152,8 +160,8 @@ export function useFlowHistorySidebar(flowId: string) {
       );
     } else if (selectedId === CURRENT_DRAFT_ID || processedPreview?.error) {
       setPreview(
-        cloneDeep(useFlowStore.getState().nodes),
-        cloneDeep(useFlowStore.getState().edges),
+        cloneDeep(originalDraftNodesRef.current),
+        cloneDeep(originalDraftEdgesRef.current),
         "Current Draft",
         null,
       );
@@ -184,19 +192,50 @@ export function useFlowHistorySidebar(flowId: string) {
     }
 
     return () => {
-      useFlowStore.setState({
-        nodes: cloneDeep(useFlowStore.getState().nodes),
-        edges: cloneDeep(useFlowStore.getState().edges),
-      });
-      clearPreview();
+      // Each cleanup step is isolated so a failure in one does not skip
+      // the rest. Auto-save restoration is especially critical — if it is
+      // skipped the user silently loses all future saves until page refresh.
 
-      if (autoSaveFnRef.current) {
-        useFlowStore.setState({ autoSaveFlow: autoSaveFnRef.current });
-        autoSaveFnRef.current = null;
+      try {
+        const wasRestored = useVersionPreviewStore.getState().didRestore;
+        if (!wasRestored) {
+          useFlowStore.setState({
+            nodes: cloneDeep(originalDraftNodesRef.current),
+            edges: cloneDeep(originalDraftEdgesRef.current),
+          });
+        }
+      } catch (err) {
+        console.error("Version sidebar cleanup: failed to restore draft", err);
       }
-      if (inspectionPanelWasVisible.current) {
-        useFlowStore.setState({ inspectionPanelVisible: true });
-        inspectionPanelWasVisible.current = false;
+
+      try {
+        clearPreview();
+      } catch (err) {
+        console.error("Version sidebar cleanup: failed to clear preview", err);
+      }
+
+      try {
+        useVersionPreviewStore.setState({ didRestore: false });
+      } catch (err) {
+        console.error("Version sidebar cleanup: failed to reset didRestore", err);
+      }
+
+      try {
+        if (autoSaveFnRef.current) {
+          useFlowStore.setState({ autoSaveFlow: autoSaveFnRef.current });
+          autoSaveFnRef.current = null;
+        }
+      } catch (err) {
+        console.error("Version sidebar cleanup: CRITICAL — failed to restore autoSaveFlow", err);
+      }
+
+      try {
+        if (inspectionPanelWasVisible.current) {
+          useFlowStore.setState({ inspectionPanelVisible: true });
+          inspectionPanelWasVisible.current = false;
+        }
+      } catch (err) {
+        console.error("Version sidebar cleanup: failed to restore inspection panel", err);
       }
     };
   }, [clearPreview]);
@@ -204,77 +243,6 @@ export function useFlowHistorySidebar(flowId: string) {
   const handleSelectEntry = useCallback((entryId: string) => {
     setSelectedId(entryId);
   }, []);
-
-  const doCreateSnapshot = useCallback(() => {
-    createSnapshot(
-      { flowId, description: null },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["useGetFlowHistory"] });
-          setSuccessData({ title: "Version saved" });
-          setPruneWarning(false);
-        },
-        onError: (err: any) => {
-          const detail = err?.response?.data?.detail;
-          setErrorData({
-            title: "Failed to save version",
-            ...(detail ? { list: [detail] } : {}),
-          });
-          setPruneWarning(false);
-        },
-      },
-    );
-  }, [flowId, createSnapshot, queryClient, setSuccessData, setErrorData]);
-
-  const handleCreateSnapshot = useCallback(() => {
-    if (history && maxEntries && history.length >= maxEntries) {
-      setPruneWarning(true);
-      return;
-    }
-    doCreateSnapshot();
-  }, [history, maxEntries, doCreateSnapshot]);
-
-  const handleRestore = useCallback(
-    async (entry: FlowVersionEntry) => {
-      setRestoreDialogEntry(null);
-      setIsRestoring(true);
-      try {
-        const response = await api.post(
-          `${getURL("FLOWS")}/${flowId}/history/${entry.id}/activate`,
-          null,
-          { params: { save_draft: true } },
-        );
-        const updatedFlow = response.data;
-        queryClient.invalidateQueries({ queryKey: ["useGetFlowHistory"] });
-        const flow = {
-          ...updatedFlow,
-          data: {
-            nodes: updatedFlow.data?.nodes ?? [],
-            edges: updatedFlow.data?.edges ?? [],
-          },
-        };
-        applyFlowToCanvas(flow);
-        clearPreview();
-        setSuccessData({ title: "Version restored" });
-      } catch (err: any) {
-        const detail = err?.response?.data?.detail;
-        setErrorData({
-          title: "Failed to restore version",
-          ...(detail ? { list: [detail] } : {}),
-        });
-      } finally {
-        setIsRestoring(false);
-      }
-    },
-    [
-      flowId,
-      queryClient,
-      applyFlowToCanvas,
-      clearPreview,
-      setSuccessData,
-      setErrorData,
-    ],
-  );
 
   const handleExport = useCallback(
     async (entry: FlowVersionEntry) => {
@@ -296,12 +264,13 @@ export function useFlowHistorySidebar(flowId: string) {
           description: currentFlow?.description ?? "",
           is_component: false,
         } as any);
-        downloadFlow(flowToExport, flowName);
+        downloadFlow(flowToExport, flowName, currentFlow?.description ?? "");
       } catch (err: any) {
         const detail = err?.response?.data?.detail;
+        const message = detail ?? err?.message ?? "Unknown error";
         setErrorData({
           title: "Failed to export version",
-          ...(detail ? { list: [detail] } : {}),
+          list: [message],
         });
       }
     },
@@ -321,11 +290,14 @@ export function useFlowHistorySidebar(flowId: string) {
         { flowId, historyId: entry.id },
         {
           onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["useGetFlowHistory"] });
             setSuccessData({ title: "Version deleted" });
+            // Select the next entry (triggers fetch + preview via existing
+            // effects) instead of setting empty arrays into the store which
+            // would cause a blank canvas flash.
             if (nextEntry) {
-              setPreview([], [], nextEntry.version_tag, nextEntry.id);
+              setSelectedId(nextEntry.id);
             } else {
+              setSelectedId(CURRENT_DRAFT_ID);
               clearPreview();
             }
           },
@@ -343,10 +315,8 @@ export function useFlowHistorySidebar(flowId: string) {
       flowId,
       history,
       deleteEntry,
-      queryClient,
       setSuccessData,
       setErrorData,
-      setPreview,
       clearPreview,
     ],
   );
@@ -355,27 +325,18 @@ export function useFlowHistorySidebar(flowId: string) {
 
   return {
     selectedId,
-    pruneWarning,
-    setPruneWarning,
     animatingId,
-    restoreDialogEntry,
-    setRestoreDialogEntry,
     deleteDialogEntry,
     setDeleteDialogEntry,
-    isRestoring,
     history,
     maxEntries,
     isLoading,
     isListError,
     isEntryError,
     processedPreview,
-    isCreating,
     isDeleting,
     isViewingDraft,
     handleSelectEntry,
-    doCreateSnapshot,
-    handleCreateSnapshot,
-    handleRestore,
     handleExport,
     handleDelete,
   };

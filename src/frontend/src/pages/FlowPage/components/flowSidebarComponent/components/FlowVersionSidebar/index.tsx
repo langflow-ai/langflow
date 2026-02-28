@@ -7,40 +7,30 @@ import {
 } from "@/components/ui/sidebar";
 import DeleteConfirmDialog from "./components/DeleteConfirmDialog";
 import VersionListItem from "./components/VersionListItem";
-import PruneWarningDialog from "./components/PruneWarningDialog";
-import RestoreConfirmDialog from "./components/RestoreConfirmDialog";
 import { CURRENT_DRAFT_ID } from "./constants";
 import type { FlowVersionSidebarContentProps } from "./types";
-import { useFlowHistorySidebar } from "./use-flow-version-sidebar";
+import { useFlowVersionSidebar } from "./use-flow-version-sidebar";
 
-export default function FlowHistorySidebarContent({
+export default function FlowVersionSidebarContent({
   flowId,
 }: FlowVersionSidebarContentProps) {
   const {
     selectedId,
-    pruneWarning,
-    setPruneWarning,
-    restoreDialogEntry,
-    setRestoreDialogEntry,
     deleteDialogEntry,
     setDeleteDialogEntry,
     animatingId,
-    isRestoring,
     history,
     maxEntries,
     isLoading,
     isListError,
     isEntryError,
     processedPreview,
-    isCreating,
     isDeleting,
     isViewingDraft,
     handleSelectEntry,
-    doCreateSnapshot,
-    handleRestore,
     handleExport,
     handleDelete,
-  } = useFlowHistorySidebar(flowId);
+  } = useFlowVersionSidebar(flowId);
 
   return (
     <>
@@ -128,22 +118,6 @@ export default function FlowHistorySidebarContent({
           </SidebarMenu>
         </div>
       </div>
-
-      <PruneWarningDialog
-        open={pruneWarning}
-        onClose={() => setPruneWarning(false)}
-        onConfirm={doCreateSnapshot}
-        isCreating={isCreating}
-        historyLength={history?.length ?? 0}
-        maxEntries={maxEntries ?? 0}
-      />
-
-      <RestoreConfirmDialog
-        entry={restoreDialogEntry}
-        onClose={() => setRestoreDialogEntry(null)}
-        onConfirm={handleRestore}
-        isRestoring={isRestoring}
-      />
 
       <DeleteConfirmDialog
         entry={deleteDialogEntry}

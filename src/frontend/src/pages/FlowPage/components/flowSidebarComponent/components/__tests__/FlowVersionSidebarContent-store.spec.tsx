@@ -55,7 +55,6 @@ jest.mock("@/controllers/API/queries/flow-version", () => ({
     isLoading: entryQueryLoading,
     isError: entryQueryError,
   }),
-  usePostCreateSnapshot: () => ({ mutate: jest.fn(), isPending: false }),
   useDeleteHistoryEntry: () => ({ mutate: jest.fn(), isPending: false }),
 }));
 
@@ -116,22 +115,22 @@ jest.mock("@/stores/alertStore", () => ({
 
 const setPreviewMock = jest.fn();
 const clearPreviewMock = jest.fn();
+const setPreviewLoadingMock = jest.fn();
 jest.mock("@/stores/versionPreviewStore", () => {
-  const store: any = (selector: any) =>
-    selector({
-      previewNodes: null,
-      previewEdges: null,
-      previewLabel: null,
-      setPreview: setPreviewMock,
-      clearPreview: clearPreviewMock,
-    });
-  store.getState = () => ({
+  const state = {
     previewNodes: null,
     previewEdges: null,
     previewLabel: null,
+    previewId: null,
+    isPreviewLoading: false,
+    didRestore: false,
     setPreview: setPreviewMock,
     clearPreview: clearPreviewMock,
-  });
+    setPreviewLoading: setPreviewLoadingMock,
+  };
+  const store: any = (selector: any) => selector(state);
+  store.getState = () => state;
+  store.setState = jest.fn();
   return { __esModule: true, default: store };
 });
 
@@ -168,6 +167,27 @@ jest.mock("@/components/ui/checkbox", () => ({
   Checkbox: () => <input type="checkbox" />,
 }));
 
+const setActiveSectionMock = jest.fn();
+jest.mock("@/components/ui/sidebar", () => ({
+  useSidebar: () => ({ setActiveSection: setActiveSectionMock }),
+  SidebarGroupLabel: ({ children, className }: any) => (
+    <div className={className}>{children}</div>
+  ),
+  SidebarMenu: ({ children, className }: any) => (
+    <div className={className}>{children}</div>
+  ),
+  SidebarMenuButton: ({ children, onClick, isActive, className }: any) => (
+    <div
+      role="button"
+      onClick={onClick}
+      className={`cursor-pointer ${className ?? ""} ${isActive ? "active" : ""}`}
+    >
+      {children}
+    </div>
+  ),
+  SidebarMenuItem: ({ children }: any) => <div>{children}</div>,
+}));
+
 jest.mock("lodash", () => ({
   cloneDeep: jest.fn((obj: any) =>
     obj === undefined ? undefined : JSON.parse(JSON.stringify(obj)),
@@ -197,7 +217,7 @@ function resetStoreState() {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("FlowHistorySidebarContent store behavior", () => {
+describe("FlowVersionSidebarContent store behavior", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     entryQueryData = null;
@@ -376,7 +396,7 @@ describe("FlowHistorySidebarContent store behavior", () => {
     ).toBeTruthy();
   });
 
-  it("restores draft when Current Draft is clicked after previewing", () => {
+  it("restores original draft when Current is clicked after previewing a version", () => {
     entryQueryData = {
       id: "entry-1",
       version_tag: "v1",
@@ -385,7 +405,7 @@ describe("FlowHistorySidebarContent store behavior", () => {
 
     render(<FlowVersionSidebarContent flowId="flow-1" />);
 
-    // Click version entry
+    // Click version entry — this sets store nodes to hist-node via layoutEffect
     const entryRow = screen.getByText("v1").closest("[class*=cursor-pointer]");
     if (entryRow) {
       act(() => {
@@ -396,9 +416,9 @@ describe("FlowHistorySidebarContent store behavior", () => {
     setStateMock.mockClear();
     clearPreviewMock.mockClear();
 
-    // Click Current Draft
+    // Click Current row
     const draftRow = screen
-      .getByText("Current Draft")
+      .getByText("Current")
       .closest("[class*=cursor-pointer]");
     if (draftRow) {
       act(() => {
@@ -406,7 +426,8 @@ describe("FlowHistorySidebarContent store behavior", () => {
       });
     }
 
-    // Should restore original nodes
+    // Should restore original draft nodes/edges (captured at mount), not the
+    // preview data that was set into the store.
     expect(setStateMock).toHaveBeenCalledWith(
       expect.objectContaining({
         nodes: [{ id: "draft-node" }],
@@ -414,11 +435,12 @@ describe("FlowHistorySidebarContent store behavior", () => {
       }),
     );
 
-    // Should show draft in preview overlay (read-only mode)
+    // Should show draft in preview overlay with null id
     expect(setPreviewMock).toHaveBeenCalledWith(
       [{ id: "draft-node" }],
       [{ id: "draft-edge" }],
       "Current Draft",
+      null,
     );
   });
 });
