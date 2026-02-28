@@ -231,16 +231,22 @@ class NativeCallbackHandler(BaseCallbackHandler):
                     if message is not None:
                         usage = getattr(message, "usage_metadata", None)
                         if usage:
-                            _get = usage.get if isinstance(usage, dict) else lambda k, d=None, u=usage: getattr(u, k, d)
-                            prompt_tokens = _get("input_tokens") or prompt_tokens
-                            completion_tokens = _get("output_tokens") or completion_tokens
-                            total_tokens = _get("total_tokens") or total_tokens
+                            if isinstance(usage, dict):
+                                prompt_tokens = usage.get("input_tokens") or prompt_tokens
+                                completion_tokens = usage.get("output_tokens") or completion_tokens
+                                total_tokens = usage.get("total_tokens") or total_tokens
+                            else:
+                                prompt_tokens = getattr(usage, "input_tokens", None) or prompt_tokens
+                                completion_tokens = getattr(usage, "output_tokens", None) or completion_tokens
+                                total_tokens = getattr(usage, "total_tokens", None) or total_tokens
+
+                        # Provider-specific fallback (e.g. OpenAI puts usage in response_metadata).
 
                         # Provider-specific fallback (e.g. OpenAI puts usage in response_metadata).
                         if not total_tokens:
-                            resp_meta = getattr(message, "response_metadata", None) or {}
+                            resp_meta = getattr(message, "response_metadata", None)
                             if isinstance(resp_meta, dict):
-                                usage_dict = resp_meta.get("token_usage") or resp_meta.get("usage", {})
+                                usage_dict = resp_meta.get("token_usage") or resp_meta.get("usage")
                                 if isinstance(usage_dict, dict):
                                     prompt_tokens = (
                                         usage_dict.get("prompt_tokens")
@@ -256,9 +262,9 @@ class NativeCallbackHandler(BaseCallbackHandler):
 
                     # Some providers (e.g. Anthropic via older adapters) put usage in generation_info.
                     if not total_tokens:
-                        gen_info = getattr(gen, "generation_info", None) or {}
+                        gen_info = getattr(gen, "generation_info", None)
                         if isinstance(gen_info, dict):
-                            usage_dict = gen_info.get("token_usage") or gen_info.get("usage", {})
+                            usage_dict = gen_info.get("token_usage") or gen_info.get("usage")
                             if isinstance(usage_dict, dict):
                                 prompt_tokens = (
                                     usage_dict.get("prompt_tokens") or usage_dict.get("input_tokens") or prompt_tokens
