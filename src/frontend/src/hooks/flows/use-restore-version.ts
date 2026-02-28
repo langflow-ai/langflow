@@ -21,7 +21,7 @@ export default function useRestoreVersion(flowId: string) {
         // --- Phase 1: API call + canvas application ---
         // Errors here are shown to the user and abort the restore.
         const response = await api.post(
-          `${getURL("FLOWS")}/${flowId}/history/${versionId}/activate`,
+          `${getURL("FLOWS")}/${flowId}/versions/${versionId}/activate`,
           null,
           { params: { save_draft: true } },
         );

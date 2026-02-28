@@ -74,7 +74,7 @@ describe("useRestoreVersion", () => {
 
     // Should POST to the activate endpoint
     expect(apiPostMock).toHaveBeenCalledWith(
-      "/api/v1/flows/flow-1/history/entry-1/activate",
+      "/api/v1/flows/flow-1/versions/entry-1/activate",
       null,
       { params: { save_draft: true } },
     );

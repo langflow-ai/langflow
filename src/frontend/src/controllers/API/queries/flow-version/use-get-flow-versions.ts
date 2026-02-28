@@ -18,7 +18,7 @@ export const useGetFlowVersions: useQueryFunctionType<
 
   const getFlowVersionsFn = async (): Promise<FlowVersionListResponse> => {
     const response = await api.get<FlowVersionListResponse>(
-      `${getURL("FLOWS")}/${flowId}/history/`,
+      `${getURL("FLOWS")}/${flowId}/versions/`,
       { params: { limit, offset } },
     );
     return response.data;

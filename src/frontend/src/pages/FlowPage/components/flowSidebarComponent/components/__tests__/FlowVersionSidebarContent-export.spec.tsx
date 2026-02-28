@@ -215,7 +215,7 @@ describe("FlowVersionSidebarContent export", () => {
 
     await waitFor(() => {
       expect(apiGetMock).toHaveBeenCalledWith(
-        "/api/v1/flows/flow-1/history/entry-1",
+        "/api/v1/flows/flow-1/versions/entry-1",
       );
     });
 

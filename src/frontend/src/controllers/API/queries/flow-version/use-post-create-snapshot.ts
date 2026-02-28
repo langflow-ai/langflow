@@ -21,7 +21,7 @@ export const usePostCreateSnapshot: useMutationFunctionType<
   ): Promise<FlowVersionEntry> => {
     const body: FlowVersionCreate = { description: payload.description };
     const response = await api.post<FlowVersionEntry>(
-      `${getURL("FLOWS")}/${payload.flowId}/history/`,
+      `${getURL("FLOWS")}/${payload.flowId}/versions/`,
       body,
     );
     return response.data;

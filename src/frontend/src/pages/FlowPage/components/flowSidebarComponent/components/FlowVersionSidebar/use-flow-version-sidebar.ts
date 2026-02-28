@@ -248,7 +248,7 @@ export function useFlowVersionSidebar(flowId: string) {
     async (entry: FlowVersionEntry) => {
       try {
         const response = await api.get(
-          `${getURL("FLOWS")}/${flowId}/history/${entry.id}`,
+          `${getURL("FLOWS")}/${flowId}/versions/${entry.id}`,
         );
         const data = response.data?.data;
         const tag = response.data?.version_tag ?? "version";
