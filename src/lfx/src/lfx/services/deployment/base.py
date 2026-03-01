@@ -50,15 +50,13 @@ class BaseDeploymentService(Service):
     @property
     @abstractmethod
     def name(self) -> str:
-        """Service name identifier.
-
-        Returns:
-            str: The service name.
-        """
+        """Service name identifier."""
         return "deployment_service"
 
+    # -- Deployment lifecycle --
+
     @abstractmethod
-    async def create_deployment(
+    async def create(
         self,
         *,
         user_id: UUID | str,
@@ -68,17 +66,7 @@ class BaseDeploymentService(Service):
         """Create a new deployment in the provider."""
 
     @abstractmethod
-    async def list_deployment_types(
-        self,
-        *,
-        user_id: UUID | str,
-        db: Any,
-    ) -> list[DeploymentType]:
-        """List deployment types supported by the provider."""
-        ...
-
-    @abstractmethod
-    async def list_deployments(
+    async def list(
         self,
         *,
         user_id: UUID | str,
@@ -88,7 +76,7 @@ class BaseDeploymentService(Service):
         """List deployments visible to this adapter."""
 
     @abstractmethod
-    async def get_deployment(
+    async def get(
         self,
         *,
         user_id: UUID | str,
@@ -98,7 +86,7 @@ class BaseDeploymentService(Service):
         """Return deployment metadata by provider ID."""
 
     @abstractmethod
-    async def update_deployment(
+    async def update(
         self,
         *,
         user_id: UUID | str,
@@ -109,7 +97,27 @@ class BaseDeploymentService(Service):
         """Update deployment inputs and apply changes in the provider."""
 
     @abstractmethod
-    async def redeploy_deployment(
+    async def delete(
+        self,
+        *,
+        user_id: UUID | str,
+        deployment_id: str,
+        db: Any,
+    ) -> DeploymentDeleteResult:
+        """Delete the deployment from the provider."""
+
+    @abstractmethod
+    async def get_status(
+        self,
+        *,
+        user_id: UUID | str,
+        deployment_id: str,
+        db: Any,
+    ) -> DeploymentStatusResult:
+        """Return provider-reported health/status for the deployment."""
+
+    @abstractmethod
+    async def redeploy(
         self,
         *,
         user_id: UUID | str,
@@ -119,7 +127,7 @@ class BaseDeploymentService(Service):
         """Re-apply current deployment inputs without changing them."""
 
     @abstractmethod
-    async def duplicate_deployment(
+    async def duplicate(
         self,
         *,
         user_id: UUID | str,
@@ -130,24 +138,15 @@ class BaseDeploymentService(Service):
         """Create a new deployment using the same inputs as the source."""
 
     @abstractmethod
-    async def delete_deployment(
+    async def list_types(
         self,
         *,
         user_id: UUID | str,
-        deployment_id: str,
         db: Any,
-    ) -> DeploymentDeleteResult:
-        """Delete the deployment from the provider."""
+    ) -> list[DeploymentType]:
+        """List deployment types supported by the provider."""
 
-    @abstractmethod
-    async def get_deployment_status(
-        self,
-        *,
-        user_id: UUID | str,
-        deployment_id: str,
-        db: Any,
-    ) -> DeploymentStatusResult:
-        """Return provider-reported health/status for the deployment."""
+    # -- Executions --
 
     @abstractmethod
     async def create_execution(
@@ -169,8 +168,10 @@ class BaseDeploymentService(Service):
     ) -> DeploymentExecutionResult:
         """Get provider-agnostic deployment execution state/output."""
 
+    # -- Configs --
+
     @abstractmethod
-    async def create_deployment_config(
+    async def create_config(
         self,
         *,
         config: BaseConfigData,
@@ -180,7 +181,7 @@ class BaseDeploymentService(Service):
         """Create a provider-scoped deployment configuration."""
 
     @abstractmethod
-    async def list_deployment_configs(
+    async def list_configs(
         self,
         *,
         user_id: UUID | str,
@@ -190,7 +191,7 @@ class BaseDeploymentService(Service):
         """List deployment configurations for this provider."""
 
     @abstractmethod
-    async def get_deployment_config(
+    async def get_config(
         self,
         *,
         user_id: UUID | str,
@@ -200,7 +201,7 @@ class BaseDeploymentService(Service):
         """Return deployment configuration by provider ID."""
 
     @abstractmethod
-    async def update_deployment_config(
+    async def update_config(
         self,
         *,
         config_id: str,
@@ -211,7 +212,7 @@ class BaseDeploymentService(Service):
         """Update a deployment configuration's JSON data."""
 
     @abstractmethod
-    async def delete_deployment_config(
+    async def delete_config(
         self,
         *,
         user_id: UUID | str,
@@ -219,6 +220,8 @@ class BaseDeploymentService(Service):
         db: Any,
     ) -> None:
         """Delete a deployment configuration from the provider."""
+
+    # -- Teardown --
 
     @abstractmethod
     async def teardown(self) -> None:
