@@ -111,6 +111,7 @@ from langflow.services.database.models.flow_history_deployment_attachment.crud i
 )
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_variable_service
+from functools import lru_cache
 
 router = APIRouter(prefix="/deployments", tags=["Deployments"])
 
@@ -536,6 +537,7 @@ async def update_provider_account(
     return _to_provider_account_response(updated)
 
 
+@lru_cache(maxsize=1)
 def _require_deployment_router_service() -> DeploymentRouterServiceProtocol:
     deployment_router_service = get_deployment_router_service()
     if deployment_router_service is None:
