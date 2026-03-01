@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import importlib.metadata as md
 import io
 import json
@@ -1867,6 +1868,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         raise AuthSchemeError(message=msg)
 
     @staticmethod
+    @functools.lru_cache(maxsize=8192)
     def _extract_error_detail(response_text: str) -> str | dict:
         """Extract a human-readable error detail from a ClientAPIException response.
 
