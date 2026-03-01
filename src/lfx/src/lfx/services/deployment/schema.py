@@ -1,10 +1,10 @@
 import datetime
 import json
 from enum import Enum
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
+from pydantic import BaseModel, Field, StringConstraints, field_validator, model_validator
 
 DeploymentProviderName = Annotated[
     str,
@@ -24,176 +24,6 @@ class DeploymentType(str, Enum):
 
     AGENT = "agent"
     MCP = "mcp"
-
-
-class ArtifactType(str, Enum):
-    """Artifact types supported by Langflow."""
-
-    FLOW = "flow"
-    DOCUMENT = "document"
-
-
-class BaseFlowArtifact(BaseModel):
-    """Model representing a payload for a flow."""
-
-    model_config = ConfigDict(extra="allow")  # e.g., viewport - good for viewing the flow in the UI
-
-    id: UUID = Field(description="Unique identifier for the flow")
-    name: str = Field(description="The name of the flow")
-    description: str | None = Field(None, description="The description of the flow")
-    data: dict = Field(description="The data of the flow")
-    tags: list[str] | None = Field(None, description="The tags of the flow")
-    provider_data: dict | None = Field(
-        None,
-        description="Provider-specific flow metadata consumed only by the active deployment adapter.",
-    )
-
-
-class BaseDocumentArtifact(BaseModel):
-    """Model representing a payload for a document."""
-
-    name: str = Field(description="The name of the document")
-    description: str | None = Field(None, description="The description of the document")
-    raw: bytes | str | dict = Field(description="The data of the document")
-
-
-ARTIFACT_MAP: dict[ArtifactType, type[BaseModel]] = {
-    ArtifactType.FLOW: BaseFlowArtifact,
-    ArtifactType.DOCUMENT: BaseDocumentArtifact,
-}
-
-
-SnapshotList = Annotated[list[BaseFlowArtifact] | list[BaseDocumentArtifact], Field(min_length=1)]
-
-
-class SnapshotItem(BaseModel):
-    """Model representing a result for a snapshot item."""
-
-    id: UUID | str = Field(description="The id of the snapshot item")
-    name: str = Field(description="The name of the snapshot item")
-    description: str | None = Field(None, description="The description of the snapshot item")
-    provider_data: dict | None = Field(None, description="The data of the snapshot item from the provider")
-
-
-class SnapshotGetResult(SnapshotItem):
-    """Model representing a result for retrieving a single snapshot payload."""
-
-    artifact_type: ArtifactType = Field(description="The type of artifact stored in the snapshot.")
-    value: BaseFlowArtifact | BaseDocumentArtifact = Field(description="The artifact payload stored in the snapshot.")
-
-
-class SnapshotListResult(BaseModel):
-    """Model representing a result for a snapshot list operation."""
-
-    snapshots: list[SnapshotItem] = Field(description="The list of snapshots")
-    provider_result: dict | None = Field(
-        None, description="The result of the snapshot list operation from the provider"
-    )
-    artifact_type: ArtifactType | Literal["_ALL"] = Field(
-        default="_ALL",
-        description="The type of the snapshot items being referenced.",
-    )
-
-
-class SnapshotItemsCreate(BaseModel):
-    """Model representing a payload for a snapshot."""
-
-    artifact_type: ArtifactType = Field(description="The type of the snapshot items being referenced.")
-    raw_payloads: SnapshotList
-
-    @model_validator(mode="after")
-    def validate_value_matches_artifact_type(self) -> "SnapshotItemsCreate":
-        validate_value_matches_artifact_type(self.raw_payloads, self.artifact_type)
-        return self
-
-
-def validate_value_matches_artifact_type(value: SnapshotList, artifact_type: ArtifactType) -> None:
-    expected_model = ARTIFACT_MAP[artifact_type]
-
-    for idx, item in enumerate(value):
-        if not isinstance(item, expected_model):
-            msg = (
-                f"All items must be of type: '{expected_model.__name__}', "
-                f"but value[{idx}] is of type '{type(item).__name__}'."
-            )
-            raise TypeError(msg)
-
-
-class SnapshotItems(BaseModel):
-    """Snapshot input for deployment create.
-
-    Accept either snapshot reference IDs or raw artifact payloads.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    artifact_type: ArtifactType = Field(description="The type of the snapshot items being referenced.")
-    reference_ids: list[str] | None = Field(
-        None,
-        description="Snapshot reference ids to use for this deployment.",
-    )
-    raw_payloads: SnapshotList | None = Field(
-        None,
-        description="Raw snapshot payloads to create and bind for this deployment.",
-    )
-
-    @field_validator("reference_ids")
-    @classmethod
-    def validate_reference_ids(cls, v: list[str] | None) -> list[str] | None:
-        if v is None:
-            return None
-        return _normalize_and_validate_id_list_for_duplicates(v, field_name="reference_ids")
-
-    @model_validator(mode="after")
-    def validate_snapshot_source(self) -> "SnapshotItems":
-        has_reference_ids = self.reference_ids is not None
-        has_raw_payloads = self.raw_payloads is not None
-
-        if has_reference_ids == has_raw_payloads:
-            msg = "Exactly one of 'reference_ids' or 'raw_payloads' must be provided."
-            raise ValueError(msg)
-
-        if self.raw_payloads is not None:
-            validate_value_matches_artifact_type(self.raw_payloads, self.artifact_type)
-
-        return self
-
-
-class SnapshotDeploymentBindingUpdate(BaseModel):
-    """Snapshot deployment binding patch payload.
-
-    Add or remove snapshot bindings for the deployment by reference ids.
-    """
-
-    add: list[str] | None = Field(
-        None,
-        description="Snapshot reference ids to attach to the deployment. Omit to leave unchanged.",
-    )
-    remove: list[str] | None = Field(
-        None,
-        description="Snapshot reference ids to detach from the deployment. Omit to leave unchanged.",
-    )
-
-    @field_validator("add", "remove")
-    @classmethod
-    def validate_id_lists(cls, v: list[str] | None) -> list[str] | None:
-        if v is None:
-            return None
-        return _normalize_and_validate_id_list_for_duplicates(v, field_name="snapshot_id")
-
-    @model_validator(mode="after")
-    def validate_operations(self):
-        """Ensure patch contains explicit and non-conflicting operations."""
-        add_values = self.add or []
-        remove_values = self.remove or []
-
-        overlap = set(add_values).intersection(remove_values)
-        if overlap:
-            ids = ", ".join(sorted(overlap))
-            msg = f"Snapshot ids cannot be present in both 'add' and 'remove': {ids}."
-            raise ValueError(msg)
-
-        return self
 
 
 EnvVarKey = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
@@ -328,10 +158,6 @@ class DeploymentCreateResult(BaseDeploymentData):
         default=None,
         description="Config id produced or bound during deployment creation.",
     )
-    snapshot_ids: list[UUID] | list[str] = Field(
-        default_factory=list,
-        description="Snapshot ids produced during deployment creation.",
-    )
     provider_result: dict | None = Field(
         None, description="The result of the deployment creation operation from the provider"
     )
@@ -387,10 +213,6 @@ class DeploymentListParams(BaseModel):
         None,
         description="Deployment ids to include in the result set.",
     )
-    snapshot_ids: list[UUID | str] | None = Field(
-        None,
-        description="Snapshot ids to include in the result set.",
-    )
     config_ids: list[UUID | str] | None = Field(
         None,
         description="Config ids to include in the result set.",
@@ -403,7 +225,7 @@ class DeploymentListParams(BaseModel):
             return None
         return list(dict.fromkeys(value))
 
-    @field_validator("deployment_ids", "snapshot_ids", "config_ids")
+    @field_validator("deployment_ids", "config_ids")
     @classmethod
     def validate_filter_ids(cls, value: list[UUID | str] | None, info) -> list[str] | None:
         if value is None:
@@ -415,15 +237,6 @@ class DeploymentListParams(BaseModel):
         return list(dict.fromkeys(normalized_ids))
 
 
-class SnapshotResult(BaseModel):
-    """Model representing a result for a snapshot creation operation."""
-
-    ids: list[UUID | str] = Field(description="The ids of the created snapshots")
-    provider_result: dict | None = Field(
-        None, description="The result of the snapshot creation operation from the provider"
-    )
-
-
 class DeploymentCreate(BaseModel):
     """Deployment create payload."""
 
@@ -432,7 +245,6 @@ class DeploymentCreate(BaseModel):
         None,
         description="The project id associated with the deployment. Defaults to the user's default Starter Project.",
     )
-    snapshot: SnapshotItems | None = Field(None, description="The snapshots of the deployment")
     config: ConfigItem | None = Field(None, description="The config of the deployment")
 
 
@@ -450,7 +262,6 @@ class DeploymentUpdate(BaseModel):
     """Deployment update payload."""
 
     spec: BaseDeploymentDataUpdate | None = Field(None, description="The metadata of the deployment")
-    snapshot: SnapshotDeploymentBindingUpdate | None = Field(None, description="The snapshot of the deployment")
     config: ConfigDeploymentBindingUpdate | None = Field(None, description="The config of the deployment")
 
 
@@ -543,15 +354,6 @@ class DeploymentExecutionStatus(BaseModel):
 
 class ConfigListFilterOptions(BaseModel):
     """Filter options for deployment config list operations."""
-
-    provider_filter: dict[str, Any] | None = Field(
-        None,
-        description="Provider-specific list filter payload.",
-    )
-
-
-class SnapshotListFilterOptions(BaseModel):
-    """Filter options for snapshot list operations."""
 
     provider_filter: dict[str, Any] | None = Field(
         None,

@@ -12,7 +12,6 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from lfx.services.deployment.schema import (
-        ArtifactType,
         BaseConfigData,
         ConfigItemResult,
         ConfigListFilterOptions,
@@ -35,11 +34,6 @@ if TYPE_CHECKING:
         DeploymentType,
         DeploymentUpdate,
         DeploymentUpdateResult,
-        SnapshotGetResult,
-        SnapshotItemsCreate,
-        SnapshotListFilterOptions,
-        SnapshotListResult,
-        SnapshotResult,
     )
     from lfx.services.settings.base import Settings
 
@@ -420,51 +414,6 @@ class DeploymentServiceProtocol(Protocol):
         db: Any,
     ) -> None:
         """Delete a deployment configuration from the provider."""
-        ...
-
-    @abstractmethod
-    async def create_snapshots(
-        self,
-        *,
-        user_id: UUID | str,
-        snapshot_items: SnapshotItemsCreate,
-        db: Any,
-    ) -> SnapshotResult:
-        """Create a provider snapshot (deployed or not)."""
-        ...
-
-    @abstractmethod
-    async def list_snapshots(
-        self,
-        *,
-        user_id: UUID | str,
-        artifact_type: ArtifactType | None = None,
-        db: Any,
-        filter_options: SnapshotListFilterOptions | None = None,
-    ) -> SnapshotListResult:
-        """List provider snapshots (deployed or not)."""
-        ...
-
-    @abstractmethod
-    async def get_snapshot(
-        self,
-        *,
-        user_id: UUID | str,
-        snapshot_id: str,
-        db: Any,
-    ) -> SnapshotGetResult:
-        """Return snapshot payload by provider ID."""
-        ...
-
-    @abstractmethod
-    async def delete_snapshot(
-        self,
-        *,
-        user_id: UUID | str,
-        snapshot_id: str,
-        db: Any,
-    ) -> None:
-        """Delete a provider snapshot."""
         ...
 
 
