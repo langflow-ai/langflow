@@ -655,16 +655,29 @@ def _collect_secret_template_field_keys(payload: Any, output: dict[str, str | No
             template = node.get("data", {}).get("node", {}).get("template")
             if isinstance(template, dict):
                 for field_name, field_data in template.items():
-                    if not (
-                        _is_secret_template_field(field_data) and isinstance(field_name, str) and field_name.strip()
-                    ):
+                    # Avoid expensive function call and repeated .get() work by
+                    # doing the same checks inline with minimal lookups.
+                    if not isinstance(field_data, dict):
                         continue
-                    if not (isinstance(field_data, dict) and field_data.get("load_from_db") is True):
+                    # secretness: type == "SecretStr" or password is True
+                    t = field_data.get("type")
+                    if t != "SecretStr" and field_data.get("password") is not True:
+                        continue
+                    # require load_from_db True as additional filter
+                    if field_data.get("load_from_db") is not True:
+                        continue
+                    if not (isinstance(field_name, str)):
                         continue
                     key = field_name.strip()
+                    if not key:
+                        continue
                     ref = field_data.get("value")
-                    if isinstance(ref, str) and ref.strip():
-                        output[key] = ref.strip()
+                    if isinstance(ref, str):
+                        v = ref.strip()
+                        if v:
+                            output[key] = v
+
+    # API object-style payload: { group: { component: { template: {...} } } }
 
     # API object-style payload: { group: { component: { template: {...} } } }
     for group in payload.values():
@@ -677,14 +690,23 @@ def _collect_secret_template_field_keys(payload: Any, output: dict[str, str | No
             if not isinstance(template, dict):
                 continue
             for field_name, field_data in template.items():
-                if not (_is_secret_template_field(field_data) and isinstance(field_name, str) and field_name.strip()):
+                if not isinstance(field_data, dict):
                     continue
-                if not (isinstance(field_data, dict) and field_data.get("load_from_db") is True):
+                t = field_data.get("type")
+                if t != "SecretStr" and field_data.get("password") is not True:
+                    continue
+                if field_data.get("load_from_db") is not True:
+                    continue
+                if not (isinstance(field_name, str)):
                     continue
                 key = field_name.strip()
+                if not key:
+                    continue
                 ref = field_data.get("value")
-                if isinstance(ref, str) and ref.strip():
-                    output[key] = ref.strip()
+                if isinstance(ref, str):
+                    v = ref.strip()
+                    if v:
+                        output[key] = v
 
 
 async def _resolve_project_id_for_deployment_create(
