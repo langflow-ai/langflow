@@ -4,6 +4,7 @@ import contextlib
 import json
 from collections.abc import AsyncIterator, Generator, Iterator
 from typing import TYPE_CHECKING, Any, cast
+from uuid import UUID
 
 import yaml
 from langchain_core.messages import AIMessage, AIMessageChunk
@@ -17,6 +18,7 @@ from lfx.schema.artifact import ArtifactType
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx.schema.schema import INPUT_FIELD_NAME
+from lfx.schema.validators import coerce_to_str_if_uuid
 from lfx.serialization.serialization import serialize
 from lfx.template.field.base import UNDEFINED, Output
 from lfx.utils.schemas import ChatOutputResponse, DataOutputResponse
@@ -165,13 +167,17 @@ class ComponentVertex(Vertex):
             message_dict = artifact if isinstance(artifact, dict) else artifact.model_dump()
             if not message_dict.get("text"):
                 continue
+            raw_session_id = message_dict.get("session_id")
+            session_id = (
+                coerce_to_str_if_uuid(raw_session_id) if isinstance(raw_session_id, (UUID, str)) else raw_session_id
+            )
             with contextlib.suppress(KeyError):
                 messages.append(
                     ChatOutputResponse(
                         message=message_dict["text"],
                         sender=message_dict.get("sender"),
                         sender_name=message_dict.get("sender_name"),
-                        session_id=message_dict.get("session_id"),
+                        session_id=session_id,
                         stream_url=message_dict.get("stream_url"),
                         files=[
                             {"path": file} if isinstance(file, str) else file for file in message_dict.get("files", [])

@@ -5,11 +5,14 @@ which is responsible for processing and managing parameters in vertices.
 """
 
 from unittest.mock import Mock
+from uuid import uuid4
 
 import pytest
 from ag_ui.core import StepFinishedEvent, StepStartedEvent
 from lfx.components.input_output import ChatInput
 from lfx.graph.edge.base import Edge
+from lfx.graph.vertex import base as vertex_base_module
+from lfx.graph.vertex import vertex_types as vertex_types_module
 from lfx.graph.vertex.base import ParameterHandler, Vertex
 from lfx.services.storage.service import StorageService
 from lfx.utils.util import unescape_string
@@ -395,3 +398,80 @@ def test_vertex_raw_event_metrics_no_optional_fields():
 
     # The metrics should contain only timestamp when no optional fields are provided
     assert len(metrics) == 1
+
+
+class _StrictChatOutputResponse:
+    """Test double that rejects non-string session_id values."""
+
+    def __init__(
+        self,
+        *,
+        message,
+        sender=None,
+        sender_name=None,
+        session_id=None,
+        stream_url=None,
+        component_id=None,
+        files=None,
+        type=None,  # noqa: A002
+    ):
+        if session_id is not None and not isinstance(session_id, str):
+            msg = "session_id must be string or None"
+            raise TypeError(msg)
+        self._payload = {
+            "message": message,
+            "sender": sender,
+            "sender_name": sender_name,
+            "session_id": session_id,
+            "stream_url": stream_url,
+            "component_id": component_id,
+            "files": files if files is not None else [],
+            "type": type,
+        }
+
+    def model_dump(self, *, exclude_none: bool = False):
+        if not exclude_none:
+            return self._payload
+        return {k: v for k, v in self._payload.items() if v is not None}
+
+
+def test_component_vertex_callsite_coerces_uuid_session_id(monkeypatch):
+    """Callsite coercion should string-cast UUID before model creation."""
+    monkeypatch.setattr(vertex_types_module, "ChatOutputResponse", _StrictChatOutputResponse)
+    session_id = uuid4()
+    vertex = object.__new__(vertex_types_module.ComponentVertex)
+    vertex.id = "vertex-1"
+    vertex.artifacts_type = {"message": "chat"}
+    artifacts = {
+        "message": {
+            "text": "hi",
+            "sender": "Machine",
+            "sender_name": "AI",
+            "session_id": session_id,
+            "stream_url": None,
+            "files": [],
+        }
+    }
+
+    messages = vertex_types_module.ComponentVertex.extract_messages_from_artifacts(vertex, artifacts)
+    assert messages[0]["session_id"] == str(session_id)
+
+
+def test_vertex_base_callsite_coerces_uuid_session_id(monkeypatch):
+    """Base vertex callsite should pass string session_id to response model."""
+    monkeypatch.setattr(vertex_base_module, "ChatOutputResponse", _StrictChatOutputResponse)
+    session_id = uuid4()
+    vertex = object.__new__(vertex_base_module.Vertex)
+    vertex.id = "vertex-2"
+    vertex.artifacts_type = "chat"
+    artifacts = {
+        "text": "hello",
+        "sender": "Machine",
+        "sender_name": "AI",
+        "session_id": session_id,
+        "stream_url": None,
+        "files": [],
+    }
+
+    messages = vertex_base_module.Vertex.extract_messages_from_artifacts(vertex, artifacts)
+    assert messages[0]["session_id"] == str(session_id)

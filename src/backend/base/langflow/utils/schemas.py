@@ -1,10 +1,13 @@
 import enum
+from uuid import UUID
 
 from langchain_core.messages import BaseMessage
 from lfx.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
 from pydantic import BaseModel, field_validator, model_validator
 from typing_extensions import TypedDict
+
+from langflow.schema.validators import coerce_to_str_if_uuid
 
 
 class File(TypedDict):
@@ -22,6 +25,8 @@ class ChatOutputResponse(BaseModel):
     sender: str | None = MESSAGE_SENDER_AI
     sender_name: str | None = MESSAGE_SENDER_NAME_AI
     session_id: str | None = None
+    """If set, must be a string. If a UUID type is provided,
+    it will be converted to a string. No other types are accepted."""
     stream_url: str | None = None
     component_id: str | None = None
     files: list[File] = []
@@ -98,6 +103,12 @@ class ChatOutputResponse(BaseModel):
         message = self.message.replace("\n\n", "\n")
         self.message = message.replace("\n", "\n\n")
         return self
+
+    @field_validator("session_id", mode="before")
+    @classmethod
+    def coerce_session_id_uuid_to_str(cls, value: UUID | str | None) -> str | None:
+        """Convert UUID session id to string."""
+        return coerce_to_str_if_uuid(value)
 
 
 class DataOutputResponse(BaseModel):
