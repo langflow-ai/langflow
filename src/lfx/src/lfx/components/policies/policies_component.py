@@ -213,8 +213,6 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             raise ValueError(msg)
 
     async def generate(self):
-        self.log(f"Start generating. Please review the generated guard code at {self.work_dir}", name="info")
-
         specs = await self._generate_guard_specs()
         res = await self._generate_guard_code(specs)
 
