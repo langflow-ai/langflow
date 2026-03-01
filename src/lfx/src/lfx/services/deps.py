@@ -21,7 +21,6 @@ if TYPE_CHECKING:
         CacheServiceProtocol,
         ChatServiceProtocol,
         DatabaseServiceProtocol,
-        DeploymentRouterServiceProtocol,
         DeploymentServiceProtocol,
         SettingsServiceProtocol,
         StorageServiceProtocol,
@@ -137,13 +136,6 @@ def get_deployment_service() -> DeploymentServiceProtocol | None:
     from lfx.services.schema import ServiceType
 
     return get_service(ServiceType.DEPLOYMENT_SERVICE)
-
-
-def get_deployment_router_service() -> DeploymentRouterServiceProtocol | None:
-    """Retrieves the deployment router service instance."""
-    from lfx.services.schema import ServiceType
-
-    return get_service(ServiceType.DEPLOYMENT_ROUTER_SERVICE)
 
 
 def get_auth_service() -> AuthServiceProtocol | None:

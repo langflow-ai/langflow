@@ -28,7 +28,6 @@ if TYPE_CHECKING:
         DeploymentItem,
         DeploymentList,
         DeploymentListParams,
-        DeploymentProviderId,
         DeploymentRedeploymentResult,
         DeploymentStatusResult,
         DeploymentType,
@@ -423,21 +422,3 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
 
-class DeploymentRouterServiceProtocol(Protocol):
-    """Protocol for deployment adapter resolver services."""
-
-    @abstractmethod
-    async def resolve_adapter(
-        self,
-        *,
-        provider_id: DeploymentProviderId,
-        user_id: UUID | str,
-        db: Any,
-    ) -> DeploymentServiceProtocol:
-        """Resolve and return adapter for a provider account owned by a user."""
-        ...
-
-    @abstractmethod
-    def list_adapter_keys(self) -> list[str]:
-        """List available adapter keys."""
-        ...
