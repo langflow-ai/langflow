@@ -7,8 +7,6 @@ from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
 from pydantic import BaseModel, field_validator, model_validator
 from typing_extensions import TypedDict
 
-from langflow.schema.validators import coerce_to_str_if_uuid
-
 
 class File(TypedDict):
     """File schema."""
@@ -108,7 +106,7 @@ class ChatOutputResponse(BaseModel):
     @classmethod
     def coerce_session_id_uuid_to_str(cls, value: UUID | str | None) -> str | None:
         """Convert UUID session id to string."""
-        return coerce_to_str_if_uuid(value)
+        return str(value) if isinstance(value, UUID) else value
 
 
 class DataOutputResponse(BaseModel):
