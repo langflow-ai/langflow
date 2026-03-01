@@ -34,7 +34,6 @@ from lfx.io import (
     TabInput,
 )
 from lfx.log.logger import logger
-from lfx.schema.message import Message
 
 if TYPE_CHECKING:
     from lfx.inputs.inputs import InputTypes
@@ -68,17 +67,6 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
     inputs = cast(
         "list[InputTypes]",
         [
-            BoolInput(
-                name="refresh_generated_code",
-                display_name="Refresh Generated Code",
-                info="Use refresh to rescan generated guard files and sync code inputs.",
-                value=False,
-                # advanced=True,
-                # show=False,
-                real_time_refresh=True,
-                refresh_button=True,
-                refresh_button_text="Refresh",
-            ),
             BoolInput(
                 name="active",
                 display_name="Active",
@@ -295,8 +283,6 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         return result
 
     async def guard_tools(self) -> list[Tool]:
-        await self.send_message(Message(text=f"Code generated to {self.work_dir}"))
-        self.status = f"Code generated to {self.work_dir}"
         if self.active:
             build_mode = getattr(self, "build_mode", BUILD_MODE_GENERATE)
             if build_mode == BUILD_MODE_GENERATE:
