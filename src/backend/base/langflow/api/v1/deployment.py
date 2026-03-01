@@ -111,6 +111,7 @@ from langflow.services.database.models.flow_history_deployment_attachment.crud i
 )
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_variable_service
+from functools import lru_cache
 
 router = APIRouter(prefix="/deployments", tags=["Deployments"])
 
@@ -624,6 +625,9 @@ def _page_offset(page: int, size: int) -> int:
 
 
 def _as_uuid(value: str) -> UUID | None:
+    # Use the cached path only for strings to avoid TypeError from unhashable inputs.
+    if isinstance(value, str):
+        return _as_uuid_cached(value)
     try:
         return UUID(value)
     except (TypeError, ValueError):
@@ -1783,3 +1787,13 @@ async def get_deployment_status(
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
     return DeploymentStatusResult(**health_result.model_dump(exclude_unset=True))
+
+
+# Cache parsed UUIDs for string inputs to avoid repeated expensive parsing.
+# Cache size chosen to balance hit-rate vs memory use.
+@lru_cache(maxsize=4096)
+def _as_uuid_cached(value: str) -> UUID | None:
+    try:
+        return UUID(value)
+    except (TypeError, ValueError):
+        return None
