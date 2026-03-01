@@ -40,6 +40,7 @@ from langflow.initial_setup.setup import (
 )
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.plugin_routes import load_plugin_routes
+from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.deps import (
     get_queue_service,
     get_service,
@@ -47,7 +48,6 @@ from langflow.services.deps import (
     get_telemetry_service,
     session_scope,
 )
-from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.schema import ServiceType
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
 from langflow.utils.mcp_cleanup import cleanup_mcp_sessions

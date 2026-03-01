@@ -34,9 +34,9 @@ from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.main import setup_app
 from langflow.services.auth.utils import get_current_user_from_access_token
 from langflow.services.database.models.api_key.crud import check_key
+from langflow.services.database.service import UnsupportedPostgreSQLVersionError, check_postgresql_version_sync
 from langflow.services.deps import get_db_service, get_settings_service, is_settings_service_initialized, session_scope
 from langflow.services.utils import initialize_services
-from langflow.services.database.service import UnsupportedPostgreSQLVersionError, check_postgresql_version_sync
 from langflow.utils.version import fetch_latest_version, get_version_info
 from langflow.utils.version import is_pre_release as langflow_is_pre_release
 

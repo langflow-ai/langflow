@@ -47,9 +47,7 @@ class UnsupportedPostgreSQLVersionError(Exception):
     """Raised when the PostgreSQL version is below the minimum required."""
 
 
-_PG_VERSION_QUERY = sa.text(
-    "SELECT current_setting('server_version_num'), current_setting('server_version')"
-)
+_PG_VERSION_QUERY = sa.text("SELECT current_setting('server_version_num'), current_setting('server_version')")
 
 
 def _check_version_row(version_num_str: str, version_str: str) -> None:
