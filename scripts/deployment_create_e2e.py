@@ -331,120 +331,83 @@ class DeploymentCreateE2E:
 
         scenarios = [
             {
-                "name": "create_ref_history_ref_config",
+                "name": "create_flow_versions_ref_config",
                 "expected": {HTTP_BAD_REQUEST},
                 "payload": self._build_create_payload(
                     deployment_type="agent",
-                    history={"artifact_type": "flow", "reference_ids": [reference_checkpoint_id]},
+                    flow_versions={"ids": [reference_checkpoint_id]},
                     config={"reference_id": reference_config_id},
                 ),
             },
             {
-                "name": "create_ref_history_raw_config",
+                "name": "create_flow_versions_raw_config",
                 "expected": {HTTP_CREATED},
                 "payload": self._build_create_payload(
                     deployment_type="agent",
-                    history={"artifact_type": "flow", "reference_ids": [reference_checkpoint_id]},
+                    flow_versions={"ids": [reference_checkpoint_id]},
                     config={"raw_payload": self._build_config_payload(label="cfg-raw-for-create")},
                 ),
             },
             {
-                "name": "create_raw_history_ref_config_rejected_bad_request",
-                "expected": {HTTP_BAD_REQUEST},
+                "name": "create_flow_versions_raw_payloads_rejected",
+                "expected": {HTTP_UNPROCESSABLE_CONTENT},
                 "payload": self._build_create_payload(
                     deployment_type="agent",
-                    history={"artifact_type": "flow", "raw_payloads": [self._build_flow_payload(label="flow-raw")]},
+                    flow_versions={"raw_payloads": [self._build_flow_payload(label="flow-raw")]},
                     config={"reference_id": reference_config_id},
                 ),
             },
             {
-                "name": "create_raw_history_raw_config",
-                "expected": {HTTP_CREATED},
-                "payload": self._build_create_payload(
-                    deployment_type="agent",
-                    history={"artifact_type": "flow", "raw_payloads": [self._build_flow_payload(label="flow-raw2")]},
-                    config={"raw_payload": self._build_config_payload(label="cfg-raw2")},
-                ),
-            },
-            {
-                "name": "create_no_history_no_config",
+                "name": "create_no_flow_versions_no_config",
                 "expected": {HTTP_CREATED},
                 "payload": self._build_create_payload(
                     deployment_type="agent",
                 ),
             },
             {
-                "name": "create_history_with_two_reference_ids",
+                "name": "create_flow_versions_with_two_ids",
                 "expected": {HTTP_CREATED},
                 "payload": self._build_create_payload(
                     deployment_type="agent",
-                    history={
-                        "artifact_type": "flow",
-                        "reference_ids": [reference_checkpoint_id, reference_checkpoint_id_2],
-                    },
+                    flow_versions={"ids": [reference_checkpoint_id, reference_checkpoint_id_2]},
                     config={"raw_payload": self._build_config_payload(label="cfg-raw-for-two-refs")},
                 ),
             },
             {
-                "name": "create_history_with_mixed_project_reference_ids",
+                "name": "create_flow_versions_with_mixed_project_ids",
                 "expected": {HTTP_NOT_FOUND},
                 "payload": self._build_create_payload(
                     deployment_type="agent",
-                    history={
-                        "artifact_type": "flow",
-                        "reference_ids": [reference_checkpoint_id, out_of_scope_checkpoint_id],
-                    },
+                    flow_versions={"ids": [reference_checkpoint_id, out_of_scope_checkpoint_id]},
                     config={"raw_payload": self._build_config_payload(label="cfg-mixed-project-refs")},
                 ),
             },
             {
-                "name": "create_history_without_project_id_outside_default_project",
+                "name": "create_flow_versions_without_project_id_outside_default_project",
                 "expected": {HTTP_NOT_FOUND},
                 "payload": self._build_create_payload(
                     deployment_type="agent",
-                    history={
-                        "artifact_type": "flow",
-                        "reference_ids": [out_of_scope_checkpoint_id],
-                    },
+                    flow_versions={"ids": [out_of_scope_checkpoint_id]},
                     config={"raw_payload": self._build_config_payload(label="cfg-outside-default")},
                 ),
             },
             {
-                "name": "create_history_with_explicit_project_mismatch",
+                "name": "create_flow_versions_with_explicit_project_mismatch",
                 "expected": {HTTP_NOT_FOUND},
                 "payload": self._build_create_payload(
                     deployment_type="agent",
-                    history={
-                        "artifact_type": "flow",
-                        "reference_ids": [out_of_scope_checkpoint_id],
-                    },
+                    flow_versions={"ids": [out_of_scope_checkpoint_id]},
                     config={"raw_payload": self._build_config_payload(label="cfg-explicit-mismatch")},
                     project_id=explicit_mismatch_project_id,
                 ),
             },
             {
-                "name": "create_history_with_two_raw_payloads",
-                "expected": {HTTP_CREATED},
-                "payload": self._build_create_payload(
-                    deployment_type="agent",
-                    history={
-                        "artifact_type": "flow",
-                        "raw_payloads": [
-                            self._build_flow_payload(label="flow-a"),
-                            self._build_flow_payload(label="flow-b"),
-                        ],
-                    },
-                    config={"raw_payload": self._build_config_payload(label="cfg-raw-for-two-raw")},
-                ),
-            },
-            {
-                "name": "create_history_with_both_reference_and_raw",
+                "name": "create_flow_versions_with_both_ids_and_raw",
                 "expected": {HTTP_UNPROCESSABLE_CONTENT},
                 "payload": self._build_create_payload(
                     deployment_type="agent",
-                    history={
-                        "artifact_type": "flow",
-                        "reference_ids": [reference_checkpoint_id],
+                    flow_versions={
+                        "ids": [reference_checkpoint_id],
                         "raw_payloads": [self._build_flow_payload(label="flow-both")],
                     },
                     config={"reference_id": reference_config_id},
@@ -455,7 +418,7 @@ class DeploymentCreateE2E:
                 "expected": {HTTP_UNPROCESSABLE_CONTENT},
                 "payload": self._build_create_payload(
                     deployment_type="agent",
-                    history={"artifact_type": "flow", "reference_ids": [reference_checkpoint_id]},
+                    flow_versions={"ids": [reference_checkpoint_id]},
                     config={
                         "reference_id": reference_config_id,
                         "raw_payload": self._build_config_payload(label="cfg-both"),
@@ -467,7 +430,7 @@ class DeploymentCreateE2E:
                 "expected": {HTTP_BAD_REQUEST},
                 "payload": self._build_create_payload(
                     deployment_type="mcp",
-                    history={"artifact_type": "flow", "reference_ids": [reference_checkpoint_id]},
+                    flow_versions={"ids": [reference_checkpoint_id]},
                     config={"raw_payload": self._build_config_payload(label="cfg-raw-for-mcp")},
                 ),
             },
@@ -523,7 +486,7 @@ class DeploymentCreateE2E:
         self,
         *,
         deployment_type: str,
-        history: dict[str, Any] | None = None,
+        flow_versions: dict[str, Any] | None = None,
         config: dict[str, Any] | None = None,
         project_id: str | None = None,
     ) -> dict[str, Any]:
@@ -535,8 +498,8 @@ class DeploymentCreateE2E:
                 "type": deployment_type,
             }
         }
-        if history is not None:
-            payload["history"] = history
+        if flow_versions is not None:
+            payload["flow_versions"] = flow_versions
         if config is not None:
             payload["config"] = config
         if project_id is not None:

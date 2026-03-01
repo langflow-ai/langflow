@@ -406,9 +406,8 @@ async def test_create_deployment_resolves_history_ids_to_raw_history_payloads(
                 "description": "deployment with checkpoint references",
                 "type": "agent",
             },
-            "history": {
-                "artifact_type": "flow",
-                "reference_ids": [history_id],
+            "flow_versions": {
+                "ids": [history_id],
             },
             "project_id": folder_id,
         },
@@ -491,9 +490,8 @@ async def test_create_deployment_rejects_history_references_from_other_project_w
                 "type": "agent",
             },
             "project_id": target_project_id,
-            "history": {
-                "artifact_type": "flow",
-                "reference_ids": [history_id],
+            "flow_versions": {
+                "ids": [history_id],
             },
         },
         headers=logged_in_headers,
@@ -550,9 +548,8 @@ async def test_create_deployment_rejects_history_references_not_in_default_proje
                 "description": "deployment defaults to starter project",
                 "type": "agent",
             },
-            "history": {
-                "artifact_type": "flow",
-                "reference_ids": [history_id],
+            "flow_versions": {
+                "ids": [history_id],
             },
         },
         headers=logged_in_headers,
@@ -664,7 +661,7 @@ async def test_create_deployment_uses_explicit_project_id_from_request(
         assert deployment_row.project_id == target_project_id
 
 
-async def test_create_deployment_accepts_history_raw_payloads_from_api(client, logged_in_headers, monkeypatch):
+async def test_create_deployment_rejects_history_raw_payloads_from_api(client, logged_in_headers, monkeypatch):
     provider = await _create_provider(client, logged_in_headers, "tenant-create-raw-payload-reject")
 
     capture_adapter = _CreateCaptureAdapter()
@@ -680,11 +677,10 @@ async def test_create_deployment_accepts_history_raw_payloads_from_api(client, l
             "provider_id": provider["id"],
             "spec": {
                 "name": f"deployment-{uuid4().hex[:8]}",
-                "description": "raw payload should be accepted",
+                "description": "raw payload should be rejected",
                 "type": "agent",
             },
-            "history": {
-                "artifact_type": "flow",
+            "flow_versions": {
                 "raw_payloads": [
                     {
                         "id": str(uuid4()),
@@ -699,14 +695,8 @@ async def test_create_deployment_accepts_history_raw_payloads_from_api(client, l
         headers=logged_in_headers,
     )
 
-    assert response.status_code == status.HTTP_201_CREATED
-    assert capture_adapter.received_payload is not None
-    assert capture_adapter.received_payload.snapshot is not None
-    assert capture_adapter.received_payload.snapshot.raw_payloads is not None
-    assert len(capture_adapter.received_payload.snapshot.raw_payloads) == 1
-    raw_payload = capture_adapter.received_payload.snapshot.raw_payloads[0]
-    assert isinstance(raw_payload.provider_data, dict)
-    assert "project_id" in raw_payload.provider_data
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert capture_adapter.received_payload is None
 
 
 async def test_detect_deployment_environment_variables_from_secret_template_fields(

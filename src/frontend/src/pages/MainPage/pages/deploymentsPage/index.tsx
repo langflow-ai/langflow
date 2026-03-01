@@ -478,9 +478,8 @@ const DeploymentsTab = () => {
     };
 
     if (selectedCheckpointIds.length > 0) {
-      payload.history = {
-        artifact_type: "flow",
-        reference_ids: selectedCheckpointIds,
+      payload.flow_versions = {
+        ids: selectedCheckpointIds,
       };
     }
 

@@ -273,30 +273,23 @@ class DetectedDeploymentEnvVar(BaseModel):
     )
 
 
-class DeploymentHistoryItemsRequest(BaseModel):
+class DeploymentFlowVersionsCreateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
-    artifact_type: ArtifactType = Field(description="The type of history artifact being referenced.")
-    reference_ids: list[str] | None = Field(
-        None,
-        description="History checkpoint reference ids to use for this deployment.",
-    )
-    raw_payloads: list[BaseFlowArtifact] | None = Field(
-        None,
-        description="Raw flow payloads for deployment creation from client-side history/export data.",
+    ids: list[str] = Field(
+        min_length=1,
+        description="Flow history checkpoint ids to attach to the deployment.",
     )
 
-    @field_validator("reference_ids")
+    @field_validator("ids")
     @classmethod
-    def validate_reference_ids(cls, values: list[str] | None) -> list[str] | None:
-        if values is None:
-            return None
+    def validate_ids(cls, values: list[str]) -> list[str]:
         cleaned: list[str] = []
         seen: set[str] = set()
         for raw in values:
             value = raw.strip()
             if not value:
-                msg = "reference_ids must not contain empty values."
+                msg = "ids must not contain empty values."
                 raise ValueError(msg)
             if value in seen:
                 continue
@@ -304,17 +297,8 @@ class DeploymentHistoryItemsRequest(BaseModel):
             cleaned.append(value)
         return cleaned
 
-    @model_validator(mode="after")
-    def validate_source(self):
-        has_reference_ids = self.reference_ids is not None
-        has_raw_payloads = self.raw_payloads is not None
-        if has_reference_ids == has_raw_payloads:
-            msg = "Exactly one of 'reference_ids' or 'raw_payloads' must be provided."
-            raise ValueError(msg)
-        return self
 
-
-class DeploymentHistoryBindingUpdateRequest(BaseModel):
+class DeploymentFlowHistoryBindingUpdateRequest(BaseModel):
     add: list[str] | None = Field(
         None,
         description="History checkpoint ids to attach to the deployment. Omit to leave unchanged.",
@@ -360,9 +344,9 @@ class DeploymentCreateRequest(BaseModel):
         default=None,
         description="Langflow Project id to persist the deployment under. Defaults to user's Starter Project.",
     )
-    history: DeploymentHistoryItemsRequest | None = Field(
+    flow_versions: DeploymentFlowVersionsCreateRequest | None = Field(
         default=None,
-        description="Langflow history checkpoint references used to build provider snapshots.",
+        description="Flow-version checkpoint ids used to build provider snapshots during deployment creation.",
     )
     config: ConfigItem | None = Field(default=None, description="Deployment config binding/create payload.")
 
@@ -373,7 +357,7 @@ class DeploymentCreateApiRequest(DeploymentCreateRequest):
 
 class DeploymentUpdateRequest(BaseModel):
     spec: BaseDeploymentDataUpdate | None = Field(default=None, description="Deployment metadata updates.")
-    history: DeploymentHistoryBindingUpdateRequest | None = Field(
+    history: DeploymentFlowHistoryBindingUpdateRequest | None = Field(
         default=None,
         description="Langflow history checkpoint attach/detach patch payload.",
     )
@@ -718,8 +702,8 @@ async def _build_adapter_deployment_create_payload(
     user_id: UUID,
     db,
 ) -> AdapterDeploymentCreate:
-    history = payload.history
-    if history is None:
+    flow_versions = payload.flow_versions
+    if flow_versions is None:
         return AdapterDeploymentCreate(
             spec=payload.spec,
             project_id=project_id,
@@ -727,35 +711,7 @@ async def _build_adapter_deployment_create_payload(
             config=payload.config,
         )
 
-    if history.artifact_type != ArtifactType.FLOW:
-        msg = f"Unsupported history artifact type for deployment create: {history.artifact_type}."
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
-
-    if history.raw_payloads is not None:
-        raw_payloads = [
-            payload_item.model_copy(
-                update={
-                    "provider_data": {
-                        **(payload_item.provider_data or {}),
-                        "project_id": str(project_id),
-                    }
-                },
-                deep=True,
-            )
-            for payload_item in history.raw_payloads
-        ]
-        adapter_snapshot_payload = SnapshotItems(
-            artifact_type=history.artifact_type,
-            raw_payloads=raw_payloads,
-        )
-        return AdapterDeploymentCreate(
-            spec=payload.spec,
-            project_id=project_id,
-            snapshot=adapter_snapshot_payload,
-            config=payload.config,
-        )
-
-    reference_ids = history.reference_ids or []
+    reference_ids = flow_versions.ids
     raw_payloads = [
         artifact
         for _, artifact in await _build_flow_artifacts_from_history_references(
@@ -767,7 +723,7 @@ async def _build_adapter_deployment_create_payload(
     ]
 
     adapter_snapshot_payload = SnapshotItems(
-        artifact_type=history.artifact_type,
+        artifact_type=ArtifactType.FLOW,
         raw_payloads=raw_payloads,
     )
     return AdapterDeploymentCreate(
@@ -935,12 +891,11 @@ async def _attach_history_checkpoints(
     snapshot_id_by_history_id: dict[UUID, str] | None = None,
     db,
 ) -> None:
-    history = payload.history
-    if history is None:
+    flow_versions = payload.flow_versions
+    if flow_versions is None:
         return
 
-    reference_ids = history.reference_ids or []
-    for ref in reference_ids:
+    for ref in flow_versions.ids:
         history_id = _as_uuid(str(ref))
         if history_id is None:
             continue
@@ -1094,7 +1049,8 @@ async def create_deployment(
             name=result.name,
         )
     snapshot_id_by_history_id: dict[UUID, str] = {}
-    history_reference_ids = deployment_payload.history.reference_ids if deployment_payload.history else None
+    flow_versions = deployment_payload.flow_versions
+    history_reference_ids = flow_versions.ids if flow_versions else None
     if history_reference_ids:
         created_snapshot_ids = [
             str(snapshot_id).strip()
@@ -1570,9 +1526,10 @@ async def update_deployment(
     remove_history_ids: list[UUID] = []
     snapshot_add_ids: list[str] = []
     snapshot_remove_ids: list[str] = []
-    if payload.history is not None:
-        add_ids = payload.history.add or []
-        remove_ids = payload.history.remove or []
+    flow_history_patch = payload.history
+    if flow_history_patch is not None:
+        add_ids = flow_history_patch.add or []
+        remove_ids = flow_history_patch.remove or []
 
         if add_ids:
             add_artifacts = await _build_flow_artifacts_from_history_references(

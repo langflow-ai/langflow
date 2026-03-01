@@ -244,9 +244,8 @@ class DeploymentUpdateE2E:
                 "description": "reference deployment for update e2e scenarios",
                 "type": "agent",
             },
-            "history": {
-                "artifact_type": "flow",
-                "reference_ids": [self.reference_checkpoint_id],
+            "flow_versions": {
+                "ids": [self.reference_checkpoint_id],
             },
             "config": {
                 "raw_payload": self._build_config_payload(label="cfg-ref-deployment"),
