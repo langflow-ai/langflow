@@ -10,10 +10,10 @@ import re
 import zipfile
 from dataclasses import dataclass
 from enum import Enum
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
-from cachetools import func
 from fastapi import HTTPException, status
 from ibm_watsonx_orchestrate_clients.agents.agent_client import AgentClient, AgentUpsertResponse
 from ibm_watsonx_orchestrate_clients.connections.connections_client import (
@@ -1931,7 +1931,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         return _WXO_SANITIZE_RE.sub("", s.translate(_WXO_TRANSLATE))
 
 
-@func.ttl_cache(maxsize=1, ttl=2)  # only used for lfx
+@lru_cache(maxsize=1)  # only used for lfx
 def _pin_requirement_name(package_name: str) -> str:
     version = md.version(package_name)
     return f"{package_name}=={version}"
