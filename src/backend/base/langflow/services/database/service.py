@@ -7,6 +7,7 @@ import sys
 import time
 from contextlib import asynccontextmanager, nullcontext
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -68,8 +69,6 @@ def check_postgresql_version_sync(database_url: str) -> None:
     if not database_url.startswith(("postgresql", "postgres")):
         return
 
-    from sqlalchemy import create_engine
-
     # Normalise the async URL to a sync-compatible one.
     url = database_url
     if url.startswith("postgres://"):
@@ -78,11 +77,25 @@ def check_postgresql_version_sync(database_url: str) -> None:
     for async_driver in ("+asyncpg", "+aiosqlite"):
         url = url.replace(async_driver, "")
 
-    engine = create_engine(url)
+    version_num_str, version_str = _fetch_version_for_url_sync(url)
+    _check_version_row(version_num_str, version_str)
+
+
+@lru_cache(maxsize=128)
+def _fetch_version_for_url_sync(normalized_url: str) -> tuple[str, str]:
+    """Fetch and return (version_num_str, version_str) for the given normalized sync URL.
+
+    This result is cached to avoid repeated expensive engine creation and connection
+    for identical database URLs. Exceptions from engine creation/connection/querying
+    are propagated and not cached.
+    """
+    from sqlalchemy import create_engine
+
+    engine = create_engine(normalized_url)
     try:
         with engine.connect() as conn:
             row = conn.execute(_PG_VERSION_QUERY).fetchone()
-            _check_version_row(*row)
+            return row[0], row[1]
     finally:
         engine.dispose()
 
