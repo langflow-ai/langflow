@@ -95,6 +95,8 @@ if TYPE_CHECKING:
     from ibm_cloud_sdk_core.authenticators import Authenticator
     from lfx.services.settings.service import SettingsService
 
+_REQUIREMENT_SPLIT_PATTERN = re.compile(r"[<>=~!\[\s;]")
+
 
 DEFAULT_LANGFLOW_RUNNER_MODULES = {"lfx", "lfx-nightly"}
 DEFAULT_ADAPTER_SNAPSHOT_TYPE = "langflow"
@@ -1657,11 +1659,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         return result
 
     def _resolve_lfx_runner_requirement(self, tool: LangflowTool) -> str:
-        tool_requirements = list(getattr(tool, "requirements", []) or [])
-        for requirement in tool_requirements:
-            requirement_name = re.split(r"[<>=~!\[\s;]", requirement.strip(), maxsplit=1)[0].lower()
-            if requirement_name in DEFAULT_LANGFLOW_RUNNER_MODULES:
-                return _pin_requirement_name(requirement_name)
+        tool_requirements = getattr(tool, "requirements", None)
+        if tool_requirements:
+            for requirement in tool_requirements:
+                requirement_name = _REQUIREMENT_SPLIT_PATTERN.split(requirement, maxsplit=1)[0].strip().lower()
+                if requirement_name in DEFAULT_LANGFLOW_RUNNER_MODULES:
+                    return _pin_requirement_name(requirement_name)
 
         # Prefer whichever runner package is actually installed right now.
         for runner_package in ("lfx-nightly", "lfx"):
