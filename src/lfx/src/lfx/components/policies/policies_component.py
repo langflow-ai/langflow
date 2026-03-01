@@ -77,7 +77,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
                 name="build_mode",
                 display_name="Build Mode",
                 options=[BUILD_MODE_GENERATE, BUILD_MODE_CACHE],
-                info="Indicates whether to invoke buildtime (Generate), or use a cached code (Use Cache)",
+                info="Generate new guard code or use cached. Review generated files in the details panel on the right.",
                 value=BUILD_MODE_GENERATE,
                 real_time_refresh=True,
                 tool_mode=True,
@@ -221,8 +221,6 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
             raise ValueError(msg)
 
     async def generate(self):
-        self.log(f"Start generating. Please review the generated guard code at {self.work_dir}", name="info")
-
         specs = await self._generate_guard_specs()
         res = await self._generate_guard_code(specs)
 
@@ -286,10 +284,11 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         if self.active:
             build_mode = getattr(self, "build_mode", BUILD_MODE_GENERATE)
             if build_mode == BUILD_MODE_GENERATE:
-                self.log("starting building toolguards...", name="info")
+                self.log(f"Start generating guard code at {self.work_dir}", name="info")
                 self.validate_before_generate()
                 await self.generate()
                 self.log(f"Policies code generation saved to {self.work_dir}", name="info")
+                self.log("Review the generated files in the details panel on the right.", name="info")
 
             else:  # build_mode == "use cache"
                 self.log(f"using cache from {self.work_dir}", name="info")
