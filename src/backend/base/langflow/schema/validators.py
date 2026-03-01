@@ -3,6 +3,13 @@ from uuid import UUID
 
 from pydantic import BeforeValidator
 
+_CACHE_MAXSIZE = 4096
+
+_SENTINEL = object()
+
+# Small module-level cache to avoid repeated str(UUID) calls for the same hashable inputs.
+_CACHE: dict[object, str | None] = {}
+
 
 def timestamp_to_str(timestamp: datetime | str) -> str:
     """Convert timestamp to standardized string format.
@@ -117,4 +124,33 @@ str_to_timestamp_validator = BeforeValidator(str_to_timestamp)
 
 def coerce_to_str_if_uuid(value: UUID | str | None) -> str | None:
     """Convert UUID or string values to strings."""
-    return str(value) if isinstance(value, UUID) else value
+    # Fast path for common immutable inputs that should be returned unchanged.
+    if isinstance(value, str) or value is None:
+        return value
+
+    # Attempt to cache only for hashable inputs; if unhashable, bypass the cache to
+    # preserve original behavior (no TypeError raised as would happen with lru_cache).
+    try:
+        key = value
+        hash(key)
+    except Exception:
+        # Unhashable: compute directly and return (preserves original behavior).
+        return str(value) if isinstance(value, UUID) else value
+
+    # Cache lookup
+    res = _CACHE.get(key, _SENTINEL)
+    if res is not _SENTINEL:
+        return res
+
+    # Compute result for hashable inputs and store in cache.
+    if isinstance(value, UUID):
+        res = str(value)
+    else:
+        res = value
+
+    if len(_CACHE) >= _CACHE_MAXSIZE:
+        # Evict an arbitrary item to keep cache bounded. Using next(iter(...))
+        # is a fast way to pop a single entry.
+        _CACHE.pop(next(iter(_CACHE)))
+    _CACHE[key] = res
+    return res
