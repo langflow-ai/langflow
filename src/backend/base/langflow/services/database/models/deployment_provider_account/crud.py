@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from functools import lru_cache
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -32,7 +33,7 @@ async def get_provider_account_by_id(
 
 def get_uuid(value: UUID | str) -> UUID:
     """Get a UUID from a string or UUID."""
-    return UUID(value) if isinstance(value, str) else value
+    return _uuid_from_str(value) if isinstance(value, str) else value
 
 
 async def list_provider_accounts(
@@ -107,3 +108,8 @@ async def delete_provider_account(
 ) -> None:
     await db.delete(provider_account)
     await db.flush()
+
+
+@lru_cache(maxsize=4096)
+def _uuid_from_str(value: str) -> UUID:
+    return UUID(value)
