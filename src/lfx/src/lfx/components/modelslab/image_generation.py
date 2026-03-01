@@ -15,8 +15,7 @@ _POLL_TIMEOUT = 300  # seconds
 class ModelsLabImageGenerationComponent(Component):
     display_name = "Image Generation"
     description = (
-        "Generate images using the ModelsLab API. Supports Flux, SDXL, "
-        "Stable Diffusion 3.5, and 100+ community models."
+        "Generate images using the ModelsLab API. Supports Flux, SDXL, Stable Diffusion 3.5, and 100+ community models."
     )
     documentation = "https://docs.modelslab.com"
     icon = "ModelsLab"
