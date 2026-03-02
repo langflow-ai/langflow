@@ -1814,29 +1814,26 @@ class Component(CustomComponent):
                     chunk.content, complete_message, message_id, message, first_chunk=first_chunk
                 )
                 first_chunk = False
-                # Capture usage metadata from chunks (usually on the last chunk)
+                # Capture usage metadata from chunks (may be split across multiple chunks)
                 if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
-                    usage_data = {
-                        "input_tokens": getattr(chunk.usage_metadata, "input_tokens", None),
-                        "output_tokens": getattr(chunk.usage_metadata, "output_tokens", None),
-                        "total_tokens": getattr(chunk.usage_metadata, "total_tokens", None),
-                    }
+                    chunk_usage = self._extract_usage_metadata(chunk.usage_metadata)
+                    usage_data = self._accumulate_usage(usage_data, chunk_usage)
                 elif hasattr(chunk, "response_metadata") and chunk.response_metadata:
                     metadata = chunk.response_metadata
                     if "token_usage" in metadata:
-                        usage_data = {
+                        chunk_usage = {
                             "input_tokens": metadata["token_usage"].get("prompt_tokens"),
                             "output_tokens": metadata["token_usage"].get("completion_tokens"),
                             "total_tokens": metadata["token_usage"].get("total_tokens"),
                         }
+                        usage_data = self._accumulate_usage(usage_data, chunk_usage)
                     elif "usage" in metadata:
-                        usage_data = {
+                        chunk_usage = {
                             "input_tokens": metadata["usage"].get("input_tokens"),
                             "output_tokens": metadata["usage"].get("output_tokens"),
                             "total_tokens": None,
                         }
-                        if usage_data["input_tokens"] and usage_data["output_tokens"]:
-                            usage_data["total_tokens"] = usage_data["input_tokens"] + usage_data["output_tokens"]
+                        usage_data = self._accumulate_usage(usage_data, chunk_usage)
         except Exception as e:
             raise StreamingError(cause=e, source=message.properties.source) from e
         else:
@@ -1854,23 +1851,24 @@ class Component(CustomComponent):
             )
             first_chunk = False
             if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
-                usage_data = self._extract_usage_metadata(chunk.usage_metadata)
+                chunk_usage = self._extract_usage_metadata(chunk.usage_metadata)
+                usage_data = self._accumulate_usage(usage_data, chunk_usage)
             elif hasattr(chunk, "response_metadata") and chunk.response_metadata:
                 metadata = chunk.response_metadata
                 if "token_usage" in metadata:
-                    usage_data = {
+                    chunk_usage = {
                         "input_tokens": metadata["token_usage"].get("prompt_tokens"),
                         "output_tokens": metadata["token_usage"].get("completion_tokens"),
                         "total_tokens": metadata["token_usage"].get("total_tokens"),
                     }
+                    usage_data = self._accumulate_usage(usage_data, chunk_usage)
                 elif "usage" in metadata:
-                    usage_data = {
+                    chunk_usage = {
                         "input_tokens": metadata["usage"].get("input_tokens"),
                         "output_tokens": metadata["usage"].get("output_tokens"),
                         "total_tokens": None,
                     }
-                    if usage_data["input_tokens"] and usage_data["output_tokens"]:
-                        usage_data["total_tokens"] = usage_data["input_tokens"] + usage_data["output_tokens"]
+                    usage_data = self._accumulate_usage(usage_data, chunk_usage)
         return complete_message, usage_data
 
     @staticmethod
@@ -1887,6 +1885,22 @@ class Component(CustomComponent):
             "output_tokens": getattr(um, "output_tokens", None),
             "total_tokens": getattr(um, "total_tokens", None),
         }
+
+    @staticmethod
+    def _accumulate_usage(existing: dict | None, new: dict) -> dict:
+        """Accumulate usage data across multiple chunks.
+
+        Some providers (e.g. Anthropic) split usage across chunks:
+        message_start has input_tokens, message_delta has output_tokens.
+        """
+        if existing is None:
+            return new
+        for key in ("input_tokens", "output_tokens"):
+            new_val = new.get(key) or 0
+            if new_val:
+                existing[key] = (existing.get(key) or 0) + new_val
+        existing["total_tokens"] = (existing.get("input_tokens") or 0) + (existing.get("output_tokens") or 0)
+        return existing
 
     async def _process_chunk(
         self, chunk: str, complete_message: str, message_id: str, message: Message, *, first_chunk: bool = False

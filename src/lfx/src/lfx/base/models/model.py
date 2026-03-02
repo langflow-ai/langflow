@@ -300,7 +300,7 @@ class LCModelComponent(Component):
                 }
             )
             if stream:
-                lf_message, result = await self._handle_stream(runnable, inputs)
+                lf_message, result, message = await self._handle_stream(runnable, inputs)
             else:
                 message = await runnable.ainvoke(inputs)
                 result = message.content if hasattr(message, "content") else message
@@ -340,9 +340,10 @@ class LCModelComponent(Component):
             inputs: The inputs to send to the model
 
         Returns:
-            tuple: (Message object if connected to chat output, model result)
+            tuple: (Message object if connected to chat output, model result, AIMessage or None)
         """
         lf_message = None
+        ai_message = None
         if self.is_connected_to_chat_output():
             # Add a Message
             if hasattr(self, "graph"):
@@ -362,9 +363,9 @@ class LCModelComponent(Component):
             lf_message = await self.send_message(model_message)
             result = lf_message.text or ""
         else:
-            message = await runnable.ainvoke(inputs)
-            result = message.content if hasattr(message, "content") else message
-        return lf_message, result
+            ai_message = await runnable.ainvoke(inputs)
+            result = ai_message.content if hasattr(ai_message, "content") else ai_message
+        return lf_message, result, ai_message
 
     @abstractmethod
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
