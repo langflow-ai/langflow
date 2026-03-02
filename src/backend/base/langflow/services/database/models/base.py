@@ -12,14 +12,14 @@ def orjson_dumps(v, *, default=None, sort_keys=False, indent_2=True):
             option = orjson.OPT_INDENT_2
         else:
             option |= orjson.OPT_INDENT_2
-    
+
     # Add NON_STRICT to prevent NaN/Infinity values (fixes PostgreSQL JSON error)
     # PostgreSQL does not support NaN/Infinity in JSON columns
     if option is None:
         option = orjson.OPT_NON_STRICT
     else:
         option |= orjson.OPT_NON_STRICT
-    
+
     if default is None:
         return orjson.dumps(v, option=option).decode()
     return orjson.dumps(v, default=default, option=option).decode()
