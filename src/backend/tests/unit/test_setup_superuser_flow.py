@@ -15,8 +15,7 @@ async def initialized_services(monkeypatch, tmp_path):
     LifespanManager. This avoids the heavy lifespan startup/shutdown (MCP servers,
     background tasks, streamable HTTP) that causes hangs on CI Linux.
     """
-    from langflow.services.utils import initialize_services
-    from langflow.services.utils import teardown_services
+    from langflow.services.utils import initialize_services, teardown_services
     from lfx.services.manager import get_service_manager
 
     db_path = tmp_path / "test.db"
