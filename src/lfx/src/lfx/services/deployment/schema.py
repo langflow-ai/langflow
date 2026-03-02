@@ -18,9 +18,11 @@ ProviderPayload = dict[str, Any]
 
 class DeploymentType(str, Enum):
     """Deployment types supported by Langflow."""
+
     # first-class deployment types supported by Langflow.
     # providers can support these options or surface their own
     AGENT = "agent"
+
 
 class BaseFlowArtifact(BaseModel):
     """Model representing a payload for a flow."""
@@ -72,21 +74,21 @@ class SnapshotDeploymentBindingUpdate(BaseModel):
     Add or remove snapshot bindings for the deployment by reference ids.
     """
 
-    add: list[str] | None = Field(
+    add: list[IdLike] | None = Field(
         None,
         description="Snapshot reference ids to attach to the deployment. Omit to leave unchanged.",
     )
-    remove: list[str] | None = Field(
+    remove: list[IdLike] | None = Field(
         None,
         description="Snapshot reference ids to detach from the deployment. Omit to leave unchanged.",
     )
 
     @field_validator("add", "remove")
     @classmethod
-    def validate_id_lists(cls, v: list[str] | None) -> list[str] | None:
+    def validate_id_lists(cls, v: list[IdLike] | None) -> list[str] | None:
         if v is None:
             return None
-        return _normalize_and_validate_id_list_for_duplicates(v, field_name="snapshot_id")
+        return _normalize_and_dedupe_id_list(v, field_name="snapshot_id")
 
     @model_validator(mode="after")
     def validate_operations(self):
@@ -309,6 +311,7 @@ class DeploymentListParams(BaseModel):
 
 class DeploymentCreate(BaseModel):
     """Deployment create payload."""
+
     spec: BaseDeploymentData = Field(description="The base metadata of the deployment")
     snapshot: SnapshotItems | None = Field(None, description="The snapshots of the deployment")
     config: ConfigItem | None = Field(None, description="The config of the deployment")
@@ -319,12 +322,14 @@ DEPLOYMENT_CREATE_SCHEMA = json.dumps(DeploymentCreate.model_json_schema(), inde
 
 class BaseDeploymentDataUpdate(BaseModel):
     """Deployment base update payload."""
+
     name: str | None = Field(None, description="The name of the deployment")
     description: str | None = Field(None, description="The description of the deployment")
 
 
 class DeploymentUpdate(BaseModel):
     """Deployment update payload."""
+
     spec: BaseDeploymentDataUpdate | None = Field(None, description="The metadata of the deployment")
     snapshot: SnapshotDeploymentBindingUpdate | None = Field(None, description="The snapshot of the deployment")
     config: ConfigDeploymentBindingUpdate | None = Field(None, description="The config of the deployment")
@@ -405,18 +410,13 @@ def _normalize_and_validate_id_list(values: list[str], *, field_name: str) -> li
     return [_normalize_and_validate_id(value, field_name=field_name) for value in values]
 
 
-def _normalize_and_validate_id_list_for_duplicates(values: list[str], *, field_name: str) -> list[str]:
-    """Normalize identifier lists and reject blank entries."""
-    normalized_values = []
-    visited = set()
-    for value in values:
-        normalized = _normalize_and_validate_id(value, field_name=field_name)
-        normalized_values.append(normalized)
-        visited.add(normalized)
-        if len(visited) < len(normalized_values):
-            msg = f"'{field_name}' must not contain duplicates: {normalized}."
-            raise ValueError(msg)
-    return normalized_values
+def _normalize_and_dedupe_id_list(values: list[IdLike], *, field_name: str) -> list[str]:
+    """Normalize identifier lists and remove duplicates while preserving order."""
+    normalized_values = _normalize_and_validate_id_list(
+        [str(value) for value in values],
+        field_name=field_name,
+    )
+    return list(dict.fromkeys(normalized_values))
 
 
 def _validate_exactly_one_of(

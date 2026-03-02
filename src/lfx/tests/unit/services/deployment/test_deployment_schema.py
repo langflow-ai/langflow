@@ -1,0 +1,202 @@
+"""Tests for deployment schema validation and shared model shapes."""
+
+from uuid import UUID, uuid4
+
+import pytest
+from lfx.services.deployment.schema import (
+    BaseFlowArtifact,
+    ConfigDeploymentBindingUpdate,
+    ConfigItem,
+    DeploymentCreate,
+    DeploymentDeleteResult,
+    DeploymentListParams,
+    DeploymentType,
+    DeploymentUpdateResult,
+    ExecutionCreate,
+    ExecutionCreateResult,
+    ExecutionStatusResult,
+    RedeployResult,
+    SnapshotDeploymentBindingUpdate,
+    SnapshotItems,
+    get_str_id,
+    get_uuid,
+)
+from pydantic import ValidationError
+
+
+def test_snapshot_items_requires_raw_payloads() -> None:
+    with pytest.raises(ValidationError, match="Field required"):
+        SnapshotItems()
+
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        SnapshotItems(
+            raw_payloads=[
+                {
+                    "id": uuid4(),
+                    "name": "Flow",
+                    "description": "test",
+                    "data": {},
+                    "tags": [],
+                }
+            ],
+            reference_ids=["snap_1"],
+        )
+
+
+def test_config_item_requires_exactly_one_source() -> None:
+    with pytest.raises(ValidationError, match="Exactly one of 'reference_id' or 'raw_payload'"):
+        ConfigItem()
+
+    with pytest.raises(ValidationError, match="Exactly one of 'reference_id' or 'raw_payload'"):
+        ConfigItem(reference_id="cfg_1", raw_payload={"name": "cfg"})
+
+
+def test_deployment_list_params_normalizes_and_dedupes_id_filters() -> None:
+    dep_uuid = uuid4()
+    cfg_uuid = uuid4()
+
+    params = DeploymentListParams(
+        deployment_ids=[dep_uuid, "  dep-id  ", "dep-id"],
+        snapshot_ids=["  snap-id  ", "snap-id"],
+        config_ids=[cfg_uuid, str(cfg_uuid)],
+    )
+
+    assert params.deployment_ids == [str(dep_uuid), "dep-id"]
+    assert params.snapshot_ids == ["snap-id"]
+    assert params.config_ids == [str(cfg_uuid)]
+
+
+def test_deployment_list_params_dedupes_types_preserving_order() -> None:
+    params = DeploymentListParams(
+        deployment_types=[
+            DeploymentType.AGENT,
+            DeploymentType.AGENT,
+        ]
+    )
+    assert params.deployment_types == [DeploymentType.AGENT]
+
+
+def test_deployment_list_params_rejects_blank_filter_ids() -> None:
+    with pytest.raises(ValidationError):
+        DeploymentListParams(deployment_ids=["   "])
+
+
+def test_snapshot_binding_update_accepts_idlike_and_dedupes() -> None:
+    snapshot_uuid = uuid4()
+
+    payload = SnapshotDeploymentBindingUpdate(
+        add=[snapshot_uuid, f"  {snapshot_uuid}  ", "snap_1", "snap_1"],
+        remove=["  snap_2  ", "snap_2"],
+    )
+
+    assert payload.add == [str(snapshot_uuid), "snap_1"]
+    assert payload.remove == ["snap_2"]
+
+
+def test_snapshot_binding_update_rejects_overlap_after_normalization() -> None:
+    snapshot_uuid = uuid4()
+    with pytest.raises(ValidationError, match="cannot be present in both 'add' and 'remove'"):
+        SnapshotDeploymentBindingUpdate(
+            add=[snapshot_uuid, " snap_1 "],
+            remove=[str(snapshot_uuid), "snap_1"],
+        )
+
+
+def test_snapshot_binding_update_rejects_blank_ids() -> None:
+    with pytest.raises(ValidationError):
+        SnapshotDeploymentBindingUpdate(add=["   "])
+
+
+def test_snapshot_binding_update_preserves_order_while_deduping() -> None:
+    payload = SnapshotDeploymentBindingUpdate(add=["b", "a", "b", "c", "a"])
+    assert payload.add == ["b", "a", "c"]
+
+
+def test_config_item_reference_id_rejects_blank() -> None:
+    with pytest.raises(ValidationError):
+        ConfigItem(reference_id="   ")
+
+
+def test_config_deployment_binding_update_normalizes_and_accepts_uuid() -> None:
+    cfg_uuid = uuid4()
+
+    normalized = ConfigDeploymentBindingUpdate(config_id="  cfg_1  ")
+    assert normalized.config_id == "cfg_1"
+
+    passthrough = ConfigDeploymentBindingUpdate(config_id=cfg_uuid)
+    assert passthrough.config_id == cfg_uuid
+
+
+def test_config_deployment_binding_update_rejects_blank() -> None:
+    with pytest.raises(ValidationError):
+        ConfigDeploymentBindingUpdate(config_id="   ")
+
+
+def test_deployment_create_rejects_invalid_deployment_type() -> None:
+    with pytest.raises(ValidationError, match="type"):
+        DeploymentCreate(spec={"name": "my deployment", "type": "invalid-type"})
+
+
+def test_snapshot_items_rejects_empty_raw_payload_list() -> None:
+    with pytest.raises(ValidationError):
+        SnapshotItems(raw_payloads=[])
+
+
+def test_base_flow_artifact_allows_extra_fields() -> None:
+    flow = BaseFlowArtifact(
+        id=uuid4(),
+        name="Flow",
+        description="desc",
+        data={},
+        tags=["tag"],
+        viewport={"x": 10, "y": 20},
+    )
+    assert flow.model_extra is not None
+    assert flow.model_extra["viewport"] == {"x": 10, "y": 20}
+
+
+def test_execution_create_normalizes_string_deployment_id() -> None:
+    payload = ExecutionCreate(deployment_id="  dep_1  ")
+    assert payload.deployment_id == "dep_1"
+
+
+def test_execution_create_accepts_uuid_deployment_id() -> None:
+    dep_uuid = uuid4()
+    payload = ExecutionCreate(deployment_id=dep_uuid)
+    assert payload.deployment_id == dep_uuid
+
+
+def test_get_id_helpers_round_trip() -> None:
+    value = uuid4()
+    value_str = get_str_id(value)
+    assert isinstance(value_str, str)
+    assert get_uuid(value_str) == value
+
+    passthrough = "dep_1"
+    assert get_str_id(passthrough) == passthrough
+    assert get_uuid(str(value)) == UUID(str(value))
+
+
+def test_execution_create_and_status_results_have_same_shape() -> None:
+    payload = {
+        "execution_id": "exec_1",
+        "deployment_id": "dep_1",
+        "provider_result": {"status": "running"},
+    }
+
+    create_result = ExecutionCreateResult(**payload)
+    status_result = ExecutionStatusResult(**payload)
+
+    assert create_result.model_dump() == status_result.model_dump()
+
+
+def test_operation_results_share_provider_result_contract() -> None:
+    provider_result = {"accepted": True}
+
+    deleted = DeploymentDeleteResult(id="dep_1", provider_result=provider_result)
+    updated = DeploymentUpdateResult(id="dep_1", provider_result=provider_result)
+    redeployed = RedeployResult(id="dep_1", provider_result=provider_result)
+
+    assert deleted.provider_result == provider_result
+    assert updated.provider_result == provider_result
+    assert redeployed.provider_result == provider_result

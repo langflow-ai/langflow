@@ -6,7 +6,6 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
 from lfx.services.deployment.base import BaseDeploymentService
-from lfx.services.registry import register_service
 from lfx.services.schema import ServiceType
 
 if TYPE_CHECKING:
@@ -31,7 +30,9 @@ if TYPE_CHECKING:
     )
 
 
-@register_service(ServiceType.DEPLOYMENT_SERVICE)
+# @register_service(ServiceType.DEPLOYMENT_SERVICE)
+# do not register this service yet. Only define the
+# protocol.
 class DeploymentService(BaseDeploymentService):
     """Minimal deployment service implementation for LFX.
 
