@@ -20,7 +20,6 @@ if TYPE_CHECKING:
         DeploymentListParams,
         DeploymentListResult,
         DeploymentListTypesResult,
-        DeploymentProviderId,
         DeploymentStatusResult,
         DeploymentUpdate,
         DeploymentUpdateResult,
@@ -258,8 +257,8 @@ class DeploymentServiceProtocol(Protocol):
         self,
         *,
         user_id: UUID | str,
-        db: Any,
         params: DeploymentListParams | None = None,
+        db: Any,
     ) -> DeploymentListResult:
         """List deployments visible to this adapter."""
         ...

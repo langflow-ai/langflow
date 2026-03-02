@@ -82,8 +82,8 @@ class DeploymentService(BaseDeploymentService):
         self,
         *,
         user_id: UUID | str,
-        db: Any,
         params: DeploymentListParams | None = None,
+        db: Any,
     ) -> DeploymentListResult:
         """List deployments visible to this adapter."""
         raise NotImplementedError
