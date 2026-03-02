@@ -2,7 +2,7 @@ from .api_key import ApiKey
 from .auth import SSOConfig, SSOUserProfile
 from .file import File
 from .flow import Flow
-from .flow_history import FlowHistory
+from .flow_version import FlowVersion
 from .folder import Folder
 from .jobs import Job
 from .message import MessageTable
@@ -14,7 +14,7 @@ __all__ = [
     "ApiKey",
     "File",
     "Flow",
-    "FlowHistory",
+    "FlowVersion",
     "Folder",
     "Job",
     "MessageTable",

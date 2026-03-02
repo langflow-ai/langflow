@@ -9,8 +9,8 @@ from sqlalchemy import CheckConstraint, Column, ForeignKey, UniqueConstraint
 from sqlmodel import JSON, Field, SQLModel
 
 
-class FlowHistory(SQLModel, table=True):  # type: ignore[call-arg]
-    __tablename__ = "flow_history"
+class FlowVersion(SQLModel, table=True):  # type: ignore[call-arg]
+    __tablename__ = "flow_version"
     __mapper_args__ = {"confirm_deleted_rows": False}
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
@@ -32,8 +32,8 @@ class FlowHistory(SQLModel, table=True):  # type: ignore[call-arg]
     )
 
 
-class FlowHistoryRead(BaseModel):
-    """Schema for listing history entries — excludes data for performance."""
+class FlowVersionRead(BaseModel):
+    """Schema for listing flow versions — excludes data for performance."""
 
     id: UUID
     flow_id: UUID
@@ -55,20 +55,20 @@ class FlowHistoryRead(BaseModel):
         return value.isoformat()
 
 
-class FlowHistoryReadWithData(FlowHistoryRead):
-    """Schema for a single history entry — includes full data."""
+class FlowVersionReadWithData(FlowVersionRead):
+    """Schema for a single flow version — includes full data."""
 
     data: dict | None
 
 
-class FlowHistoryCreate(BaseModel):
-    """Schema for creating a history entry — user only provides description."""
+class FlowVersionCreate(BaseModel):
+    """Schema for creating a flow version — user only provides description."""
 
     description: str | None = Field(default=None, max_length=500)
 
 
-class FlowHistoryListResponse(BaseModel):
-    """Wrapper for the list endpoint — includes entries and the configured max."""
+class FlowVersionListResponse(BaseModel):
+    """Wrapper for the list endpoint — includes flow versions and the configured max."""
 
-    entries: list[FlowHistoryRead]
+    entries: list[FlowVersionRead]
     max_entries: int = PydanticField(ge=1)

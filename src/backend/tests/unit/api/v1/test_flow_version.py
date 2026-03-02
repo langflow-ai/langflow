@@ -96,7 +96,7 @@ async def test_list_versions_response_includes_max_entries(client: AsyncClient, 
     from langflow.services.deps import get_settings_service
 
     settings = get_settings_service().settings
-    monkeypatch.setattr(settings, "max_flow_history_entries_per_flow", 25)
+    monkeypatch.setattr(settings, "max_flow_version_entries_per_flow", 25)
 
     flow = await _create_flow(client, logged_in_headers)
     await _create_snapshot(client, logged_in_headers, flow["id"])
@@ -501,7 +501,7 @@ async def test_version_limit_enforcement(client: AsyncClient, logged_in_headers,
     from langflow.services.deps import get_settings_service
 
     settings = get_settings_service().settings
-    monkeypatch.setattr(settings, "max_flow_history_entries_per_flow", 3)
+    monkeypatch.setattr(settings, "max_flow_version_entries_per_flow", 3)
 
     flow = await _create_flow(client, logged_in_headers)
     flow_id = flow["id"]
@@ -519,7 +519,7 @@ async def test_version_limit_keeps_newest(client: AsyncClient, logged_in_headers
     from langflow.services.deps import get_settings_service
 
     settings = get_settings_service().settings
-    monkeypatch.setattr(settings, "max_flow_history_entries_per_flow", 3)
+    monkeypatch.setattr(settings, "max_flow_version_entries_per_flow", 3)
 
     flow = await _create_flow(client, logged_in_headers)
     flow_id = flow["id"]
@@ -538,7 +538,7 @@ async def test_pruning_deletes_oldest_by_data_content(client: AsyncClient, logge
     from langflow.services.deps import get_settings_service
 
     settings = get_settings_service().settings
-    monkeypatch.setattr(settings, "max_flow_history_entries_per_flow", 2)
+    monkeypatch.setattr(settings, "max_flow_version_entries_per_flow", 2)
 
     flow = await _create_flow(client, logged_in_headers)
     flow_id = flow["id"]
@@ -572,7 +572,7 @@ async def test_lowered_limit_prunes_excess_on_next_snapshot(client: AsyncClient,
     settings = get_settings_service().settings
 
     # Start with a generous limit and create 5 snapshots.
-    monkeypatch.setattr(settings, "max_flow_history_entries_per_flow", 10)
+    monkeypatch.setattr(settings, "max_flow_version_entries_per_flow", 10)
     flow = await _create_flow(client, logged_in_headers)
     flow_id = flow["id"]
 
@@ -583,7 +583,7 @@ async def test_lowered_limit_prunes_excess_on_next_snapshot(client: AsyncClient,
     assert len(entries) == 5
 
     # Now lower the limit to 2 — existing entries remain untouched until next snapshot.
-    monkeypatch.setattr(settings, "max_flow_history_entries_per_flow", 2)
+    monkeypatch.setattr(settings, "max_flow_version_entries_per_flow", 2)
 
     entries_before = await _list_versions(client, logged_in_headers, flow_id)
     assert len(entries_before) == 5  # Still 5 — no pruning yet
@@ -604,7 +604,7 @@ async def test_snapshot_rejects_oversized_data(client: AsyncClient, logged_in_he
     from langflow.services.deps import get_settings_service
 
     settings = get_settings_service().settings
-    monkeypatch.setattr(settings, "max_flow_history_data_size_bytes", 10)  # 10 bytes
+    monkeypatch.setattr(settings, "max_flow_version_data_size_bytes", 10)  # 10 bytes
 
     flow = await _create_flow(client, logged_in_headers)
     resp = await client.post(
@@ -624,7 +624,7 @@ async def test_activate_version_with_null_data(client: AsyncClient, logged_in_he
     """Activating a version whose data is None should return 400."""
     from uuid import UUID
 
-    from langflow.services.database.models.flow_history.model import FlowHistory
+    from langflow.services.database.models.flow_version.model import FlowVersion
     from langflow.services.deps import session_scope
     from sqlmodel import select
 
@@ -635,7 +635,7 @@ async def test_activate_version_with_null_data(client: AsyncClient, logged_in_he
 
     # Manually set the snapshot's data to None in the DB
     async with session_scope() as session:
-        result = await session.exec(select(FlowHistory).where(FlowHistory.id == UUID(snap["id"])))
+        result = await session.exec(select(FlowVersion).where(FlowVersion.id == UUID(snap["id"])))
         entry = result.first()
         if entry:
             entry.data = None
@@ -815,7 +815,7 @@ async def test_activate_with_deeply_nested_data(client: AsyncClient, logged_in_h
 
 async def test_version_number_is_always_positive(client: AsyncClient, logged_in_headers):
     """get_next_version_number always returns >= 1, even for a brand-new flow."""
-    from langflow.services.database.models.flow_history.crud import get_next_version_number
+    from langflow.services.database.models.flow_version.crud import get_next_version_number
     from langflow.services.deps import session_scope
 
     flow = await _create_flow(client, logged_in_headers)
@@ -839,7 +839,7 @@ async def test_rapid_snapshots_with_low_limit(client: AsyncClient, logged_in_hea
     from langflow.services.deps import get_settings_service
 
     settings = get_settings_service().settings
-    monkeypatch.setattr(settings, "max_flow_history_entries_per_flow", 2)
+    monkeypatch.setattr(settings, "max_flow_version_entries_per_flow", 2)
 
     flow = await _create_flow(client, logged_in_headers)
     flow_id = flow["id"]

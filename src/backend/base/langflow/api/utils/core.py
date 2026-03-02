@@ -17,7 +17,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth.utils import get_current_active_user, get_current_active_user_mcp
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.flow_history.model import FlowHistory
+from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User
@@ -338,7 +338,7 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
         # Explicit delete despite FK CASCADE — SQLite doesn't enforce FK cascades
         # by default (requires PRAGMA foreign_keys = ON), and this function follows
         # the existing pattern of explicitly deleting all child records.
-        await session.exec(delete(FlowHistory).where(FlowHistory.flow_id == flow_id))
+        await session.exec(delete(FlowVersion).where(FlowVersion.flow_id == flow_id))
         await session.exec(delete(Flow).where(Flow.id == flow_id))
     except Exception as e:
         msg = f"Unable to cascade delete flow: {flow_id}"

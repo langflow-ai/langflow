@@ -6,17 +6,17 @@ These are raised by the CRUD layer and translated to HTTP responses at the API b
 from __future__ import annotations
 
 
-class FlowHistoryError(Exception):
-    """Base exception for flow-history domain errors."""
+class FlowVersionError(Exception):
+    """Base exception for flow-version domain errors."""
 
 
-class FlowHistorySerializationError(FlowHistoryError):
+class FlowVersionSerializationError(FlowVersionError):
     """Raised when flow data cannot be serialized."""
 
 
-class FlowHistoryVersionConflictError(FlowHistoryError):
+class FlowVersionConflictError(FlowVersionError):
     """Raised when version number conflicts exhaust all retries."""
 
 
-class FlowHistoryNotFoundError(FlowHistoryError):
-    """Raised when a history entry is not found."""
+class FlowVersionNotFoundError(FlowVersionError):
+    """Raised when a version entry is not found."""

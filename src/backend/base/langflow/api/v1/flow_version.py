@@ -13,24 +13,24 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
 from langflow.api.utils.core import remove_api_keys
 from langflow.services.database.models.flow.model import Flow, FlowRead
-from langflow.services.database.models.flow_history.crud import (
-    create_flow_history_entry,
-    delete_flow_history_entry,
-    get_flow_history_entry_or_raise,
-    get_flow_history_list,
+from langflow.services.database.models.flow_version.crud import (
+    create_flow_version_entry,
+    delete_flow_version_entry,
+    get_flow_version_entry_or_raise,
+    get_flow_version_list,
 )
-from langflow.services.database.models.flow_history.exceptions import (
-    FlowHistoryError,
-    FlowHistoryNotFoundError,
-    FlowHistorySerializationError,
-    FlowHistoryVersionConflictError,
+from langflow.services.database.models.flow_version.exceptions import (
+    FlowVersionError,
+    FlowVersionNotFoundError,
+    FlowVersionSerializationError,
+    FlowVersionConflictError,
 )
-from langflow.services.database.models.flow_history.model import (
-    FlowHistory,
-    FlowHistoryCreate,
-    FlowHistoryListResponse,
-    FlowHistoryRead,
-    FlowHistoryReadWithData,
+from langflow.services.database.models.flow_version.model import (
+    FlowVersion,
+    FlowVersionCreate,
+    FlowVersionListResponse,
+    FlowVersionRead,
+    FlowVersionReadWithData,
 )
 from langflow.services.deps import get_settings_service
 
@@ -55,12 +55,12 @@ def strip_version_data(data: dict | None) -> dict | None:
         return None
 
 
-def _version_to_read(entry: FlowHistory) -> FlowHistoryRead:
-    return FlowHistoryRead.model_validate(entry, from_attributes=True)
+def _version_to_read(entry: FlowVersion) -> FlowVersionRead:
+    return FlowVersionRead.model_validate(entry, from_attributes=True)
 
 
-def _version_to_read_full(entry: FlowHistory, *, strip_keys: bool = False) -> FlowHistoryReadWithData:
-    result = FlowHistoryReadWithData.model_validate(entry, from_attributes=True)
+def _version_to_read_full(entry: FlowVersion, *, strip_keys: bool = False) -> FlowVersionReadWithData:
+    result = FlowVersionReadWithData.model_validate(entry, from_attributes=True)
     if strip_keys:
         result.data = strip_version_data(result.data)
     return result
@@ -74,13 +74,13 @@ async def _get_user_flow(session: AsyncSession, flow_id: UUID, user_id: UUID) ->
     return flow
 
 
-def _translate_version_error(exc: FlowHistoryError) -> HTTPException:
+def _translate_version_error(exc: FlowVersionError) -> HTTPException:
     """Translate a domain exception into an HTTPException."""
-    if isinstance(exc, FlowHistorySerializationError):
+    if isinstance(exc, FlowVersionSerializationError):
         return HTTPException(status_code=422, detail=str(exc))
-    if isinstance(exc, FlowHistoryVersionConflictError):
+    if isinstance(exc, FlowVersionConflictError):
         return HTTPException(status_code=409, detail=str(exc))
-    if isinstance(exc, FlowHistoryNotFoundError):
+    if isinstance(exc, FlowVersionNotFoundError):
         return HTTPException(status_code=404, detail=str(exc))
     return HTTPException(status_code=500, detail=str(exc))
 
@@ -92,11 +92,11 @@ async def list_flow_versions(
     session: DbSessionReadOnly,
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-) -> FlowHistoryListResponse:
+) -> FlowVersionListResponse:
     await _get_user_flow(session, flow_id, current_user.id)
-    entries = await get_flow_history_list(session, flow_id, current_user.id, limit, offset)
-    max_entries = get_settings_service().settings.max_flow_history_entries_per_flow
-    return FlowHistoryListResponse(
+    entries = await get_flow_version_list(session, flow_id, current_user.id, limit, offset)
+    max_entries = get_settings_service().settings.max_flow_version_entries_per_flow
+    return FlowVersionListResponse(
         entries=[_version_to_read(e) for e in entries],
         max_entries=max_entries,
     )
@@ -113,11 +113,11 @@ async def get_single_flow_version(
     version_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSessionReadOnly,
-) -> FlowHistoryReadWithData:
+) -> FlowVersionReadWithData:
     await _get_user_flow(session, flow_id, current_user.id)
     try:
-        entry = await get_flow_history_entry_or_raise(session, version_id, current_user.id, flow_id=flow_id)
-    except FlowHistoryNotFoundError as exc:
+        entry = await get_flow_version_entry_or_raise(session, version_id, current_user.id, flow_id=flow_id)
+    except FlowVersionNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Version entry not found") from exc
     return _version_to_read_full(entry, strip_keys=True)
 
@@ -127,8 +127,8 @@ async def create_snapshot(
     flow_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSession,
-    body: FlowHistoryCreate | None = None,
-) -> FlowHistoryRead:
+    body: FlowVersionCreate | None = None,
+) -> FlowVersionRead:
     flow = await _get_user_flow(session, flow_id, current_user.id)
     description = body.description if body else None
     try:
@@ -139,14 +139,14 @@ async def create_snapshot(
             detail="Flow data could not be copied for snapshot. The data may be corrupted.",
         ) from exc
     try:
-        entry = await create_flow_history_entry(
+        entry = await create_flow_version_entry(
             session,
             flow_id=flow.id,
             user_id=current_user.id,
             data=data,
             description=description,
         )
-    except FlowHistoryError as exc:
+    except FlowVersionError as exc:
         raise _translate_version_error(exc) from exc
     return _version_to_read(entry)
 
@@ -163,8 +163,8 @@ async def activate_version(
 
     # Verify version entry belongs to this flow
     try:
-        target_entry = await get_flow_history_entry_or_raise(session, version_id, current_user.id, flow_id=flow_id)
-    except FlowHistoryNotFoundError as exc:
+        target_entry = await get_flow_version_entry_or_raise(session, version_id, current_user.id, flow_id=flow_id)
+    except FlowVersionNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Version entry not found") from exc
 
     # Guard against activating a version with no data (check before auto-snapshot)
@@ -172,7 +172,7 @@ async def activate_version(
         raise HTTPException(status_code=400, detail="Cannot activate a version with no data")
 
     # Capture copies of both data dicts before the savepoint to avoid stale
-    # reads if pruning inside create_flow_history_entry deletes old entries.
+    # reads if pruning inside create_flow_version_entry deletes old entries.
     try:
         current_data = copy.deepcopy(flow.data) if save_draft else None
         target_data = copy.deepcopy(target_entry.data)
@@ -187,7 +187,7 @@ async def activate_version(
     try:
         async with session.begin_nested():
             if save_draft and current_data is not None:
-                await create_flow_history_entry(
+                await create_flow_version_entry(
                     session,
                     flow_id=flow.id,
                     user_id=current_user.id,
@@ -200,7 +200,7 @@ async def activate_version(
 
             session.add(flow)
             await session.flush()
-    except FlowHistoryError as exc:
+    except FlowVersionError as exc:
         raise _translate_version_error(exc) from exc
     except IntegrityError as exc:
         raise HTTPException(
@@ -229,8 +229,8 @@ async def delete_version_entry(
 
     # Verify entry belongs to this flow, then delete
     try:
-        await get_flow_history_entry_or_raise(session, version_id, current_user.id, flow_id=flow_id)
-        await delete_flow_history_entry(session, version_id, current_user.id)
-    except FlowHistoryError as exc:
+        await get_flow_version_entry_or_raise(session, version_id, current_user.id, flow_id=flow_id)
+        await delete_flow_version_entry(session, version_id, current_user.id)
+    except FlowVersionError as exc:
         raise _translate_version_error(exc) from exc
     await logger.adebug("Deleted version entry %s for flow %s", version_id, flow_id)
