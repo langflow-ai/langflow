@@ -12,27 +12,28 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from lfx.services.deployment.schema import (
-        BaseConfigData,
-        ConfigItemResult,
-        ConfigListFilterOptions,
-        ConfigListResult,
-        ConfigResult,
-        ConfigUpdate,
-        DeploymentCreate,
-        DeploymentCreateResult,
-        DeploymentDeleteResult,
-        DeploymentDetailItem,
-        DeploymentExecution,
-        DeploymentExecutionResult,
-        DeploymentExecutionStatus,
+        ConfigCreateRequest,
+        ConfigDeleteRequest,
+        ConfigDetail,
+        ConfigList,
+        ConfigListParams,
+        ConfigResponse,
+        ConfigUpdateRequest,
+        DeploymentCreateRequest,
+        DeploymentCreateResponse,
+        DeploymentDeleteRequest,
+        DeploymentDeleteResponse,
+        DeploymentExecutionRequest,
+        DeploymentExecutionResponse,
+        DeploymentExecutionStatusRequest,
         DeploymentItem,
         DeploymentList,
         DeploymentListParams,
-        DeploymentRedeploymentResult,
-        DeploymentStatusResult,
+        DeploymentRedeployResponse,
+        DeploymentStatus,
         DeploymentType,
-        DeploymentUpdate,
-        DeploymentUpdateResult,
+        DeploymentUpdateRequest,
+        DeploymentUpdateResponse,
     )
     from lfx.services.settings.base import Settings
 
@@ -244,9 +245,9 @@ class DeploymentServiceProtocol(Protocol):
         self,
         *,
         user_id: UUID | str,
-        deployment: DeploymentCreate,
+        request: DeploymentCreateRequest,
         db: Any,
-    ) -> DeploymentCreateResult:
+    ) -> DeploymentCreateResponse:
         """Create a new deployment in the provider."""
         ...
 
@@ -268,8 +269,8 @@ class DeploymentServiceProtocol(Protocol):
         user_id: UUID | str,
         deployment_id: UUID | str,
         db: Any,
-    ) -> DeploymentDetailItem:
-        """Return deployment metadata by provider ID."""
+    ) -> DeploymentItem:
+        """Return deployment metadata by ID."""
         ...
 
     @abstractmethod
@@ -278,9 +279,9 @@ class DeploymentServiceProtocol(Protocol):
         *,
         user_id: UUID | str,
         deployment_id: UUID | str,
-        update_data: DeploymentUpdate,
+        request: DeploymentUpdateRequest,
         db: Any,
-    ) -> DeploymentUpdateResult:
+    ) -> DeploymentUpdateResponse:
         """Update deployment inputs and apply changes in the provider."""
         ...
 
@@ -289,9 +290,9 @@ class DeploymentServiceProtocol(Protocol):
         self,
         *,
         user_id: UUID | str,
-        deployment_id: str,
+        request: DeploymentDeleteRequest,
         db: Any,
-    ) -> DeploymentDeleteResult:
+    ) -> DeploymentDeleteResponse:
         """Delete the deployment from the provider."""
         ...
 
@@ -302,7 +303,7 @@ class DeploymentServiceProtocol(Protocol):
         user_id: UUID | str,
         deployment_id: str,
         db: Any,
-    ) -> DeploymentStatusResult:
+    ) -> DeploymentStatus:
         """Return provider-reported health/status for the deployment."""
         ...
 
@@ -313,7 +314,7 @@ class DeploymentServiceProtocol(Protocol):
         user_id: UUID | str,
         deployment_id: str,
         db: Any,
-    ) -> DeploymentRedeploymentResult:
+    ) -> DeploymentRedeployResponse:
         """Re-apply current deployment inputs without changing them."""
         ...
 
@@ -346,10 +347,10 @@ class DeploymentServiceProtocol(Protocol):
         self,
         *,
         user_id: UUID | str,
-        execution: DeploymentExecution,
+        request: DeploymentExecutionRequest,
         db: Any,
-    ) -> DeploymentExecutionResult:
-        """Run a provider-agnostic deployment execution."""
+    ) -> DeploymentExecutionResponse:
+        """Run a deployment execution."""
         ...
 
     @abstractmethod
@@ -357,10 +358,10 @@ class DeploymentServiceProtocol(Protocol):
         self,
         *,
         user_id: UUID | str,
-        execution_status: DeploymentExecutionStatus,
+        request: DeploymentExecutionStatusRequest,
         db: Any,
-    ) -> DeploymentExecutionResult:
-        """Get provider-agnostic deployment execution state/output."""
+    ) -> DeploymentExecutionResponse:
+        """Get deployment execution state/output."""
         ...
 
     # -- Configs --
@@ -369,10 +370,10 @@ class DeploymentServiceProtocol(Protocol):
     async def create_config(
         self,
         *,
-        config: BaseConfigData,
         user_id: UUID | str,
+        request: ConfigCreateRequest,
         db: Any,
-    ) -> ConfigResult:
+    ) -> ConfigResponse:
         """Create a provider-scoped deployment configuration."""
         ...
 
@@ -382,8 +383,8 @@ class DeploymentServiceProtocol(Protocol):
         *,
         user_id: UUID | str,
         db: Any,
-        filter_options: ConfigListFilterOptions | None = None,
-    ) -> ConfigListResult:
+        params: ConfigListParams | None = None,
+    ) -> ConfigList:
         """List deployment configurations."""
         ...
 
@@ -394,19 +395,18 @@ class DeploymentServiceProtocol(Protocol):
         user_id: UUID | str,
         config_id: str,
         db: Any,
-    ) -> ConfigItemResult:
-        """Return deployment configuration by provider ID."""
+    ) -> ConfigDetail:
+        """Return deployment configuration by ID."""
         ...
 
     @abstractmethod
     async def update_config(
         self,
         *,
-        config_id: str,
-        update_data: ConfigUpdate,
         user_id: UUID | str,
+        request: ConfigUpdateRequest,
         db: Any,
-    ) -> ConfigResult:
+    ) -> ConfigResponse:
         """Update a deployment configuration's JSON data."""
         ...
 
@@ -415,7 +415,7 @@ class DeploymentServiceProtocol(Protocol):
         self,
         *,
         user_id: UUID | str,
-        config_id: str,
+        request: ConfigDeleteRequest,
         db: Any,
     ) -> None:
         """Delete a deployment configuration from the provider."""

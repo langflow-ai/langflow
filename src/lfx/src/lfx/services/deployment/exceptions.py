@@ -1,8 +1,4 @@
-"""Framework-agnostic deployment exceptions for LFX deployment service.
-
-Shared exception types so that both minimal (LFX) and full (Langflow) deployment
-implementations can raise the same errors.
-"""
+"""Deployment exceptions for LFX deployment service."""
 
 from __future__ import annotations
 
@@ -16,24 +12,11 @@ class DeploymentError(Exception):
         super().__init__(message)
 
 
-class AuthenticationError(DeploymentError):
-    """Base exception for authentication failures.
+class DeploymentNotFoundError(DeploymentError):
+    """Raised when a deployment is not found."""
 
-    Please ensure that the message does not leak sensitive information.
-    """
-
-    def __init__(self, message: str, *, error_code: str | None = None):
-        super().__init__(message=message, error_code=error_code)
-
-
-class CredentialResolutionError(AuthenticationError):
-    """Raised when credentials resolution fails.
-
-    Please ensure that the message does not leak sensitive information.
-    """
-
-    def __init__(self, message: str = "Credentials resolution failed"):
-        super().__init__(message, error_code="credentials_resolution_error")
+    def __init__(self, message: str = "Deployment not found"):
+        super().__init__(message, error_code="deployment_not_found")
 
 
 class DeploymentConflictError(DeploymentError):
@@ -57,23 +40,6 @@ class InvalidDeploymentOperationError(DeploymentError):
         super().__init__(message, error_code="invalid_deployment_operation")
 
 
-class DeploymentSupportError(DeploymentError):
-    """Raised when a deployment type is unsupported."""
-
-    def __init__(self, message: str = "Deployment type is unsupported"):
-        super().__init__(message, error_code="unsupported_deployment_type")
-
-
-class AuthSchemeError(AuthenticationError):
-    """Raised when no matching authentication scheme was found.
-
-    Please ensure that the message does not leak sensitive information.
-    """
-
-    def __init__(self, message: str = "No matching authentication scheme was found"):
-        super().__init__(message, error_code="unsupported_auth_type")
-
-
 class InvalidDeploymentTypeError(DeploymentError):
     """Raised when an invalid deployment type is provided."""
 
@@ -81,8 +47,8 @@ class InvalidDeploymentTypeError(DeploymentError):
         super().__init__(message, error_code="invalid_deployment_type")
 
 
-class DeploymentNotFoundError(DeploymentError):
-    """Raised when a deployment is not found."""
+class DeploymentSupportError(DeploymentError):
+    """Raised when a deployment type is unsupported."""
 
-    def __init__(self, message: str = "Deployment not found"):
-        super().__init__(message, error_code="deployment_not_found")
+    def __init__(self, message: str = "Deployment type is unsupported"):
+        super().__init__(message, error_code="unsupported_deployment_type")

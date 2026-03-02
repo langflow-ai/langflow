@@ -1,22 +1,9 @@
 import datetime
-import json
 from enum import Enum
 from typing import Annotated, Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field, StringConstraints, field_validator, model_validator
-
-DeploymentProviderName = Annotated[
-    str,
-    StringConstraints(strip_whitespace=True, min_length=1, max_length=128),
-]  # the name of the deployment provider.
-
-DeploymentProviderId = UUID  # primary key of a deployment provider account registration.
-
-AccountId = Annotated[
-    str,
-    StringConstraints(strip_whitespace=True, min_length=1, max_length=128),
-]  # the provider account / tenant id.
 
 
 class DeploymentType(str, Enum):
@@ -34,7 +21,7 @@ class EnvVarSource(str, Enum):
     VARIABLE = "variable"
 
 
-class EnvVarValueSpec(BaseModel):
+class EnvVarValue(BaseModel):
     """Environment variable resolution spec."""
 
     value: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)] = Field(
@@ -46,11 +33,11 @@ class EnvVarValueSpec(BaseModel):
     )
 
 
-EnvVarValue = EnvVarValueSpec
+# -- Configs --
 
 
-class BaseConfigData(BaseModel):
-    """Model representing a data for a config."""
+class ConfigCreateRequest(BaseModel):
+    """Config create request."""
 
     name: str = Field(description="The name of the config")
     description: str | None = Field(None, description="The description of the config")
@@ -58,17 +45,15 @@ class BaseConfigData(BaseModel):
     provider_config: dict | None = Field(None, description="Provider configuration")
 
 
-class ConfigResult(BaseModel):
-    """Model representing a result for a config creation operation."""
+class ConfigResponse(BaseModel):
+    """Response from a config create/update operation."""
 
-    id: UUID | str = Field(description="The id of the created config")
-    provider_result: dict | None = Field(
-        None, description="The result of the config creation operation from the provider"
-    )
+    id: UUID | str = Field(description="The id of the config")
+    provider_response: dict | None = Field(None, description="Provider-specific response data")
 
 
-class ConfigItemResult(BaseModel):
-    """Model representing a result for a config item."""
+class ConfigDetail(BaseModel):
+    """Single config detail."""
 
     id: UUID | str = Field(description="The id of the config")
     name: str | None = Field(None, description="The name of the config")
@@ -76,11 +61,11 @@ class ConfigItemResult(BaseModel):
     provider_data: dict | None = Field(None, description="The config data from the provider")
 
 
-class ConfigListResult(BaseModel):
-    """Model representing a result for a config list operation."""
+class ConfigList(BaseModel):
+    """Config list."""
 
-    configs: list[ConfigItemResult] = Field(description="The list of configs")
-    provider_result: dict | None = Field(None, description="The result of the config list operation from the provider")
+    configs: list[ConfigDetail] = Field(description="The list of configs")
+    provider_data: dict | None = Field(None, description="Provider-specific data")
 
 
 class ConfigItem(BaseModel):
@@ -93,7 +78,7 @@ class ConfigItem(BaseModel):
         None,
         description="Existing config reference id to bind to the deployment.",
     )
-    raw_payload: BaseConfigData | None = Field(
+    raw_payload: ConfigCreateRequest | None = Field(
         None,
         description="Config payload to create and bind to the deployment.",
     )
@@ -117,16 +102,22 @@ class ConfigItem(BaseModel):
         return self
 
 
-class ConfigUpdate(BaseModel):
-    """Config update payload."""
+class ConfigUpdateRequest(BaseModel):
+    """Config update request."""
 
+    config_id: str = Field(description="The id of the config to update")
     name: str | None = Field(None, description="The name of the config")
     description: str | None = Field(None, description="The description of the config")
     environment_variables: dict[EnvVarKey, EnvVarValue] | None = Field(None, description="Environment variables")
 
+    @field_validator("config_id")
+    @classmethod
+    def validate_config_id(cls, value: str) -> str:
+        return _normalize_and_validate_id(value, field_name="config_id")
 
-class ConfigDeploymentBindingUpdate(BaseModel):
-    """Config deployment binding patch payload."""
+
+class ConfigBindingUpdate(BaseModel):
+    """Patch payload for binding/unbinding a config on a deployment."""
 
     config_id: str | UUID | None = Field(
         None,
@@ -141,61 +132,80 @@ class ConfigDeploymentBindingUpdate(BaseModel):
         return v
 
 
-class BaseDeploymentData(BaseModel):
-    """Model representing a data for a deployment."""
+class ConfigDeleteRequest(BaseModel):
+    """Config delete request."""
+
+    config_id: str = Field(description="The id of the config to delete")
+
+    @field_validator("config_id")
+    @classmethod
+    def validate_config_id(cls, value: str) -> str:
+        return _normalize_and_validate_id(value, field_name="config_id")
+
+
+class ConfigListParams(BaseModel):
+    """Query params for config list operations."""
+
+    provider_params: dict[str, Any] | None = Field(
+        None,
+        description="Provider-specific list filter payload.",
+    )
+
+
+# -- Deployments --
+
+
+class DeploymentSpec(BaseModel):
+    """Core deployment metadata (used for create)."""
 
     name: str = Field(description="The name of the deployment")
     description: str = Field(default="", description="The description of the deployment")
     type: DeploymentType = Field(description="The type of the deployment")
-    provider_spec: dict | None = Field(None, description="The data of the deployment from the provider")
+    provider_spec: dict | None = Field(None, description="Provider-specific input data")
 
 
-class DeploymentCreateResult(BaseDeploymentData):
-    """Model representing a result for a deployment creation operation."""
+class DeploymentSpecUpdate(BaseModel):
+    """Deployment metadata update payload."""
 
-    id: UUID | str = Field(description="The id of the created deployment")
-    config_id: UUID | str | None = Field(
-        default=None,
-        description="Config id produced or bound during deployment creation.",
-    )
-    provider_result: dict | None = Field(
-        None, description="The result of the deployment creation operation from the provider"
-    )
-
-
-class DeploymentDeleteResult(BaseModel):
-    """Model representing a result for a deployment deletion operation."""
-
-    id: UUID | str = Field(description="The id of the deleted deployment")
-    provider_result: dict | None = Field(
-        None, description="The result of the deployment deletion operation from the provider"
-    )
-
-
-class DeploymentItem(BaseModel):
-    """Model representing a result for a deployment list item."""
-
-    id: UUID | str = Field(description="The id of the deployment")
-    name: str = Field(description="The name of the deployment")
-    type: DeploymentType = Field(description="The type of the deployment")
-    created_at: datetime.datetime | None = Field(None, description="The created timestamp of the deployment")
-    updated_at: datetime.datetime | None = Field(None, description="The last updated timestamp of the deployment")
-    provider_data: dict | None = Field(None, description="The data of the deployment from the provider")
-
-
-class DeploymentDetailItem(DeploymentItem):
-    """Model representing a detailed deployment payload."""
-
+    name: str | None = Field(None, description="The name of the deployment")
     description: str | None = Field(None, description="The description of the deployment")
 
 
+class DeploymentCreateRequest(BaseModel):
+    """Deployment create payload."""
+
+    spec: DeploymentSpec = Field(description="The base metadata of the deployment")
+    project_id: UUID | None = Field(
+        None,
+        description="The project id associated with the deployment.",
+    )
+    config: ConfigItem | None = Field(None, description="The config of the deployment")
+
+
+class DeploymentUpdateRequest(BaseModel):
+    """Deployment update payload."""
+
+    spec: DeploymentSpecUpdate | None = Field(None, description="The metadata of the deployment")
+    config: ConfigBindingUpdate | None = Field(None, description="The config binding update")
+
+
+class DeploymentItem(BaseModel):
+    """Deployment summary/detail model."""
+
+    id: UUID | str = Field(description="The id of the deployment")
+    name: str = Field(description="The name of the deployment")
+    description: str | None = Field(None, description="The description of the deployment")
+    type: DeploymentType = Field(description="The type of the deployment")
+    created_at: datetime.datetime | None = Field(None, description="The created timestamp of the deployment")
+    updated_at: datetime.datetime | None = Field(None, description="The last updated timestamp of the deployment")
+    provider_data: dict | None = Field(None, description="Provider-specific data")
+
+
 class DeploymentList(BaseModel):
-    """Model representing a result for a deployment list operation."""
+    """Response from a deployment list operation."""
 
     deployments: list[DeploymentItem] = Field(description="The list of deployments")
-    provider_result: dict | None = Field(
-        None, description="The result of the deployment list operation from the provider"
-    )
+    provider_response: dict | None = Field(None, description="Provider-specific response data")
 
 
 class DeploymentListParams(BaseModel):
@@ -237,71 +247,79 @@ class DeploymentListParams(BaseModel):
         return list(dict.fromkeys(normalized_ids))
 
 
-class DeploymentCreate(BaseModel):
-    """Deployment create payload."""
+# -- Deployment requests --
 
-    spec: BaseDeploymentData = Field(description="The base metadata of the deployment")
-    project_id: UUID | None = Field(
-        None,
-        description="The project id associated with the deployment. Defaults to the user's default Starter Project.",
+
+class DeploymentDeleteRequest(BaseModel):
+    """Deployment delete request payload."""
+
+    deployment_id: UUID | str = Field(description="The id of the deployment to delete.")
+
+    @field_validator("deployment_id")
+    @classmethod
+    def validate_deployment_id(cls, value: UUID | str) -> UUID | str:
+        if isinstance(value, str):
+            return _normalize_and_validate_id(value, field_name="deployment_id")
+        return value
+
+
+# -- Deployment responses --
+
+
+class DeploymentCreateResponse(DeploymentSpec):
+    """Response from a deployment create operation."""
+
+    id: UUID | str = Field(description="The id of the created deployment")
+    config_id: UUID | str | None = Field(
+        default=None,
+        description="Config id produced or bound during deployment creation.",
     )
-    config: ConfigItem | None = Field(None, description="The config of the deployment")
+    provider_response: dict | None = Field(None, description="Provider-specific response data")
 
 
-DEPLOYMENT_CREATE_SCHEMA = json.dumps(DeploymentCreate.model_json_schema(), indent=2)
-
-
-class BaseDeploymentDataUpdate(BaseModel):
-    """Deployment base update payload."""
-
-    name: str | None = Field(None, description="The name of the deployment")
-    description: str | None = Field(None, description="The description of the deployment")
-
-
-class DeploymentUpdate(BaseModel):
-    """Deployment update payload."""
-
-    spec: BaseDeploymentDataUpdate | None = Field(None, description="The metadata of the deployment")
-    config: ConfigDeploymentBindingUpdate | None = Field(None, description="The config of the deployment")
-
-
-class DeploymentUpdateResult(BaseModel):
-    """Model representing a result for a deployment update operation."""
+class DeploymentUpdateResponse(BaseModel):
+    """Response from a deployment update operation."""
 
     id: UUID | str = Field(description="The id of the updated deployment")
-    provider_result: dict | None = Field(
-        None, description="The result of the deployment update operation from the provider"
-    )
+    provider_response: dict | None = Field(None, description="Provider-specific response data")
 
 
-class DeploymentRedeploymentResult(BaseModel):
-    """Model representing a deployment redeployment operation result."""
+class DeploymentDeleteResponse(BaseModel):
+    """Response from a deployment delete operation."""
+
+    id: UUID | str = Field(description="The id of the deleted deployment")
+    provider_response: dict | None = Field(None, description="Provider-specific response data")
+
+
+class DeploymentRedeployResponse(BaseModel):
+    """Response from a redeploy operation."""
 
     id: UUID | str = Field(description="The id of the redeployed deployment")
     status: str = Field(description="The deployment status reported by the provider")
-    provider_result: dict | None = Field(
-        None, description="The result of the deployment redeployment operation from the provider"
-    )
+    provider_response: dict | None = Field(None, description="Provider-specific response data")
 
 
-class DeploymentStatusResult(BaseModel):
-    """Model representing a deployment status response."""
+class DeploymentStatus(BaseModel):
+    """Deployment status."""
 
     id: UUID | str = Field(description="The id of the deployment")
     status: str | None = Field(None, description="The normalized deployment health status")
     provider_data: dict | None = Field(None, description="The provider health payload")
 
 
-class DeploymentExecution(BaseModel):
-    """Provider-agnostic deployment execution payload."""
+# -- Executions --
+
+
+class DeploymentExecutionRequest(BaseModel):
+    """Request payload for executing a deployment."""
 
     deployment_id: UUID | str = Field(description="The id of the deployment to execute.")
     deployment_type: DeploymentType = Field(description="The deployment type to execute.")
-    input: str | dict[str, Any] | None = Field(
+    payload: str | dict[str, Any] | None = Field(
         None,
-        description="Provider-agnostic execution input payload.",
+        description="Provider-agnostic execution payload.",
     )
-    provider_input: dict[str, Any] | None = Field(
+    provider_params: dict[str, Any] | None = Field(
         None,
         description="Provider-specific execution options and overrides.",
     )
@@ -314,8 +332,8 @@ class DeploymentExecution(BaseModel):
         return value
 
 
-class DeploymentExecutionResult(BaseModel):
-    """Model representing a deployment execution response."""
+class DeploymentExecutionResponse(BaseModel):
+    """Response from a deployment execution."""
 
     execution_id: str | None = Field(
         default=None,
@@ -328,18 +346,18 @@ class DeploymentExecutionResult(BaseModel):
         default=None,
         description="Provider-agnostic output payload, when available.",
     )
-    provider_result: dict | None = Field(
+    provider_response: dict | None = Field(
         default=None,
         description="Provider-specific execution metadata and identifiers.",
     )
 
 
-class DeploymentExecutionStatus(BaseModel):
-    """Provider-agnostic execution status lookup payload."""
+class DeploymentExecutionStatusRequest(BaseModel):
+    """Request payload for checking execution status."""
 
     deployment_id: UUID | str = Field(description="The id of the deployment execution owner.")
     deployment_type: DeploymentType = Field(description="The deployment type that is being executed.")
-    provider_input: dict[str, Any] = Field(
+    provider_params: dict[str, Any] = Field(
         default_factory=dict,
         description="Provider-specific identifiers for status retrieval (e.g., task_id/run_id/thread_id).",
     )
@@ -352,13 +370,7 @@ class DeploymentExecutionStatus(BaseModel):
         return value
 
 
-class ConfigListFilterOptions(BaseModel):
-    """Filter options for deployment config list operations."""
-
-    provider_filter: dict[str, Any] | None = Field(
-        None,
-        description="Provider-specific list filter payload.",
-    )
+# -- Helpers --
 
 
 def _normalize_and_validate_id(value: str, *, field_name: str) -> str:
@@ -373,25 +385,3 @@ def _normalize_and_validate_id(value: str, *, field_name: str) -> str:
 def _normalize_and_validate_id_list(values: list[str], *, field_name: str) -> list[str]:
     """Normalize identifier lists and reject blank entries."""
     return [_normalize_and_validate_id(value, field_name=field_name) for value in values]
-
-
-def _normalize_and_validate_id_list_for_duplicates(values: list[str], *, field_name: str) -> list[str]:
-    """Normalize identifier lists and reject blank entries."""
-    normalized_values = []
-    visited = set()
-    for value in values:
-        normalized = _normalize_and_validate_id(value, field_name=field_name)
-        normalized_values.append(normalized)
-        visited.add(normalized)
-        if len(visited) < len(normalized_values):
-            msg = f"'{field_name}' must not contain duplicates: {normalized}."
-            raise ValueError(msg)
-    return normalized_values
-
-
-def get_str_id(v: str | UUID) -> str:
-    return str(v) if isinstance(v, UUID) else v
-
-
-def get_uuid(v: str | UUID) -> UUID:
-    return UUID(v) if isinstance(v, str) else v

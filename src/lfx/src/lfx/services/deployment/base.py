@@ -11,27 +11,28 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from lfx.services.deployment.schema import (
-        BaseConfigData,
-        ConfigItemResult,
-        ConfigListFilterOptions,
-        ConfigListResult,
-        ConfigResult,
-        ConfigUpdate,
-        DeploymentCreate,
-        DeploymentCreateResult,
-        DeploymentDeleteResult,
-        DeploymentDetailItem,
-        DeploymentExecution,
-        DeploymentExecutionResult,
-        DeploymentExecutionStatus,
+        ConfigCreateRequest,
+        ConfigDeleteRequest,
+        ConfigDetail,
+        ConfigList,
+        ConfigListParams,
+        ConfigResponse,
+        ConfigUpdateRequest,
+        DeploymentCreateRequest,
+        DeploymentCreateResponse,
+        DeploymentDeleteRequest,
+        DeploymentDeleteResponse,
+        DeploymentExecutionRequest,
+        DeploymentExecutionResponse,
+        DeploymentExecutionStatusRequest,
         DeploymentItem,
         DeploymentList,
         DeploymentListParams,
-        DeploymentRedeploymentResult,
-        DeploymentStatusResult,
+        DeploymentRedeployResponse,
+        DeploymentStatus,
         DeploymentType,
-        DeploymentUpdate,
-        DeploymentUpdateResult,
+        DeploymentUpdateRequest,
+        DeploymentUpdateResponse,
     )
 
 
@@ -60,9 +61,9 @@ class BaseDeploymentService(Service):
         self,
         *,
         user_id: UUID | str,
-        deployment: DeploymentCreate,
+        request: DeploymentCreateRequest,
         db: Any,
-    ) -> DeploymentCreateResult:
+    ) -> DeploymentCreateResponse:
         """Create a new deployment in the provider."""
 
     @abstractmethod
@@ -82,8 +83,8 @@ class BaseDeploymentService(Service):
         user_id: UUID | str,
         deployment_id: UUID | str,
         db: Any,
-    ) -> DeploymentDetailItem:
-        """Return deployment metadata by provider ID."""
+    ) -> DeploymentItem:
+        """Return deployment metadata by ID."""
 
     @abstractmethod
     async def update(
@@ -91,9 +92,9 @@ class BaseDeploymentService(Service):
         *,
         user_id: UUID | str,
         deployment_id: UUID | str,
-        update_data: DeploymentUpdate,
+        request: DeploymentUpdateRequest,
         db: Any,
-    ) -> DeploymentUpdateResult:
+    ) -> DeploymentUpdateResponse:
         """Update deployment inputs and apply changes in the provider."""
 
     @abstractmethod
@@ -101,9 +102,9 @@ class BaseDeploymentService(Service):
         self,
         *,
         user_id: UUID | str,
-        deployment_id: str,
+        request: DeploymentDeleteRequest,
         db: Any,
-    ) -> DeploymentDeleteResult:
+    ) -> DeploymentDeleteResponse:
         """Delete the deployment from the provider."""
 
     @abstractmethod
@@ -113,7 +114,7 @@ class BaseDeploymentService(Service):
         user_id: UUID | str,
         deployment_id: str,
         db: Any,
-    ) -> DeploymentStatusResult:
+    ) -> DeploymentStatus:
         """Return provider-reported health/status for the deployment."""
 
     @abstractmethod
@@ -123,7 +124,7 @@ class BaseDeploymentService(Service):
         user_id: UUID | str,
         deployment_id: str,
         db: Any,
-    ) -> DeploymentRedeploymentResult:
+    ) -> DeploymentRedeployResponse:
         """Re-apply current deployment inputs without changing them."""
 
     @abstractmethod
@@ -153,20 +154,20 @@ class BaseDeploymentService(Service):
         self,
         *,
         user_id: UUID | str,
-        execution: DeploymentExecution,
+        request: DeploymentExecutionRequest,
         db: Any,
-    ) -> DeploymentExecutionResult:
-        """Run a provider-agnostic deployment execution."""
+    ) -> DeploymentExecutionResponse:
+        """Run a deployment execution."""
 
     @abstractmethod
     async def get_execution(
         self,
         *,
         user_id: UUID | str,
-        execution_status: DeploymentExecutionStatus,
+        request: DeploymentExecutionStatusRequest,
         db: Any,
-    ) -> DeploymentExecutionResult:
-        """Get provider-agnostic deployment execution state/output."""
+    ) -> DeploymentExecutionResponse:
+        """Get deployment execution state/output."""
 
     # -- Configs --
 
@@ -174,10 +175,10 @@ class BaseDeploymentService(Service):
     async def create_config(
         self,
         *,
-        config: BaseConfigData,
         user_id: UUID | str,
+        request: ConfigCreateRequest,
         db: Any,
-    ) -> ConfigResult:
+    ) -> ConfigResponse:
         """Create a provider-scoped deployment configuration."""
 
     @abstractmethod
@@ -186,8 +187,8 @@ class BaseDeploymentService(Service):
         *,
         user_id: UUID | str,
         db: Any,
-        filter_options: ConfigListFilterOptions | None = None,
-    ) -> ConfigListResult:
+        params: ConfigListParams | None = None,
+    ) -> ConfigList:
         """List deployment configurations for this provider."""
 
     @abstractmethod
@@ -197,18 +198,17 @@ class BaseDeploymentService(Service):
         user_id: UUID | str,
         config_id: str,
         db: Any,
-    ) -> ConfigItemResult:
-        """Return deployment configuration by provider ID."""
+    ) -> ConfigDetail:
+        """Return deployment configuration by ID."""
 
     @abstractmethod
     async def update_config(
         self,
         *,
-        config_id: str,
-        update_data: ConfigUpdate,
         user_id: UUID | str,
+        request: ConfigUpdateRequest,
         db: Any,
-    ) -> ConfigResult:
+    ) -> ConfigResponse:
         """Update a deployment configuration's JSON data."""
 
     @abstractmethod
@@ -216,7 +216,7 @@ class BaseDeploymentService(Service):
         self,
         *,
         user_id: UUID | str,
-        config_id: str,
+        request: ConfigDeleteRequest,
         db: Any,
     ) -> None:
         """Delete a deployment configuration from the provider."""

@@ -13,27 +13,28 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from lfx.services.deployment.schema import (
-        BaseConfigData,
-        ConfigItemResult,
-        ConfigListFilterOptions,
-        ConfigListResult,
-        ConfigResult,
-        ConfigUpdate,
-        DeploymentCreate,
-        DeploymentCreateResult,
-        DeploymentDeleteResult,
-        DeploymentDetailItem,
-        DeploymentExecution,
-        DeploymentExecutionResult,
-        DeploymentExecutionStatus,
+        ConfigCreateRequest,
+        ConfigDeleteRequest,
+        ConfigDetail,
+        ConfigList,
+        ConfigListParams,
+        ConfigResponse,
+        ConfigUpdateRequest,
+        DeploymentCreateRequest,
+        DeploymentCreateResponse,
+        DeploymentDeleteRequest,
+        DeploymentDeleteResponse,
+        DeploymentExecutionRequest,
+        DeploymentExecutionResponse,
+        DeploymentExecutionStatusRequest,
         DeploymentItem,
         DeploymentList,
         DeploymentListParams,
-        DeploymentRedeploymentResult,
-        DeploymentStatusResult,
+        DeploymentRedeployResponse,
+        DeploymentStatus,
         DeploymentType,
-        DeploymentUpdate,
-        DeploymentUpdateResult,
+        DeploymentUpdateRequest,
+        DeploymentUpdateResponse,
     )
 
 
@@ -56,33 +57,41 @@ class DeploymentService(BaseDeploymentService):
     # -- Deployment lifecycle --
 
     @abstractmethod
-    async def create(self, *, user_id: UUID | str, deployment: DeploymentCreate, db: Any) -> DeploymentCreateResult:
+    async def create(
+        self, *, user_id: UUID | str, request: DeploymentCreateRequest, db: Any
+    ) -> DeploymentCreateResponse:
         raise NotImplementedError
 
     @abstractmethod
-    async def list(self, *, user_id: UUID | str, db: Any, params: DeploymentListParams | None = None) -> DeploymentList:
+    async def list(
+        self, *, user_id: UUID | str, db: Any, params: DeploymentListParams | None = None
+    ) -> DeploymentList:
         raise NotImplementedError
 
     @abstractmethod
-    async def get(self, *, user_id: UUID | str, deployment_id: UUID | str, db: Any) -> DeploymentDetailItem:
+    async def get(self, *, user_id: UUID | str, deployment_id: UUID | str, db: Any) -> DeploymentItem:
         raise NotImplementedError
 
     @abstractmethod
     async def update(
-        self, *, user_id: UUID | str, deployment_id: UUID | str, update_data: DeploymentUpdate, db: Any
-    ) -> DeploymentUpdateResult:
+        self, *, user_id: UUID | str, deployment_id: UUID | str, request: DeploymentUpdateRequest, db: Any
+    ) -> DeploymentUpdateResponse:
         raise NotImplementedError
 
     @abstractmethod
-    async def delete(self, *, user_id: UUID | str, deployment_id: str, db: Any) -> DeploymentDeleteResult:
+    async def delete(
+        self, *, user_id: UUID | str, request: DeploymentDeleteRequest, db: Any
+    ) -> DeploymentDeleteResponse:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_status(self, *, user_id: UUID | str, deployment_id: str, db: Any) -> DeploymentStatusResult:
+    async def get_status(self, *, user_id: UUID | str, deployment_id: str, db: Any) -> DeploymentStatus:
         raise NotImplementedError
 
     @abstractmethod
-    async def redeploy(self, *, user_id: UUID | str, deployment_id: str, db: Any) -> DeploymentRedeploymentResult:
+    async def redeploy(
+        self, *, user_id: UUID | str, deployment_id: str, db: Any
+    ) -> DeploymentRedeployResponse:
         raise NotImplementedError
 
     @abstractmethod
@@ -99,40 +108,44 @@ class DeploymentService(BaseDeploymentService):
 
     @abstractmethod
     async def create_execution(
-        self, *, user_id: UUID | str, execution: DeploymentExecution, db: Any
-    ) -> DeploymentExecutionResult:
+        self, *, user_id: UUID | str, request: DeploymentExecutionRequest, db: Any
+    ) -> DeploymentExecutionResponse:
         raise NotImplementedError
 
     @abstractmethod
     async def get_execution(
-        self, *, user_id: UUID | str, execution_status: DeploymentExecutionStatus, db: Any
-    ) -> DeploymentExecutionResult:
+        self, *, user_id: UUID | str, request: DeploymentExecutionStatusRequest, db: Any
+    ) -> DeploymentExecutionResponse:
         raise NotImplementedError
 
     # -- Configs --
 
     @abstractmethod
-    async def create_config(self, *, config: BaseConfigData, user_id: UUID | str, db: Any) -> ConfigResult:
+    async def create_config(
+        self, *, user_id: UUID | str, request: ConfigCreateRequest, db: Any
+    ) -> ConfigResponse:
         raise NotImplementedError
 
     @abstractmethod
     async def list_configs(
-        self, *, user_id: UUID | str, db: Any, filter_options: ConfigListFilterOptions | None = None
-    ) -> ConfigListResult:
+        self, *, user_id: UUID | str, db: Any, params: ConfigListParams | None = None
+    ) -> ConfigList:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_config(self, *, user_id: UUID | str, config_id: str, db: Any) -> ConfigItemResult:
+    async def get_config(self, *, user_id: UUID | str, config_id: str, db: Any) -> ConfigDetail:
         raise NotImplementedError
 
     @abstractmethod
     async def update_config(
-        self, *, config_id: str, update_data: ConfigUpdate, user_id: UUID | str, db: Any
-    ) -> ConfigResult:
+        self, *, user_id: UUID | str, request: ConfigUpdateRequest, db: Any
+    ) -> ConfigResponse:
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_config(self, *, user_id: UUID | str, config_id: str, db: Any) -> None:
+    async def delete_config(
+        self, *, user_id: UUID | str, request: ConfigDeleteRequest, db: Any
+    ) -> None:
         raise NotImplementedError
 
     # -- Teardown --
