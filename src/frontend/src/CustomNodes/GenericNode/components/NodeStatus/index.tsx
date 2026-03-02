@@ -19,6 +19,7 @@ import { useShortcutsStore } from "@/stores/shortcuts";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { VertexBuildTypeAPI } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
+import { formatTokenCount } from "@/utils/format-token-count";
 import { findLastNode } from "@/utils/reactflowUtils";
 import { classNames, cn } from "@/utils/utils";
 import IconComponent from "../../../../components/common/genericIconComponent";
@@ -392,9 +393,9 @@ export default function NodeStatus({
           {showNodeStatus && (
             <ShadTooltip
               styleClasses={cn(
-                "border rounded-xl",
+                "border rounded-xl p-2 bg",
                 conditionSuccess
-                  ? "border-accent-emerald-foreground bg-success-background"
+                  ? "bg-neutral-700"
                   : "border-destructive bg-error-background",
               )}
               content={
@@ -410,9 +411,24 @@ export default function NodeStatus({
               <div className="cursor-help">
                 {conditionSuccess && validationStatus?.data?.duration ? (
                   <div
-                    className="flex rounded-sm px-1 font-mono text-xs text-accent-emerald-foreground transition-colors hover:bg-accent-emerald"
+                    className="flex items-center gap-1 rounded-sm px-1 font-mono text-xs text-accent-emerald-foreground transition-colors hover:bg-accent-emerald"
                     data-testid={`node_duration_` + display_name.toLowerCase()}
                   >
+                    {validationStatus?.data?.token_usage && (
+                      <>
+                        <IconComponent
+                          name="Coins"
+                          className="h-3 w-3 text-muted-foreground"
+                          strokeWidth={ICON_STROKE_WIDTH}
+                        />
+                        <span>
+                          {formatTokenCount(
+                            validationStatus.data.token_usage.total_tokens,
+                          )}
+                        </span>
+                        <span className="text-muted-foreground">|</span>
+                      </>
+                    )}
                     <span>
                       {normalizeTimeString(validationStatus?.data?.duration)}
                     </span>

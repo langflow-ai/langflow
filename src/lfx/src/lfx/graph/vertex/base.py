@@ -457,6 +457,12 @@ class Vertex:
 
         return messages
 
+    def _extract_token_usage(self) -> dict | None:
+        """Extract token usage from the custom component if available."""
+        if self.custom_component and hasattr(self.custom_component, "_token_usage"):
+            return self.custom_component._token_usage  # noqa: SLF001
+        return None
+
     def finalize_build(self) -> None:
         result_dict = self.get_built_result()
         # We need to set the artifacts to pass information
@@ -464,6 +470,7 @@ class Vertex:
         self.set_artifacts()
         artifacts = self.artifacts_raw
         messages = self.extract_messages_from_artifacts(artifacts) if isinstance(artifacts, dict) else []
+        token_usage = self._extract_token_usage()
         result_dict = ResultData(
             results=result_dict,
             artifacts=artifacts,
@@ -472,6 +479,7 @@ class Vertex:
             messages=messages,
             component_display_name=self.display_name,
             component_id=self.id,
+            token_usage=token_usage,
         )
         self.set_result(result_dict)
 

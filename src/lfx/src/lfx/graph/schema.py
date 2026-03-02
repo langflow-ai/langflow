@@ -19,6 +19,7 @@ class ResultData(BaseModel):
     component_display_name: str | None = None
     component_id: str | None = None
     used_frozen_result: bool | None = False
+    token_usage: dict | None = None
 
     @field_serializer("results")
     def serialize_results(self, value):

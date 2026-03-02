@@ -175,6 +175,18 @@ class LCModelComponent(Component):
         Returns:
             A dict with input_tokens, output_tokens, total_tokens or None if not available.
         """
+        # LangChain standard: usage_metadata (works for Ollama, newer providers)
+        usage_metadata = getattr(message, "usage_metadata", None)
+        if usage_metadata and isinstance(usage_metadata, dict):
+            input_tokens = usage_metadata.get("input_tokens", 0) or 0
+            output_tokens = usage_metadata.get("output_tokens", 0) or 0
+            if input_tokens or output_tokens:
+                return {
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "total_tokens": input_tokens + output_tokens,
+                }
+
         if not message.response_metadata:
             return None
 
@@ -297,6 +309,8 @@ class LCModelComponent(Component):
                 self.status = status_message
                 # Extract usage for the response
                 usage_data = self.extract_usage(message)
+                if usage_data:
+                    self._token_usage = usage_data
             elif isinstance(result, dict):
                 result = json.dumps(message, indent=4)
                 self.status = result
@@ -308,6 +322,8 @@ class LCModelComponent(Component):
             raise
 
         if lf_message:
+            if lf_message.properties and lf_message.properties.usage:
+                self._token_usage = lf_message.properties.usage.model_dump()
             return lf_message
 
         # Create message with usage data if available

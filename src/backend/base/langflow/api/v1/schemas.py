@@ -272,6 +272,7 @@ class ResultDataResponse(BaseModel):
     timedelta: float | None = None
     duration: str | None = None
     used_frozen_result: bool | None = False
+    token_usage: dict | None = None
 
     @field_serializer("results")
     @classmethod
@@ -301,6 +302,7 @@ class ResultDataResponse(BaseModel):
             "timedelta": self.timedelta,
             "duration": self.duration,
             "used_frozen_result": self.used_frozen_result,
+            "token_usage": self.token_usage,
         }
 
 
