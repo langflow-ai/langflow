@@ -115,6 +115,7 @@ test(
     );
     await page.getByTestId("playground-close-button").click();
     await page.getByTestId("sidebar-nav-traces").click();
+    await page.waitForTimeout(50000);
     await page.getByLabel("Reload").click();
     await page.getByRole("gridcell", { name: /Hello/i }).first().click({
       timeout: 60000,
