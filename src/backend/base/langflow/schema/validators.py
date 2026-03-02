@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from uuid import UUID
 
 from pydantic import BeforeValidator
 
@@ -113,8 +112,3 @@ def timestamp_with_fractional_seconds(timestamp: datetime | str) -> str:
 timestamp_to_str_validator = BeforeValidator(timestamp_to_str)
 timestamp_with_fractional_seconds_validator = BeforeValidator(timestamp_with_fractional_seconds)
 str_to_timestamp_validator = BeforeValidator(str_to_timestamp)
-
-
-def coerce_to_str_if_uuid(value: UUID | str | None) -> str | None:
-    """Convert UUID or string values to strings."""
-    return str(value) if isinstance(value, UUID) else value

@@ -124,11 +124,6 @@ def uuid_validator(uuid_str: str | UUID, message: str | None = None) -> UUID:
         raise ValueError(message or f"Invalid UUID: {uuid_str}") from e
 
 
-def coerce_to_str_if_uuid(value: UUID | str | None) -> str | None:
-    """Convert UUID or string values to strings."""
-    return str(value) if isinstance(value, UUID) else value
-
-
 def null_check_validator(value: str | None, message: str | None = None) -> str | None:
     if value is None:
         raise ValueError(message or "Value is required")

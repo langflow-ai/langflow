@@ -1,11 +1,10 @@
 import enum
+from typing import Any
 from uuid import UUID
 
 from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, field_validator, model_validator
 from typing_extensions import TypedDict
-
-from lfx.schema.validators import coerce_to_str_if_uuid
 
 from .constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
 
@@ -129,9 +128,20 @@ class ChatOutputResponse(BaseModel):
 
     @field_validator("session_id", mode="before")
     @classmethod
-    def coerce_session_id_uuid_to_str(cls, value: UUID | str | None) -> str | None:
-        """Convert UUID session id to string."""
-        return coerce_to_str_if_uuid(value)
+    def validate_and_coerce_session_id(cls, value: Any) -> str | None:
+        """Validate and coerce session id to a string if it is a UUID.
+
+        Must be a UUID, string, or None.
+        If the session id is a UUID, it will be converted to a string.
+        If the session id is a string or None, it will be returned as is.
+        Otherwise, a TypeError will be raised.
+        """
+        if value is None or isinstance(value, str):
+            return value
+        if isinstance(value, UUID):
+            return str(value)
+        msg = f"The provided Session ID must be a UUID, string, or None. Got {value} of type {type(value)}."
+        raise TypeError(msg)
 
 
 class DataOutputResponse(BaseModel):

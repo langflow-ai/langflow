@@ -15,7 +15,6 @@ from lfx.graph.vertex import base as vertex_base_module
 from lfx.graph.vertex import vertex_types as vertex_types_module
 from lfx.graph.vertex.base import ParameterHandler, Vertex
 from lfx.services.storage.service import StorageService
-from lfx.utils import schemas as schemas_module
 from lfx.utils.util import unescape_string
 
 
@@ -401,10 +400,8 @@ def test_vertex_raw_event_metrics_no_optional_fields():
     assert len(metrics) == 1
 
 
-def test_component_vertex_callsite_coerces_uuid_session_id(monkeypatch):
-    """Callsite coercion should string-cast UUID before model creation."""
-    # Disable model-level coercion to ensure callsite coercion is doing the work.
-    monkeypatch.setattr(schemas_module, "coerce_to_str_if_uuid", lambda value: value)
+def test_component_vertex_extract_messages_coerces_uuid_session_id():
+    """Model-level coercion should string-cast UUID in extracted messages."""
     session_id = uuid4()
     vertex = object.__new__(vertex_types_module.ComponentVertex)
     vertex.id = "vertex-1"
@@ -424,10 +421,8 @@ def test_component_vertex_callsite_coerces_uuid_session_id(monkeypatch):
     assert messages[0]["session_id"] == str(session_id)
 
 
-def test_vertex_base_callsite_coerces_uuid_session_id(monkeypatch):
-    """Base vertex callsite should pass string session_id to response model."""
-    # Disable model-level coercion to ensure callsite coercion is doing the work.
-    monkeypatch.setattr(schemas_module, "coerce_to_str_if_uuid", lambda value: value)
+def test_vertex_base_extract_messages_coerces_uuid_session_id():
+    """Model-level coercion should string-cast UUID in base vertex messages."""
     session_id = uuid4()
     vertex = object.__new__(vertex_base_module.Vertex)
     vertex.id = "vertex-2"

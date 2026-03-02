@@ -21,7 +21,6 @@ from lfx.schema.artifact import ArtifactType
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx.schema.schema import INPUT_FIELD_NAME, OutputValue, build_output_logs
-from lfx.schema.validators import coerce_to_str_if_uuid
 from lfx.utils.schemas import ChatOutputResponse
 from lfx.utils.util import sync_to_async
 
@@ -446,7 +445,7 @@ class Vertex:
                     message=text,
                     sender=sender,
                     sender_name=sender_name,
-                    session_id=coerce_to_str_if_uuid(session_id),
+                    session_id=session_id,
                     stream_url=stream_url,
                     files=files,
                     component_id=component_id,
