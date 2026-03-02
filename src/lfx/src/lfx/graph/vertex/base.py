@@ -457,8 +457,66 @@ class Vertex:
 
         return messages
 
+    def _get_all_upstream_vertices(self) -> list[Vertex]:
+        """Walk all upstream vertices using edges, deduplicating by ID."""
+        visited: set[str] = set()
+        result: list[Vertex] = []
+        stack = [edge.source_id for edge in self.graph.edges if edge.target_id == self.id]
+
+        while stack:
+            vid = stack.pop()
+            if vid in visited:
+                continue
+            visited.add(vid)
+            vertex = self.graph.get_vertex(vid)
+            result.append(vertex)
+            stack.extend(edge.source_id for edge in self.graph.edges if edge.target_id == vid)
+
+        return result
+
+    def _accumulate_upstream_token_usage(self) -> dict | None:
+        """Accumulate token usage from all upstream vertices.
+
+        Walks all recursive predecessors via edges, deduplicates by vertex ID,
+        and sums their token usage into a single total.
+        """
+        predecessors = self._get_all_upstream_vertices()
+        total_input = 0
+        total_output = 0
+        has_data = False
+
+        for predecessor in predecessors:
+            if predecessor.result and predecessor.result.token_usage:
+                usage = predecessor.result.token_usage
+                total_input += usage.get("input_tokens", 0) or 0
+                total_output += usage.get("output_tokens", 0) or 0
+                has_data = True
+
+        # Include own token usage if present
+        if self.custom_component and hasattr(self.custom_component, "_token_usage"):
+            own_usage = self.custom_component._token_usage  # noqa: SLF001
+            if own_usage:
+                total_input += own_usage.get("input_tokens", 0) or 0
+                total_output += own_usage.get("output_tokens", 0) or 0
+                has_data = True
+
+        if not has_data:
+            return None
+
+        return {
+            "input_tokens": total_input,
+            "output_tokens": total_output,
+            "total_tokens": total_input + total_output,
+        }
+
     def _extract_token_usage(self) -> dict | None:
-        """Extract token usage from the custom component if available."""
+        """Extract token usage from the custom component if available.
+
+        Output vertices don't show token usage on the node badge because
+        the accumulated total is displayed on the chat message instead.
+        """
+        if self.is_output:
+            return None
         if self.custom_component and hasattr(self.custom_component, "_token_usage"):
             return self.custom_component._token_usage  # noqa: SLF001
         return None

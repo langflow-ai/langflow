@@ -10,7 +10,7 @@ from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, MessageText
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
-from lfx.schema.properties import Source
+from lfx.schema.properties import Source, Usage
 from lfx.template.field.base import Output
 from lfx.utils.constants import (
     MESSAGE_SENDER_AI,
@@ -143,6 +143,17 @@ class ChatOutput(ChatComponent):
             stored_message = await self.send_message(message)
             self.message.value = stored_message
             message = stored_message
+
+        # Set accumulated token usage from all upstream LLM vertices.
+        # This must happen AFTER send_message() because streaming captures
+        # usage from chunks and would overwrite accumulated totals.
+        if hasattr(self, "_vertex") and self._vertex is not None:
+            accumulated_usage = self._vertex._accumulate_upstream_token_usage()  # noqa: SLF001
+            if accumulated_usage:
+                message.properties.usage = Usage(**accumulated_usage)
+                if self.should_store_message and message.get_id():
+                    message = await self._update_stored_message(message)
+                    await self._send_message_event(message, id_=message.get_id())
 
         self.status = message
         return message
