@@ -103,7 +103,13 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             return list[schema_type]
 
         if t == "object":
-            # inline object not in $defs ⇒ anonymous nested model
+            # Check if the object has defined properties
+            # If no properties are defined, treat it as a free-form dict to preserve nested data
+            # This fixes issue #9881 where nested dictionaries were being lost
+            if not s.get("properties"):
+                # Free-form object without defined structure → use dict[str, Any]
+                return dict[str, Any]
+            # inline object not in $defs with properties ⇒ anonymous nested model
             return _build_model(f"AnonModel{len(model_cache)}", s)
 
         # primitive fallback
