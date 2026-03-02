@@ -1502,12 +1502,16 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         message_id = provider_input.get("message_id")
 
         message_paths: list[str] = []
-        if isinstance(thread_id, str) and thread_id.strip() and isinstance(message_id, str) and message_id.strip():
-            message_paths.append(f"/threads/{thread_id}/messages/{message_id}")
-        if isinstance(thread_id, str) and thread_id.strip():
-            message_paths.append(f"/threads/{thread_id}/messages")
-        if isinstance(message_id, str) and message_id.strip():
-            message_paths.append(f"/messages/{message_id}")
+        # compute trimmed values once to avoid repeating isinstance/strip checks
+        thread_id_str = thread_id if isinstance(thread_id, str) and thread_id.strip() else None
+        message_id_str = message_id if isinstance(message_id, str) and message_id.strip() else None
+
+        if thread_id_str and message_id_str:
+            message_paths.append(f"/threads/{thread_id_str}/messages/{message_id_str}")
+        if thread_id_str:
+            message_paths.append(f"/threads/{thread_id_str}/messages")
+        if message_id_str:
+            message_paths.append(f"/messages/{message_id_str}")
 
         for path in message_paths:
             try:
@@ -1546,9 +1550,14 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         if isinstance(payload, list):
             extracted_chunks: list[str] = []
             for item in payload:
-                extracted = self._extract_text_from_payload(item)
-                if isinstance(extracted, str) and extracted:
-                    extracted_chunks.append(extracted)
+                if isinstance(item, str):
+                    stripped = item.strip()
+                    if stripped:
+                        extracted_chunks.append(stripped)
+                else:
+                    extracted = self._extract_text_from_payload(item)
+                    if isinstance(extracted, str) and extracted:
+                        extracted_chunks.append(extracted)
             if extracted_chunks:
                 return "\n".join(extracted_chunks)
             return None
