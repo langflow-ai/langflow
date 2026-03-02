@@ -125,6 +125,12 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     The OpenAI Responses API endpoint now tracks and returns token usage statistics when your flow uses language model APIs that provide token usage information.
     For more information, see [Token usage tracking](/api-openai-responses#token-usage-tracking).
 
+- Docker AMD vs ARM image sizes
+
+    Langflow 1.8.0 addresses the AMD vs ARM Docker image size gap.
+    We reconfigured our Python dependencies to use CPU-only PyTorch wheels through `uv` sources, which removes large CUDA-related dependencies from the AMD64 images.
+    With this change, both AMD64 and ARM64 images are now under ~2GB.
+
 ## 1.7.x
 
 :::warning Version yanked
