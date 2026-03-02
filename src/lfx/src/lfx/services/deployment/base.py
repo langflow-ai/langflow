@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from lfx.services.base import Service
 
 if TYPE_CHECKING:
     from uuid import UUID
+
+    from sqlalchemy.ext.asyncio import AsyncSession
 
     from lfx.services.deployment.schema import (
         DeploymentCreate,
@@ -36,8 +38,8 @@ class BaseDeploymentService(Service, ABC):
     must provide, whether minimal (LFX) or full-featured (Langflow).
 
     Note:
-        ``db`` parameters are intentionally typed as ``Any`` to avoid coupling
-        deployment adapters to a specific session implementation.
+        ``db`` parameters are typed as ``AsyncSession`` to align with current
+        LFX dependency injection and service protocols.
     """
 
     @abstractmethod
@@ -46,7 +48,7 @@ class BaseDeploymentService(Service, ABC):
         *,
         user_id: UUID | str,
         payload: DeploymentCreate,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentCreateResult:
         """Create a new deployment in the provider."""
 
@@ -55,7 +57,7 @@ class BaseDeploymentService(Service, ABC):
         self,
         *,
         user_id: UUID | str,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentListTypesResult:
         """List deployment types supported by the provider."""
 
@@ -65,7 +67,7 @@ class BaseDeploymentService(Service, ABC):
         *,
         user_id: UUID | str,
         params: DeploymentListParams | None = None,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentListResult:
         """List deployments visible to this adapter."""
 
@@ -75,7 +77,7 @@ class BaseDeploymentService(Service, ABC):
         *,
         user_id: UUID | str,
         deployment_id: UUID | str,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentGetResult:
         """Return deployment metadata by provider ID."""
 
@@ -86,7 +88,7 @@ class BaseDeploymentService(Service, ABC):
         user_id: UUID | str,
         deployment_id: UUID | str,
         payload: DeploymentUpdate,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentUpdateResult:
         """Update deployment inputs and apply changes in the provider."""
 
@@ -96,7 +98,7 @@ class BaseDeploymentService(Service, ABC):
         *,
         user_id: UUID | str,
         deployment_id: UUID | str,
-        db: Any,
+        db: AsyncSession,
     ) -> RedeployResult:
         """Re-apply current deployment inputs without changing them."""
 
@@ -106,7 +108,7 @@ class BaseDeploymentService(Service, ABC):
         *,
         user_id: UUID | str,
         deployment_id: UUID | str,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentDuplicateResult:
         """Create a new deployment using the same inputs as the source."""
 
@@ -116,7 +118,7 @@ class BaseDeploymentService(Service, ABC):
         *,
         user_id: UUID | str,
         deployment_id: UUID | str,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentDeleteResult:
         """Delete the deployment from the provider."""
 
@@ -126,7 +128,7 @@ class BaseDeploymentService(Service, ABC):
         *,
         user_id: UUID | str,
         deployment_id: UUID | str,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentStatusResult:
         """Return provider-reported health/status for the deployment."""
 
@@ -136,7 +138,7 @@ class BaseDeploymentService(Service, ABC):
         *,
         user_id: UUID | str,
         payload: ExecutionCreate,
-        db: Any,
+        db: AsyncSession,
     ) -> ExecutionCreateResult:
         """Run a provider-agnostic deployment execution."""
 
@@ -146,6 +148,6 @@ class BaseDeploymentService(Service, ABC):
         *,
         user_id: UUID | str,
         execution_id: UUID | str,
-        db: Any,
+        db: AsyncSession,
     ) -> ExecutionStatusResult:
         """Get provider-agnostic deployment execution state/output."""

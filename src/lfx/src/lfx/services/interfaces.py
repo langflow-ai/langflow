@@ -229,9 +229,6 @@ class DeploymentServiceProtocol(Protocol):
     Adapter-specific or advanced operations are defined on concrete deployment
     service classes.
 
-    ``db`` is intentionally typed as ``Any`` to keep this protocol adapter- and
-    storage-agnostic. Concrete integrations may use AsyncSession or another
-    session type.
     """
 
     @abstractmethod
@@ -240,7 +237,7 @@ class DeploymentServiceProtocol(Protocol):
         *,
         user_id: UUID | str,
         payload: DeploymentCreate,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentCreateResult:
         """Create a new deployment in the provider."""
         ...
@@ -250,7 +247,7 @@ class DeploymentServiceProtocol(Protocol):
         self,
         *,
         user_id: UUID | str,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentListTypesResult:
         """List deployment types supported by the provider."""
         ...
@@ -261,7 +258,7 @@ class DeploymentServiceProtocol(Protocol):
         *,
         user_id: UUID | str,
         params: DeploymentListParams | None = None,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentListResult:
         """List deployments visible to this adapter."""
         ...
@@ -272,7 +269,7 @@ class DeploymentServiceProtocol(Protocol):
         *,
         user_id: UUID | str,
         deployment_id: UUID | str,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentGetResult:
         """Return deployment metadata by provider ID."""
         ...
@@ -284,7 +281,7 @@ class DeploymentServiceProtocol(Protocol):
         user_id: UUID | str,
         deployment_id: UUID | str,
         payload: DeploymentUpdate,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentUpdateResult:
         """Update deployment inputs and apply changes in the provider."""
         ...
@@ -295,7 +292,7 @@ class DeploymentServiceProtocol(Protocol):
         *,
         user_id: UUID | str,
         deployment_id: UUID | str,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentDeleteResult:
         """Delete the deployment from the provider."""
         ...
@@ -306,7 +303,7 @@ class DeploymentServiceProtocol(Protocol):
         *,
         user_id: UUID | str,
         deployment_id: UUID | str,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentStatusResult:
         """Return provider-reported health/status for the deployment."""
         ...

@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
 from lfx.services.deployment.base import BaseDeploymentService
 
 if TYPE_CHECKING:
     from uuid import UUID
+
+    from sqlalchemy.ext.asyncio import AsyncSession
 
     from lfx.services.deployment.schema import (
         DeploymentCreate,
@@ -37,7 +39,6 @@ class DeploymentService(BaseDeploymentService):
 
     This is a stub that exposes crud operations for deployments.
     LFX does not implement a deployment adapter.
-    ``db`` remains ``Any`` by design to preserve adapter-agnostic contracts.
     """
 
     name = "deployment_service"
@@ -52,7 +53,7 @@ class DeploymentService(BaseDeploymentService):
         *,
         user_id: UUID | str,
         payload: DeploymentCreate,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentCreateResult:
         """Create a new deployment in the provider."""
         raise NotImplementedError
@@ -61,7 +62,7 @@ class DeploymentService(BaseDeploymentService):
         self,
         *,
         user_id: UUID | str,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentListTypesResult:
         """List deployment types supported by the provider."""
         raise NotImplementedError
@@ -71,7 +72,7 @@ class DeploymentService(BaseDeploymentService):
         *,
         user_id: UUID | str,
         params: DeploymentListParams | None = None,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentListResult:
         """List deployments visible to this adapter."""
         raise NotImplementedError
@@ -81,7 +82,7 @@ class DeploymentService(BaseDeploymentService):
         *,
         user_id: UUID | str,
         deployment_id: UUID | str,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentGetResult:
         """Return deployment metadata by provider ID."""
         raise NotImplementedError
@@ -92,7 +93,7 @@ class DeploymentService(BaseDeploymentService):
         user_id: UUID | str,
         deployment_id: UUID | str,
         payload: DeploymentUpdate,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentUpdateResult:
         """Update deployment inputs and apply changes in the provider."""
         raise NotImplementedError
@@ -102,7 +103,7 @@ class DeploymentService(BaseDeploymentService):
         *,
         user_id: UUID | str,
         deployment_id: UUID | str,
-        db: Any,
+        db: AsyncSession,
     ) -> RedeployResult:
         """Re-apply current deployment inputs without changing them."""
         raise NotImplementedError
@@ -112,7 +113,7 @@ class DeploymentService(BaseDeploymentService):
         *,
         user_id: UUID | str,
         deployment_id: UUID | str,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentDuplicateResult:
         """Create a new deployment using the same inputs as the source."""
         raise NotImplementedError
@@ -122,7 +123,7 @@ class DeploymentService(BaseDeploymentService):
         *,
         user_id: UUID | str,
         deployment_id: UUID | str,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentDeleteResult:
         """Delete the deployment from the provider."""
         raise NotImplementedError
@@ -132,7 +133,7 @@ class DeploymentService(BaseDeploymentService):
         *,
         user_id: UUID | str,
         deployment_id: UUID | str,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentStatusResult:
         """Return provider-reported health/status for the deployment."""
         raise NotImplementedError
@@ -142,7 +143,7 @@ class DeploymentService(BaseDeploymentService):
         *,
         user_id: UUID | str,
         payload: ExecutionCreate,
-        db: Any,
+        db: AsyncSession,
     ) -> ExecutionCreateResult:
         """Run a provider-agnostic deployment execution."""
         raise NotImplementedError
@@ -152,7 +153,7 @@ class DeploymentService(BaseDeploymentService):
         *,
         user_id: UUID | str,
         execution_id: UUID | str,
-        db: Any,
+        db: AsyncSession,
     ) -> ExecutionStatusResult:
         """Get provider-agnostic deployment execution state/output."""
         raise NotImplementedError
