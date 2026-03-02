@@ -48,7 +48,7 @@ def strip_version_data(data: dict | None) -> dict | None:
     data_copy = copy.deepcopy(data)
     try:
         return remove_api_keys({"data": data_copy}).get("data")
-    except Exception:
+    except Exception: # noqa: BLE001
         logger.warning(
             "Failed to strip API keys from version data — excluding data from export to prevent secret leakage",
             exc_info=True,
