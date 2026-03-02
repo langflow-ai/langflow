@@ -188,6 +188,24 @@ async def delete_messages_session(
     return {"message": "Messages deleted successfully"}
 
 
+@router.delete("/messages/sessions", status_code=204, dependencies=[Depends(get_current_active_user)])
+async def delete_messages_sessions(
+    session_ids: list[str],
+    session: DbSession,
+):
+    """Bulk delete messages for multiple sessions at once."""
+    try:
+        await session.exec(
+            delete(MessageTable)
+            .where(col(MessageTable.session_id).in_(session_ids))
+            .execution_options(synchronize_session="fetch")
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return {"message": f"Messages deleted successfully for {len(session_ids)} sessions"}
+
+
 @router.get("/transactions", dependencies=[Depends(get_current_active_user)])
 async def get_transactions(
     flow_id: Annotated[UUID, Query()],
