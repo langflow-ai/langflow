@@ -7,9 +7,9 @@ import pytest
 from lfx.services.deployment.schema import (
     BaseDeploymentDataUpdate,
     BaseFlowArtifact,
-    DeploymentConfig,
     ConfigDeploymentBindingUpdate,
     ConfigItem,
+    DeploymentConfig,
     DeploymentCreate,
     DeploymentCreateResult,
     DeploymentDeleteResult,
@@ -419,5 +419,3 @@ def test_get_deployment_create_schema_is_cached() -> None:
     first = get_deployment_create_schema()
     second = get_deployment_create_schema()
     assert first is second
-
-

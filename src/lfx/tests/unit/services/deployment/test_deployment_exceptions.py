@@ -1,7 +1,13 @@
 """Tests for deployment exception hierarchy, metadata, and service instantiation."""
 
 import pytest
-from lfx.services.deployment import BaseDeploymentService, DeploymentError, DeploymentNotConfiguredError, DeploymentService, DeploymentServiceError
+from lfx.services.deployment import (
+    BaseDeploymentService,
+    DeploymentError,
+    DeploymentNotConfiguredError,
+    DeploymentService,
+    DeploymentServiceError,
+)
 from lfx.services.deployment.exceptions import (
     AuthenticationError,
     AuthSchemeError,
