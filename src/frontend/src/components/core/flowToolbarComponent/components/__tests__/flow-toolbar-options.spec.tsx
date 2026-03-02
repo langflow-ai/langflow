@@ -1,7 +1,10 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 
-let mockToolbarStatus: "loading" | "deployed" | "changes_not_deployed" | "not_deployed" =
-  "deployed";
+let mockToolbarStatus:
+  | "loading"
+  | "deployed"
+  | "changes_not_deployed"
+  | "not_deployed" = "deployed";
 
 jest.mock("@/hooks/flows/use-flow-deployment-status", () => ({
   useFlowDeploymentStatus: () => ({
@@ -49,14 +52,18 @@ import FlowToolbarOptions from "../flow-toolbar-options";
 describe("FlowToolbarOptions", () => {
   it("renders deployed status badge", () => {
     mockToolbarStatus = "deployed";
-    render(<FlowToolbarOptions openApiModal={false} setOpenApiModal={() => {}} />);
+    render(
+      <FlowToolbarOptions openApiModal={false} setOpenApiModal={() => {}} />,
+    );
 
     expect(screen.getByText("Deployed")).toBeTruthy();
   });
 
   it("opens deploy modal when deploy button is clicked", () => {
     mockToolbarStatus = "not_deployed";
-    render(<FlowToolbarOptions openApiModal={false} setOpenApiModal={() => {}} />);
+    render(
+      <FlowToolbarOptions openApiModal={false} setOpenApiModal={() => {}} />,
+    );
 
     expect(screen.getByTestId("flow-deploy-modal").textContent).toBe("closed");
     fireEvent.click(screen.getByTestId("deploy-button"));

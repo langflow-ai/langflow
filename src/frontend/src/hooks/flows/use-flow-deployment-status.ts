@@ -17,10 +17,8 @@ export function useFlowDeploymentStatus({
   flowId,
   selectedEntryId,
 }: UseFlowDeploymentStatusArgs) {
-  const { data: historyResponse, isLoading: isLoadingHistory } = useGetFlowHistory(
-    { flowId: flowId ?? "" },
-    { enabled: Boolean(flowId) },
-  );
+  const { data: historyResponse, isLoading: isLoadingHistory } =
+    useGetFlowHistory({ flowId: flowId ?? "" }, { enabled: Boolean(flowId) });
 
   const history = historyResponse?.entries ?? [];
   const latestHistoryId = history[0]?.id ?? null;
@@ -36,10 +34,10 @@ export function useFlowDeploymentStatus({
   );
 
   const selectedHistoryDeploymentCount = selectedHistoryId
-    ? deploymentCountsByHistoryId[selectedHistoryId] ?? 0
+    ? (deploymentCountsByHistoryId[selectedHistoryId] ?? 0)
     : 0;
   const latestHistoryDeploymentCount = latestHistoryId
-    ? deploymentCountsByHistoryId[latestHistoryId] ?? 0
+    ? (deploymentCountsByHistoryId[latestHistoryId] ?? 0)
     : 0;
 
   const toolbarStatus: ToolbarDeploymentState = useMemo(() => {

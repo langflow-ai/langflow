@@ -42,7 +42,9 @@ export default function HistoryListItem({
         className="h-auto flex flex-1 flex-row items-center justify-between rounded-none py-3 pl-3"
       >
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="truncate pb-0.5 text-sm font-medium">{entry.version_tag}</span>
+          <span className="truncate pb-0.5 text-sm font-medium">
+            {entry.version_tag}
+          </span>
           <div className="flex items-center justify-between pr-2">
             <span className="text-xs text-muted-foreground">
               {formatTimestamp(entry.created_at)}
