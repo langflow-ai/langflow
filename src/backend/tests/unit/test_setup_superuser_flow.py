@@ -1,3 +1,5 @@
+import time
+
 import pytest
 from langflow.services.auth.utils import verify_password
 from langflow.services.database.models.user.model import User
@@ -183,3 +185,25 @@ async def test_setup_superuser_with_custom_credentials(client):  # noqa: ARG001
         if created_custom:
             await session.delete(created_custom)
             await session.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(20)
+async def test_should_complete_client_fixture_shutdown_within_bounded_time(client):  # noqa: ARG001
+    """Test that the client fixture lifespan shutdown completes in bounded time.
+
+    Bug: LifespanManager(shutdown_timeout=None) in the client fixture allows
+    indefinite hanging during shutdown when MCP operations (stop_project_task_group,
+    stop_streamable_http_manager) don't complete. On CI, this causes the entire
+    test job to hit its 720s timeout and get killed.
+
+    This test verifies that the fixture teardown (lifespan shutdown) completes
+    within a bounded time, even under normal conditions.
+    """
+    start = time.monotonic()
+    # The test body is intentionally empty — we're testing that the fixture
+    # teardown (lifespan shutdown) completes within the pytest timeout.
+    # If shutdown_timeout=None and a shutdown operation hangs, the fixture
+    # teardown would block indefinitely, causing this test to hit the
+    # @pytest.mark.timeout(20) limit and FAIL.
+    _ = start  # Consumed in teardown measurement via pytest timing

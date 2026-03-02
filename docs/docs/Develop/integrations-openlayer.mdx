@@ -1,0 +1,139 @@
+---
+title: Openlayer
+slug: /integrations-openlayer
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+[Openlayer](https://www.openlayer.com/) is a testing and evaluation platform for LLM applications. It provides comprehensive observability, testing, and monitoring capabilities to help you ship high-quality AI systems with confidence.
+
+You can configure Langflow to collect tracing data about your flow executions and automatically send the data to Openlayer for analysis, monitoring, and evaluation.
+
+## Prerequisites
+
+- An [Openlayer account](https://www.openlayer.com/)
+- A [running Langflow server](/get-started-installation) with a [flow](/concepts-flows) that you want to trace
+- An Openlayer inference pipeline
+
+:::tip
+If you need a flow to test the Openlayer integration, see the [Langflow quickstart](/get-started-quickstart).
+:::
+
+## Set Openlayer credentials as environment variables
+
+1. Get your [Openlayer API key](https://app.openlayer.com/settings/api-keys) from your Openlayer account.
+
+2. Create an inference pipeline in Openlayer and copy the pipeline ID.
+
+3. Set your Openlayer credentials as environment variables in the same environment where you run Langflow.
+
+    In the following examples, replace `YOUR_API_KEY` and `YOUR_PIPELINE_ID` with your actual Openlayer credentials.
+
+    <Tabs>
+    <TabItem value="linux-macos" label="Linux or macOS" default>
+
+    These commands set the environment variables in a Linux or macOS terminal session:
+
+    ```bash
+    export OPENLAYER_API_KEY="YOUR_API_KEY"
+    export OPENLAYER_INFERENCE_PIPELINE_ID="YOUR_PIPELINE_ID"
+    ```
+
+    </TabItem>
+    <TabItem value="windows" label="Windows">
+
+    These commands set the environment variables in a Windows command prompt session:
+
+    ```cmd
+    set OPENLAYER_API_KEY=YOUR_API_KEY
+    set OPENLAYER_INFERENCE_PIPELINE_ID=YOUR_PIPELINE_ID
+    ```
+
+    </TabItem>
+    </Tabs>
+
+## Start Langflow and view traces in Openlayer
+
+1. Start Langflow in the same environment where you set the Openlayer environment variables:
+
+    ```bash
+    uv run langflow run
+    ```
+
+2. Run a flow in Langflow.
+
+    Langflow automatically collects and sends tracing data about the flow execution to Openlayer, including:
+    - Component inputs and outputs
+    - Execution timing and latency
+    - LLM calls and nested operations
+    - User and session context
+
+3. View the collected data in your [Openlayer dashboard](https://app.openlayer.com/).
+
+    Each flow execution appears as a trace with a hierarchical view of all components and their nested operations.
+
+## Advanced configuration
+
+### Flow-specific pipelines
+
+You can configure different Openlayer inference pipelines for different flows using flow-specific environment variables:
+
+```bash
+export OPENLAYER_PIPELINE_MY_FLOW_NAME="pipeline-id-1"
+export OPENLAYER_PIPELINE_ANOTHER_FLOW="pipeline-id-2"
+```
+
+The flow name is converted to uppercase and non-alphanumeric characters are replaced with underscores. For example, "My Flow-Name" becomes `OPENLAYER_PIPELINE_MY_FLOW_NAME`.
+
+### JSON mapping
+
+Alternatively, you can use a JSON mapping to configure multiple flows at once:
+
+<Tabs>
+<TabItem value="linux-macos" label="Linux or macOS" default>
+
+```bash
+export OPENLAYER_LANGFLOW_MAPPING='{"Flow Name 1":"pipeline-id-1","Flow Name 2":"pipeline-id-2"}'
+```
+
+</TabItem>
+<TabItem value="windows" label="Windows">
+
+```cmd
+set OPENLAYER_LANGFLOW_MAPPING={"Flow Name 1":"pipeline-id-1","Flow Name 2":"pipeline-id-2"}
+```
+
+</TabItem>
+</Tabs>
+
+### Configuration priority
+
+Openlayer configuration is resolved in the following order (highest priority first):
+
+1. Flow-specific environment variable: `OPENLAYER_PIPELINE_<FLOW_NAME>`
+2. JSON mapping: `OPENLAYER_LANGFLOW_MAPPING`
+3. Default environment variable: `OPENLAYER_INFERENCE_PIPELINE_ID`
+
+This allows you to set a default pipeline for all flows and override it for specific flows as needed.
+
+## Disable Openlayer tracing
+
+To disable the Openlayer integration, remove the `OPENLAYER_API_KEY` environment variable, and then restart Langflow.
+
+## Features
+
+The Openlayer integration automatically captures:
+
+- **Component hierarchy**: All flow components with parent-child relationships
+- **LangChain callbacks**: Nested LLM calls and tool executions appear within their parent components
+- **Timing metrics**: Start time, end time, and latency for each component
+- **Inputs and outputs**: Component inputs and outputs with automatic type conversion
+- **User context**: User ID and session ID propagation for better analytics
+- **Error tracking**: Errors and logs captured in component metadata
+
+## See also
+
+* [Openlayer documentation](https://docs.openlayer.com/)
+* [Openlayer GitHub repository](https://github.com/openlayer-ai/openlayer-python)
+
