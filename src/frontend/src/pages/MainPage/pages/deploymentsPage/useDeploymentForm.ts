@@ -62,6 +62,7 @@ export const useDeploymentForm = () => {
     deploymentUrl,
     setDeploymentUrl,
     selectedItems,
+    setSelectedItems,
     envVars,
     setEnvVars,
     variableScope,

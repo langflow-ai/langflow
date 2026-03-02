@@ -25,6 +25,7 @@ import ModalsComponent from "../../components/modalsComponent";
 import useFileDrop from "../../hooks/use-on-file-drop";
 import DeploymentsTab from "../deploymentsPage";
 import EmptyFolder from "../emptyFolder";
+import FlowVersionsTable from "./components/FlowVersionsTable";
 
 const HomePage = ({
   type,
@@ -325,6 +326,14 @@ const HomePage = ({
                     <DeploymentsTab />
                   ) : flowType === "mcp" ? (
                     <CustomMcpServerTab folderName={folderName} />
+                  ) : flowType === "flows" &&
+                    view === "list" &&
+                    data &&
+                    data.pagination.total > 0 ? (
+                    <FlowVersionsTable
+                      flows={data.flows}
+                      folderId={folderId ?? undefined}
+                    />
                   ) : (flowType === "flows" || flowType === "components") &&
                     data &&
                     data.pagination.total > 0 ? (

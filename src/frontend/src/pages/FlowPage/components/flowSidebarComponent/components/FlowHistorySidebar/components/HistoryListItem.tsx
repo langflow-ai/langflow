@@ -12,6 +12,7 @@ import { formatTimestamp } from "../utils";
 
 interface HistoryListItemProps {
   entry: FlowHistoryEntry;
+  deploymentCount: number;
   isSelected: boolean;
   isAnimating: boolean;
   onSelect: (id: string) => void;
@@ -21,6 +22,7 @@ interface HistoryListItemProps {
 
 export default function HistoryListItem({
   entry,
+  deploymentCount,
   isSelected,
   isAnimating,
   onSelect,
@@ -37,13 +39,25 @@ export default function HistoryListItem({
       <SidebarMenuButton
         isActive={isSelected}
         onClick={() => onSelect(entry.id)}
-        className="h-auto flex flex-1 flex-row items-center justify-between pl-3 py-3 rounded-none"
+        className="h-auto flex flex-1 flex-row items-center justify-between rounded-none py-3 pl-3"
       >
-        <div className="flex flex-col items-start">
-          <span className="font-medium text-sm pb-1">{entry.version_tag}</span>
-          <span className="text-xs text-muted-foreground">
-            {formatTimestamp(entry.created_at)}
-          </span>
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="truncate pb-0.5 text-sm font-medium">{entry.version_tag}</span>
+          <div className="flex items-center justify-between pr-2">
+            <span className="text-xs text-muted-foreground">
+              {formatTimestamp(entry.created_at)}
+            </span>
+            <span className="inline-flex min-h-[16px] items-center gap-1 text-xs text-muted-foreground">
+              {deploymentCount > 0 && (
+                <>
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  {deploymentCount > 1
+                    ? `Deployed (${deploymentCount})`
+                    : "Deployed"}
+                </>
+              )}
+            </span>
+          </div>
         </div>
         <div className="flex items-center">
           <DropdownMenu>

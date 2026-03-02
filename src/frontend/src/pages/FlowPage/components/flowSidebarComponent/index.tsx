@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useSearchParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -152,6 +153,8 @@ interface FlowSidebarComponentProps {
 }
 
 export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
+  const [searchParams] = useSearchParams();
+  const requestedHistoryId = searchParams.get("historyId");
   const rawData = useTypesStore((state) => state.data);
 
   // Filter out knowledge components from files_and_knowledge category when ENABLE_KNOWLEDGE_BASES is OFF
@@ -198,7 +201,12 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     })),
   );
 
-  const { activeSection, setOpen, setActiveSection, open: sidebarOpen } = useSidebar();
+  const {
+    activeSection,
+    setOpen,
+    setActiveSection,
+    open: sidebarOpen,
+  } = useSidebar();
   const addComponent = useAddComponent();
 
   // Get MCP servers for search functionality (only when new sidebar is enabled)
@@ -597,6 +605,14 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     ENABLE_NEW_SIDEBAR && activeSection === "history" && sidebarOpen;
   const currentFlowForHistory = useFlowStore((state) => state.currentFlow);
 
+  useEffect(() => {
+    if (!ENABLE_NEW_SIDEBAR || !requestedHistoryId) {
+      return;
+    }
+    setActiveSection("history");
+    setOpen(true);
+  }, [requestedHistoryId, setActiveSection, setOpen]);
+
   const [category, component] = getFilterComponent?.split(".") ?? ["", ""];
 
   const filterDescription =
@@ -634,9 +650,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
           )}
         >
           {showHistory && currentFlowForHistory?.id ? (
-            <FlowHistorySidebarContent
-              flowId={currentFlowForHistory.id}
-            />
+            <FlowHistorySidebarContent flowId={currentFlowForHistory.id} />
           ) : (
             <>
               <SidebarHeaderComponent

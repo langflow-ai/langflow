@@ -119,11 +119,11 @@ async def test_process_config_uses_raw_payload_but_overrides_name(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     captured = {}
 
-    async def mock_create_deployment_config(*, config, user_id, db):  # noqa: ARG001
+    async def mock_create_config(*, config, user_id, db):  # noqa: ARG001
         captured["name"] = config.name
         captured["env_vars"] = config.environment_variables
 
-    monkeypatch.setattr(service, "create_deployment_config", mock_create_deployment_config)
+    monkeypatch.setattr(service, "create_config", mock_create_config)
 
     app_id = await service._process_config(
         user_id="user-1",
@@ -204,7 +204,7 @@ async def test_update_deployment_denies_config_replacement(monkeypatch):
     update_data = DeploymentUpdate(config=ConfigDeploymentBindingUpdate(config_id="replacement-config"))
 
     with pytest.raises(DeploymentConflictError, match="Replacing deployment configuration/connection"):
-        await service.update_deployment(
+        await service.update(
             user_id="user-1",
             deployment_id="dep-1",
             update_data=update_data,
@@ -233,7 +233,7 @@ async def test_list_deployments_filters_with_provider_draft_filters(monkeypatch)
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    result = await service.list_deployments(
+    result = await service.list(
         user_id="user-1",
         db=object(),
         params=DeploymentListParams(
@@ -269,7 +269,7 @@ async def test_update_deployment_denies_config_unbind(monkeypatch):
     update_data = DeploymentUpdate(config=ConfigDeploymentBindingUpdate(config_id=None))
 
     with pytest.raises(DeploymentConflictError, match="Unbinding deployment configuration/connection"):
-        await service.update_deployment(
+        await service.update(
             user_id="user-1",
             deployment_id="dep-1",
             update_data=update_data,

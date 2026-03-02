@@ -615,6 +615,26 @@ def _as_uuid(value: str) -> UUID | None:
         return None
 
 
+def _normalize_history_query_ids(history_ids: list[str] | None) -> list[UUID]:
+    if not history_ids:
+        return []
+
+    normalized: list[UUID] = []
+    seen: set[UUID] = set()
+    for raw in history_ids:
+        value = raw.strip()
+        if not value:
+            continue
+        history_uuid = _as_uuid(value)
+        if history_uuid is None:
+            continue
+        if history_uuid in seen:
+            continue
+        seen.add(history_uuid)
+        normalized.append(history_uuid)
+    return normalized
+
+
 def _is_secret_template_field(field_data: Any) -> bool:
     if not isinstance(field_data, dict):
         return False
@@ -841,36 +861,40 @@ async def _sync_page_with_provider(
     page: int,
     size: int,
     deployment_type: DeploymentType | None,
-) -> tuple[list[tuple[Deployment, int]], int]:
-    accepted_rows: list[tuple[Deployment, int]] = []
+    history_ids: list[UUID] | None = None,
+    match_limit: int | None = None,
+) -> tuple[list[tuple[Deployment, int, list[str]]], int]:
+    accepted_rows: list[tuple[Deployment, int, list[str]]] = []
+    requested_size = size if match_limit is None else min(size, match_limit)
     cursor = _page_offset(page, size)
     guard = 0
-    while len(accepted_rows) < size and guard < (size * 4 + 20):
+    while len(accepted_rows) < requested_size and guard < (requested_size * 4 + 20):
         guard += 1
         batch = await list_deployment_rows_page(
             db,
             user_id=user_id,
             provider_account_id=provider_id,
             offset=cursor,
-            limit=size - len(accepted_rows),
+            limit=requested_size - len(accepted_rows),
+            history_ids=history_ids,
         )
         if not batch:
             break
-        resource_keys = [row.resource_key for row, _ in batch]
+        resource_keys = [row.resource_key for row, _, _ in batch]
         list_params = DeploymentListParams(
             deployment_types=[deployment_type] if deployment_type is not None else None,
             provider_params={"ids": resource_keys},
         )
-        provider_view = await deployment_adapter.list_deployments(
+        provider_view = await deployment_adapter.list(
             user_id=user_id,
             db=db,
             params=list_params,
         )
         provider_ids = {str(item.id) for item in provider_view.deployments if item.id}
         provider_names = {item.name for item in provider_view.deployments if item.name}
-        for row, attached_count in batch:
+        for row, attached_count, matched_history_ids in batch:
             if row.resource_key in provider_ids or row.resource_key in provider_names:
-                accepted_rows.append((row, attached_count))
+                accepted_rows.append((row, attached_count, matched_history_ids))
                 cursor += 1
                 continue
             await delete_deployment_row_by_resource_key(
@@ -879,7 +903,12 @@ async def _sync_page_with_provider(
                 provider_account_id=provider_id,
                 resource_key=row.resource_key,
             )
-    total = await count_deployment_rows(db, user_id=user_id, provider_account_id=provider_id)
+    total = await count_deployment_rows(
+        db,
+        user_id=user_id,
+        provider_account_id=provider_id,
+        history_ids=history_ids,
+    )
     return accepted_rows, total
 
 
@@ -1008,7 +1037,7 @@ async def create_deployment(
     )
     try:
         result: AdapterDeploymentCreateResult = (
-            await deployment_adapter.create_deployment(
+            await deployment_adapter.create(
                 user_id=user.id,
                 deployment=adapter_payload,
                 db=db,
@@ -1086,7 +1115,7 @@ async def list_deployment_types(
     """List deployment types for a provider account."""
     deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
     try:
-        deployment_types = await deployment_adapter.list_deployment_types(
+        deployment_types = await deployment_adapter.list_types(
             user_id=user.id,
             db=db,
         )
@@ -1104,8 +1133,28 @@ async def list_deployments(
     db: DbSession,
     params: Annotated[Params, Depends(_deployment_pagination_params)],
     deployment_type: Annotated[DeploymentType | None, Query()] = None,
+    history_ids: Annotated[
+        list[str] | None,
+        Query(
+            description=(
+                "Optional flow-history checkpoint ids. When provided, deployments are filtered to those "
+                "with at least one matching attachment (OR semantics across ids)."
+            )
+        ),
+    ] = None,
+    match_limit: Annotated[
+        int | None,
+        Query(
+            ge=1,
+            le=500,
+            description=(
+                "Optional cap on number of matching deployments returned per page when history_ids are provided."
+            ),
+        ),
+    ] = None,
 ):
     """List deployments for a provider account using lazy provider synchronization."""
+    normalized_history_ids = _normalize_history_query_ids(history_ids)
     deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
     try:
         rows_with_counts, total = await _sync_page_with_provider(
@@ -1116,6 +1165,8 @@ async def list_deployments(
             page=params.page,
             size=params.size,
             deployment_type=deployment_type,
+            history_ids=normalized_history_ids or None,
+            match_limit=match_limit if normalized_history_ids else None,
         )
         deployments = [
             DeploymentListItemResponse(
@@ -1126,8 +1177,13 @@ async def list_deployments(
                 attached_count=attached_count,
                 created_at=row.created_at,
                 updated_at=row.updated_at,
+                provider_data=(
+                    {"matched_history_ids": matched_history_ids}
+                    if normalized_history_ids
+                    else None
+                ),
             )
-            for row, attached_count in rows_with_counts
+            for row, attached_count, matched_history_ids in rows_with_counts
         ]
     except InvalidDeploymentTypeError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -1256,7 +1312,7 @@ async def create_deployment_config(
     config_payload = BaseConfigData.model_validate(payload.model_dump(exclude={"provider_id"}))
     deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
     try:
-        create_result = await deployment_adapter.create_deployment_config(
+        create_result = await deployment_adapter.create_config(
             config=config_payload,
             user_id=user.id,
             db=db,
@@ -1283,7 +1339,7 @@ async def list_deployment_configs(
     """List deployment configs for a provider account."""
     deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
     try:
-        configs_result: ConfigListResult = await deployment_adapter.list_deployment_configs(
+        configs_result: ConfigListResult = await deployment_adapter.list_configs(
             user_id=user.id,
             db=db,
         )
@@ -1306,7 +1362,7 @@ async def get_deployment_config(
     """Get deployment config for a provider account."""
     deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
     try:
-        config = await deployment_adapter.get_deployment_config(
+        config = await deployment_adapter.get_config(
             config_id=config_id,
             user_id=user.id,
             db=db,
@@ -1425,7 +1481,7 @@ async def update_deployment_config(
     """Update deployment config for a provider account."""
     deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
     try:
-        update_result = await deployment_adapter.update_deployment_config(
+        update_result = await deployment_adapter.update_config(
             config_id=config_id,
             update_data=payload,
             user_id=user.id,
@@ -1454,7 +1510,7 @@ async def delete_deployment_config(
     """Delete deployment config for a provider account."""
     deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
     try:
-        await deployment_adapter.delete_deployment_config(
+        await deployment_adapter.delete_config(
             config_id=config_id,
             user_id=user.id,
             db=db,
@@ -1483,7 +1539,7 @@ async def get_deployment(
         db=db,
     )
     try:
-        deployment = await deployment_adapter.get_deployment(
+        deployment = await deployment_adapter.get(
             user_id=user.id,
             deployment_id=deployment_row.resource_key,
             db=db,
@@ -1587,7 +1643,7 @@ async def update_deployment(
         snapshot=snapshot_patch_payload,
     )
     try:
-        update_result = await deployment_adapter.update_deployment(
+        update_result = await deployment_adapter.update(
             deployment_id=deployment_row.resource_key,
             update_data=adapter_payload,
             user_id=user.id,
@@ -1632,7 +1688,7 @@ async def delete_deployment(
         db=db,
     )
     try:
-        await deployment_adapter.delete_deployment(
+        await deployment_adapter.delete(
             deployment_id=deployment_row.resource_key,
             user_id=user.id,
             db=db,
@@ -1668,7 +1724,7 @@ async def redeploy_deployment(
         db=db,
     )
     try:
-        redeploy_result = await deployment_adapter.redeploy_deployment(
+        redeploy_result = await deployment_adapter.redeploy(
             deployment_id=deployment_row.resource_key,
             user_id=user.id,
             db=db,
@@ -1702,7 +1758,7 @@ async def duplicate_deployment(
         db=db,
     )
     try:
-        clone_result = await deployment_adapter.duplicate_deployment(
+        clone_result = await deployment_adapter.duplicate(
             deployment_id=deployment_row.resource_key,
             deployment_type=payload.deployment_type,
             user_id=user.id,
@@ -1735,7 +1791,7 @@ async def get_deployment_status(
         db=db,
     )
     try:
-        health_result = await deployment_adapter.get_deployment_status(
+        health_result = await deployment_adapter.get_status(
             deployment_id=deployment_row.resource_key,
             user_id=user.id,
             db=db,

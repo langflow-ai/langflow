@@ -170,7 +170,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         self._client_managers: dict[str, WxOClient] = {}
         self.set_ready()
 
-    async def create_deployment(
+    async def create(
         self,
         *,
         user_id: UUID | str,
@@ -292,7 +292,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             **deployment_spec.model_dump(exclude_unset=True),
         )
 
-    async def list_deployment_types(
+    async def list_types(
         self,
         *,
         user_id: UUID | str,  # noqa: ARG002 - not used yet, might be, e.g., RBAC
@@ -301,7 +301,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         """List deployment types supported by the provider."""
         return [DeploymentType.AGENT]
 
-    async def list_deployments(
+    async def list(
         self,
         *,
         user_id: UUID | str,
@@ -356,7 +356,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             deployments=deployments,
         )
 
-    async def get_deployment(
+    async def get(
         self,
         *,
         user_id: UUID | str,
@@ -374,7 +374,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             deployment_type=DeploymentType.AGENT,
         )
 
-    async def update_deployment(
+    async def update(
         self,
         *,
         user_id: UUID | str,
@@ -432,7 +432,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         return DeploymentUpdateResult(id=deployment_id)
 
-    async def redeploy_deployment(
+    async def redeploy(
         self,
         deployment_id: str,
         *,
@@ -442,7 +442,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         """Trigger a deployment redeployment for the agent in draft environment."""
         raise NotImplementedError
 
-    async def duplicate_deployment(
+    async def duplicate(
         self,
         deployment_id: str,  # noqa: ARG002
         *,
@@ -470,7 +470,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         """Undeploy a deployment."""
         raise NotImplementedError
 
-    async def delete_deployment(
+    async def delete(
         self,
         *,
         user_id: UUID | str,
@@ -492,7 +492,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         return DeploymentDeleteResult(id=deployment_id)
 
-    async def get_deployment_status(
+    async def get_status(
         self,
         *,
         user_id: UUID | str,
@@ -651,7 +651,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             provider_result=provider_result or None,
         )
 
-    async def create_deployment_config(
+    async def create_config(
         self,
         *,
         config: BaseConfigData,
@@ -690,7 +690,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         return ConfigResult(id=app_id)
 
-    async def list_deployment_configs(
+    async def list_configs(
         self,
         *,
         user_id: UUID | str,
@@ -718,7 +718,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             ]
         )
 
-    async def get_deployment_config(
+    async def get_config(
         self,
         config_id: str,
         *,
@@ -748,7 +748,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             },
         )
 
-    async def update_deployment_config(
+    async def update_config(
         self,
         *,
         config_id: str,
@@ -757,7 +757,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         db: Any,
     ) -> ConfigResult:
         """Update an existing draft config by app_id."""
-        existing = await self.get_deployment_config(config_id, user_id=user_id, db=db)
+        existing = await self.get_config(config_id, user_id=user_id, db=db)
 
         environment_variables = update_data.environment_variables or {}
         config = BaseConfigData(
@@ -765,10 +765,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             description=update_data.description or "",
             environment_variables=environment_variables,
         )
-        await self.create_deployment_config(config=config, user_id=user_id, db=db)
+        await self.create_config(config=config, user_id=user_id, db=db)
         return ConfigResult(id=config_id, provider_result=existing.provider_data)
 
-    async def delete_deployment_config(
+    async def delete_config(
         self,
         config_id: str,
         *,
@@ -927,7 +927,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             description=description,
             environment_variables=environment_variables,
         )
-        await self.create_deployment_config(
+        await self.create_config(
             config=config_payload,
             user_id=user_id,
             db=db,

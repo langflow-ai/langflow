@@ -278,8 +278,8 @@ async def test_list_history_supports_deployment_ids_filter_with_counts(
     body = resp.json()
 
     assert {entry["id"] for entry in body["entries"]} == {snap_1["id"], snap_2["id"]}
-    assert body["deployment_counts"][deployment_1_id] == 1
-    assert body["deployment_counts"][deployment_2_id] == 1
+    assert body["deployment_counts"][snap_1["id"]] == 1
+    assert body["deployment_counts"][snap_2["id"]] == 1
 
 
 async def test_version_numbers_auto_increment(client: AsyncClient, logged_in_headers):

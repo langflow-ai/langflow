@@ -35,6 +35,7 @@ from langflow.services.database.models.flow.model import (
     FlowUpdate,
 )
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
+from langflow.services.database.models.flow_history.crud import get_deployed_flow_ids
 
 # TODO: Full-history import/export is planned as a follow-up feature. When implemented,
 # re-add imports for create_flow_history_entry, get_flow_history_list, strip_history_data,
@@ -396,11 +397,29 @@ async def read_flows(
                 flows = [flow for flow in flows if flow.folder_id != starter_folder_id]
             if header_flows:
                 # Convert to FlowHeader objects and compress the response
-                flow_headers = [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
+                deployed_flow_ids = await get_deployed_flow_ids(
+                    session,
+                    user_id=current_user.id,
+                    flow_ids=[flow.id for flow in flows],
+                )
+                flow_headers: list[FlowHeader] = []
+                for flow in flows:
+                    flow_header = FlowHeader.model_validate(flow, from_attributes=True)
+                    flow_header.has_deployments = flow.id in deployed_flow_ids
+                    flow_headers.append(flow_header)
                 return compress_response(flow_headers)
 
             # Convert to FlowRead while session is still active to avoid detached instance errors
-            flow_reads = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows]
+            deployed_flow_ids = await get_deployed_flow_ids(
+                session,
+                user_id=current_user.id,
+                flow_ids=[flow.id for flow in flows],
+            )
+            flow_reads: list[FlowRead] = []
+            for flow in flows:
+                flow_read = FlowRead.model_validate(flow, from_attributes=True)
+                flow_read.has_deployments = flow.id in deployed_flow_ids
+                flow_reads.append(flow_read)
             return compress_response(flow_reads)
 
         stmt = stmt.where(Flow.folder_id == folder_id)
@@ -411,7 +430,20 @@ async def read_flows(
             warnings.filterwarnings(
                 "ignore", category=DeprecationWarning, module=r"fastapi_pagination\.ext\.sqlalchemy"
             )
-            return await apaginate(session, stmt, params=params)
+            async def _flow_transformer(flows: list[Flow]) -> list[FlowRead]:
+                deployed_flow_ids = await get_deployed_flow_ids(
+                    session,
+                    user_id=current_user.id,
+                    flow_ids=[flow.id for flow in flows],
+                )
+                transformed: list[FlowRead] = []
+                for flow in flows:
+                    flow_read = FlowRead.model_validate(flow, from_attributes=True)
+                    flow_read.has_deployments = flow.id in deployed_flow_ids
+                    transformed.append(flow_read)
+                return transformed
+
+            return await apaginate(session, stmt, params=params, transformer=_flow_transformer)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

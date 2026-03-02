@@ -80,7 +80,8 @@ async def list_deployment_rows_page(
     provider_account_id: UUID,
     offset: int,
     limit: int,
-) -> list[tuple[Deployment, int]]:
+    history_ids: list[UUID] | None = None,
+) -> list[tuple[Deployment, int, list[str]]]:
     attachment_counts_subquery = (
         select(
             FlowHistoryDeploymentAttachment.deployment_id.label("deployment_id"),
@@ -100,12 +101,55 @@ async def list_deployment_rows_page(
             Deployment.user_id == user_id,
             Deployment.provider_account_id == provider_account_id,
         )
-        .order_by(col(Deployment.created_at).desc(), col(Deployment.id).desc())
-        .offset(offset)
-        .limit(limit)
     )
+    if history_ids:
+        matched_deployments_subquery = (
+            select(FlowHistoryDeploymentAttachment.deployment_id)
+            .where(
+                FlowHistoryDeploymentAttachment.user_id == user_id,
+                FlowHistoryDeploymentAttachment.history_id.in_(history_ids),
+            )
+            .group_by(FlowHistoryDeploymentAttachment.deployment_id)
+            .subquery()
+        )
+        stmt = stmt.join(
+            matched_deployments_subquery,
+            matched_deployments_subquery.c.deployment_id == Deployment.id,
+        )
+    stmt = stmt.order_by(col(Deployment.created_at).desc(), col(Deployment.id).desc()).offset(offset).limit(limit)
     rows = (await db.exec(stmt)).all()
-    return [(deployment, int(attached_count or 0)) for deployment, attached_count in rows]
+    deployment_rows = [(deployment, int(attached_count or 0)) for deployment, attached_count in rows]
+    if not history_ids or not deployment_rows:
+        return [(deployment, attached_count, []) for deployment, attached_count in deployment_rows]
+
+    deployment_ids = [deployment.id for deployment, _ in deployment_rows]
+    matched_rows = (
+        await db.exec(
+            select(
+                FlowHistoryDeploymentAttachment.deployment_id,
+                FlowHistoryDeploymentAttachment.history_id,
+            ).where(
+                FlowHistoryDeploymentAttachment.user_id == user_id,
+                FlowHistoryDeploymentAttachment.deployment_id.in_(deployment_ids),
+                FlowHistoryDeploymentAttachment.history_id.in_(history_ids),
+            )
+        )
+    ).all()
+    matched_history_ids_by_deployment: dict[UUID, list[str]] = {}
+    for deployment_id, history_id in matched_rows:
+        existing = matched_history_ids_by_deployment.setdefault(deployment_id, [])
+        history_id_str = str(history_id)
+        if history_id_str not in existing:
+            existing.append(history_id_str)
+
+    return [
+        (
+            deployment,
+            attached_count,
+            matched_history_ids_by_deployment.get(deployment.id, []),
+        )
+        for deployment, attached_count in deployment_rows
+    ]
 
 
 async def count_deployment_rows(
@@ -113,11 +157,26 @@ async def count_deployment_rows(
     *,
     user_id: UUID,
     provider_account_id: UUID,
+    history_ids: list[UUID] | None = None,
 ) -> int:
     stmt = select(func.count(Deployment.id)).where(
         Deployment.user_id == user_id,
         Deployment.provider_account_id == provider_account_id,
     )
+    if history_ids:
+        matched_deployments_subquery = (
+            select(FlowHistoryDeploymentAttachment.deployment_id)
+            .where(
+                FlowHistoryDeploymentAttachment.user_id == user_id,
+                FlowHistoryDeploymentAttachment.history_id.in_(history_ids),
+            )
+            .group_by(FlowHistoryDeploymentAttachment.deployment_id)
+            .subquery()
+        )
+        stmt = stmt.join(
+            matched_deployments_subquery,
+            matched_deployments_subquery.c.deployment_id == Deployment.id,
+        )
     return int((await db.exec(stmt)).one() or 0)
 
 

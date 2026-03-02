@@ -245,7 +245,7 @@ class DeploymentServiceProtocol(Protocol):
     """
 
     @abstractmethod
-    async def create_deployment(
+    async def create(
         self,
         *,
         user_id: UUID | str,
@@ -256,7 +256,7 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
     @abstractmethod
-    async def list_deployment_types(
+    async def list_types(
         self,
         *,
         user_id: UUID | str,
@@ -266,7 +266,7 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
     @abstractmethod
-    async def list_deployments(
+    async def list(
         self,
         *,
         user_id: UUID | str,
@@ -277,7 +277,7 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
     @abstractmethod
-    async def get_deployment(
+    async def get(
         self,
         *,
         user_id: UUID | str,
@@ -288,7 +288,7 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
     @abstractmethod
-    async def update_deployment(
+    async def update(
         self,
         *,
         user_id: UUID | str,
@@ -300,7 +300,7 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
     @abstractmethod
-    async def redeploy_deployment(
+    async def redeploy(
         self,
         *,
         user_id: UUID | str,
@@ -311,7 +311,7 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
     @abstractmethod
-    async def duplicate_deployment(
+    async def duplicate(
         self,
         *,
         user_id: UUID | str,
@@ -323,7 +323,7 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
     @abstractmethod
-    async def delete_deployment(
+    async def delete(
         self,
         *,
         user_id: UUID | str,
@@ -334,7 +334,7 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
     @abstractmethod
-    async def get_deployment_status(
+    async def get_status(
         self,
         *,
         user_id: UUID | str,
@@ -367,7 +367,7 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
     @abstractmethod
-    async def create_deployment_config(
+    async def create_config(
         self,
         *,
         user_id: UUID | str,
@@ -378,7 +378,7 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
     @abstractmethod
-    async def list_deployment_configs(
+    async def list_configs(
         self,
         *,
         user_id: UUID | str,
@@ -389,7 +389,7 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
     @abstractmethod
-    async def get_deployment_config(
+    async def get_config(
         self,
         *,
         user_id: UUID | str,
@@ -400,7 +400,7 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
     @abstractmethod
-    async def update_deployment_config(
+    async def update_config(
         self,
         *,
         config_id: str,
@@ -412,7 +412,7 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
     @abstractmethod
-    async def delete_deployment_config(
+    async def delete_config(
         self,
         *,
         user_id: UUID | str,

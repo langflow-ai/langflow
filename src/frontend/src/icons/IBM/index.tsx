@@ -19,5 +19,7 @@ export const IBMIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(
 export const WatsonxOrchestrateIcon = (
   props: React.ComponentPropsWithoutRef<"img">,
 ) => {
-  return <img src={WatsonxOrchestrateImage} alt="watsonx Orchestrate" {...props} />;
+  return (
+    <img src={WatsonxOrchestrateImage} alt="watsonx Orchestrate" {...props} />
+  );
 };

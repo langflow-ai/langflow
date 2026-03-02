@@ -48,6 +48,7 @@ export type DeploymentListItem = {
   updated_at?: string | null;
   provider_data?: {
     snapshot_ids?: string[];
+    matched_history_ids?: string[];
     mode?: string;
     [key: string]: unknown;
   };
@@ -132,6 +133,8 @@ type ProviderScopedParams = {
 type PaginationParams = {
   page?: number;
   pageSize?: number;
+  historyIds?: string[];
+  matchLimit?: number;
 };
 
 export const useGetDeploymentProviders: useQueryFunctionType<
@@ -167,11 +170,22 @@ export const useGetDeployments: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const getDeploymentsFn = async (): Promise<DeploymentListResponse> => {
-    const url = buildQueryStringUrl(getURL("DEPLOYMENTS"), {
-      provider_id: params.providerId,
-      page: params.page ?? 1,
-      size: params.pageSize ?? 20,
-    });
+    const queryParams = new URLSearchParams();
+    queryParams.append("provider_id", params.providerId);
+    queryParams.append("page", String(params.page ?? 1));
+    queryParams.append("size", String(params.pageSize ?? 20));
+
+    if (typeof params.matchLimit === "number") {
+      queryParams.append("match_limit", String(params.matchLimit));
+    }
+    for (const historyId of params.historyIds ?? []) {
+      const normalized = historyId.trim();
+      if (normalized.length > 0) {
+        queryParams.append("history_ids", normalized);
+      }
+    }
+
+    const url = `${getURL("DEPLOYMENTS")}?${queryParams.toString()}`;
     const { data } = await api.get<DeploymentListResponse>(url);
     return data;
   };
@@ -182,6 +196,8 @@ export const useGetDeployments: useQueryFunctionType<
       params.providerId,
       params.page ?? 1,
       params.pageSize ?? 20,
+      (params.historyIds ?? []).join(","),
+      params.matchLimit ?? null,
     ],
     getDeploymentsFn,
     options,
@@ -209,13 +225,9 @@ export const usePostCreateDeployment: useMutationFunctionType<
     DeploymentCreateResponse,
     Error,
     DeploymentCreatePayload
-  > = mutate(
-    ["usePostCreateDeployment"],
-    createDeploymentFn,
-    {
-      ...options,
-    },
-  );
+  > = mutate(["usePostCreateDeployment"], createDeploymentFn, {
+    ...options,
+  });
 
   return mutation;
 };

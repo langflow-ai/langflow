@@ -18,7 +18,7 @@ from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow_history.crud import (
     create_flow_history_entry,
     delete_flow_history_entry,
-    get_flow_history_counts_by_deployment_ids,
+    get_flow_history_counts_by_history_ids,
     get_flow_history_entry_or_raise,
     get_flow_history_list,
 )
@@ -161,16 +161,16 @@ async def list_flow_history(
         offset,
         deployment_ids=normalized_deployment_ids or None,
     )
-    deployment_counts: dict[str, int] | None = None
-    if normalized_deployment_ids:
-        counts = await get_flow_history_counts_by_deployment_ids(
-            session,
-            flow_id=flow_id,
-            user_id=current_user.id,
-            deployment_ids=normalized_deployment_ids,
-        )
-        deployment_counts = {str(deployment_uuid): 0 for deployment_uuid in normalized_deployment_ids}
-        deployment_counts.update({str(deployment_uuid): count for deployment_uuid, count in counts.items()})
+    history_ids = [entry.id for entry in entries]
+    counts_by_history_id = await get_flow_history_counts_by_history_ids(
+        session,
+        flow_id=flow_id,
+        user_id=current_user.id,
+        history_ids=history_ids,
+        deployment_ids=normalized_deployment_ids or None,
+    )
+    deployment_counts = {str(history_id): 0 for history_id in history_ids}
+    deployment_counts.update({str(history_id): count for history_id, count in counts_by_history_id.items()})
     max_entries = get_settings_service().settings.max_flow_history_entries_per_flow
     return FlowHistoryListResponse(
         entries=[_history_to_read(e) for e in entries],

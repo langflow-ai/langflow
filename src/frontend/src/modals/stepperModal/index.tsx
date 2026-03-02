@@ -103,10 +103,7 @@ export function StepperModal({
                 <div className="flex items-center justify-between">
                   <DialogTitle className="flex items-center gap-2 text-base font-semibold">
                     <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
-                      <ForwardedIconComponent
-                        name={icon}
-                        className="h-4 w-4"
-                      />
+                      <ForwardedIconComponent name={icon} className="h-4 w-4" />
                     </div>
                     {title}
                   </DialogTitle>

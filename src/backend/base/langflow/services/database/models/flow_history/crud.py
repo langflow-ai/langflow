@@ -181,6 +181,66 @@ async def get_flow_history_counts_by_deployment_ids(
     return {deployment_id: int(count) for deployment_id, count in rows}
 
 
+async def get_flow_history_counts_by_history_ids(
+    session: AsyncSession,
+    flow_id: UUID,
+    user_id: UUID,
+    history_ids: list[UUID],
+    deployment_ids: list[UUID] | None = None,
+) -> dict[UUID, int]:
+    if not history_ids:
+        return {}
+
+    stmt = (
+        select(
+            FlowHistoryDeploymentAttachment.history_id,
+            func.count(func.distinct(FlowHistoryDeploymentAttachment.deployment_id)),
+        )
+        .join(
+            FlowHistory,
+            FlowHistory.id == FlowHistoryDeploymentAttachment.history_id,
+        )
+        .where(
+            FlowHistory.id.in_(history_ids),
+            FlowHistory.flow_id == flow_id,
+            FlowHistory.user_id == user_id,
+            FlowHistoryDeploymentAttachment.user_id == user_id,
+        )
+    )
+    if deployment_ids:
+        stmt = stmt.where(FlowHistoryDeploymentAttachment.deployment_id.in_(deployment_ids))
+
+    stmt = stmt.group_by(FlowHistoryDeploymentAttachment.history_id)
+    rows = (await session.exec(stmt)).all()
+    return {history_id: int(count) for history_id, count in rows}
+
+
+async def get_deployed_flow_ids(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    flow_ids: list[UUID],
+) -> set[UUID]:
+    if not flow_ids:
+        return set()
+
+    stmt = (
+        select(FlowHistory.flow_id)
+        .join(
+            FlowHistoryDeploymentAttachment,
+            FlowHistoryDeploymentAttachment.history_id == FlowHistory.id,
+        )
+        .where(
+            FlowHistory.user_id == user_id,
+            FlowHistory.flow_id.in_(flow_ids),
+            FlowHistoryDeploymentAttachment.user_id == user_id,
+        )
+        .distinct()
+    )
+    rows = (await session.exec(stmt)).all()
+    return set(rows)
+
+
 async def get_flow_history_entry(
     session: AsyncSession,
     history_id: UUID,

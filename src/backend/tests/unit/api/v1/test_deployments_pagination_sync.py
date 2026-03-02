@@ -92,7 +92,7 @@ class _FakeAdapter:
     def __init__(self) -> None:
         self.last_update_payload = None
 
-    async def list_deployments(self, *, params=None, **_):
+    async def list(self, *, params=None, **_):
         provider_params = params.provider_params if params else None
         ids = provider_params.get("ids", []) if isinstance(provider_params, dict) else []
         requested_types = params.deployment_types if params else None
@@ -108,8 +108,30 @@ class _FakeAdapter:
             )
         return DeploymentList(deployments=kept, deployment_type=resolved_type if kept else None)
 
-    async def update_deployment(self, *, deployment_id, **_) -> DeploymentUpdateResult:
+    async def update(self, *, deployment_id, **_) -> DeploymentUpdateResult:
         self.last_update_payload = _.get("update_data")
+        return DeploymentUpdateResult(id=deployment_id)
+
+    async def create_snapshots(self, *, snapshot_items, **_) -> SnapshotResult:
+        ids = [f"snapshot-{idx}" for idx, _ in enumerate(snapshot_items.raw_payloads, start=1)]
+        return SnapshotResult(ids=ids)
+
+
+class _EchoAdapter:
+    async def list(self, *, params=None, **_):
+        provider_params = params.provider_params if params else {}
+        ids = provider_params.get("ids", []) if isinstance(provider_params, dict) else []
+        requested_types = params.deployment_types if params else None
+        resolved_type = requested_types[0] if requested_types else DeploymentType.AGENT
+        return DeploymentList(
+            deployments=[
+                DeploymentItem(id=resource_id, name=f"deployment-{resource_id}", type=resolved_type)
+                for resource_id in ids
+            ],
+            deployment_type=resolved_type if ids else None,
+        )
+
+    async def update(self, *, deployment_id, **_) -> DeploymentUpdateResult:
         return DeploymentUpdateResult(id=deployment_id)
 
     async def create_snapshots(self, *, snapshot_items, **_) -> SnapshotResult:
@@ -121,7 +143,7 @@ class _CreateCaptureAdapter:
     def __init__(self) -> None:
         self.received_payload = None
 
-    async def create_deployment(self, *, deployment, **_) -> DeploymentCreateResult:
+    async def create(self, *, deployment, **_) -> DeploymentCreateResult:
         self.received_payload = deployment
         return DeploymentCreateResult(
             id="provider-deployment-1",
@@ -147,11 +169,11 @@ class _ConfigsAndSnapshotsAdapter:
             artifact_type=ArtifactType.FLOW,
         )
 
-    async def create_deployment_config(self, *, config, **_) -> ConfigResult:
+    async def create_config(self, *, config, **_) -> ConfigResult:
         self.created_config = config
         return ConfigResult(id="cfg-created", provider_result={"source": "test"})
 
-    async def list_deployment_configs(self, **_) -> ConfigListResult:
+    async def list_configs(self, **_) -> ConfigListResult:
         return ConfigListResult(
             configs=[
                 ConfigItemResult(
@@ -164,7 +186,7 @@ class _ConfigsAndSnapshotsAdapter:
             provider_result={"source": "test"},
         )
 
-    async def get_deployment_config(self, *, config_id: str, **_) -> ConfigItemResult:
+    async def get_config(self, *, config_id: str, **_) -> ConfigItemResult:
         return ConfigItemResult(
             id=config_id,
             name="single-config",
@@ -172,11 +194,11 @@ class _ConfigsAndSnapshotsAdapter:
             provider_data={},
         )
 
-    async def update_deployment_config(self, *, config_id: str, update_data, **_) -> ConfigResult:
+    async def update_config(self, *, config_id: str, update_data, **_) -> ConfigResult:
         self.updated_config = (config_id, update_data)
         return ConfigResult(id=config_id, provider_result={"source": "test"})
 
-    async def delete_deployment_config(self, *, config_id: str, **_) -> None:
+    async def delete_config(self, *, config_id: str, **_) -> None:
         self.deleted_config_id = config_id
 
 
@@ -262,6 +284,116 @@ async def test_deployments_lazy_sync_prunes_stale_rows(client, logged_in_headers
             )
         ).first()
         assert stale is None
+
+
+async def test_list_deployments_filters_by_history_ids_and_exposes_matched_ids(
+    client, logged_in_headers, active_user, monkeypatch
+):
+    provider = await _create_provider(client, logged_in_headers, "tenant-history-filter")
+
+    async with session_scope() as session:
+        folder = Folder(name=f"proj-{uuid4().hex[:8]}", user_id=active_user.id)
+        session.add(folder)
+        await session.flush()
+
+        flow = Flow(
+            name=f"flow-{uuid4().hex[:8]}",
+            user_id=active_user.id,
+            folder_id=folder.id,
+            data={"nodes": [], "edges": []},
+        )
+        session.add(flow)
+        await session.flush()
+
+        history_rows: list[FlowHistory] = []
+        for version_number in range(1, 4):
+            row = FlowHistory(
+                flow_id=flow.id,
+                user_id=active_user.id,
+                data={"nodes": [], "edges": []},
+                version_number=version_number,
+                description=f"checkpoint-{version_number}",
+            )
+            session.add(row)
+            history_rows.append(row)
+        await session.flush()
+
+        deployment_one = Deployment(
+            resource_key="history-filter-1",
+            user_id=active_user.id,
+            project_id=folder.id,
+            provider_account_id=UUID(provider["id"]),
+            name=f"deployment-one-{uuid4().hex[:8]}",
+        )
+        deployment_two = Deployment(
+            resource_key="history-filter-2",
+            user_id=active_user.id,
+            project_id=folder.id,
+            provider_account_id=UUID(provider["id"]),
+            name=f"deployment-two-{uuid4().hex[:8]}",
+        )
+        deployment_three = Deployment(
+            resource_key="history-filter-3",
+            user_id=active_user.id,
+            project_id=folder.id,
+            provider_account_id=UUID(provider["id"]),
+            name=f"deployment-three-{uuid4().hex[:8]}",
+        )
+        session.add(deployment_one)
+        session.add(deployment_two)
+        session.add(deployment_three)
+        await session.flush()
+
+        session.add(
+            FlowHistoryDeploymentAttachment(
+                user_id=active_user.id,
+                history_id=history_rows[0].id,
+                deployment_id=deployment_one.id,
+            )
+        )
+        session.add(
+            FlowHistoryDeploymentAttachment(
+                user_id=active_user.id,
+                history_id=history_rows[1].id,
+                deployment_id=deployment_two.id,
+            )
+        )
+        session.add(
+            FlowHistoryDeploymentAttachment(
+                user_id=active_user.id,
+                history_id=history_rows[2].id,
+                deployment_id=deployment_three.id,
+            )
+        )
+        await session.flush()
+
+        history_id_one = str(history_rows[0].id)
+        history_id_two = str(history_rows[1].id)
+
+    async def _mock_resolve_adapter(*_, **__):
+        return _EchoAdapter()
+
+    monkeypatch.setattr(deployment_api, "_resolve_deployment_adapter", _mock_resolve_adapter)
+
+    response = await client.get(
+        "api/v1/deployments",
+        params={
+            "provider_id": provider["id"],
+            "page": 1,
+            "size": 10,
+            "history_ids": [history_id_one, history_id_two],
+            "match_limit": 1,
+        },
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    body = response.json()
+
+    # OR-style matching across history_ids with optional match_limit cap.
+    assert body["total"] == 2
+    assert len(body["deployments"]) == 1
+    matched_history_ids = body["deployments"][0]["provider_data"]["matched_history_ids"]
+    assert set(matched_history_ids).issubset({history_id_one, history_id_two})
 
 
 async def test_patch_deployment_history_updates_checkpoint_attachments(

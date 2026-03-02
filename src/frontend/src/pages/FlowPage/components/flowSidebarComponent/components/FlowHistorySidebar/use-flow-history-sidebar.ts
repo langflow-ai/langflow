@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import {
@@ -29,6 +30,7 @@ import {
 import { CURRENT_DRAFT_ID } from "./constants";
 
 export function useFlowHistorySidebar(flowId: string) {
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -38,6 +40,7 @@ export function useFlowHistorySidebar(flowId: string) {
   const storePreviewId = useHistoryPreviewStore((s) => s.previewId);
 
   const [selectedId, setSelectedId] = useState<string>(CURRENT_DRAFT_ID);
+  const requestedHistoryId = searchParams.get("historyId");
 
   useEffect(() => {
     setSelectedId(storePreviewId ?? CURRENT_DRAFT_ID);
@@ -67,6 +70,19 @@ export function useFlowHistorySidebar(flowId: string) {
 
   const history = historyResponse?.entries;
   const maxEntries = historyResponse?.max_entries;
+  useEffect(() => {
+    if (!requestedHistoryId || !history?.length) {
+      return;
+    }
+    const hasRequestedEntry = history.some(
+      (entry) => entry.id === requestedHistoryId,
+    );
+    if (hasRequestedEntry) {
+      setSelectedId(requestedHistoryId);
+    }
+  }, [history, requestedHistoryId]);
+
+  const deploymentCountsByHistoryId = historyResponse?.deployment_counts ?? {};
 
   useEffect(() => {
     const newLen = history?.length ?? 0;
@@ -353,7 +369,6 @@ export function useFlowHistorySidebar(flowId: string) {
   );
 
   const isViewingDraft = selectedId === CURRENT_DRAFT_ID;
-
   return {
     selectedId,
     pruneWarning,
@@ -373,6 +388,7 @@ export function useFlowHistorySidebar(flowId: string) {
     isCreating,
     isDeleting,
     isViewingDraft,
+    deploymentCountsByHistoryId,
     handleSelectEntry,
     doCreateSnapshot,
     handleCreateSnapshot,

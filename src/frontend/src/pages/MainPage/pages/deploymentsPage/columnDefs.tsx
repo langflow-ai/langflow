@@ -105,7 +105,10 @@ export const buildDeploymentColumnDefs = ({
     field: "modifiedDate",
     flex: 1.5,
     headerClass: "[&_.ag-header-cell-resize]:hidden",
-    cellRenderer: (params: { value: string; data: { createdDate: string } }) => (
+    cellRenderer: (params: {
+      value: string;
+      data: { createdDate: string };
+    }) => (
       <div className="flex flex-col justify-center gap-0.5 py-2">
         <span className="text-sm leading-tight">{params.value}</span>
         <span className="text-xs text-muted-foreground">

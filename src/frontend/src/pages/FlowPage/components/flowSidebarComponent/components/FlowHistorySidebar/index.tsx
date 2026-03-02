@@ -35,13 +35,13 @@ export default function FlowHistorySidebarContent({
     isCreating,
     isDeleting,
     isViewingDraft,
+    deploymentCountsByHistoryId,
     handleSelectEntry,
     doCreateSnapshot,
     handleRestore,
     handleExport,
     handleDelete,
   } = useFlowHistorySidebar(flowId);
-
   return (
     <>
       <div className="flex h-full flex-col">
@@ -113,6 +113,7 @@ export default function FlowHistorySidebarContent({
               <HistoryListItem
                 key={entry.id}
                 entry={entry}
+                deploymentCount={deploymentCountsByHistoryId[entry.id] ?? 0}
                 isSelected={entry.id === selectedId}
                 isAnimating={entry.id === animatingId}
                 onSelect={handleSelectEntry}
