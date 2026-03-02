@@ -15,7 +15,11 @@ export default function useRestoreVersion(flowId: string) {
   const [isRestoring, setIsRestoring] = useState(false);
 
   const restore = useCallback(
-    async (versionId: string, options?: { onSuccess?: () => void }) => {
+    async (
+      versionId: string,
+      options?: { saveDraft?: boolean; onSuccess?: () => void },
+    ) => {
+      const saveDraft = options?.saveDraft ?? true;
       setIsRestoring(true);
       try {
         // --- Phase 1: API call + canvas application ---
@@ -23,7 +27,7 @@ export default function useRestoreVersion(flowId: string) {
         const response = await api.post(
           `${getURL("FLOWS")}/${flowId}/versions/${versionId}/activate`,
           null,
-          { params: { save_draft: true } },
+          { params: { save_draft: saveDraft } },
         );
         const updatedFlow = response.data;
 

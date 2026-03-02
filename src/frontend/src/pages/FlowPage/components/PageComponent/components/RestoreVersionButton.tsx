@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useSidebar } from "@/components/ui/sidebar";
 import useRestoreVersion from "@/hooks/flows/use-restore-version";
 import CanvasBanner, { CanvasBannerButton } from "./CanvasBanner";
@@ -21,10 +22,12 @@ export default function RestoreVersionButton({
   const { setActiveSection } = useSidebar();
 
   const [showConfirm, setShowConfirm] = useState(false);
+  const [saveDraft, setSaveDraft] = useState(true);
 
   const handleRestore = async () => {
     setShowConfirm(false);
     await restore(versionId, {
+      saveDraft,
       onSuccess: () => {
         // Switch sidebar away from "versions" to trigger the version sidebar's
         // unmount cleanup, which re-enables auto-save and restores the
@@ -67,9 +70,22 @@ export default function RestoreVersionButton({
                 <span className="text-lg font-semibold">Restore Version</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                Restore <strong>{versionTag}</strong>? Your current draft will
-                be saved before restoring.
+                Restore <strong>{versionTag}</strong>? This will replace your
+                current canvas.
               </p>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="save-draft"
+                  checked={saveDraft}
+                  onCheckedChange={(checked: boolean) => setSaveDraft(checked)}
+                />
+                <label
+                  htmlFor="save-draft"
+                  className="text-sm text-muted-foreground"
+                >
+                  Save current draft before restoring
+                </label>
+              </div>
               <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"
