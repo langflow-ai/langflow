@@ -184,14 +184,13 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
         metadata = {
             "embedding_provider": "OpenAI",
             "embedding_model": "text-embedding-ada-002",
-            "api_key": "test-api-key",  # pragma:allowlist secret
             "chunk_size": 1000,
         }
 
         mock_embeddings = MagicMock()
         mock_openai_embeddings.return_value = mock_embeddings
 
-        result = component._build_embeddings(metadata)
+        result = component._build_embeddings(metadata, api_key="test-api-key")
 
         mock_openai_embeddings.assert_called_once_with(
             model="text-embedding-ada-002",
@@ -207,7 +206,6 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
         metadata = {
             "embedding_provider": "OpenAI",
             "embedding_model": "text-embedding-ada-002",
-            "api_key": None,
             "chunk_size": 1000,
         }
 
@@ -222,14 +220,13 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
         metadata = {
             "embedding_provider": "Cohere",
             "embedding_model": "embed-english-v3.0",
-            "api_key": "test-api-key",  # pragma:allowlist secret
             "chunk_size": 1000,
         }
 
         mock_embeddings = MagicMock()
         mock_cohere_embeddings.return_value = mock_embeddings
 
-        result = component._build_embeddings(metadata)
+        result = component._build_embeddings(metadata, api_key="test-api-key")
 
         mock_cohere_embeddings.assert_called_once_with(
             model="embed-english-v3.0",
@@ -244,7 +241,6 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
         metadata = {
             "embedding_provider": "Cohere",
             "embedding_model": "embed-english-v3.0",
-            "api_key": None,
             "chunk_size": 1000,
         }
 
@@ -258,8 +254,7 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
         metadata = {
             "embedding_provider": "Custom",
             "embedding_model": "custom-model",
-            "api_key": "test-key",  # pragma:allowlist secret
-        }  # pragma:allowlist secret
+        }
 
         with pytest.raises(NotImplementedError, match="Custom embedding models not yet supported"):
             component._build_embeddings(metadata)
@@ -285,14 +280,13 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
         metadata = {
             "embedding_provider": "Google Generative AI",
             "embedding_model": "models/embedding-001",
-            "api_key": "test-google-key",  # pragma:allowlist secret
             "chunk_size": 1000,
         }
 
         mock_embeddings = MagicMock()
         mock_google_embeddings.return_value = mock_embeddings
 
-        result = component._build_embeddings(metadata)
+        result = component._build_embeddings(metadata, api_key="test-google-key")
 
         mock_google_embeddings.assert_called_once_with(
             model="models/embedding-001",
@@ -307,7 +301,6 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
         metadata = {
             "embedding_provider": "Google Generative AI",
             "embedding_model": "models/embedding-001",
-            "api_key": None,
             "chunk_size": 1000,
         }
 
@@ -315,23 +308,23 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
             component._build_embeddings(metadata)
 
     @patch("langchain_ollama.OllamaEmbeddings")
-    @patch("langflow.components.knowledge_bases.retrieval.get_all_variables_for_provider")
-    def test_build_embeddings_ollama(self, mock_get_vars, mock_ollama_embeddings, component_class, default_kwargs):
+    def test_build_embeddings_ollama(self, mock_ollama_embeddings, component_class, default_kwargs):
         """Test building Ollama embeddings."""
         component = component_class(**default_kwargs)
-        mock_get_vars.return_value = {"OLLAMA_BASE_URL": "http://localhost:11434"}
 
         metadata = {
             "embedding_provider": "Ollama",
             "embedding_model": "nomic-embed-text",
-            "api_key": None,
             "chunk_size": 1000,
         }
 
         mock_embeddings = MagicMock()
         mock_ollama_embeddings.return_value = mock_embeddings
 
-        result = component._build_embeddings(metadata)
+        result = component._build_embeddings(
+            metadata,
+            provider_vars={"OLLAMA_BASE_URL": "http://localhost:11434"},
+        )
 
         mock_ollama_embeddings.assert_called_once_with(
             model="nomic-embed-text",
@@ -340,27 +333,28 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
         assert result == mock_embeddings
 
     @patch("langchain_ibm.WatsonxEmbeddings")
-    @patch("langflow.components.knowledge_bases.retrieval.get_all_variables_for_provider")
-    def test_build_embeddings_watsonx(self, mock_get_vars, mock_watsonx_embeddings, component_class, default_kwargs):
+    def test_build_embeddings_watsonx(self, mock_watsonx_embeddings, component_class, default_kwargs):
         """Test building IBM WatsonX embeddings."""
         component = component_class(**default_kwargs)
-        mock_get_vars.return_value = {
-            "WATSONX_APIKEY": "test-watsonx-key",  # pragma:allowlist secret
-            "WATSONX_PROJECT_ID": "test-project-id",
-            "WATSONX_URL": "https://us-south.ml.cloud.ibm.com",
-        }
 
         metadata = {
             "embedding_provider": "IBM WatsonX",
             "embedding_model": "ibm/slate-125m-english-rtrvr-v2",
-            "api_key": None,
             "chunk_size": 1000,
         }
 
         mock_embeddings = MagicMock()
         mock_watsonx_embeddings.return_value = mock_embeddings
 
-        result = component._build_embeddings(metadata)
+        result = component._build_embeddings(
+            metadata,
+            api_key="test-watsonx-key",
+            provider_vars={
+                "WATSONX_APIKEY": "test-watsonx-key",  # pragma:allowlist secret
+                "WATSONX_PROJECT_ID": "test-project-id",
+                "WATSONX_URL": "https://us-south.ml.cloud.ibm.com",
+            },
+        )
 
         mock_watsonx_embeddings.assert_called_once_with(
             model_id="ibm/slate-125m-english-rtrvr-v2",
@@ -377,38 +371,30 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
         metadata = {
             "embedding_provider": "IBM WatsonX",
             "embedding_model": "ibm/slate-125m-english-rtrvr-v2",
-            "api_key": None,
             "chunk_size": 1000,
         }
 
-        with (
-            patch("langflow.components.knowledge_bases.retrieval.get_all_variables_for_provider", return_value={}),
-            pytest.raises(ValueError, match="IBM WatsonX API key is required"),
-        ):
+        with pytest.raises(ValueError, match="IBM WatsonX API key is required"):
             component._build_embeddings(metadata)
 
     @patch("langchain_openai.OpenAIEmbeddings")
-    @patch("langflow.components.knowledge_bases.retrieval.get_api_key_for_provider")
-    def test_build_embeddings_openai_global_api_key_fallback(
-        self, mock_get_api_key, mock_openai_embeddings, component_class, default_kwargs
-    ):
-        """Test that OpenAI falls back to global API key when metadata has no key."""
+    async def test_resolve_api_key_global_fallback(self, mock_openai_embeddings, component_class, default_kwargs):
+        """Test that retrieve_data resolves the global API key for OpenAI."""
         component = component_class(**default_kwargs)
-        mock_get_api_key.return_value = "global-openai-key"  # pragma:allowlist secret
 
         metadata = {
             "embedding_provider": "OpenAI",
             "embedding_model": "text-embedding-ada-002",
-            "api_key": None,
             "chunk_size": 1000,
         }
 
         mock_embeddings = MagicMock()
         mock_openai_embeddings.return_value = mock_embeddings
 
-        result = component._build_embeddings(metadata)
+        # The async _resolve_api_key should find the global key
+        with patch.object(component, "_resolve_api_key", return_value="global-openai-key"):
+            result = component._build_embeddings(metadata, api_key="global-openai-key")
 
-        mock_get_api_key.assert_called_once()
         mock_openai_embeddings.assert_called_once_with(
             model="text-embedding-ada-002",
             api_key="global-openai-key",  # pragma:allowlist secret
@@ -416,18 +402,13 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
         )
         assert result == mock_embeddings
 
-    def test_build_embeddings_with_user_api_key(self, component_class, default_kwargs):
-        """Test that user-provided API key overrides stored one."""
-        # Use a real SecretStr object instead of a mock
-        mock_secret = SecretStr("user-provided-key")
-
-        default_kwargs["api_key"] = mock_secret
+    def test_build_embeddings_with_explicit_api_key(self, component_class, default_kwargs):
+        """Test that an explicit API key is used when passed."""
         component = component_class(**default_kwargs)
 
         metadata = {
             "embedding_provider": "OpenAI",
             "embedding_model": "text-embedding-ada-002",
-            "api_key": "stored-key",  # pragma:allowlist secret
             "chunk_size": 1000,
         }
 
@@ -435,9 +416,8 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
             mock_embeddings = MagicMock()
             mock_openai.return_value = mock_embeddings
 
-            component._build_embeddings(metadata)
+            component._build_embeddings(metadata, api_key="user-provided-key")
 
-            # The user-provided key should override the stored key in metadata
             mock_openai.assert_called_once_with(
                 model="text-embedding-ada-002",
                 api_key="user-provided-key",  # pragma:allowlist secret

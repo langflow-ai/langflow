@@ -2,6 +2,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+import chromadb
+import chromadb.api.client
 from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
 from langflow.services.auth.utils import decrypt_api_key
@@ -9,13 +11,16 @@ from langflow.services.database.models.user.crud import get_user_by_id
 from pydantic import SecretStr
 
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
-from lfx.base.models.unified_models import get_all_variables_for_provider, get_api_key_for_provider
+from lfx.base.models.unified_models import (
+    get_model_provider_variable_mapping,
+    get_provider_all_variables,
+)
 from lfx.custom import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
-from lfx.services.deps import get_settings_service, session_scope
+from lfx.services.deps import get_settings_service, get_variable_service, session_scope
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 
 _KNOWLEDGE_BASES_ROOT_PATH: Path | None = None
@@ -143,20 +148,80 @@ class KnowledgeRetrievalComponent(Component):
                 metadata["api_key"] = None
         return metadata
 
-    def _build_embeddings(self, metadata: dict):
-        """Build embedding model from metadata."""
-        runtime_api_key = self.api_key.get_secret_value() if isinstance(self.api_key, SecretStr) else self.api_key
+    async def _resolve_provider_variables(self, provider: str) -> dict[str, str]:
+        """Resolve all global variables for a provider using the async session.
+
+        This avoids the run_until_complete thread dance by doing the lookup
+        directly in the already-running async context.
+        """
+        import os
+
+        result: dict[str, str] = {}
+        provider_vars = get_provider_all_variables(provider)
+        if not provider_vars or not self.user_id:
+            return result
+
+        async with session_scope() as session:
+            variable_service = get_variable_service()
+            if variable_service is None:
+                return result
+
+            user_id = self.user_id if not isinstance(self.user_id, str) else __import__("uuid").UUID(self.user_id)
+            for var_info in provider_vars:
+                var_key = var_info.get("variable_key")
+                if not var_key:
+                    continue
+                try:
+                    value = await variable_service.get_variable(
+                        user_id=user_id,
+                        name=var_key,
+                        field="",
+                        session=session,
+                    )
+                    if value and str(value).strip():
+                        result[var_key] = str(value)
+                except (ValueError, Exception):  # noqa: BLE001
+                    env_value = os.environ.get(var_key)
+                    if env_value and env_value.strip():
+                        result[var_key] = env_value
+        return result
+
+    async def _resolve_api_key(self, provider: str) -> str | None:
+        """Resolve the API key for the given provider.
+
+        Priority: user override > metadata (decrypted) > global variable.
+        """
+        provider_variable_map = get_model_provider_variable_mapping()
+        variable_name = provider_variable_map.get(provider)
+        if not variable_name or not self.user_id:
+            return None
+
+        async with session_scope() as session:
+            variable_service = get_variable_service()
+            if variable_service is None:
+                return None
+            try:
+                user_id = self.user_id if not isinstance(self.user_id, str) else __import__("uuid").UUID(self.user_id)
+                return await variable_service.get_variable(
+                    user_id=user_id,
+                    name=variable_name,
+                    field="",
+                    session=session,
+                )
+            except (ValueError, Exception):  # noqa: BLE001
+                return None
+
+    def _build_embeddings(self, metadata: dict, *, api_key: str | None = None, provider_vars: dict | None = None):
+        """Build embedding model from metadata.
+
+        Args:
+            metadata: The knowledge base embedding metadata.
+            api_key: Pre-resolved API key (user override > metadata > global).
+            provider_vars: Pre-resolved provider variables (for Ollama/WatsonX).
+        """
         provider = metadata.get("embedding_provider")
         model = metadata.get("embedding_model")
-        api_key = runtime_api_key or metadata.get("api_key")
         chunk_size = metadata.get("chunk_size")
-
-        # Fallback: retrieve API key from provider's stored global variables
-        if not api_key and provider:
-            try:
-                api_key = get_api_key_for_provider(self.user_id, provider)
-            except (ValueError, RuntimeError):
-                pass  # Variable not configured; provider-specific checks below will raise a clear error
 
         # Handle various providers
         if provider == "OpenAI":
@@ -165,11 +230,10 @@ class KnowledgeRetrievalComponent(Component):
             if not api_key:
                 msg = "OpenAI API key is required. Provide it in the component's advanced settings or configure it globally."
                 raise ValueError(msg)
-            return OpenAIEmbeddings(
-                model=model,
-                api_key=api_key,
-                chunk_size=chunk_size,
-            )
+            openai_kwargs: dict = {"model": model, "api_key": api_key}
+            if chunk_size is not None:
+                openai_kwargs["chunk_size"] = chunk_size
+            return OpenAIEmbeddings(**openai_kwargs)
         if provider == "HuggingFace":
             from langchain_huggingface import HuggingFaceEmbeddings
 
@@ -199,7 +263,7 @@ class KnowledgeRetrievalComponent(Component):
         if provider == "Ollama":
             from langchain_ollama import OllamaEmbeddings
 
-            all_vars = get_all_variables_for_provider(self.user_id, provider)
+            all_vars = provider_vars or {}
             base_url = all_vars.get("OLLAMA_BASE_URL")
             kwargs: dict = {"model": model}
             if base_url:
@@ -208,7 +272,7 @@ class KnowledgeRetrievalComponent(Component):
         if provider == "IBM WatsonX":
             from langchain_ibm import WatsonxEmbeddings
 
-            all_vars = get_all_variables_for_provider(self.user_id, provider)
+            all_vars = provider_vars or {}
             watsonx_apikey = api_key or all_vars.get("WATSONX_APIKEY")
             watsonx_project_id = all_vars.get("WATSONX_PROJECT_ID")
             watsonx_url = all_vars.get("WATSONX_URL")
@@ -253,10 +317,24 @@ class KnowledgeRetrievalComponent(Component):
             msg = f"Metadata not found for knowledge base: {self.knowledge_base}. Ensure it has been indexed."
             raise ValueError(msg)
 
-        # Build the embedder for the knowledge base
-        embedding_function = self._build_embeddings(metadata)
+        # Resolve API key: user override > metadata (decrypted) > global variable
+        provider = metadata.get("embedding_provider")
+        runtime_api_key = self.api_key.get_secret_value() if isinstance(self.api_key, SecretStr) else self.api_key
+        api_key = runtime_api_key or metadata.get("api_key")
+        if not api_key and provider:
+            api_key = await self._resolve_api_key(provider)
 
-        # Load vector store
+        # Resolve provider-specific variables (e.g. base_url for Ollama, project_id for WatsonX)
+        provider_vars: dict[str, str] = {}
+        if provider in {"Ollama", "IBM WatsonX"}:
+            provider_vars = await self._resolve_provider_variables(provider)
+
+        # Build the embedder for the knowledge base
+        embedding_function = self._build_embeddings(metadata, api_key=api_key, provider_vars=provider_vars)
+
+        # Clear Chroma's singleton client cache to avoid "different settings"
+        # conflicts when ingestion and retrieval run in the same process.
+        chromadb.api.client.SharedSystemClient.clear_system_cache()
         chroma = Chroma(
             persist_directory=str(kb_path),
             embedding_function=embedding_function,
