@@ -86,7 +86,7 @@
   },
   "AnthropicModel": {
     "versions": {
-      "0.3.0": "7c894c5a66ba"
+      "0.3.0": "038d697c8200"
     }
   },
   "ApifyActors": {
@@ -956,7 +956,7 @@
   },
   "ChatOutput": {
     "versions": {
-      "0.3.0": "8c87e536cca4"
+      "0.3.0": "0a57b6fbe2d7"
     }
   },
   "TextInput": {
@@ -1321,7 +1321,7 @@
   },
   "OpenAIModel": {
     "versions": {
-      "0.3.0": "128d8ef661d4"
+      "0.3.0": "3b98f02f32f8"
     }
   },
   "OpenRouterComponent": {
