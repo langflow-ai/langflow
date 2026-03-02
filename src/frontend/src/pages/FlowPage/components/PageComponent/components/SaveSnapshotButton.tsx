@@ -37,7 +37,6 @@ export default function SaveSnapshotButton({
           setSuccessData({ title: "Version saved" });
           setIsSavingDisplay(false);
           setSavedSuccess(true);
-          setTimeout(() => setSavedSuccess(false), 1500);
         },
         onError: (err: any) => {
           const detail = err?.response?.data?.detail;
