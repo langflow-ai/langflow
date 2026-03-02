@@ -142,17 +142,67 @@ def test_snapshot_items_rejects_empty_raw_payload_list() -> None:
         SnapshotItems(raw_payloads=[])
 
 
+def test_snapshot_items_accepts_none_raw_payloads() -> None:
+    payload = SnapshotItems(raw_payloads=None)
+    assert payload.raw_payloads is None
+
+
 def test_base_flow_artifact_allows_extra_fields() -> None:
     flow = BaseFlowArtifact(
         id=uuid4(),
         name="Flow",
         description="desc",
-        data={},
+        data={"nodes": [], "edges": []},
         tags=["tag"],
         viewport={"x": 10, "y": 20},
     )
     assert flow.model_extra is not None
     assert flow.model_extra["viewport"] == {"x": 10, "y": 20}
+
+
+def test_base_flow_artifact_requires_nodes_and_edges() -> None:
+    with pytest.raises(ValidationError, match="Flow must have nodes"):
+        BaseFlowArtifact(
+            id=uuid4(),
+            name="Flow",
+            data={"edges": []},
+        )
+
+    with pytest.raises(ValidationError, match="Flow must have edges"):
+        BaseFlowArtifact(
+            id=uuid4(),
+            name="Flow",
+            data={"nodes": []},
+        )
+
+
+def test_snapshot_items_accepts_starter_project_data_shape() -> None:
+    payload = SnapshotItems(
+        raw_payloads=[
+            {
+                "id": uuid4(),
+                "name": "Starter Project Flow",
+                "description": "starter project payload shape",
+                "data": {"nodes": [], "edges": []},
+            }
+        ]
+    )
+    assert payload.raw_payloads is not None
+    assert payload.raw_payloads[0].data == {"nodes": [], "edges": []}
+
+
+def test_snapshot_items_rejects_wrapped_data_shape() -> None:
+    with pytest.raises(ValidationError, match="Flow must have nodes"):
+        SnapshotItems(
+            raw_payloads=[
+                {
+                    "id": uuid4(),
+                    "name": "Wrapped Flow",
+                    # Invalid for BaseFlowArtifact.data: this is one level too high.
+                    "data": {"data": {"nodes": [], "edges": []}},
+                }
+            ]
+        )
 
 
 def test_execution_create_normalizes_string_deployment_id() -> None:

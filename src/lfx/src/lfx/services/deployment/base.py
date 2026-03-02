@@ -37,21 +37,6 @@ class BaseDeploymentService(Service):
     """
 
     @abstractmethod
-    def __init__(self):
-        """Initialize the deployment service."""
-        super().__init__()
-
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """Service name identifier.
-
-        Returns:
-            str: The service name.
-        """
-        return "deployment_service"
-
-    @abstractmethod
     async def create(
         self,
         *,
@@ -69,7 +54,6 @@ class BaseDeploymentService(Service):
         db: Any,
     ) -> DeploymentListTypesResult:
         """List deployment types supported by the provider."""
-        ...
 
     @abstractmethod
     async def list(

@@ -39,7 +39,20 @@ class BaseFlowArtifact(BaseModel):
         description="Provider-specific flow metadata consumed only by the active deployment adapter.",
     )
 
-    # TODO: validate presence of nodes and edges in data
+    @field_validator("data")
+    @classmethod
+    def validate_data(cls, value: dict) -> dict:
+        """Validate flow payload shape.
+
+        Keep validation aligned with backend flow model expectations.
+        """
+        if "nodes" not in value:
+            msg = "Flow must have nodes"
+            raise ValueError(msg)
+        if "edges" not in value:
+            msg = "Flow must have edges"
+            raise ValueError(msg)
+        return value
 
 
 SnapshotList = Annotated[list[BaseFlowArtifact], Field(min_length=1)]
