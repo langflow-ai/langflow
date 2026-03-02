@@ -668,6 +668,7 @@ class Graph:
                 run_name=run_name,
                 user_id=self.user_id,
                 session_id=self.session_id,
+                flow_id=self.flow_id,
             )
 
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
