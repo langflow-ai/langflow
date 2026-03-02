@@ -32,12 +32,10 @@ REASONING_MODEL_NAMES = {
 }
 
 MODEL_TO_DEPLOYMENT = {
-    "gpt-5.1": "dsailangflow-gpt-5.1",
-    "gpt-5-mini": "dsailangflow-gpt-5-mini",
-    "gpt-5-nano": "dsailangflow-gpt-5-nano",
-    "gpt-4.1": "dsailangflow-gpt4.1",
-    "gpt-4.1-mini": "dsailangflow-gpt4.1-mini",
-    "gpt-4.1-nano": "dsailangflow-gpt4.1-nano",
+    "gpt-5.1": "YOUR-DEPLOYMENT-gpt-5.1",
+    "gpt-5-mini": "YOUR-DEPLOYMENT-gpt-5-mini",
+    "gpt-4.1": "YOUR-DEPLOYMENT-gpt4.1",
+    "gpt-4.1-mini": "YOUR-DEPLOYMENT-gpt4.1-mini",
 }
 AZURE_MODEL_NAMES = list(MODEL_TO_DEPLOYMENT)
 
@@ -66,6 +64,13 @@ class AzureChatOpenAIComponent(LCModelComponent):
             options=AZURE_MODEL_NAMES,
             value=AZURE_MODEL_NAMES[0],
             combobox=True,
+            required=True,
+            real_time_refresh=True,
+        ),
+        MessageTextInput(
+            name="azure_deployment",
+            display_name="Deployment Name",
+            info="The Azure deployment name to use. Auto-populated from model selection; override for custom deployments.",
             required=True,
             real_time_refresh=True,
         ),
@@ -102,7 +107,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
         SliderInput(
             name="temperature",
             display_name="Temperature",
-            value=1.0,
+            value=0.7,
             range_spec=RangeSpec(min=0, max=2, step=0.01),
             info="Controls randomness. Lower values are more deterministic, higher values are more creative.",
             advanced=True,
@@ -139,6 +144,9 @@ class AzureChatOpenAIComponent(LCModelComponent):
             model = str(field_value) if field_value else ""
             is_reasoning = self._is_reasoning_model(model)
             self._apply_reasoning_visibility(build_config, is_reasoning=is_reasoning)
+            build_config["azure_deployment"]["value"] = MODEL_TO_DEPLOYMENT.get(
+                model, model
+            )
 
         return build_config
 
@@ -147,10 +155,13 @@ class AzureChatOpenAIComponent(LCModelComponent):
         return any(model in name for model in REASONING_MODEL_NAMES)
 
     def _resolve_deployment_name(self) -> str:
-        """Map the selected model name to its Azure deployment name.
+        """Return the Azure deployment name.
 
-        Falls back to the raw value for custom entries typed into the combobox.
+        Uses azure_deployment as the primary source. Falls back to mapping
+        the model name if deployment is not set.
         """
+        if self.azure_deployment:
+            return self.azure_deployment
         return MODEL_TO_DEPLOYMENT.get(self.model_name, self.model_name)
 
     def _apply_legacy_api_visibility(
