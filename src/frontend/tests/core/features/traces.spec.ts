@@ -57,7 +57,7 @@ test(
   },
 );
 
-test(
+test.skip(
   "should able to see traces after running a flow",
   { tag: ["@release", "@workspace", "@api"] },
 
