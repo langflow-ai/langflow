@@ -345,7 +345,9 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
 
     @patch("langflow.components.knowledge_bases.ingestion.json.loads")
     @patch("langflow.components.knowledge_bases.ingestion.decrypt_api_key")
-    async def test_build_kb_info_with_message_input(self, mock_decrypt, mock_json_loads, component_class, default_kwargs):
+    async def test_build_kb_info_with_message_input(
+        self, mock_decrypt, mock_json_loads, component_class, default_kwargs
+    ):
         """Test that Message input is accepted and converted to DataFrame."""
         # Replace the DataFrame input with a Message
         default_kwargs["input_df"] = Message(text="Sample text 1")
