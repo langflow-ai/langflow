@@ -2,6 +2,7 @@ import {
   downloadJson,
   endOfDay,
   formatCost,
+  formatDateLabel,
   formatIOPreview,
   formatJsonData,
   formatTokens,
@@ -12,6 +13,7 @@ import {
   getStatusIconProps,
   getStatusVariant,
   startOfDay,
+  toUtcIsoForDate,
 } from "../traceViewHelpers";
 
 jest.mock("@/utils/dateTime", () => ({
@@ -262,6 +264,53 @@ describe("traceViewHelpers", () => {
       const obj: { self?: unknown } = {};
       obj.self = obj;
       expect(formatIOPreview(obj)).toBe("[Complex Object]");
+    });
+  });
+
+  describe("formatDateLabel", () => {
+    it("formats YYYY-MM-DD as a local date label", () => {
+      const formatter = new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+      const expected = formatter.format(new Date(2025, 4, 10));
+      expect(formatDateLabel("2025-05-10")).toBe(expected);
+    });
+
+    it("returns empty string for empty input", () => {
+      expect(formatDateLabel("")).toBe("");
+    });
+
+    it("returns the input when parsing fails", () => {
+      expect(formatDateLabel("not-a-date")).toBe("not-a-date");
+    });
+  });
+
+  describe("toUtcIsoForDate", () => {
+    it("returns start of day UTC when isEnd is false", () => {
+      expect(toUtcIsoForDate("2025-05-10", false)).toBe(
+        "2025-05-10T00:00:00.000Z",
+      );
+    });
+
+    it("returns end of day UTC when isEnd is true", () => {
+      expect(toUtcIsoForDate("2025-05-10", true)).toBe(
+        "2025-05-10T23:59:59.999Z",
+      );
+    });
+
+    it("returns undefined for empty input", () => {
+      expect(toUtcIsoForDate("", false)).toBeUndefined();
+    });
+
+    it("returns undefined for invalid input", () => {
+      expect(toUtcIsoForDate("not-a-date", true)).toBeUndefined();
+    });
+
+    it("preserves explicit timestamps", () => {
+      const iso = "2025-05-10T12:34:56.789Z";
+      expect(toUtcIsoForDate(iso, false)).toBe(iso);
     });
   });
 

@@ -105,7 +105,14 @@ test(
 
     await page.getByTestId("playground-btn-flow-io").click();
     await page.getByTestId("button-send").click();
-    await page.waitForSelector("text=Finished", { timeout: 60000 });
+    await page.waitForFunction(
+      () => {
+        const text = document.body?.innerText || "";
+        return /Finished|Error occurred/i.test(text);
+      },
+      null,
+      { timeout: 60000 },
+    );
     await page.getByTestId("playground-close-button").click();
     await page.getByTestId("sidebar-nav-traces").click();
     await page

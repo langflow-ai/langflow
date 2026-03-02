@@ -186,3 +186,46 @@ export const endOfDay = (date: Date) => {
   d.setHours(23, 59, 59, 999);
   return d;
 };
+
+const DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
+export const formatDateLabel = (value: string): string => {
+  if (!value) return "";
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const parsed = match
+    ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+    : new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return DATE_FORMATTER.format(parsed);
+};
+
+export const toUtcIsoForDate = (
+  value: string,
+  isEnd: boolean,
+): string | undefined => {
+  if (!value) return undefined;
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  const date = new Date(
+    Date.UTC(
+      year,
+      month,
+      day,
+      isEnd ? 23 : 0,
+      isEnd ? 59 : 0,
+      isEnd ? 59 : 0,
+      isEnd ? 999 : 0,
+    ),
+  );
+  return date.toISOString();
+};

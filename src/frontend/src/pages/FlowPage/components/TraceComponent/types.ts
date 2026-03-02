@@ -105,3 +105,10 @@ export type RenderGroupedSessionType = {
   expandedSessionIds: string[];
   handleCellClicked: (event: CellClickedEvent) => void;
 };
+
+export type DateRangePopoverProps = {
+  startDate: string;
+  endDate: string;
+  onStartDateChange: (value: string) => void;
+  onEndDateChange: (value: string) => void;
+};

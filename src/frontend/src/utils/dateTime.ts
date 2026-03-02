@@ -30,7 +30,10 @@ export const formatSmartTimestamp = (value: unknown): string => {
 
   const time = new Intl.DateTimeFormat(undefined, {
     hour: "2-digit",
+    hour12: false,
     minute: "2-digit",
+    second: "2-digit",
+    timeZone: "UTC",
   }).format(date);
 
   const isToday =
@@ -45,6 +48,11 @@ export const formatSmartTimestamp = (value: unknown): string => {
     return new Intl.DateTimeFormat(undefined, {
       day: "2-digit",
       month: "short",
+      hour: "2-digit",
+      hour12: false,
+      minute: "2-digit",
+      second: "2-digit",
+      timeZone: "UTC",
     }).format(date);
   }
 

@@ -15,11 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -35,8 +30,9 @@ import { TraceListItem } from "@/controllers/API/queries/traces/types";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
 import { createFlowTracesColumns } from "./config/flowTraceColumns";
+import { DateRangePopover } from "./DateRangePopover";
 import { TraceDetailView } from "./TraceDetailView";
-import { downloadJson, endOfDay, startOfDay } from "./traceViewHelpers";
+import { downloadJson, toUtcIsoForDate } from "./traceViewHelpers";
 import { RenderGroupedSessionType } from "./types";
 
 export function FlowInsightsContent({
@@ -91,12 +87,14 @@ export function FlowInsightsContent({
       params: {
         query: searchText.trim() ? searchText.trim() : undefined,
         status: statusFilter !== "all" ? statusFilter : undefined,
-        start_time: startDate
-          ? startOfDay(new Date(startDate)).toISOString()
-          : undefined,
-        end_time: endDateValue
-          ? endOfDay(new Date(endDateValue)).toISOString()
-          : undefined,
+        start_time:
+          startDate && !(endDateValue && endDateValue < startDate)
+            ? toUtcIsoForDate(startDate, false)
+            : undefined,
+        end_time:
+          endDateValue && !(startDate && endDateValue < startDate)
+            ? toUtcIsoForDate(endDateValue, true)
+            : undefined,
         page: pageIndex,
         size: pageSize,
       },
@@ -281,41 +279,12 @@ export function FlowInsightsContent({
               </SelectContent>
             </Select>
 
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Date range">
-                  <IconComponent name="Calendar" className="h-4 w-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-[260px] p-3">
-                <div className="flex flex-col gap-2">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">
-                      Start date
-                    </span>
-                    <Input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="h-8 text-sm [color-scheme:light] dark:[color-scheme:white] dark:[&::-webkit-calendar-picker-indicator]:invert dark:[&::-webkit-calendar-picker-indicator]:opacity-80"
-                      aria-label="Start date"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">
-                      End date
-                    </span>
-                    <Input
-                      type="date"
-                      value={endDateValue}
-                      onChange={(e) => setEndDateValue(e.target.value)}
-                      className="h-8 text-sm [color-scheme:light] dark:[color-scheme:white] dark:[&::-webkit-calendar-picker-indicator]:invert dark:[&::-webkit-calendar-picker-indicator]:opacity-80"
-                      aria-label="End date"
-                    />
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
+            <DateRangePopover
+              startDate={startDate}
+              endDate={endDateValue}
+              onStartDateChange={setStartDate}
+              onEndDateChange={setEndDateValue}
+            />
 
             <Button
               variant="ghost"

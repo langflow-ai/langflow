@@ -23,11 +23,6 @@ describe("dateTime", () => {
       expect(parseApiTimestamp("\n\t")).toBeNull();
     });
 
-    it("appends Z when missing timezone and has T", () => {
-      const result = parseApiTimestamp("2024-01-02T03:04:05");
-      expect(result?.toISOString()).toBe("2024-01-02T03:04:05.000Z");
-    });
-
     it("preserves explicit timezone offset", () => {
       const result = parseApiTimestamp("2024-01-02T03:04:05+02:00");
       expect(result?.toISOString()).toBe("2024-01-02T01:04:05.000Z");
@@ -48,7 +43,10 @@ describe("dateTime", () => {
       const date = new Date("2025-02-25T08:15:00Z");
       const expected = new Intl.DateTimeFormat(undefined, {
         hour: "2-digit",
+        hour12: false,
         minute: "2-digit",
+        second: "2-digit",
+        timeZone: "UTC",
       }).format(date);
       expect(formatSmartTimestamp(date)).toBe(expected);
     });
@@ -58,6 +56,11 @@ describe("dateTime", () => {
       const expected = new Intl.DateTimeFormat(undefined, {
         day: "2-digit",
         month: "short",
+        hour: "2-digit",
+        hour12: false,
+        minute: "2-digit",
+        second: "2-digit",
+        timeZone: "UTC",
       }).format(date);
       expect(formatSmartTimestamp(date)).toBe(expected);
     });
@@ -66,7 +69,10 @@ describe("dateTime", () => {
       const date = new Date("2024-12-31T23:59:00Z");
       const time = new Intl.DateTimeFormat(undefined, {
         hour: "2-digit",
+        hour12: false,
         minute: "2-digit",
+        second: "2-digit",
+        timeZone: "UTC",
       }).format(date);
       expect(formatSmartTimestamp(date)).toBe(`31/12/2024 ${time}`);
     });

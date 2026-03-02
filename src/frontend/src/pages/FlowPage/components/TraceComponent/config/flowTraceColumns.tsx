@@ -37,7 +37,7 @@ export function createFlowTracesColumns({
     },
 
     {
-      headerName: "Timestamp",
+      headerName: "Timestamp (UTC)",
       field: "startTime",
       flex: 0.5,
       minWidth: 70,
