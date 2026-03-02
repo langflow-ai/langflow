@@ -58,7 +58,6 @@ on:
         type: boolean
         default: false
 
-
 env:
   PYTHON_VERSION: "3.13"
   TEST_TAG: "langflowai/langflow:test"
@@ -202,7 +201,7 @@ jobs:
             fi
           fi
   build:
-    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]
     needs: [get-version, setup]
     steps:
       - name: Check out the code at a specific ref
@@ -289,13 +288,14 @@ jobs:
 
   build_components:
     if: ${{ inputs.release_type == 'main' }}
-    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]
     permissions:
       packages: write
     needs: [build, get-version]
     strategy:
       matrix:
-        component: [docker-backend, docker-frontend, ghcr-backend, ghcr-frontend]
+        component:
+          [docker-backend, docker-frontend, ghcr-backend, ghcr-frontend]
         include:
           - component: docker-backend
             dockerfile: ./docker/build_and_push_backend.Dockerfile
@@ -341,7 +341,6 @@ jobs:
           driver-opts: |
             image=moby/buildkit:v0.22.0
             network=host
-
 
       - name: Login to Docker Hub
         if: ${{ matrix.component == 'docker-backend' }} || ${{ matrix.component == 'docker-frontend' }}
@@ -400,6 +399,3 @@ jobs:
       - name: Restart HuggingFace Spaces Build
         run: |
           uv run ./scripts/factory_restart_space.py --space "Langflow/Langflow" --token ${{ secrets.HUGGINGFACE_API_TOKEN }}
-
-
-

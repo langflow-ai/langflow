@@ -927,7 +927,7 @@ async def test_agent_streaming_skips_empty_chunks():
         },
         {
             "event": "on_chain_stream",
-            "data": {"chunk": AIMessageChunk(content="   ")},  # Whitespace - should be skipped
+            "data": {"chunk": AIMessageChunk(content="   ")},  # Whitespace - are valid
         },
         {
             "event": "on_chain_stream",
@@ -942,9 +942,10 @@ async def test_agent_streaming_skips_empty_chunks():
     result = await process_agent_events(create_event_iterator(events), agent_message, mock_send_message, event_manager)
 
     # Only non-empty chunks should generate token events
-    assert len(token_events) == 2, f"Expected 2 token events (empty chunks skipped), got {len(token_events)}"
+    assert len(token_events) == 3, f"Expected 3 token events (empty chunks skipped), got {len(token_events)}"
     assert token_events[0]["chunk"] == "Hello"
-    assert token_events[1]["chunk"] == " world"
+    assert token_events[1]["chunk"] == "   "
+    assert token_events[2]["chunk"] == " world"
     assert result.properties.state == "complete"
 
 

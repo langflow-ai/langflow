@@ -2,7 +2,8 @@ import { expect, test } from "../../fixtures";
 import { addCustomComponent } from "../../utils/add-custom-component";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
-test.describe("Flow Logs Modal", () => {
+// Logs button being removed for now
+test.describe.skip("Flow Logs Modal", () => {
   test(
     "should open logs modal and show description",
     { tag: ["@release", "@logs"] },
@@ -151,7 +152,7 @@ class CustomComponent(Component):
       await page.getByTestId("title-Custom Component").click();
 
       // Open code editor and add error code
-      await page.getByTestId("code-button-modal").click();
+      await page.getByTestId("code-button-modal").last().click();
 
       await page.locator(".ace_content").click();
       await page.keyboard.press("ControlOrMeta+A");
