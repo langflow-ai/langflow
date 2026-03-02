@@ -228,7 +228,10 @@ class KnowledgeRetrievalComponent(Component):
             from langchain_openai import OpenAIEmbeddings
 
             if not api_key:
-                msg = "OpenAI API key is required. Provide it in the component's advanced settings or configure it globally."
+                msg = (
+                    "OpenAI API key is required. Provide it in the component's advanced settings"
+                    " or configure it globally."
+                )
                 raise ValueError(msg)
             openai_kwargs: dict = {"model": model, "api_key": api_key}
             if chunk_size is not None:
@@ -254,7 +257,10 @@ class KnowledgeRetrievalComponent(Component):
             from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
             if not api_key:
-                msg = "Google API key is required. Provide it in the component's advanced settings or configure it globally."
+                msg = (
+                    "Google API key is required. Provide it in the component's advanced settings"
+                    " or configure it globally."
+                )
                 raise ValueError(msg)
             return GoogleGenerativeAIEmbeddings(
                 model=model,
@@ -277,7 +283,10 @@ class KnowledgeRetrievalComponent(Component):
             watsonx_project_id = all_vars.get("WATSONX_PROJECT_ID")
             watsonx_url = all_vars.get("WATSONX_URL")
             if not watsonx_apikey:
-                msg = "IBM WatsonX API key is required. Provide it in the component's advanced settings or configure it globally."
+                msg = (
+                    "IBM WatsonX API key is required. Provide it in the component's advanced settings"
+                    " or configure it globally."
+                )
                 raise ValueError(msg)
             kwargs = {"model_id": model, "apikey": watsonx_apikey}
             if watsonx_project_id:
