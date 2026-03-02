@@ -69,6 +69,7 @@ describe("useUploadFile", () => {
       expect(mockCreateFileUpload).toHaveBeenCalledWith({
         accept: ".pdf",
         multiple: false,
+        webkitdirectory: false,
       });
     });
 
@@ -90,6 +91,7 @@ describe("useUploadFile", () => {
       expect(mockCreateFileUpload).toHaveBeenCalledWith({
         accept: ".pdf,.txt,.csv",
         multiple: true,
+        webkitdirectory: false,
       });
     });
   });

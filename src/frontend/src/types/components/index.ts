@@ -73,7 +73,10 @@ export type DropDownComponent = {
   id?: string;
   children?: ReactNode;
   name: string;
-  dialogInputs?: any;
+  dialogInputs?: {
+    fields: { data: { node: APIClassType } };
+    functionality: string;
+  };
   externalOptions?: any;
   toggle?: boolean;
 };
