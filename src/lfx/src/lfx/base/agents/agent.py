@@ -23,7 +23,6 @@ from lfx.schema.content_block import ContentBlock
 from lfx.schema.data import Data
 from lfx.schema.log import OnTokenFunctionType
 from lfx.schema.message import Message
-from lfx.schema.properties import Usage
 from lfx.template.field.base import Output
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
@@ -301,7 +300,7 @@ class LCAgentComponent(Component):
         usage_data = token_usage_handler.get_usage()
         if usage_data:
             self._token_usage = usage_data
-            result.properties.usage = Usage(**usage_data)
+            result.properties.usage = usage_data
             # Only update DB and send event if the message was stored (has an ID)
             if result.get_id():
                 stored_result = await self._update_stored_message(result)

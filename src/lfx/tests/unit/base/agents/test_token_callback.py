@@ -5,6 +5,7 @@ import threading
 from langchain_core.messages import AIMessage
 from langchain_core.outputs import ChatGeneration, LLMResult
 from lfx.base.agents.token_callback import TokenUsageCallbackHandler
+from lfx.schema.properties import Usage
 
 
 def _make_llm_result(*, llm_output=None, generations=None):
@@ -31,10 +32,10 @@ class TestExtractUsageFromLLMOutput:
         handler.on_llm_end(result)
         usage = handler.get_usage()
 
-        assert usage is not None
-        assert usage["input_tokens"] == 10
-        assert usage["output_tokens"] == 20
-        assert usage["total_tokens"] == 30
+        assert isinstance(usage, Usage)
+        assert usage.input_tokens == 10
+        assert usage.output_tokens == 20
+        assert usage.total_tokens == 30
 
 
 class TestExtractUsageFromUsageMetadata:
@@ -49,10 +50,10 @@ class TestExtractUsageFromUsageMetadata:
         handler.on_llm_end(result)
         usage = handler.get_usage()
 
-        assert usage is not None
-        assert usage["input_tokens"] == 15
-        assert usage["output_tokens"] == 25
-        assert usage["total_tokens"] == 40
+        assert isinstance(usage, Usage)
+        assert usage.input_tokens == 15
+        assert usage.output_tokens == 25
+        assert usage.total_tokens == 40
 
 
 class TestExtractUsageFromResponseMetadataTokenUsage:
@@ -74,10 +75,10 @@ class TestExtractUsageFromResponseMetadataTokenUsage:
         handler.on_llm_end(result)
         usage = handler.get_usage()
 
-        assert usage is not None
-        assert usage["input_tokens"] == 50
-        assert usage["output_tokens"] == 100
-        assert usage["total_tokens"] == 150
+        assert isinstance(usage, Usage)
+        assert usage.input_tokens == 50
+        assert usage.output_tokens == 100
+        assert usage.total_tokens == 150
 
 
 class TestExtractUsageFromResponseMetadataUsage:
@@ -99,10 +100,10 @@ class TestExtractUsageFromResponseMetadataUsage:
         handler.on_llm_end(result)
         usage = handler.get_usage()
 
-        assert usage is not None
-        assert usage["input_tokens"] == 200
-        assert usage["output_tokens"] == 300
-        assert usage["total_tokens"] == 500
+        assert isinstance(usage, Usage)
+        assert usage.input_tokens == 200
+        assert usage.output_tokens == 300
+        assert usage.total_tokens == 500
 
 
 class TestAccumulation:
@@ -118,10 +119,10 @@ class TestAccumulation:
         handler.on_llm_end(result2)
 
         usage = handler.get_usage()
-        assert usage is not None
-        assert usage["input_tokens"] == 40
-        assert usage["output_tokens"] == 60
-        assert usage["total_tokens"] == 100
+        assert isinstance(usage, Usage)
+        assert usage.input_tokens == 40
+        assert usage.output_tokens == 60
+        assert usage.total_tokens == 100
 
 
 class TestNoUsageData:
@@ -170,10 +171,10 @@ class TestThreadSafety:
             t.join()
 
         usage = handler.get_usage()
-        assert usage is not None
-        assert usage["input_tokens"] == num_threads * tokens_per_call
-        assert usage["output_tokens"] == num_threads * tokens_per_call
-        assert usage["total_tokens"] == num_threads * tokens_per_call * 2
+        assert isinstance(usage, Usage)
+        assert usage.input_tokens == num_threads * tokens_per_call
+        assert usage.output_tokens == num_threads * tokens_per_call
+        assert usage.total_tokens == num_threads * tokens_per_call * 2
 
 
 class TestStrategyPriority:
@@ -193,6 +194,6 @@ class TestStrategyPriority:
         handler.on_llm_end(result)
         usage = handler.get_usage()
 
-        assert usage is not None
-        assert usage["input_tokens"] == 10
-        assert usage["output_tokens"] == 20
+        assert isinstance(usage, Usage)
+        assert usage.input_tokens == 10
+        assert usage.output_tokens == 20

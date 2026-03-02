@@ -14,6 +14,7 @@ from lfx.field_typing import LanguageModel
 from lfx.inputs.inputs import BoolInput, InputTypes, MessageInput, MultilineInput
 from lfx.schema.message import Message
 from lfx.schema.properties import Usage
+from lfx.schema.token_usage import extract_usage_from_message
 from lfx.template.field.base import Output
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
@@ -166,53 +167,16 @@ class LCModelComponent(Component):
             status_message = f"Response: {message.content}"  # type: ignore[assignment]
         return status_message
 
-    def extract_usage(self, message: AIMessage) -> dict | None:
+    def extract_usage(self, message: AIMessage) -> Usage | None:
         """Extract token usage from an AIMessage's response metadata.
 
         Args:
             message: The AIMessage with response_metadata containing usage info.
 
         Returns:
-            A dict with input_tokens, output_tokens, total_tokens or None if not available.
+            Usage with input_tokens, output_tokens, total_tokens or None if not available.
         """
-        # LangChain standard: usage_metadata (works for Ollama, newer providers)
-        usage_metadata = getattr(message, "usage_metadata", None)
-        if usage_metadata and isinstance(usage_metadata, dict):
-            input_tokens = usage_metadata.get("input_tokens", 0) or 0
-            output_tokens = usage_metadata.get("output_tokens", 0) or 0
-            if input_tokens or output_tokens:
-                return {
-                    "input_tokens": input_tokens,
-                    "output_tokens": output_tokens,
-                    "total_tokens": input_tokens + output_tokens,
-                }
-
-        if not message.response_metadata:
-            return None
-
-        response_metadata = message.response_metadata
-
-        # OpenAI format
-        if "token_usage" in response_metadata:
-            token_usage = response_metadata["token_usage"]
-            return {
-                "input_tokens": token_usage.get("prompt_tokens"),
-                "output_tokens": token_usage.get("completion_tokens"),
-                "total_tokens": token_usage.get("total_tokens"),
-            }
-
-        # Anthropic format
-        if "usage" in response_metadata:
-            usage = response_metadata["usage"]
-            input_tokens = usage.get("input_tokens")
-            output_tokens = usage.get("output_tokens")
-            return {
-                "input_tokens": input_tokens,
-                "output_tokens": output_tokens,
-                "total_tokens": (input_tokens or 0) + (output_tokens or 0) if input_tokens or output_tokens else None,
-            }
-
-        return None
+        return extract_usage_from_message(message)
 
     async def get_chat_result(
         self,
@@ -323,13 +287,13 @@ class LCModelComponent(Component):
 
         if lf_message:
             if lf_message.properties and lf_message.properties.usage:
-                self._token_usage = lf_message.properties.usage.model_dump()
+                self._token_usage = lf_message.properties.usage
             return lf_message
 
         # Create message with usage data if available
         msg = Message(text=result)
         if usage_data:
-            msg.properties.usage = Usage(**usage_data)
+            msg.properties.usage = usage_data
         return msg
 
     async def _handle_stream(self, runnable, inputs):

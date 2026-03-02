@@ -20,6 +20,7 @@ from lfx.log.logger import logger
 from lfx.schema.artifact import ArtifactType
 from lfx.schema.data import Data
 from lfx.schema.message import Message
+from lfx.schema.properties import Usage
 from lfx.schema.schema import INPUT_FIELD_NAME, OutputValue, build_output_logs
 from lfx.utils.schemas import ChatOutputResponse
 from lfx.utils.util import sync_to_async
@@ -474,7 +475,7 @@ class Vertex:
 
         return result
 
-    def _accumulate_upstream_token_usage(self) -> dict | None:
+    def _accumulate_upstream_token_usage(self) -> Usage | None:
         """Accumulate token usage from all upstream vertices.
 
         Walks all recursive predecessors via edges, deduplicates by vertex ID,
@@ -488,28 +489,28 @@ class Vertex:
         for predecessor in predecessors:
             if predecessor.result and predecessor.result.token_usage:
                 usage = predecessor.result.token_usage
-                total_input += usage.get("input_tokens", 0) or 0
-                total_output += usage.get("output_tokens", 0) or 0
+                total_input += usage.input_tokens or 0
+                total_output += usage.output_tokens or 0
                 has_data = True
 
         # Include own token usage if present
-        if self.custom_component and hasattr(self.custom_component, "_token_usage"):
+        if self.custom_component:
             own_usage = self.custom_component._token_usage  # noqa: SLF001
             if own_usage:
-                total_input += own_usage.get("input_tokens", 0) or 0
-                total_output += own_usage.get("output_tokens", 0) or 0
+                total_input += own_usage.input_tokens or 0
+                total_output += own_usage.output_tokens or 0
                 has_data = True
 
         if not has_data:
             return None
 
-        return {
-            "input_tokens": total_input,
-            "output_tokens": total_output,
-            "total_tokens": total_input + total_output,
-        }
+        return Usage(
+            input_tokens=total_input,
+            output_tokens=total_output,
+            total_tokens=total_input + total_output,
+        )
 
-    def _extract_token_usage(self) -> dict | None:
+    def _extract_token_usage(self) -> Usage | None:
         """Extract token usage from the custom component if available.
 
         Output vertices don't show token usage on the node badge because
@@ -517,7 +518,7 @@ class Vertex:
         """
         if self.is_output:
             return None
-        if self.custom_component and hasattr(self.custom_component, "_token_usage"):
+        if self.custom_component and self.custom_component._token_usage:  # noqa: SLF001
             return self.custom_component._token_usage  # noqa: SLF001
         return None
 

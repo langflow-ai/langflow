@@ -5,6 +5,9 @@ import threading
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.outputs import LLMResult
 
+from lfx.schema.properties import Usage
+from lfx.schema.token_usage import extract_usage_from_message
+
 
 class TokenUsageCallbackHandler(BaseCallbackHandler):
     """Accumulates token usage from all LLM calls made during an agent execution.
@@ -24,72 +27,45 @@ class TokenUsageCallbackHandler(BaseCallbackHandler):
         usage = self._extract_usage(response)
         if usage:
             with self._lock:
-                self._total_input_tokens += usage["input_tokens"]
-                self._total_output_tokens += usage["output_tokens"]
+                self._total_input_tokens += usage.input_tokens or 0
+                self._total_output_tokens += usage.output_tokens or 0
                 self._has_data = True
 
-    def _extract_usage(self, response: LLMResult) -> dict | None:
+    def _extract_usage(self, response: LLMResult) -> Usage | None:
         """Extract token usage from an LLMResult using multiple strategies.
 
         Priority order:
-        1. LLMResult.llm_output["token_usage"] (OpenAI legacy)
-        2. generation.message.usage_metadata (LangChain standard)
-        3. generation.message.response_metadata["token_usage"] (OpenAI via LC)
-        4. generation.message.response_metadata["usage"] (Anthropic)
+        1. LLMResult.llm_output["token_usage"] (OpenAI legacy — unique to LLMResult)
+        2-4. Delegated to extract_usage_from_message() for generation-level extraction
         """
-        # Strategy 1: llm_output["token_usage"]
+        # Strategy 1: llm_output["token_usage"] (unique to LLMResult, not on messages)
         if response.llm_output and "token_usage" in response.llm_output:
             token_usage = response.llm_output["token_usage"]
             input_tokens = token_usage.get("prompt_tokens", 0) or 0
             output_tokens = token_usage.get("completion_tokens", 0) or 0
             if input_tokens or output_tokens:
-                return {"input_tokens": input_tokens, "output_tokens": output_tokens}
+                return Usage(input_tokens=input_tokens, output_tokens=output_tokens)
 
-        # Try generation-level extraction
+        # Strategies 2-4: delegate to shared extraction from generation messages
         for generation_list in response.generations:
             for generation in generation_list:
                 message = getattr(generation, "message", None)
                 if message is None:
                     continue
-
-                # Strategy 2: usage_metadata (LangChain standard)
-                usage_metadata = getattr(message, "usage_metadata", None)
-                if usage_metadata and isinstance(usage_metadata, dict):
-                    input_tokens = usage_metadata.get("input_tokens", 0) or 0
-                    output_tokens = usage_metadata.get("output_tokens", 0) or 0
-                    if input_tokens or output_tokens:
-                        return {"input_tokens": input_tokens, "output_tokens": output_tokens}
-
-                response_metadata = getattr(message, "response_metadata", None)
-                if not response_metadata or not isinstance(response_metadata, dict):
-                    continue
-
-                # Strategy 3: response_metadata["token_usage"] (OpenAI via LC)
-                if "token_usage" in response_metadata:
-                    token_usage = response_metadata["token_usage"]
-                    input_tokens = token_usage.get("prompt_tokens", 0) or 0
-                    output_tokens = token_usage.get("completion_tokens", 0) or 0
-                    if input_tokens or output_tokens:
-                        return {"input_tokens": input_tokens, "output_tokens": output_tokens}
-
-                # Strategy 4: response_metadata["usage"] (Anthropic)
-                if "usage" in response_metadata:
-                    usage = response_metadata["usage"]
-                    input_tokens = usage.get("input_tokens", 0) or 0
-                    output_tokens = usage.get("output_tokens", 0) or 0
-                    if input_tokens or output_tokens:
-                        return {"input_tokens": input_tokens, "output_tokens": output_tokens}
+                usage = extract_usage_from_message(message)
+                if usage:
+                    return usage
 
         return None
 
-    def get_usage(self) -> dict | None:
+    def get_usage(self) -> Usage | None:
         """Return accumulated usage data, or None if no token data was captured."""
         with self._lock:
             if not self._has_data:
                 return None
             total = self._total_input_tokens + self._total_output_tokens
-            return {
-                "input_tokens": self._total_input_tokens,
-                "output_tokens": self._total_output_tokens,
-                "total_tokens": total,
-            }
+            return Usage(
+                input_tokens=self._total_input_tokens,
+                output_tokens=self._total_output_tokens,
+                total_tokens=total,
+            )

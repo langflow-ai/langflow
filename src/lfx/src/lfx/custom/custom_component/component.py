@@ -35,7 +35,8 @@ from lfx.schema.artifact import get_artifact_type, post_process_raw
 from lfx.schema.data import Data
 from lfx.schema.log import Log
 from lfx.schema.message import ErrorMessage, Message
-from lfx.schema.properties import Source
+from lfx.schema.properties import Source, Usage
+from lfx.schema.token_usage import accumulate_usage, extract_usage_from_chunk
 from lfx.serialization.serialization import serialize
 from lfx.template.field.base import UNDEFINED, Input, Output
 from lfx.template.frontend_node.custom_components import ComponentFrontendNode
@@ -135,6 +136,7 @@ class Component(CustomComponent):
         self._edges: list[EdgeData] = []
         self._components: list[Component] = []
         self._event_manager: EventManager | None = None
+        self._token_usage: Usage | None = None
         self._state_model = None
         self._telemetry_input_values: dict[str, Any] | None = None
 
@@ -1698,9 +1700,7 @@ class Component(CustomComponent):
                         stored_message.properties.state = "complete"
                     # Set usage data if captured from streaming
                     if usage_data:
-                        from lfx.schema.properties import Usage
-
-                        stored_message.properties.usage = Usage(**usage_data)
+                        stored_message.properties.usage = usage_data
                     stored_message = await self._update_stored_message(stored_message)
                     # Send a final add_message event with state="complete" and usage data
                     # This is needed for OpenAI Responses API to capture usage in streaming mode
@@ -1787,11 +1787,11 @@ class Component(CustomComponent):
         message_table = message_tables[0]
         return await Message.create(**message_table.model_dump())
 
-    async def _stream_message(self, iterator: AsyncIterator | Iterator, message: Message) -> tuple[str, dict | None]:
+    async def _stream_message(self, iterator: AsyncIterator | Iterator, message: Message) -> tuple[str, Usage | None]:
         """Stream message content from an iterator and capture usage metadata.
 
         Returns:
-            tuple: (complete_message_text, usage_data_dict_or_none)
+            tuple: (complete_message_text, Usage_or_none)
         """
         if not isinstance(iterator, AsyncIterator | Iterator):
             msg = "The message must be an iterator or an async iterator."
@@ -1808,32 +1808,14 @@ class Component(CustomComponent):
         try:
             complete_message = ""
             first_chunk = True
-            usage_data = None
+            usage_data: Usage | None = None
             for chunk in iterator:
                 complete_message = await self._process_chunk(
                     chunk.content, complete_message, message_id, message, first_chunk=first_chunk
                 )
                 first_chunk = False
-                # Capture usage metadata from chunks (may be split across multiple chunks)
-                if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
-                    chunk_usage = self._extract_usage_metadata(chunk.usage_metadata)
-                    usage_data = self._accumulate_usage(usage_data, chunk_usage)
-                elif hasattr(chunk, "response_metadata") and chunk.response_metadata:
-                    metadata = chunk.response_metadata
-                    if "token_usage" in metadata:
-                        chunk_usage = {
-                            "input_tokens": metadata["token_usage"].get("prompt_tokens"),
-                            "output_tokens": metadata["token_usage"].get("completion_tokens"),
-                            "total_tokens": metadata["token_usage"].get("total_tokens"),
-                        }
-                        usage_data = self._accumulate_usage(usage_data, chunk_usage)
-                    elif "usage" in metadata:
-                        chunk_usage = {
-                            "input_tokens": metadata["usage"].get("input_tokens"),
-                            "output_tokens": metadata["usage"].get("output_tokens"),
-                            "total_tokens": None,
-                        }
-                        usage_data = self._accumulate_usage(usage_data, chunk_usage)
+                chunk_usage = extract_usage_from_chunk(chunk)
+                usage_data = accumulate_usage(usage_data, chunk_usage)
         except Exception as e:
             raise StreamingError(cause=e, source=message.properties.source) from e
         else:
@@ -1841,66 +1823,18 @@ class Component(CustomComponent):
 
     async def _handle_async_iterator(
         self, iterator: AsyncIterator, message_id: str, message: Message
-    ) -> tuple[str, dict | None]:
+    ) -> tuple[str, Usage | None]:
         complete_message = ""
         first_chunk = True
-        usage_data = None
+        usage_data: Usage | None = None
         async for chunk in iterator:
             complete_message = await self._process_chunk(
                 chunk.content, complete_message, message_id, message, first_chunk=first_chunk
             )
             first_chunk = False
-            if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
-                chunk_usage = self._extract_usage_metadata(chunk.usage_metadata)
-                usage_data = self._accumulate_usage(usage_data, chunk_usage)
-            elif hasattr(chunk, "response_metadata") and chunk.response_metadata:
-                metadata = chunk.response_metadata
-                if "token_usage" in metadata:
-                    chunk_usage = {
-                        "input_tokens": metadata["token_usage"].get("prompt_tokens"),
-                        "output_tokens": metadata["token_usage"].get("completion_tokens"),
-                        "total_tokens": metadata["token_usage"].get("total_tokens"),
-                    }
-                    usage_data = self._accumulate_usage(usage_data, chunk_usage)
-                elif "usage" in metadata:
-                    chunk_usage = {
-                        "input_tokens": metadata["usage"].get("input_tokens"),
-                        "output_tokens": metadata["usage"].get("output_tokens"),
-                        "total_tokens": None,
-                    }
-                    usage_data = self._accumulate_usage(usage_data, chunk_usage)
+            chunk_usage = extract_usage_from_chunk(chunk)
+            usage_data = accumulate_usage(usage_data, chunk_usage)
         return complete_message, usage_data
-
-    @staticmethod
-    def _extract_usage_metadata(um) -> dict:
-        """Extract usage from usage_metadata, handling both dict (TypedDict) and object forms."""
-        if isinstance(um, dict):
-            return {
-                "input_tokens": um.get("input_tokens"),
-                "output_tokens": um.get("output_tokens"),
-                "total_tokens": um.get("total_tokens"),
-            }
-        return {
-            "input_tokens": getattr(um, "input_tokens", None),
-            "output_tokens": getattr(um, "output_tokens", None),
-            "total_tokens": getattr(um, "total_tokens", None),
-        }
-
-    @staticmethod
-    def _accumulate_usage(existing: dict | None, new: dict) -> dict:
-        """Accumulate usage data across multiple chunks.
-
-        Some providers (e.g. Anthropic) split usage across chunks:
-        message_start has input_tokens, message_delta has output_tokens.
-        """
-        if existing is None:
-            return new
-        for key in ("input_tokens", "output_tokens"):
-            new_val = new.get(key) or 0
-            if new_val:
-                existing[key] = (existing.get(key) or 0) + new_val
-        existing["total_tokens"] = (existing.get("input_tokens") or 0) + (existing.get("output_tokens") or 0)
-        return existing
 
     async def _process_chunk(
         self, chunk: str, complete_message: str, message_id: str, message: Message, *, first_chunk: bool = False

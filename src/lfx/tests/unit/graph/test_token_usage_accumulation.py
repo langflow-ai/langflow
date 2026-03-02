@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 
 from lfx.graph.schema import ResultData
 from lfx.graph.vertex.base import Vertex
+from lfx.schema.properties import Usage
 
 
 def _make_edge(source_id: str, target_id: str):
@@ -16,8 +17,8 @@ def _make_vertex_stub(
     vertex_id: str,
     *,
     is_output: bool = False,
-    token_usage: dict | None = None,
-    own_token_usage: dict | None = None,
+    token_usage: Usage | None = None,
+    own_token_usage: Usage | None = None,
 ):
     """Create a lightweight stub that behaves like a Vertex for accumulation tests."""
     stub = MagicMock(spec=Vertex)
@@ -55,27 +56,27 @@ class TestAccumulateUpstreamTokenUsage:
         """Single LLM predecessor: returns that LLM's token usage."""
         llm = _make_vertex_stub(
             "LLM-1",
-            token_usage={"input_tokens": 100, "output_tokens": 50, "total_tokens": 150},
+            token_usage=Usage(input_tokens=100, output_tokens=50, total_tokens=150),
         )
         output = _make_vertex_stub("ChatOutput-1", is_output=True)
         _wire_graph(output, {"LLM-1": llm}, [_make_edge("LLM-1", "ChatOutput-1")])
 
         result = output._accumulate_upstream_token_usage()
 
-        assert result is not None
-        assert result["input_tokens"] == 100
-        assert result["output_tokens"] == 50
-        assert result["total_tokens"] == 150
+        assert isinstance(result, Usage)
+        assert result.input_tokens == 100
+        assert result.output_tokens == 50
+        assert result.total_tokens == 150
 
     def test_two_serial_llms(self):
-        """LLM1 → LLM2 → ChatOutput: returns accumulated total from both."""
+        """LLM1 -> LLM2 -> ChatOutput: returns accumulated total from both."""
         llm1 = _make_vertex_stub(
             "LLM-1",
-            token_usage={"input_tokens": 100, "output_tokens": 50, "total_tokens": 150},
+            token_usage=Usage(input_tokens=100, output_tokens=50, total_tokens=150),
         )
         llm2 = _make_vertex_stub(
             "LLM-2",
-            token_usage={"input_tokens": 200, "output_tokens": 80, "total_tokens": 280},
+            token_usage=Usage(input_tokens=200, output_tokens=80, total_tokens=280),
         )
         output = _make_vertex_stub("ChatOutput-1", is_output=True)
         edges = [_make_edge("LLM-1", "LLM-2"), _make_edge("LLM-2", "ChatOutput-1")]
@@ -83,10 +84,10 @@ class TestAccumulateUpstreamTokenUsage:
 
         result = output._accumulate_upstream_token_usage()
 
-        assert result is not None
-        assert result["input_tokens"] == 300
-        assert result["output_tokens"] == 130
-        assert result["total_tokens"] == 430
+        assert isinstance(result, Usage)
+        assert result.input_tokens == 300
+        assert result.output_tokens == 130
+        assert result.total_tokens == 430
 
     def test_no_llms_upstream(self):
         """No predecessors with token usage: returns None."""
@@ -111,7 +112,7 @@ class TestAccumulateUpstreamTokenUsage:
         """Diamond: LLM feeds into two branches that merge at ChatOutput, counted once."""
         llm = _make_vertex_stub(
             "LLM-1",
-            token_usage={"input_tokens": 100, "output_tokens": 50, "total_tokens": 150},
+            token_usage=Usage(input_tokens=100, output_tokens=50, total_tokens=150),
         )
         branch_a = _make_vertex_stub("BranchA-1")
         branch_b = _make_vertex_stub("BranchB-1")
@@ -126,36 +127,36 @@ class TestAccumulateUpstreamTokenUsage:
 
         result = output._accumulate_upstream_token_usage()
 
-        assert result is not None
-        assert result["input_tokens"] == 100
-        assert result["output_tokens"] == 50
-        assert result["total_tokens"] == 150
+        assert isinstance(result, Usage)
+        assert result.input_tokens == 100
+        assert result.output_tokens == 50
+        assert result.total_tokens == 150
 
     def test_includes_own_token_usage(self):
         """Output vertex with its own _token_usage includes it in the total."""
         llm = _make_vertex_stub(
             "LLM-1",
-            token_usage={"input_tokens": 100, "output_tokens": 50, "total_tokens": 150},
+            token_usage=Usage(input_tokens=100, output_tokens=50, total_tokens=150),
         )
         output = _make_vertex_stub(
             "ChatOutput-1",
             is_output=True,
-            own_token_usage={"input_tokens": 10, "output_tokens": 5, "total_tokens": 15},
+            own_token_usage=Usage(input_tokens=10, output_tokens=5, total_tokens=15),
         )
         _wire_graph(output, {"LLM-1": llm}, [_make_edge("LLM-1", "ChatOutput-1")])
 
         result = output._accumulate_upstream_token_usage()
 
-        assert result is not None
-        assert result["input_tokens"] == 110
-        assert result["output_tokens"] == 55
-        assert result["total_tokens"] == 165
+        assert isinstance(result, Usage)
+        assert result.input_tokens == 110
+        assert result.output_tokens == 55
+        assert result.total_tokens == 165
 
     def test_mixed_predecessors_with_and_without_tokens(self):
         """Only predecessors with token_usage contribute; others are skipped."""
         llm = _make_vertex_stub(
             "LLM-1",
-            token_usage={"input_tokens": 100, "output_tokens": 50, "total_tokens": 150},
+            token_usage=Usage(input_tokens=100, output_tokens=50, total_tokens=150),
         )
         prompt = _make_vertex_stub("Prompt-1")
         output = _make_vertex_stub("ChatOutput-1", is_output=True)
@@ -164,10 +165,10 @@ class TestAccumulateUpstreamTokenUsage:
 
         result = output._accumulate_upstream_token_usage()
 
-        assert result is not None
-        assert result["input_tokens"] == 100
-        assert result["output_tokens"] == 50
-        assert result["total_tokens"] == 150
+        assert isinstance(result, Usage)
+        assert result.input_tokens == 100
+        assert result.output_tokens == 50
+        assert result.total_tokens == 150
 
     def test_predecessor_with_result_but_no_token_usage(self):
         """Predecessor has a result but token_usage is None: skipped."""
@@ -180,21 +181,21 @@ class TestAccumulateUpstreamTokenUsage:
 
         assert result is None
 
-    def test_handles_none_values_in_token_dict(self):
-        """Token usage dict with None values treated as 0."""
+    def test_handles_none_values_in_token_usage(self):
+        """Token usage with None values treated as 0."""
         llm = _make_vertex_stub(
             "LLM-1",
-            token_usage={"input_tokens": None, "output_tokens": 50, "total_tokens": None},
+            token_usage=Usage(input_tokens=None, output_tokens=50, total_tokens=None),
         )
         output = _make_vertex_stub("ChatOutput-1", is_output=True)
         _wire_graph(output, {"LLM-1": llm}, [_make_edge("LLM-1", "ChatOutput-1")])
 
         result = output._accumulate_upstream_token_usage()
 
-        assert result is not None
-        assert result["input_tokens"] == 0
-        assert result["output_tokens"] == 50
-        assert result["total_tokens"] == 50
+        assert isinstance(result, Usage)
+        assert result.input_tokens == 0
+        assert result.output_tokens == 50
+        assert result.total_tokens == 50
 
 
 class TestExtractTokenUsage:
@@ -204,7 +205,7 @@ class TestExtractTokenUsage:
         """Output vertex returns None (tokens shown on chat message instead)."""
         llm = _make_vertex_stub(
             "LLM-1",
-            token_usage={"input_tokens": 100, "output_tokens": 50, "total_tokens": 150},
+            token_usage=Usage(input_tokens=100, output_tokens=50, total_tokens=150),
         )
         output = _make_vertex_stub("ChatOutput-1", is_output=True)
         _wire_graph(output, {"LLM-1": llm}, [_make_edge("LLM-1", "ChatOutput-1")])
@@ -215,18 +216,19 @@ class TestExtractTokenUsage:
 
     def test_non_output_vertex_returns_own_usage(self):
         """Non-output vertex returns its own component's _token_usage."""
+        expected_usage = Usage(input_tokens=100, output_tokens=50, total_tokens=150)
         llm = _make_vertex_stub(
             "LLM-1",
             is_output=False,
-            own_token_usage={"input_tokens": 100, "output_tokens": 50, "total_tokens": 150},
+            own_token_usage=expected_usage,
         )
 
         result = Vertex._extract_token_usage(llm)
 
-        assert result is not None
-        assert result["input_tokens"] == 100
-        assert result["output_tokens"] == 50
-        assert result["total_tokens"] == 150
+        assert isinstance(result, Usage)
+        assert result.input_tokens == 100
+        assert result.output_tokens == 50
+        assert result.total_tokens == 150
 
     def test_non_output_vertex_without_usage_returns_none(self):
         """Non-output vertex with no _token_usage returns None."""
