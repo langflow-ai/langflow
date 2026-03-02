@@ -13,6 +13,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { UPLOAD_ERROR_ALERT } from "@/constants/alerts_constants";
 import { useUpdateUser } from "@/controllers/API/queries/auth";
 import {
   usePatchFolders,
@@ -133,37 +134,52 @@ const SideBarFoldersButtonsComponent = ({
         return;
       }
 
-      getObjectsFromFilelist<any>(files).then((objects) => {
-        if (objects.every((flow) => flow.data?.nodes)) {
-          uploadFlow({ files }).then(() => {
-            setSuccessData({
-              title: "Uploaded successfully",
+      getObjectsFromFilelist<any>(files)
+        .then((objects) => {
+          if (objects.every((flow) => flow.data?.nodes)) {
+            uploadFlow({ files })
+              .then(() => {
+                setSuccessData({
+                  title: "Uploaded successfully",
+                });
+              })
+              .catch((error) => {
+                setErrorData({
+                  title: UPLOAD_ERROR_ALERT,
+                  list: [(error as Error).message],
+                });
+              });
+          } else {
+            files.forEach((folder) => {
+              const formData = new FormData();
+              formData.append("file", folder);
+              mutate(
+                { formData },
+                {
+                  onSuccess: () => {
+                    setSuccessData({
+                      title: "Project uploaded successfully.",
+                    });
+                  },
+                  onError: (err) => {
+                    console.error(err);
+                    setErrorData({
+                      title: `Error on uploading your project, try dragging it into an existing project.`,
+                      list: [err["response"]["data"]["message"]],
+                    });
+                  },
+                },
+              );
             });
+          }
+        })
+        .catch((error) => {
+          console.error("Error parsing files:", error);
+          setErrorData({
+            title: UPLOAD_ERROR_ALERT,
+            list: [(error as Error).message],
           });
-        } else {
-          files.forEach((folder) => {
-            const formData = new FormData();
-            formData.append("file", folder);
-            mutate(
-              { formData },
-              {
-                onSuccess: () => {
-                  setSuccessData({
-                    title: "Project uploaded successfully.",
-                  });
-                },
-                onError: (err) => {
-                  console.error(err);
-                  setErrorData({
-                    title: `Error on uploading your project, try dragging it into an existing project.`,
-                    list: [err["response"]["data"]["message"]],
-                  });
-                },
-              },
-            );
-          });
-        }
-      });
+        });
     });
   };
 
