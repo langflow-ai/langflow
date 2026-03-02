@@ -2,6 +2,7 @@ import { cloneDeep } from "lodash";
 import { useCallback } from "react";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import useFlowStore from "@/stores/flowStore";
 import type { FlowType } from "@/types/flow";
 import { processFlows } from "@/utils/reactflowUtils";
 
@@ -29,6 +30,9 @@ const useApplyFlowToCanvas = () => {
         );
       }
       setCurrentFlow(clonedFlow);
+      requestAnimationFrame(() => {
+        useFlowStore.getState().reactFlowInstance?.fitView();
+      });
       refreshAllModelInputs({ silent: true }).catch((err) => {
         console.error(
           "useApplyFlowToCanvas: failed to refresh model inputs",

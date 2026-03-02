@@ -12,8 +12,8 @@ import { Button } from "../../../../ui/button";
 import { Command } from "../../../../ui/command";
 import {
   Popover,
-  PopoverContentWithoutPortal,
   PopoverContent,
+  PopoverContentWithoutPortal,
 } from "../../../../ui/popover";
 import type { BaseInputProps } from "../../types";
 import ModelList from "./components/ModelList";
@@ -34,6 +34,7 @@ export default function ModelInputComponent({
   showParameter = true,
   editNode,
   inspectionPanel,
+  showEmptyState = false,
 }: BaseInputProps<any> & ModelInputComponentType): JSX.Element | null {
   const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);

@@ -9,7 +9,12 @@ jest.mock("../KnowledgeBaseSelectionOverlay", () => {
     quantitySelected,
     onClearSelection,
     onDelete,
-  }: any) => {
+  }: {
+    selectedFiles: { id: string; name: string }[];
+    quantitySelected: number;
+    onClearSelection: () => void;
+    onDelete?: () => void;
+  }) => {
     const isVisible = selectedFiles.length > 0;
     const pluralSuffix = quantitySelected > 1 ? "s" : "";
 

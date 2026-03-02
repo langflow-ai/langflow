@@ -131,6 +131,10 @@ export function useFlowVersionSidebar(flowId: string) {
         edges: cloneDeep(originalDraftEdgesRef.current),
       });
     }
+    // Fit the canvas to the new nodes after ReactFlow processes the state update.
+    requestAnimationFrame(() => {
+      useFlowStore.getState().reactFlowInstance?.fitView();
+    });
   }, [processedPreview, selectedId]);
 
   useEffect(() => {
