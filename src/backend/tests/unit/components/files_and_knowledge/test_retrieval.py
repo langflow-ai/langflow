@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from lfx.components.knowledge_bases.retrieval import KnowledgeRetrievalComponent
-from pydantic import SecretStr
 
 from tests.base import ComponentTestBaseWithClient
 
