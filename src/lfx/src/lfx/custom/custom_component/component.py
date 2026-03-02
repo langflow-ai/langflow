@@ -383,11 +383,11 @@ class Component(CustomComponent):
         new_component = type(self)(**kwargs)
         new_component._code = self._code
         new_component._outputs_map = self._outputs_map
-        new_component._inputs = self._inputs
+        new_component._inputs = deepcopy(self._inputs, memo)
         new_component._edges = self._edges
         new_component._components = self._components
         new_component._parameters = self._parameters
-        new_component._attributes = self._attributes
+        new_component._attributes = dict(self._attributes)
         new_component._output_logs = self._output_logs
         new_component._logs = self._logs  # type: ignore[attr-defined]
         memo[id(self)] = new_component
