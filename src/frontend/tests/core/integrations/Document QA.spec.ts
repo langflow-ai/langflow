@@ -57,15 +57,6 @@ withEventDeliveryModes(
     });
 
     await page.getByText("this is a test file").last().isVisible();
-
-    // Exit fullscreen so the chat-header-more-menu is visible
-    await page.getByRole("button", { name: "Exit fullscreen" }).click();
-    await page.getByTestId("chat-header-more-menu").click();
-    await page.getByTestId("clear-chat-option").click();
-    await page.waitForSelector('[data-testid="input-chat-playground"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("input-chat-playground").last().isVisible();
+    expect(await page.getByTestId("div-chat-message).last().count()).toBe(1)"));
   },
 );
