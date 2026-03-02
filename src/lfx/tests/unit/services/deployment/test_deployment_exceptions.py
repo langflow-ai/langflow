@@ -1,7 +1,7 @@
 """Tests for deployment exception hierarchy, metadata, and service instantiation."""
 
 import pytest
-from lfx.services.deployment import BaseDeploymentService, DeploymentError, DeploymentService
+from lfx.services.deployment import BaseDeploymentService, DeploymentError, DeploymentNotConfiguredError, DeploymentService, DeploymentServiceError
 from lfx.services.deployment.exceptions import (
     AuthenticationError,
     AuthSchemeError,
@@ -17,12 +17,23 @@ from lfx.services.interfaces import DeploymentServiceProtocol
 
 
 def test_exception_hierarchy_is_preserved() -> None:
-    assert issubclass(AuthenticationError, DeploymentError)
+    # DeploymentServiceError is the common root
+    assert issubclass(DeploymentError, DeploymentServiceError)
+    assert issubclass(AuthenticationError, DeploymentServiceError)
+
+    # AuthenticationError is a sibling of DeploymentError, NOT a child
+    assert not issubclass(AuthenticationError, DeploymentError)
+    assert not issubclass(DeploymentError, AuthenticationError)
+
+    # Auth subtypes
     assert issubclass(CredentialResolutionError, AuthenticationError)
     assert issubclass(AuthSchemeError, AuthenticationError)
+
+    # Deployment operation subtypes
     assert issubclass(DeploymentConflictError, DeploymentError)
     assert issubclass(InvalidContentError, DeploymentError)
     assert issubclass(InvalidDeploymentOperationError, DeploymentError)
+    assert issubclass(DeploymentNotConfiguredError, DeploymentError)
 
 
 def test_exception_error_codes_are_set() -> None:
@@ -33,6 +44,7 @@ def test_exception_error_codes_are_set() -> None:
     assert InvalidContentError().error_code == "unprocessable_content_error"
     assert InvalidDeploymentOperationError().error_code == "invalid_deployment_operation"
     assert AuthSchemeError().error_code == "unsupported_auth_type"
+    assert DeploymentNotConfiguredError().error_code == "deployment_not_configured"
 
 
 def test_deployment_type_exceptions_have_distinct_default_messages() -> None:
@@ -103,13 +115,41 @@ def test_deployment_service_is_base_deployment_service() -> None:
 )
 async def test_deployment_service_stub_methods_raise(method_name: str, kwargs: dict) -> None:
     svc = DeploymentService()
-    with pytest.raises(NotImplementedError, match="is not implemented"):
+    with pytest.raises(DeploymentNotConfiguredError, match="requires a concrete deployment adapter"):
         await getattr(svc, method_name)(**kwargs)
 
 
 async def test_deployment_service_teardown_is_noop() -> None:
     svc = DeploymentService()
     await svc.teardown()
+
+
+def test_deployment_not_configured_includes_method_name() -> None:
+    err = DeploymentNotConfiguredError(method="create")
+    assert "DeploymentService.create()" in str(err)
+    assert err.error_code == "deployment_not_configured"
+
+
+def test_deployment_not_configured_default_message() -> None:
+    err = DeploymentNotConfiguredError()
+    assert "No deployment adapter is registered" in str(err)
+
+
+def test_auth_errors_not_caught_by_deployment_error() -> None:
+    """Ensure except DeploymentError does NOT catch auth failures."""
+    with pytest.raises(AuthenticationError):
+        try:
+            raise CredentialResolutionError()
+        except DeploymentError:
+            pytest.fail("DeploymentError should not catch AuthenticationError")
+
+
+def test_deployment_service_error_catches_both_hierarchies() -> None:
+    """DeploymentServiceError catches both deployment and auth errors."""
+    with pytest.raises(DeploymentServiceError):
+        raise CredentialResolutionError()
+    with pytest.raises(DeploymentServiceError):
+        raise DeploymentNotFoundError()
 
 
 def test_package_exports_base_and_error() -> None:

@@ -1,14 +1,20 @@
 """Framework-agnostic deployment exceptions for LFX deployment service.
 
-Shared exception types so that both minimal (LFX) and full (Langflow) deployment
-implementations can raise the same errors.
+Shared exception types for all deployment service implementations,
+regardless of adapter.
 """
 
 from __future__ import annotations
 
 
-class DeploymentError(Exception):
-    """Base exception for deployment failures."""
+class DeploymentServiceError(Exception):
+    """Root exception for all deployment service failures.
+
+    Both operational errors (:class:`DeploymentError`) and authentication
+    errors (:class:`AuthenticationError`) inherit from this class.
+    Catch this only when you truly want to handle *every* deployment-related
+    failure uniformly.
+    """
 
     def __init__(self, message: str, *, error_code: str, cause: Exception | None = None):
         self.message = message
@@ -19,8 +25,17 @@ class DeploymentError(Exception):
             self.__cause__ = cause
 
 
-class AuthenticationError(DeploymentError):
+class DeploymentError(DeploymentServiceError):
+    """Base exception for deployment operation failures (non-auth)."""
+
+
+class AuthenticationError(DeploymentServiceError):
     """Base exception for authentication failures.
+
+    Intentionally a sibling of :class:`DeploymentError`, not a child.
+    This ensures ``except DeploymentError`` will not accidentally swallow
+    authentication failures, allowing API layers to return the correct
+    HTTP status (401/403) separately from deployment errors (400/404/409/422).
 
     Please ensure that the message does not leak sensitive information.
     """
@@ -102,3 +117,26 @@ class DeploymentNotFoundError(DeploymentError):
             if deployment_id:
                 message = f"Deployment not found: {deployment_id}"
         super().__init__(message, error_code="deployment_not_found", cause=cause)
+
+
+class DeploymentNotConfiguredError(DeploymentError):
+    """Raised when no concrete deployment adapter has been registered.
+
+    The stub :class:`~lfx.services.deployment.service.DeploymentService` raises
+    this for every operation so that callers receive a domain exception rather
+    than a bare ``NotImplementedError``.
+    """
+
+    def __init__(
+        self,
+        message: str = "No deployment adapter is registered. Register a concrete adapter to enable deployment operations.",
+        *,
+        method: str | None = None,
+        cause: Exception | None = None,
+    ):
+        if method is not None:
+            message = (
+                f"DeploymentService.{method}() requires a concrete deployment adapter. "
+                "Register one to enable deployment operations."
+            )
+        super().__init__(message, error_code="deployment_not_configured", cause=cause)

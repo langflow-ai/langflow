@@ -7,7 +7,7 @@ import pytest
 from lfx.services.deployment.schema import (
     BaseDeploymentDataUpdate,
     BaseFlowArtifact,
-    Config,
+    DeploymentConfig,
     ConfigDeploymentBindingUpdate,
     ConfigItem,
     DeploymentCreate,
@@ -360,7 +360,7 @@ def test_deployment_update_accepts_snapshot_only() -> None:
 
 
 def test_env_var_config_accepts_raw_and_variable_sources() -> None:
-    config = Config(
+    config = DeploymentConfig(
         name="cfg",
         environment_variables={
             "RAW_TOKEN": EnvVarValueSpec(value="literal", source=EnvVarSource.RAW),

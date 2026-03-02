@@ -70,7 +70,7 @@ SnapshotList = Annotated[list[BaseFlowArtifact], Field(min_length=1)]
 class SnapshotItem(BaseModel):
     """Model representing a result for a snapshot item."""
 
-    id: UUID | str = Field(description="The id of the snapshot item")
+    id: IdLike = Field(description="The id of the snapshot item")
     name: str = Field(description="The name of the snapshot item")
     description: str | None = Field(None, description="The description of the snapshot item")
     provider_data: dict | None = Field(None, description="The data of the snapshot item from the provider")
@@ -151,10 +151,12 @@ class EnvVarValueSpec(BaseModel):
     )
 
 
-class Config(BaseModel):
-    """Model representing a data for a config."""
+class DeploymentConfig(BaseModel):
+    """Deployment configuration payload, including environment variables and provider-specific settings."""
 
-    name: str = Field(description="The name of the config")
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)] = Field(
+        description="The name of the config"
+    )
     description: str | None = Field(None, description="The description of the config")
     environment_variables: dict[EnvVarKey, EnvVarValueSpec] | None = Field(None, description="Environment variables")
     # the provider might have additional configuration options that are not covered here
@@ -171,7 +173,7 @@ class ConfigItem(BaseModel):
         None,
         description="Existing config reference id to bind to the deployment.",
     )
-    raw_payload: Config | None = Field(
+    raw_payload: DeploymentConfig | None = Field(
         None,
         description="Config payload to create and bind to the deployment.",
     )
@@ -203,7 +205,7 @@ class ConfigDeploymentBindingUpdate(BaseModel):
 
     @field_validator("config_id")
     @classmethod
-    def validate_config_id(cls, v: str | UUID | None) -> str | UUID | None:
+    def validate_config_id(cls, v: IdLike | None) -> IdLike | None:
         if isinstance(v, str):
             return _normalize_and_validate_id(v, field_name="config_id")
         return v

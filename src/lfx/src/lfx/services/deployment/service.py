@@ -1,4 +1,4 @@
-"""Deployment service base class."""
+"""Default (no-op) deployment service implementation."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
 from lfx.services.deployment.base import BaseDeploymentService
+from lfx.services.deployment.exceptions import DeploymentNotConfiguredError
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,20 +30,16 @@ if TYPE_CHECKING:
         RedeployResult,
     )
 
-_NOT_IMPLEMENTED_MSG = (
-    "DeploymentService.{method}() is not implemented. "
-    "Register a concrete deployment adapter to enable deployment operations."
-)
 
-
-# @register_service(ServiceType.DEPLOYMENT_SERVICE)
-# do not register this service yet. Only define the
-# protocol.
+# Not registered yet — no ServiceType.DEPLOYMENT_SERVICE enum value exists.
+# This stub defines the concrete class so the protocol and ABC are testable.
+# A future PR will add the enum value and register the service.
 class DeploymentService(BaseDeploymentService):
-    """Minimal deployment service implementation for LFX.
+    """Null deployment service for LFX.
 
-    This is a stub that exposes crud operations for deployments.
-    LFX does not implement a deployment adapter.
+    All operations raise :class:`DeploymentNotConfiguredError` because LFX does
+    not ship a deployment adapter.  Concrete adapters (e.g. in Langflow) should
+    subclass :class:`BaseDeploymentService` to provide real behaviour.
     """
 
     name = "deployment_service"
@@ -55,7 +52,7 @@ class DeploymentService(BaseDeploymentService):
         db: AsyncSession,
     ) -> DeploymentCreateResult:
         """Create a new deployment in the provider."""
-        raise NotImplementedError(_NOT_IMPLEMENTED_MSG.format(method="create"))
+        raise DeploymentNotConfiguredError(method="create")
 
     async def list_types(
         self,
@@ -64,7 +61,7 @@ class DeploymentService(BaseDeploymentService):
         db: AsyncSession,
     ) -> DeploymentListTypesResult:
         """List deployment types supported by the provider."""
-        raise NotImplementedError(_NOT_IMPLEMENTED_MSG.format(method="list_types"))
+        raise DeploymentNotConfiguredError(method="list_types")
 
     async def list(
         self,
@@ -74,7 +71,7 @@ class DeploymentService(BaseDeploymentService):
         db: AsyncSession,
     ) -> DeploymentListResult:
         """List deployments visible to this adapter."""
-        raise NotImplementedError(_NOT_IMPLEMENTED_MSG.format(method="list"))
+        raise DeploymentNotConfiguredError(method="list")
 
     async def get(
         self,
@@ -84,7 +81,7 @@ class DeploymentService(BaseDeploymentService):
         db: AsyncSession,
     ) -> DeploymentGetResult:
         """Return deployment metadata by provider ID."""
-        raise NotImplementedError(_NOT_IMPLEMENTED_MSG.format(method="get"))
+        raise DeploymentNotConfiguredError(method="get")
 
     async def update(
         self,
@@ -95,7 +92,7 @@ class DeploymentService(BaseDeploymentService):
         db: AsyncSession,
     ) -> DeploymentUpdateResult:
         """Update deployment inputs and apply changes in the provider."""
-        raise NotImplementedError(_NOT_IMPLEMENTED_MSG.format(method="update"))
+        raise DeploymentNotConfiguredError(method="update")
 
     async def redeploy(
         self,
@@ -105,7 +102,7 @@ class DeploymentService(BaseDeploymentService):
         db: AsyncSession,
     ) -> RedeployResult:
         """Re-apply current deployment inputs without changing them."""
-        raise NotImplementedError(_NOT_IMPLEMENTED_MSG.format(method="redeploy"))
+        raise DeploymentNotConfiguredError(method="redeploy")
 
     async def duplicate(
         self,
@@ -115,7 +112,7 @@ class DeploymentService(BaseDeploymentService):
         db: AsyncSession,
     ) -> DeploymentDuplicateResult:
         """Create a new deployment using the same inputs as the source."""
-        raise NotImplementedError(_NOT_IMPLEMENTED_MSG.format(method="duplicate"))
+        raise DeploymentNotConfiguredError(method="duplicate")
 
     async def delete(
         self,
@@ -125,7 +122,7 @@ class DeploymentService(BaseDeploymentService):
         db: AsyncSession,
     ) -> DeploymentDeleteResult:
         """Delete the deployment from the provider."""
-        raise NotImplementedError(_NOT_IMPLEMENTED_MSG.format(method="delete"))
+        raise DeploymentNotConfiguredError(method="delete")
 
     async def get_status(
         self,
@@ -135,7 +132,7 @@ class DeploymentService(BaseDeploymentService):
         db: AsyncSession,
     ) -> DeploymentStatusResult:
         """Return provider-reported health/status for the deployment."""
-        raise NotImplementedError(_NOT_IMPLEMENTED_MSG.format(method="get_status"))
+        raise DeploymentNotConfiguredError(method="get_status")
 
     async def create_execution(
         self,
@@ -145,7 +142,7 @@ class DeploymentService(BaseDeploymentService):
         db: AsyncSession,
     ) -> ExecutionCreateResult:
         """Run a provider-agnostic deployment execution."""
-        raise NotImplementedError(_NOT_IMPLEMENTED_MSG.format(method="create_execution"))
+        raise DeploymentNotConfiguredError(method="create_execution")
 
     async def get_execution(
         self,
@@ -155,7 +152,7 @@ class DeploymentService(BaseDeploymentService):
         db: AsyncSession,
     ) -> ExecutionStatusResult:
         """Get provider-agnostic deployment execution state/output."""
-        raise NotImplementedError(_NOT_IMPLEMENTED_MSG.format(method="get_execution"))
+        raise DeploymentNotConfiguredError(method="get_execution")
 
     async def teardown(self) -> None:
         logger.debug("Deployment service teardown")
