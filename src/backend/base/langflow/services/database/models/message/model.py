@@ -60,9 +60,7 @@ class MessageBase(SQLModel):
     @classmethod
     def from_message(cls, message: "Message", flow_id: str | UUID | None = None):
         if message.text is None or not message.sender or not message.sender_name:
-            raise ValueError(
-                "The message does not have the required fields (text, sender, sender_name)."
-            )
+            raise ValueError("The message does not have the required fields (text, sender, sender_name).")
 
         if message.files:
             image_paths = []
@@ -85,13 +83,9 @@ class MessageBase(SQLModel):
 
         if isinstance(message.timestamp, str):
             try:
-                timestamp = datetime.strptime(
-                    message.timestamp, "%Y-%m-%d %H:%M:%S %Z"
-                ).replace(tzinfo=timezone.utc)
+                timestamp = datetime.strptime(message.timestamp, "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
             except ValueError:
-                timestamp = datetime.fromisoformat(
-                    message.timestamp
-                ).replace(tzinfo=timezone.utc)
+                timestamp = datetime.fromisoformat(message.timestamp).replace(tzinfo=timezone.utc)
         else:
             timestamp = message.timestamp
 
@@ -108,11 +102,7 @@ class MessageBase(SQLModel):
 
         content_blocks = []
         for content_block in message.content_blocks or []:
-            content = (
-                content_block.model_dump_json()
-                if hasattr(content_block, "model_dump_json")
-                else content_block
-            )
+            content = content_block.model_dump_json() if hasattr(content_block, "model_dump_json") else content_block
             content_blocks.append(content)
 
         if isinstance(flow_id, str):
@@ -137,10 +127,7 @@ class MessageBase(SQLModel):
 
 
 class MessageTable(MessageBase, table=True):
-    model_config = ConfigDict(
-        validate_assignment=True,
-        arbitrary_types_allowed=True
-    )
+    model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)
 
     __tablename__ = "message"
 
@@ -188,10 +175,7 @@ class MessageTable(MessageBase, table=True):
     @classmethod
     def validate_properties_or_content_blocks(cls, value):
         if isinstance(value, list):
-            value = [
-                cls.validate_properties_or_content_blocks(item)
-                for item in value
-            ]
+            value = [cls.validate_properties_or_content_blocks(item) for item in value]
         elif hasattr(value, "model_dump"):
             value = value.model_dump()
         elif isinstance(value, str):
@@ -201,14 +185,9 @@ class MessageTable(MessageBase, table=True):
 
     @field_serializer("properties", "content_blocks")
     @classmethod
-    def serialize_properties_or_content_blocks(
-        cls, value
-    ) -> dict | list[dict]:
+    def serialize_properties_or_content_blocks(cls, value) -> dict | list[dict]:
         if isinstance(value, list):
-            value = [
-                cls.serialize_properties_or_content_blocks(item)
-                for item in value
-            ]
+            value = [cls.serialize_properties_or_content_blocks(item) for item in value]
         elif hasattr(value, "model_dump"):
             value = value.model_dump()
         elif isinstance(value, str):
