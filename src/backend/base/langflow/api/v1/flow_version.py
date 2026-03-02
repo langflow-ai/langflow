@@ -44,7 +44,7 @@ def strip_version_data(data: dict | None) -> dict | None:
     """
     if data is None:
         return None
-    data_copy = copy.deepcopy(data)
+    data_copy = _copy_data_for_stripping(data)
     try:
         return remove_api_keys({"data": data_copy}).get("data")
     except (KeyError, TypeError, AttributeError, ValueError):
@@ -234,3 +234,58 @@ async def delete_version_entry(
     except FlowVersionError as exc:
         raise _translate_version_error(exc) from exc
     await logger.adebug("Deleted version entry %s for flow %s", version_id, flow_id)
+
+
+def _copy_data_for_stripping(data: dict):
+    """Make a targeted copy of data for remove_api_keys to mutate safely.
+
+    Shallow copies the nested path that remove_api_keys modifies:
+    nodes -> node["data"] -> node["data"]["node"] -> template -> template values
+
+    This is significantly faster than deepcopy for large flows.
+    """
+    if not isinstance(data, dict):
+        return copy.deepcopy(data)
+
+    data_copy = data.copy()
+    nodes = data.get("nodes")
+    if not isinstance(nodes, list):
+        return data_copy
+
+    new_nodes = []
+    for node in nodes:
+        if not isinstance(node, dict):
+            new_nodes.append(node)
+            continue
+
+        new_node = node.copy()
+        node_data = node.get("data")
+        if not isinstance(node_data, dict):
+            new_nodes.append(new_node)
+            continue
+
+        new_node_data = node_data.copy()
+        node_inner = node_data.get("node")
+        if not isinstance(node_inner, dict):
+            new_node["data"] = new_node_data
+            new_nodes.append(new_node)
+            continue
+
+        new_node_inner = node_inner.copy()
+        template = node_inner.get("template")
+        if isinstance(template, dict):
+            # Copy template and its dict values so mutations don't affect original
+            new_template = {}
+            for key, val in template.items():
+                if isinstance(val, dict):
+                    new_template[key] = val.copy()
+                else:
+                    new_template[key] = val
+            new_node_inner["template"] = new_template
+
+        new_node_data["node"] = new_node_inner
+        new_node["data"] = new_node_data
+        new_nodes.append(new_node)
+
+    data_copy["nodes"] = new_nodes
+    return data_copy
