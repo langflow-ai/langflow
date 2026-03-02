@@ -394,9 +394,9 @@ describe("SidebarSegmentedNav", () => {
       tooltip: "Add Sticky Notes",
     });
     expect(NAV_ITEMS[5]).toEqual({
-      id: "history",
+      id: "versions",
       icon: "History",
-      label: "History",
+      label: "Versions",
       tooltip: "Version History",
     });
   });

@@ -46,6 +46,7 @@ import McpSidebarGroup from "./components/McpSidebarGroup";
 import MemoizedSidebarGroup from "./components/sidebarBundles";
 import SidebarMenuButtons from "./components/sidebarFooterButtons";
 import { SidebarHeaderComponent } from "./components/sidebarHeader";
+import FlowVersionSidebarContent from "./components/FlowVersionSidebarContent";
 import SidebarSegmentedNav from "./components/sidebarSegmentedNav";
 import { applyBetaFilter } from "./helpers/apply-beta-filter";
 import { applyComponentFilter } from "./helpers/apply-component-filter";
@@ -598,10 +599,10 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       hasMcpComponents,
       hasBundleItems,
     });
-  const showHistory =
-    ENABLE_NEW_SIDEBAR && activeSection === "history" && sidebarOpen;
+  const showVersions =
+    ENABLE_NEW_SIDEBAR && activeSection === "versions" && sidebarOpen;
 
-  const currentFlowForHistory = useFlowStore((state) => state.currentFlow);
+  const currentFlowForVersions = useFlowStore((state) => state.currentFlow);
 
   const [category, component] = getFilterComponent?.split(".") ?? ["", ""];
 
@@ -639,8 +640,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
             ENABLE_NEW_SIDEBAR && "sidebar-segmented",
           )}
         >
-          {showHistory && currentFlowForHistory?.id ? (
-            <FlowHistorySidebarContent flowId={currentFlowForHistory.id} />
+          {showVersions && currentFlowForVersions?.id ? (
+            <FlowVersionSidebarContent flowId={currentFlowForVersions.id} />
           ) : (
             <>
               <SidebarHeaderComponent

@@ -36,7 +36,7 @@ export function CanvasBadge({
 
 const canvasBannerVariants = {
   readme:
-    "history-preview-banner flex items-center gap-4 overflow-hidden rounded-xl border border-border bg-background px-5 py-3",
+    "version-preview-banner flex items-center gap-4 overflow-hidden rounded-xl border border-border bg-background px-5 py-3",
 } as const;
 
 type CanvasBannerVariant = keyof typeof canvasBannerVariants;
@@ -57,7 +57,7 @@ export default function CanvasBanner({
   variant = "readme",
 }: CanvasBannerProps) {
   return (
-    <div className="history-preview-banner-enter pointer-events-auto absolute bottom-7 left-1/2 w-[650px]">
+    <div className="version-preview-banner-enter pointer-events-auto absolute bottom-7 left-1/2 w-[650px]">
       <div className={canvasBannerVariants[variant]}>
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#6366F1]/20">
           <ForwardedIconComponent

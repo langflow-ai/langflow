@@ -1,18 +1,17 @@
 import { create } from "zustand";
 import type { AllNodeType, EdgeType } from "../types/flow";
 
-interface HistoryPreviewState {
+interface VersionPreviewState {
   previewNodes: AllNodeType[] | null;
   previewEdges: EdgeType[] | null;
   previewLabel: string | null;
-  /** The history entry ID currently being previewed, or null for current draft. */
+  /** The version entry ID currently being previewed, or null for current draft. */
   previewId: string | null;
-  /** Monotonically increasing counter — changes on every setPreview call so
-   *  it can be used as a React key to force remount even when the label is
-   *  the same (e.g. switching away from and back to the same version). */
-  previewKey: number;
-  /** True while the sidebar is fetching a history entry to display. */
+  /** True while the sidebar is fetching a version entry to display. */
   isPreviewLoading: boolean;
+  /** True after a version was activated via the restore hook. The sidebar
+   *  unmount cleanup reads this to avoid overwriting the restored flow. */
+  didRestore: boolean;
   setPreviewLoading: (loading: boolean) => void;
   setPreview: (
     nodes: AllNodeType[],
@@ -23,13 +22,13 @@ interface HistoryPreviewState {
   clearPreview: () => void;
 }
 
-const useHistoryPreviewStore = create<HistoryPreviewState>((set, get) => ({
+const useVersionPreviewStore = create<VersionPreviewState>((set) => ({
   previewNodes: null,
   previewEdges: null,
   previewLabel: null,
   previewId: null,
-  previewKey: 0,
   isPreviewLoading: false,
+  didRestore: false,
   setPreviewLoading: (loading) => set({ isPreviewLoading: loading }),
   setPreview: (nodes, edges, label, id = null) =>
     set({
@@ -37,7 +36,6 @@ const useHistoryPreviewStore = create<HistoryPreviewState>((set, get) => ({
       previewEdges: edges,
       previewLabel: label,
       previewId: id,
-      previewKey: get().previewKey + 1,
     }),
   clearPreview: () =>
     set({
@@ -46,7 +44,9 @@ const useHistoryPreviewStore = create<HistoryPreviewState>((set, get) => ({
       previewLabel: null,
       previewId: null,
       isPreviewLoading: false,
+      // NOTE: didRestore is intentionally NOT reset here. It is read and
+      // reset by the sidebar unmount cleanup, which runs after clearPreview.
     }),
 }));
 
-export default useHistoryPreviewStore;
+export default useVersionPreviewStore;

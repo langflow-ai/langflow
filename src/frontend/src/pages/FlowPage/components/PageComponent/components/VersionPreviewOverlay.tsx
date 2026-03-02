@@ -1,20 +1,20 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import useHistoryPreviewStore from "@/stores/historyPreviewStore";
+import useVersionPreviewStore from "@/stores/versionPreviewStore";
 import { CanvasBadge } from "./CanvasBanner";
 import RestoreVersionButton from "./RestoreVersionButton";
 import SaveSnapshotButton from "./SaveSnapshotButton";
 
-export default function HistoryPreviewOverlay() {
-  const previewLabel = useHistoryPreviewStore((s) => s.previewLabel);
-  const previewId = useHistoryPreviewStore((s) => s.previewId);
-  const isPreviewLoading = useHistoryPreviewStore((s) => s.isPreviewLoading);
+export default function VersionPreviewOverlay() {
+  const previewLabel = useVersionPreviewStore((s) => s.previewLabel);
+  const previewId = useVersionPreviewStore((s) => s.previewId);
+  const isPreviewLoading = useVersionPreviewStore((s) => s.isPreviewLoading);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   if (previewLabel === null) return null;
 
   return (
-    <div className="history-preview-overlay pointer-events-none absolute inset-0 z-50">
+    <div className="version-preview-overlay pointer-events-none absolute inset-0 z-50">
       <CanvasBadge>
         <span className="h-2 w-2 shrink-0 rounded-lg bg-[#6366F1]" />
         <span className="text-sm">
@@ -46,7 +46,7 @@ export default function HistoryPreviewOverlay() {
       {previewId && previewLabel && previewLabel !== "Current Draft" && (
         <RestoreVersionButton
           flowId={currentFlowId}
-          historyId={previewId}
+          versionId={previewId}
           versionTag={previewLabel}
         />
       )}

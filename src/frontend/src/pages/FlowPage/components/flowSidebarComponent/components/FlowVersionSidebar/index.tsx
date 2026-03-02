@@ -6,50 +6,40 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import DeleteConfirmDialog from "./components/DeleteConfirmDialog";
-import HistoryListItem from "./components/HistoryListItem";
-import PruneWarningDialog from "./components/PruneWarningDialog";
-import RestoreConfirmDialog from "./components/RestoreConfirmDialog";
+import VersionListItem from "./components/VersionListItem";
 import { CURRENT_DRAFT_ID } from "./constants";
-import type { FlowHistorySidebarContentProps } from "./types";
-import { useFlowHistorySidebar } from "./use-flow-history-sidebar";
+import type { FlowVersionSidebarContentProps } from "./types";
+import { useFlowVersionSidebar } from "./use-flow-version-sidebar";
 
-export default function FlowHistorySidebarContent({
+export default function FlowVersionSidebarContent({
   flowId,
-}: FlowHistorySidebarContentProps) {
+}: FlowVersionSidebarContentProps) {
   const {
     selectedId,
-    pruneWarning,
-    setPruneWarning,
-    restoreDialogEntry,
-    setRestoreDialogEntry,
     deleteDialogEntry,
     setDeleteDialogEntry,
     animatingId,
-    isRestoring,
-    history,
+    versions,
     maxEntries,
     isLoading,
     isListError,
     isEntryError,
     processedPreview,
-    isCreating,
     isDeleting,
     isViewingDraft,
     handleSelectEntry,
-    doCreateSnapshot,
-    handleRestore,
     handleExport,
     handleDelete,
-  } = useFlowHistorySidebar(flowId);
+  } = useFlowVersionSidebar(flowId);
 
   return (
     <>
       <div className="flex h-full flex-col">
         <SidebarGroupLabel className="flex items-center justify-between px-3 pt-3">
           <span>Version History</span>
-          {history && history.length > 0 && (
+          {versions && versions.length > 0 && (
             <span className="font-normal text-foreground/50">
-              {history.length}
+              {versions.length}
               {maxEntries ? ` / ${maxEntries}` : ""}
             </span>
           )}
@@ -103,19 +93,19 @@ export default function FlowHistorySidebarContent({
             )}
             {isListError && (
               <div className="px-2 py-6 text-center text-xs text-destructive">
-                Failed to load version history
+                Failed to load versions
               </div>
             )}
             {!isLoading &&
               !isListError &&
-              (!history || history.length === 0) && (
+              (!versions || versions.length === 0) && (
                 <div className="px-2 py-6 text-center text-xs text-muted-foreground">
                   No saved versions yet
                 </div>
               )}
 
-            {history?.map((entry) => (
-              <HistoryListItem
+            {versions?.map((entry) => (
+              <VersionListItem
                 key={entry.id}
                 entry={entry}
                 isSelected={entry.id === selectedId}
@@ -128,22 +118,6 @@ export default function FlowHistorySidebarContent({
           </SidebarMenu>
         </div>
       </div>
-
-      <PruneWarningDialog
-        open={pruneWarning}
-        onClose={() => setPruneWarning(false)}
-        onConfirm={doCreateSnapshot}
-        isCreating={isCreating}
-        historyLength={history?.length ?? 0}
-        maxEntries={maxEntries ?? 0}
-      />
-
-      <RestoreConfirmDialog
-        entry={restoreDialogEntry}
-        onClose={() => setRestoreDialogEntry(null)}
-        onConfirm={handleRestore}
-        isRestoring={isRestoring}
-      />
 
       <DeleteConfirmDialog
         entry={deleteDialogEntry}

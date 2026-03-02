@@ -44,7 +44,7 @@ import ExportModal from "../../../../modals/exportModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import useHistoryPreviewStore from "../../../../stores/historyPreviewStore";
+import useVersionPreviewStore from "../../../../stores/versionPreviewStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
 import type { APIClassType } from "../../../../types/api";
@@ -58,7 +58,6 @@ import {
   generateNodeFromFlow,
   getNodeId,
   isValidConnection,
-  processFlows,
   scapeJSONParse,
   updateIds,
   validateSelection,
@@ -68,7 +67,7 @@ import ConnectionLineComponent from "../ConnectionLineComponent";
 import FlowBuildingComponent from "../flowBuildingComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import UpdateAllComponents from "../UpdateAllComponents";
-import HistoryPreviewOverlay from "./components/HistoryPreviewOverlay";
+import VersionPreviewOverlay from "./components/VersionPreviewOverlay";
 import HelperLines from "./components/helper-lines";
 import {
   getHelperLines,
@@ -109,7 +108,7 @@ export default function Page({
   const edges = useFlowStore((state) => state.edges);
   const isEmptyFlow = useRef(nodes.length === 0);
 
-  const previewLabel = useHistoryPreviewStore((s) => s.previewLabel);
+  const previewLabel = useVersionPreviewStore((s) => s.previewLabel);
   const isPreviewActive = previewLabel !== null;
   const onNodesChange = useFlowStore((state) => state.onNodesChange);
   const onEdgesChange = useFlowStore((state) => state.onEdgesChange);
@@ -871,7 +870,7 @@ export default function Page({
               <MemoizedBackground />
               {helperLineEnabled && <HelperLines helperLines={helperLines} />}
             </ReactFlow>
-            {isPreviewActive && <HistoryPreviewOverlay />}
+            {isPreviewActive && <VersionPreviewOverlay />}
           </div>
           <div
             id="shadow-box"

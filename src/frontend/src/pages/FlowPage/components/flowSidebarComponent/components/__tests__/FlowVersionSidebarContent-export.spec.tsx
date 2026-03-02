@@ -19,7 +19,7 @@ jest.mock("@/utils/reactflowUtils", () => ({
   removeApiKeys: (flow: any) => removeApiKeysMock(flow),
 }));
 
-// API mock — used by handleExportEntry to fetch the full history entry
+// API mock — used by handleExportEntry to fetch the full version entry
 const apiGetMock = jest.fn();
 jest.mock("@/controllers/API/api", () => ({
   api: { get: (...args: any[]) => apiGetMock(...args), post: jest.fn() },
@@ -28,8 +28,8 @@ jest.mock("@/controllers/API/helpers/constants", () => ({
   getURL: () => "/api/v1/flows",
 }));
 
-// Query-hook mocks — returns the FlowHistoryListResponse wrapper shape
-const mockHistory = [
+// Query-hook mocks — returns the FlowVersionListResponse wrapper shape
+const mockVersions = [
   {
     id: "entry-1",
     flow_id: "flow-1",
@@ -41,19 +41,18 @@ const mockHistory = [
   },
 ];
 
-jest.mock("@/controllers/API/queries/flow-history", () => ({
-  useGetFlowHistory: () => ({
-    data: { entries: mockHistory, max_entries: 50 },
+jest.mock("@/controllers/API/queries/flow-version", () => ({
+  useGetFlowVersions: () => ({
+    data: { entries: mockVersions, max_entries: 50 },
     isLoading: false,
     isError: false,
   }),
-  useGetFlowHistoryEntry: () => ({
+  useGetFlowVersionEntry: () => ({
     data: null,
     isLoading: false,
     isError: false,
   }),
-  usePostCreateSnapshot: () => ({ mutate: jest.fn(), isPending: false }),
-  useDeleteHistoryEntry: () => ({ mutate: jest.fn(), isPending: false }),
+  useDeleteVersionEntry: () => ({ mutate: jest.fn(), isPending: false }),
 }));
 
 jest.mock("@/hooks/flows/use-apply-flow-to-canvas", () => ({
@@ -132,28 +131,47 @@ jest.mock("@/components/ui/checkbox", () => ({
   Checkbox: () => <input type="checkbox" />,
 }));
 
+jest.mock("@/components/ui/sidebar", () => ({
+  useSidebar: () => ({ setActiveSection: jest.fn() }),
+  SidebarGroupLabel: ({ children, className }: any) => (
+    <div className={className}>{children}</div>
+  ),
+  SidebarMenu: ({ children, className }: any) => (
+    <div className={className}>{children}</div>
+  ),
+  SidebarMenuButton: ({ children, onClick, isActive, className }: any) => (
+    <div
+      role="button"
+      onClick={onClick}
+      className={`cursor-pointer ${className ?? ""} ${isActive ? "active" : ""}`}
+    >
+      {children}
+    </div>
+  ),
+  SidebarMenuItem: ({ children }: any) => <div>{children}</div>,
+}));
+
 jest.mock("lodash", () => ({
   cloneDeep: jest.fn((obj: any) =>
     obj === undefined ? undefined : JSON.parse(JSON.stringify(obj)),
   ),
 }));
 
-jest.mock("@/stores/historyPreviewStore", () => {
-  const store: any = (selector: any) =>
-    selector({
-      previewNodes: null,
-      previewEdges: null,
-      previewLabel: null,
-      setPreview: jest.fn(),
-      clearPreview: jest.fn(),
-    });
-  store.getState = () => ({
+jest.mock("@/stores/versionPreviewStore", () => {
+  const state = {
     previewNodes: null,
     previewEdges: null,
     previewLabel: null,
+    previewId: null,
+    isPreviewLoading: false,
+    didRestore: false,
     setPreview: jest.fn(),
     clearPreview: jest.fn(),
-  });
+    setPreviewLoading: jest.fn(),
+  };
+  const store: any = (selector: any) => selector(state);
+  store.getState = () => state;
+  store.setState = jest.fn();
   return { __esModule: true, default: store };
 });
 
@@ -161,35 +179,35 @@ jest.mock("@/stores/historyPreviewStore", () => {
 // Import the component AFTER all mocks are set up
 // ---------------------------------------------------------------------------
 
-import FlowHistorySidebarContent from "../FlowHistorySidebarContent";
+import FlowVersionSidebarContent from "../FlowVersionSidebarContent";
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("FlowHistorySidebarContent export", () => {
+describe("FlowVersionSidebarContent export", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it("exports a history entry using removeApiKeys + downloadFlow", async () => {
+  it("exports a version entry using removeApiKeys + downloadFlow", async () => {
     const user = userEvent.setup();
-    const historyData = {
-      nodes: [{ id: "hist-node", data: { node: { template: {} } } }],
+    const versionData = {
+      nodes: [{ id: "version-node", data: { node: { template: {} } } }],
       edges: [],
     };
 
     apiGetMock.mockResolvedValueOnce({
       data: {
-        ...mockHistory[0],
-        data: historyData,
+        ...mockVersions[0],
+        data: versionData,
         version_tag: "v1",
       },
     });
 
-    render(<FlowHistorySidebarContent flowId="flow-1" />);
+    render(<FlowVersionSidebarContent flowId="flow-1" />);
 
-    // Find the Export menu items — there's one for each history entry
+    // Find the Export menu items — there's one for each version entry
     const exportItems = screen.getAllByRole("menuitem", { name: /Export/i });
     expect(exportItems.length).toBeGreaterThan(0);
 
@@ -197,7 +215,7 @@ describe("FlowHistorySidebarContent export", () => {
 
     await waitFor(() => {
       expect(apiGetMock).toHaveBeenCalledWith(
-        "/api/v1/flows/flow-1/history/entry-1",
+        "/api/v1/flows/flow-1/versions/entry-1",
       );
     });
 
@@ -205,7 +223,7 @@ describe("FlowHistorySidebarContent export", () => {
       expect(removeApiKeysMock).toHaveBeenCalledWith(
         expect.objectContaining({
           id: "flow-1",
-          data: historyData,
+          data: versionData,
           name: "Test Flow_v1",
           description: "A test flow",
           is_component: false,
@@ -215,25 +233,25 @@ describe("FlowHistorySidebarContent export", () => {
 
     await waitFor(() => {
       expect(downloadFlowMock).toHaveBeenCalledWith(
-        expect.objectContaining({ data: historyData }),
+        expect.objectContaining({ data: versionData }),
         "Test Flow_v1",
         expect.any(String),
       );
     });
   });
 
-  it("exports a history entry with the correct flow name and description", async () => {
+  it("exports a version entry with the correct flow name and description", async () => {
     const user = userEvent.setup();
-    const historyData = {
+    const versionData = {
       nodes: [{ id: "v1-node" }],
       edges: [],
     };
 
     apiGetMock.mockResolvedValueOnce({
-      data: { ...mockHistory[0], data: historyData, version_tag: "v1" },
+      data: { ...mockVersions[0], data: versionData, version_tag: "v1" },
     });
 
-    render(<FlowHistorySidebarContent flowId="flow-1" />);
+    render(<FlowVersionSidebarContent flowId="flow-1" />);
 
     const exportItems = screen.getAllByRole("menuitem", { name: /Export/i });
     await user.click(exportItems[0]);
@@ -254,7 +272,7 @@ describe("FlowHistorySidebarContent export", () => {
       response: { data: { detail: "Server error" } },
     });
 
-    render(<FlowHistorySidebarContent flowId="flow-1" />);
+    render(<FlowVersionSidebarContent flowId="flow-1" />);
 
     const exportItems = screen.getAllByRole("menuitem", { name: /Export/i });
     await user.click(exportItems[0]);
