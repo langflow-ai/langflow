@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from lfx.components.azure.azure_openai import AzureChatOpenAIComponent
 
 from tests.base import ComponentTestBaseWithoutClient
@@ -30,9 +29,7 @@ class TestAzureChatOpenAIComponent(ComponentTestBaseWithoutClient):
         return []
 
     @patch("lfx.components.azure.azure_openai.ChatOpenAI")
-    async def test_build_model_v1(
-        self, mock_chat_openai, component_class, default_kwargs
-    ):
+    async def test_build_model_v1(self, mock_chat_openai, component_class, default_kwargs):
         """Test V1 Foundry API model building (default)."""
         mock_instance = MagicMock()
         mock_chat_openai.return_value = mock_instance
@@ -51,9 +48,7 @@ class TestAzureChatOpenAIComponent(ComponentTestBaseWithoutClient):
         assert model == mock_instance
 
     @patch("lfx.components.azure.azure_openai.AzureChatOpenAI")
-    async def test_build_model_legacy(
-        self, mock_azure_chat_openai, component_class, default_kwargs
-    ):
+    async def test_build_model_legacy(self, mock_azure_chat_openai, component_class, default_kwargs):
         """Test legacy API model building."""
         mock_instance = MagicMock()
         mock_azure_chat_openai.return_value = mock_instance
@@ -75,9 +70,7 @@ class TestAzureChatOpenAIComponent(ComponentTestBaseWithoutClient):
         assert model == mock_instance
 
     @patch("lfx.components.azure.azure_openai.ChatOpenAI")
-    async def test_build_model_reasoning(
-        self, mock_chat_openai, component_class, default_kwargs
-    ):
+    async def test_build_model_reasoning(self, mock_chat_openai, component_class, default_kwargs):
         """Test reasoning model handling with V1 API."""
         mock_instance = MagicMock()
         mock_chat_openai.return_value = mock_instance
@@ -105,9 +98,7 @@ class TestAzureChatOpenAIComponent(ComponentTestBaseWithoutClient):
         }
 
         # Test with reasoning model (gpt-5.1)
-        updated_config = component.update_build_config(
-            build_config, "gpt-5.1", "model_name"
-        )
+        updated_config = component.update_build_config(build_config, "gpt-5.1", "model_name")
         assert updated_config["temperature"]["show"] is False
         assert updated_config["seed"]["show"] is False
         assert updated_config["reasoning_effort"]["show"] is True
@@ -117,9 +108,7 @@ class TestAzureChatOpenAIComponent(ComponentTestBaseWithoutClient):
         build_config["seed"]["show"] = True
 
         # Test with non-reasoning model
-        updated_config = component.update_build_config(
-            build_config, "gpt-4", "model_name"
-        )
+        updated_config = component.update_build_config(build_config, "gpt-4", "model_name")
         assert updated_config["temperature"]["show"] is True
         assert updated_config["seed"]["show"] is True
         assert updated_config["reasoning_effort"]["show"] is False

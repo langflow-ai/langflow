@@ -27,9 +27,7 @@ AZURE_OPENAI_API_VERSIONS = [
     "2023-05-15",
 ]
 
-REASONING_MODEL_NAMES = {
-    m["name"] for m in OPENAI_MODELS_DETAILED if m.get("reasoning")
-}
+REASONING_MODEL_NAMES = {m["name"] for m in OPENAI_MODELS_DETAILED if m.get("reasoning")}
 
 MODEL_TO_DEPLOYMENT = {
     "gpt-5.1": "YOUR-DEPLOYMENT-gpt-5.1",
@@ -43,9 +41,7 @@ AZURE_MODEL_NAMES = list(MODEL_TO_DEPLOYMENT)
 class AzureChatOpenAIComponent(LCModelComponent):
     display_name: str = "Azure OpenAI"
     description: str = "Generate text using Azure OpenAI LLMs."
-    documentation: str = (
-        "https://python.langchain.com/docs/integrations/llms/azure_openai"
-    )
+    documentation: str = "https://python.langchain.com/docs/integrations/llms/azure_openai"
     beta = False
     icon = "Azure"
     name = "AzureOpenAIModel"
@@ -134,9 +130,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
         ),
     ]
 
-    def update_build_config(
-        self, build_config: dict, field_value: Any, field_name: str | None = None
-    ) -> dict:
+    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         if field_name == "use_legacy_api":
             self._apply_legacy_api_visibility(build_config, is_legacy=bool(field_value))
 
@@ -144,9 +138,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
             model = str(field_value) if field_value else ""
             is_reasoning = self._is_reasoning_model(model)
             self._apply_reasoning_visibility(build_config, is_reasoning=is_reasoning)
-            build_config["azure_deployment"]["value"] = MODEL_TO_DEPLOYMENT.get(
-                model, model
-            )
+            build_config["azure_deployment"]["value"] = MODEL_TO_DEPLOYMENT.get(model, model)
 
         return build_config
 
@@ -164,14 +156,10 @@ class AzureChatOpenAIComponent(LCModelComponent):
             return self.azure_deployment
         return MODEL_TO_DEPLOYMENT.get(self.model_name, self.model_name)
 
-    def _apply_legacy_api_visibility(
-        self, build_config: dict, *, is_legacy: bool
-    ) -> None:
+    def _apply_legacy_api_visibility(self, build_config: dict, *, is_legacy: bool) -> None:
         build_config["api_version"]["show"] = is_legacy
 
-    def _apply_reasoning_visibility(
-        self, build_config: dict, *, is_reasoning: bool
-    ) -> None:
+    def _apply_reasoning_visibility(self, build_config: dict, *, is_reasoning: bool) -> None:
         build_config["temperature"]["show"] = not is_reasoning
         build_config["seed"]["show"] = not is_reasoning
         build_config["reasoning_effort"]["show"] = is_reasoning
@@ -182,12 +170,8 @@ class AzureChatOpenAIComponent(LCModelComponent):
         is_reasoning = self._is_reasoning_model(self.model_name or "")
 
         if self.use_legacy_api:
-            return self._build_legacy_model(
-                api_key_value, model_kwargs, is_reasoning=is_reasoning
-            )
-        return self._build_v1_model(
-            api_key_value, model_kwargs, is_reasoning=is_reasoning
-        )
+            return self._build_legacy_model(api_key_value, model_kwargs, is_reasoning=is_reasoning)
+        return self._build_v1_model(api_key_value, model_kwargs, is_reasoning=is_reasoning)
 
     def _resolve_api_key(self) -> str | None:
         if not self.api_key:
@@ -201,9 +185,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
         model_kwargs.pop("api_key", None)
         return model_kwargs
 
-    def _build_v1_model(
-        self, api_key: str | None, model_kwargs: dict, *, is_reasoning: bool
-    ) -> LanguageModel:
+    def _build_v1_model(self, api_key: str | None, model_kwargs: dict, *, is_reasoning: bool) -> LanguageModel:
         base_url = self.azure_endpoint.rstrip("/") + "/openai/v1"
         if is_reasoning:
             model_kwargs = {**model_kwargs, "reasoning_effort": self.reasoning_effort}
@@ -220,9 +202,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
             if self.max_tokens:
                 parameters["max_completion_tokens"] = self.max_tokens
         else:
-            parameters["temperature"] = (
-                self.temperature if self.temperature is not None else 0.7
-            )
+            parameters["temperature"] = self.temperature if self.temperature is not None else 0.7
             if self.seed:
                 parameters["seed"] = self.seed
             if self.max_tokens:
@@ -234,9 +214,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
             msg = f"Could not connect to Azure OpenAI V1 API: {e}"
             raise ValueError(msg) from e
 
-    def _build_legacy_model(
-        self, api_key: str | None, model_kwargs: dict, *, is_reasoning: bool
-    ) -> LanguageModel:
+    def _build_legacy_model(self, api_key: str | None, model_kwargs: dict, *, is_reasoning: bool) -> LanguageModel:
         if is_reasoning:
             model_kwargs = {**model_kwargs, "reasoning_effort": self.reasoning_effort}
 
@@ -253,9 +231,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
             if self.max_tokens:
                 parameters["max_completion_tokens"] = self.max_tokens
         else:
-            parameters["temperature"] = (
-                self.temperature if self.temperature is not None else 0.7
-            )
+            parameters["temperature"] = self.temperature if self.temperature is not None else 0.7
             if self.seed:
                 parameters["seed"] = self.seed
             if self.max_tokens:
