@@ -82,7 +82,11 @@ def remove_api_keys(flow: dict):
         if not isinstance(template, dict):
             continue
         for value in template.values():
-            if isinstance(value, dict) and "name" in value and has_api_terms(value["name"]) and value.get("password"):
+            if not isinstance(value, dict):
+                continue
+            if not value.get("password"):
+                continue
+            if "name" in value and has_api_terms(value["name"]):
                 value["value"] = None
 
     return flow
