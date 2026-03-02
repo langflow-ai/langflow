@@ -1,5 +1,11 @@
+from uuid import UUID
+
 from fastapi import status
 from httpx import AsyncClient
+from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+from langflow.services.database.models.user.model import User
+from langflow.services.deps import get_auth_service, session_scope
+from sqlmodel import select
 
 
 async def test_add_user_public_signup(client: AsyncClient):
@@ -179,3 +185,37 @@ async def test_patch_user_deactivate_other_user_allowed(client: AsyncClient, log
 
     assert response.status_code == status.HTTP_200_OK
     assert result["is_active"] is False
+
+
+async def test_delete_user_cascades_deployment_provider_accounts(client: AsyncClient, logged_in_headers_super_user):
+    async with session_scope() as session:
+        user = User(
+            username="delete-user-with-providers",
+            password=get_auth_service().get_password_hash("delete-user-pass"),
+            is_active=True,
+        )
+        session.add(user)
+        await session.flush()
+        await session.refresh(user)
+        created_user_id = str(user.id)
+
+        provider_account = DeploymentProviderAccount(
+            user_id=user.id,
+            account_id="tenant-cascade-check",
+            provider_key="watsonx-orchestrate",
+            backend_url="https://example.ibm.com",
+            api_key="secret",
+        )
+        session.add(provider_account)
+        await session.flush()
+
+    delete_response = await client.delete(f"api/v1/users/{created_user_id}", headers=logged_in_headers_super_user)
+    assert delete_response.status_code == status.HTTP_200_OK
+
+    async with session_scope() as session:
+        remaining = (
+            await session.exec(
+                select(DeploymentProviderAccount).where(DeploymentProviderAccount.user_id == UUID(created_user_id))
+            )
+        ).all()
+        assert remaining == []

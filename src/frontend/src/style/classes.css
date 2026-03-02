@@ -432,3 +432,58 @@ input[type="search"]::-webkit-search-cancel-button {
 .jse-button.jse-search:active {
   background-color: hsl(var(--border)) !important;
 }
+
+@keyframes history-item-drop-in {
+  0% {
+    transform: translateY(-16px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.history-item-drop-in {
+  animation: history-item-drop-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.history-preview-overlay {
+  box-shadow:
+    inset 0 0 0 2px hsl(var(--accent-indigo-foreground)),
+    inset 0 0 60px 12px hsl(var(--accent-indigo-foreground) / 0.12);
+}
+
+@keyframes banner-slide-up {
+  from {
+    transform: translateX(-50%) translateY(calc(100% + 2.5rem));
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes banner-slide-down {
+  from {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-50%) translateY(calc(100% + 2.5rem));
+    opacity: 0;
+  }
+}
+
+.history-preview-banner {
+  box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.12);
+}
+
+.history-preview-banner-enter {
+  animation: banner-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.history-preview-banner-exit {
+  animation: banner-slide-down 0.25s ease-in forwards;
+}

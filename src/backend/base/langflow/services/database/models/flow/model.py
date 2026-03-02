@@ -224,6 +224,10 @@ class FlowRead(FlowBase):
     user_id: UUID | None = Field()
     folder_id: UUID | None = Field()
     tags: list[str] | None = Field(None, description="The tags of the flow")
+    has_deployments: bool = Field(
+        default=False,
+        description="Whether any history checkpoint of this flow is attached to at least one deployment.",
+    )
 
 
 class FlowHeader(BaseModel):
@@ -244,6 +248,10 @@ class FlowHeader(BaseModel):
     mcp_enabled: bool | None = Field(None, description="Flag indicating whether the flow is exposed in the MCP server")
     action_name: str | None = Field(None, description="The name of the action associated with the flow")
     action_description: str | None = Field(None, description="The description of the action associated with the flow")
+    has_deployments: bool = Field(
+        default=False,
+        description="Whether any history checkpoint of this flow is attached to at least one deployment.",
+    )
 
     @field_validator("data", mode="before")
     @classmethod

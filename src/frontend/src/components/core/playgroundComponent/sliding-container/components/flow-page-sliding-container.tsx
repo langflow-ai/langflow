@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { StickToBottom } from "use-stick-to-bottom";
-import { SafariScrollFix } from "@/components/common/safari-scroll-fix";
 import { ChatHeader } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-header";
 import { ChatSidebar } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-sidebar";
 import { useSendMessage } from "@/components/core/playgroundComponent/chat-view/hooks/use-send-message";
@@ -8,7 +7,6 @@ import { useGetFlowId } from "@/components/core/playgroundComponent/hooks/use-ge
 import { AnimatedConditional } from "@/components/ui/animated-close";
 import { useSimpleSidebar } from "@/components/ui/simple-sidebar";
 import useFlowStore from "@/stores/flowStore";
-import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { FilePreviewType } from "@/types/components";
 import { useEditSessionInfo } from "../../chat-view/chat-header/hooks/use-edit-session-info";
@@ -17,7 +15,6 @@ import { ChatInput } from "../../chat-view/chat-input";
 import useDragAndDrop from "../../chat-view/chat-input/hooks/use-drag-and-drop";
 import { Messages } from "../../chat-view/chat-messages";
 import { useChatHistory } from "../../chat-view/chat-messages/hooks/use-chat-history";
-import { clearSessionMessages } from "../../chat-view/utils/message-utils";
 
 type FlowPageSlidingContainerContentProps = {
   isFullscreen: boolean;
@@ -34,9 +31,6 @@ export function FlowPageSlidingContainerContent({
   const nodes = useFlowStore((state) => state.nodes);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
-  const deleteSessionFromStore = useMessagesStore(
-    (state) => state.deleteSession,
-  );
 
   const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(
     currentFlowId,
@@ -133,8 +127,6 @@ export function FlowPageSlidingContainerContent({
   const handleNewChat = () => {
     // Pass all sessions (including currentSessionId) to ensure unique IDs
     const newId = addNewSession(orderedSessions);
-    // Clear any cached messages for the new session to prevent stale data
-    clearSessionMessages(newId, currentFlowId);
     setCurrentSessionId(newId);
   };
 
@@ -142,9 +134,6 @@ export function FlowPageSlidingContainerContent({
     handleDelete(sessionId);
     // Also remove from local sessions if it's a local session
     removeLocalSession(sessionId);
-    // Clear messages from both React Query cache and Zustand store
-    clearSessionMessages(sessionId, currentFlowId);
-    deleteSessionFromStore(sessionId);
     if (sessionId === currentSessionId) {
       setCurrentSessionId(currentFlowId);
     }
@@ -196,23 +185,20 @@ export function FlowPageSlidingContainerContent({
             setOpenLogsModal={setOpenLogsModal}
             renameLocalSession={renameLocalSession}
           />
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden playground-messages-wrapper">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <StickToBottom
               className="flex-1 min-h-0 overflow-hidden"
-              resize="instant"
+              resize="smooth"
               initial="instant"
             >
-              <StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden ">
-                <div
-                  className={`flex flex-col ${isFullscreen ? "w-full max-w-[744px] p-0 mx-auto" : "w-full"}`}
-                >
+              <StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden p-4">
+                <div className="flex flex-col w-full">
                   <Messages
                     visibleSession={currentSessionId ?? currentFlowId ?? null}
                     playgroundPage={true}
                   />
                 </div>
               </StickToBottom.Content>
-              <SafariScrollFix />
             </StickToBottom>
 
             <div

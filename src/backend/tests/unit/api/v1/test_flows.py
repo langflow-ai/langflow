@@ -59,6 +59,85 @@ async def test_read_flows(client: AsyncClient, logged_in_headers):
     assert isinstance(result, list), "The result must be a list"
 
 
+async def test_read_flows_has_deployments_flag(client: AsyncClient, logged_in_headers, active_user):
+    from langflow.services.database.models.deployment.model import Deployment
+    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+    from langflow.services.database.models.flow_history.model import FlowHistory
+    from langflow.services.database.models.flow_history_deployment_attachment.model import (
+        FlowHistoryDeploymentAttachment,
+    )
+    from langflow.services.deps import session_scope
+
+    flow_with_history_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": f"flow-with-deployment-{uuid.uuid4().hex[:8]}", "data": {"nodes": [], "edges": []}},
+        headers=logged_in_headers,
+    )
+    flow_without_history_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": f"flow-without-deployment-{uuid.uuid4().hex[:8]}", "data": {"nodes": [], "edges": []}},
+        headers=logged_in_headers,
+    )
+
+    assert flow_with_history_resp.status_code == status.HTTP_201_CREATED
+    assert flow_without_history_resp.status_code == status.HTTP_201_CREATED
+
+    flow_with_history = flow_with_history_resp.json()
+    flow_without_history = flow_without_history_resp.json()
+
+    async with session_scope() as session:
+        provider_account = DeploymentProviderAccount(
+            user_id=active_user.id,
+            account_id=f"acct-{uuid.uuid4().hex[:8]}",
+            provider_key="watsonx-orchestrate",
+            backend_url=f"https://{uuid.uuid4().hex}.example.com",
+            api_key="test-api-key",  # pragma: allowlist secret
+        )
+        session.add(provider_account)
+        await session.flush()
+
+        deployment = Deployment(
+            resource_key=f"resource-{uuid.uuid4().hex[:8]}",
+            user_id=active_user.id,
+            project_id=uuid.UUID(flow_with_history["folder_id"]),
+            provider_account_id=provider_account.id,
+            name=f"deployment-{uuid.uuid4().hex[:8]}",
+        )
+        session.add(deployment)
+        await session.flush()
+
+        history_entry = FlowHistory(
+            flow_id=uuid.UUID(flow_with_history["id"]),
+            user_id=active_user.id,
+            data={"nodes": [], "edges": []},
+            version_number=1,
+            description="checkpoint",
+        )
+        session.add(history_entry)
+        await session.flush()
+
+        session.add(
+            FlowHistoryDeploymentAttachment(
+                user_id=active_user.id,
+                history_id=history_entry.id,
+                deployment_id=deployment.id,
+            )
+        )
+        await session.flush()
+
+    response = await client.get(
+        "api/v1/flows/",
+        params={"remove_example_flows": True, "get_all": True},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    rows = response.json()
+    by_id = {row["id"]: row for row in rows}
+    assert by_id[flow_with_history["id"]]["has_deployments"] is True
+    assert by_id[flow_without_history["id"]]["has_deployments"] is False
+
+
 async def test_get_flows_with_malformed_bearer_token_returns_401(client: AsyncClient):
     """CT-010: GET /api/v1/flows with malformed Bearer token must return 401 Unauthorized."""
     headers = {"Authorization": "Bearer invalid.token.here"}

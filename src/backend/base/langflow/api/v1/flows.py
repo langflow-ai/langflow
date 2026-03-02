@@ -35,6 +35,11 @@ from langflow.services.database.models.flow.model import (
     FlowUpdate,
 )
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
+from langflow.services.database.models.flow_history.crud import get_deployed_flow_ids
+
+# TODO: Full-history import/export is planned as a follow-up feature. When implemented,
+# re-add imports for create_flow_history_entry, get_flow_history_list, strip_history_data,
+# and FlowHistoryError from the flow_history modules.
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.folder.utils import get_default_folder_id
@@ -392,11 +397,29 @@ async def read_flows(
                 flows = [flow for flow in flows if flow.folder_id != starter_folder_id]
             if header_flows:
                 # Convert to FlowHeader objects and compress the response
-                flow_headers = [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
+                deployed_flow_ids = await get_deployed_flow_ids(
+                    session,
+                    user_id=current_user.id,
+                    flow_ids=[flow.id for flow in flows],
+                )
+                flow_headers: list[FlowHeader] = []
+                for flow in flows:
+                    flow_header = FlowHeader.model_validate(flow, from_attributes=True)
+                    flow_header.has_deployments = flow.id in deployed_flow_ids
+                    flow_headers.append(flow_header)
                 return compress_response(flow_headers)
 
             # Convert to FlowRead while session is still active to avoid detached instance errors
-            flow_reads = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows]
+            deployed_flow_ids = await get_deployed_flow_ids(
+                session,
+                user_id=current_user.id,
+                flow_ids=[flow.id for flow in flows],
+            )
+            flow_reads: list[FlowRead] = []
+            for flow in flows:
+                flow_read = FlowRead.model_validate(flow, from_attributes=True)
+                flow_read.has_deployments = flow.id in deployed_flow_ids
+                flow_reads.append(flow_read)
             return compress_response(flow_reads)
 
         stmt = stmt.where(Flow.folder_id == folder_id)
@@ -407,7 +430,21 @@ async def read_flows(
             warnings.filterwarnings(
                 "ignore", category=DeprecationWarning, module=r"fastapi_pagination\.ext\.sqlalchemy"
             )
-            return await apaginate(session, stmt, params=params)
+
+            async def _flow_transformer(flows: list[Flow]) -> list[FlowRead]:
+                deployed_flow_ids = await get_deployed_flow_ids(
+                    session,
+                    user_id=current_user.id,
+                    flow_ids=[flow.id for flow in flows],
+                )
+                transformed: list[FlowRead] = []
+                for flow in flows:
+                    flow_read = FlowRead.model_validate(flow, from_attributes=True)
+                    flow_read.has_deployments = flow.id in deployed_flow_ids
+                    transformed.append(flow_read)
+                return transformed
+
+            return await apaginate(session, stmt, params=params, transformer=_flow_transformer)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -743,7 +780,15 @@ async def upload_file(
     """Upload flows from a file."""
     contents = await file.read()
     data = orjson.loads(contents)
-    flow_list = FlowListCreate(**data) if "flows" in data else FlowListCreate(flows=[FlowCreate(**data)])
+
+    if "flows" in data:
+        flow_list = FlowListCreate(**data)
+    else:
+        flow_list = FlowListCreate(flows=[FlowCreate(**data)])
+
+    # TODO: Full-history import is planned as a follow-up feature.
+    # When implemented, extract raw flow dicts here to read embedded "history"
+    # arrays and create FlowHistory entries for each imported flow.
 
     try:
         flow_reads = []
@@ -811,6 +856,9 @@ async def download_multiple_file(
     db: DbSession,
 ):
     """Download all flows as a zip file."""
+    # TODO: Full-history download (include_history parameter) is planned as a follow-up feature.
+    # When implemented, add an include_history: bool = False parameter and embed history
+    # entries in each flow dict using get_flow_history_list and strip_history_data.
     flows = (await db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids))))).all()  # type: ignore[attr-defined]
 
     if not flows:
