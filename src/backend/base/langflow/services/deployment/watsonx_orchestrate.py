@@ -195,9 +195,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 config=deployment.config,
             )
             created_config_id = (
-                app_id
-                if deployment.config is not None and deployment.config.raw_payload is not None
-                else None
+                app_id if deployment.config is not None and deployment.config.raw_payload is not None else None
             )
 
             tool_ids: list[str] = []

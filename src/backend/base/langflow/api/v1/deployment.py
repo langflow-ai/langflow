@@ -201,7 +201,6 @@ class DeploymentProviderAccountResponse(BaseModel):
     registered_at: datetime | None
 
 
-
 class DeploymentProviderAccountListResponse(BaseModel):
     deployment_providers: list[DeploymentProviderAccountResponse]
     page: int = Field(default=1, ge=1)
@@ -977,7 +976,7 @@ async def _apply_checkpoint_patch_attachments(
         )
 
 
-@router.post( # TODO: move this to the flows API
+@router.post(  # TODO: move this to the flows API
     "/variables/detections",
     response_model=DetectDeploymentEnvVarsResponse,
 )
@@ -1027,21 +1026,17 @@ async def create_deployment(
         user_id=user.id,
         db=db,
     )
-    adapter_payload: AdapterDeploymentCreate  = (
-        await _build_adapter_deployment_create_payload(
-            payload=deployment_payload,
-            project_id=project_id,
-            user_id=user.id,
-            db=db,
-        )
+    adapter_payload: AdapterDeploymentCreate = await _build_adapter_deployment_create_payload(
+        payload=deployment_payload,
+        project_id=project_id,
+        user_id=user.id,
+        db=db,
     )
     try:
-        result: AdapterDeploymentCreateResult = (
-            await deployment_adapter.create(
-                user_id=user.id,
-                deployment=adapter_payload,
-                db=db,
-            )
+        result: AdapterDeploymentCreateResult = await deployment_adapter.create(
+            user_id=user.id,
+            deployment=adapter_payload,
+            db=db,
         )
     # TODO: Create functions that handle mapping
     # from deployment erros to HTTP errors
@@ -1060,13 +1055,11 @@ async def create_deployment(
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
-    deployment_row: Deployment | None = (
-        await get_deployment_row_by_resource_key(
-            db,
-            user_id=user.id,
-            provider_account_id=provider_id,
-            resource_key=str(result.id),
-        )
+    deployment_row: Deployment | None = await get_deployment_row_by_resource_key(
+        db,
+        user_id=user.id,
+        provider_account_id=provider_id,
+        resource_key=str(result.id),
     )
     if deployment_row is None:
         deployment_row = await create_deployment_row(
@@ -1082,9 +1075,7 @@ async def create_deployment(
     history_reference_ids = flow_versions.ids if flow_versions else None
     if history_reference_ids:
         created_snapshot_ids = [
-            str(snapshot_id).strip()
-            for snapshot_id in result.snapshot_ids
-            if str(snapshot_id).strip()
+            str(snapshot_id).strip() for snapshot_id in result.snapshot_ids if str(snapshot_id).strip()
         ]
         history_uuid_ids = [_as_uuid(str(history_id)) for history_id in history_reference_ids]
         valid_history_uuid_ids = [history_id for history_id in history_uuid_ids if history_id is not None]
@@ -1177,11 +1168,7 @@ async def list_deployments(
                 attached_count=attached_count,
                 created_at=row.created_at,
                 updated_at=row.updated_at,
-                provider_data=(
-                    {"matched_history_ids": matched_history_ids}
-                    if normalized_history_ids
-                    else None
-                ),
+                provider_data=({"matched_history_ids": matched_history_ids} if normalized_history_ids else None),
             )
             for row, attached_count, matched_history_ids in rows_with_counts
         ]

@@ -496,7 +496,7 @@ class DeploymentCreateE2E:
                 "name": self._mk_name(f"dep-{deployment_type}"),
                 "description": "e2e deployment create scenario",
                 "type": deployment_type,
-            }
+            },
         }
         if flow_versions is not None:
             payload["flow_versions"] = flow_versions

@@ -1,12 +1,11 @@
-from fastapi import status
-from httpx import AsyncClient
-from sqlmodel import select
 from uuid import UUID
 
+from fastapi import status
+from httpx import AsyncClient
 from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_auth_service
-from langflow.services.deps import session_scope
+from langflow.services.deps import get_auth_service, session_scope
+from sqlmodel import select
 
 
 async def test_add_user_public_signup(client: AsyncClient):

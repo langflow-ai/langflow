@@ -83,8 +83,7 @@ class FakeAgentClient:
                 return [
                     agent
                     for agent in self._listed_agents
-                    if str(agent.get("id") or "").strip() in id_set
-                    or str(agent.get("name") or "").strip() in name_set
+                    if str(agent.get("id") or "").strip() in id_set or str(agent.get("name") or "").strip() in name_set
                 ]
             return self._listed_agents
         return self._get_payloads.get(path, {})

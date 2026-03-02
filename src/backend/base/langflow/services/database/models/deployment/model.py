@@ -15,9 +15,7 @@ if TYPE_CHECKING:
 
 class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
     __tablename__ = "deployment"
-    __table_args__ = (
-        UniqueConstraint("provider_account_id", "name", name="uq_deployment_name_in_provider"),
-    )
+    __table_args__ = (UniqueConstraint("provider_account_id", "name", name="uq_deployment_name_in_provider"),)
 
     id: UUID | None = Field(default_factory=uuid4, primary_key=True, description="Unique ID for the deployment")
     resource_key: str = Field(index=True, description="ID assigned by Langflow or the deployment provider")

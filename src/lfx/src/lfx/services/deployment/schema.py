@@ -368,8 +368,6 @@ class DeploymentDetailItem(DeploymentItem):
     description: str | None = Field(None, description="The description of the deployment")
 
 
-
-
 class DeploymentList(BaseModel):
     """Model representing a result for a deployment list operation."""
 
@@ -422,6 +420,7 @@ class DeploymentListParams(BaseModel):
         )
         # Keep first occurrence order while removing duplicates.
         return list(dict.fromkeys(normalized_ids))
+
 
 class SnapshotResult(BaseModel):
     """Model representing a result for a snapshot creation operation."""

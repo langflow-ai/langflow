@@ -96,9 +96,7 @@ class DeploymentRouterService(BaseDeploymentRouterService):
             user_id=user_id,
         )
         if provider_account is None:
-            msg = (
-                f"Deployment provider account '{provider_id}' not found. "
-            )
+            msg = f"Deployment provider account '{provider_id}' not found. "
             raise DeploymentAccountNotFoundError(message=msg)
 
         adapter_key = provider_account.provider_key.strip()
@@ -134,10 +132,7 @@ class DeploymentRouterService(BaseDeploymentRouterService):
             if parameter.default is not inspect.Parameter.empty:
                 continue
 
-            msg = (
-                f"Failed to instantiate adapter '{adapter_class.__name__}': "
-                f"unresolved required dependency '{name}'."
-            )
+            msg = f"Failed to instantiate adapter '{adapter_class.__name__}': unresolved required dependency '{name}'."
             raise DeploymentRouterError(message=msg)
 
         return adapter_class(**dependencies)

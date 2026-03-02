@@ -290,4 +290,3 @@ class FlowUpdate(SQLModel):
                     detail="Endpoint name must contain only letters, numbers, hyphens, and underscores",
                 )
         return v
-

@@ -711,7 +711,7 @@ async def test_create_deployment_falls_back_to_default_project_when_project_id_i
                 "name": f"deployment-{uuid4().hex[:8]}",
                 "description": "deployment without explicit project id",
                 "type": "agent",
-            }
+            },
         },
         headers=logged_in_headers,
     )

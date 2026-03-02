@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path, PurePath
 
 import pytest
-
 from lfx.services import subservice as subservice_mod
 
 
@@ -136,4 +135,3 @@ watsonx-orchestrate = "invalid_without_colon"
     registry.discover_sub_services(config_dir=tmp_path)
 
     assert registry.get_sub_service_class("watsonx-orchestrate") is None
-
