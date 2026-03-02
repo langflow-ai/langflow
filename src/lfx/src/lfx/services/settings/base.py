@@ -374,7 +374,10 @@ class Settings(BaseSettings):
             if "://" in value:
                 from urllib.parse import urlparse
 
-                parsed_port = urlparse(value).port
+                try:
+                    parsed_port = urlparse(value).port
+                except ValueError:
+                    return None
                 if parsed_port is not None:
                     return parsed_port
         return None
