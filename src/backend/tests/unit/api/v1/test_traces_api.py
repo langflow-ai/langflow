@@ -208,14 +208,14 @@ class TestGetTraces:
 
         assert captured == [SpanStatus.OK]
 
-    def test_should_reject_invalid_page_param(self, client: TestClient):
+    def test_should_accept_page_zero_as_first_page(self, client: TestClient):
         async def _fetch(*_args, **_kwargs):
             return _empty_list_response()
 
         with patch("langflow.api.v1.traces.fetch_traces", side_effect=_fetch):
             resp = client.get(self._PATH, params={"page": 0})
 
-        assert resp.status_code == 422
+        assert resp.status_code == 200
 
     def test_should_reject_size_above_maximum(self, client: TestClient):
         async def _fetch(*_args, **_kwargs):
