@@ -175,8 +175,8 @@ def add_serialized(_logger: Any, _method_name: str, event_dict: dict[str, Any]) 
 
 
 def remove_exception_in_production(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
-    """Remove exception details in production."""
-    if DEV is False:
+    """Remove exception details in production for non-error logs."""
+    if DEV is False and event_dict.get("level", "").upper() not in ("ERROR", "CRITICAL"):
         event_dict.pop("exception", None)
         event_dict.pop("exc_info", None)
     return event_dict
@@ -391,18 +391,23 @@ class InterceptHandler(logging.Handler):
         logger_name = record.name
         structlog_logger = structlog.get_logger(logger_name)
 
+        msg = record.getMessage()
+        kwargs: dict[str, Any] = {}
+        if record.exc_info and record.exc_info[0] is not None:
+            kwargs["exc_info"] = record.exc_info
+
         # Map log levels
         level = record.levelno
         if level >= logging.CRITICAL:
-            structlog_logger.critical(record.getMessage())
+            structlog_logger.critical(msg, **kwargs)
         elif level >= logging.ERROR:
-            structlog_logger.error(record.getMessage())
+            structlog_logger.error(msg, **kwargs)
         elif level >= logging.WARNING:
-            structlog_logger.warning(record.getMessage())
+            structlog_logger.warning(msg, **kwargs)
         elif level >= logging.INFO:
-            structlog_logger.info(record.getMessage())
+            structlog_logger.info(msg, **kwargs)
         else:
-            structlog_logger.debug(record.getMessage())
+            structlog_logger.debug(msg, **kwargs)
 
 
 # Initialize logger - will be reconfigured when configure() is called
