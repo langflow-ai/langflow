@@ -690,7 +690,7 @@ async function onEvent(
       }
       return true;
     }
-   case "end_vertex": {
+    case "end_vertex": {
       return processEndVertexEvent(data, buildResults, {
         onBuildUpdate,
         onBuildError,
