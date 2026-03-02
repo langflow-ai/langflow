@@ -776,7 +776,7 @@
   },
   "KnowledgeRetrieval": {
     "versions": {
-      "0.3.0": "be00436ee36c"
+      "0.3.0": "1a95fca184de"
     }
   },
   "SaveToFile": {
