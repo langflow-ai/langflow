@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useBlocker, useParams } from "react-router-dom";
 import { FlowPageSlidingContainerContent } from "@/components/core/playgroundComponent/sliding-container/components/flow-page-sliding-container";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import {
   SimpleSidebar,
   SimpleSidebarProvider,
@@ -27,6 +27,35 @@ import {
   FlowSidebarComponent,
 } from "./components/flowSidebarComponent";
 import Page from "./components/PageComponent";
+import { FlowInsightsContent } from "./components/TraceComponent/FlowInsightsContent";
+
+function FlowPageMainContent({
+  flowId,
+  setIsLoading,
+}: {
+  flowId?: string;
+  setIsLoading: (isLoading: boolean) => void;
+}): JSX.Element {
+  const { activeSection } = useSidebar();
+  const showTraces = ENABLE_NEW_SIDEBAR && activeSection === "traces";
+
+  if (showTraces) {
+    return (
+      <div
+        className="flex h-full w-full flex-col overflow-hidden"
+        data-testid="flow-insights-embedded"
+      >
+        <FlowInsightsContent
+          flowId={flowId}
+          refreshOnMount
+          showFlowActivityHeader
+        />
+      </div>
+    );
+  }
+
+  return <Page setIsLoading={setIsLoading} />;
+}
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const types = useTypesStore((state) => state.types);
@@ -266,7 +295,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                     )}
                   >
                     <div className="h-full w-full">
-                      <Page setIsLoading={setIsLoading} />
+                      <FlowPageMainContent
+                        flowId={id}
+                        setIsLoading={setIsLoading}
+                      />
                     </div>
                   </main>
                 </FlowSearchProvider>
