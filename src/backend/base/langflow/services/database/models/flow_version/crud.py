@@ -8,11 +8,12 @@ from sqlmodel import col, delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.database.models.flow_version.exceptions import (
-    FlowVersionNotFoundError,
-    FlowVersionSerializationError,
     FlowVersionConflictError,
+    FlowVersionNotFoundError,
 )
-from langflow.services.database.models.flow_version.model import FlowVersion, FlowVersionCreate, FlowVersionListResponse, FlowVersionRead, FlowVersionReadWithData
+from langflow.services.database.models.flow_version.model import (
+    FlowVersion,
+)
 from langflow.services.deps import get_settings_service
 
 MAX_VERSION_RETRIES = 3
@@ -95,13 +96,13 @@ async def create_flow_version_entry(
         )
         result = await session.exec(delete_older)
         if hasattr(result, "rowcount") and result.rowcount:  # type: ignore[union-attr]
-            await logger.adebug("Pruned %d old version entries for flow %s", result.rowcount, flow_id)  # type: ignore[union-attr] # noqa: E501
+            await logger.adebug("Pruned %d old version entries for flow %s", result.rowcount, flow_id)  # type: ignore[union-attr]
     except SQLAlchemyError:
         # Pruning is best-effort: we don't fail the snapshot because pruning broke.
         # Logged at error level because repeated failures cause unbounded table growth
         # and may need operational attention.
         await logger.aerror(
-            "Failed to prune old version entries for flow %s — version table may exceed configured limit", # noqa: E501
+            "Failed to prune old version entries for flow %s — version table may exceed configured limit",
             flow_id,
             exc_info=True,
         )

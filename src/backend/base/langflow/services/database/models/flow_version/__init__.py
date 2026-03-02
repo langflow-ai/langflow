@@ -1,13 +1,14 @@
 from .exceptions import (
+    FlowVersionConflictError,
     FlowVersionError,
     FlowVersionNotFoundError,
     FlowVersionSerializationError,
-    FlowVersionConflictError,
 )
 from .model import FlowVersion, FlowVersionCreate, FlowVersionListResponse, FlowVersionRead, FlowVersionReadWithData
 
 __all__ = [
     "FlowVersion",
+    "FlowVersionConflictError",
     "FlowVersionCreate",
     "FlowVersionError",
     "FlowVersionListResponse",
@@ -15,5 +16,4 @@ __all__ = [
     "FlowVersionRead",
     "FlowVersionReadWithData",
     "FlowVersionSerializationError",
-    "FlowVersionConflictError",
 ]
