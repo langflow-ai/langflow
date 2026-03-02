@@ -134,14 +134,14 @@ class ChatOutputResponse(BaseModel):
         Must be a UUID, string, or None.
         If the session id is a UUID, it will be converted to a string.
         If the session id is a string or None, it will be returned as is.
-        Otherwise, a TypeError will be raised.
+        Otherwise, a ValueError will be raised.
         """
         if value is None or isinstance(value, str):
             return value
         if isinstance(value, UUID):
             return str(value)
         msg = f"The provided Session ID must be a UUID, string, or None. Got {value} of type {type(value)}."
-        raise TypeError(msg)
+        raise ValueError(msg)
 
 
 class DataOutputResponse(BaseModel):
