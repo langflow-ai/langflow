@@ -96,10 +96,16 @@ def span_to_response(span: SpanTable) -> SpanReadResponse:
     """
     token_usage = None
     if span.attributes:
+        # OTel GenAI conventions enable consistent parsing across different LLM providers
+        input_tokens = span.attributes.get("gen_ai.usage.input_tokens", 0)
+        output_tokens = span.attributes.get("gen_ai.usage.output_tokens", 0)
+        # OTel spec requires deriving total from input+output (no standard total_tokens key)
+        total_tokens = safe_int_tokens(input_tokens) + safe_int_tokens(output_tokens)
+
         token_usage = {
-            "promptTokens": safe_int_tokens(span.attributes.get("prompt_tokens", 0)),
-            "completionTokens": safe_int_tokens(span.attributes.get("completion_tokens", 0)),
-            "totalTokens": safe_int_tokens(span.attributes.get("total_tokens", 0)),
+            "promptTokens": safe_int_tokens(input_tokens),
+            "completionTokens": safe_int_tokens(output_tokens),
+            "totalTokens": total_tokens,
         }
 
     return SpanReadResponse(
@@ -113,7 +119,7 @@ def span_to_response(span: SpanTable) -> SpanReadResponse:
         inputs=span.inputs,
         outputs=span.outputs,
         error=span.error,
-        model_name=(span.attributes or {}).get("model_name"),
+        model_name=(span.attributes or {}).get("gen_ai.response.model"),
         token_usage=token_usage,
     )
 
@@ -300,6 +306,13 @@ def compute_leaf_token_total(
     for span_id in span_ids:
         if span_id not in parent_ids:
             attrs = attributes_by_id.get(span_id) or {}
-            token_val = attrs.get("llm.usage.total_tokens") or attrs.get("total_tokens") or 0
+            # Prefer OTel GenAI keys for consistency with observability standards
+            input_tokens = attrs.get("gen_ai.usage.input_tokens", 0)
+            output_tokens = attrs.get("gen_ai.usage.output_tokens", 0)
+            # Sum input+output when available, otherwise fall back for backward compatibility
+            if input_tokens or output_tokens:
+                token_val = safe_int_tokens(input_tokens) + safe_int_tokens(output_tokens)
+            else:
+                token_val = attrs.get("total_tokens", 0)
             total += safe_int_tokens(token_val)
     return total

@@ -219,7 +219,7 @@ class TestFetchTraceSummaryData:
 
     @pytest.mark.asyncio
     async def test_should_use_llm_usage_total_tokens_attribute(self):
-        """Prefer 'llm.usage.total_tokens' over 'total_tokens' when both present."""
+        """Prefer OTel GenAI token attributes over legacy 'total_tokens'."""
         from langflow.services.tracing.repository import fetch_trace_summary_data
 
         trace_id = uuid4()
@@ -234,7 +234,7 @@ class TestFetchTraceSummaryData:
                 None,
                 None,
                 None,
-                {"llm.usage.total_tokens": 50, "total_tokens": 10},
+                {"gen_ai.usage.input_tokens": 30, "gen_ai.usage.output_tokens": 20, "total_tokens": 10},
             ),
         ]
         result = await fetch_trace_summary_data(_make_session(rows), [trace_id])

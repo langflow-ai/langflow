@@ -197,16 +197,14 @@ class TestAddEndTrace:
         tracer.add_trace("comp-1", "Comp (comp-1)", "llm", {})
         # Simulate token accumulation from a child LangChain span
         tracer._component_tokens["comp-1"] = {
-            "prompt_tokens": 10,
-            "completion_tokens": 20,
-            "total_tokens": 30,
+            "gen_ai.usage.input_tokens": 10,
+            "gen_ai.usage.output_tokens": 20,
         }
         tracer.end_trace("comp-1", "Comp")
 
         span = tracer.completed_spans[0]
-        assert span["attributes"]["prompt_tokens"] == 10
-        assert span["attributes"]["completion_tokens"] == 20
-        assert span["attributes"]["total_tokens"] == 30
+        assert span["attributes"]["gen_ai.usage.input_tokens"] == 10
+        assert span["attributes"]["gen_ai.usage.output_tokens"] == 20
 
     def test_end_trace_no_token_attributes_when_zero(self):
         tracer = _make_tracer()
@@ -438,7 +436,7 @@ class TestFlushToDatabase:
                 "latency_ms": 10,
                 "status": SpanStatus.OK,
                 "error": None,
-                "attributes": {"total_tokens": 50},
+                "attributes": {"gen_ai.usage.input_tokens": 30, "gen_ai.usage.output_tokens": 20},
                 "span_source": "langchain",
             },
             {
@@ -452,7 +450,7 @@ class TestFlushToDatabase:
                 "latency_ms": 5,
                 "status": SpanStatus.OK,
                 "error": None,
-                "attributes": {"total_tokens": 30},
+                "attributes": {"gen_ai.usage.input_tokens": 20, "gen_ai.usage.output_tokens": 10},
                 "span_source": "langchain",
             },
         ]
@@ -519,9 +517,8 @@ class TestLangchainSpans:
         assert len(tracer.completed_spans) == 1
         span = tracer.completed_spans[0]
         assert span["status"] == SpanStatus.OK
-        assert span["attributes"]["prompt_tokens"] == 10
-        assert span["attributes"]["completion_tokens"] == 20
-        assert span["attributes"]["total_tokens"] == 30
+        assert span["attributes"]["gen_ai.usage.input_tokens"] == 10
+        assert span["attributes"]["gen_ai.usage.output_tokens"] == 20
 
     def test_end_langchain_span_with_error(self):
         tracer = _make_tracer()
@@ -545,9 +542,8 @@ class TestLangchainSpans:
             total_tokens=15,
         )
 
-        assert tracer._component_tokens["comp-1"]["total_tokens"] == 15
-        assert tracer._component_tokens["comp-1"]["prompt_tokens"] == 5
-        assert tracer._component_tokens["comp-1"]["completion_tokens"] == 10
+        assert tracer._component_tokens["comp-1"]["gen_ai.usage.input_tokens"] == 5
+        assert tracer._component_tokens["comp-1"]["gen_ai.usage.output_tokens"] == 10
 
     def test_end_langchain_span_noop_for_unknown_span_id(self):
         tracer = _make_tracer()
@@ -567,7 +563,7 @@ class TestLangchainSpans:
         tracer.end_langchain_span(span_id)
 
         span = tracer.completed_spans[0]
-        assert span["attributes"]["model_name"] == "gpt-4"
+        assert span["attributes"]["gen_ai.response.model"] == "gpt-4"
 
 
 # ---------------------------------------------------------------------------

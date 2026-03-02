@@ -197,14 +197,12 @@ class NativeTracer(BaseTracer):
         # Pop so tokens aren't double-counted if end_trace is called more than once for the same component.
         tokens = self._component_tokens.pop(trace_id, {})
 
-        # OTel attribute keys so the frontend can render token usage without knowing provider-specific field names.
+        # Use OTel GenAI conventions so observability tools can parse token usage uniformly across providers
         attributes: dict[str, Any] = {}
-        if tokens.get("prompt_tokens"):
-            attributes["prompt_tokens"] = tokens["prompt_tokens"]
-        if tokens.get("completion_tokens"):
-            attributes["completion_tokens"] = tokens["completion_tokens"]
-        if tokens.get("total_tokens"):
-            attributes["total_tokens"] = tokens["total_tokens"]
+        if tokens.get("gen_ai.usage.input_tokens"):
+            attributes["gen_ai.usage.input_tokens"] = tokens["gen_ai.usage.input_tokens"]
+        if tokens.get("gen_ai.usage.output_tokens"):
+            attributes["gen_ai.usage.output_tokens"] = tokens["gen_ai.usage.output_tokens"]
 
         self.completed_spans.append(
             self._build_completed_span(
@@ -298,8 +296,12 @@ class NativeTracer(BaseTracer):
 
             # Only sum LangChain spans because component spans already aggregate their children's
             # tokens — summing both levels would double-count every LLM call.
+            # OTel spec requires deriving total from input+output (no standard total_tokens key)
+            from langflow.services.tracing.formatting import safe_int_tokens
+
             total_tokens = sum(
-                int((span.get("attributes") or {}).get("total_tokens") or 0)
+                safe_int_tokens((span.get("attributes") or {}).get("gen_ai.usage.input_tokens"))
+                + safe_int_tokens((span.get("attributes") or {}).get("gen_ai.usage.output_tokens"))
                 for span in self.completed_spans
                 if span.get("span_source") == "langchain"
             )
@@ -388,6 +390,7 @@ class NativeTracer(BaseTracer):
         inputs: dict[str, Any],
         parent_span_id: UUID | None = None,
         model_name: str | None = None,
+        provider: str | None = None,
     ) -> None:
         """Add a LangChain span (called from NativeCallbackHandler).
 
@@ -398,6 +401,7 @@ class NativeTracer(BaseTracer):
             inputs: Input data
             parent_span_id: Optional parent span ID
             model_name: Optional model name for LLM spans
+            provider: Optional provider name for gen_ai.provider.name
         """
         if not self._ready:
             return
@@ -413,6 +417,7 @@ class NativeTracer(BaseTracer):
             "start_time": start_time,
             "parent_span_id": parent_span_id,
             "model_name": model_name,
+            "provider": provider,
         }
 
     def end_langchain_span(
@@ -452,25 +457,27 @@ class NativeTracer(BaseTracer):
             tokens = self._component_tokens.setdefault(
                 self._current_component_id,
                 {
-                    "prompt_tokens": 0,
-                    "completion_tokens": 0,
-                    "total_tokens": 0,
+                    "gen_ai.usage.input_tokens": 0,
+                    "gen_ai.usage.output_tokens": 0,
                 },
             )
-            tokens["prompt_tokens"] += prompt_tokens or 0
-            tokens["completion_tokens"] += completion_tokens or 0
-            tokens["total_tokens"] += total_tokens or 0
+            tokens["gen_ai.usage.input_tokens"] += prompt_tokens or 0
+            tokens["gen_ai.usage.output_tokens"] += completion_tokens or 0
 
-        # OTel attribute keys so the frontend can render token usage without knowing provider-specific field names.
+        # Use OTel GenAI conventions so observability tools can parse LLM metrics uniformly
         lc_attributes: dict[str, Any] = {}
         if span_info.get("model_name"):
-            lc_attributes["model_name"] = span_info["model_name"]
+            # response.model captures the actual model used (vs request.model which may differ due to routing)
+            lc_attributes["gen_ai.response.model"] = span_info["model_name"]
+        if span_info.get("provider"):
+            lc_attributes["gen_ai.provider.name"] = span_info["provider"]
+        # Default to chat since most LLM usage in Langflow is conversational
+        if span_info.get("span_type") == "llm":
+            lc_attributes["gen_ai.operation.name"] = "chat"
         if prompt_tokens:
-            lc_attributes["prompt_tokens"] = prompt_tokens
+            lc_attributes["gen_ai.usage.input_tokens"] = prompt_tokens
         if completion_tokens:
-            lc_attributes["completion_tokens"] = completion_tokens
-        if total_tokens:
-            lc_attributes["total_tokens"] = total_tokens
+            lc_attributes["gen_ai.usage.output_tokens"] = completion_tokens
 
         self.completed_spans.append(
             self._build_completed_span(
