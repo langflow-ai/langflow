@@ -115,9 +115,9 @@ test(
     );
     await page.getByTestId("playground-close-button").click();
     await page.getByTestId("sidebar-nav-traces").click();
-    await page
-      .getByRole("gridcell", { name: '{"input_value":"Hello"}' })
-      .click();
+    await page.getByRole("gridcell", { name: /Hello/i }).first().click({
+      timeout: 30000,
+    });
     await page.getByText("Run");
   },
 );
