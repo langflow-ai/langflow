@@ -113,8 +113,7 @@ export function useFlowVersionSidebar(flowId: string) {
       processFlows([flow]);
       return { nodes: flow.data.nodes, edges: flow.data.edges };
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : String(err);
+      const errorMessage = err instanceof Error ? err.message : String(err);
       console.error("Failed to process version flow data for preview:", err);
       return { nodes: [], edges: [], error: true, errorMessage };
     }
@@ -217,7 +216,10 @@ export function useFlowVersionSidebar(flowId: string) {
       try {
         useVersionPreviewStore.setState({ didRestore: false });
       } catch (err) {
-        console.error("Version sidebar cleanup: failed to reset didRestore", err);
+        console.error(
+          "Version sidebar cleanup: failed to reset didRestore",
+          err,
+        );
       }
 
       try {
@@ -226,7 +228,10 @@ export function useFlowVersionSidebar(flowId: string) {
           autoSaveFnRef.current = null;
         }
       } catch (err) {
-        console.error("Version sidebar cleanup: CRITICAL — failed to restore autoSaveFlow", err);
+        console.error(
+          "Version sidebar cleanup: CRITICAL — failed to restore autoSaveFlow",
+          err,
+        );
       }
 
       try {
@@ -235,7 +240,10 @@ export function useFlowVersionSidebar(flowId: string) {
           inspectionPanelWasVisible.current = false;
         }
       } catch (err) {
-        console.error("Version sidebar cleanup: failed to restore inspection panel", err);
+        console.error(
+          "Version sidebar cleanup: failed to restore inspection panel",
+          err,
+        );
       }
     };
   }, [clearPreview]);
@@ -311,14 +319,7 @@ export function useFlowVersionSidebar(flowId: string) {
         },
       );
     },
-    [
-      flowId,
-      versions,
-      deleteEntry,
-      setSuccessData,
-      setErrorData,
-      clearPreview,
-    ],
+    [flowId, versions, deleteEntry, setSuccessData, setErrorData, clearPreview],
   );
 
   const isViewingDraft = selectedId === CURRENT_DRAFT_ID;

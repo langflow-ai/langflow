@@ -39,7 +39,10 @@ const setPreviewStateMock = jest.fn();
 jest.mock("@/stores/versionPreviewStore", () => {
   const store: any = (selector: any) =>
     selector({ clearPreview: clearPreviewMock });
-  store.getState = () => ({ clearPreview: clearPreviewMock, didRestore: false });
+  store.getState = () => ({
+    clearPreview: clearPreviewMock,
+    didRestore: false,
+  });
   store.setState = (...args: any[]) => setPreviewStateMock(...args);
   return { __esModule: true, default: store };
 });
