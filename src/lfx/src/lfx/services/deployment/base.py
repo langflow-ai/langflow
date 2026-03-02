@@ -149,7 +149,3 @@ class BaseDeploymentService(Service, ABC):
         db: Any,
     ) -> ExecutionStatusResult:
         """Get provider-agnostic deployment execution state/output."""
-
-    @abstractmethod
-    async def teardown(self) -> None:
-        """Teardown the deployment service."""

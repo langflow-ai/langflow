@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from lfx.log.logger import logger
 from lfx.services.deployment.base import BaseDeploymentService
 
 if TYPE_CHECKING:
@@ -157,5 +158,4 @@ class DeploymentService(BaseDeploymentService):
         raise NotImplementedError
 
     async def teardown(self) -> None:
-        """Teardown the deployment service."""
-        raise NotImplementedError
+        logger.debug("Deployment service teardown")
