@@ -95,6 +95,7 @@ module.exports = {
       label: "Develop",
       items: [
         "Develop/api-keys-and-authentication",
+        "Develop/jwt-authentication",
         "Develop/install-custom-dependencies",
         "Develop/configuration-global-variables",
         "Develop/environment-variables",
@@ -321,6 +322,7 @@ module.exports = {
               label: "LLM Operations",
               items: [
                 "Components/batch-run",
+                "Components/guardrails",
                 "Components/llm-selector",
                 "Components/smart-router",
                 "Components/smart-transform",
@@ -357,6 +359,7 @@ module.exports = {
           label: "Bundles",
           items: [
             "Components/components-bundles",
+            "Components/bundles-agentics",
             "Components/bundles-aiml",
             "Components/bundles-altk",
             "Components/bundles-amazon",
@@ -443,6 +446,22 @@ module.exports = {
           type: "doc",
           id: "API-Reference/api-flows-run",
           label: "Flow trigger endpoints",
+        },
+        {
+          type: "category",
+          label: "Developer API (Beta)",
+          items: [
+            {
+              type: "doc",
+              id: "API-Reference/workflows-api",
+              label: "Workflow API (Beta)",
+            },
+            {
+              type: "link",
+              label: "Workflow API specification (Beta)",
+              href: "/api/workflow",
+            },
+          ],
         },
         {
           type: "doc",
