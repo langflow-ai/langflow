@@ -15,7 +15,6 @@ if TYPE_CHECKING:
         DeploymentCreate,
         DeploymentCreateResult,
         DeploymentDeleteResult,
-        DeploymentDuplicateResult,
         DeploymentGetResult,
         DeploymentListParams,
         DeploymentListResult,
@@ -23,10 +22,6 @@ if TYPE_CHECKING:
         DeploymentStatusResult,
         DeploymentUpdate,
         DeploymentUpdateResult,
-        ExecutionCreate,
-        ExecutionCreateResult,
-        ExecutionStatusResult,
-        RedeployResult,
     )
     from lfx.services.settings.base import Settings
 
@@ -229,6 +224,14 @@ class DeploymentServiceProtocol(Protocol):
     This protocol exposes adapter-agnostic deployment contracts:
     top-level fields are minimal generic metadata, while provider-specific
     details are carried in ``provider_data``/``provider_result`` fields.
+
+    Keep this protocol intentionally narrow (consumer-facing CRUD + status).
+    Adapter-specific or advanced operations are defined on concrete deployment
+    service classes.
+
+    ``db`` is intentionally typed as ``Any`` to keep this protocol adapter- and
+    storage-agnostic. Concrete integrations may use AsyncSession or another
+    session type.
     """
 
     @abstractmethod
@@ -287,28 +290,6 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
     @abstractmethod
-    async def redeploy(
-        self,
-        *,
-        user_id: UUID | str,
-        deployment_id: UUID | str,
-        db: Any,
-    ) -> RedeployResult:
-        """Re-apply current deployment inputs without changing them."""
-        ...
-
-    @abstractmethod
-    async def duplicate(
-        self,
-        *,
-        user_id: UUID | str,
-        deployment_id: UUID | str,
-        db: Any,
-    ) -> DeploymentDuplicateResult:
-        """Create a new deployment using the same inputs as the source."""
-        ...
-
-    @abstractmethod
     async def delete(
         self,
         *,
@@ -331,23 +312,6 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
     @abstractmethod
-    async def create_execution(
-        self,
-        *,
-        user_id: UUID | str,
-        payload: ExecutionCreate,
-        db: Any,
-    ) -> ExecutionCreateResult:
-        """Run a provider-agnostic deployment execution."""
-        ...
-
-    @abstractmethod
-    async def get_execution(
-        self,
-        *,
-        user_id: UUID | str,
-        execution_id: UUID | str,
-        db: Any,
-    ) -> ExecutionStatusResult:
-        """Get provider-agnostic deployment execution state/output."""
+    async def teardown(self) -> None:
+        """Teardown the deployment service."""
         ...

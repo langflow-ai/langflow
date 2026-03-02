@@ -1,6 +1,7 @@
 import datetime
 import json
 from enum import Enum
+from functools import lru_cache
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -17,10 +18,10 @@ ProviderPayload = dict[str, Any]
 
 
 class DeploymentType(str, Enum):
-    """Deployment types supported by Langflow."""
+    """Core deployment types recognized by LFX contracts."""
 
-    # first-class deployment types supported by Langflow.
-    # providers can support these options or surface their own
+    # First-class deployment types recognized by the core schema.
+    # Adapters may carry additional provider-specific classification in `provider_data`.
     AGENT = "agent"
 
 
@@ -75,7 +76,7 @@ class SnapshotItems(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    raw_payloads: SnapshotList | None = Field(
+    raw_payloads: SnapshotList = Field(
         ...,
         description="Raw snapshot payloads to create and bind for this deployment.",
     )
@@ -109,6 +110,10 @@ class SnapshotDeploymentBindingUpdate(BaseModel):
         add_values = self.add or []
         remove_values = self.remove or []
 
+        if not add_values and not remove_values:
+            msg = "At least one of 'add' or 'remove' must be provided."
+            raise ValueError(msg)
+
         overlap = set(add_values).intersection(remove_values)
         if overlap:
             ids = ", ".join(sorted(overlap))
@@ -138,15 +143,12 @@ class EnvVarValueSpec(BaseModel):
     )
 
 
-EnvVarValue = EnvVarValueSpec
-
-
 class Config(BaseModel):
     """Model representing a data for a config."""
 
     name: str = Field(description="The name of the config")
     description: str | None = Field(None, description="The description of the config")
-    environment_variables: dict[EnvVarKey, EnvVarValue] | None = Field(None, description="Environment variables")
+    environment_variables: dict[EnvVarKey, EnvVarValueSpec] | None = Field(None, description="Environment variables")
     # the provider might have additional configuration options that are not covered here
     provider_config: ProviderPayload | None = Field(None, description="Provider configuration")
 
@@ -248,8 +250,6 @@ class DeploymentOperationResult(ProviderResultModel):
 class DeploymentDeleteResult(DeploymentOperationResult):
     """Model representing a result for a deployment deletion operation."""
 
-    id: IdLike = Field(description="The id of the deleted deployment")
-
 
 class ItemResult(ProviderDataModel):
     """Model representing a result for a deployment list item."""
@@ -330,7 +330,10 @@ class DeploymentCreate(BaseModel):
     config: ConfigItem | None = Field(None, description="The config of the deployment")
 
 
-DEPLOYMENT_CREATE_SCHEMA = json.dumps(DeploymentCreate.model_json_schema(), indent=2)
+@lru_cache(maxsize=1)
+def get_deployment_create_schema() -> str:
+    """Return serialized JSON schema for deployment create payload."""
+    return json.dumps(DeploymentCreate.model_json_schema(), indent=2)
 
 
 class BaseDeploymentDataUpdate(BaseModel):
@@ -338,6 +341,13 @@ class BaseDeploymentDataUpdate(BaseModel):
 
     name: str | None = Field(None, description="The name of the deployment")
     description: str | None = Field(None, description="The description of the deployment")
+
+    @model_validator(mode="after")
+    def validate_has_changes(self) -> "BaseDeploymentDataUpdate":
+        if self.name is None and self.description is None:
+            msg = "At least one of 'name' or 'description' must be provided."
+            raise ValueError(msg)
+        return self
 
 
 class DeploymentUpdate(BaseModel):
@@ -347,17 +357,20 @@ class DeploymentUpdate(BaseModel):
     snapshot: SnapshotDeploymentBindingUpdate | None = Field(None, description="The snapshot of the deployment")
     config: ConfigDeploymentBindingUpdate | None = Field(None, description="The config of the deployment")
 
+    @model_validator(mode="after")
+    def validate_has_changes(self) -> "DeploymentUpdate":
+        if self.spec is None and self.snapshot is None and self.config is None:
+            msg = "At least one of 'spec', 'snapshot', or 'config' must be provided."
+            raise ValueError(msg)
+        return self
+
 
 class DeploymentUpdateResult(DeploymentOperationResult):
     """Model representing a result for a deployment update operation."""
 
-    id: IdLike = Field(description="The id of the updated deployment")
-
 
 class RedeployResult(DeploymentOperationResult):
     """Model representing a deployment redeployment operation result."""
-
-    id: IdLike = Field(description="The id of the redeployed deployment")
 
 
 class DeploymentStatusResult(ProviderDataModel):
@@ -396,11 +409,23 @@ class ExecutionResultBase(ProviderResultModel):
 
 
 class ExecutionCreateResult(ExecutionResultBase):
-    """Model representing a deployment execution response."""
+    """Result returned when an execution is created.
+
+    This model intentionally remains distinct from ``ExecutionStatusResult`` even
+    though both currently share the same shape. Callers should not mix the two
+    response types: create responses and status responses represent different API
+    stages and may diverge as the contract evolves.
+    """
 
 
 class ExecutionStatusResult(ExecutionResultBase):
-    """Model representing a deployment execution status response."""
+    """Result returned when querying an execution status.
+
+    This model intentionally remains distinct from ``ExecutionCreateResult`` even
+    though both currently share the same shape. Callers should not mix the two
+    response types: create responses and status responses represent different API
+    stages and may diverge as the contract evolves.
+    """
 
 
 class DeploymentListTypesResult(ProviderResultModel):
@@ -451,5 +476,17 @@ def get_str_id(v: IdLike) -> str:
     return str(v) if isinstance(v, UUID) else v
 
 
-def get_uuid(v: IdLike) -> UUID:
-    return UUID(v) if isinstance(v, str) else v
+def get_uuid(v: UUID | str) -> UUID:
+    """Return a UUID from a UUID object or UUID-formatted string.
+
+    This helper is intentionally strict: opaque deployment identifiers like
+    ``dep_1`` are valid ``IdLike`` values, but are not valid UUIDs.
+    Use ``get_str_id`` when callers need to preserve opaque ids.
+    """
+    if isinstance(v, str):
+        try:
+            return UUID(v)
+        except ValueError as exc:
+            msg = f"Cannot convert identifier '{v}' to UUID. Use get_str_id() for opaque IDs."
+            raise ValueError(msg) from exc
+    return v

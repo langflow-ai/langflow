@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
 from lfx.services.base import Service
@@ -29,11 +29,15 @@ if TYPE_CHECKING:
     )
 
 
-class BaseDeploymentService(Service):
+class BaseDeploymentService(Service, ABC):
     """Abstract base class for deployment provider services.
 
     Defines the minimal interface that all deployment service implementations
     must provide, whether minimal (LFX) or full-featured (Langflow).
+
+    Note:
+        ``db`` parameters are intentionally typed as ``Any`` to avoid coupling
+        deployment adapters to a specific session implementation.
     """
 
     @abstractmethod

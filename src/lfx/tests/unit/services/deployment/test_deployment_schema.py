@@ -4,14 +4,20 @@ from uuid import UUID, uuid4
 
 import pytest
 from lfx.services.deployment.schema import (
+    BaseDeploymentDataUpdate,
     BaseFlowArtifact,
+    Config,
     ConfigDeploymentBindingUpdate,
     ConfigItem,
     DeploymentCreate,
+    DeploymentCreateResult,
     DeploymentDeleteResult,
     DeploymentListParams,
     DeploymentType,
+    DeploymentUpdate,
     DeploymentUpdateResult,
+    EnvVarSource,
+    EnvVarValueSpec,
     ExecutionCreate,
     ExecutionCreateResult,
     ExecutionStatusResult,
@@ -112,6 +118,11 @@ def test_snapshot_binding_update_preserves_order_while_deduping() -> None:
     assert payload.add == ["b", "a", "c"]
 
 
+def test_snapshot_binding_update_rejects_noop_payload() -> None:
+    with pytest.raises(ValidationError, match="At least one of 'add' or 'remove'"):
+        SnapshotDeploymentBindingUpdate()
+
+
 def test_config_item_reference_id_rejects_blank() -> None:
     with pytest.raises(ValidationError):
         ConfigItem(reference_id="   ")
@@ -140,11 +151,6 @@ def test_deployment_create_rejects_invalid_deployment_type() -> None:
 def test_snapshot_items_rejects_empty_raw_payload_list() -> None:
     with pytest.raises(ValidationError):
         SnapshotItems(raw_payloads=[])
-
-
-def test_snapshot_items_accepts_none_raw_payloads() -> None:
-    payload = SnapshotItems(raw_payloads=None)
-    assert payload.raw_payloads is None
 
 
 def test_base_flow_artifact_allows_extra_fields() -> None:
@@ -227,6 +233,11 @@ def test_get_id_helpers_round_trip() -> None:
     assert get_uuid(str(value)) == UUID(str(value))
 
 
+def test_get_uuid_rejects_non_uuid_strings() -> None:
+    with pytest.raises(ValueError, match="Use get_str_id\\(\\) for opaque IDs"):
+        get_uuid("dep_1")
+
+
 def test_execution_create_and_status_results_have_same_shape() -> None:
     payload = {
         "execution_id": "exec_1",
@@ -250,3 +261,62 @@ def test_operation_results_share_provider_result_contract() -> None:
     assert deleted.provider_result == provider_result
     assert updated.provider_result == provider_result
     assert redeployed.provider_result == provider_result
+
+
+def test_base_deployment_data_update_requires_at_least_one_field() -> None:
+    with pytest.raises(ValidationError, match="At least one of 'name' or 'description'"):
+        BaseDeploymentDataUpdate()
+
+
+def test_deployment_update_requires_at_least_one_section() -> None:
+    with pytest.raises(ValidationError, match="At least one of 'spec', 'snapshot', or 'config'"):
+        DeploymentUpdate()
+
+
+def test_env_var_config_accepts_raw_and_variable_sources() -> None:
+    config = Config(
+        name="cfg",
+        environment_variables={
+            "RAW_TOKEN": EnvVarValueSpec(value="literal", source=EnvVarSource.RAW),
+            "VAR_TOKEN": EnvVarValueSpec(value="OPENAI_API_KEY", source=EnvVarSource.VARIABLE),
+        },
+    )
+    assert config.environment_variables is not None
+    assert config.environment_variables["RAW_TOKEN"].source == EnvVarSource.RAW
+    assert config.environment_variables["VAR_TOKEN"].source == EnvVarSource.VARIABLE
+
+
+def test_env_var_value_spec_rejects_blank_value() -> None:
+    with pytest.raises(ValidationError):
+        EnvVarValueSpec(value="  ")
+
+
+def test_deployment_create_happy_path_with_snapshot_and_config() -> None:
+    payload = DeploymentCreate(
+        spec={"name": "my deployment", "description": "desc", "type": DeploymentType.AGENT},
+        snapshot={
+            "raw_payloads": [
+                {
+                    "id": uuid4(),
+                    "name": "Flow",
+                    "description": "flow description",
+                    "data": {"nodes": [], "edges": []},
+                }
+            ]
+        },
+        config={"raw_payload": {"name": "cfg", "description": "cfg desc"}},
+    )
+    assert payload.spec.type == DeploymentType.AGENT
+    assert payload.snapshot is not None
+    assert payload.config is not None
+
+
+def test_deployment_create_result_defaults() -> None:
+    result = DeploymentCreateResult(
+        id="dep_1",
+        name="deployment",
+        description="",
+        type=DeploymentType.AGENT,
+    )
+    assert result.snapshot_ids == []
+    assert result.config_id is None

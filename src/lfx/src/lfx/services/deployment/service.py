@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
 from lfx.services.deployment.base import BaseDeploymentService
@@ -35,29 +34,18 @@ if TYPE_CHECKING:
 class DeploymentService(BaseDeploymentService):
     """Minimal deployment service implementation for LFX.
 
-    This is a stub that exposes
-    crud operations of deployment
-    resources in the deployment adapter,
-    such as snapshots and configs.
+    This is a stub that exposes crud operations for deployments.
     LFX does not implement a deployment adapter.
+    ``db`` remains ``Any`` by design to preserve adapter-agnostic contracts.
     """
+
+    name = "deployment_service"
 
     def __init__(self):
         """Initialize the deployment service."""
         super().__init__()
         self.set_ready()
 
-    @property
-    def name(self) -> str:
-        """Service name identifier.
-
-        Returns:
-            str: The service name.
-        """
-        # for now, return a string. Later, define ServiceType.DEPLOYMENT_SERVICE.
-        return "deployment_service"
-
-    @abstractmethod
     async def create(
         self,
         *,
@@ -68,7 +56,6 @@ class DeploymentService(BaseDeploymentService):
         """Create a new deployment in the provider."""
         raise NotImplementedError
 
-    @abstractmethod
     async def list_types(
         self,
         *,
@@ -78,7 +65,6 @@ class DeploymentService(BaseDeploymentService):
         """List deployment types supported by the provider."""
         raise NotImplementedError
 
-    @abstractmethod
     async def list(
         self,
         *,
@@ -89,7 +75,6 @@ class DeploymentService(BaseDeploymentService):
         """List deployments visible to this adapter."""
         raise NotImplementedError
 
-    @abstractmethod
     async def get(
         self,
         *,
@@ -100,7 +85,6 @@ class DeploymentService(BaseDeploymentService):
         """Return deployment metadata by provider ID."""
         raise NotImplementedError
 
-    @abstractmethod
     async def update(
         self,
         *,
@@ -112,7 +96,6 @@ class DeploymentService(BaseDeploymentService):
         """Update deployment inputs and apply changes in the provider."""
         raise NotImplementedError
 
-    @abstractmethod
     async def redeploy(
         self,
         *,
@@ -123,7 +106,6 @@ class DeploymentService(BaseDeploymentService):
         """Re-apply current deployment inputs without changing them."""
         raise NotImplementedError
 
-    @abstractmethod
     async def duplicate(
         self,
         *,
@@ -134,7 +116,6 @@ class DeploymentService(BaseDeploymentService):
         """Create a new deployment using the same inputs as the source."""
         raise NotImplementedError
 
-    @abstractmethod
     async def delete(
         self,
         *,
@@ -145,7 +126,6 @@ class DeploymentService(BaseDeploymentService):
         """Delete the deployment from the provider."""
         raise NotImplementedError
 
-    @abstractmethod
     async def get_status(
         self,
         *,
@@ -156,7 +136,6 @@ class DeploymentService(BaseDeploymentService):
         """Return provider-reported health/status for the deployment."""
         raise NotImplementedError
 
-    @abstractmethod
     async def create_execution(
         self,
         *,
@@ -167,7 +146,6 @@ class DeploymentService(BaseDeploymentService):
         """Run a provider-agnostic deployment execution."""
         raise NotImplementedError
 
-    @abstractmethod
     async def get_execution(
         self,
         *,
@@ -178,7 +156,6 @@ class DeploymentService(BaseDeploymentService):
         """Get provider-agnostic deployment execution state/output."""
         raise NotImplementedError
 
-    @abstractmethod
     async def teardown(self) -> None:
         """Teardown the deployment service."""
         raise NotImplementedError
