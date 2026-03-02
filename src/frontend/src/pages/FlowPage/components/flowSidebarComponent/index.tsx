@@ -600,7 +600,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       hasBundleItems,
     });
   const showVersions =
-    ENABLE_NEW_SIDEBAR && activeSection === "version" && sidebarOpen;
+    ENABLE_NEW_SIDEBAR && activeSection === "versions" && sidebarOpen;
 
   const currentFlowForVersions = useFlowStore((state) => state.currentFlow);
 
