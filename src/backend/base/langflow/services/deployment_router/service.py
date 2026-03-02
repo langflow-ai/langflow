@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import inspect
+from functools import cache
 from typing import TYPE_CHECKING, Any
 
 from lfx.services.deployment_router.base import BaseDeploymentRouterService
@@ -111,7 +112,7 @@ class DeploymentRouterService(BaseDeploymentRouterService):
             importlib.import_module(module_path)
 
     def _instantiate_adapter(self, adapter_class: type[DeploymentServiceProtocol]) -> DeploymentServiceProtocol:
-        signature = inspect.signature(adapter_class.__init__)
+        signature = _cached_init_signature(adapter_class)
         dependencies = {}
 
         for name, parameter in signature.parameters.items():
@@ -136,3 +137,9 @@ class DeploymentRouterService(BaseDeploymentRouterService):
             raise DeploymentRouterError(message=msg)
 
         return adapter_class(**dependencies)
+
+
+@cache
+def _cached_init_signature(adapter_class: type) -> inspect.Signature:
+    # Cache the signature for a given adapter class to avoid repeated expensive reflection.
+    return inspect.signature(adapter_class.__init__)
