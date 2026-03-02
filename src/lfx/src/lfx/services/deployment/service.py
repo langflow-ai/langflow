@@ -6,7 +6,6 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
 from lfx.services.deployment.base import BaseDeploymentService
-from lfx.services.schema import ServiceType
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -55,7 +54,8 @@ class DeploymentService(BaseDeploymentService):
         Returns:
             str: The service name.
         """
-        return ServiceType.DEPLOYMENT_SERVICE.value
+        # for now, return a string. Later, define ServiceType.DEPLOYMENT_SERVICE.
+        return "deployment_service"
 
     @abstractmethod
     async def create(
