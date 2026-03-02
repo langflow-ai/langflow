@@ -1,3 +1,4 @@
+import contextlib
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -10,6 +11,18 @@ from tests.base import ComponentTestBaseWithoutClient
 
 
 class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
+    @pytest.fixture(scope="class", autouse=True)
+    def cleanup_test_files(self):
+        """Clean up test files after all tests in the class complete."""
+        yield
+        # Clean up test files created during tests
+        test_files = ["test_data.json", "test_message.txt", "test_output.csv"]
+        for filename in test_files:
+            filepath = Path(filename)
+            if filepath.exists():
+                with contextlib.suppress(Exception):
+                    filepath.unlink()
+
     @pytest.fixture
     def component_class(self):
         """Return the component class to test."""
