@@ -1,5 +1,6 @@
 """Tests for deployment schema validation and shared model shapes."""
 
+import json
 from uuid import UUID, uuid4
 
 import pytest
@@ -24,6 +25,7 @@ from lfx.services.deployment.schema import (
     RedeployResult,
     SnapshotDeploymentBindingUpdate,
     SnapshotItems,
+    get_deployment_create_schema,
     get_str_id,
     get_uuid,
 )
@@ -57,6 +59,18 @@ def test_config_item_requires_exactly_one_source() -> None:
         ConfigItem(reference_id="cfg_1", raw_payload={"name": "cfg"})
 
 
+def test_config_item_accepts_reference_id_only() -> None:
+    item = ConfigItem(reference_id="cfg_1")
+    assert item.reference_id == "cfg_1"
+    assert item.raw_payload is None
+
+
+def test_config_item_accepts_raw_payload_only() -> None:
+    item = ConfigItem(raw_payload={"name": "cfg"})
+    assert item.raw_payload is not None
+    assert item.reference_id is None
+
+
 def test_deployment_list_params_normalizes_and_dedupes_id_filters() -> None:
     dep_uuid = uuid4()
     cfg_uuid = uuid4()
@@ -70,6 +84,15 @@ def test_deployment_list_params_normalizes_and_dedupes_id_filters() -> None:
     assert params.deployment_ids == [str(dep_uuid), "dep-id"]
     assert params.snapshot_ids == ["snap-id"]
     assert params.config_ids == [str(cfg_uuid)]
+
+
+def test_deployment_list_params_defaults_to_none() -> None:
+    params = DeploymentListParams()
+    assert params.deployment_ids is None
+    assert params.snapshot_ids is None
+    assert params.config_ids is None
+    assert params.deployment_types is None
+    assert params.provider_params is None
 
 
 def test_deployment_list_params_dedupes_types_preserving_order() -> None:
@@ -97,6 +120,18 @@ def test_snapshot_binding_update_accepts_idlike_and_dedupes() -> None:
 
     assert payload.add == [str(snapshot_uuid), "snap_1"]
     assert payload.remove == ["snap_2"]
+
+
+def test_snapshot_binding_update_add_only() -> None:
+    payload = SnapshotDeploymentBindingUpdate(add=["snap_1"])
+    assert payload.add == ["snap_1"]
+    assert payload.remove is None
+
+
+def test_snapshot_binding_update_remove_only() -> None:
+    payload = SnapshotDeploymentBindingUpdate(remove=["snap_1"])
+    assert payload.remove == ["snap_1"]
+    assert payload.add is None
 
 
 def test_snapshot_binding_update_rejects_overlap_after_normalization() -> None:
@@ -182,6 +217,31 @@ def test_base_flow_artifact_requires_nodes_and_edges() -> None:
         )
 
 
+def test_base_flow_artifact_validates_nodes_and_edges_are_lists() -> None:
+    with pytest.raises(ValidationError, match="Flow 'nodes' must be a list"):
+        BaseFlowArtifact(
+            id=uuid4(),
+            name="Flow",
+            data={"nodes": "not a list", "edges": []},
+        )
+
+    with pytest.raises(ValidationError, match="Flow 'edges' must be a list"):
+        BaseFlowArtifact(
+            id=uuid4(),
+            name="Flow",
+            data={"nodes": [], "edges": 42},
+        )
+
+
+def test_base_flow_artifact_rejects_empty_name() -> None:
+    with pytest.raises(ValidationError):
+        BaseFlowArtifact(
+            id=uuid4(),
+            name="",
+            data={"nodes": [], "edges": []},
+        )
+
+
 def test_snapshot_items_accepts_starter_project_data_shape() -> None:
     payload = SnapshotItems(
         raw_payloads=[
@@ -220,6 +280,11 @@ def test_execution_create_accepts_uuid_deployment_id() -> None:
     dep_uuid = uuid4()
     payload = ExecutionCreate(deployment_id=dep_uuid)
     assert payload.deployment_id == dep_uuid
+
+
+def test_execution_create_rejects_blank_deployment_id() -> None:
+    with pytest.raises(ValidationError):
+        ExecutionCreate(deployment_id="   ")
 
 
 def test_get_id_helpers_round_trip() -> None:
@@ -273,6 +338,27 @@ def test_deployment_update_requires_at_least_one_section() -> None:
         DeploymentUpdate()
 
 
+def test_deployment_update_accepts_spec_only() -> None:
+    update = DeploymentUpdate(spec={"name": "new name"})
+    assert update.spec is not None
+    assert update.snapshot is None
+    assert update.config is None
+
+
+def test_deployment_update_accepts_config_only() -> None:
+    update = DeploymentUpdate(config={"config_id": "cfg_1"})
+    assert update.config is not None
+    assert update.spec is None
+    assert update.snapshot is None
+
+
+def test_deployment_update_accepts_snapshot_only() -> None:
+    update = DeploymentUpdate(snapshot={"add": ["snap_1"]})
+    assert update.snapshot is not None
+    assert update.spec is None
+    assert update.config is None
+
+
 def test_env_var_config_accepts_raw_and_variable_sources() -> None:
     config = Config(
         name="cfg",
@@ -320,3 +406,18 @@ def test_deployment_create_result_defaults() -> None:
     )
     assert result.snapshot_ids == []
     assert result.config_id is None
+
+
+def test_get_deployment_create_schema_returns_valid_json() -> None:
+    schema_str = get_deployment_create_schema()
+    schema = json.loads(schema_str)
+    assert "properties" in schema
+    assert "spec" in schema["properties"]
+
+
+def test_get_deployment_create_schema_is_cached() -> None:
+    first = get_deployment_create_schema()
+    second = get_deployment_create_schema()
+    assert first is second
+
+

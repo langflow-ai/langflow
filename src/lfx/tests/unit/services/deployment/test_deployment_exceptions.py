@@ -1,19 +1,19 @@
 """Tests for deployment exception hierarchy, metadata, and service instantiation."""
 
 import pytest
-from lfx.services.deployment import DeploymentService
+from lfx.services.deployment import BaseDeploymentService, DeploymentError, DeploymentService
 from lfx.services.deployment.exceptions import (
     AuthenticationError,
     AuthSchemeError,
     CredentialResolutionError,
     DeploymentConflictError,
-    DeploymentError,
     DeploymentNotFoundError,
     DeploymentSupportError,
     InvalidContentError,
     InvalidDeploymentOperationError,
     InvalidDeploymentTypeError,
 )
+from lfx.services.interfaces import DeploymentServiceProtocol
 
 
 def test_exception_hierarchy_is_preserved() -> None:
@@ -44,6 +44,19 @@ def test_deployment_not_found_includes_context_when_id_is_provided() -> None:
     err = DeploymentNotFoundError(deployment_id="dep_1")
     assert str(err) == "Deployment not found: dep_1"
     assert err.error_code == "deployment_not_found"
+    assert err.deployment_id == "dep_1"
+
+
+def test_deployment_not_found_default_message() -> None:
+    err = DeploymentNotFoundError()
+    assert str(err) == "Deployment not found"
+    assert err.deployment_id is None
+
+
+def test_deployment_not_found_preserves_deployment_id_with_custom_message() -> None:
+    err = DeploymentNotFoundError(message="Custom error", deployment_id="dep_1")
+    assert str(err) == "Custom error"
+    assert err.deployment_id == "dep_1"
 
 
 def test_base_error_supports_cause_chaining() -> None:
@@ -53,18 +66,55 @@ def test_base_error_supports_cause_chaining() -> None:
     assert err.__cause__ is root
 
 
-def test_deployment_service_is_instantiable_and_ready() -> None:
+def test_base_error_requires_error_code() -> None:
+    err = DeploymentError("failed", error_code="test_code")
+    assert err.error_code == "test_code"
+
+
+def test_deployment_service_is_instantiable() -> None:
     svc = DeploymentService()
-    assert svc.ready is True
     assert svc.name == "deployment_service"
 
 
-async def test_deployment_service_stub_methods_raise() -> None:
+def test_deployment_service_satisfies_protocol() -> None:
     svc = DeploymentService()
-    with pytest.raises(NotImplementedError):
-        await svc.create(user_id="u1", payload=None, db=None)
+    assert isinstance(svc, DeploymentServiceProtocol)
+
+
+def test_deployment_service_is_base_deployment_service() -> None:
+    assert issubclass(DeploymentService, BaseDeploymentService)
+
+
+@pytest.mark.parametrize(
+    ("method_name", "kwargs"),
+    [
+        ("create", {"user_id": "u1", "payload": None, "db": None}),
+        ("list_types", {"user_id": "u1", "db": None}),
+        ("list", {"user_id": "u1", "db": None}),
+        ("get", {"user_id": "u1", "deployment_id": "d1", "db": None}),
+        ("update", {"user_id": "u1", "deployment_id": "d1", "payload": None, "db": None}),
+        ("redeploy", {"user_id": "u1", "deployment_id": "d1", "db": None}),
+        ("duplicate", {"user_id": "u1", "deployment_id": "d1", "db": None}),
+        ("delete", {"user_id": "u1", "deployment_id": "d1", "db": None}),
+        ("get_status", {"user_id": "u1", "deployment_id": "d1", "db": None}),
+        ("create_execution", {"user_id": "u1", "payload": None, "db": None}),
+        ("get_execution", {"user_id": "u1", "execution_id": "e1", "db": None}),
+    ],
+)
+async def test_deployment_service_stub_methods_raise(method_name: str, kwargs: dict) -> None:
+    svc = DeploymentService()
+    with pytest.raises(NotImplementedError, match="is not implemented"):
+        await getattr(svc, method_name)(**kwargs)
 
 
 async def test_deployment_service_teardown_is_noop() -> None:
     svc = DeploymentService()
     await svc.teardown()
+
+
+def test_package_exports_base_and_error() -> None:
+    from lfx.services.deployment import BaseDeploymentService, DeploymentError, DeploymentService
+
+    assert BaseDeploymentService is not None
+    assert DeploymentError is not None
+    assert DeploymentService is not None

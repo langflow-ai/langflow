@@ -31,7 +31,9 @@ class BaseFlowArtifact(BaseModel):
     model_config = ConfigDict(extra="allow")  # e.g., viewport - good for viewing the flow in the UI
 
     id: UUID = Field(description="Unique identifier for the flow")
-    name: str = Field(description="The name of the flow")
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)] = Field(
+        description="The name of the flow"
+    )
     description: str | None = Field(None, description="The description of the flow")
     data: dict = Field(description="The data of the flow")
     tags: list[str] | None = Field(None, description="The tags of the flow")
@@ -52,6 +54,12 @@ class BaseFlowArtifact(BaseModel):
             raise ValueError(msg)
         if "edges" not in value:
             msg = "Flow must have edges"
+            raise ValueError(msg)
+        if not isinstance(value["nodes"], list):
+            msg = "Flow 'nodes' must be a list"
+            raise ValueError(msg)
+        if not isinstance(value["edges"], list):
+            msg = "Flow 'edges' must be a list"
             raise ValueError(msg)
         return value
 
@@ -374,10 +382,13 @@ class RedeployResult(DeploymentOperationResult):
 
 
 class DeploymentStatusResult(ProviderDataModel):
-    """Model representing a deployment status response."""
+    """Model representing a deployment status response.
+
+    Inherits ``provider_data`` from ``ProviderDataModel`` to carry
+    provider-reported health information.
+    """
 
     id: IdLike = Field(description="The id of the deployment")
-    provider_data: ProviderPayload | None = Field(None, description="The provider health payload")
 
 
 class ExecutionCreate(BaseModel):

@@ -8,8 +8,6 @@ from typing import TYPE_CHECKING
 from lfx.services.base import Service
 
 if TYPE_CHECKING:
-    from uuid import UUID
-
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from lfx.services.deployment.schema import (
@@ -27,6 +25,7 @@ if TYPE_CHECKING:
         ExecutionCreate,
         ExecutionCreateResult,
         ExecutionStatusResult,
+        IdLike,
         RedeployResult,
     )
 
@@ -46,7 +45,7 @@ class BaseDeploymentService(Service, ABC):
     async def create(
         self,
         *,
-        user_id: UUID | str,
+        user_id: IdLike,
         payload: DeploymentCreate,
         db: AsyncSession,
     ) -> DeploymentCreateResult:
@@ -56,7 +55,7 @@ class BaseDeploymentService(Service, ABC):
     async def list_types(
         self,
         *,
-        user_id: UUID | str,
+        user_id: IdLike,
         db: AsyncSession,
     ) -> DeploymentListTypesResult:
         """List deployment types supported by the provider."""
@@ -65,7 +64,7 @@ class BaseDeploymentService(Service, ABC):
     async def list(
         self,
         *,
-        user_id: UUID | str,
+        user_id: IdLike,
         params: DeploymentListParams | None = None,
         db: AsyncSession,
     ) -> DeploymentListResult:
@@ -75,8 +74,8 @@ class BaseDeploymentService(Service, ABC):
     async def get(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: UUID | str,
+        user_id: IdLike,
+        deployment_id: IdLike,
         db: AsyncSession,
     ) -> DeploymentGetResult:
         """Return deployment metadata by provider ID."""
@@ -85,8 +84,8 @@ class BaseDeploymentService(Service, ABC):
     async def update(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: UUID | str,
+        user_id: IdLike,
+        deployment_id: IdLike,
         payload: DeploymentUpdate,
         db: AsyncSession,
     ) -> DeploymentUpdateResult:
@@ -96,8 +95,8 @@ class BaseDeploymentService(Service, ABC):
     async def redeploy(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: UUID | str,
+        user_id: IdLike,
+        deployment_id: IdLike,
         db: AsyncSession,
     ) -> RedeployResult:
         """Re-apply current deployment inputs without changing them."""
@@ -106,8 +105,8 @@ class BaseDeploymentService(Service, ABC):
     async def duplicate(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: UUID | str,
+        user_id: IdLike,
+        deployment_id: IdLike,
         db: AsyncSession,
     ) -> DeploymentDuplicateResult:
         """Create a new deployment using the same inputs as the source."""
@@ -116,8 +115,8 @@ class BaseDeploymentService(Service, ABC):
     async def delete(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: UUID | str,
+        user_id: IdLike,
+        deployment_id: IdLike,
         db: AsyncSession,
     ) -> DeploymentDeleteResult:
         """Delete the deployment from the provider."""
@@ -126,8 +125,8 @@ class BaseDeploymentService(Service, ABC):
     async def get_status(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: UUID | str,
+        user_id: IdLike,
+        deployment_id: IdLike,
         db: AsyncSession,
     ) -> DeploymentStatusResult:
         """Return provider-reported health/status for the deployment."""
@@ -136,7 +135,7 @@ class BaseDeploymentService(Service, ABC):
     async def create_execution(
         self,
         *,
-        user_id: UUID | str,
+        user_id: IdLike,
         payload: ExecutionCreate,
         db: AsyncSession,
     ) -> ExecutionCreateResult:
@@ -146,8 +145,8 @@ class BaseDeploymentService(Service, ABC):
     async def get_execution(
         self,
         *,
-        user_id: UUID | str,
-        execution_id: UUID | str,
+        user_id: IdLike,
+        execution_id: IdLike,
         db: AsyncSession,
     ) -> ExecutionStatusResult:
         """Get provider-agnostic deployment execution state/output."""

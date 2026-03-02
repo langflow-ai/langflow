@@ -15,6 +15,7 @@ if TYPE_CHECKING:
         DeploymentCreate,
         DeploymentCreateResult,
         DeploymentDeleteResult,
+        DeploymentDuplicateResult,
         DeploymentGetResult,
         DeploymentListParams,
         DeploymentListResult,
@@ -22,12 +23,17 @@ if TYPE_CHECKING:
         DeploymentStatusResult,
         DeploymentUpdate,
         DeploymentUpdateResult,
+        ExecutionCreate,
+        ExecutionCreateResult,
+        ExecutionStatusResult,
+        IdLike,
+        RedeployResult,
     )
     from lfx.services.settings.base import Settings
 
 
 class AuthUserProtocol(Protocol):
-    """Auhtenticated user object (id, username, is_active, is_superuser).
+    """Authenticated user object (id, username, is_active, is_superuser).
 
     Implementations may use User or UserRead from the database layer; this protocol
     describes the surface needed by consumers of the auth service.
@@ -218,6 +224,7 @@ class TransactionServiceProtocol(Protocol):
         ...
 
 
+@runtime_checkable
 class DeploymentServiceProtocol(Protocol):
     """Protocol for deployment provider services.
 
@@ -228,14 +235,13 @@ class DeploymentServiceProtocol(Protocol):
     Keep this protocol intentionally narrow (consumer-facing CRUD + status).
     Adapter-specific or advanced operations are defined on concrete deployment
     service classes.
-
     """
 
     @abstractmethod
     async def create(
         self,
         *,
-        user_id: UUID | str,
+        user_id: IdLike,
         payload: DeploymentCreate,
         db: AsyncSession,
     ) -> DeploymentCreateResult:
@@ -246,7 +252,7 @@ class DeploymentServiceProtocol(Protocol):
     async def list_types(
         self,
         *,
-        user_id: UUID | str,
+        user_id: IdLike,
         db: AsyncSession,
     ) -> DeploymentListTypesResult:
         """List deployment types supported by the provider."""
@@ -256,7 +262,7 @@ class DeploymentServiceProtocol(Protocol):
     async def list(
         self,
         *,
-        user_id: UUID | str,
+        user_id: IdLike,
         params: DeploymentListParams | None = None,
         db: AsyncSession,
     ) -> DeploymentListResult:
@@ -267,8 +273,8 @@ class DeploymentServiceProtocol(Protocol):
     async def get(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: UUID | str,
+        user_id: IdLike,
+        deployment_id: IdLike,
         db: AsyncSession,
     ) -> DeploymentGetResult:
         """Return deployment metadata by provider ID."""
@@ -278,8 +284,8 @@ class DeploymentServiceProtocol(Protocol):
     async def update(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: UUID | str,
+        user_id: IdLike,
+        deployment_id: IdLike,
         payload: DeploymentUpdate,
         db: AsyncSession,
     ) -> DeploymentUpdateResult:
@@ -287,11 +293,33 @@ class DeploymentServiceProtocol(Protocol):
         ...
 
     @abstractmethod
+    async def redeploy(
+        self,
+        *,
+        user_id: IdLike,
+        deployment_id: IdLike,
+        db: AsyncSession,
+    ) -> RedeployResult:
+        """Re-apply current deployment inputs without changing them."""
+        ...
+
+    @abstractmethod
+    async def duplicate(
+        self,
+        *,
+        user_id: IdLike,
+        deployment_id: IdLike,
+        db: AsyncSession,
+    ) -> DeploymentDuplicateResult:
+        """Create a new deployment using the same inputs as the source."""
+        ...
+
+    @abstractmethod
     async def delete(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: UUID | str,
+        user_id: IdLike,
+        deployment_id: IdLike,
         db: AsyncSession,
     ) -> DeploymentDeleteResult:
         """Delete the deployment from the provider."""
@@ -301,11 +329,33 @@ class DeploymentServiceProtocol(Protocol):
     async def get_status(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: UUID | str,
+        user_id: IdLike,
+        deployment_id: IdLike,
         db: AsyncSession,
     ) -> DeploymentStatusResult:
         """Return provider-reported health/status for the deployment."""
+        ...
+
+    @abstractmethod
+    async def create_execution(
+        self,
+        *,
+        user_id: IdLike,
+        payload: ExecutionCreate,
+        db: AsyncSession,
+    ) -> ExecutionCreateResult:
+        """Run a provider-agnostic deployment execution."""
+        ...
+
+    @abstractmethod
+    async def get_execution(
+        self,
+        *,
+        user_id: IdLike,
+        execution_id: IdLike,
+        db: AsyncSession,
+    ) -> ExecutionStatusResult:
+        """Get provider-agnostic deployment execution state/output."""
         ...
 
     @abstractmethod

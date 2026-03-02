@@ -10,7 +10,7 @@ from __future__ import annotations
 class DeploymentError(Exception):
     """Base exception for deployment failures."""
 
-    def __init__(self, message: str, *, error_code: str | None = None, cause: Exception | None = None):
+    def __init__(self, message: str, *, error_code: str, cause: Exception | None = None):
         self.message = message
         self.error_code = error_code
         self.cause = cause
@@ -96,6 +96,7 @@ class DeploymentNotFoundError(DeploymentError):
         deployment_id: str | None = None,
         cause: Exception | None = None,
     ):
+        self.deployment_id = deployment_id
         if message is None:
             message = "Deployment not found"
             if deployment_id:
