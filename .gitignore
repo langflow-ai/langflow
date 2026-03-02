@@ -280,7 +280,6 @@ src/frontend/temp
 *.mcp.json
 
 news-aggregated.json
-CLAUDE.md
 .claude
 
 member_servers.json
@@ -291,3 +290,4 @@ member_servers.json
 data/user
 
 sso-config.yaml
+AGENTS.md

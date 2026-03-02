@@ -13,13 +13,12 @@ import type { chatMessagePropsType } from "@/types/components";
 import { cn } from "@/utils/utils";
 import { useMessageDuration } from "../hooks/use-message-duration";
 import { useStreamingMessage } from "../hooks/use-streaming-message";
-import { useToolDurations } from "../hooks/use-tool-durations";
 import {
   getContentBlockLoadingState,
   getContentBlockState,
 } from "../utils/content-blocks";
 import { convertFiles } from "../utils/convert-files";
-import { formatSeconds, formatTime } from "../utils/format";
+import { formatSeconds } from "../utils/format";
 import EditMessageField from "./edit-message-field";
 import { EditMessageButton } from "./message-options";
 
@@ -85,10 +84,13 @@ export const BotMessage = memo(
             session_id: chat.session ?? "",
             properties: {
               ...chat.properties,
+              state: chat.properties?.state as
+                | "complete"
+                | "partial"
+                | undefined,
               positive_feedback: evaluation,
             },
           },
-          refetch: true,
         },
         {
           onError: () => {
@@ -101,12 +103,10 @@ export const BotMessage = memo(
     };
 
     const editedFlag = chat.edit ? (
-      <div className="text-sm text-muted-foreground">(Edited)</div>
+      <div className="mt-2 text-xs text-muted-foreground text-right">
+        (Edited)
+      </div>
     ) : null;
-
-    const isEmoji = chat.properties?.icon?.match(
-      /[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]/,
-    );
 
     const thinkingActive = Boolean(isBuilding && lastMessage);
 
@@ -125,101 +125,67 @@ export const BotMessage = memo(
         ? persistedDuration
         : liveDisplayTime;
 
-    // Use shared hook for tool duration tracking
-    const { totalToolDuration } = useToolDurations(
-      chat.content_blocks,
-      thinkingActive,
-    );
-
-    // Check if message has tools
-    const messageHasTools = Boolean(
-      chat.content_blocks?.some((block) =>
-        block.contents.some((content) => content.type === "tool_use"),
-      ),
-    );
-
-    // The total tool duration green ms ALWAYS shows the sum of backend tool durations when tools exist
-    // It will be 0 until backend provides durations, then show the sum
-    // For messages without tools, it shows the same as displayTime
-    const greenMsTime = messageHasTools ? totalToolDuration : displayTime;
-
     return (
       <>
-        <div className="w-full py-4 word-break-break-word">
+        <div className="w-full word-break-break-word mt-2">
           <div
             className={cn(
-              "group relative flex w-full flex-col gap-3 rounded-md p-2",
+              "group relative flex w-full flex-col gap-3 rounded-md px-2 py-3",
               editMessage ? "" : "hover:bg-muted",
             )}
           >
-            {/* Content: thinking (paragraph) -> steps dropdown -> answer with bot avatar */}
-            <div className="flex w-full flex-col gap-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                {!thinkingActive && displayTime > 0 && (
-                  <ForwardedIconComponent
-                    name="Check"
-                    className="h-4 w-4 text-emerald-400"
-                  />
-                )}
-                <span className="w-full flex justify-between">
-                  {thinkingActive && displayTime > 0 ? (
-                    <>
+            <div className="flex w-full items-start gap-3">
+              {(thinkingActive || displayTime > 0 || chatMessage !== "") && (
+                <div
+                  className="relative hidden h-6 w-6 mt-[-1px] flex-shrink-0 items-center justify-center overflow-hidden rounded bg-white text-2xl @[45rem]/chat-panel:!flex border-0"
+                  style={
+                    chat.properties?.background_color
+                      ? { backgroundColor: chat.properties.background_color }
+                      : {}
+                  }
+                >
+                  <div className="flex h-5 w-5 items-center justify-center">
+                    <LangflowLogo className="h-4 w-4 text-black" />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex w-full flex-col min-w-0">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-0.5">
+                  {!thinkingActive && displayTime > 0 && (
+                    <ForwardedIconComponent
+                      name="Check"
+                      className="h-4 w-4 text-emerald-400"
+                    />
+                  )}
+                  <span>
+                    {thinkingActive && displayTime > 0 ? (
                       <span>Running... {formatSeconds(displayTime)}</span>
-                      {messageHasTools && (
-                        <span className="text-emerald-500">
-                          {formatTime(greenMsTime, true)}
-                        </span>
-                      )}
-                    </>
-                  ) : !thinkingActive && displayTime > 0 ? (
-                    <>
+                    ) : !thinkingActive && displayTime > 0 ? (
                       <span className="text-muted-foreground">
                         Finished in {formatSeconds(displayTime)}
                       </span>
-                      {messageHasTools && greenMsTime > 0 && (
-                        <span className="text-emerald-500">
-                          {formatTime(greenMsTime, true)}
-                        </span>
-                      )}
-                    </>
-                  ) : null}
-                </span>
-              </div>
+                    ) : null}
+                  </span>
+                </div>
 
-              {/* Show content blocks if they exist OR if we're building the last message (to show tools immediately when user sends message) */}
-              {((chat.content_blocks && chat.content_blocks.length > 0) ||
-                (isBuilding && lastMessage)) && (
-                <ContentBlockDisplay
-                  playgroundPage={playgroundPage}
-                  contentBlocks={chat.content_blocks || []}
-                  isLoading={getContentBlockLoadingState(
-                    chat,
-                    isBuilding,
-                    lastMessage,
-                  )}
-                  state={getContentBlockState(chat, isBuilding, lastMessage)}
-                  chatId={chat.id}
-                  hideHeader={true}
-                />
-              )}
-
-              <div className="flex w-full items-start gap-3">
-                {(thinkingActive || displayTime > 0 || chatMessage !== "") && (
-                  <div
-                    className="relative hidden h-6 w-6 flex-shrink-0 items-center justify-center overflow-hidden rounded bg-white text-2xl @[45rem]/chat-panel:!flex border-0"
-                    style={
-                      chat.properties?.background_color
-                        ? { backgroundColor: chat.properties.background_color }
-                        : {}
-                    }
-                  >
-                    <div className="flex h-5 w-5 items-center justify-center">
-                      <LangflowLogo className="h-4 w-4 text-black" />
-                    </div>
-                  </div>
+                {((chat.content_blocks && chat.content_blocks.length > 0) ||
+                  (isBuilding && lastMessage)) && (
+                  <ContentBlockDisplay
+                    playgroundPage={playgroundPage}
+                    contentBlocks={chat.content_blocks || []}
+                    isLoading={getContentBlockLoadingState(
+                      chat,
+                      isBuilding,
+                      lastMessage,
+                    )}
+                    state={getContentBlockState(chat, isBuilding, lastMessage)}
+                    chatId={chat.id}
+                    hideHeader={true}
+                  />
                 )}
 
-                <div className="form-modal-chat-text-position flex-grow">
+                <div className="form-modal-chat-text-position flex-grow mt-2">
                   <div className="form-modal-chat-text">
                     <div className="flex w-full flex-col">
                       <div
@@ -267,7 +233,6 @@ export const BotMessage = memo(
               </div>
             </div>
 
-            {/* Actions */}
             {!editMessage && (
               <div className="invisible absolute -top-4 right-0 group-hover:visible">
                 <EditMessageButton
