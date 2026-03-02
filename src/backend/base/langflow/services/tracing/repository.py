@@ -69,7 +69,6 @@ def _trace_to_base_fields(
         "start_time": trace.start_time,
         "total_latency_ms": trace.total_latency_ms,
         "total_tokens": total_tokens,
-        "total_cost": trace.total_cost,
         "flow_id": trace.flow_id,
         "session_id": trace.session_id or str(trace.id),
         "input": summary.input if summary else None,

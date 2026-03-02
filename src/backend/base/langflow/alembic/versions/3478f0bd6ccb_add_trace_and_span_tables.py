@@ -34,7 +34,6 @@ def upgrade() -> None:
             sa.Column("end_time", sa.DateTime(), nullable=True),
             sa.Column("total_latency_ms", sa.Integer(), nullable=False),
             sa.Column("total_tokens", sa.Integer(), nullable=False),
-            sa.Column("total_cost", sa.Float(), nullable=False),
             sa.Column("flow_id", sa.Uuid(), nullable=False),
             sa.Column("session_id", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
             sa.Column("id", sa.Uuid(), nullable=False),

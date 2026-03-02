@@ -68,7 +68,6 @@ class TraceBase(SQLModel):
     end_time: datetime | None = Field(default=None, description="When the trace ended")
     total_latency_ms: int = Field(default=0, description="Total execution time in milliseconds")
     total_tokens: int = Field(default=0, description="Total tokens used across all LLM calls")
-    total_cost: float = Field(default=0.0, description="Estimated total cost")
     flow_id: UUID = Field(foreign_key="flow.id", index=True, description="ID of the flow this trace belongs to")
     session_id: str | None = Field(
         default=None,
@@ -148,7 +147,6 @@ class TraceRead(BaseModel):
     end_time: datetime | None
     total_latency_ms: int
     total_tokens: int
-    total_cost: float
     flow_id: UUID
     session_id: str
     input: dict[str, Any] | None = None
@@ -174,7 +172,6 @@ class TraceSummaryRead(BaseModel):
     start_time: datetime | None
     total_latency_ms: int
     total_tokens: int
-    total_cost: float
     flow_id: UUID
     session_id: str
     input: dict[str, Any] | None = None

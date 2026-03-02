@@ -100,7 +100,6 @@ def span_to_response(span: SpanTable) -> SpanReadResponse:
             "promptTokens": safe_int_tokens(span.attributes.get("prompt_tokens", 0)),
             "completionTokens": safe_int_tokens(span.attributes.get("completion_tokens", 0)),
             "totalTokens": safe_int_tokens(span.attributes.get("total_tokens", 0)),
-            "cost": span.attributes.get("cost", 0.0),
         }
 
     return SpanReadResponse(
