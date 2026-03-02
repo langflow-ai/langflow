@@ -41,6 +41,7 @@ import type { APIClassType } from "../../../../types/api";
 import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
 import { CategoryGroup } from "./components/categoryGroup";
 import NoResultsMessage from "./components/emptySearchComponent";
+import FlowHistorySidebarContent from "./components/FlowHistorySidebarContent";
 import McpSidebarGroup from "./components/McpSidebarGroup";
 import MemoizedSidebarGroup from "./components/sidebarBundles";
 import SidebarMenuButtons from "./components/sidebarFooterButtons";
@@ -52,6 +53,7 @@ import { applyComponentFilter } from "./helpers/apply-component-filter";
 import { applyEdgeFilter } from "./helpers/apply-edge-filter";
 import { applyLegacyFilter } from "./helpers/apply-legacy-filter";
 import { combinedResultsFn } from "./helpers/combined-results";
+import { computeSectionVisibility } from "./helpers/compute-section-visibility";
 import { filteredDataFn } from "./helpers/filtered-data";
 import { normalizeString } from "./helpers/normalize-string";
 import sensitiveSort from "./helpers/sensitive-sort";
@@ -588,21 +590,17 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     filterType !== undefined ||
     getFilterComponent !== "";
 
-  const showComponents =
-    (ENABLE_NEW_SIDEBAR &&
-      hasCoreComponents &&
-      (activeSection === "components" || activeSection === "search")) ||
-    (hasSearchInput && hasCoreComponents && ENABLE_NEW_SIDEBAR) ||
-    !ENABLE_NEW_SIDEBAR;
-  const showBundles =
-    (hasBundleItems && ENABLE_NEW_SIDEBAR && activeSection === "bundles") ||
-    (hasSearchInput && hasBundleItems && ENABLE_NEW_SIDEBAR) ||
-    !ENABLE_NEW_SIDEBAR;
-  const showMcp =
-    (ENABLE_NEW_SIDEBAR && activeSection === "mcp") ||
-    (hasSearchInput && hasMcpComponents && ENABLE_NEW_SIDEBAR);
+  const { showComponents, showBundles, showMcp, isMcpTabActive } =
+    computeSectionVisibility({
+      enableNewSidebar: ENABLE_NEW_SIDEBAR,
+      activeSection,
+      hasSearchInput,
+      hasCoreComponents,
+      hasMcpComponents,
+      hasBundleItems,
+    });
   const showVersions =
-    ENABLE_NEW_SIDEBAR && activeSection === "versions" && sidebarOpen;
+    ENABLE_NEW_SIDEBAR && activeSection === "version" && sidebarOpen;
 
   const currentFlowForVersions = useFlowStore((state) => state.currentFlow);
 
@@ -682,7 +680,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                   <>
                     {hasResults ? (
                       <>
-                        {showComponents && !showMcp && (
+                        {showComponents && !isMcpTabActive && (
                           <CategoryGroup
                             dataFilter={dataFilter}
                             sortedCategories={sortedCategories}
