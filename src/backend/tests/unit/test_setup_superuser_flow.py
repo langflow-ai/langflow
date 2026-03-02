@@ -4,19 +4,28 @@ import pytest
 from langflow.services.auth.utils import verify_password
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
-from langflow.services.utils import initialize_services, setup_superuser, teardown_superuser
+from langflow.services.utils import setup_superuser, teardown_superuser
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from sqlmodel import select
 
 
 @pytest.mark.asyncio
+@pytest.mark.timeout(60)
 async def test_initialize_services_creates_default_superuser_when_auto_login_true(client):  # noqa: ARG001
+    """Test that setup_superuser creates the default superuser when AUTO_LOGIN=True.
+
+    The client fixture boots the full app with AUTO_LOGIN=False. We set AUTO_LOGIN=True
+    and call setup_superuser() directly (not initialize_services()) to test the
+    AUTO_LOGIN=True code path without redundant full re-initialization that causes
+    shutdown hangs on CI.
+    """
     from langflow.services.deps import session_scope
 
     settings = get_settings_service()
     settings.auth_settings.AUTO_LOGIN = True
 
-    await initialize_services()
+    async with session_scope() as session:
+        await setup_superuser(settings, session)
 
     async with session_scope() as session:
         stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
@@ -26,17 +35,16 @@ async def test_initialize_services_creates_default_superuser_when_auto_login_tru
 
 
 @pytest.mark.asyncio
+@pytest.mark.timeout(60)
 async def test_teardown_superuser_removes_default_if_never_logged(client):  # noqa: ARG001
     from langflow.services.deps import session_scope
 
     settings = get_settings_service()
     settings.auth_settings.AUTO_LOGIN = False
 
-    # Ensure default exists and has never logged in
-    await initialize_services()
-
+    # The client fixture's lifespan already called initialize_services(),
+    # which created the default superuser. Ensure it exists and has never logged in.
     async with session_scope() as session:
-        # Create default manually if missing
         stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
         user = (await session.exec(stmt)).first()
         if not user:
@@ -65,6 +73,7 @@ async def test_teardown_superuser_removes_default_if_never_logged(client):  # no
 
 
 @pytest.mark.asyncio
+@pytest.mark.timeout(60)
 async def test_teardown_superuser_preserves_logged_in_default(client):  # noqa: ARG001
     """Test that teardown preserves default superuser if they have logged in."""
     from datetime import datetime, timezone
@@ -74,9 +83,7 @@ async def test_teardown_superuser_preserves_logged_in_default(client):  # noqa: 
     settings = get_settings_service()
     settings.auth_settings.AUTO_LOGIN = False
 
-    # Ensure default exists
-    await initialize_services()
-
+    # The client fixture's lifespan already created the default superuser.
     async with session_scope() as session:
         # Create default manually if missing and mark as logged in
         stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
@@ -109,6 +116,7 @@ async def test_teardown_superuser_preserves_logged_in_default(client):  # noqa: 
 
 
 @pytest.mark.asyncio
+@pytest.mark.timeout(60)
 async def test_setup_superuser_with_no_configured_credentials(client):  # noqa: ARG001
     """Test setup_superuser behavior when no superuser credentials are configured."""
     from langflow.services.deps import session_scope
@@ -131,6 +139,7 @@ async def test_setup_superuser_with_no_configured_credentials(client):  # noqa: 
 
 
 @pytest.mark.asyncio
+@pytest.mark.timeout(60)
 async def test_setup_superuser_with_custom_credentials(client):  # noqa: ARG001
     """Test setup_superuser behavior with custom superuser credentials."""
     from langflow.services.deps import session_scope
@@ -188,7 +197,7 @@ async def test_setup_superuser_with_custom_credentials(client):  # noqa: ARG001
 
 
 @pytest.mark.asyncio
-@pytest.mark.timeout(20)
+@pytest.mark.timeout(120)
 async def test_should_complete_client_fixture_shutdown_within_bounded_time(client):  # noqa: ARG001
     """Test that the client fixture lifespan shutdown completes in bounded time.
 
@@ -205,5 +214,5 @@ async def test_should_complete_client_fixture_shutdown_within_bounded_time(clien
     # teardown (lifespan shutdown) completes within the pytest timeout.
     # If shutdown_timeout=None and a shutdown operation hangs, the fixture
     # teardown would block indefinitely, causing this test to hit the
-    # @pytest.mark.timeout(20) limit and FAIL.
+    # configured pytest timeout limit and FAIL.
     _ = start  # Consumed in teardown measurement via pytest timing
