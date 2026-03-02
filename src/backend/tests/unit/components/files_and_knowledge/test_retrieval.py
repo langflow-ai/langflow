@@ -382,9 +382,7 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
         }
 
         with (
-            patch(
-                "langflow.components.knowledge_bases.retrieval.get_all_variables_for_provider", return_value={}
-            ),
+            patch("langflow.components.knowledge_bases.retrieval.get_all_variables_for_provider", return_value={}),
             pytest.raises(ValueError, match="IBM WatsonX API key is required"),
         ):
             component._build_embeddings(metadata)
