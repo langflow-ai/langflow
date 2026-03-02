@@ -126,7 +126,7 @@
   },
   "AzureOpenAIModel": {
     "versions": {
-      "0.3.0": "be5baf7de5dc"
+      "0.3.0": "d7dc1027daf4"
     }
   },
   "AzureOpenAIEmbeddings": {
