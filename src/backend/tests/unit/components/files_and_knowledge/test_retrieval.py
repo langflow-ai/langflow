@@ -277,6 +277,147 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
         with pytest.raises(NotImplementedError, match="Embedding provider 'UnsupportedProvider' is not supported"):
             component._build_embeddings(metadata)
 
+    @patch("langchain_google_genai.GoogleGenerativeAIEmbeddings")
+    def test_build_embeddings_google_generative_ai(self, mock_google_embeddings, component_class, default_kwargs):
+        """Test building Google Generative AI embeddings."""
+        component = component_class(**default_kwargs)
+
+        metadata = {
+            "embedding_provider": "Google Generative AI",
+            "embedding_model": "models/embedding-001",
+            "api_key": "test-google-key",  # pragma:allowlist secret
+            "chunk_size": 1000,
+        }
+
+        mock_embeddings = MagicMock()
+        mock_google_embeddings.return_value = mock_embeddings
+
+        result = component._build_embeddings(metadata)
+
+        mock_google_embeddings.assert_called_once_with(
+            model="models/embedding-001",
+            google_api_key="test-google-key",  # pragma:allowlist secret
+        )
+        assert result == mock_embeddings
+
+    def test_build_embeddings_google_no_key(self, component_class, default_kwargs):
+        """Test building Google Generative AI embeddings without API key raises error."""
+        component = component_class(**default_kwargs)
+
+        metadata = {
+            "embedding_provider": "Google Generative AI",
+            "embedding_model": "models/embedding-001",
+            "api_key": None,
+            "chunk_size": 1000,
+        }
+
+        with pytest.raises(ValueError, match="Google API key is required"):
+            component._build_embeddings(metadata)
+
+    @patch("langchain_ollama.OllamaEmbeddings")
+    @patch("langflow.components.knowledge_bases.retrieval.get_all_variables_for_provider")
+    def test_build_embeddings_ollama(self, mock_get_vars, mock_ollama_embeddings, component_class, default_kwargs):
+        """Test building Ollama embeddings."""
+        component = component_class(**default_kwargs)
+        mock_get_vars.return_value = {"OLLAMA_BASE_URL": "http://localhost:11434"}
+
+        metadata = {
+            "embedding_provider": "Ollama",
+            "embedding_model": "nomic-embed-text",
+            "api_key": None,
+            "chunk_size": 1000,
+        }
+
+        mock_embeddings = MagicMock()
+        mock_ollama_embeddings.return_value = mock_embeddings
+
+        result = component._build_embeddings(metadata)
+
+        mock_ollama_embeddings.assert_called_once_with(
+            model="nomic-embed-text",
+            base_url="http://localhost:11434",
+        )
+        assert result == mock_embeddings
+
+    @patch("langchain_ibm.WatsonxEmbeddings")
+    @patch("langflow.components.knowledge_bases.retrieval.get_all_variables_for_provider")
+    def test_build_embeddings_watsonx(self, mock_get_vars, mock_watsonx_embeddings, component_class, default_kwargs):
+        """Test building IBM WatsonX embeddings."""
+        component = component_class(**default_kwargs)
+        mock_get_vars.return_value = {
+            "WATSONX_APIKEY": "test-watsonx-key",  # pragma:allowlist secret
+            "WATSONX_PROJECT_ID": "test-project-id",
+            "WATSONX_URL": "https://us-south.ml.cloud.ibm.com",
+        }
+
+        metadata = {
+            "embedding_provider": "IBM WatsonX",
+            "embedding_model": "ibm/slate-125m-english-rtrvr-v2",
+            "api_key": None,
+            "chunk_size": 1000,
+        }
+
+        mock_embeddings = MagicMock()
+        mock_watsonx_embeddings.return_value = mock_embeddings
+
+        result = component._build_embeddings(metadata)
+
+        mock_watsonx_embeddings.assert_called_once_with(
+            model_id="ibm/slate-125m-english-rtrvr-v2",
+            apikey="test-watsonx-key",  # pragma:allowlist secret
+            project_id="test-project-id",
+            url="https://us-south.ml.cloud.ibm.com",
+        )
+        assert result == mock_embeddings
+
+    def test_build_embeddings_watsonx_no_key(self, component_class, default_kwargs):
+        """Test building IBM WatsonX embeddings without API key raises error."""
+        component = component_class(**default_kwargs)
+
+        metadata = {
+            "embedding_provider": "IBM WatsonX",
+            "embedding_model": "ibm/slate-125m-english-rtrvr-v2",
+            "api_key": None,
+            "chunk_size": 1000,
+        }
+
+        with (
+            patch(
+                "langflow.components.knowledge_bases.retrieval.get_all_variables_for_provider", return_value={}
+            ),
+            pytest.raises(ValueError, match="IBM WatsonX API key is required"),
+        ):
+            component._build_embeddings(metadata)
+
+    @patch("langchain_openai.OpenAIEmbeddings")
+    @patch("langflow.components.knowledge_bases.retrieval.get_api_key_for_provider")
+    def test_build_embeddings_openai_global_api_key_fallback(
+        self, mock_get_api_key, mock_openai_embeddings, component_class, default_kwargs
+    ):
+        """Test that OpenAI falls back to global API key when metadata has no key."""
+        component = component_class(**default_kwargs)
+        mock_get_api_key.return_value = "global-openai-key"  # pragma:allowlist secret
+
+        metadata = {
+            "embedding_provider": "OpenAI",
+            "embedding_model": "text-embedding-ada-002",
+            "api_key": None,
+            "chunk_size": 1000,
+        }
+
+        mock_embeddings = MagicMock()
+        mock_openai_embeddings.return_value = mock_embeddings
+
+        result = component._build_embeddings(metadata)
+
+        mock_get_api_key.assert_called_once()
+        mock_openai_embeddings.assert_called_once_with(
+            model="text-embedding-ada-002",
+            api_key="global-openai-key",  # pragma:allowlist secret
+            chunk_size=1000,
+        )
+        assert result == mock_embeddings
+
     def test_build_embeddings_with_user_api_key(self, component_class, default_kwargs):
         """Test that user-provided API key overrides stored one."""
         # Use a real SecretStr object instead of a mock

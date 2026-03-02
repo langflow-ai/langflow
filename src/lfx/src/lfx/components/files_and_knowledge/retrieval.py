@@ -9,6 +9,7 @@ from langflow.services.database.models.user.crud import get_user_by_id
 from pydantic import SecretStr
 
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
+from lfx.base.models.unified_models import get_all_variables_for_provider, get_api_key_for_provider
 from lfx.custom import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from lfx.log.logger import logger
@@ -150,12 +151,19 @@ class KnowledgeRetrievalComponent(Component):
         api_key = runtime_api_key or metadata.get("api_key")
         chunk_size = metadata.get("chunk_size")
 
+        # Fallback: retrieve API key from provider's stored global variables
+        if not api_key and provider:
+            try:
+                api_key = get_api_key_for_provider(self.user_id, provider)
+            except (ValueError, RuntimeError):
+                pass  # Variable not configured; provider-specific checks below will raise a clear error
+
         # Handle various providers
         if provider == "OpenAI":
             from langchain_openai import OpenAIEmbeddings
 
             if not api_key:
-                msg = "OpenAI API key is required. Provide it in the component's advanced settings."
+                msg = "OpenAI API key is required. Provide it in the component's advanced settings or configure it globally."
                 raise ValueError(msg)
             return OpenAIEmbeddings(
                 model=model,
@@ -178,11 +186,45 @@ class KnowledgeRetrievalComponent(Component):
                 model=model,
                 cohere_api_key=api_key,
             )
+        if provider == "Google Generative AI":
+            from langchain_google_genai import GoogleGenerativeAIEmbeddings
+
+            if not api_key:
+                msg = "Google API key is required. Provide it in the component's advanced settings or configure it globally."
+                raise ValueError(msg)
+            return GoogleGenerativeAIEmbeddings(
+                model=model,
+                google_api_key=api_key,
+            )
+        if provider == "Ollama":
+            from langchain_ollama import OllamaEmbeddings
+
+            all_vars = get_all_variables_for_provider(self.user_id, provider)
+            base_url = all_vars.get("OLLAMA_BASE_URL")
+            kwargs: dict = {"model": model}
+            if base_url:
+                kwargs["base_url"] = base_url
+            return OllamaEmbeddings(**kwargs)
+        if provider == "IBM WatsonX":
+            from langchain_ibm import WatsonxEmbeddings
+
+            all_vars = get_all_variables_for_provider(self.user_id, provider)
+            watsonx_apikey = api_key or all_vars.get("WATSONX_APIKEY")
+            watsonx_project_id = all_vars.get("WATSONX_PROJECT_ID")
+            watsonx_url = all_vars.get("WATSONX_URL")
+            if not watsonx_apikey:
+                msg = "IBM WatsonX API key is required. Provide it in the component's advanced settings or configure it globally."
+                raise ValueError(msg)
+            kwargs = {"model_id": model, "apikey": watsonx_apikey}
+            if watsonx_project_id:
+                kwargs["project_id"] = watsonx_project_id
+            if watsonx_url:
+                kwargs["url"] = watsonx_url
+            return WatsonxEmbeddings(**kwargs)
         if provider == "Custom":
             # For custom embedding models, we would need additional configuration
             msg = "Custom embedding models not yet supported"
             raise NotImplementedError(msg)
-        # Add other providers here if they become supported in ingest
         msg = f"Embedding provider '{provider}' is not supported for retrieval."
         raise NotImplementedError(msg)
 
