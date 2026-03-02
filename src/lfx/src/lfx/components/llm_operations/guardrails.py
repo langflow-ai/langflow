@@ -36,6 +36,7 @@ guardrail_descriptions = {
 class GuardrailsComponent(Component):
     display_name = "Guardrails"
     description = "Validates input text against multiple security and safety guardrails using LLM-based detection."
+    documentation = "https://docs.langflow.org/guardrails"
     icon = "shield-check"
     name = "GuardrailValidator"
 
