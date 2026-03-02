@@ -20,7 +20,6 @@ from langflow.services.database.models.flow_history.crud import (
     get_flow_history_list,
 )
 from langflow.services.database.models.flow_history.exceptions import (
-    FlowHistoryDataTooLargeError,
     FlowHistoryError,
     FlowHistoryNotFoundError,
     FlowHistorySerializationError,
@@ -79,8 +78,6 @@ def _translate_version_error(exc: FlowHistoryError) -> HTTPException:
     """Translate a domain exception into an HTTPException."""
     if isinstance(exc, FlowHistorySerializationError):
         return HTTPException(status_code=422, detail=str(exc))
-    if isinstance(exc, FlowHistoryDataTooLargeError):
-        return HTTPException(status_code=413, detail=str(exc))
     if isinstance(exc, FlowHistoryVersionConflictError):
         return HTTPException(status_code=409, detail=str(exc))
     if isinstance(exc, FlowHistoryNotFoundError):
