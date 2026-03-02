@@ -1,5 +1,4 @@
 from .exceptions import (
-    FlowHistoryDataTooLargeError,
     FlowHistoryError,
     FlowHistoryNotFoundError,
     FlowHistorySerializationError,
@@ -10,7 +9,6 @@ from .model import FlowHistory, FlowHistoryCreate, FlowHistoryListResponse, Flow
 __all__ = [
     "FlowHistory",
     "FlowHistoryCreate",
-    "FlowHistoryDataTooLargeError",
     "FlowHistoryError",
     "FlowHistoryListResponse",
     "FlowHistoryNotFoundError",

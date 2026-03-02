@@ -98,7 +98,10 @@ async def create_flow_history_entry(
         if hasattr(result, "rowcount") and result.rowcount:  # type: ignore[union-attr]
             await logger.adebug("Pruned %d old history entries for flow %s", result.rowcount, flow_id)  # type: ignore[union-attr]
     except SQLAlchemyError:
-        await logger.awarning(
+        # Pruning is best-effort: we don't fail the snapshot because pruning broke.
+        # Logged at error level because repeated failures cause unbounded table growth
+        # and may need operational attention.
+        await logger.aerror(
             "Failed to prune old history entries for flow %s — history table may exceed configured limit",
             flow_id,
             exc_info=True,
