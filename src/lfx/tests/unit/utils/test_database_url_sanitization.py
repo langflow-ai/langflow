@@ -122,15 +122,28 @@ class TestSanitizeDatabaseUrl:
 
     def test_should_handle_malformed_url_with_regex_fallback(self):
         """Test that malformed URLs are sanitized via regex fallback."""
-        # Arrange - malformed URL that SQLAlchemy can't parse
-        url = "notvalid://user:pass@host/db"
+        # Arrange - malformed URL that SQLAlchemy can't parse, with distinctive credentials
+        url = "notvalid://s3cr3tuser:s3cr3tpass@host/db"
 
         # Act
         sanitized = sanitize_database_url(url)
 
         # Assert - credentials should be masked
-        assert "user" not in sanitized or "***" in sanitized
-        assert "pass" not in sanitized or "***" in sanitized
+        assert "s3cr3tuser" not in sanitized, f"Credential 's3cr3tuser' was not masked in: {sanitized}"
+        assert "s3cr3tpass" not in sanitized, f"Credential 's3cr3tpass' was not masked in: {sanitized}"
+        assert "***" in sanitized
+
+    def test_should_mask_password_only_url(self):
+        """Test that URL with password but no username is still masked."""
+        # Arrange - password-only auth (no username)
+        url = "postgresql://:password123@localhost:5432/db"
+
+        # Act
+        sanitized = sanitize_database_url(url)
+
+        # Assert
+        assert "password123" not in sanitized, f"Password was not masked in: {sanitized}"
+        assert "***" in sanitized
 
     def test_should_handle_empty_url(self):
         """Test that empty URL returns empty string."""

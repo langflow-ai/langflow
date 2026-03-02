@@ -53,14 +53,14 @@ def sanitize_database_url(url: str) -> str:
         from sqlalchemy.engine import make_url
 
         parsed_url = make_url(url)
-        if parsed_url.username:
+        if parsed_url.username or parsed_url.password:
             parsed_url = parsed_url.set(username="***", password="***")  # noqa: S106
         return str(parsed_url)
     except Exception:  # noqa: BLE001
         # Fallback: use regex if SQLAlchemy fails to parse
         import re
 
-        pattern = r"(://)[^:/@]+(?::[^@]*)?@"
+        pattern = r"(://)[^:/@]*(?::[^@]*)?@"
         return re.sub(pattern, r"\1***:***@", url)
 
 
