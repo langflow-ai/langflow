@@ -37,18 +37,6 @@ async def create_flow_history_entry(
     NOTE: This function does NOT verify that user_id owns the flow.
     Callers are responsible for checking ownership before calling this.
     """
-    if data is not None:
-        import orjson
-
-        try:
-            data_size = len(orjson.dumps(data))
-        except (TypeError, orjson.JSONEncodeError) as exc:
-            msg = "Flow data could not be serialized. The data may contain non-serializable values."
-            raise FlowHistorySerializationError(msg) from exc
-        max_size = get_settings_service().settings.max_flow_history_data_size_bytes
-        if data_size > max_size:
-            raise FlowHistoryDataTooLargeError(data_size, max_size)
-
     entry: FlowHistory | None = None
     for attempt in range(MAX_VERSION_RETRIES):
         version_number = await get_next_version_number(session, flow_id)

@@ -1,4 +1,4 @@
-"""add flow_history table
+"""add flow_version table
 
 Revision ID: 7d327cfafab6
 Revises: 369268b9af8b
@@ -22,31 +22,33 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     conn = op.get_bind()
 
-    # Create flow_history table
-    if not migration.table_exists("flow_history", conn):
+    # Create flow_version table
+    if not migration.table_exists("flow_version", conn):
         op.create_table(
-            "flow_history",
+            "flow_version",
             sa.Column("id", sa.Uuid(), nullable=False),
             sa.Column("flow_id", sa.Uuid(), nullable=False),
             sa.Column("user_id", sa.Uuid(), nullable=False),
             sa.Column("data", sa.JSON(), nullable=True),
             sa.Column("version_number", sa.Integer(), nullable=False),
             sa.Column("description", sa.String(), nullable=True),
-            sa.Column("created_at", sa.DateTime(), nullable=False),
+            sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
             sa.ForeignKeyConstraint(["flow_id"], ["flow.id"], ondelete="CASCADE"),
-            sa.ForeignKeyConstraint(["user_id"], ["user.id"]),
+            sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="SET NULL"),
             sa.PrimaryKeyConstraint("id"),
             sa.UniqueConstraint("flow_id", "version_number", name="unique_flow_version_number"),
             sa.CheckConstraint("version_number >= 1", name="check_version_number_positive"),
         )
-        op.create_index(op.f("ix_flow_history_flow_id"), "flow_history", ["flow_id"])
-        op.create_index(op.f("ix_flow_history_user_id"), "flow_history", ["user_id"])
+        op.create_index(op.f("ix_flow_version_flow_id"), "flow_version", ["flow_id"])
+        op.create_index(op.f("ix_flow_version_user_id"), "flow_version", ["user_id"])
+        op.create_index(op.f("ix_flow_version_created_at"), "flow_version", ["created_at"])
 
 
 def downgrade() -> None:
     conn = op.get_bind()
 
-    if migration.table_exists("flow_history", conn):
-        op.drop_index(op.f("ix_flow_history_user_id"), table_name="flow_history")
-        op.drop_index(op.f("ix_flow_history_flow_id"), table_name="flow_history")
-        op.drop_table("flow_history")
+    if migration.table_exists("flow_version", conn):
+        op.drop_index(op.f("ix_flow_version_created_at"), table_name="flow_version")
+        op.drop_index(op.f("ix_flow_version_user_id"), table_name="flow_version")
+        op.drop_index(op.f("ix_flow_version_flow_id"), table_name="flow_version")
+        op.drop_table("flow_version")
