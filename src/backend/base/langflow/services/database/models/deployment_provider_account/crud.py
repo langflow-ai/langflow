@@ -7,7 +7,6 @@ from uuid import UUID
 from sqlmodel import select
 
 from langflow.services.auth import utils as auth_utils
-from langflow.services.auth.mcp_encryption import is_encrypted
 from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 
 if TYPE_CHECKING:
@@ -20,8 +19,8 @@ async def get_provider_account_by_id(
     provider_id: UUID | str,
     user_id: UUID | str,
 ) -> DeploymentProviderAccount | None:
-    provider_uuid = _get_uuid(provider_id)
-    user_uuid = _get_uuid(user_id)
+    provider_uuid = _parse_uuid(provider_id, field_name="provider_id")
+    user_uuid = _parse_uuid(user_id, field_name="user_id")
 
     stmt = select(DeploymentProviderAccount).where(
         DeploymentProviderAccount.id == provider_uuid,
@@ -30,17 +29,12 @@ async def get_provider_account_by_id(
     return (await db.exec(stmt)).first()
 
 
-def _get_uuid(value: UUID | str) -> UUID:
-    """Get a UUID from a string or UUID."""
-    return UUID(value) if isinstance(value, str) else value
-
-
 async def list_provider_accounts(
     db: AsyncSession,
     *,
     user_id: UUID | str,
 ) -> list[DeploymentProviderAccount]:
-    user_uuid = _get_uuid(user_id)
+    user_uuid = _parse_uuid(user_id, field_name="user_id")
     stmt = (
         select(DeploymentProviderAccount)
         .where(DeploymentProviderAccount.user_id == user_uuid)
@@ -58,14 +52,19 @@ async def create_provider_account(
     provider_url: str,
     api_key: str,
 ) -> DeploymentProviderAccount:
-    user_uuid = _get_uuid(user_id)
+    user_uuid = _parse_uuid(user_id, field_name="user_id")
     now = datetime.now(timezone.utc)
+    try:
+        encrypted_key = auth_utils.encrypt_api_key(api_key.strip())
+    except Exception as e:
+        msg = "Failed to encrypt API key -- check server encryption configuration"
+        raise RuntimeError(msg) from e
     provider_account = DeploymentProviderAccount(
         user_id=user_uuid,
         account_id=account_id.strip() if account_id is not None else None,
         provider_key=provider_key.strip(),
         provider_url=provider_url.strip(),
-        api_key=auth_utils.encrypt_api_key(api_key.strip()),
+        api_key=encrypted_key,
         created_at=now,
         updated_at=now,
     )
@@ -91,8 +90,11 @@ async def update_provider_account(
     if provider_url is not None:
         provider_account.provider_url = provider_url.strip()
     if api_key is not None:
-        stripped = api_key.strip()
-        provider_account.api_key = stripped if is_encrypted(stripped) else auth_utils.encrypt_api_key(stripped)
+        try:
+            provider_account.api_key = auth_utils.encrypt_api_key(api_key.strip())
+        except Exception as e:
+            msg = "Failed to encrypt API key -- check server encryption configuration"
+            raise RuntimeError(msg) from e
     provider_account.updated_at = datetime.now(timezone.utc)
     db.add(provider_account)
     await db.flush()
@@ -107,3 +109,21 @@ async def delete_provider_account(
 ) -> None:
     await db.delete(provider_account)
     await db.flush()
+
+
+def _parse_uuid(value: UUID | str, *, field_name: str = "value") -> UUID:
+    """Parse a UUID from a string or pass through a UUID.
+
+    Raises ValueError with context if the string is not a valid UUID.
+    """
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            msg = f"{field_name} must not be empty"
+            raise ValueError(msg)
+        try:
+            return UUID(stripped)
+        except ValueError:
+            msg = f"{field_name} is not a valid UUID: {stripped!r}"
+            raise ValueError(msg) from None
+    return value

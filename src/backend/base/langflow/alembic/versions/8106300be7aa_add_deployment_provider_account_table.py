@@ -1,8 +1,8 @@
 """Add deployment provider account table
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: 8106300be7aa
 Revises: 3478f0bd6ccb
-Create Date: 2026-03-03 00:00:00.000000
+Create Date: 2026-03-03 12:00:00.000000
 
 Phase: EXPAND
 """
@@ -15,7 +15,7 @@ from langflow.utils import migration
 from sqlmodel.sql.sqltypes import AutoString
 
 # revision identifiers, used by Alembic.
-revision: str = "a1b2c3d4e5f6"  # pragma: allowlist secret
+revision: str = "8106300be7aa"  # pragma: allowlist secret
 down_revision: str | None = "3478f0bd6ccb"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

@@ -1,8 +1,8 @@
 """Add deployment table
 
-Revision ID: c3d4e5f6a7b8
-Revises: a1b2c3d4e5f6
-Create Date: 2026-03-03 00:00:00.000000
+Revision ID: 2a5defa5ddc0
+Revises: 8106300be7aa
+Create Date: 2026-03-03 12:01:00.000000
 
 Phase: EXPAND
 """
@@ -15,12 +15,13 @@ from alembic import op
 from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
-revision: str = "c3d4e5f6a7b8"  # pragma: allowlist secret
-down_revision: str | None = "a1b2c3d4e5f6"  # pragma: allowlist secret
+revision: str = "2a5defa5ddc0"  # pragma: allowlist secret
+down_revision: str | None = "8106300be7aa"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-UNIQUE_CONSTRAINT_NAME = "uq_deployment_name_in_provider"
+NAME_UNIQUE_CONSTRAINT = "uq_deployment_name_in_provider"
+RESOURCE_KEY_UNIQUE_CONSTRAINT = "uq_deployment_resource_key_in_provider"
 
 
 def upgrade() -> None:
@@ -64,7 +65,8 @@ def upgrade() -> None:
         batch_op.create_index(batch_op.f("ix_deployment_provider_account_id"), ["provider_account_id"], unique=False)
         batch_op.create_index(batch_op.f("ix_deployment_resource_key"), ["resource_key"], unique=False)
         batch_op.create_index(batch_op.f("ix_deployment_user_id"), ["user_id"], unique=False)
-        batch_op.create_unique_constraint(UNIQUE_CONSTRAINT_NAME, ["provider_account_id", "name"])
+        batch_op.create_unique_constraint(NAME_UNIQUE_CONSTRAINT, ["provider_account_id", "name"])
+        batch_op.create_unique_constraint(RESOURCE_KEY_UNIQUE_CONSTRAINT, ["provider_account_id", "resource_key"])
 
 
 def downgrade() -> None:
@@ -73,7 +75,8 @@ def downgrade() -> None:
         return
 
     with op.batch_alter_table("deployment", schema=None) as batch_op:
-        batch_op.drop_constraint(UNIQUE_CONSTRAINT_NAME, type_="unique")
+        batch_op.drop_constraint(RESOURCE_KEY_UNIQUE_CONSTRAINT, type_="unique")
+        batch_op.drop_constraint(NAME_UNIQUE_CONSTRAINT, type_="unique")
         batch_op.drop_index(batch_op.f("ix_deployment_user_id"))
         batch_op.drop_index(batch_op.f("ix_deployment_resource_key"))
         batch_op.drop_index(batch_op.f("ix_deployment_provider_account_id"))

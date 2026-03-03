@@ -1,3 +1,3 @@
-from .model import Deployment
+from .model import Deployment, DeploymentRead
 
-__all__ = ["Deployment"]
+__all__ = ["Deployment", "DeploymentRead"]

@@ -1,7 +1,10 @@
-from datetime import datetime
+from __future__ import annotations
+
+from datetime import datetime  # noqa: TC003 - needed at runtime for Pydantic schemas
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+from pydantic import field_validator
 from sqlalchemy import UniqueConstraint
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
@@ -21,29 +24,61 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
         ),
     )
 
-    id: UUID | None = Field(
-        default_factory=uuid4,
-        primary_key=True,
-        description="Unique ID for the deployment provider account",
-    )
-    user_id: UUID = Field(foreign_key="user.id", index=True, description="User owner for this provider account")
-    account_id: str | None = Field(default=None, index=True, description="Provider tenant/organization identifier")
-    provider_key: str = Field(index=True, description="Deployment adapter routing key")
-    provider_url: str = Field(description="Deployment provider URL")
-    api_key: str = Field(description="Deployment provider API key")
+    id: UUID | None = Field(default_factory=uuid4, primary_key=True)
+    user_id: UUID = Field(foreign_key="user.id", index=True)
+    # account_id participates in a unique constraint. When NULL, most databases
+    # treat NULL != NULL, so multiple rows with the same (user_id, provider_url)
+    # are allowed when account_id is NULL. This is intentional: a provider may
+    # not require a tenant/organization identifier.
+    account_id: str | None = Field(default=None, index=True)
+    provider_key: str = Field(index=True)
+    provider_url: str = Field()
+    api_key: str = Field()
     created_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
-        description="When the deployment provider account was created.",
     )
     updated_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False),
-        description="When the user last updated the deployment provider account.",
     )
 
-    user: "User" = Relationship(back_populates="deployment_provider_accounts")
-    deployments: list["Deployment"] = Relationship(
+    user: User = Relationship(back_populates="deployment_provider_accounts")
+    deployments: list[Deployment] = Relationship(
         back_populates="provider_account",
-        sa_relationship_kwargs={"cascade": "delete"},
+        sa_relationship_kwargs={"cascade": "all, delete, delete-orphan"},
     )
+
+    @field_validator("provider_key", "provider_url")
+    @classmethod
+    def validate_non_empty(cls, v: str) -> str:
+        stripped = v.strip()
+        if not stripped:
+            msg = "Field must not be empty"
+            raise ValueError(msg)
+        return stripped
+
+
+class DeploymentProviderAccountCreate(SQLModel):
+    account_id: str | None = None
+    provider_key: str
+    provider_url: str
+    api_key: str
+
+
+class DeploymentProviderAccountRead(SQLModel):
+    id: UUID
+    user_id: UUID
+    account_id: str | None = None
+    provider_key: str
+    provider_url: str
+    created_at: datetime
+    updated_at: datetime
+    # api_key intentionally omitted -- never serialize credentials
+
+
+class DeploymentProviderAccountUpdate(SQLModel):
+    account_id: str | None = None
+    provider_key: str | None = None
+    provider_url: str | None = None
+    api_key: str | None = None
