@@ -599,22 +599,6 @@ async def test_lowered_limit_prunes_excess_on_next_snapshot(client: AsyncClient,
     assert entries_after[1]["description"] == "snap-4"
 
 
-async def test_snapshot_rejects_oversized_data(client: AsyncClient, logged_in_headers, monkeypatch):
-    """Creating a snapshot should fail if flow data exceeds the size limit."""
-    from langflow.services.deps import get_settings_service
-
-    settings = get_settings_service().settings
-    monkeypatch.setattr(settings, "max_flow_version_data_size_bytes", 10)  # 10 bytes
-
-    flow = await _create_flow(client, logged_in_headers)
-    resp = await client.post(
-        f"api/v1/flows/{flow['id']}/versions/",
-        json={},
-        headers=logged_in_headers,
-    )
-    assert resp.status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
-
-
 # ---------------------------------------------------------------------------
 # Activate version with null data
 # ---------------------------------------------------------------------------

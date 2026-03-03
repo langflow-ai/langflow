@@ -284,8 +284,6 @@ class Settings(BaseSettings):
     If retroactively lowered below the current count for a flow,
     the oldest entries are deleted only when the next entry is created.
     """
-    max_flow_version_data_size_bytes: int = 10 * 1024 * 1024
-    """Maximum serialized size (in bytes) for flow data stored in a version snapshot. Rejects if exceeded."""
     webhook_polling_interval: int = 0
     """The polling interval for the webhook in ms. Set to 0 to disable (SSE provides real-time updates)."""
     fs_flows_polling_interval: int = 10000

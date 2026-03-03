@@ -130,6 +130,7 @@ async def create_snapshot(
 ) -> FlowVersionRead:
     flow = await _get_user_flow(session, flow_id, current_user.id)
     description = body.description if body else None
+
     try:
         data = copy.deepcopy(flow.data)
     except Exception as exc:
@@ -137,6 +138,7 @@ async def create_snapshot(
             status_code=422,
             detail="Flow data could not be copied for snapshot. The data may be corrupted.",
         ) from exc
+
     try:
         entry = await create_flow_version_entry(
             session,
