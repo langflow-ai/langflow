@@ -62,8 +62,8 @@ For example, this schema definition creates the following DataFrame output:
 |------|------|-------------|
 | Language Model | Dropdown | Select the LLM provider and model. Use guided experience. |
 | Input DataFrame | DataFrame | Optional. Example DataFrame to learn from; only first 50 rows used. If not provided, Schema is used. |
-| Schema | Table | Define columns to generate when no Input DataFrame is provided. See [Output Schema Format](#output-schema-format). |
-| Instructions | String | **Advanced.** Optional instructions for generation. |
+| Schema | Table | Define columns to generate when no Input DataFrame is provided. See the component's schema definition. |
+| Instructions | String | Optional instructions for generation. |
 | Number of Rows to Generate | Integer | How many synthetic rows to create. Default: 10. |
 
 ## aMap component
@@ -98,7 +98,7 @@ For example, **aMap** keeps each input row and fills in `sentiment`, `confidence
 |------|------|-------------|
 | Language Model | Dropdown | Select the LLM provider and model. Use guided experience. |
 | Input DataFrame | DataFrame | Input DataFrame (list of dicts or DataFrame). Each row is processed independently. |
-| Schema | Table | Define the structure and types for generated columns. See [Output Schema Format](#output-schema-format). |
+| Schema | Table | Define the structure and types for generated columns. See the component's schema definition. |
 | Instructions | String | Natural language instructions for transforming each row into the output schema. |
 | As List | Boolean | If true, generate multiple instances of the schema per row and concatenate. |
 | Keep Source Columns | Boolean | If `true`, append new columns to original data; if false, return only generated columns. Ignored if As List is true. Default: `true`. |
@@ -139,7 +139,7 @@ It sums revenue into `total_revenue`, identifies the best-selling product in `be
 |------|------|-------------|
 | Language Model | Dropdown | Select the LLM provider and model. |
 | Input DataFrame | DataFrame | Input DataFrame (list of dicts or DataFrame). Required. |
-| Schema | Table | Define the structure and types for the aggregated output. See [Output Schema Format](#output-schema-format). |
+| Schema | Table | Define the structure and types for the aggregated output. See the component's schema definition. |
 | As List | Boolean | If true, output is a list of instances of the schema. |
 | Instructions | String | Optional instructions for aggregation. If omitted, the LLM infers from field descriptions. |
 

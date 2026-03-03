@@ -124,6 +124,7 @@ module.exports = {
               id: "Develop/enterprise-database-guide",
               label: "Database guide for enterprise administrators"
             },
+            "Develop/knowledge",
           ],
         },
         {
@@ -300,9 +301,11 @@ module.exports = {
             },
             {
               type: "category",
-              label: "Files",
+              label: "Files and Knowledge",
               items: [
                 "Components/directory",
+                "Components/knowledge-ingestion",
+                "Components/knowledge-retrieval",
                 "Components/read-file",
                 "Components/write-file",
               ]
