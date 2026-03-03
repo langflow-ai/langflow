@@ -4,8 +4,8 @@ import HeaderTabs from "./components/HeaderTabs";
 import HeaderTitle from "./components/HeaderTitle";
 import { FlowType } from "./types";
 
-const TAB_TYPES_MCP: FlowType[] = ["deployments", "mcp", "flows"];
-const TAB_TYPES_DEFAULT: FlowType[] = ["deployments", "components", "flows"];
+const TAB_TYPES_MCP: FlowType[] = ["flows", "mcp", "deployments"];
+const TAB_TYPES_DEFAULT: FlowType[] = ["flows", "components", "deployments"];
 
 interface HeaderComponentProps {
   flowType: FlowType;
@@ -37,8 +37,10 @@ const HeaderComponent = ({
   }, [flowType, isMCPEnabled, setFlowType]);
 
   return (
-    <div className="px-5 pt-5">
-      <HeaderTitle folderName={folderName} />
+    <div className="bg-background pt-6">
+      <div className="3xl:container">
+        <HeaderTitle folderName={folderName} />
+      </div>
       {!isEmptyFolder && (
         <HeaderTabs
           flowType={flowType}

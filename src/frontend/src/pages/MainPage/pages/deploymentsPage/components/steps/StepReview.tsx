@@ -1,5 +1,6 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import type { DeploymentType, EnvVar } from "../constants";
+import type { DeploymentType, EnvVar } from "../../constants";
+
 type SelectedItem = { name: string };
 
 type StepReviewProps = {

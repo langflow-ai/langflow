@@ -73,7 +73,7 @@ export default function CollectionPage(): JSX.Element {
             }}
           />
         )}
-      <main className="flex h-full w-full overflow-hidden">
+      <main className="flex h-full w-full overflow-hidden bg-secondary">
         {flows && examples && folders ? (
           <div
             className={`relative mx-auto flex h-full w-full flex-col overflow-hidden`}

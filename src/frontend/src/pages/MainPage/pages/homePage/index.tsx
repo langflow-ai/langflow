@@ -279,10 +279,10 @@ const HomePage = ({
       dragMessage={`Drop your ${isEmptyFolder ? "flows or components" : flowType} here`}
     >
       <div
-        className="flex h-full w-full flex-col overflow-y-auto"
+        className="flex h-full w-full flex-col overflow-y-auto bg-secondary"
         data-testid="cards-wrapper"
       >
-        <div className="flex h-full w-full flex-col 3xl:container">
+        <div className="flex h-full w-full flex-col bg-secondary">
           {ENABLE_DATASTAX_LANGFLOW && <CustomBanner />}
           <div className="flex flex-1 flex-col justify-start">
             <div className="flex h-full flex-col justify-start">
@@ -292,103 +292,107 @@ const HomePage = ({
                 setFlowType={setFlowType}
                 isEmptyFolder={isEmptyFolder}
               />
-              {showToolbar && (
-                <HeaderToolbar
-                  flowType={flowType}
-                  view={view}
-                  setView={setView}
-                  setSearch={onSearch}
-                  setNewProjectModal={setNewProjectModal}
-                  selectedFlows={selectedFlows}
-                  onDownload={handleDownload}
-                  onDelete={handleDelete}
-                  isDownloading={isDownloading}
-                  isDeleting={isDeleting}
-                />
-              )}
-              {isEmptyFolder ? (
-                <EmptyFolder setOpenModal={setNewProjectModal} />
+              {!isLoading && flowType === "deployments" ? (
+                <DeploymentsTab />
               ) : (
-                <div className="flex h-full flex-col">
-                  {isLoading ? (
-                    view === "grid" ? (
-                      <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
-                        <ListSkeleton />
-                        <ListSkeleton />
-                      </div>
-                    ) : (
-                      <div className="mt-4 flex flex-col gap-1">
-                        <ListSkeleton />
-                        <ListSkeleton />
-                      </div>
-                    )
-                  ) : flowType === "deployments" ? (
-                    <DeploymentsTab />
-                  ) : flowType === "mcp" ? (
-                    <CustomMcpServerTab folderName={folderName} />
-                  ) : flowType === "flows" &&
-                    view === "list" &&
-                    data &&
-                    data.pagination.total > 0 ? (
-                    <FlowVersionsTable
-                      flows={data.flows}
-                      folderId={folderId ?? undefined}
+                <div className="3xl:container flex h-full flex-col">
+                  {showToolbar && (
+                    <HeaderToolbar
+                      flowType={flowType}
+                      view={view}
+                      setView={setView}
+                      setSearch={onSearch}
+                      setNewProjectModal={setNewProjectModal}
+                      selectedFlows={selectedFlows}
+                      onDownload={handleDownload}
+                      onDelete={handleDelete}
+                      isDownloading={isDownloading}
+                      isDeleting={isDeleting}
                     />
-                  ) : (flowType === "flows" || flowType === "components") &&
-                    data &&
-                    data.pagination.total > 0 ? (
-                    view === "grid" ? (
-                      <div className="p-5 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
-                        {data.flows.map((flow, index) => (
-                          <ListComponent
-                            key={flow.id}
-                            flowData={flow}
-                            selected={selectedFlows.includes(flow.id)}
-                            setSelected={(selected) =>
-                              setSelectedFlow(selected, flow.id, index)
-                            }
-                            shiftPressed={isShiftPressed || isCtrlPressed}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-1 p-5">
-                        {data.flows.map((flow, index) => (
-                          <ListComponent
-                            key={flow.id}
-                            flowData={flow}
-                            selected={selectedFlows.includes(flow.id)}
-                            setSelected={(selected) =>
-                              setSelectedFlow(selected, flow.id, index)
-                            }
-                            shiftPressed={isShiftPressed || isCtrlPressed}
-                          />
-                        ))}
-                      </div>
-                    )
-                  ) : flowType === "flows" ? (
-                    <div className="pt-24 text-center text-sm text-secondary-foreground">
-                      No flows in this project.{" "}
-                      <a
-                        onClick={() => setNewProjectModal(true)}
-                        className="cursor-pointer underline"
-                      >
-                        Create a new flow
-                      </a>
-                      , or browse the store.
-                    </div>
+                  )}
+                  {isEmptyFolder ? (
+                    <EmptyFolder setOpenModal={setNewProjectModal} />
                   ) : (
-                    <div className="pt-24 text-center text-sm text-secondary-foreground">
-                      No saved or custom components. Learn more about{" "}
-                      <a
-                        href="https://docs.langflow.org/components-custom-components"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline"
-                      >
-                        creating custom components
-                      </a>
-                      , or browse the store.
+                    <div className="flex h-full flex-col bg-secondary">
+                      {isLoading ? (
+                        view === "grid" ? (
+                          <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
+                            <ListSkeleton />
+                            <ListSkeleton />
+                          </div>
+                        ) : (
+                          <div className="mt-4 flex flex-col gap-1">
+                            <ListSkeleton />
+                            <ListSkeleton />
+                          </div>
+                        )
+                      ) : flowType === "mcp" ? (
+                        <CustomMcpServerTab folderName={folderName} />
+                      ) : flowType === "flows" &&
+                        view === "list" &&
+                        data &&
+                        data.pagination.total > 0 ? (
+                        <FlowVersionsTable
+                          flows={data.flows}
+                          folderId={folderId ?? undefined}
+                        />
+                      ) : (flowType === "flows" || flowType === "components") &&
+                        data &&
+                        data.pagination.total > 0 ? (
+                        view === "grid" ? (
+                          <div className="p-5 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
+                            {data.flows.map((flow, index) => (
+                              <ListComponent
+                                key={flow.id}
+                                flowData={flow}
+                                selected={selectedFlows.includes(flow.id)}
+                                setSelected={(selected) =>
+                                  setSelectedFlow(selected, flow.id, index)
+                                }
+                                shiftPressed={isShiftPressed || isCtrlPressed}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-1 p-5">
+                            {data.flows.map((flow, index) => (
+                              <ListComponent
+                                key={flow.id}
+                                flowData={flow}
+                                selected={selectedFlows.includes(flow.id)}
+                                setSelected={(selected) =>
+                                  setSelectedFlow(selected, flow.id, index)
+                                }
+                                shiftPressed={isShiftPressed || isCtrlPressed}
+                              />
+                            ))}
+                          </div>
+                        )
+                      ) : flowType === "flows" ? (
+                        <div className="pt-24 text-center text-sm text-secondary-foreground">
+                          No flows in this project.{" "}
+                          <a
+                            onClick={() => setNewProjectModal(true)}
+                            className="cursor-pointer underline"
+                          >
+                            Create a new flow
+                          </a>
+                          , or browse the store.
+                        </div>
+                      ) : (
+                        <div className="pt-24 text-center text-sm text-secondary-foreground">
+                          No saved or custom components. Learn more about{" "}
+                          <a
+                            href="https://docs.langflow.org/components-custom-components"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="underline"
+                          >
+                            creating custom components
+                          </a>
+                          , or browse the store.
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

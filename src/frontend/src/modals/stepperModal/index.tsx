@@ -7,10 +7,12 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/utils/utils";
 import { switchCaseModalSize } from "../baseModal/helpers/switch-case-size";
+import { HorizontalStepRail } from "./components/HorizontalStepRail";
 import { ProgressIndicator } from "./components/ProgressIndicator";
 import { SidePanel } from "./components/SidePanel";
 import { StepRail } from "./components/StepRail";
 import {
+  DEFAULT_FULL_PAGE,
   DEFAULT_ICON,
   DEFAULT_SHOW_PROGRESS,
   DEFAULT_SIDE_PANEL_OPEN,
@@ -38,6 +40,10 @@ export function StepperModal({
   sidePanel,
   sidePanelOpen = DEFAULT_SIDE_PANEL_OPEN,
   stepLabels,
+  fullPage = DEFAULT_FULL_PAGE,
+  onBack,
+  backLabel,
+  bgClassName,
 }: StepperModalProps) {
   const { minWidth, height: sizeHeight } = switchCaseModalSize(size);
   const isNumericHeight = customHeight && /^\d+$/.test(customHeight);
@@ -47,6 +53,81 @@ export function StepperModal({
     : undefined;
 
   const useRailLayout = !!stepLabels && stepLabels.length > 0;
+
+  if (fullPage && open) {
+    return (
+      <StepperContext.Provider
+        value={{ currentStep, totalSteps, title, description }}
+      >
+        <div
+          className={cn(
+            "fixed inset-0 z-50 flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300",
+            bgClassName || "bg-background",
+          )}
+        >
+          {/* Full-page header */}
+          <div className="flex flex-col gap-4 px-8 pt-[45px]">
+            <div
+              className={cn(
+                "mx-auto flex w-full flex-col gap-4 ",
+                customWidth || "max-w-2xl 3xl:container",
+              )}
+            >
+              {onBack && (
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <ForwardedIconComponent
+                    name="ChevronLeft"
+                    className="h-4 w-4"
+                  />
+                  {backLabel || "Back"}
+                </button>
+              )}
+              <div className="flex flex-col gap-1">
+                <h1 className="text-xl font-semibold">{title}</h1>
+                {description && (
+                  <p className="text-sm text-muted-foreground">{description}</p>
+                )}
+              </div>
+              {stepLabels && stepLabels.length > 0 && (
+                <div className="w-full pt-2">
+                  <HorizontalStepRail
+                    stepLabels={stepLabels}
+                    currentStep={currentStep}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Full-page content */}
+          <div className="flex flex-1 justify-center overflow-y-auto py-6 ">
+            <div
+              className={cn(
+                "w-full rounded-xl border border-border p-6",
+                customWidth || "max-w-2xl",
+                contentClassName,
+              )}
+            >
+              {children}
+            </div>
+          </div>
+
+          {/* Full-page footer */}
+          {footer && (
+            <div className="flex items-center justify-center px-8 pb-10">
+              <div className={cn("w-full", customWidth || "max-w-2xl")}>
+                {footer}
+              </div>
+            </div>
+          )}
+        </div>
+      </StepperContext.Provider>
+    );
+  }
 
   return (
     <StepperContext.Provider

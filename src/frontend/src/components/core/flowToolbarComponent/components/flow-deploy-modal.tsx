@@ -11,20 +11,20 @@ import {
   usePostCreateSnapshot,
 } from "@/controllers/API/queries/flow-history";
 import { StepperModal, StepperModalFooter } from "@/modals/stepperModal";
-import useAlertStore from "@/stores/alertStore";
-import useHistoryPreviewStore from "@/stores/historyPreviewStore";
-import type { FlowHistoryEntry } from "@/types/flow/history";
-import { RegisterDeploymentProviderModal } from "@/pages/MainPage/pages/deploymentsPage/RegisterDeploymentProviderModal";
+import { CURRENT_DRAFT_ID } from "@/pages/FlowPage/components/flowSidebarComponent/components/FlowHistorySidebar/constants";
+import { RegisterDeploymentProviderModal } from "@/pages/MainPage/pages/deploymentsPage/components/RegisterDeploymentProviderModal";
+import { StepAttach } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepAttach";
+import { StepBasics } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepBasics";
+import { StepConfiguration } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepConfiguration";
+import { StepReview } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepReview";
 import {
   type EnvVar,
   TOTAL_STEPS,
 } from "@/pages/MainPage/pages/deploymentsPage/constants";
-import { StepAttach } from "@/pages/MainPage/pages/deploymentsPage/steps/StepAttach";
-import { StepBasics } from "@/pages/MainPage/pages/deploymentsPage/steps/StepBasics";
-import { StepConfiguration } from "@/pages/MainPage/pages/deploymentsPage/steps/StepConfiguration";
-import { StepReview } from "@/pages/MainPage/pages/deploymentsPage/steps/StepReview";
-import { useDeploymentForm } from "@/pages/MainPage/pages/deploymentsPage/useDeploymentForm";
-import { CURRENT_DRAFT_ID } from "@/pages/FlowPage/components/flowSidebarComponent/components/FlowHistorySidebar/constants";
+import { useDeploymentForm } from "@/pages/MainPage/pages/deploymentsPage/hooks/useDeploymentForm";
+import useAlertStore from "@/stores/alertStore";
+import useHistoryPreviewStore from "@/stores/historyPreviewStore";
+import type { FlowHistoryEntry } from "@/types/flow/history";
 
 type FlowDeployModalProps = {
   open: boolean;

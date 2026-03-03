@@ -35,15 +35,15 @@ const HeaderToolbar = ({
   const { inputValue, handleSearch } = useHeaderSearch(setSearch);
 
   return (
-    <div className="flex justify-between pt-5 px-5">
-      <div className="flex w-full xl:w-5/12">
+    <div className="flex justify-between pt-5 px-5 bg-secondary ">
+      <div className="flex w-full xl:w-5/12 ">
         <Input
           icon="Search"
           data-testid="search-store-input"
           type="text"
           placeholder={`Search ${flowType}...`}
           className="mr-2 !text-mmd"
-          inputClassName="!text-mmd"
+          inputClassName="!text-mmd bg-secondary"
           value={inputValue}
           onChange={handleSearch}
         />

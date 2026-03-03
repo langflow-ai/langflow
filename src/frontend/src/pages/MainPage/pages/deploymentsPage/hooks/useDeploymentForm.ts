@@ -4,7 +4,7 @@ import {
   type EnvVar,
   TOTAL_STEPS,
   type VariableScope,
-} from "./constants";
+} from "../constants";
 
 export const useDeploymentForm = () => {
   const [newDeploymentOpen, setNewDeploymentOpen] = useState(false);

@@ -1,5 +1,5 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import type { VariableScope } from "../constants";
+import type { VariableScope } from "../../constants";
 
 type StepScopeProps = {
   variableScope: VariableScope;

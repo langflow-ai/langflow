@@ -7,7 +7,7 @@ interface HeaderTitleProps {
 
 const HeaderTitle = ({ folderName }: HeaderTitleProps) => (
   <div
-    className="flex items-center pb-4 text-xl font-semibold"
+    className="flex items-center pb-4 text-xl font-semibold px-6"
     data-testid="mainpage_title"
   >
     <div className="h-7 w-10 transition-all group-data-[open=true]/sidebar-wrapper:md:w-0 lg:hidden">

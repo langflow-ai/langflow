@@ -6,7 +6,7 @@ import { CommandItem } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import { cn } from "@/utils/utils";
-import type { EnvVar } from "../constants";
+import type { EnvVar } from "../../constants";
 
 type StepConfigurationProps = {
   envVars: EnvVar[];

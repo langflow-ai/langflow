@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { Button } from "@/components/ui/button";
-import { api } from "@/controllers/API/api";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getURL } from "@/controllers/API/helpers/constants";
 import {
   type DeploymentCreatePayload,
@@ -17,135 +18,47 @@ import {
 } from "@/controllers/API/queries/deployments/use-deployments";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { StepperModal, StepperModalFooter } from "@/modals/stepperModal";
+// import StepperModal, {
+//   StepperModalFooter,
+// } from '@/modals/stepperModal/StepperModal';
 import useAlertStore from "@/stores/alertStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import type { FlowType } from "@/types/flow";
 import type { FlowHistoryEntry } from "@/types/flow/history";
-import { ConfigureDeploymentProviderModal } from "./ConfigureDeploymentProviderModal";
-import { type EnvVar, TOTAL_STEPS } from "./constants";
-import { DeploymentCreationStatusView } from "./DeploymentCreationStatusView";
+import { ConfigureDeploymentProviderModal } from "./components/ConfigureDeploymentProviderModal";
+import { DeploymentCreationStatusView } from "./components/DeploymentCreationStatusView";
 import {
   type DeploymentListRow,
   DeploymentProvidersView,
-} from "./DeploymentProvidersView";
-import { RegisterDeploymentProviderModal } from "./RegisterDeploymentProviderModal";
-import { StepAttach } from "./steps/StepAttach";
-import { StepBasics } from "./steps/StepBasics";
-import { StepConfiguration } from "./steps/StepConfiguration";
-import { StepReview } from "./steps/StepReview";
-import { TestAgentModal } from "./TestAgentModal";
-import { useDeploymentForm } from "./useDeploymentForm";
+} from "./components/DeploymentProvidersView";
+import { RegisterDeploymentProviderModal } from "./components/RegisterDeploymentProviderModal";
+import { StepAttach } from "./components/steps/StepAttach";
+import { StepBasics } from "./components/steps/StepBasics";
+import { StepConfiguration } from "./components/steps/StepConfiguration";
+import { StepReview } from "./components/steps/StepReview";
+import { TestAgentModal } from "./components/TestAgentModal";
+import { type EnvVar, TOTAL_STEPS } from "./constants";
+import { useDeploymentForm } from "./hooks/useDeploymentForm";
+import type {
+  CreatedDeploymentUiMeta,
+  DeploymentCreationState,
+  FlowCheckpointGroup,
+  TestDeploymentTarget,
+} from "./types";
+import {
+  fetchFlowHistoryWithDedupe,
+  formatDateLabel,
+  mapProviderModeToLabel,
+  validateEnvVars,
+} from "./utils";
 
-const formatDateLabel = (value?: string | null): string => {
-  if (!value) {
-    return "-";
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return "-";
-  }
-
-  return parsed.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-};
-
-const mapProviderModeToLabel = (mode?: string): string => {
-  if (mode === "both" || mode === "live") {
-    return "Live";
-  }
-  return "Draft";
-};
-
-type CheckpointAttachItem = {
-  id: string;
-  name: string;
-  updatedDate: string;
-};
-
-type FlowCheckpointGroup = {
-  flowId: string;
-  flowName: string;
-  checkpoints: CheckpointAttachItem[];
-};
-
-type FlowHistoryListApiResponse = {
-  entries: FlowHistoryEntry[];
-};
-
-const inflightFlowHistoryRequests = new Map<
-  string,
-  Promise<FlowHistoryListApiResponse>
->();
-
-const fetchFlowHistoryWithDedupe = async (
-  requestUrl: string,
-): Promise<FlowHistoryListApiResponse> => {
-  const existingRequest = inflightFlowHistoryRequests.get(requestUrl);
-  if (existingRequest) {
-    return existingRequest;
-  }
-  const request = api
-    .get<FlowHistoryListApiResponse>(requestUrl)
-    .then((response) => response.data)
-    .finally(() => {
-      inflightFlowHistoryRequests.delete(requestUrl);
-    });
-  inflightFlowHistoryRequests.set(requestUrl, request);
-  return request;
-};
-
-const validateEnvVars = (envVars: EnvVar[]): string[] => {
-  const errors: string[] = [];
-  const seenKeys = new Set<string>();
-
-  envVars.forEach((item, index) => {
-    const row = index + 1;
-    const key = item.key.trim();
-    const value = item.value.trim();
-
-    if (!key && !value) {
-      return;
-    }
-
-    if (!key) {
-      errors.push(`Row ${row}: key is required when a value is provided.`);
-      return;
-    }
-
-    if (!value) {
-      errors.push(`Row ${row}: value is required for key "${key}".`);
-      return;
-    }
-
-    if (seenKeys.has(key)) {
-      errors.push(`Row ${row}: duplicate key "${key}". Keys must be unique.`);
-      return;
-    }
-    seenKeys.add(key);
-  });
-
-  return errors;
-};
-
-type DeploymentCreationState = "idle" | "creating" | "success" | "error";
-type TestDeploymentTarget = {
-  id: string;
-  name: string;
-  deploymentType: "agent" | "mcp";
-  mode?: string;
-};
-type CreatedDeploymentUiMeta = {
-  deploymentId: string;
-  attachedCount: number;
-  createdAt: string;
-};
+const STEP_LABELS = [
+  "Basics",
+  "Attach Flows/Snapshots",
+  "Config",
+  "Variable Scope",
+  "Review",
+];
 
 const DeploymentsTab = () => {
   const { folderId } = useParams();
@@ -178,6 +91,9 @@ const DeploymentsTab = () => {
   const [checkpointGroups, setCheckpointGroups] = useState<
     FlowCheckpointGroup[]
   >([]);
+  const [activeSubTab, setActiveSubTab] = useState<"deployments" | "providers">(
+    "deployments",
+  );
 
   const providersQuery = useGetDeploymentProviders({
     refetchOnWindowFocus: false,
@@ -547,221 +463,419 @@ const DeploymentsTab = () => {
     });
   };
 
-  return (
-    <div className="flex h-full flex-col p-5">
-      {creationState !== "idle" ? (
-        <DeploymentCreationStatusView
-          state={creationState}
-          deploymentName={createdDeploymentName}
-          deploymentType={createdDeploymentType}
-          onBack={() => {
-            setCreationState("idle");
-          }}
-          onPrimaryAction={() => {
-            if (createdDeploymentType === "agent") {
-              if (!createdDeploymentId) {
-                setNoticeData({
-                  title: "Deployment ID not available yet. Please try again.",
-                });
-                return;
-              }
-              setTestDeploymentTarget({
-                id: createdDeploymentId,
-                name: createdDeploymentName,
-                deploymentType: "agent",
-                mode:
-                  deploymentRows.find((row) => row.id === createdDeploymentId)
-                    ?.mode || undefined,
-              });
-              setTestAgentModalOpen(true);
-              return;
-            }
-            setNoticeData({
-              title: "MCP deployment testing UI will be added soon.",
-            });
-          }}
-        />
-      ) : !providersQuery.isLoading && !hasProviders ? (
-        <div className="flex h-full flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-border bg-muted/20">
-          <div className="max-w-lg text-center">
-            <h3 className="text-lg font-semibold">No deployment providers</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Register a deployment provider to start creating and managing
-              deployments in this project.
-            </p>
-          </div>
-          <Button onClick={() => setRegisterProviderOpen(true)}>
-            Register Deployment Provider
-          </Button>
-        </div>
-      ) : (
-        <>
-          <div className="flex items-center justify-end gap-2">
-            <Button
-              variant="secondary"
-              className="flex items-center gap-2 font-semibold"
-              onClick={() => setRegisterProviderOpen(true)}
-            >
-              <ForwardedIconComponent name="Plus" />
-              Add Provider
-            </Button>
-            <Button
-              className="flex items-center gap-2 font-semibold"
-              disabled={!providerId}
-              onClick={() => handleOpenChange(true)}
-            >
-              <ForwardedIconComponent name="Plus" />
-              New Deployment
-            </Button>
-          </div>
+  const showEmptyDeployments =
+    !providersQuery.isLoading &&
+    !hasProviders &&
+    activeSubTab === "deployments" &&
+    creationState === "idle";
+  const showEmptyProviders =
+    !providersQuery.isLoading &&
+    !hasProviders &&
+    activeSubTab === "providers" &&
+    creationState === "idle";
 
-          <div className="pt-4">
-            <DeploymentProvidersView
-              providers={providers}
-              deploymentRows={deploymentRows}
-              selectedProviderId={providerId || null}
-              onSelectProvider={setSelectedProviderId}
-              onConfigureProvider={handleConfigureProvider}
-              selectedProviderDeploymentCount={liveDeployments.length}
-              isLoadingDeployments={deploymentsQuery.isLoading}
-              isLoadingProviders={providersQuery.isLoading}
-              page={deploymentsPage}
-              pageSize={deploymentsPageSize}
-              total={deploymentsQuery.data?.total ?? 0}
-              onPageChange={setDeploymentsPage}
-              onTestAgent={(deployment) => {
-                if (
-                  !deployment.id.trim() ||
-                  !deployment.name.trim() ||
-                  deployment.deploymentType !== "agent"
-                ) {
+  return (
+    <div className="relative h-full">
+      <div className="flex h-full flex-col pt-5 px-5 3xl:container">
+        {creationState !== "idle" ? (
+          <DeploymentCreationStatusView
+            state={creationState}
+            deploymentName={createdDeploymentName}
+            deploymentType={createdDeploymentType}
+            onBack={() => {
+              setCreationState("idle");
+            }}
+            onPrimaryAction={() => {
+              if (createdDeploymentType === "agent") {
+                if (!createdDeploymentId) {
+                  setNoticeData({
+                    title: "Deployment ID not available yet. Please try again.",
+                  });
                   return;
                 }
-                setTestDeploymentTarget(deployment);
+                setTestDeploymentTarget({
+                  id: createdDeploymentId,
+                  name: createdDeploymentName,
+                  deploymentType: "agent",
+                  mode:
+                    deploymentRows.find((row) => row.id === createdDeploymentId)
+                      ?.mode || undefined,
+                });
                 setTestAgentModalOpen(true);
-              }}
-            />
-          </div>
-          <StepperModal
-            open={newDeploymentOpen}
-            onOpenChange={handleOpenChange}
-            currentStep={currentStep}
-            totalSteps={TOTAL_STEPS}
-            title="Create Deployment"
-            icon="Rocket"
-            description="Deploy your Langflow workflows to watsonx Orchestrate"
-            stepLabels={["Basics", "Attach", "Configuration", "Review"]}
-            width="w-[800px]"
-            height="h-[700px]"
-            size="medium-h-full"
-            footer={
-              <StepperModalFooter
-                currentStep={currentStep}
-                totalSteps={TOTAL_STEPS}
-                onBack={handleBack}
-                onNext={() => {
-                  if (currentStep === 2) {
-                    const selKey = Array.from(selectedItems).sort().join(",");
-                    const selectionChanged =
-                      selKey !== prevSelectedKeyRef.current;
-                    const shouldSeedDetectedVars =
-                      selectionChanged ||
-                      (envVars.length === 0 && detectedEnvVars.length > 0);
+                return;
+              }
+              setNoticeData({
+                title: "MCP deployment testing UI will be added soon.",
+              });
+            }}
+          />
+        ) : (
+          <>
+            {/* Sub-tab toggle — always visible */}
+            <div className="flex items-center justify-between gap-4">
+              <div className="inline-flex items-center rounded-md border border-border bg-background p-1">
+                <button
+                  type="button"
+                  onClick={() => setActiveSubTab("deployments")}
+                  className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+                    activeSubTab === "deployments"
+                      ? "bg-muted text-primary shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Deployments
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveSubTab("providers")}
+                  className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+                    activeSubTab === "providers"
+                      ? "bg-muted text-primary shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Deployment Providers
+                </button>
+              </div>
+              {/* <div className="flex items-center gap-2">
+              {activeSubTab === 'providers' && (
+                <Button
+                  variant="secondary"
+                  className="flex items-center gap-2 font-semibold"
+                  onClick={() => setRegisterProviderOpen(true)}
+                >
+                  <ForwardedIconComponent name="Plus" />
+                  Add Provider
+                </Button>
+              )}
+              {activeSubTab === 'deployments' && (
+                <Button
+                  className="flex items-center gap-2 font-semibold"
+                  disabled={!providerId}
+                  onClick={() => handleOpenChange(true)}
+                >
+                  <ForwardedIconComponent name="Plus" />
+                  New Deployment
+                </Button>
+              )}
+            </div> */}
+            </div>
 
-                    if (shouldSeedDetectedVars) {
-                      prevSelectedKeyRef.current = selKey;
-                      setEnvVars(detectedEnvVars);
-                    }
-                  }
-                  if (currentStep === 3) {
-                    const envVarValidationErrors = validateEnvVars(envVars);
-                    if (envVarValidationErrors.length > 0) {
-                      setErrorData({
-                        title: "Invalid environment variables",
-                        list: envVarValidationErrors,
-                      });
+            {/* Content area */}
+            {!providersQuery.isLoading && !hasProviders ? (
+              activeSubTab === "deployments" ? (
+                <div className="mt-4 h-full">
+                  <div className="pointer-events-none h-full opacity-30 [&_.ag-root-wrapper]:!border-none [&_.ag-root-wrapper]:!bg-transparent [&_.ag-header]:!bg-transparent [&_.ag-row]:!bg-transparent">
+                    <TableComponent
+                      columnDefs={[
+                        {
+                          headerName: "Name",
+                          field: "name",
+                          flex: 2,
+                          cellRenderer: () => <Skeleton className="h-4 w-28" />,
+                        },
+                        {
+                          headerName: "Status",
+                          field: "status",
+                          flex: 1,
+                          cellRenderer: () => <Skeleton className="h-4 w-16" />,
+                        },
+                        {
+                          headerName: "Health",
+                          field: "health",
+                          flex: 1,
+                          cellRenderer: () => <Skeleton className="h-4 w-16" />,
+                        },
+                        {
+                          headerName: "Attached",
+                          field: "attached",
+                          flex: 1,
+                          cellRenderer: () => <Skeleton className="h-4 w-10" />,
+                        },
+                        {
+                          headerName: "Provider",
+                          field: "provider",
+                          flex: 1,
+                          cellRenderer: () => <Skeleton className="h-4 w-20" />,
+                        },
+                        {
+                          headerName: "Last Modified",
+                          field: "lastModified",
+                          flex: 1.5,
+                          cellRenderer: () => <Skeleton className="h-4 w-24" />,
+                        },
+                        {
+                          headerName: "Test",
+                          field: "test",
+                          flex: 0.5,
+                          cellRenderer: () => <Skeleton className="h-4 w-10" />,
+                        },
+                        {
+                          headerName: "",
+                          field: "settings",
+                          width: 48,
+                          sortable: false,
+                          filter: false,
+                          resizable: false,
+                          cellRenderer: () => <Skeleton className="h-4 w-4" />,
+                        },
+                      ]}
+                      rowData={Array.from({ length: 3 }, (_, i) => ({
+                        id: `skeleton-${i}`,
+                      }))}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 h-full">
+                  <div className="pointer-events-none h-full opacity-30">
+                    <div className="grid grid-cols-3 gap-4">
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5"
+                        >
+                          {/* Header: icon + name + status */}
+                          <div className="flex items-start gap-3">
+                            <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
+                            <div className="flex w-full flex-col gap-1.5">
+                              <div className="flex items-center justify-between">
+                                <Skeleton className="h-4 w-32" />
+                                <div className="flex items-center gap-1.5">
+                                  <Skeleton className="h-2 w-2 rounded-full" />
+                                  <Skeleton className="h-3 w-16" />
+                                </div>
+                              </div>
+                              <Skeleton className="h-3 w-24" />
+                            </div>
+                          </div>
+                          {/* Endpoint */}
+                          <div className="flex flex-col gap-1">
+                            <Skeleton className="h-3 w-16" />
+                            <Skeleton className="h-4 w-full" />
+                          </div>
+                          {/* Stats row */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="flex flex-col gap-1">
+                              <Skeleton className="h-3 w-20" />
+                              <Skeleton className="h-4 w-24" />
+                            </div>
+                            <div className="flex flex-col items-end gap-1">
+                              <Skeleton className="h-3 w-20" />
+                              <Skeleton className="h-4 w-8" />
+                            </div>
+                          </div>
+                          {/* Action buttons */}
+                          <div className="flex gap-2 border-t border-border pt-3">
+                            <Skeleton className="h-8 flex-1 rounded-md" />
+                            <Skeleton className="h-8 flex-1 rounded-md" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="pt-4">
+                <DeploymentProvidersView
+                  providers={providers}
+                  deploymentRows={deploymentRows}
+                  selectedProviderId={providerId || null}
+                  onSelectProvider={setSelectedProviderId}
+                  onConfigureProvider={handleConfigureProvider}
+                  selectedProviderDeploymentCount={liveDeployments.length}
+                  isLoadingDeployments={deploymentsQuery.isLoading}
+                  isLoadingProviders={providersQuery.isLoading}
+                  page={deploymentsPage}
+                  pageSize={deploymentsPageSize}
+                  total={deploymentsQuery.data?.total ?? 0}
+                  onPageChange={setDeploymentsPage}
+                  onCreateDeployment={() => handleOpenChange(true)}
+                  activeSubTab={activeSubTab}
+                  onTestAgent={(deployment) => {
+                    if (
+                      !deployment.id.trim() ||
+                      !deployment.name.trim() ||
+                      deployment.deploymentType !== "agent"
+                    ) {
                       return;
                     }
+                    setTestDeploymentTarget(deployment);
+                    setTestAgentModalOpen(true);
+                  }}
+                />
+              </div>
+            )}
+            <StepperModal
+              open={newDeploymentOpen}
+              onOpenChange={handleOpenChange}
+              currentStep={currentStep}
+              totalSteps={TOTAL_STEPS}
+              title="Create Deployment"
+              bgClassName="bg-secondary"
+              icon="Rocket"
+              fullPage
+              width="3xl:container"
+              description="Deploy your Langflow workflows to watsonx Orchestrate"
+              contentClassName="bg-background"
+              stepLabels={STEP_LABELS}
+              onBack={() => handleOpenChange(false)}
+              backLabel="Back to Deployments"
+              footer={
+                <StepperModalFooter
+                  currentStep={currentStep}
+                  totalSteps={TOTAL_STEPS}
+                  onBack={handleBack}
+                  onNext={() => {
+                    if (currentStep === 2) {
+                      const selKey = Array.from(selectedItems).sort().join(",");
+                      const selectionChanged =
+                        selKey !== prevSelectedKeyRef.current;
+                      const shouldSeedDetectedVars =
+                        selectionChanged ||
+                        (envVars.length === 0 && detectedEnvVars.length > 0);
+
+                      if (shouldSeedDetectedVars) {
+                        prevSelectedKeyRef.current = selKey;
+                        setEnvVars(detectedEnvVars);
+                      }
+                    }
+                    if (currentStep === 3) {
+                      const envVarValidationErrors = validateEnvVars(envVars);
+                      if (envVarValidationErrors.length > 0) {
+                        setErrorData({
+                          title: "Invalid environment variables",
+                          list: envVarValidationErrors,
+                        });
+                        return;
+                      }
+                    }
+                    handleNext();
+                  }}
+                  onSubmit={handleCreateDeployment}
+                  nextDisabled={
+                    (currentStep === 1 && !deploymentName.trim()) ||
+                    (currentStep === 2 && selectedItems.size === 0) ||
+                    (currentStep === 3 && validateEnvVars(envVars).length > 0)
                   }
-                  handleNext();
-                }}
-                onSubmit={handleCreateDeployment}
-                nextDisabled={
-                  (currentStep === 1 && !deploymentName.trim()) ||
-                  (currentStep === 2 && selectedItems.size === 0) ||
-                  (currentStep === 3 && validateEnvVars(envVars).length > 0)
-                }
-                submitLabel="Deploy"
-              />
+                  submitLabel="Deploy"
+                  onCancel={() => handleOpenChange(false)}
+                  nextLabel="Continue"
+                />
+              }
+            >
+              {currentStep === 1 && (
+                <StepBasics
+                  deploymentName={deploymentName}
+                  setDeploymentName={setDeploymentName}
+                  deploymentDescription={deploymentDescription}
+                  setDeploymentDescription={setDeploymentDescription}
+                  deploymentType={deploymentType}
+                  setDeploymentType={setDeploymentType}
+                />
+              )}
+
+              {currentStep === 2 && (
+                <StepAttach
+                  selectedItems={selectedItems}
+                  toggleItem={toggleItem}
+                  flows={checkpointGroups}
+                />
+              )}
+
+              {currentStep === 3 && (
+                <StepConfiguration
+                  envVars={envVars}
+                  setEnvVars={setEnvVars}
+                  detectedVarCount={detectedEnvVars.length}
+                />
+              )}
+              {currentStep === 4 && (
+                <StepReview
+                  deploymentType={deploymentType}
+                  deploymentName={deploymentName}
+                  deploymentDescription={deploymentDescription}
+                  selectedItems={selectedReviewItems}
+                  envVars={envVars}
+                />
+              )}
+            </StepperModal>
+          </>
+        )}
+        <RegisterDeploymentProviderModal
+          open={registerProviderOpen}
+          onOpenChange={setRegisterProviderOpen}
+        />
+        <ConfigureDeploymentProviderModal
+          open={configureProviderOpen}
+          provider={providerToConfigure}
+          onOpenChange={(nextOpen) => {
+            setConfigureProviderOpen(nextOpen);
+            if (!nextOpen) {
+              setProviderToConfigure(null);
             }
+          }}
+        />
+        <TestAgentModal
+          open={testAgentModalOpen}
+          providerId={providerId}
+          providerKey={selectedProvider?.provider_key}
+          deploymentId={testDeploymentTarget?.id ?? ""}
+          deploymentType={testDeploymentTarget?.deploymentType ?? "agent"}
+          deploymentMode={testDeploymentTarget?.mode ?? null}
+          deploymentName={testDeploymentTarget?.name ?? createdDeploymentName}
+          onOpenChange={(nextOpen) => {
+            setTestAgentModalOpen(nextOpen);
+            if (!nextOpen) {
+              setTestDeploymentTarget(null);
+            }
+          }}
+        />
+      </div>
+      {showEmptyDeployments && (
+        <div
+          className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2"
+          style={{
+            background:
+              "linear-gradient(to bottom, transparent 0%, transparent 25%, hsl(var(--background) / 0.5) 45%, hsl(var(--background)) 65%, hsl(var(--background)) 100%)",
+          }}
+        >
+          <h3 className="text-lg font-semibold">No Deployments</h3>
+          <p className="text-center text-sm text-muted-foreground pb-4">
+            Create your first deployment to run your flows in <br /> production.
+          </p>
+          <Button
+            className="pointer-events-auto flex items-center gap-2"
+            onClick={() => handleOpenChange(true)}
           >
-            {currentStep === 1 && (
-              <StepBasics
-                deploymentName={deploymentName}
-                setDeploymentName={setDeploymentName}
-                deploymentDescription={deploymentDescription}
-                setDeploymentDescription={setDeploymentDescription}
-                deploymentType={deploymentType}
-                setDeploymentType={setDeploymentType}
-              />
-            )}
-
-            {currentStep === 2 && (
-              <StepAttach
-                selectedItems={selectedItems}
-                toggleItem={toggleItem}
-                flows={checkpointGroups}
-              />
-            )}
-
-            {currentStep === 3 && (
-              <StepConfiguration
-                envVars={envVars}
-                setEnvVars={setEnvVars}
-                detectedVarCount={detectedEnvVars.length}
-              />
-            )}
-            {currentStep === 4 && (
-              <StepReview
-                deploymentType={deploymentType}
-                deploymentName={deploymentName}
-                deploymentDescription={deploymentDescription}
-                selectedItems={selectedReviewItems}
-                envVars={envVars}
-              />
-            )}
-          </StepperModal>
-        </>
+            <ForwardedIconComponent name="Plus" className="h-4 w-4" />
+            Create Deployment
+          </Button>
+        </div>
       )}
-      <RegisterDeploymentProviderModal
-        open={registerProviderOpen}
-        onOpenChange={setRegisterProviderOpen}
-      />
-      <ConfigureDeploymentProviderModal
-        open={configureProviderOpen}
-        provider={providerToConfigure}
-        onOpenChange={(nextOpen) => {
-          setConfigureProviderOpen(nextOpen);
-          if (!nextOpen) {
-            setProviderToConfigure(null);
-          }
-        }}
-      />
-      <TestAgentModal
-        open={testAgentModalOpen}
-        providerId={providerId}
-        providerKey={selectedProvider?.provider_key}
-        deploymentId={testDeploymentTarget?.id ?? ""}
-        deploymentType={testDeploymentTarget?.deploymentType ?? "agent"}
-        deploymentMode={testDeploymentTarget?.mode ?? null}
-        deploymentName={testDeploymentTarget?.name ?? createdDeploymentName}
-        onOpenChange={(nextOpen) => {
-          setTestAgentModalOpen(nextOpen);
-          if (!nextOpen) {
-            setTestDeploymentTarget(null);
-          }
-        }}
-      />
+      {showEmptyProviders && (
+        <div
+          className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2"
+          style={{
+            background:
+              "linear-gradient(to bottom, transparent 0%, transparent 25%, hsl(var(--background) / 0.5) 45%, hsl(var(--background)) 65%, hsl(var(--background)) 100%)",
+          }}
+        >
+          <h3 className="text-lg font-semibold">No Providers Connected</h3>
+          <p className="text-center text-sm text-muted-foreground pb-4">
+            Connect your first deployment provider to start <br /> deploying
+            your flows to production environments.
+          </p>
+          <Button
+            className="pointer-events-auto flex items-center gap-2"
+            onClick={() => setRegisterProviderOpen(true)}
+          >
+            <ForwardedIconComponent name="Plus" className="h-4 w-4" />
+            Add Provider
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

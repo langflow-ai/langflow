@@ -39,6 +39,10 @@ export interface StepperModalProps {
   sidePanel?: ReactNode;
   sidePanelOpen?: boolean;
   stepLabels?: string[];
+  fullPage?: boolean;
+  onBack?: () => void;
+  backLabel?: string;
+  bgClassName?: string;
 }
 
 export interface StepperModalFooterProps {
@@ -57,4 +61,6 @@ export interface StepperModalFooterProps {
   onHelp?: () => void;
   helpLabel?: string;
   submitTestId?: string;
+  onCancel?: () => void;
+  cancelLabel?: string;
 }

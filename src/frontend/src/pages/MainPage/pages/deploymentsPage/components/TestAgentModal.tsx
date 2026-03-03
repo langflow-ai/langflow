@@ -4,17 +4,17 @@ import remarkGfm from "remark-gfm";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import SimplifiedCodeTabComponent from "@/components/core/codeTabsComponent";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   Disclosure,
   DisclosureContent,
   DisclosureTrigger,
 } from "@/components/ui/disclosure";
 import {
+  type DeploymentExecutionResponse,
   useGetDeploymentExecutionById,
   usePostCreateDeploymentExecution,
-  type DeploymentExecutionResponse,
 } from "@/controllers/API/queries/deployments/use-deployments";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { WatsonxOrchestrateIcon } from "@/icons/IBM";
 import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 

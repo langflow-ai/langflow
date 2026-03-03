@@ -1,7 +1,7 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { DeploymentType } from "../constants";
+import type { DeploymentType } from "../../constants";
 
 type StepBasicsProps = {
   deploymentName: string;
@@ -20,7 +20,7 @@ export const StepBasics = ({
   deploymentType,
   setDeploymentType,
 }: StepBasicsProps) => (
-  <div className="flex h-full flex-col gap-5 overflow-y-auto">
+  <div className="flex h-full w-full flex-col gap-5 overflow-y-auto">
     <div>
       <h3 className="text-base font-semibold">Deployment Basics</h3>
       <p className="mt-1 text-sm text-muted-foreground">
