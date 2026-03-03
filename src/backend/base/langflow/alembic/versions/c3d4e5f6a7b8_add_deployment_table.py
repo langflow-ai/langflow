@@ -1,7 +1,7 @@
 """Add deployment table
 
 Revision ID: c3d4e5f6a7b8
-Revises: b2c3d4e5f6a7
+Revises: a1b2c3d4e5f6
 Create Date: 2026-03-03 00:00:00.000000
 
 Phase: EXPAND
@@ -36,16 +36,27 @@ def upgrade() -> None:
         sa.Column("project_id", sa.Uuid(), nullable=False),
         sa.Column("provider_account_id", sa.Uuid(), nullable=False),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column(
-            "created_at", sa.DateTime(timezone=True), server_default=sa.text("(CURRENT_TIMESTAMP)"), nullable=False
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["project_id"],
+            ["folder.id"],
+            name=op.f("fk_deployment_project_id_folder"),
+            ondelete="CASCADE",
         ),
-        sa.Column(
-            "updated_at", sa.DateTime(timezone=True), server_default=sa.text("(CURRENT_TIMESTAMP)"), nullable=False
+        sa.ForeignKeyConstraint(
+            ["provider_account_id"],
+            ["deployment_provider_account.id"],
+            name=op.f("fk_deployment_provider_account_id_deployment_provider_account"),
+            ondelete="CASCADE",
         ),
-        sa.ForeignKeyConstraint(["project_id"], ["folder.id"]),
-        sa.ForeignKeyConstraint(["provider_account_id"], ["deployment_provider_account.id"]),
-        sa.ForeignKeyConstraint(["user_id"], ["user.id"]),
-        sa.PrimaryKeyConstraint("id"),
+        sa.ForeignKeyConstraint(
+            ["user_id"],
+            ["user.id"],
+            name=op.f("fk_deployment_user_id_user"),
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_deployment")),
     )
     with op.batch_alter_table("deployment", schema=None) as batch_op:
         batch_op.create_index(batch_op.f("ix_deployment_name"), ["name"], unique=False)

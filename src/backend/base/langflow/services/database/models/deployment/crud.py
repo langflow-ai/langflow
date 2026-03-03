@@ -128,7 +128,16 @@ async def delete_deployment_row_by_id(
     user_id: UUID,
     deployment_id: UUID | str,
 ) -> int:
-    deployment_uuid = UUID(deployment_id) if isinstance(deployment_id, str) else deployment_id
+    if isinstance(deployment_id, str):
+        normalized = deployment_id.strip()
+        if not normalized:
+            return 0
+        try:
+            deployment_uuid = UUID(normalized)
+        except ValueError:
+            return 0
+    else:
+        deployment_uuid = deployment_id
     stmt = delete(Deployment).where(
         Deployment.user_id == user_id,
         Deployment.id == deployment_uuid,

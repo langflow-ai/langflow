@@ -39,7 +39,9 @@ def upgrade() -> None:
         sa.Column("api_key", AutoString(), nullable=False),
         sa.Column("registered_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.ForeignKeyConstraint(["user_id"], ["user.id"], name=op.f("fk_deployment_provider_account_user_id_user")),
+        sa.ForeignKeyConstraint(
+            ["user_id"], ["user.id"], name=op.f("fk_deployment_provider_account_user_id_user"), ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_deployment_provider_account")),
         sa.UniqueConstraint("user_id", "backend_url", "account_id", name=UNIQUE_CONSTRAINT_NAME),
     )
