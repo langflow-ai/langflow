@@ -6,6 +6,7 @@ from lfx.base.models.unified_models import (
     get_api_key_for_provider,
     get_embedding_class,
     get_embedding_model_options,
+    get_embeddings,
     get_unified_models_detailed,
     update_model_options_in_build_config,
 )
@@ -167,43 +168,29 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         except ImportError:
             pass
 
-        # Safely extract model configuration
-        if not self.model or not isinstance(self.model, list):
-            msg = "Model must be a non-empty list"
-            raise ValueError(msg)
+        # Build the primary embedding instance via the shared utility
+        primary_instance = get_embeddings(
+            model=self.model,
+            user_id=self.user_id,
+            api_key=self.api_key,
+            api_base=self.api_base if self.api_base else None,
+            dimensions=self.dimensions if self.dimensions else None,
+            chunk_size=self.chunk_size if self.chunk_size else None,
+            request_timeout=self.request_timeout if self.request_timeout else None,
+            max_retries=self.max_retries if self.max_retries else None,
+            show_progress_bar=self.show_progress_bar if hasattr(self, "show_progress_bar") else None,
+            model_kwargs=self.model_kwargs if self.model_kwargs else None,
+            watsonx_url=self.base_url_ibm_watsonx if hasattr(self, "base_url_ibm_watsonx") else None,
+            watsonx_project_id=self.project_id if hasattr(self, "project_id") else None,
+        )
 
-        model = self.model[0]
-        model_name = model.get("name")
-        provider = model.get("provider")
-        metadata = model.get("metadata", {})
-
-        # Get API key from user input or global variables
-        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)
-
-        # Validate required fields (Ollama doesn't require API key)
-        if not api_key and provider != "Ollama":
-            msg = (
-                f"{provider} API key is required. "
-                f"Please provide it in the component or configure it globally as "
-                f"{provider.upper().replace(' ', '_')}_API_KEY."
-            )
-            raise ValueError(msg)
-
-        if not model_name:
-            msg = "Model name is required"
-            raise ValueError(msg)
-
-        # Get embedding class
+        # Extract model config for _build_available_models
+        model_dict = self.model[0]
+        provider = model_dict.get("provider")
+        metadata = model_dict.get("metadata", {})
         embedding_class_name = metadata.get("embedding_class")
-        if not embedding_class_name:
-            msg = f"No embedding class defined in metadata for {model_name}"
-            raise ValueError(msg)
-
         embedding_class = get_embedding_class(embedding_class_name)
-
-        # Build kwargs using parameter mapping for primary instance
-        kwargs = self._build_kwargs(model, metadata)
-        primary_instance = embedding_class(**kwargs)
+        api_key = get_api_key_for_provider(self.user_id, provider, self.api_key)
 
         # Get all available embedding models for this provider
         available_models_dict = self._build_available_models(
