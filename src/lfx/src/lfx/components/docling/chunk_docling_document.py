@@ -6,7 +6,7 @@ from docling_core.transforms.chunker.hierarchical_chunker import HierarchicalChu
 
 from lfx.base.data.docling_utils import extract_docling_documents
 from lfx.custom import Component
-from lfx.io import DropdownInput, HandleInput, IntInput, MessageTextInput, Output, StrInput
+from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, Output, StrInput
 from lfx.schema import Data, DataFrame
 
 
@@ -32,6 +32,7 @@ class ChunkDoclingDocumentComponent(Component):
             info=("Which chunker to use."),
             value="HybridChunker",
             real_time_refresh=True,
+            input_types=["Message"],
         ),
         DropdownInput(
             name="provider",
@@ -72,6 +73,25 @@ class ChunkDoclingDocumentComponent(Component):
             required=False,
             advanced=True,
             dynamic=True,
+            input_types=["Message"],
+        ),
+        BoolInput(
+            name="merge_peers",
+            display_name="Merge peers",
+            info="Merge undersized chunks sharing the same relevant metadata.",
+            value=True,
+            show=True,
+            advanced=True,
+            dynamic=True,
+        ),
+        BoolInput(
+            name="always_emit_headings",
+            display_name="Always emit headings",
+            info="Emit headings even for empty sections.",
+            value=False,
+            show=True,
+            advanced=True,
+            dynamic=True,
         ),
         MessageTextInput(
             name="doc_key",
@@ -87,6 +107,7 @@ class ChunkDoclingDocumentComponent(Component):
     ]
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
+        """Update build_config to show/hide fields based on chunker and provider selection."""
         if field_name == "chunker":
             provider_type = build_config["provider"]["value"]
             is_hf = provider_type == "Hugging Face"
@@ -96,11 +117,15 @@ class ChunkDoclingDocumentComponent(Component):
                 build_config["hf_model_name"]["show"] = is_hf
                 build_config["openai_model_name"]["show"] = is_openai
                 build_config["max_tokens"]["show"] = True
+                build_config["merge_peers"]["show"] = True
+                build_config["always_emit_headings"]["show"] = True
             else:
                 build_config["provider"]["show"] = False
                 build_config["hf_model_name"]["show"] = False
                 build_config["openai_model_name"]["show"] = False
                 build_config["max_tokens"]["show"] = False
+                build_config["merge_peers"]["show"] = False
+                build_config["always_emit_headings"]["show"] = False
         elif field_name == "provider" and build_config["chunker"]["value"] == "HybridChunker":
             if field_value == "Hugging Face":
                 build_config["hf_model_name"]["show"] = True
@@ -160,9 +185,15 @@ class ChunkDoclingDocumentComponent(Component):
                 )
             chunker = HybridChunker(
                 tokenizer=tokenizer,
+                merge_peers=bool(self.merge_peers),
+                always_emit_headings=bool(self.always_emit_headings),
             )
+
         elif self.chunker == "HierarchicalChunker":
             chunker = HierarchicalChunker()
+        else:
+            msg = f"Unknown chunker: {self.chunker}"
+            raise ValueError(msg)
 
         results: list[Data] = []
         try:

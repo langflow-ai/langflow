@@ -1,3 +1,11 @@
+from lfx.base.flow_controls.loop_utils import (
+    execute_loop_body,
+    extract_loop_output,
+    get_loop_body_start_edge,
+    get_loop_body_start_vertex,
+    get_loop_body_vertices,
+    validate_data_input,
+)
 from lfx.components.processing.converter import convert_to_data
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import HandleInput
@@ -10,7 +18,7 @@ from lfx.template.field.base import Output
 class LoopComponent(Component):
     display_name = "Loop"
     description = (
-        "Iterates over a list of Data or Message objects, outputting one item at a time and "
+        "Iterates over a list of Data or Message objects, processing one item at a time and "
         "aggregating results from loop inputs. Message objects are automatically converted to "
         "Data objects for consistent processing."
     )
@@ -61,103 +69,118 @@ class LoopComponent(Component):
         return convert_to_data(message, auto_parse=False)
 
     def _validate_data(self, data):
-        """Validate and return a list of Data objects. Message objects are auto-converted to Data."""
-        if isinstance(data, DataFrame):
-            return data.to_data_list()
-        if isinstance(data, Data):
-            return [data]
-        if isinstance(data, Message):
-            # Auto-convert Message to Data
-            converted_data = self._convert_message_to_data(data)
-            return [converted_data]
-        if isinstance(data, list) and all(isinstance(item, (Data, Message)) for item in data):
-            # Convert any Message objects in the list to Data objects
-            converted_list = []
-            for item in data:
-                if isinstance(item, Message):
-                    converted_list.append(self._convert_message_to_data(item))
-                else:
-                    converted_list.append(item)
-            return converted_list
-        msg = "The 'data' input must be a DataFrame, a list of Data/Message objects, or a single Data/Message object."
-        raise TypeError(msg)
+        """Validate and return a list of Data objects."""
+        return validate_data_input(data)
 
-    def evaluate_stop_loop(self) -> bool:
-        """Evaluate whether to stop item or done output."""
-        current_index = self.ctx.get(f"{self._id}_index", 0)
-        data_length = len(self.ctx.get(f"{self._id}_data", []))
-        return current_index > data_length
+    def get_loop_body_vertices(self) -> set[str]:
+        """Identify vertices in this loop's body via graph traversal.
 
-    def item_output(self) -> Data:
-        """Output the next item in the list or stop if done."""
-        self.initialize_data()
-        current_item = Data(text="")
+        Traverses from the loop's "item" output to the vertex that feeds back
+        to the loop's "item" input, collecting all vertices in between.
+        This naturally handles nested loops by stopping at this loop's feedback edge.
 
-        if self.evaluate_stop_loop():
-            self.stop("item")
-        else:
-            # Get data list and current index
-            data_list, current_index = self.loop_variables()
-            if current_index < len(data_list):
-                # Output current item and increment index
-                try:
-                    current_item = data_list[current_index]
-                except IndexError:
-                    current_item = Data(text="")
-            self.aggregated_output()
-            self.update_ctx({f"{self._id}_index": current_index + 1})
+        Returns:
+            Set of vertex IDs that form this loop's body
+        """
+        # Check if we have a proper graph context
+        if not hasattr(self, "_vertex") or self._vertex is None:
+            return set()
 
-        # Now we need to update the dependencies for the next run
-        self.update_dependency()
-        return current_item
-
-    def update_dependency(self):
-        item_dependency_id = self.get_incoming_edge_by_target_param("item")
-        if item_dependency_id not in self.graph.run_manager.run_predecessors[self._id]:
-            self.graph.run_manager.run_predecessors[self._id].append(item_dependency_id)
-            # CRITICAL: Also update run_map so remove_from_predecessors() works correctly
-            # run_map[predecessor] = list of vertices that depend on predecessor
-            if self._id not in self.graph.run_manager.run_map[item_dependency_id]:
-                self.graph.run_manager.run_map[item_dependency_id].append(self._id)
-
-    def done_output(self) -> DataFrame:
-        """Trigger the done output when iteration is complete."""
-        self.initialize_data()
-
-        if self.evaluate_stop_loop():
-            self.stop("item")
-            self.start("done")
-
-            aggregated = self.ctx.get(f"{self._id}_aggregated", [])
-
-            return DataFrame(aggregated)
-        self.stop("done")
-        return DataFrame([])
-
-    def loop_variables(self):
-        """Retrieve loop variables from context."""
-        return (
-            self.ctx.get(f"{self._id}_data", []),
-            self.ctx.get(f"{self._id}_index", 0),
+        return get_loop_body_vertices(
+            vertex=self._vertex,
+            graph=self.graph,
+            get_incoming_edge_by_target_param_fn=self.get_incoming_edge_by_target_param,
         )
 
-    def aggregated_output(self) -> list[Data]:
-        """Return the aggregated list once all items are processed.
+    def _get_loop_body_start_vertex(self) -> str | None:
+        """Get the first vertex in the loop body (connected to loop's item output).
 
-        Returns Data or Message objects depending on loop input types.
+        Returns:
+            The vertex ID of the first vertex in the loop body, or None if not found
+        """
+        # Check if we have a proper graph context
+        if not hasattr(self, "_vertex") or self._vertex is None:
+            return None
+
+        return get_loop_body_start_vertex(vertex=self._vertex)
+
+    def _extract_loop_output(self, results: list) -> Data:
+        """Extract the output from subgraph execution results.
+
+        Args:
+            results: List of VertexBuildResult objects from subgraph execution
+
+        Returns:
+            Data object containing the loop iteration output
+        """
+        # Get the vertex ID that feeds back to the item input (end of loop body)
+        end_vertex_id = self.get_incoming_edge_by_target_param("item")
+        return extract_loop_output(results=results, end_vertex_id=end_vertex_id)
+
+    async def execute_loop_body(self, data_list: list[Data], event_manager=None) -> list[Data]:
+        """Execute loop body for each data item.
+
+        Creates an isolated subgraph for the loop body and executes it
+        for each item in the data list, collecting results.
+
+        Args:
+            data_list: List of Data objects to iterate over
+            event_manager: Optional event manager to pass to subgraph execution for UI events
+
+        Returns:
+            List of Data objects containing results from each iteration
+        """
+        # Get the loop body configuration once
+        loop_body_vertex_ids = self.get_loop_body_vertices()
+        start_vertex_id = self._get_loop_body_start_vertex()
+        start_edge = get_loop_body_start_edge(self._vertex)
+        end_vertex_id = self.get_incoming_edge_by_target_param("item")
+
+        return await execute_loop_body(
+            graph=self.graph,
+            data_list=data_list,
+            loop_body_vertex_ids=loop_body_vertex_ids,
+            start_vertex_id=start_vertex_id,
+            start_edge=start_edge,
+            end_vertex_id=end_vertex_id,
+            event_manager=event_manager,
+        )
+
+    def item_output(self) -> Data:
+        """Output is no longer used - loop executes internally now.
+
+        This method is kept for backward compatibility but does nothing.
+        The actual loop execution happens in done_output().
+        """
+        self.stop("item")
+        return Data(text="")
+
+    async def done_output(self) -> DataFrame:
+        """Execute the loop body for all items and return aggregated results.
+
+        This is now the main execution point for the loop. It:
+        1. Gets the data list to iterate over
+        2. Executes the loop body as an isolated subgraph for each item
+        3. Returns the aggregated results
+
+        Args:
+            event_manager: Optional event manager for UI event emission
         """
         self.initialize_data()
 
-        # Get data list and aggregated list
+        # Get data list
         data_list = self.ctx.get(f"{self._id}_data", [])
-        aggregated = self.ctx.get(f"{self._id}_aggregated", [])
-        loop_input = self.item
 
-        # Append the current loop input to aggregated if it's not already included
-        if loop_input is not None and not isinstance(loop_input, str) and len(aggregated) <= len(data_list):
-            # If the loop input is a Message, convert it to Data for consistency
-            if isinstance(loop_input, Message):
-                loop_input = self._convert_message_to_data(loop_input)
-            aggregated.append(loop_input)
-            self.update_ctx({f"{self._id}_aggregated": aggregated})
-        return aggregated
+        if not data_list:
+            return DataFrame([])
+
+        # Execute loop body for all items
+        try:
+            aggregated_results = await self.execute_loop_body(data_list, event_manager=self._event_manager)
+            return DataFrame(aggregated_results)
+        except Exception as e:
+            # Log error and return empty DataFrame
+            from lfx.log.logger import logger
+
+            await logger.aerror(f"Error executing loop body: {e}")
+            raise

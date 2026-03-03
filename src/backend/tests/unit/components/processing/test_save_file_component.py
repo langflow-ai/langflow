@@ -1,3 +1,4 @@
+import contextlib
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -10,6 +11,18 @@ from tests.base import ComponentTestBaseWithoutClient
 
 
 class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
+    @pytest.fixture(scope="class", autouse=True)
+    def cleanup_test_files(self):
+        """Clean up test files after all tests in the class complete."""
+        yield
+        # Clean up test files created during tests
+        test_files = ["test_data.json", "test_message.txt", "test_output.csv"]
+        for filename in test_files:
+            filepath = Path(filename)
+            if filepath.exists():
+                with contextlib.suppress(Exception):
+                    filepath.unlink()
+
     @pytest.fixture
     def component_class(self):
         """Return the component class to test."""
@@ -462,3 +475,13 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         assert result["append_mode"]["show"] is False, "append_mode should be hidden for Google Drive storage"
         assert result["file_name"]["show"] is True
         assert result["gdrive_format"]["show"] is True
+
+    def test_storage_location_defaults_to_local(self, component_class):
+        """Test that storage_location input defaults to Local when component is dropped."""
+        storage_input = next(i for i in component_class.inputs if i.name == "storage_location")
+        assert storage_input.value == [{"name": "Local", "icon": "hard-drive"}]
+
+    def test_storage_location_is_advanced(self, component_class):
+        """Test that storage_location is in advanced controls."""
+        storage_input = next(i for i in component_class.inputs if i.name == "storage_location")
+        assert storage_input.advanced is True

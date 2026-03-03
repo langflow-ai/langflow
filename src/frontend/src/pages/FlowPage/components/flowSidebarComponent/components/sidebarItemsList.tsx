@@ -38,6 +38,9 @@ const SidebarItemsList = ({
         })
         .map((SBItemName) => {
           const currentItem = dataFilter[item.name][SBItemName];
+          if (SBItemName === "MCPTools") {
+            return null;
+          }
 
           if (SBItemName === "ChatInput" || SBItemName === "Webhook") {
             return (

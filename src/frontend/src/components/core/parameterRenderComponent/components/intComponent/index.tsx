@@ -21,7 +21,8 @@ export default function IntComponent({
   editNode = false,
   id = "",
   readonly,
-}: InputProps<number, IntComponentType>): JSX.Element {
+  showParameter = true,
+}: InputProps<number, IntComponentType>): JSX.Element | null {
   const min = -Infinity;
   // Clear component state when disabled
   useEffect(() => {
@@ -138,6 +139,10 @@ export default function IntComponent({
     " hover:rounded-br-[5px] hover:bg-muted group-decrement";
   const inputRef = useRef(null);
 
+  if (!showParameter) {
+    return null;
+  }
+
   return (
     <div className="w-full">
       <NumberInput
@@ -176,17 +181,17 @@ export default function IntComponent({
             />
           </NumberIncrementStepper>
           <NumberDecrementStepper
-            className={decrementStepperClassName}
-            _disabled={{ cursor: "default" }}
-            isDisabled={isAtOrBelowMin}
-            onClickCapture={
-              isAtOrBelowMin
-                ? (e: React.MouseEvent) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }
-                : undefined
-            }
+            className={cn(
+              decrementStepperClassName,
+              isAtOrBelowMin && "pointer-events-none opacity-50",
+            )}
+            aria-disabled={isAtOrBelowMin || undefined}
+            data-disabled={isAtOrBelowMin ? "" : undefined}
+            onClickCapture={(e: React.MouseEvent) => {
+              if (!isAtOrBelowMin) return;
+              e.preventDefault();
+              e.stopPropagation();
+            }}
           >
             <MinusIcon
               className={iconClassName}

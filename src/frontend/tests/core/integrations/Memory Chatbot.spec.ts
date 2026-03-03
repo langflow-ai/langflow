@@ -69,21 +69,18 @@ withEventDeliveryModes(
     const concatAllText = textContents.join(" ");
     expect(concatAllText.length).toBeGreaterThan(20);
 
-    await page.getByText("Default Session").last().click();
+    // Open message logs from session sidebar menu (chat-header-more-menu is hidden in fullscreen)
+    await page
+      .locator('[data-testid^="session-"][data-testid$="-more-menu"]')
+      .first()
+      .click();
+    await page.getByTestId("message-logs-option").click();
 
-    await page.getByText("timestamp", { exact: true }).last().isVisible();
-    await page.getByText("text", { exact: true }).last().isVisible();
-    await page.getByText("sender", { exact: true }).last().isVisible();
-    await page.getByText("sender_name", { exact: true }).last().isVisible();
-    await page.getByText("session_id", { exact: true }).last().isVisible();
-    await page.getByText("files", { exact: true }).last().isVisible();
-
-    await page.getByRole("gridcell").last().isVisible();
-    await page.getByRole("combobox").click();
-    await page.getByLabel("Delete").click();
-    await page.waitForSelector('[data-testid="input-chat-playground"]', {
-      timeout: 100000,
-    });
-    await page.getByTestId("input-chat-playground").last().isVisible();
+    await expect(page.getByText("timestamp", { exact: true })).toBeVisible();
+    await expect(page.getByText("text", { exact: true })).toBeVisible();
+    await expect(page.getByText("sender", { exact: true })).toBeVisible();
+    await expect(page.getByText("sender_name", { exact: true })).toBeVisible();
+    await expect(page.getByText("session_id", { exact: true })).toBeVisible();
+    await expect(page.getByText("files", { exact: true })).toBeVisible();
   },
 );

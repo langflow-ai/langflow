@@ -4,11 +4,11 @@ import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import CanvasControlButton from "@/components/core/canvasControlsComponent/CanvasControlButton";
 import CanvasControls from "@/components/core/canvasControlsComponent/CanvasControls";
-import LogCanvasControls from "@/components/core/logCanvasControlsComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import useFlowStore from "@/stores/flowStore";
+import { AllNodeType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 import { useSearchContext } from "../flowSidebarComponent";
 import { NAV_ITEMS } from "../flowSidebarComponent/components/sidebarSegmentedNav";
@@ -21,22 +21,22 @@ interface MemoizedCanvasControlsProps {
   setIsAddingNote: (value: boolean) => void;
   shadowBoxWidth: number;
   shadowBoxHeight: number;
+  selectedNode: AllNodeType | null;
 }
-
-export const MemoizedLogCanvasControls = memo(() => <LogCanvasControls />);
 
 export const MemoizedCanvasControls = memo(
   ({
     setIsAddingNote,
     shadowBoxWidth,
     shadowBoxHeight,
+    selectedNode,
   }: MemoizedCanvasControlsProps) => {
     const isLocked = useFlowStore(
       useShallow((state) => state.currentFlow?.locked),
     );
 
     return (
-      <CanvasControls>
+      <CanvasControls selectedNode={selectedNode}>
         <Button
           unstyled
           unselectable="on"

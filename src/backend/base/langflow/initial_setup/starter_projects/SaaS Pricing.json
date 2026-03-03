@@ -111,7 +111,9 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "template"
+              "template",
+              "use_double_brackets",
+              "tool_placeholder"
             ],
             "frozen": false,
             "icon": "prompts",
@@ -389,10 +391,8 @@
               "sender",
               "sender_name",
               "session_id",
+              "context_id",
               "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color",
               "clean_data"
             ],
             "frozen": false,
@@ -409,7 +409,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.128.0"
+                    "version": "0.133.1"
                   },
                   {
                     "name": "lfx",
@@ -870,9 +870,12 @@
             "field_order": [
               "model",
               "api_key",
+              "base_url_ibm_watsonx",
+              "project_id",
               "system_prompt",
               "context_id",
               "n_messages",
+              "max_tokens",
               "format_instructions",
               "output_schema",
               "tools",
@@ -1211,7 +1214,9 @@
                   }
                 },
                 "info": "Select your model provider",
-                "input_types": [],
+                "input_types": [
+                  "LanguageModel"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "language",

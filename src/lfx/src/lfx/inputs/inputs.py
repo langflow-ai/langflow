@@ -146,7 +146,7 @@ class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMix
 
 
 class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
-    """Represents a model input field with optional LanguageModel connection support.
+    """Represents a model input field with optional model connection support.
 
     By default:
     - input_types=[] (no handle shown)
@@ -154,7 +154,9 @@ class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTrace
     - refresh_button=True
 
     When "Connect other models" is selected (value="connect_other_models"):
-    - input_types is set to ["LanguageModel"] to show the connection handle
+    - input_types is set based on model_type:
+      - "embedding" -> ["Embeddings"]
+      - "language" (default) -> ["LanguageModel"]
 
     Value format:
     - Can be a list of dicts: [{'name': 'gpt-4o', 'provider': 'OpenAI', ...}]
@@ -227,34 +229,17 @@ class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTrace
 
     @model_validator(mode="after")
     def set_defaults(self):
-        """Handle connection mode and set defaults.
+        """Set default input_types based on model_type.
 
-        When value is "connect_other_models", set input_types to ["LanguageModel"]
-        to enable the connection handle. Otherwise, keep input_types empty.
+        Always set input_types to enable connection handles:
+        - "embedding" -> ["Embeddings"]
+        - "language" (default) -> ["LanguageModel"]
         """
-        # Check if we're in connection mode (user selected "Connect other models")
-        if self.value == "connect_other_models" and not self.input_types:
-            # Enable connection handle by setting input_types
-            # Use object.__setattr__ to avoid triggering validation recursion
-            object.__setattr__(self, "input_types", ["LanguageModel"])
+        # Always set input_types based on model_type if not explicitly provided
+        if not self.input_types:
+            default_input_type = "Embeddings" if self.model_type == "embedding" else "LanguageModel"
+            object.__setattr__(self, "input_types", [default_input_type])
 
-        # Set external_options if not explicitly provided
-        if self.external_options is None or len(self.external_options) == 0:
-            object.__setattr__(
-                self,
-                "external_options",
-                {
-                    "fields": {
-                        "data": {
-                            "node": {
-                                "name": "connect_other_models",
-                                "display_name": "Connect other models",
-                                "icon": "CornerDownLeft",
-                            }
-                        }
-                    },
-                },
-            )
         return self
 
 
@@ -511,12 +496,32 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
         Raises:
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
-        if v and not isinstance(v, int | float):
-            msg = f"Invalid value type {type(v)} for input {info.data.get('name')}."
-            raise ValueError(msg)
+        if isinstance(v, int):
+            return v
         if isinstance(v, float):
-            v = int(v)
-        return v
+            return int(v)
+        if isinstance(v, Message):
+            v = v.text
+        elif isinstance(v, Data):
+            v = v.data.get(v.text_key, "")
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return 0
+            try:
+                return int(v)
+            except ValueError:
+                pass
+            try:
+                return int(float(v))
+            except ValueError:
+                input_name = info.data.get("name", "unknown")
+                msg = f"Could not convert '{v}' to integer for input {input_name}."
+                raise ValueError(msg) from None
+        if not v:
+            return 0
+        msg = f"Invalid value type {type(v)} for input {info.data.get('name')}."
+        raise ValueError(msg)
 
 
 class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin, ToolModeMixin):
@@ -547,12 +552,28 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
         Raises:
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
-        if v and not isinstance(v, int | float):
-            msg = f"Invalid value type {type(v)} for input {info.data.get('name')}."
-            raise ValueError(msg)
+        if isinstance(v, float):
+            return v
         if isinstance(v, int):
-            v = float(v)
-        return v
+            return float(v)
+        if isinstance(v, Message):
+            v = v.text
+        elif isinstance(v, Data):
+            v = v.data.get(v.text_key, "")
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return 0.0
+            try:
+                return float(v)
+            except ValueError:
+                input_name = info.data.get("name", "unknown")
+                msg = f"Could not convert '{v}' to float for input {input_name}."
+                raise ValueError(msg) from None
+        if not v:
+            return 0.0
+        msg = f"Invalid value type {type(v)} for input {info.data.get('name')}."
+        raise ValueError(msg)
 
 
 class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, ToolModeMixin):
@@ -590,6 +611,35 @@ class NestedDictInput(
 
     field_type: SerializableFieldTypes = FieldTypes.NESTED_DICT
     value: dict | None = {}
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def validate_value(cls, v: Any, info):
+        if v is None or isinstance(v, dict):
+            return v
+        if isinstance(v, Message):
+            v = v.text
+        elif isinstance(v, Data):
+            v = v.data.get(v.text_key, "")
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return {}
+            import json
+
+            try:
+                parsed = json.loads(v)
+            except json.JSONDecodeError as e:
+                input_name = info.data.get("name", "unknown")
+                msg = f"Could not parse JSON string for input {input_name}: {e}"
+                raise ValueError(msg) from None
+            if not isinstance(parsed, dict):
+                input_name = info.data.get("name", "unknown")
+                msg = f"Expected a JSON object for input {input_name}, got {type(parsed).__name__}."
+                raise TypeError(msg)
+            return parsed
+        msg = f"Invalid value type {type(v)} for input {info.data.get('name')}."
+        raise TypeError(msg)
 
 
 class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):

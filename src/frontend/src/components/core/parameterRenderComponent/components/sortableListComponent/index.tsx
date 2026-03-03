@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { isEqual } from "lodash";
 import { ReactSortable } from "react-sortablejs";
 import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -86,6 +87,7 @@ const SortableListComponent = ({
   searchCategory = [],
   limit,
   id,
+  showParameter = true,
   ...baseInputProps
 }: InputProps<any, SortableListComponentProps>) => {
   const { placeholder, handleOnNewValue, value } = baseInputProps;
@@ -104,9 +106,21 @@ const SortableListComponent = ({
 
   const setListDataHandler = useCallback(
     (newList: any[]) => {
-      handleOnNewValue({ value: newList });
+      const sanitizedNewList = newList.map((item) => {
+        const { chosen, selected, ...rest } = item;
+        return rest;
+      });
+
+      const sanitizedListData = listData.map((item) => {
+        const { chosen, selected, ...rest } = item;
+        return rest;
+      });
+
+      if (!isEqual(sanitizedNewList, sanitizedListData)) {
+        handleOnNewValue({ value: sanitizedNewList });
+      }
     },
-    [handleOnNewValue],
+    [listData, handleOnNewValue],
   );
 
   const handleCloseListSelectionDialog = useCallback(() => {
@@ -131,6 +145,10 @@ const SortableListComponent = ({
       setOpen(false);
     }
   }, [helperText, open]);
+
+  if (!showParameter) {
+    return null;
+  }
 
   return (
     <div className="flex w-full flex-col">
@@ -201,6 +219,7 @@ const SortableListComponent = ({
         selectedList={listData}
         options={options}
         limit={limit}
+        id={id}
         {...baseInputProps}
       />
     </div>

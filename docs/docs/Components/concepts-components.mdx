@@ -4,6 +4,8 @@ slug: /concepts-components
 ---
 
 import Icon from "@site/src/components/icon";
+import CodeSnippet from "@site/src/components/CodeSnippet";
+import RecursiveCharacterSource from "!!raw-loader!@langflow/src/lfx/src/lfx/components/langchain_utilities/recursive_character.py";
 
 Components are the building blocks of your flows.
 Like classes in an application, each component is designed for a specific use case or integration.
@@ -161,56 +163,26 @@ Each component's code includes definitions for inputs and outputs, which are rep
 For example, the `RecursiveCharacterTextSplitter` has four inputs. Each input definition specifies the input type, such as `IntInput`, as well as the encoded name, display name, description, and other parameters for that specific input.
 These values determine the component settings, such as display names and tooltips in the visual editor.
 
-```python
-    inputs = [
-        IntInput(
-            name="chunk_size",
-            display_name="Chunk Size",
-            info="The maximum length of each chunk.",
-            value=1000,
-        ),
-        IntInput(
-            name="chunk_overlap",
-            display_name="Chunk Overlap",
-            info="The amount of overlap between chunks.",
-            value=200,
-        ),
-        DataInput(
-            name="data_input",
-            display_name="Input",
-            info="The texts to split.",
-            input_types=["Document", "Data"],
-        ),
-        MessageTextInput(
-            name="separators",
-            display_name="Separators",
-            info='The characters to split on.\nIf left empty defaults to ["\\n\\n", "\\n", " ", ""].',
-            is_list=True,
-        ),
-    ]
-```
+<CodeSnippet
+  source={RecursiveCharacterSource}
+  startLine={17}
+  endLine={41}
+  language="python"
+  title="RecursiveCharacterTextSplitter inputs (from recursive_character.py)"
+  showLineNumbers
+/>
 
 Additionally, components have methods or functions that handle their functionality.
 For example, the `RecursiveCharacterTextSplitter` has two methods:
 
-```python
-    def get_data_input(self) -> Any:
-        return self.data_input
-
-    def build_text_splitter(self) -> TextSplitter:
-        if not self.separators:
-            separators: list[str] | None = None
-        else:
-            # check if the separators list has escaped characters
-            # if there are escaped characters, unescape them
-            separators = [unescape_string(x) for x in self.separators]
-
-        return RecursiveCharacterTextSplitter(
-            separators=separators,
-            chunk_size=self.chunk_size,
-            chunk_overlap=self.chunk_overlap,
-        )
-```
+<CodeSnippet
+  source={RecursiveCharacterSource}
+  startLine={45}
+  endLine={60}
+  language="python"
+  title="RecursiveCharacterTextSplitter methods (from recursive_character.py)"
+  showLineNumbers
+/>
 
 The `get_data_input` method retrieves the text to be split from the component's input, which makes the data available to the class.
 The `build_text_splitter` method creates a `RecursiveCharacterTextSplitter` object by calling its parent class's `build` method. Then, the text is split with the created splitter and passed to the next component.
