@@ -149,7 +149,7 @@
                 "dependencies": [
                   {
                     "name": "apify_client",
-                    "version": "2.4.1"
+                    "version": "2.5.0"
                   },
                   {
                     "name": "langchain_community",
@@ -161,7 +161,7 @@
                   },
                   {
                     "name": "pydantic",
-                    "version": "2.11.10"
+                    "version": "2.12.5"
                   },
                   {
                     "name": "lfx",
@@ -380,7 +380,7 @@
                 "dependencies": [
                   {
                     "name": "apify_client",
-                    "version": "2.4.1"
+                    "version": "2.5.0"
                   },
                   {
                     "name": "langchain_community",
@@ -392,7 +392,7 @@
                   },
                   {
                     "name": "pydantic",
-                    "version": "2.11.10"
+                    "version": "2.12.5"
                   },
                   {
                     "name": "lfx",
@@ -976,7 +976,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.128.1"
+                    "version": "0.133.1"
                   },
                   {
                     "name": "lfx",
@@ -1287,7 +1287,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": "2.11.10"
+                    "version": "2.12.5"
                   },
                   {
                     "name": "lfx",
