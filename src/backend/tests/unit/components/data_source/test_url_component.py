@@ -264,7 +264,7 @@ class TestURLComponentSSRFProtection:
 
         with patch("lfx.components.data_source.url.validate_url_for_ssrf") as mock_validate:
             component.ensure_url("https://example.com")
-            mock_validate.assert_called_once_with("https://example.com", warn_only=True)
+            mock_validate.assert_called_once_with("https://example.com", warn_only=False)
 
     def test_ssrf_blocks_localhost(self):
         """Test that localhost is blocked when SSRF validation raises."""
@@ -307,15 +307,15 @@ class TestURLComponentSSRFProtection:
             assert url == "https://www.google.com"
             mock_validate.assert_called_once()
 
-    def test_ssrf_warn_only_mode(self):
-        """Test that warn_only=True is passed to validation."""
+    def test_ssrf_blocking_mode(self):
+        """Test that warn_only=False is passed to validation for actual blocking."""
         component = URLComponent()
 
         with patch("lfx.components.data_source.url.validate_url_for_ssrf") as mock_validate:
             component.ensure_url("https://example.com")
 
-            # Verify warn_only=True is passed (current behavior for backwards compatibility)
-            mock_validate.assert_called_with("https://example.com", warn_only=True)
+            # Verify warn_only=False is passed to enforce blocking when SSRF protection is enabled
+            mock_validate.assert_called_with("https://example.com", warn_only=False)
 
     def test_ssrf_protection_in_fetch_content(self):
         """Test that SSRF protection is applied during fetch_content."""

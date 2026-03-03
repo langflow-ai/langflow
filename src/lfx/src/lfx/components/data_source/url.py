@@ -238,11 +238,11 @@ class URLComponent(Component):
             raise ValueError(msg)
 
         # SSRF Protection: Validate URL to prevent access to internal resources
-        # TODO: In next major version (2.0), remove warn_only=True to enforce blocking
+        # Blocks requests to private IPs, localhost, and cloud metadata endpoints
+        # when LANGFLOW_SSRF_PROTECTION_ENABLED=true
         try:
-            validate_url_for_ssrf(url, warn_only=True)
+            validate_url_for_ssrf(url, warn_only=False)
         except SSRFProtectionError as e:
-            # This will only raise if SSRF protection is enabled and warn_only=False
             msg = f"SSRF Protection: {e}"
             raise ValueError(msg) from e
 
