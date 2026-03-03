@@ -18,7 +18,7 @@ The pluggable services system supports **three** discovery mechanisms:
 ## Adapter Registries (Service-Scoped Plugin Registries)
 
 LFX also supports **adapter registries** -- collections of swappable implementations that share the same protocol.
-Use them when you need to choose between several adapters at runtime (for example, deployment adapters like `local` and `remote`).
+Use them when you need to choose between several adapters at runtime (for example, deployment adapters keyed as `local` and `remote` in your own config/plugin setup).
 
 ### Service vs Adapter Registry
 
@@ -27,7 +27,7 @@ Use them when you need to choose between several adapters at runtime (for exampl
 | **Lookup key** | `ServiceType` enum | String key within a namespace |
 | **Cardinality** | One implementation per type | Many adapters per registry |
 | **Type safety** | Protocol per `ServiceType` | Protocol-typed registry per `AdapterType` |
-| **Example** | `storage_service` | `deployment` adapters: `"local"`, `"remote"` |
+| **Example** | `storage_service` | `deployment` adapters by key, e.g. `"local"`, `"remote"` |
 
 ### Core API
 
@@ -45,6 +45,19 @@ keys = deployment_registry.list_keys()
 ```
 
 `AdapterRegistry` is generic over `T`, so `get_class` returns `type[T] | None` -- callers get full type-checking on the resolved adapter class.
+
+To resolve singleton adapter instances managed by the registry:
+
+```python
+from lfx.services.deps import get_deployment_adapter
+
+adapter = get_deployment_adapter("local")
+```
+
+`get_instance`/`get_deployment_adapter` create adapters lazily and cache one instance per adapter key.
+Discovery config is resolved internally (settings `config_dir` when available, otherwise current working directory).
+Use this when you want shared, long-lived adapter objects instead of per-call construction.
+The key (`"local"` above) is an example, not a built-in requirement.
 
 For advanced use (custom entry-point groups, non-standard config paths), use the lower-level factory directly:
 
@@ -74,6 +87,7 @@ class LocalAdapter:
 
 The decorator preserves the concrete class type (uses a `TypeVar` internally).
 Defaults to `override=True`; set `override=False` to keep an existing key untouched.
+`"local"` is only an example adapter key.
 
 #### Option B: Configuration Files
 
@@ -93,6 +107,8 @@ local = "my_package.deployment:LocalAdapter"
 remote = "my_package.deployment:RemoteAdapter"
 ```
 
+`local`/`remote` are illustrative keys; choose names that match your adapter set.
+
 #### Option C: Entry Points
 
 Entry-point groups follow the naming convention `lfx.<adapter_type>.adapters` (e.g. `lfx.deployment.adapters`).
@@ -102,6 +118,8 @@ Entry-point groups follow the naming convention `lfx.<adapter_type>.adapters` (e
 local = "my_package.deployment:LocalAdapter"
 remote = "my_package.deployment:RemoteAdapter"
 ```
+
+Entry-point names are adapter keys and are fully user-defined.
 
 ### Adapter Discovery and Precedence
 
@@ -114,6 +132,32 @@ Adapter discovery order matches top-level services:
 Config files are deployment-time overrides and win by default.
 
 Discovery is **one-time per registry instance**. Subsequent calls to `discover()` are no-ops.
+
+### Adapter Instance Lifecycle
+
+- Class discovery and registration are separate from instance creation
+- Instance creation is lazy (`get_instance` on first access)
+- One instance is cached per adapter key
+- Registry teardown (`teardown_instances`) clears and tears down cached adapter singletons
+- Global teardown (`teardown_all_adapter_registries`) is invoked during service manager shutdown
+
+### Recommended File Structure
+
+When adapters are part of core LFX, prefer namespacing them under `services/adapters`:
+
+```text
+lfx/services/
+  adapters/
+    deployment/
+      __init__.py
+      registry.py
+      base.py
+      service.py
+      exceptions.py
+      schema.py
+```
+
+This keeps top-level services focused on DI-managed host services while adapter implementations live under explicit adapter namespaces.
 
 ### Error Handling Behavior
 
@@ -145,6 +189,8 @@ adapter = adapter_cls(...)
 
 The host service remains the only object registered in the top-level service manager for its `ServiceType`.
 Adapters are discovered and selected inside that host service; they do not replace the host service itself.
+
+If your architecture does not require a host service, consumers may resolve adapters directly from the registry and still preserve singleton lifecycle semantics.
 
 ## Quick Start
 

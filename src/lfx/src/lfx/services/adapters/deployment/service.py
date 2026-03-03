@@ -1,3 +1,4 @@
+# ruff: noqa: ARG002
 """Default (no-op) deployment service implementation."""
 
 from __future__ import annotations
@@ -5,13 +6,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
-from lfx.services.deployment.base import BaseDeploymentService
-from lfx.services.deployment.exceptions import DeploymentNotConfiguredError
+from lfx.services.adapters.deployment.base import BaseDeploymentService
+from lfx.services.adapters.deployment.exceptions import DeploymentNotConfiguredError
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from lfx.services.deployment.schema import (
+    from lfx.services.adapters.deployment.schema import (
         DeploymentCreate,
         DeploymentCreateResult,
         DeploymentDeleteResult,

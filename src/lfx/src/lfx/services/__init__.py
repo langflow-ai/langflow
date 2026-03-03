@@ -5,7 +5,9 @@ from .adapter_registry import (
     AdapterRegistryConflictError,
     get_adapter_registry,
     register_adapter,
+    teardown_all_adapter_registries,
 )
+from .deps import get_deployment_adapter, get_deployment_registry
 from .interfaces import (
     AuthServiceProtocol,
     CacheServiceProtocol,
@@ -37,6 +39,9 @@ __all__ = [
     "TracingServiceProtocol",
     "VariableServiceProtocol",
     "get_adapter_registry",
+    "get_deployment_adapter",
+    "get_deployment_registry",
     "register_adapter",
     "register_service",
+    "teardown_all_adapter_registries",
 ]

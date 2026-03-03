@@ -10,7 +10,7 @@ from lfx.services.base import Service
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from lfx.services.deployment.schema import (
+    from lfx.services.adapters.deployment.schema import (
         DeploymentCreate,
         DeploymentCreateResult,
         DeploymentDeleteResult,

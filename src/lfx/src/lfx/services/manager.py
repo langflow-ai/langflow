@@ -288,6 +288,11 @@ class ServiceManager:
                     await teardown_result
             except Exception as exc:  # noqa: BLE001
                 logger.debug(f"Error in teardown of {service.name}", exc_info=exc)
+
+        # Adapter registries own singleton adapter instances and must also be cleaned up.
+        from lfx.services.adapter_registry import teardown_all_adapter_registries
+
+        await teardown_all_adapter_registries()
         self.services = {}
         self.factories = {}
 

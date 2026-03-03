@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager, suppress
+from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from fastapi import HTTPException
@@ -160,6 +161,27 @@ def get_deployment_registry() -> AdapterRegistry[DeploymentServiceProtocol]:
             config_section_path=("deployment", "adapters"),
         ),
     )
+
+
+def get_deployment_adapter(
+    adapter_key: str,
+) -> DeploymentServiceProtocol | None:
+    """Resolve a singleton deployment adapter instance by key.
+
+    Args:
+        adapter_key: Deployment adapter registry key (for example ``"local"``).
+    """
+    registry = get_deployment_registry()
+    registry.discover(config_dir=_resolve_adapter_config_dir())
+    return registry.get_instance(adapter_key, factory=lambda adapter_class: adapter_class())
+
+
+def _resolve_adapter_config_dir() -> Path:
+    """Resolve config directory for adapter discovery."""
+    settings_service = get_settings_service()
+    if settings_service is not None and settings_service.settings.config_dir:
+        return Path(settings_service.settings.config_dir)
+    return Path.cwd()
 
 
 async def get_session():

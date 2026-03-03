@@ -14,10 +14,12 @@ existing ServiceManager plugin model:
 from __future__ import annotations
 
 import importlib
+import inspect
 import threading
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
     from lfx.services.schema import AdapterType
@@ -32,6 +34,7 @@ __all__ = [
     "AdapterRegistryConflictError",
     "get_adapter_registry",
     "register_adapter",
+    "teardown_all_adapter_registries",
 ]
 
 
@@ -91,6 +94,7 @@ class AdapterRegistry(Generic[T]):
         self.entry_point_group = entry_point_group
         self.config_section_path = config_section_path
         self.adapter_classes: dict[str, type[T]] = {}
+        self.adapter_instances: dict[str, T] = {}
         self._discovered = False
         self._lock = threading.RLock()
 
@@ -126,6 +130,45 @@ class AdapterRegistry(Generic[T]):
     def list_keys(self) -> list[str]:
         """Return sorted list of registered adapter keys."""
         return sorted(self.adapter_classes.keys())
+
+    def get_instance(self, key: str, *, factory: Callable[[type[T]], T]) -> T | None:
+        """Get or create a singleton adapter instance for a key.
+
+        The registry is the owner of adapter instance lifecycle:
+        - Instances are created lazily on first access per key.
+        - A single instance is cached per key.
+        - Cached instances are torn down via ``teardown_instances``.
+        """
+        with self._lock:
+            if key in self.adapter_instances:
+                return self.adapter_instances[key]
+
+            adapter_class = self.get_class(key)
+            if adapter_class is None:
+                return None
+
+            instance = factory(adapter_class)
+            self.adapter_instances[key] = instance
+            return instance
+
+    async def teardown_instances(self) -> None:
+        """Teardown and clear all cached adapter instances in this registry."""
+        with self._lock:
+            instances = list(self.adapter_instances.values())
+            self.adapter_instances.clear()
+
+        for instance in instances:
+            teardown = getattr(instance, "teardown", None)
+            if not callable(teardown):
+                continue
+            try:
+                result = teardown()
+                if inspect.isawaitable(result):
+                    await result
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    f"Failed to teardown adapter instance for adapter_type='{self.adapter_type.value}': {exc}"
+                )
 
     def discover(self, config_dir: Path) -> None:
         """Discover and register adapters from all supported sources.
@@ -253,6 +296,14 @@ def _reset_registries() -> None:
     with _decorator_lock, _adapter_registries_lock:
         _decorator_adapter_registry.clear()
         _adapter_registries.clear()
+
+
+async def teardown_all_adapter_registries() -> None:
+    """Teardown all cached instances across all adapter registries."""
+    with _adapter_registries_lock:
+        registries = list(_adapter_registries.values())
+    for registry in registries:
+        await registry.teardown_instances()
 
 
 def _get_nested_section(config: dict[str, Any], path: tuple[str, ...]) -> Any:
