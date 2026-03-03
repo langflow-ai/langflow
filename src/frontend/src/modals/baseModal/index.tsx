@@ -220,6 +220,8 @@ interface BaseModalProps {
   onOpenAutoFocus?: (e: Event) => void;
   closeButtonClassName?: string;
   dialogContentWithouFixed?: boolean;
+  height?: string;
+  width?: string;
 }
 function BaseModal({
   className,
@@ -234,6 +236,8 @@ function BaseModal({
   onOpenAutoFocus,
   closeButtonClassName,
   dialogContentWithouFixed = false,
+  height: customHeight,
+  width: customWidth,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Header,
@@ -264,9 +268,14 @@ function BaseModal({
     </>
   );
 
+  const customStyle: React.CSSProperties = {
+    ...(customHeight ? { height: customHeight } : {}),
+    ...(customWidth ? { width: customWidth, minWidth: customWidth } : {}),
+  };
+
   const contentClasses = cn(
-    minWidth,
-    height,
+    !customWidth && minWidth,
+    !customHeight && height,
     "flex flex-col flex-1 overflow-hidden max-h-[98dvh]",
     className,
   );
@@ -279,7 +288,9 @@ function BaseModal({
       {type === "modal" ? (
         <Modal open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <ModalContent className={contentClasses}>{modalContent}</ModalContent>
+          <ModalContent className={contentClasses} style={customStyle}>
+            {modalContent}
+          </ModalContent>
         </Modal>
       ) : type === "full-screen" ? (
         <div className="min-h-full w-full flex-1 overflow-hidden">
@@ -295,6 +306,7 @@ function BaseModal({
               onOpenAutoFocus={onOpenAutoFocus}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
+              style={customStyle}
             >
               {onSubmit ? (
                 <Form.Root
@@ -317,6 +329,7 @@ function BaseModal({
               onOpenAutoFocus={onOpenAutoFocus}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
+              style={customStyle}
             >
               {onSubmit ? (
                 <Form.Root

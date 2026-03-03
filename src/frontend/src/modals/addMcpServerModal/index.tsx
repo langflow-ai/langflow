@@ -292,12 +292,13 @@ export default function AddMcpServerModal({
     <BaseModal
       open={open}
       setOpen={setOpen}
-      size="x-small"
+      width="500px"
+      height="533px"
       onSubmit={submitForm}
       className="!p-0"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
-      <BaseModal.Content className="flex flex-col justify-between overflow-hidden">
+      <BaseModal.Content className="flex flex-col overflow-hidden">
         <div className="flex h-full w-full flex-col overflow-hidden">
           <div className="flex flex-col gap-3 p-4 tracking-normal">
             <div className="flex items-center gap-2 text-sm font-medium">
@@ -326,11 +327,12 @@ export default function AddMcpServerModal({
             <Tabs
               defaultValue={type}
               onValueChange={changeType}
-              className="w-full"
+              className="flex h-full w-full flex-col"
             >
               <div className="px-4">
-                <TabsList className="mb-4 grid w-full grid-cols-3">
+                <TabsList className="mb-4 flex w-full gap-2">
                   <TabsTrigger
+                    className="flex-1"
                     disabled={!!initialData && type !== "JSON"}
                     data-testid="json-tab"
                     value="JSON"
@@ -338,6 +340,7 @@ export default function AddMcpServerModal({
                     JSON
                   </TabsTrigger>
                   <TabsTrigger
+                    className="flex-1"
                     data-testid="stdio-tab"
                     disabled={!!initialData && type !== "STDIO"}
                     value="STDIO"
@@ -345,6 +348,7 @@ export default function AddMcpServerModal({
                     STDIO
                   </TabsTrigger>
                   <TabsTrigger
+                    className="flex-1"
                     data-testid="http-tab"
                     disabled={!!initialData && type !== "HTTP"}
                     value="HTTP"
@@ -354,7 +358,7 @@ export default function AddMcpServerModal({
                 </TabsList>
               </div>
               <div
-                className="relative flex max-h-[280px] min-h-[280px] w-full flex-1 flex-col gap-2 overflow-y-auto border-y p-4 pt-2"
+                className="flex w-full flex-1 flex-col gap-2 border-y p-4"
                 id="global-variable-modal-inputs"
               >
                 {error && (
@@ -369,21 +373,21 @@ export default function AddMcpServerModal({
                     </div>
                   </ShadTooltip>
                 )}
-                <TabsContent value="JSON">
-                  <div className="flex flex-col gap-2">
+                <TabsContent value="JSON" className="h-full">
+                  <div className="flex flex-1 flex-col gap-2 h-full">
                     <Label className="!text-mmd">Paste in JSON config</Label>
                     <Textarea
                       value={jsonValue}
                       data-testid="json-input"
                       onChange={(e) => setJsonValue(e.target.value)}
-                      className="min-h-[225px] font-mono text-mmd"
+                      className="flex-1 font-mono text-mmd h-full"
                       placeholder="Paste in JSON config to add server"
                       disabled={isPending}
                     />
                   </div>
                 </TabsContent>
                 <TabsContent value="STDIO">
-                  <div className="flex flex-col gap-4">
+                  <div className="flex h-full flex-col gap-4">
                     <div className="flex flex-col gap-2">
                       <Label className="flex items-start gap-1 !text-mmd">
                         Name <span className="text-red-500">*</span>
@@ -435,7 +439,7 @@ export default function AddMcpServerModal({
                   </div>
                 </TabsContent>
                 <TabsContent value="HTTP">
-                  <div className="flex flex-col gap-4">
+                  <div className="flex h-full flex-col gap-4">
                     <div className="flex flex-col gap-2">
                       <Label className="flex items-start gap-1 !text-mmd">
                         Name<span className="text-red-500">*</span>
