@@ -1,0 +1,72 @@
+"""Add deployment table
+
+Revision ID: c3d4e5f6a7b8
+Revises: b2c3d4e5f6a7
+Create Date: 2026-03-03 00:00:00.000000
+
+Phase: EXPAND
+"""
+
+from collections.abc import Sequence
+
+import sqlalchemy as sa
+import sqlmodel
+from alembic import op
+from langflow.utils import migration
+
+# revision identifiers, used by Alembic.
+revision: str = "c3d4e5f6a7b8"  # pragma: allowlist secret
+down_revision: str | None = "a1b2c3d4e5f6"  # pragma: allowlist secret
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
+
+UNIQUE_CONSTRAINT_NAME = "uq_deployment_name_in_provider"
+
+
+def upgrade() -> None:
+    conn = op.get_bind()
+    if migration.table_exists("deployment", conn):
+        return
+
+    op.create_table(
+        "deployment",
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("resource_key", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("user_id", sa.Uuid(), nullable=False),
+        sa.Column("project_id", sa.Uuid(), nullable=False),
+        sa.Column("provider_account_id", sa.Uuid(), nullable=False),
+        sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.text("(CURRENT_TIMESTAMP)"), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.text("(CURRENT_TIMESTAMP)"), nullable=False
+        ),
+        sa.ForeignKeyConstraint(["project_id"], ["folder.id"]),
+        sa.ForeignKeyConstraint(["provider_account_id"], ["deployment_provider_account.id"]),
+        sa.ForeignKeyConstraint(["user_id"], ["user.id"]),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    with op.batch_alter_table("deployment", schema=None) as batch_op:
+        batch_op.create_index(batch_op.f("ix_deployment_name"), ["name"], unique=False)
+        batch_op.create_index(batch_op.f("ix_deployment_project_id"), ["project_id"], unique=False)
+        batch_op.create_index(batch_op.f("ix_deployment_provider_account_id"), ["provider_account_id"], unique=False)
+        batch_op.create_index(batch_op.f("ix_deployment_resource_key"), ["resource_key"], unique=False)
+        batch_op.create_index(batch_op.f("ix_deployment_user_id"), ["user_id"], unique=False)
+        batch_op.create_unique_constraint(UNIQUE_CONSTRAINT_NAME, ["provider_account_id", "name"])
+
+
+def downgrade() -> None:
+    conn = op.get_bind()
+    if not migration.table_exists("deployment", conn):
+        return
+
+    with op.batch_alter_table("deployment", schema=None) as batch_op:
+        batch_op.drop_constraint(UNIQUE_CONSTRAINT_NAME, type_="unique")
+        batch_op.drop_index(batch_op.f("ix_deployment_user_id"))
+        batch_op.drop_index(batch_op.f("ix_deployment_resource_key"))
+        batch_op.drop_index(batch_op.f("ix_deployment_provider_account_id"))
+        batch_op.drop_index(batch_op.f("ix_deployment_project_id"))
+        batch_op.drop_index(batch_op.f("ix_deployment_name"))
+
+    op.drop_table("deployment")
