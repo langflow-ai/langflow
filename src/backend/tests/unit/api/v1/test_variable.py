@@ -163,12 +163,18 @@ async def test_read_variables__empty(client: AsyncClient, logged_in_headers):
 
 @pytest.mark.usefixtures("active_user")
 async def test_read_variables__(client: AsyncClient, logged_in_headers):
+    """When the variable service raises (e.g. DB error), the list endpoint returns 500."""
     generic_message = "Generic error message"
 
-    with mock.patch("sqlmodel.Session.exec") as m:
-        m.side_effect = Exception(generic_message)
-        with pytest.raises(Exception, match=generic_message):
-            await client.get("api/v1/variables/", headers=logged_in_headers)
+    with mock.patch(
+        "langflow.services.variable.service.DatabaseVariableService.get_all",
+        new_callable=mock.AsyncMock,
+        side_effect=Exception(generic_message),
+    ):
+        response = await client.get("api/v1/variables/", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert generic_message in response.json().get("detail", "")
 
 
 @pytest.mark.usefixtures("active_user")
@@ -374,6 +380,7 @@ async def test_create_variable__ollama_base_url_validation_success(client: Async
     # Mock successful Ollama API call
     with mock.patch("requests.get") as mock_get:
         mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {"models": []}
         response = await client.post("api/v1/variables/", json=ollama_variable, headers=logged_in_headers)
         result = response.json()
 

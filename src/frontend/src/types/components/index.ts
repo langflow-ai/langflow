@@ -51,6 +51,7 @@ export type InputComponentType = {
   commandWidth?: string;
   blockAddNewGlobalVariable?: boolean;
   hasRefreshButton?: boolean;
+  inspectionPanel?: boolean;
 };
 export type DropDownComponent = {
   disabled?: boolean;
@@ -72,7 +73,10 @@ export type DropDownComponent = {
   id?: string;
   children?: ReactNode;
   name: string;
-  dialogInputs?: any;
+  dialogInputs?: {
+    fields: { data: { node: APIClassType } };
+    functionality: string;
+  };
   externalOptions?: any;
   toggle?: boolean;
 };
@@ -559,7 +563,6 @@ export type ChatInputType = {
     repeat: number;
     files?: string[];
   }) => Promise<void>;
-  playgroundPage: boolean;
 };
 
 export type editNodeToggleType = {
@@ -643,13 +646,15 @@ export type codeAreaModalPropsType = {
 export type chatMessagePropsType = {
   chat: ChatMessageType;
   lastMessage: boolean;
-  updateChat: (
+  updateChat?: (
     chat: ChatMessageType,
     message: string,
     stream_url?: string,
   ) => void;
   closeChat?: () => void;
   playgroundPage?: boolean;
+  isThinking?: boolean;
+  thinkingDuration?: number | null;
 };
 
 export type genericModalPropsType = {

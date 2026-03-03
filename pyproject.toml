@@ -57,7 +57,6 @@ dev = [
     "pytest-github-actions-annotate-failures>=0.2.0",
     "blockbuster>=1.5.20,<1.6",
     "types-aiofiles>=24.1.0.20240626",
-    "codeflash>=0.8.4",
     "hypothesis>=6.123.17",
     "locust~=2.40.5",
     "pytest-rerunfailures>=15.0",
@@ -70,12 +69,21 @@ dev = [
     "types-cachetools>=5.5.0.20240820",
     "pyyaml>=6.0.2",
     "pyleak>=0.1.14",
+    "mcp-server-fetch>=2025.1.17",
+    "onnxruntime>=1.20,<=1.23" # >=1.24 does not support Python 3.10
 ]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [tool.uv.sources]
 langflow-base = { workspace = true }
 langflow = { workspace = true }
 lfx = { workspace = true }
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }
 
 [tool.uv.workspace]
 members = [
@@ -97,6 +105,10 @@ docling = [
     "tesserocr>=2.8.0",
     "rapidocr-onnxruntime>=1.4.4",
     "ocrmac>=1.0.0; sys_platform == 'darwin'",
+    # CPU-only PyTorch required for docling features
+    # Loose version ranges intentionally used to avoid conflicts with transitive dependencies (e.g., altk)
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
 ]
 
 audio = [
@@ -258,6 +270,11 @@ external = ["RUF027"]
 ]
 "src/lfx/src/lfx/base/curl/parse.py" = [
     "S105",  # False positive: 'token' variable name, not a password
+]
+"src/lfx/src/lfx/services/auth/service.py" = [
+    "ARG002",  # No-op impl: unused args required by interface
+    "EM101",  # NotImplementedError messages as literals
+    "TC003",  # Type-only imports used in signatures
 ]
 "src/lfx/src/lfx/base/mcp/util.py" = [
     "SLF001",  # MCP library private member access

@@ -126,7 +126,7 @@
   },
   "AzureOpenAIModel": {
     "versions": {
-      "0.3.0": "cc8d003556d8"
+      "0.3.0": "2ba26202203e"
     }
   },
   "AzureOpenAIEmbeddings": {
@@ -576,7 +576,7 @@
   },
   "APIRequest": {
     "versions": {
-      "0.3.0": "7f013aba27c9"
+      "0.3.0": "f102aadfb328"
     }
   },
   "CSVtoData": {
@@ -706,7 +706,7 @@
   },
   "ChunkDoclingDocument": {
     "versions": {
-      "0.3.0": "d84ce7ffc6cb"
+      "0.3.0": "49d762d97039"
     }
   },
   "DoclingInline": {
@@ -716,7 +716,7 @@
   },
   "DoclingRemote": {
     "versions": {
-      "0.3.0": "5723576d00e5"
+      "0.3.0": "409d771a961e"
     }
   },
   "ExportDoclingDocument": {
@@ -736,12 +736,12 @@
   },
   "OpenSearchVectorStoreComponent": {
     "versions": {
-      "0.3.0": "77834dd0fa75"
+      "0.3.0": "4968b4d34fad"
     }
   },
   "OpenSearchVectorStoreComponentMultimodalMultiEmbedding": {
     "versions": {
-      "0.3.0": "a52b7daaae16"
+      "0.3.0": "6a3df45b55c5"
     }
   },
   "EmbeddingSimilarityComponent": {
@@ -761,7 +761,7 @@
   },
   "Directory": {
     "versions": {
-      "0.3.0": "c55e0e29079d"
+      "0.3.0": "328e6f996926"
     }
   },
   "File": {
@@ -771,7 +771,7 @@
   },
   "KnowledgeIngestion": {
     "versions": {
-      "0.3.0": "52a451e4f053"
+      "0.3.0": "c37fd1b357d1"
     }
   },
   "KnowledgeRetrieval": {
@@ -841,7 +841,7 @@
   },
   "RunFlow": {
     "versions": {
-      "0.3.0": "0ab9e9a36313"
+      "0.3.0": "9e5eefa14766"
     }
   },
   "SubFlow": {
@@ -886,7 +886,7 @@
   },
   "GoogleGenerativeAIModel": {
     "versions": {
-      "0.3.0": "ffb6e75b6684"
+      "0.3.0": "049f38001189"
     }
   },
   "Google Generative AI Embeddings": {
@@ -936,12 +936,12 @@
   },
   "IBMwatsonxModel": {
     "versions": {
-      "0.3.0": "769869108e5e"
+      "0.3.0": "689a87ecc73a"
     }
   },
   "WatsonxEmbeddingsComponent": {
     "versions": {
-      "0.3.0": "ffded413ea90"
+      "0.3.0": "011bcac795de"
     }
   },
   "Combinatorial Reasoner": {
@@ -1041,7 +1041,7 @@
   },
   "CSVAgent": {
     "versions": {
-      "0.3.0": "97947e212da9"
+      "0.3.0": "1888a727f9dd"
     }
   },
   "LangChainFakeEmbeddings": {
@@ -1091,12 +1091,12 @@
   },
   "OpenAIToolsAgent": {
     "versions": {
-      "0.3.0": "b2ad248a3e6c"
+      "0.3.0": "21bfd16796e5"
     }
   },
   "OpenAPIAgent": {
     "versions": {
-      "0.3.0": "3b817f0cd966"
+      "0.3.0": "a4a7564100da"
     }
   },
   "RecursiveCharacterTextSplitter": {
@@ -1126,7 +1126,7 @@
   },
   "SQLAgent": {
     "versions": {
-      "0.3.0": "8d02598705fc"
+      "0.3.0": "550c16461236"
     }
   },
   "SQLDatabase": {
@@ -1141,7 +1141,7 @@
   },
   "ToolCallingAgent": {
     "versions": {
-      "0.3.0": "a5afe724de9c"
+      "0.3.0": "cdeb13ac7430"
     }
   },
   "VectorStoreInfo": {
@@ -1156,7 +1156,7 @@
   },
   "XMLAgent": {
     "versions": {
-      "0.3.0": "338332984901"
+      "0.3.0": "17a0cb4c48a8"
     }
   },
   "LangWatchEvaluator": {
@@ -1166,7 +1166,7 @@
   },
   "BatchRunComponent": {
     "versions": {
-      "0.3.0": "53935e54dfe7"
+      "0.3.0": "8b1ec3b03475"
     }
   },
   "Smart Transform": {
@@ -1231,12 +1231,12 @@
   },
   "EmbeddingModel": {
     "versions": {
-      "0.3.0": "3e0b64afc9a2"
+      "0.3.0": "c5ce0982da48"
     }
   },
   "LanguageModelComponent": {
     "versions": {
-      "0.3.0": "07d0ce9ea77e"
+      "0.3.0": "4af3c0cc0dcf"
     }
   },
   "MCPTools": {
@@ -1251,7 +1251,7 @@
   },
   "Prompt Template": {
     "versions": {
-      "0.3.0": "595f7c9c8463"
+      "0.3.0": "5b3e6730923e"
     }
   },
   "MongoDBAtlasVector": {
@@ -1306,12 +1306,12 @@
   },
   "OllamaModel": {
     "versions": {
-      "0.3.0": "12e5c1954fe1"
+      "0.3.0": "cd3dc38272a7"
     }
   },
   "OllamaEmbeddings": {
     "versions": {
-      "0.3.0": "c1f138e1f771"
+      "0.3.0": "a8c56d0835de"
     }
   },
   "OpenAIEmbeddings": {
@@ -1371,7 +1371,7 @@
   },
   "DataOperations": {
     "versions": {
-      "0.3.0": "f5d9680f8644"
+      "0.3.0": "1e5bfda1706b"
     }
   },
   "DataToDataFrame": {
@@ -1381,7 +1381,7 @@
   },
   "DataFrameOperations": {
     "versions": {
-      "0.3.0": "904f4eaebccd"
+      "0.3.0": "e2b4323d4ed5"
     }
   },
   "DynamicCreateData": {
@@ -1456,7 +1456,7 @@
   },
   "SplitText": {
     "versions": {
-      "0.3.0": "b9d63ae59e8a"
+      "0.3.0": "29ae597d2d86"
     }
   },
   "StoreMessage": {
@@ -1772,6 +1772,16 @@
   "ZepChatMemory": {
     "versions": {
       "0.3.0": "ec825c33caf6"
+    }
+  },
+  "GuardrailValidator": {
+    "versions": {
+      "0.3.0": "675232be19cc"
+    }
+  },
+  "LiteLLMProxyModel": {
+    "versions": {
+      "0.3.0": "386ae52865b5"
     }
   }
 }
