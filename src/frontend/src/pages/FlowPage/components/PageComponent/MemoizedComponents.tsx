@@ -10,10 +10,10 @@ import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useFlowStore from "@/stores/flowStore";
+import { AllNodeType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 import { useSearchContext } from "../flowSidebarComponent";
 import { NAV_ITEMS } from "../flowSidebarComponent/components/sidebarSegmentedNav";
-import { AllNodeType } from "@/types/flow";
 
 export const MemoizedBackground = memo(() => (
   <Background size={2} gap={20} className="" />

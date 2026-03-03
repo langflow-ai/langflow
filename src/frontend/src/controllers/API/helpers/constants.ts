@@ -3,6 +3,7 @@ import { BASE_URL_API_V2 } from "../../../constants/constants";
 
 export const URLs = {
   TRANSACTIONS: `monitor/transactions`,
+  TRACES: `monitor/traces`,
   API_KEY: `api_key`,
   FILES: `files`,
   FILE_MANAGEMENT: `files`,
@@ -46,7 +47,7 @@ export const URLs = {
 
 export function getURL(
   key: keyof typeof URLs,
-  params: Record<string, string | number> = {},
+  params: Record<string, unknown> = {},
   v2: boolean = false,
 ) {
   let url = URLs[key];
