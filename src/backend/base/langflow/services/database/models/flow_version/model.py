@@ -21,7 +21,7 @@ class FlowVersion(SQLModel, table=True):  # type: ignore[call-arg]
     data: dict | None = Field(default=None, sa_column=Column(JSON))
     version_number: int = Field(nullable=False, ge=1)
     description: str | None = Field(default=None, nullable=True, max_length=500)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False, index=True)
 
     # The UniqueConstraint on (flow_id, version_number) creates an implicit composite
     # btree index that also covers ORDER BY version_number DESC queries filtered by
