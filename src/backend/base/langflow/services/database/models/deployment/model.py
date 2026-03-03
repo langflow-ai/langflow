@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from datetime import datetime  # noqa: TC003 - needed at runtime for Pydantic schemas
+from datetime import datetime  # noqa: TC003 - needed at runtime for SQLModel fields and Pydantic schemas
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
 from sqlalchemy import UniqueConstraint
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
+
+from langflow.services.database.utils import validate_non_empty_string
 
 if TYPE_CHECKING:
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
@@ -26,7 +28,9 @@ class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
     id: UUID | None = Field(default_factory=uuid4, primary_key=True)
     resource_key: str = Field(index=True)
     user_id: UUID = Field(foreign_key="user.id", index=True)
+    # "project" is represented by a Folder row in the existing schema.
     project_id: UUID = Field(foreign_key="folder.id", index=True)
+    # CASCADE behaviour is enforced at the migration/DDL level.
     deployment_provider_account_id: UUID = Field(foreign_key="deployment_provider_account.id", index=True)
     name: str = Field(index=True)
     created_at: datetime | None = Field(
@@ -40,17 +44,24 @@ class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
 
     user: User = Relationship(back_populates="deployments")
     deployment_provider_account: DeploymentProviderAccount = Relationship(back_populates="deployments")
-    folder: Folder | None = Relationship(back_populates="deployments")
+    folder: Folder = Relationship(back_populates="deployments")
 
     @field_validator("name", "resource_key")
     @classmethod
     def validate_non_empty(cls, v: str, info: object) -> str:
-        stripped = v.strip()
-        if not stripped:
-            field = getattr(info, "field_name", "Field")
-            msg = f"{field} must not be empty"
-            raise ValueError(msg)
-        return stripped
+        return validate_non_empty_string(v, info)
+
+
+class DeploymentCreate(SQLModel):
+    resource_key: str
+    deployment_provider_account_id: UUID
+    project_id: UUID
+    name: str
+
+    @field_validator("name", "resource_key")
+    @classmethod
+    def validate_non_empty(cls, v: str, info: object) -> str:
+        return validate_non_empty_string(v, info)
 
 
 class DeploymentRead(SQLModel):

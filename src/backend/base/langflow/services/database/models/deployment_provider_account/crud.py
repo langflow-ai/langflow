@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from cryptography.fernet import InvalidToken
 from lfx.log.logger import logger
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import select
+from sqlmodel import col, select
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
@@ -16,6 +16,21 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+_UNSET = object()
+
+
+def _encrypt_api_key(raw: str) -> str:
+    """Encrypt an API key, raising ``RuntimeError`` on failure."""
+    stripped = raw.strip()
+    if not stripped:
+        msg = "api_key must not be empty"
+        raise ValueError(msg)
+    try:
+        return auth_utils.encrypt_api_key(stripped)
+    except (ValueError, InvalidToken, TypeError, AttributeError) as e:
+        msg = "Failed to encrypt API key -- check server encryption configuration"
+        raise RuntimeError(msg) from e
 
 
 async def get_provider_account_by_id(
@@ -43,7 +58,7 @@ async def list_provider_accounts(
     stmt = (
         select(DeploymentProviderAccount)
         .where(DeploymentProviderAccount.user_id == user_uuid)
-        .order_by(DeploymentProviderAccount.created_at.desc())
+        .order_by(col(DeploymentProviderAccount.created_at).desc())
     )
     return list((await db.exec(stmt)).all())
 
@@ -58,18 +73,32 @@ async def create_provider_account(
     api_key: str,
 ) -> DeploymentProviderAccount:
     user_uuid = parse_uuid(user_id, field_name="user_id")
+
+    # Validate required strings before DB round-trip
+    provider_key_s = provider_key.strip()
+    if not provider_key_s:
+        msg = "provider_key must not be empty"
+        raise ValueError(msg)
+    provider_url_s = provider_url.strip()
+    if not provider_url_s:
+        msg = "provider_url must not be empty"
+        raise ValueError(msg)
+
     now = datetime.now(timezone.utc)
     try:
-        encrypted_key = auth_utils.encrypt_api_key(api_key.strip())
-    except (ValueError, InvalidToken) as e:
-        msg = "Failed to encrypt API key -- check server encryption configuration"
-        await logger.aerror(msg)
-        raise RuntimeError(msg) from e
+        encrypted_key = _encrypt_api_key(api_key)
+    except RuntimeError:
+        await logger.aerror(
+            "Encryption failed creating provider account (user_id=%s, provider_url=%s)",
+            user_id,
+            provider_url,
+        )
+        raise
     provider_account = DeploymentProviderAccount(
         user_id=user_uuid,
         provider_tenant_id=provider_tenant_id.strip() if provider_tenant_id is not None else None,
-        provider_key=provider_key.strip(),
-        provider_url=provider_url.strip(),
+        provider_key=provider_key_s,
+        provider_url=provider_url_s,
         api_key=encrypted_key,
         created_at=now,
         updated_at=now,
@@ -79,6 +108,7 @@ async def create_provider_account(
         await db.flush()
     except IntegrityError as exc:
         await db.rollback()
+        await logger.aerror("IntegrityError creating provider account: %s", exc)
         msg = (
             f"Provider account already exists "
             f"(provider_url={provider_url!r}, provider_tenant_id={provider_tenant_id!r})"
@@ -92,13 +122,18 @@ async def update_provider_account(
     db: AsyncSession,
     *,
     provider_account: DeploymentProviderAccount,
-    provider_tenant_id: str | None = None,
+    provider_tenant_id: str | None = _UNSET,  # type: ignore[assignment]
     provider_key: str | None = None,
     provider_url: str | None = None,
     api_key: str | None = None,
 ) -> DeploymentProviderAccount:
-    if provider_tenant_id is not None:
-        provider_account.provider_tenant_id = provider_tenant_id.strip()
+    if provider_tenant_id is not _UNSET:
+        if provider_tenant_id is not None:
+            stripped = provider_tenant_id.strip()  # type: ignore[union-attr]
+            # Normalize empty string to None (no tenant)
+            provider_account.provider_tenant_id = stripped if stripped else None
+        else:
+            provider_account.provider_tenant_id = None
     if provider_key is not None:
         stripped = provider_key.strip()
         if not stripped:
@@ -113,17 +148,20 @@ async def update_provider_account(
         provider_account.provider_url = stripped
     if api_key is not None:
         try:
-            provider_account.api_key = auth_utils.encrypt_api_key(api_key.strip())
-        except (ValueError, InvalidToken) as e:
-            msg = "Failed to encrypt API key -- check server encryption configuration"
-            await logger.aerror(msg)
-            raise RuntimeError(msg) from e
+            provider_account.api_key = _encrypt_api_key(api_key)
+        except RuntimeError:
+            await logger.aerror(
+                "Encryption failed updating provider account id=%s",
+                provider_account.id,
+            )
+            raise
     provider_account.updated_at = datetime.now(timezone.utc)
     db.add(provider_account)
     try:
         await db.flush()
     except IntegrityError as exc:
         await db.rollback()
+        await logger.aerror("IntegrityError updating provider account id=%s: %s", provider_account.id, exc)
         msg = "Provider account update conflicts with an existing record"
         raise ValueError(msg) from exc
     await db.refresh(provider_account)
@@ -140,6 +178,6 @@ async def delete_provider_account(
         await db.flush()
     except IntegrityError as exc:
         await db.rollback()
-        await logger.aerror("Failed to delete provider account id=%s", provider_account.id)
-        msg = "Failed to delete provider account"
+        await logger.aerror("Failed to delete provider account id=%s: %s", provider_account.id, exc)
+        msg = f"Failed to delete provider account id={provider_account.id}"
         raise ValueError(msg) from exc

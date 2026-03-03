@@ -8,11 +8,15 @@ from cryptography.fernet import InvalidToken
 from langflow.services.database.models.deployment_provider_account.crud import (
     create_provider_account,
     delete_provider_account,
+    get_provider_account_by_id,
+    list_provider_accounts,
     update_provider_account,
 )
 from sqlalchemy.exc import IntegrityError
 
 MODEL_CLASS = "langflow.services.database.models.deployment_provider_account.crud.DeploymentProviderAccount"
+CRUD_AUTH = "langflow.services.database.models.deployment_provider_account.crud.auth_utils"
+CRUD_LOGGER = "langflow.services.database.models.deployment_provider_account.crud.logger"
 
 
 def _make_db() -> AsyncMock:
@@ -39,6 +43,71 @@ def _make_provider_account(**overrides) -> MagicMock:
     return mock
 
 
+# --- get_provider_account_by_id ---
+
+
+@pytest.mark.asyncio
+async def test_get_provider_account_by_id_found():
+    db = _make_db()
+    mock_acct = MagicMock()
+    mock_result = MagicMock()
+    mock_result.first.return_value = mock_acct
+    db.exec.return_value = mock_result
+
+    result = await get_provider_account_by_id(db, provider_id=uuid4(), user_id=uuid4())
+
+    assert result is mock_acct
+
+
+@pytest.mark.asyncio
+async def test_get_provider_account_by_id_not_found():
+    db = _make_db()
+    mock_result = MagicMock()
+    mock_result.first.return_value = None
+    db.exec.return_value = mock_result
+
+    result = await get_provider_account_by_id(db, provider_id=uuid4(), user_id=uuid4())
+
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_get_provider_account_by_id_invalid_uuid_raises():
+    db = _make_db()
+
+    with pytest.raises(ValueError, match="provider_id is not a valid UUID"):
+        await get_provider_account_by_id(db, provider_id="not-a-uuid", user_id=uuid4())
+
+
+# --- list_provider_accounts ---
+
+
+@pytest.mark.asyncio
+async def test_list_provider_accounts_returns_list():
+    db = _make_db()
+    mock_items = [MagicMock(), MagicMock()]
+    mock_result = MagicMock()
+    mock_result.all.return_value = mock_items
+    db.exec.return_value = mock_result
+
+    result = await list_provider_accounts(db, user_id=uuid4())
+
+    assert result == mock_items
+    assert isinstance(result, list)
+
+
+@pytest.mark.asyncio
+async def test_list_provider_accounts_empty():
+    db = _make_db()
+    mock_result = MagicMock()
+    mock_result.all.return_value = []
+    db.exec.return_value = mock_result
+
+    result = await list_provider_accounts(db, user_id=uuid4())
+
+    assert result == []
+
+
 # --- create_provider_account ---
 
 
@@ -47,7 +116,7 @@ async def test_create_provider_account_success():
     db = _make_db()
 
     with (
-        patch("langflow.services.database.models.deployment_provider_account.crud.auth_utils") as mock_auth,
+        patch(CRUD_AUTH) as mock_auth,
         patch(MODEL_CLASS) as mock_cls,
     ):
         mock_auth.encrypt_api_key.return_value = "encrypted"
@@ -79,7 +148,7 @@ async def test_create_provider_account_strips_whitespace():
     db = _make_db()
 
     with (
-        patch("langflow.services.database.models.deployment_provider_account.crud.auth_utils") as mock_auth,
+        patch(CRUD_AUTH) as mock_auth,
         patch(MODEL_CLASS) as mock_cls,
     ):
         mock_auth.encrypt_api_key.return_value = "encrypted"
@@ -106,7 +175,7 @@ async def test_create_provider_account_none_tenant_id():
     db = _make_db()
 
     with (
-        patch("langflow.services.database.models.deployment_provider_account.crud.auth_utils") as mock_auth,
+        patch(CRUD_AUTH) as mock_auth,
         patch(MODEL_CLASS) as mock_cls,
     ):
         mock_auth.encrypt_api_key.return_value = "encrypted"
@@ -126,15 +195,62 @@ async def test_create_provider_account_none_tenant_id():
 
 
 @pytest.mark.asyncio
+async def test_create_provider_account_empty_provider_key_raises():
+    db = _make_db()
+
+    with pytest.raises(ValueError, match="provider_key must not be empty"):
+        await create_provider_account(
+            db,
+            user_id=uuid4(),
+            provider_tenant_id=None,
+            provider_key="   ",
+            provider_url="https://example.com",
+            api_key="secret",
+        )
+
+
+@pytest.mark.asyncio
+async def test_create_provider_account_empty_provider_url_raises():
+    db = _make_db()
+
+    with pytest.raises(ValueError, match="provider_url must not be empty"):
+        await create_provider_account(
+            db,
+            user_id=uuid4(),
+            provider_tenant_id=None,
+            provider_key="watsonx",
+            provider_url="",
+            api_key="secret",
+        )
+
+
+@pytest.mark.asyncio
+async def test_create_provider_account_empty_api_key_raises():
+    db = _make_db()
+
+    with pytest.raises(ValueError, match="api_key must not be empty"):
+        await create_provider_account(
+            db,
+            user_id=uuid4(),
+            provider_tenant_id=None,
+            provider_key="watsonx",
+            provider_url="https://example.com",
+            api_key="   ",
+        )
+
+
+@pytest.mark.asyncio
 async def test_create_provider_account_integrity_error_raises_value_error():
     db = _make_db()
     db.flush.side_effect = IntegrityError("dup", params=None, orig=Exception())
 
     with (
-        patch("langflow.services.database.models.deployment_provider_account.crud.auth_utils") as mock_auth,
+        patch(CRUD_AUTH) as mock_auth,
         patch(MODEL_CLASS),
+        patch(CRUD_LOGGER) as mock_logger,
     ):
         mock_auth.encrypt_api_key.return_value = "encrypted"
+        mock_logger.aerror = AsyncMock()
         with pytest.raises(ValueError, match="Provider account already exists"):
             await create_provider_account(
                 db,
@@ -153,8 +269,8 @@ async def test_create_provider_account_encryption_value_error():
     db = _make_db()
 
     with (
-        patch("langflow.services.database.models.deployment_provider_account.crud.auth_utils") as mock_auth,
-        patch("langflow.services.database.models.deployment_provider_account.crud.logger") as mock_logger,
+        patch(CRUD_AUTH) as mock_auth,
+        patch(CRUD_LOGGER) as mock_logger,
     ):
         mock_auth.encrypt_api_key.side_effect = ValueError("bad key")
         mock_logger.aerror = AsyncMock()
@@ -174,8 +290,8 @@ async def test_create_provider_account_encryption_invalid_token():
     db = _make_db()
 
     with (
-        patch("langflow.services.database.models.deployment_provider_account.crud.auth_utils") as mock_auth,
-        patch("langflow.services.database.models.deployment_provider_account.crud.logger") as mock_logger,
+        patch(CRUD_AUTH) as mock_auth,
+        patch(CRUD_LOGGER) as mock_logger,
     ):
         mock_auth.encrypt_api_key.side_effect = InvalidToken()
         mock_logger.aerror = AsyncMock()
@@ -198,7 +314,7 @@ async def test_update_provider_account_success():
     db = _make_db()
     acct = _make_provider_account()
 
-    with patch("langflow.services.database.models.deployment_provider_account.crud.auth_utils") as mock_auth:
+    with patch(CRUD_AUTH) as mock_auth:
         mock_auth.encrypt_api_key.return_value = "new-encrypted"
         result = await update_provider_account(
             db,
@@ -230,6 +346,26 @@ async def test_update_provider_account_no_changes():
 
 
 @pytest.mark.asyncio
+async def test_update_provider_account_set_tenant_to_none():
+    db = _make_db()
+    acct = _make_provider_account(provider_tenant_id="old-tenant")
+
+    await update_provider_account(db, provider_account=acct, provider_tenant_id=None)
+
+    assert acct.provider_tenant_id is None
+
+
+@pytest.mark.asyncio
+async def test_update_provider_account_empty_tenant_normalizes_to_none():
+    db = _make_db()
+    acct = _make_provider_account(provider_tenant_id="old-tenant")
+
+    await update_provider_account(db, provider_account=acct, provider_tenant_id="   ")
+
+    assert acct.provider_tenant_id is None
+
+
+@pytest.mark.asyncio
 async def test_update_provider_account_empty_provider_key_raises():
     db = _make_db()
     acct = _make_provider_account()
@@ -257,13 +393,24 @@ async def test_update_provider_account_empty_provider_url_raises():
 
 
 @pytest.mark.asyncio
+async def test_update_provider_account_empty_api_key_raises():
+    db = _make_db()
+    acct = _make_provider_account()
+
+    with pytest.raises(ValueError, match="api_key must not be empty"):
+        await update_provider_account(db, provider_account=acct, api_key="   ")
+
+
+@pytest.mark.asyncio
 async def test_update_provider_account_integrity_error_raises_value_error():
     db = _make_db()
     db.flush.side_effect = IntegrityError("dup", params=None, orig=Exception())
     acct = _make_provider_account()
 
-    with pytest.raises(ValueError, match="conflicts with an existing record"):
-        await update_provider_account(db, provider_account=acct, provider_tenant_id="new-tenant")
+    with patch(CRUD_LOGGER) as mock_logger:
+        mock_logger.aerror = AsyncMock()
+        with pytest.raises(ValueError, match="conflicts with an existing record"):
+            await update_provider_account(db, provider_account=acct, provider_tenant_id="new-tenant")
 
     db.rollback.assert_awaited_once()
 
@@ -274,8 +421,8 @@ async def test_update_provider_account_encryption_error():
     acct = _make_provider_account()
 
     with (
-        patch("langflow.services.database.models.deployment_provider_account.crud.auth_utils") as mock_auth,
-        patch("langflow.services.database.models.deployment_provider_account.crud.logger") as mock_logger,
+        patch(CRUD_AUTH) as mock_auth,
+        patch(CRUD_LOGGER) as mock_logger,
     ):
         mock_auth.encrypt_api_key.side_effect = ValueError("bad key")
         mock_logger.aerror = AsyncMock()
@@ -303,7 +450,7 @@ async def test_delete_provider_account_integrity_error_raises_value_error():
     db.flush.side_effect = IntegrityError("fk", params=None, orig=Exception())
     acct = _make_provider_account()
 
-    with patch("langflow.services.database.models.deployment_provider_account.crud.logger") as mock_logger:
+    with patch(CRUD_LOGGER) as mock_logger:
         mock_logger.aerror = AsyncMock()
         with pytest.raises(ValueError, match="Failed to delete provider account"):
             await delete_provider_account(db, provider_account=acct)

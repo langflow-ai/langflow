@@ -24,18 +24,29 @@ async def create_deployment(
     resource_key: str,
     name: str,
 ) -> Deployment:
+    # Validate required strings before DB round-trip
+    resource_key_s = resource_key.strip()
+    if not resource_key_s:
+        msg = "resource_key must not be empty"
+        raise ValueError(msg)
+    name_s = name.strip()
+    if not name_s:
+        msg = "name must not be empty"
+        raise ValueError(msg)
+
     row = Deployment(
         user_id=user_id,
         project_id=project_id,
         deployment_provider_account_id=deployment_provider_account_id,
-        resource_key=resource_key.strip(),
-        name=name.strip(),
+        resource_key=resource_key_s,
+        name=name_s,
     )
     db.add(row)
     try:
         await db.flush()
     except IntegrityError as exc:
         await db.rollback()
+        await logger.aerror("IntegrityError creating deployment: %s", exc)
         msg = f"Deployment already exists (resource_key={resource_key!r}, name={name!r})"
         raise ValueError(msg) from exc
     await db.refresh(row)
@@ -119,7 +130,11 @@ async def delete_deployment_by_resource_key(
     )
     result = await db.exec(stmt)
     if result.rowcount is None:
-        await logger.awarning("DELETE rowcount was None for deployment resource_key=%r", resource_key)
+        await logger.aerror(
+            "DELETE rowcount was None for deployment resource_key=%r -- "
+            "database driver may not support rowcount for DELETE statements",
+            resource_key,
+        )
     return int(result.rowcount or 0)
 
 
@@ -136,5 +151,9 @@ async def delete_deployment_by_id(
     )
     result = await db.exec(stmt)
     if result.rowcount is None:
-        await logger.awarning("DELETE rowcount was None for deployment id=%s", deployment_uuid)
+        await logger.aerror(
+            "DELETE rowcount was None for deployment id=%s -- "
+            "database driver may not support rowcount for DELETE statements",
+            deployment_uuid,
+        )
     return int(result.rowcount or 0)

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from datetime import datetime  # noqa: TC003 - needed at runtime for Pydantic schemas
+from datetime import datetime  # noqa: TC003 - needed at runtime for SQLModel fields and Pydantic schemas
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
 from sqlalchemy import UniqueConstraint
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
+
+from langflow.services.database.utils import validate_non_empty_string, validate_non_empty_string_optional
 
 if TYPE_CHECKING:
     from langflow.services.database.models.deployment.model import Deployment
@@ -26,11 +28,11 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
 
     id: UUID | None = Field(default_factory=uuid4, primary_key=True)
     user_id: UUID = Field(foreign_key="user.id", index=True)
-    # provider_tenant_id participates in a unique constraint. When NULL, most
-    # databases treat NULL != NULL, so multiple rows with the same
-    # (user_id, provider_url) are allowed when provider_tenant_id is NULL.
-    # This is intentional: a provider may not require a tenant/organization
-    # identifier.
+    # provider_tenant_id participates in a unique constraint. When NULL,
+    # SQL-standard databases (PostgreSQL, SQLite) treat NULL != NULL in unique
+    # constraints, so multiple rows with the same (user_id, provider_url) are
+    # allowed when provider_tenant_id is NULL.  This is intentional: a provider
+    # may not require a tenant/organization identifier.
     provider_tenant_id: str | None = Field(default=None, index=True)
     provider_key: str = Field(index=True)
     provider_url: str = Field()
@@ -53,12 +55,7 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
     @field_validator("provider_key", "provider_url", "api_key")
     @classmethod
     def validate_non_empty(cls, v: str, info: object) -> str:
-        stripped = v.strip()
-        if not stripped:
-            field = getattr(info, "field_name", "Field")
-            msg = f"{field} must not be empty"
-            raise ValueError(msg)
-        return stripped
+        return validate_non_empty_string(v, info)
 
 
 class DeploymentProviderAccountCreate(SQLModel):
@@ -70,12 +67,7 @@ class DeploymentProviderAccountCreate(SQLModel):
     @field_validator("provider_key", "provider_url", "api_key")
     @classmethod
     def validate_non_empty(cls, v: str, info: object) -> str:
-        stripped = v.strip()
-        if not stripped:
-            field = getattr(info, "field_name", "Field")
-            msg = f"{field} must not be empty"
-            raise ValueError(msg)
-        return stripped
+        return validate_non_empty_string(v, info)
 
 
 class DeploymentProviderAccountRead(SQLModel):
@@ -86,7 +78,7 @@ class DeploymentProviderAccountRead(SQLModel):
     provider_url: str
     created_at: datetime
     updated_at: datetime
-    # api_key intentionally omitted -- never serialize credentials
+    # api_key intentionally omitted -- stored encrypted, never serialize credentials to API responses
 
 
 class DeploymentProviderAccountUpdate(SQLModel):
@@ -98,11 +90,4 @@ class DeploymentProviderAccountUpdate(SQLModel):
     @field_validator("provider_key", "provider_url", "api_key", mode="before")
     @classmethod
     def validate_non_empty_if_provided(cls, v: str | None, info: object) -> str | None:
-        if v is None:
-            return v
-        stripped = v.strip()
-        if not stripped:
-            field = getattr(info, "field_name", "Field")
-            msg = f"{field} must not be empty"
-            raise ValueError(msg)
-        return stripped
+        return validate_non_empty_string_optional(v, info)

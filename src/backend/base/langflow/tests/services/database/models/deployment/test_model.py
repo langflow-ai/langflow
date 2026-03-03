@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from langflow.services.database.models.deployment.model import Deployment, DeploymentRead
+from langflow.services.database.models.deployment.model import Deployment, DeploymentCreate, DeploymentRead
 
 
 class TestDeploymentValidation:
@@ -52,3 +52,50 @@ class TestDeploymentRead:
             "updated_at",
         }
         assert set(DeploymentRead.model_fields.keys()) == expected
+
+
+class TestDeploymentCreate:
+    """Tests for DeploymentCreate schema."""
+
+    def test_rejects_empty_name(self):
+        from uuid import uuid4
+
+        with pytest.raises(ValueError, match="name must not be empty"):
+            DeploymentCreate(
+                resource_key="rk-1",
+                deployment_provider_account_id=uuid4(),
+                project_id=uuid4(),
+                name="",
+            )
+
+    def test_rejects_empty_resource_key(self):
+        from uuid import uuid4
+
+        with pytest.raises(ValueError, match="resource_key must not be empty"):
+            DeploymentCreate(
+                resource_key="   ",
+                deployment_provider_account_id=uuid4(),
+                project_id=uuid4(),
+                name="my-deploy",
+            )
+
+    def test_valid_create(self):
+        from uuid import uuid4
+
+        obj = DeploymentCreate(
+            resource_key="rk-1",
+            deployment_provider_account_id=uuid4(),
+            project_id=uuid4(),
+            name="my-deploy",
+        )
+        assert obj.name == "my-deploy"
+        assert obj.resource_key == "rk-1"
+
+    def test_has_expected_fields(self):
+        expected = {
+            "resource_key",
+            "deployment_provider_account_id",
+            "project_id",
+            "name",
+        }
+        assert set(DeploymentCreate.model_fields.keys()) == expected
