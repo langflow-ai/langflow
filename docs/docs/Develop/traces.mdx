@@ -27,7 +27,7 @@ To view traces in the Langflow UI, do the following:
    The **Trace Details** pane displays spans for your flow run, including a flow-level span for the entire run, and a span for each component.
    Individual component spans include the component's inputs and outputs, timing, and token usage.
 
-### What traces capture
+## What traces capture
 
 The tracer records:
 
@@ -48,18 +48,7 @@ Each span includes:
 To programmatically query traces, use the `/monitor/traces` endpoints.
 For full parameter details and code examples in Python, TypeScript, and curl, see [Monitor endpoints: Get traces](/api-monitor#get-traces).
 
-## Delete trace data
-
-You can remove trace data either from the UI (where available) or through the tracing API:
-
-- **Delete a single trace**: Use the `DELETE /monitor/traces/{trace_id}` endpoint to remove one trace and all of its spans.
-- **Delete all traces for a flow**: Use `DELETE /monitor/traces?flow_id=...` to delete all traces associated with a specific flow.
-
-These operations require authentication and only allow users to delete traces for flows they own.
-
 ## See also
 
 - [Logs](/logging)
 - [Monitor endpoints](/api-monitor)
-- [Observability integrations](/integrations-langfuse)
-
