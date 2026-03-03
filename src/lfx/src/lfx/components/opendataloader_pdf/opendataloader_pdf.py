@@ -530,6 +530,8 @@ class OpenDataLoaderPDFComponent(BaseFileComponent):
             return results
         if isinstance(file_path, Data):
             return [file_path]
+        if isinstance(file_path, str):
+            return [Data(data={self.SERVER_FILE_PATH_FIELDNAME: file_path})]
 
         return super()._file_path_as_list()
 
