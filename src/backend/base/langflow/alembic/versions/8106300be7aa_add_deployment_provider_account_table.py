@@ -21,7 +21,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 TABLE_NAME = "deployment_provider_account"
-UNIQUE_CONSTRAINT_NAME = "uq_deployment_provider_account_user_url_account"
+UNIQUE_CONSTRAINT_NAME = "uq_deployment_provider_account_user_url_tenant"
 
 
 def upgrade() -> None:
@@ -33,22 +33,27 @@ def upgrade() -> None:
         TABLE_NAME,
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=False),
-        sa.Column("account_id", AutoString(), nullable=True),
+        sa.Column("provider_tenant_id", AutoString(), nullable=True),
         sa.Column("provider_key", AutoString(), nullable=False),
         sa.Column("provider_url", AutoString(), nullable=False),
         sa.Column("api_key", AutoString(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(
-            ["user_id"], ["user.id"], name=op.f("fk_deployment_provider_account_user_id_user"), ondelete="CASCADE"
+            ["user_id"],
+            ["user.id"],
+            name=op.f("fk_deployment_provider_account_user_id_user"),
+            ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_deployment_provider_account")),
-        sa.UniqueConstraint("user_id", "provider_url", "account_id", name=UNIQUE_CONSTRAINT_NAME),
+        sa.UniqueConstraint("user_id", "provider_url", "provider_tenant_id", name=UNIQUE_CONSTRAINT_NAME),
     )
 
     with op.batch_alter_table(TABLE_NAME, schema=None) as batch_op:
         batch_op.create_index(batch_op.f("ix_deployment_provider_account_user_id"), ["user_id"], unique=False)
-        batch_op.create_index(batch_op.f("ix_deployment_provider_account_account_id"), ["account_id"], unique=False)
+        batch_op.create_index(
+            batch_op.f("ix_deployment_provider_account_provider_tenant_id"), ["provider_tenant_id"], unique=False
+        )
         batch_op.create_index(batch_op.f("ix_deployment_provider_account_provider_key"), ["provider_key"], unique=False)
 
 
@@ -59,7 +64,7 @@ def downgrade() -> None:
 
     with op.batch_alter_table(TABLE_NAME, schema=None) as batch_op:
         batch_op.drop_index(batch_op.f("ix_deployment_provider_account_provider_key"))
-        batch_op.drop_index(batch_op.f("ix_deployment_provider_account_account_id"))
+        batch_op.drop_index(batch_op.f("ix_deployment_provider_account_provider_tenant_id"))
         batch_op.drop_index(batch_op.f("ix_deployment_provider_account_user_id"))
 
     op.drop_table(TABLE_NAME)

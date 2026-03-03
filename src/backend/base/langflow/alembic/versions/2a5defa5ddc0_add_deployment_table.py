@@ -35,7 +35,7 @@ def upgrade() -> None:
         sa.Column("resource_key", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("project_id", sa.Uuid(), nullable=False),
-        sa.Column("provider_account_id", sa.Uuid(), nullable=False),
+        sa.Column("deployment_provider_account_id", sa.Uuid(), nullable=False),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
@@ -46,9 +46,9 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(
-            ["provider_account_id"],
+            ["deployment_provider_account_id"],
             ["deployment_provider_account.id"],
-            name=op.f("fk_deployment_provider_account_id_deployment_provider_account"),
+            name=op.f("fk_deployment_deployment_provider_account_id_deployment_provider_account"),
             ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(
@@ -62,11 +62,17 @@ def upgrade() -> None:
     with op.batch_alter_table("deployment", schema=None) as batch_op:
         batch_op.create_index(batch_op.f("ix_deployment_name"), ["name"], unique=False)
         batch_op.create_index(batch_op.f("ix_deployment_project_id"), ["project_id"], unique=False)
-        batch_op.create_index(batch_op.f("ix_deployment_provider_account_id"), ["provider_account_id"], unique=False)
+        batch_op.create_index(
+            batch_op.f("ix_deployment_deployment_provider_account_id"),
+            ["deployment_provider_account_id"],
+            unique=False,
+        )
         batch_op.create_index(batch_op.f("ix_deployment_resource_key"), ["resource_key"], unique=False)
         batch_op.create_index(batch_op.f("ix_deployment_user_id"), ["user_id"], unique=False)
-        batch_op.create_unique_constraint(NAME_UNIQUE_CONSTRAINT, ["provider_account_id", "name"])
-        batch_op.create_unique_constraint(RESOURCE_KEY_UNIQUE_CONSTRAINT, ["provider_account_id", "resource_key"])
+        batch_op.create_unique_constraint(NAME_UNIQUE_CONSTRAINT, ["deployment_provider_account_id", "name"])
+        batch_op.create_unique_constraint(
+            RESOURCE_KEY_UNIQUE_CONSTRAINT, ["deployment_provider_account_id", "resource_key"]
+        )
 
 
 def downgrade() -> None:
@@ -79,7 +85,7 @@ def downgrade() -> None:
         batch_op.drop_constraint(NAME_UNIQUE_CONSTRAINT, type_="unique")
         batch_op.drop_index(batch_op.f("ix_deployment_user_id"))
         batch_op.drop_index(batch_op.f("ix_deployment_resource_key"))
-        batch_op.drop_index(batch_op.f("ix_deployment_provider_account_id"))
+        batch_op.drop_index(batch_op.f("ix_deployment_deployment_provider_account_id"))
         batch_op.drop_index(batch_op.f("ix_deployment_project_id"))
         batch_op.drop_index(batch_op.f("ix_deployment_name"))
 

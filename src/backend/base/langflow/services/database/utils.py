@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from alembic.util.exc import CommandError
 from lfx.log.logger import logger
@@ -73,6 +74,24 @@ async def session_getter(db_service: DatabaseService):
         raise
     finally:
         await session.close()
+
+
+def parse_uuid(value: UUID | str, *, field_name: str = "value") -> UUID:
+    """Parse a UUID from a string or pass through a UUID.
+
+    Raises ValueError with context if the string is not a valid UUID.
+    """
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            msg = f"{field_name} must not be empty"
+            raise ValueError(msg)
+        try:
+            return UUID(stripped)
+        except ValueError:
+            msg = f"{field_name} is not a valid UUID: {stripped!r}"
+            raise ValueError(msg) from None
+    return value
 
 
 @dataclass
