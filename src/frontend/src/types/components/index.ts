@@ -73,7 +73,10 @@ export type DropDownComponent = {
   id?: string;
   children?: ReactNode;
   name: string;
-  dialogInputs?: any;
+  dialogInputs?: {
+    fields: { data: { node: APIClassType } };
+    functionality: string;
+  };
   externalOptions?: any;
   toggle?: boolean;
 };
@@ -560,7 +563,6 @@ export type ChatInputType = {
     repeat: number;
     files?: string[];
   }) => Promise<void>;
-  playgroundPage: boolean;
 };
 
 export type editNodeToggleType = {

@@ -1,4 +1,3 @@
-import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { ENABLE_VOICE_ASSISTANT } from "@/customization/feature-flags";
 import type { FilePreviewType } from "@/types/components";
 import FilePreviewDisplay from "../../utils/file-preview-display";
@@ -18,7 +17,7 @@ interface InputWrapperProps {
   files: FilePreviewType[];
   isDragging: boolean;
   handleDeleteFile: (file: FilePreviewType) => void;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   handleFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   handleButtonClick: () => void;
   audioRecordingState: AudioRecordingState;
@@ -47,8 +46,6 @@ const InputWrapper = ({
 }: InputWrapperProps) => {
   const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto`;
 
-  const { data: config } = useGetConfig();
-
   const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     if (target.closest("textarea")) {
@@ -74,12 +71,12 @@ const InputWrapper = ({
       {/* Input container */}
       <div
         data-testid="input-wrapper"
-        className="flex w-full flex-col gap-2 rounded-md border border-input bg-background p-3 hover:border-muted-foreground focus-within:border-primary"
+        className="flex w-full flex-col rounded-md border border-input bg-background p-3 cursor-text hover:border-muted-foreground focus-within:border-primary"
         onClick={onClick}
         onMouseDown={onMouseDown}
       >
         {/* Text input area */}
-        <div className="w-full pb-3">
+        <div className="w-full">
           <TextAreaWrapper
             CHAT_INPUT_PLACEHOLDER={"Send a message"}
             isBuilding={isBuilding}
