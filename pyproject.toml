@@ -90,6 +90,7 @@ members = [
     "src/backend/base",
     ".",
     "src/lfx",
+    "src/langflow-stepflow",
 ]
 
 [tool.hatch.build.targets.wheel]
