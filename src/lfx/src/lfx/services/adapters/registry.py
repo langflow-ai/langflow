@@ -67,8 +67,15 @@ def register_adapter(
     """
 
     def decorator(adapter_class: type[AdapterT]) -> type[AdapterT]:
-        registry = get_adapter_registry(adapter_type=adapter_type)
-        registry.register_class(key, adapter_class, override=override)
+        try:
+            registry = get_adapter_registry(adapter_type=adapter_type)
+            registry.register_class(key, adapter_class, override=override)
+            logger.debug(f"Registered adapter via decorator: {adapter_type.value}.{key} -> {adapter_class.__name__}")
+        except ValueError:
+            # Re-raise ValueError (used for registry identity conflicts)
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Failed to register adapter {adapter_type.value}.{key} from decorator: {exc}")
         return adapter_class
 
     return decorator

@@ -2,12 +2,29 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from pathlib import Path
+from typing import Any
 
 from lfx.log.logger import logger
+
+
+def resolve_config_dir(config_dir: Path | str | None, *, settings_service: Any | None = None) -> Path:
+    """Resolve config directory using explicit value, settings, then cwd.
+
+    Resolution order:
+    1. ``config_dir`` argument (if provided)
+    2. ``settings_service.settings.config_dir`` (if present)
+    3. Current working directory
+    """
+    if config_dir is not None:
+        return Path(config_dir)
+
+    settings = getattr(settings_service, "settings", None)
+    settings_config_dir = getattr(settings, "config_dir", None)
+    if settings_config_dir:
+        return Path(settings_config_dir)
+
+    return Path.cwd()
 
 
 def get_preferred_config_source(

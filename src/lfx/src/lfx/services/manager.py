@@ -17,7 +17,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
-from lfx.services.config_discovery import get_nested_section, get_preferred_config_source, load_toml_config
+from lfx.services.config_discovery import (
+    get_nested_section,
+    get_preferred_config_source,
+    load_toml_config,
+    resolve_config_dir,
+)
 from lfx.services.schema import ServiceType
 from lfx.utils.concurrency import KeyedMemoryLockManager
 
@@ -353,13 +358,10 @@ class ServiceManager:
                 logger.debug("Plugins already discovered, skipping...")
                 return
 
-            # Get config_dir from settings service if not provided
-            if config_dir is None and ServiceType.SETTINGS_SERVICE in self.services:
-                settings_service = self.services[ServiceType.SETTINGS_SERVICE]
-                if hasattr(settings_service, "settings") and settings_service.settings.config_dir:
-                    config_dir = Path(settings_service.settings.config_dir)
+            settings_service = self.services.get(ServiceType.SETTINGS_SERVICE)
+            config_dir = resolve_config_dir(config_dir, settings_service=settings_service)
 
-            logger.debug(f"Starting plugin discovery (config_dir: {config_dir or 'cwd'})...")
+            logger.debug(f"Starting plugin discovery (config_dir: {config_dir})...")
 
             # 1. Discover from entry points
             self._discover_from_entry_points()
@@ -390,7 +392,7 @@ class ServiceManager:
 
     def _discover_from_config(self, config_dir: Path | None = None) -> None:
         """Discover services from config files (lfx.toml / pyproject.toml)."""
-        config_dir = Path.cwd() if config_dir is None else Path(config_dir)
+        config_dir = resolve_config_dir(config_dir)
         source = get_preferred_config_source(
             config_dir,
             lfx_root_path=("services",),

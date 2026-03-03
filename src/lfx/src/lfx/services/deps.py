@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager, suppress
-from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from fastapi import HTTPException
 from sqlalchemy.exc import InvalidRequestError
 
 from lfx.log.logger import logger
+from lfx.services.config_discovery import resolve_config_dir
 from lfx.services.schema import ServiceType
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
+    from pathlib import Path
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -173,10 +174,7 @@ def get_deployment_adapter(
 
 def _resolve_adapter_config_dir() -> Path:
     """Resolve config directory for adapter discovery."""
-    settings_service = get_settings_service()
-    if settings_service is not None and settings_service.settings.config_dir:
-        return Path(settings_service.settings.config_dir)
-    return Path.cwd()
+    return resolve_config_dir(None, settings_service=get_settings_service())
 
 
 async def get_session():
