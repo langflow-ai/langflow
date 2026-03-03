@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 from pathlib import Path
 from typing import Any
 
@@ -68,3 +69,26 @@ def get_nested_section(config: dict[str, Any], path: tuple[str, ...]) -> dict[st
             return None
         node = node.get(key)
     return node if isinstance(node, dict) else None
+
+
+def load_object_from_import_path(
+    import_path: Any,
+    *,
+    object_kind: str,
+    object_key: str,
+) -> Any | None:
+    """Load a Python object from ``module:attribute`` import path.
+
+    Returns ``None`` on invalid format or import resolution failures.
+    """
+    if not isinstance(import_path, str) or ":" not in import_path:
+        logger.warning(f"Invalid {object_kind} path for key='{object_key}': '{import_path}'. Expected 'module:class'.")
+        return None
+
+    try:
+        module_path, attribute_name = import_path.split(":", 1)
+        module = importlib.import_module(module_path)
+        return getattr(module, attribute_name)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"Failed to load {object_kind} for key='{object_key}' from '{import_path}': {exc}")
+        return None

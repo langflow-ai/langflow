@@ -21,7 +21,6 @@ convention.
 from __future__ import annotations
 
 import asyncio
-import importlib
 import threading
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
@@ -32,7 +31,12 @@ if TYPE_CHECKING:
     from lfx.services.adapters.schema import AdapterType
 
 from lfx.log.logger import logger
-from lfx.services.config_discovery import get_nested_section, get_preferred_config_source, load_toml_config
+from lfx.services.config_discovery import (
+    get_nested_section,
+    get_preferred_config_source,
+    load_object_from_import_path,
+    load_toml_config,
+)
 
 T = TypeVar("T")
 AdapterT = TypeVar("AdapterT")
@@ -232,23 +236,15 @@ class AdapterRegistry(Generic[T]):
             logger.debug(f"Loaded {len(section)} adapter(s) for '{self.adapter_type.value}' from {config_path}")
 
     def _register_adapter_from_path(self, *, key: str, import_path: Any) -> None:
-        if not isinstance(import_path, str) or ":" not in import_path:
-            logger.warning(
-                f"Invalid adapter path for adapter_type='{self.adapter_type.value}' key='{key}': "
-                f"'{import_path}'. Expected 'module:class'."
-            )
+        adapter_class = load_object_from_import_path(
+            import_path,
+            object_kind=f"adapter for adapter_type='{self.adapter_type.value}'",
+            object_key=key,
+        )
+        if adapter_class is None:
             return
 
-        try:
-            module_path, class_name = import_path.split(":", 1)
-            module = importlib.import_module(module_path)
-            adapter_class = getattr(module, class_name)
-            self.register_class(key, adapter_class, override=True)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(
-                f"Failed to register adapter for adapter_type='{self.adapter_type.value}' "
-                f"key='{key}' from '{import_path}': {exc}"
-            )
+        self.register_class(key, adapter_class, override=True)
 
 
 def _default_entry_point_group(adapter_type: AdapterType) -> str:

@@ -20,6 +20,7 @@ from lfx.log.logger import logger
 from lfx.services.config_discovery import (
     get_nested_section,
     get_preferred_config_source,
+    load_object_from_import_path,
     load_toml_config,
     resolve_config_dir,
 )
@@ -429,20 +430,16 @@ class ServiceManager:
             logger.warning(f"Invalid service key '{service_key}' - must match ServiceType enum value")
             return
 
-        try:
-            # Parse module:class format
-            if ":" not in service_path:
-                logger.warning(f"Invalid service path '{service_path}' - must be 'module:class' format")
-                return
+        service_class = load_object_from_import_path(
+            service_path,
+            object_kind="service",
+            object_key=service_key,
+        )
+        if service_class is None:
+            return
 
-            module_path, class_name = service_path.split(":", 1)
-            module = importlib.import_module(module_path)
-            service_class = getattr(module, class_name)
-
-            self.register_service_class(service_type, service_class, override=True)
-            logger.debug(f"Registered service from config: {service_key} -> {service_path}")
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(f"Failed to register service {service_key} from {service_path}: {exc}")
+        self.register_service_class(service_type, service_class, override=True)
+        logger.debug(f"Registered service from config: {service_key} -> {service_path}")
 
 
 # Global variables for lazy initialization
