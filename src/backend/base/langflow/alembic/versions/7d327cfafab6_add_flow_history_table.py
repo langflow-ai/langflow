@@ -1,8 +1,10 @@
 """add flow_history table
 
 Revision ID: 7d327cfafab6
-Revises: 369268b9af8b
+Revises: 3478f0bd6ccb
 Create Date: 2026-02-22 00:00:00.000000
+
+Phase: EXPAND
 
 """
 
@@ -13,8 +15,8 @@ from alembic import op
 from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
-revision: str = "7d327cfafab6"
-down_revision: str | None = "7a1c9e2f4b6d"
+revision: str = "7d327cfafab6"  # pragma: allowlist secret
+down_revision: str | None = "3478f0bd6ccb"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

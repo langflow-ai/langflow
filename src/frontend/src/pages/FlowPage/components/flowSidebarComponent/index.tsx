@@ -754,6 +754,10 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                   <SkeletonGroup count={21} className="my-0.5 h-7" />
                 </div>
               </div>
+            ) : showHistory ? (
+              <FlowHistorySidebarContent
+                flowId={currentFlowForHistory?.id ?? ""}
+              />
             ) : (
               <>
                 {hasResults ? (

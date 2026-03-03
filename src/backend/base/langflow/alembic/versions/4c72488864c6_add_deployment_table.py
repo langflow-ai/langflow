@@ -1,8 +1,10 @@
 """add deployment table
 
 Revision ID: 4c72488864c6
-Revises: 7d327cfafab6
+Revises: 7a1c9e2f4b6d
 Create Date: 2026-02-26 00:47:43.856001
+
+Phase: EXPAND
 
 """
 
@@ -14,8 +16,8 @@ from alembic import op
 from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
-revision: str = "4c72488864c6"
-down_revision: str | None = "7d327cfafab6"
+revision: str = "4c72488864c6"  # pragma: allowlist secret
+down_revision: str | None = "7a1c9e2f4b6d"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

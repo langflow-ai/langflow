@@ -59,6 +59,12 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Traces",
     tooltip: "Traces",
   },
+  {
+    id: "history",
+    icon: "Clock",
+    label: "History",
+    tooltip: "Version History",
+  },
 ];
 
 const SidebarSegmentedNav = () => {

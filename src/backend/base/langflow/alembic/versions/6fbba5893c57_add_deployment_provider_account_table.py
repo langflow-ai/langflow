@@ -1,7 +1,7 @@
 """add deployment provider account table.
 
 Revision ID: 6fbba5893c57
-Revises: 369268b9af8b
+Revises: 7d327cfafab6
 Create Date: 2026-02-20 00:00:00.000000
 
 Phase: EXPAND
@@ -15,7 +15,7 @@ from sqlmodel.sql.sqltypes import AutoString
 
 # revision identifiers, used by Alembic.
 revision: str = "6fbba5893c57"  # pragma: allowlist secret
-down_revision: str | None = "369268b9af8b"  # pragma: allowlist secret
+down_revision: str | None = "7d327cfafab6"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

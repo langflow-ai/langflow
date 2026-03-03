@@ -3,18 +3,19 @@
 Revision ID: 2b9c4d8e7a11
 Revises: 0f6a9f8b2d31
 Create Date: 2026-02-26 00:00:00.000000
+
+Phase: EXPAND
 """
 
 from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
-
 from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
-revision: str = "2b9c4d8e7a11"
-down_revision: str | Sequence[str] | None = ("0f6a9f8b2d31", "c187c3b9bb94")
+revision: str = "2b9c4d8e7a11"  # pragma: allowlist secret
+down_revision: str | Sequence[str] | None = "0f6a9f8b2d31"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
