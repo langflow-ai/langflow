@@ -35,6 +35,7 @@ EXPECTED_TABLES = {
     "transaction",
     "vertex_build",
     "job",
+    "trace",
 }
 
 EXPECTED_COLUMNS = {
@@ -107,11 +108,12 @@ def test_no_phantom_migrations():
         finally:
             engine.dispose()
 
-        # Filter out diffs that are known SQLite limitations
-        # (e.g. SQLite doesn't support ALTER COLUMN, so type changes show up)
-        significant_diffs = [
-            d for d in diffs if not (isinstance(d, tuple) and len(d) >= 2 and d[0] == "modify_nullable")
-        ]
+        # Filter out diffs that are known SQLite limitations:
+        # - modify_nullable: SQLite doesn't support ALTER COLUMN
+        # - remove_fk/add_fk: SQLite doesn't track FK names or ondelete, so
+        #   autogenerate sees phantom FK changes
+        _sqlite_noise = {"modify_nullable", "remove_fk", "add_fk"}
+        significant_diffs = [d for d in diffs if not (isinstance(d, tuple) and len(d) >= 2 and d[0] in _sqlite_noise)]
 
         if significant_diffs:
             diff_descriptions = "\n".join(str(d) for d in significant_diffs)
