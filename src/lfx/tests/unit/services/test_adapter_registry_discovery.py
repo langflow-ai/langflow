@@ -57,6 +57,14 @@ def test_get_adapter_registry_raises_on_parameter_mismatch_for_same_adapter_type
         )
 
 
+def test_get_adapter_registry_convention_defaults():
+    """Convention-derived params match explicit equivalents."""
+    registry = adapter_registry_mod.get_adapter_registry(adapter_type=AdapterType.DEPLOYMENT)
+
+    assert registry.entry_point_group == "lfx.deployment.adapters"
+    assert registry.config_section_path == ("deployment", "adapters")
+
+
 def test_discovery_precedence_entrypoint_decorator_config(tmp_path, monkeypatch):
     registry = make_deployment_adapter_registry()
 
@@ -146,7 +154,13 @@ def test_register_class_override_false_preserves_existing():
     assert registry.get_class("local") is DummyEntryPointAdapter
 
 
-def test_decorator_override_false_preserves_entrypoint(tmp_path, monkeypatch):
+def test_decorator_override_false_wins_over_entrypoint(tmp_path, monkeypatch):
+    """Decorator registers at import time (before discover), so it wins.
+
+    Both sources use override=False.  The decorator fires first, and the
+    entry point can't overwrite it.  This mirrors ``@register_service``
+    behavior for top-level services.
+    """
     registry = make_deployment_adapter_registry()
     monkeypatch.setattr(
         "importlib.metadata.entry_points",
@@ -160,7 +174,7 @@ def test_decorator_override_false_preserves_entrypoint(tmp_path, monkeypatch):
 
     registry.discover(config_dir=tmp_path)
 
-    assert registry.get_class("local") is DummyEntryPointAdapter
+    assert registry.get_class("local") is DummyDecoratorAdapter
 
 
 def test_decorator_override_false_skips_when_same_key_already_decorated(tmp_path):

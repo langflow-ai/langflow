@@ -3,12 +3,19 @@
 Adapter registries are service-scoped plugin registries
 that allow multiple adapters of the same service type
 to be registered and used simultaneously.
-Discovery sources intentionally mirror the
-existing ServiceManager plugin model:
+Discovery sources mirror the existing ServiceManager
+plugin model:
 
-1. Entry points (lowest priority)
-2. Decorator registration
-3. Config files (highest priority)
+1. Decorator registration (immediate, at import time)
+2. Entry points (during ``discover()``, ``override=False``)
+3. Config files (during ``discover()``, ``override=True``)
+
+Decorators register directly on the ``AdapterRegistry``
+singleton (mirroring ``@register_service`` for top-level
+services).  No intermediary staging dict is needed because
+``get_adapter_registry`` derives ``entry_point_group`` and
+``config_section_path`` from the ``AdapterType`` value by
+convention.
 """
 
 from __future__ import annotations
@@ -39,8 +46,6 @@ __all__ = [
 ]
 
 
-_decorator_adapter_registry: dict[AdapterType, dict[str, tuple[type[Any], bool]]] = {}
-_decorator_lock = threading.Lock()
 _adapter_registries: dict[AdapterType, AdapterRegistry[Any]] = {}
 _adapter_registries_lock = threading.Lock()
 
@@ -55,30 +60,22 @@ def register_adapter(
     *,
     override: bool = True,
 ):
-    """Decorator to register an adapter class for an adapter type."""
+    """Decorator to register an adapter class for an adapter type.
+
+    Registers immediately on the ``AdapterRegistry`` singleton (same
+    pattern as ``@register_service`` for top-level services).
+    """
 
     def decorator(adapter_class: type[AdapterT]) -> type[AdapterT]:
-        with _decorator_lock:
-            registry = _decorator_adapter_registry.setdefault(adapter_type, {})
-            if key in registry and not override:
-                logger.debug(
-                    f"Skipped adapter registration for adapter_type='{adapter_type.value}' "
-                    f"key='{key}' (override={override})."
-                )
-                return adapter_class
-
-            registry[key] = (adapter_class, override)
-            logger.debug(
-                f"Registered adapter via decorator: adapter_type='{adapter_type.value}' key='{key}' "
-                f"class='{adapter_class.__name__}'"
-            )
+        registry = get_adapter_registry(adapter_type=adapter_type)
+        registry.register_class(key, adapter_class, override=override)
         return adapter_class
 
     return decorator
 
 
 class AdapterRegistry(Generic[T]):
-    """Registry for adapters under a parent service namespace.
+    """Registry for adapters of a single AdapterType.
 
     Generic over ``T``, the adapter contract expected by callers
     (e.g. ``AdapterRegistry[DeploymentServiceProtocol]``).
@@ -106,12 +103,7 @@ class AdapterRegistry(Generic[T]):
         )
 
     def register_class(self, key: str, adapter_class: type[T], *, override: bool = True) -> None:
-        """Register an adapter class under a key.
-
-        Not internally locked — callers are responsible for synchronisation.
-        During discovery this is called under ``self._lock``, matching the
-        ``ServiceManager.register_service_class`` pattern.
-        """
+        """Register an adapter class under a key."""
         if key in self.adapter_classes and not override:
             logger.debug(
                 f"Skipped adapter registration for adapter_type='{self.adapter_type.value}' "
@@ -186,7 +178,6 @@ class AdapterRegistry(Generic[T]):
                 return
 
             self._discover_from_entry_points()
-            self._discover_from_decorators()
             self._discover_from_config(config_dir=config_dir)
             self._discovered = True
 
@@ -206,12 +197,6 @@ class AdapterRegistry(Generic[T]):
                 logger.debug(
                     f"Error loading adapter entry point group='{self.entry_point_group}' name='{ep.name}': {exc}"
                 )
-
-    def _discover_from_decorators(self) -> None:
-        with _decorator_lock:
-            decorator_entries = dict(_decorator_adapter_registry.get(self.adapter_type, {}))
-        for key, (adapter_class, override) in decorator_entries.items():
-            self.register_class(key, adapter_class, override=override)
 
     def _discover_from_config(self, *, config_dir: Path) -> None:
         source = get_preferred_config_source(
@@ -254,46 +239,69 @@ class AdapterRegistry(Generic[T]):
             self.register_class(key, adapter_class, override=True)
         except Exception as exc:  # noqa: BLE001
             logger.warning(
-                f"Failed to register adapter adapter_type='{self.adapter_type.value}' "
+                f"Failed to register adapter for adapter_type='{self.adapter_type.value}' "
                 f"key='{key}' from '{import_path}': {exc}"
             )
+
+
+def _default_entry_point_group(adapter_type: AdapterType) -> str:
+    return f"lfx.{adapter_type.value}.adapters"
+
+
+def _default_config_section_path(adapter_type: AdapterType) -> tuple[str, ...]:
+    return (adapter_type.value, "adapters")
 
 
 def get_adapter_registry(
     *,
     adapter_type: AdapterType,
-    entry_point_group: str,
-    config_section_path: tuple[str, ...],
+    entry_point_group: str | None = None,
+    config_section_path: tuple[str, ...] | None = None,
 ) -> AdapterRegistry[Any]:
-    """Get or create a singleton adapter registry for an adapter type."""
+    """Get or create a singleton adapter registry for an adapter type.
+
+    ``entry_point_group`` and ``config_section_path`` are derived from
+    ``adapter_type`` by convention when not provided explicitly:
+
+    * ``entry_point_group`` → ``"lfx.<adapter_type>.adapters"``
+    * ``config_section_path`` → ``("<adapter_type>", "adapters")``
+    """
+    resolved_epg = entry_point_group or _default_entry_point_group(adapter_type)
+    resolved_csp = config_section_path or _default_config_section_path(adapter_type)
+
     with _adapter_registries_lock:
         if adapter_type in _adapter_registries:
             existing = _adapter_registries[adapter_type]
-            if existing.entry_point_group != entry_point_group or existing.config_section_path != config_section_path:
+            if existing.entry_point_group != resolved_epg or existing.config_section_path != resolved_csp:
                 msg = (
                     "get_adapter_registry called with conflicting parameters for existing "
                     f"adapter_type='{adapter_type.value}'. "
                     f"Existing: entry_point_group='{existing.entry_point_group}', "
                     f"config_section_path={existing.config_section_path}. "
-                    f"Requested: entry_point_group='{entry_point_group}', "
-                    f"config_section_path={config_section_path}."
+                    f"Requested: entry_point_group='{resolved_epg}', "
+                    f"config_section_path={resolved_csp}."
                 )
                 raise AdapterRegistryConflictError(msg)
             return existing
 
         registry = AdapterRegistry(
             adapter_type=adapter_type,
-            entry_point_group=entry_point_group,
-            config_section_path=config_section_path,
+            entry_point_group=resolved_epg,
+            config_section_path=resolved_csp,
         )
         _adapter_registries[adapter_type] = registry
         return registry
 
 
-def _reset_registries() -> None:
-    """Reset all adapter registry state. For testing only."""
-    with _decorator_lock, _adapter_registries_lock:
-        _decorator_adapter_registry.clear()
+async def _reset_registries() -> None:
+    """Reset all adapter registry state. For testing only.
+
+    Tears down cached adapter instances before clearing registries so
+    that resources held by adapters (connections, file handles, …) are
+    released even in test-isolation scenarios.
+    """
+    await teardown_all_adapter_registries()
+    with _adapter_registries_lock:
         _adapter_registries.clear()
 
 

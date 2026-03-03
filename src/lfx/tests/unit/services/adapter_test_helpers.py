@@ -27,9 +27,5 @@ class DeploymentAdapterStub(BaseDeploymentService):
 
 
 def make_deployment_adapter_registry():
-    """Create a deployment adapter registry with standard parameters."""
-    return adapter_registry_mod.get_adapter_registry(
-        adapter_type=AdapterType.DEPLOYMENT,
-        entry_point_group="lfx.deployment.adapters",
-        config_section_path=("deployment", "adapters"),
-    )
+    """Create a deployment adapter registry with convention-derived parameters."""
+    return adapter_registry_mod.get_adapter_registry(adapter_type=AdapterType.DEPLOYMENT)

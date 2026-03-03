@@ -24,7 +24,7 @@ Use them when you need to choose between several adapters at runtime (for exampl
 
 | Concern | Service | Adapter registry |
 |---|---|---|
-| **Lookup key** | `ServiceType` enum | String key within a namespace |
+| **Lookup key** | `ServiceType` enum | String key within a registry |
 | **Cardinality** | One implementation per type | Many adapters per registry |
 | **Type safety** | Protocol per `ServiceType` | Protocol-typed registry per `AdapterType` |
 | **Example** | `storage_service` | `deployment` adapters by key, e.g. `"local"`, `"remote"` |
@@ -59,7 +59,8 @@ class LocalAdapter:
     ...
 ```
 
-The decorator preserves the concrete class type (uses a `TypeVar` internally).
+The decorator registers immediately on the `AdapterRegistry` singleton (same pattern as `@register_service` for top-level services).
+It preserves the concrete class type (uses a `TypeVar` internally).
 Defaults to `override=True`; set `override=False` to keep an existing key untouched.
 `"local"` is only an example adapter key.
 
@@ -97,15 +98,21 @@ Entry-point names are adapter keys and are fully user-defined.
 
 ### Adapter Discovery and Precedence
 
-Adapter discovery order matches top-level services:
+Adapter registration mirrors the top-level `@register_service` model:
 
-1. Entry points (`override=False`)
-2. Decorator registration (`override=True`)
-3. Config files (`override=True`)
+1. **Decorator registration** — immediate at import time (`override=True` by default)
+2. **Entry points** (`override=False`) — discovered during `discover()`
+3. **Config files** (`override=True`) — discovered during `discover()`
+
+Effective precedence (what wins when multiple sources register the same key):
+
+Config files > Decorators > Entry points
 
 Config files are deployment-time overrides and win by default.
 
 Discovery is **one-time per registry instance**. Subsequent calls to `discover()` are no-ops.
+
+`entry_point_group` and `config_section_path` are derived from the `AdapterType` value by convention (`lfx.<type>.adapters` and `(<type>, "adapters")`) so they rarely need to be specified explicitly.
 
 ### Adapter Instance Lifecycle
 
@@ -124,14 +131,13 @@ lfx/services/
   adapters/
     deployment/
       __init__.py
-      registry.py
       base.py
       service.py
       exceptions.py
       schema.py
 ```
 
-This keeps top-level services focused on DI-managed host services while adapter implementations live under explicit adapter namespaces.
+This keeps top-level services focused on DI-managed host services while adapter implementations live under explicit adapter registries.
 
 ### Error Handling Behavior
 

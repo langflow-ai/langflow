@@ -146,7 +146,6 @@ def get_auth_service() -> AuthServiceProtocol | None:
 def _get_deployment_registry() -> AdapterRegistry[DeploymentServiceProtocol]:
     """Retrieve the deployment adapter registry singleton.
 
-    This is the typed entry point for looking up deployment adapters.
     Discovery still needs to be triggered separately via
     ``registry.discover(config_dir=...)``.
     """
@@ -155,11 +154,7 @@ def _get_deployment_registry() -> AdapterRegistry[DeploymentServiceProtocol]:
 
     return cast(
         "AdapterRegistry[DeploymentServiceProtocol]",
-        get_adapter_registry(
-            adapter_type=AdapterType.DEPLOYMENT,
-            entry_point_group="lfx.deployment.adapters",
-            config_section_path=("deployment", "adapters"),
-        ),
+        get_adapter_registry(adapter_type=AdapterType.DEPLOYMENT),
     )
 
 

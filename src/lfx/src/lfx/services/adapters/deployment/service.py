@@ -8,8 +8,6 @@ from typing import TYPE_CHECKING
 from lfx.log.logger import logger
 from lfx.services.adapters.deployment.base import BaseDeploymentService
 from lfx.services.adapters.deployment.exceptions import DeploymentNotConfiguredError
-from lfx.services.adapters.registry import register_adapter
-from lfx.services.schema import AdapterType
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,7 +32,9 @@ if TYPE_CHECKING:
     )
 
 
-@register_adapter(AdapterType.DEPLOYMENT, "lfx-not-implemented")
+# No adapter key registered -- this stub exists so the protocol and ABC are
+# testable.  Concrete adapters (e.g. in Langflow) subclass BaseDeploymentService
+# and register under meaningful keys like "local" or "remote".
 class DeploymentService(BaseDeploymentService):
     """Null deployment service for LFX.
 
