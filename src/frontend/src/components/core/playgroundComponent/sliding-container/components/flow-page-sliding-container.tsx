@@ -179,7 +179,7 @@ export function FlowPageSlidingContainerContent({
             </div>
           </div>
         </AnimatedConditional>
-        <div className="flex-1 flex flex-col overflow-hidden pt-2">
+        <div className="flex-1 flex flex-col overflow-hidden pt-2 bg-muted">
           <ChatHeader
             sessions={orderedSessions}
             onNewChat={handleNewChat}
