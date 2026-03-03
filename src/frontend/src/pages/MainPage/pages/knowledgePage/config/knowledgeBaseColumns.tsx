@@ -57,7 +57,7 @@ export const createKnowledgeBaseColumns = (
         } else if (sourceTypes.length === 1) {
           const type = sourceTypes[0] as keyof typeof FILE_ICONS;
           iconName = FILE_ICONS[type]?.icon ?? "File";
-          iconColor = FILE_ICONS[type]?.color ?? "text-blue-500";
+          iconColor = FILE_ICONS[type]?.color ?? "text-accent-blue-foreground";
         } else {
           iconName = "Layers";
           iconColor = undefined;
