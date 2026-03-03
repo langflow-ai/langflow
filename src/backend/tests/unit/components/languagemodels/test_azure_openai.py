@@ -16,7 +16,7 @@ class TestAzureChatOpenAIComponent(ComponentTestBaseWithoutClient):
         return {
             "azure_endpoint": "https://example.azure.openai.com/",
             "model_name": "gpt-5.1",
-            "azure_deployment": "YOUR-DEPLOYMENT-gpt-5.1",
+            "azure_deployment": "gpt-5.1",
             "api_key": "test-api-key",
             "use_legacy_api": False,
             "temperature": 0.7,
@@ -36,14 +36,14 @@ class TestAzureChatOpenAIComponent(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
         model = component.build_model()
 
+        # gpt-5.1 is a reasoning model, so it uses max_completion_tokens and reasoning_effort
         mock_chat_openai.assert_called_once_with(
-            model="YOUR-DEPLOYMENT-gpt-5.1",
+            model="gpt-5.1",
             api_key="test-api-key",
             base_url="https://example.azure.openai.com/openai/v1",
             streaming=False,
-            model_kwargs={},
-            temperature=0.7,
-            max_tokens=1000,
+            model_kwargs={"reasoning_effort": "medium"},
+            max_completion_tokens=1000,
         )
         assert model == mock_instance
 
@@ -57,15 +57,15 @@ class TestAzureChatOpenAIComponent(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
         model = component.build_model()
 
+        # gpt-5.1 is a reasoning model, so it uses max_completion_tokens and reasoning_effort
         mock_azure_chat_openai.assert_called_once_with(
             azure_endpoint="https://example.azure.openai.com/",
-            azure_deployment="YOUR-DEPLOYMENT-gpt-5.1",
+            azure_deployment="gpt-5.1",
             api_version="2025-04-01-preview",
             api_key="test-api-key",
             streaming=False,
-            model_kwargs={},
-            temperature=0.7,
-            max_tokens=1000,
+            model_kwargs={"reasoning_effort": "medium"},
+            max_completion_tokens=1000,
         )
         assert model == mock_instance
 
@@ -90,28 +90,31 @@ class TestAzureChatOpenAIComponent(ComponentTestBaseWithoutClient):
 
     async def test_update_build_config_reasoning(self, component_class, default_kwargs):
         """Test build config updates for reasoning vs non-reasoning models."""
-        component = component_class(**default_kwargs)
-        build_config = {
-            "temperature": {"show": True},
-            "seed": {"show": True},
-            "reasoning_effort": {"show": True},
-        }
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Get the full frontend node to get a complete build_config
+        frontend_node = component.to_frontend_node()
+        build_config = frontend_node["data"]["node"]["template"]
 
         # Test with reasoning model (gpt-5.1)
         updated_config = component.update_build_config(build_config, "gpt-5.1", "model_name")
         assert updated_config["temperature"]["show"] is False
         assert updated_config["seed"]["show"] is False
         assert updated_config["reasoning_effort"]["show"] is True
+        # Verify azure_deployment is auto-populated to the model name (since MODEL_TO_DEPLOYMENT is empty)
+        assert updated_config["azure_deployment"]["value"] == "gpt-5.1"
 
-        # Reset
+        # Reset visibility flags for next test
         build_config["temperature"]["show"] = True
         build_config["seed"]["show"] = True
 
-        # Test with non-reasoning model
+        # Test with non-reasoning model (gpt-4)
         updated_config = component.update_build_config(build_config, "gpt-4", "model_name")
         assert updated_config["temperature"]["show"] is True
         assert updated_config["seed"]["show"] is True
         assert updated_config["reasoning_effort"]["show"] is False
+        # Verify azure_deployment is auto-populated to the model name
+        assert updated_config["azure_deployment"]["value"] == "gpt-4"
 
     async def test_deployment_name_override(self, component_class, default_kwargs):
         """Test that custom azure_deployment value overrides the model-to-deployment mapping."""
@@ -121,8 +124,8 @@ class TestAzureChatOpenAIComponent(ComponentTestBaseWithoutClient):
         deployment = component._resolve_deployment_name()
         assert deployment == "my-custom-deployment"
 
-        # Test that empty deployment falls back to mapping
+        # Test that empty deployment falls back to model name
         component.azure_deployment = ""
         component.model_name = "gpt-5.1"
         deployment = component._resolve_deployment_name()
-        assert deployment == "YOUR-DEPLOYMENT-gpt-5.1"
+        assert deployment == "gpt-5.1"

@@ -29,13 +29,8 @@ AZURE_OPENAI_API_VERSIONS = [
 
 REASONING_MODEL_NAMES = {m["name"] for m in OPENAI_MODELS_DETAILED if m.get("reasoning")}
 
-MODEL_TO_DEPLOYMENT = {
-    "gpt-5.1": "YOUR-DEPLOYMENT-gpt-5.1",
-    "gpt-5-mini": "YOUR-DEPLOYMENT-gpt-5-mini",
-    "gpt-4.1": "YOUR-DEPLOYMENT-gpt4.1",
-    "gpt-4.1-mini": "YOUR-DEPLOYMENT-gpt4.1-mini",
-}
-AZURE_MODEL_NAMES = list(MODEL_TO_DEPLOYMENT)
+MODEL_TO_DEPLOYMENT: dict[str, str] = {}
+AZURE_MODEL_NAMES = ["gpt-5.1", "gpt-5-mini", "gpt-4.1", "gpt-4.1-mini"]
 
 
 class AzureChatOpenAIComponent(LCModelComponent):
@@ -66,7 +61,10 @@ class AzureChatOpenAIComponent(LCModelComponent):
         MessageTextInput(
             name="azure_deployment",
             display_name="Deployment Name",
-            info="The Azure deployment name to use. Auto-populated from model selection; override for custom deployments.",
+            info=(
+                "The Azure deployment name to use. Auto-populated from model selection; "
+                "override for custom deployments."
+            ),
             required=True,
             real_time_refresh=True,
         ),
@@ -138,7 +136,8 @@ class AzureChatOpenAIComponent(LCModelComponent):
             model = str(field_value) if field_value else ""
             is_reasoning = self._is_reasoning_model(model)
             self._apply_reasoning_visibility(build_config, is_reasoning=is_reasoning)
-            build_config["azure_deployment"]["value"] = MODEL_TO_DEPLOYMENT.get(model, model)
+            if "azure_deployment" in build_config and isinstance(build_config["azure_deployment"], dict):
+                build_config["azure_deployment"]["value"] = MODEL_TO_DEPLOYMENT.get(model, model)
 
         return build_config
 
@@ -152,9 +151,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
         Uses azure_deployment as the primary source. Falls back to mapping
         the model name if deployment is not set.
         """
-        if self.azure_deployment:
-            return self.azure_deployment
-        return MODEL_TO_DEPLOYMENT.get(self.model_name, self.model_name)
+        return self.azure_deployment or MODEL_TO_DEPLOYMENT.get(self.model_name, self.model_name)
 
     def _apply_legacy_api_visibility(self, build_config: dict, *, is_legacy: bool) -> None:
         build_config["api_version"]["show"] = is_legacy
