@@ -375,9 +375,9 @@ class NativeTracer(BaseTracer):
         from langflow.services.tracing.native_callback import NativeCallbackHandler
         from langflow.services.tracing.service import component_context_var
 
-        # Component context is set before add_trace() is called, so it's available when
-        # components call get_langchain_callbacks() during their execution. This fixes
-        # the timing issue where _current_component_id was still None when callbacks were created.
+        # Component context is set before add_trace() is called,
+        # so it's available when components call get_langchain_callbacks() during flow execution.
+        # We need to check component_context incase _current_component_id was still None when callbacks were created.
         parent_span_id = None
         component_context = component_context_var.get(None)
         if component_context:
