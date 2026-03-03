@@ -351,7 +351,7 @@ export function FlowInsightsContent({
       >
         <DialogContent
           className={
-            "right-0 top-0 h-[100dvh] w-full max-w-none rounded-l-xl rounded-r-none p-0 sm:w-[70vw] " +
+            "right-0 top-[3rem] h-[calc(100dvh-3rem)] w-full max-w-none rounded-l-xl rounded-r-none p-0 sm:w-[80vw] " +
             "data-[state=open]:animate-in data-[state=closed]:animate-out " +
             "data-[state=open]:slide-in-from-right-1/2 data-[state=closed]:slide-out-to-right-1/2"
           }
