@@ -92,7 +92,7 @@ async def _resolve_assistant_context(
     model_name = request.model_name or get_default_model(provider) or ""
 
     # Get all configured variables for the provider
-    provider_vars = await get_all_variables_for_provider(user_id, provider)
+    provider_vars = get_all_variables_for_provider(user_id, provider)
 
     # Validate all required variables are present
     required_keys = get_provider_required_variable_keys(provider)
@@ -147,7 +147,7 @@ async def execute_named_flow(flow_name: str, request: AssistantRequest, current_
 
     try:
         # Check for OpenAI variables (required for some assistant features)
-        openai_vars = await get_all_variables_for_provider(user_id, "OpenAI")
+        openai_vars = get_all_variables_for_provider(user_id, "OpenAI")
         global_vars.update(openai_vars)
     except (ValueError, HTTPException):
         logger.debug("OpenAI variables not configured, continuing without them")
