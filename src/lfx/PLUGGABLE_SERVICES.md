@@ -15,6 +15,127 @@ The pluggable services system supports **three** discovery mechanisms:
 2. Decorator registration
 3. Configuration files (highest priority)
 
+## Sub-services (Service-Scoped Plugin Registries)
+
+LFX also supports **sub-services**, which are registries that live under a parent service namespace.
+Use them when one service type needs multiple selectable adapters at the same time (for example, deployment adapters like `local` and `remote`).
+
+### Service vs Sub-service
+
+- **Service**: one implementation resolved by a `ServiceType` key (e.g. `storage_service`)
+- **Sub-service**: many adapter implementations resolved by string keys within a namespace (e.g. `deployment.adapters.local`)
+
+Important distinction:
+
+- The **host/resolver service** (a normal `ServiceType`-based service) performs the lookup.
+- The **sub-service adapters** returned from that lookup are not a second `ServiceType` registration.
+- In other words, the lookup service type and the adapter class type are intentionally different concerns.
+
+### Core API
+
+Sub-services are implemented in `lfx.services.subservice`.
+
+```python
+from lfx.services.subservice import get_sub_service_registry, register_sub_service
+
+registry = get_sub_service_registry(
+    namespace="deployment.adapters",
+    entry_point_group="lfx.deployment.adapters",
+    config_section_path=("deployment", "adapters"),
+)
+
+# One-time discovery (entry points -> decorators -> config files)
+registry.discover_sub_services()
+
+# Lookup/list available adapters
+adapter_cls = registry.get_sub_service_class("local")
+keys = registry.list_sub_service_keys()
+```
+
+### Registering Sub-services
+
+#### Option A: Decorator Registration
+
+```python
+from lfx.services.subservice import register_sub_service
+
+@register_sub_service("deployment.adapters", "local")
+class LocalAdapter:
+    ...
+```
+
+Decorator registration defaults to `override=True`. Set `override=False` to keep an existing key untouched.
+
+#### Option B: Configuration Files
+
+`lfx.toml` (preferred when both files exist):
+
+```toml
+[deployment.adapters]
+local = "my_package.deployment:LocalAdapter"
+remote = "my_package.deployment:RemoteAdapter"
+```
+
+`pyproject.toml`:
+
+```toml
+[tool.lfx.deployment.adapters]
+local = "my_package.deployment:LocalAdapter"
+remote = "my_package.deployment:RemoteAdapter"
+```
+
+#### Option C: Entry Points
+
+```toml
+[project.entry-points."lfx.deployment.adapters"]
+local = "my_package.deployment:LocalAdapter"
+remote = "my_package.deployment:RemoteAdapter"
+```
+
+### Sub-service Discovery and Precedence
+
+Sub-service discovery order matches top-level services:
+
+1. Entry points (`override=False`)
+2. Decorator registration (`override=True`)
+3. Config files (`override=True`)
+
+This means config files are deployment-time overrides and win by default.
+
+Discovery is intentionally **one-time per namespace registry instance**. Re-calling `discover_sub_services()` will be a no-op after first discovery.
+If you need a different result, create a fresh process or clear/rebuild registry state in tests.
+
+### Error Handling Behavior
+
+- Invalid import paths (missing `module:ClassName`) are ignored with warning logs
+- Entry point load failures do not stop discovery from other sources
+- Malformed TOML is ignored with warning logs
+- Missing namespace sections are treated as empty configuration
+
+### Integration Pattern in a Parent Service
+
+```python
+from pathlib import Path
+from lfx.services.subservice import get_sub_service_registry
+
+registry = get_sub_service_registry(
+    namespace="deployment.adapters",
+    entry_point_group="lfx.deployment.adapters",
+    config_section_path=("deployment", "adapters"),
+)
+registry.discover_sub_services(config_dir=Path.cwd())
+
+# A host service (resolved normally via ServiceType) selects an adapter by key.
+adapter_cls = registry.get_sub_service_class("local")
+if adapter_cls is None:
+    raise ValueError("Unknown deployment adapter")
+
+adapter = adapter_cls(...)
+```
+
+The host service remains the only object registered in the top-level service manager for its `ServiceType`.
+Sub-service adapters are discovered/selected inside that host service and do not replace the host service itself.
+
 ## Quick Start
 
 ### For CLI Users (Config File Approach)

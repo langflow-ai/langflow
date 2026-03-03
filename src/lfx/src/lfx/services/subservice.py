@@ -1,7 +1,9 @@
 """Generic sub-service discovery and registration helpers.
 
-Sub-services are service-scoped plugin registries (e.g. deployment adapters for
-the deployment router service). Discovery sources intentionally mirror the
+Sub-services are service-scoped plugin registries
+that allow multiple adapters of the same service type
+to be registered and used simultaneously.
+Discovery sources intentionally mirror the
 existing ServiceManager plugin model:
 
 1. Entry points (lowest priority)
@@ -169,14 +171,32 @@ def get_sub_service_registry(
     entry_point_group: str,
     config_section_path: tuple[str, ...],
 ) -> SubServiceRegistry:
-    """Get or create a singleton sub-service registry for a namespace."""
+    """Get or create a singleton sub-service registry for a namespace.
+
+    If a registry already exists for *namespace*, the existing instance is
+    returned.  A warning is logged when the caller supplies *entry_point_group*
+    or *config_section_path* values that differ from those on the existing
+    registry, since the new values will be silently ignored.
+    """
     with _subservice_registries_lock:
-        if namespace not in _subservice_registries:
-            _subservice_registries[namespace] = SubServiceRegistry(
-                namespace=namespace,
-                entry_point_group=entry_point_group,
-                config_section_path=config_section_path,
-            )
+        if namespace in _subservice_registries:
+            existing = _subservice_registries[namespace]
+            if existing.entry_point_group != entry_point_group or existing.config_section_path != config_section_path:
+                logger.warning(
+                    f"get_sub_service_registry called with different parameters for namespace='{namespace}'. "
+                    f"Existing: entry_point_group='{existing.entry_point_group}', "
+                    f"config_section_path={existing.config_section_path}. "
+                    f"Requested: entry_point_group='{entry_point_group}', "
+                    f"config_section_path={config_section_path}. "
+                    f"Returning the existing registry."
+                )
+            return existing
+
+        _subservice_registries[namespace] = SubServiceRegistry(
+            namespace=namespace,
+            entry_point_group=entry_point_group,
+            config_section_path=config_section_path,
+        )
         return _subservice_registries[namespace]
 
 
