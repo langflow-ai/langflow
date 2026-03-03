@@ -15,7 +15,7 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
     __table_args__ = (
         UniqueConstraint(
             "user_id",
-            "backend_url",
+            "provider_url",
             "account_id",
             name="uq_deployment_provider_account_user_url_account",
         ),
@@ -29,12 +29,12 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
     user_id: UUID = Field(foreign_key="user.id", index=True, description="User owner for this provider account")
     account_id: str | None = Field(default=None, index=True, description="Provider tenant/organization identifier")
     provider_key: str = Field(index=True, description="Deployment adapter routing key")
-    backend_url: str = Field(description="Deployment provider backend URL")
+    provider_url: str = Field(description="Deployment provider URL")
     api_key: str = Field(description="Deployment provider API key")
-    registered_at: datetime | None = Field(
+    created_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
-        description="When the user registered the deployment provider account with Langflow.",
+        description="When the deployment provider account was created.",
     )
     updated_at: datetime | None = Field(
         default=None,

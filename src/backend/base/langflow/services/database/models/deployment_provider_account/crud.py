@@ -44,7 +44,7 @@ async def list_provider_accounts(
     stmt = (
         select(DeploymentProviderAccount)
         .where(DeploymentProviderAccount.user_id == user_uuid)
-        .order_by(DeploymentProviderAccount.registered_at.desc())
+        .order_by(DeploymentProviderAccount.created_at.desc())
     )
     return list((await db.exec(stmt)).all())
 
@@ -55,7 +55,7 @@ async def create_provider_account(
     user_id: UUID | str,
     account_id: str | None,
     provider_key: str,
-    backend_url: str,
+    provider_url: str,
     api_key: str,
 ) -> DeploymentProviderAccount:
     user_uuid = _get_uuid(user_id)
@@ -64,9 +64,9 @@ async def create_provider_account(
         user_id=user_uuid,
         account_id=account_id.strip() if account_id is not None else None,
         provider_key=provider_key.strip(),
-        backend_url=backend_url.strip(),
+        provider_url=provider_url.strip(),
         api_key=auth_utils.encrypt_api_key(api_key.strip()),
-        registered_at=now,
+        created_at=now,
         updated_at=now,
     )
     db.add(provider_account)
@@ -81,15 +81,15 @@ async def update_provider_account(
     provider_account: DeploymentProviderAccount,
     account_id: str | None = None,
     provider_key: str | None = None,
-    backend_url: str | None = None,
+    provider_url: str | None = None,
     api_key: str | None = None,
 ) -> DeploymentProviderAccount:
     if account_id is not None:
         provider_account.account_id = account_id.strip()
     if provider_key is not None:
         provider_account.provider_key = provider_key.strip()
-    if backend_url is not None:
-        provider_account.backend_url = backend_url.strip()
+    if provider_url is not None:
+        provider_account.provider_url = provider_url.strip()
     if api_key is not None:
         stripped = api_key.strip()
         provider_account.api_key = stripped if is_encrypted(stripped) else auth_utils.encrypt_api_key(stripped)
