@@ -9,7 +9,8 @@ import TabItem from '@theme/TabItem';
 
 Langflow’s **Traces** feature records detailed execution traces for your flows and components so that you can debug issues, measure latency, and track token usage without relying on external observability services.
 
-Trace data is stored in the Langflow database in the `trace` and `span` tables. Trace data is presented in the **Flow Activity** page in the UI, and can be retrieved through the tracing API.
+Trace data is stored in the Langflow database in the `trace` and `span` tables.
+Trace data is presented in the **Flow Activity** and **Trace Details** pages in the UI, and can be retrieved from the `/monitor/traces` API endpoint.
 
 Traces are enabled by default.
 To disable Langflow tracing and use a different tracing provider, set `LANGFLOW_NATIVE_TRACING` to `false`.
@@ -27,6 +28,11 @@ To view traces in the Langflow UI, do the following:
    The **Trace Details** pane displays spans for your flow run, including a flow-level span for the entire run, and a span for each component.
    Individual component spans include the component's inputs and outputs, timing, and token usage.
 
+## Retrieve traces with the API
+
+To programmatically query traces, use the `/monitor/traces` endpoints.
+For full parameter details and code examples in Python, TypeScript, and curl, see [Monitor endpoints: Get traces](/api-monitor#get-traces).
+
 ## What traces capture
 
 The tracer records:
@@ -42,11 +48,6 @@ Each span includes:
 - **Inputs and outputs** (serialized)
 - **Error details**, if the span failed
 - **Attributes** such as token counts and model metadata
-
-## Retrieve traces with the API
-
-To programmatically query traces, use the `/monitor/traces` endpoints.
-For full parameter details and code examples in Python, TypeScript, and curl, see [Monitor endpoints: Get traces](/api-monitor#get-traces).
 
 ## See also
 
