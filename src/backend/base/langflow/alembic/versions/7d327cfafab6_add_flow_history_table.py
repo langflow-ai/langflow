@@ -1,9 +1,10 @@
 """add flow_version table
 
 Revision ID: 7d327cfafab6
-Revises: 369268b9af8b
+Revises: 3478f0bd6ccb
 Create Date: 2026-02-22 00:00:00.000000
 
+Phase: EXPAND
 """
 
 from collections.abc import Sequence

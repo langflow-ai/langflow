@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-from uuid import UUID
+from typing import TYPE_CHECKING
 
 from lfx.log import logger
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import col, delete, func, select
-from sqlmodel.ext.asyncio.session import AsyncSession
+
+if TYPE_CHECKING:
+    from uuid import UUID
+
+    from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.database.models.flow_version.exceptions import (
     FlowVersionConflictError,

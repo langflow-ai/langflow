@@ -42,7 +42,7 @@ class FlowVersionRead(BaseModel):
     description: str | None
     created_at: datetime
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def version_tag(self) -> str:
         return f"v{self.version_number}"

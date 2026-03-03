@@ -748,10 +748,7 @@ async def upload_file(
     contents = await file.read()
     data = orjson.loads(contents)
 
-    if "flows" in data:
-        flow_list = FlowListCreate(**data)
-    else:
-        flow_list = FlowListCreate(flows=[FlowCreate(**data)])
+    flow_list = FlowListCreate(**data) if "flows" in data else FlowListCreate(flows=[FlowCreate(**data)])
 
     # TODO: Full-version import is planned as a follow-up feature.
     # When implemented, extract raw flow dicts here to read embedded "version"

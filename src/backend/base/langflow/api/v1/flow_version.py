@@ -1,7 +1,6 @@
-from __future__ import annotations
-
 import copy
 from datetime import datetime, timezone
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query
@@ -90,8 +89,8 @@ async def list_flow_versions(
     flow_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSessionReadOnly,
-    limit: int = Query(default=50, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> FlowVersionListResponse:
     await _get_user_flow(session, flow_id, current_user.id)
     entries = await get_flow_version_list(session, flow_id, current_user.id, limit, offset)
@@ -157,7 +156,8 @@ async def activate_version(
     version_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSession,
-    save_draft: bool = Query(default=True),
+    *,
+    save_draft: Annotated[bool, Query()] = True,
 ) -> FlowRead:
     flow = await _get_user_flow(session, flow_id, current_user.id)
 
