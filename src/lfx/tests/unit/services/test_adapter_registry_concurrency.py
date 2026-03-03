@@ -6,52 +6,19 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
-from lfx.services.adapters import registry as adapter_registry_mod
-from lfx.services.adapters.deployment.base import BaseDeploymentService
-from lfx.services.schema import AdapterType
+
+from tests.unit.services.adapter_test_helpers import DeploymentAdapterStub, make_deployment_adapter_registry
 
 
-class _DeploymentAdapterStub(BaseDeploymentService):
-    """Minimal stub subclassing BaseDeploymentService for tests."""
-
-    name = "stub_deployment"
-
-    async def create(self, **kw): ...
-    async def list_types(self, **kw): ...
-    async def list(self, **kw): ...
-    async def get(self, **kw): ...
-    async def update(self, **kw): ...
-    async def redeploy(self, **kw): ...
-    async def duplicate(self, **kw): ...
-    async def delete(self, **kw): ...
-    async def get_status(self, **kw): ...
-    async def create_execution(self, **kw): ...
-    async def get_execution(self, **kw): ...
-    async def teardown(self): ...
-
-
-class DummyEntryPointAdapter(_DeploymentAdapterStub):
+class DummyEntryPointAdapter(DeploymentAdapterStub):
     pass
 
 
-@pytest.fixture(autouse=True)
-def clean_adapter_globals():
-    """Ensure global registry state is isolated per test."""
-    adapter_registry_mod._reset_registries()
-    yield
-    adapter_registry_mod._reset_registries()
-
-
-def _registry():
-    return adapter_registry_mod.get_adapter_registry(
-        adapter_type=AdapterType.DEPLOYMENT,
-        entry_point_group="lfx.deployment.adapters",
-        config_section_path=("deployment", "adapters"),
-    )
+pytestmark = pytest.mark.usefixtures("clean_adapter_globals")
 
 
 def test_get_instance_is_thread_safe_singleton_creation():
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
     registry.register_class("local", DummyEntryPointAdapter)
     factory_calls = 0
     factory_lock = threading.Lock()

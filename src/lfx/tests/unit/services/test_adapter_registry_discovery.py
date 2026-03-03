@@ -4,42 +4,24 @@ from __future__ import annotations
 
 import pytest
 from lfx.services.adapters import registry as adapter_registry_mod
-from lfx.services.adapters.deployment.base import BaseDeploymentService
 from lfx.services.schema import AdapterType
 
-
-class _DeploymentAdapterStub(BaseDeploymentService):
-    """Minimal stub subclassing BaseDeploymentService for tests."""
-
-    name = "stub_deployment"
-
-    async def create(self, **kw): ...
-    async def list_types(self, **kw): ...
-    async def list(self, **kw): ...
-    async def get(self, **kw): ...
-    async def update(self, **kw): ...
-    async def redeploy(self, **kw): ...
-    async def duplicate(self, **kw): ...
-    async def delete(self, **kw): ...
-    async def get_status(self, **kw): ...
-    async def create_execution(self, **kw): ...
-    async def get_execution(self, **kw): ...
-    async def teardown(self): ...
+from tests.unit.services.adapter_test_helpers import DeploymentAdapterStub, make_deployment_adapter_registry
 
 
-class DummyDecoratorAdapter(_DeploymentAdapterStub):
+class DummyDecoratorAdapter(DeploymentAdapterStub):
     pass
 
 
-class DummyEntryPointAdapter(_DeploymentAdapterStub):
+class DummyEntryPointAdapter(DeploymentAdapterStub):
     pass
 
 
-class DummyConfigAdapter(_DeploymentAdapterStub):
+class DummyConfigAdapter(DeploymentAdapterStub):
     pass
 
 
-class DummyAlternateAdapter(_DeploymentAdapterStub):
+class DummyAlternateAdapter(DeploymentAdapterStub):
     pass
 
 
@@ -54,31 +36,18 @@ class DummyEntryPoint:
         return self._obj
 
 
-@pytest.fixture(autouse=True)
-def clean_adapter_globals():
-    """Ensure global registry state is isolated per test."""
-    adapter_registry_mod._reset_registries()
-    yield
-    adapter_registry_mod._reset_registries()
-
-
-def _registry():
-    return adapter_registry_mod.get_adapter_registry(
-        adapter_type=AdapterType.DEPLOYMENT,
-        entry_point_group="lfx.deployment.adapters",
-        config_section_path=("deployment", "adapters"),
-    )
+pytestmark = pytest.mark.usefixtures("clean_adapter_globals")
 
 
 def test_get_adapter_registry_singleton():
-    first = _registry()
-    second = _registry()
+    first = make_deployment_adapter_registry()
+    second = make_deployment_adapter_registry()
 
     assert first is second
 
 
 def test_get_adapter_registry_raises_on_parameter_mismatch_for_same_adapter_type():
-    _registry()
+    make_deployment_adapter_registry()
 
     with pytest.raises(adapter_registry_mod.AdapterRegistryConflictError):
         adapter_registry_mod.get_adapter_registry(
@@ -89,7 +58,7 @@ def test_get_adapter_registry_raises_on_parameter_mismatch_for_same_adapter_type
 
 
 def test_discovery_precedence_entrypoint_decorator_config(tmp_path, monkeypatch):
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
 
     monkeypatch.setattr(
         "importlib.metadata.entry_points",
@@ -111,7 +80,7 @@ local = "{__name__}:DummyConfigAdapter"
 
 
 def test_lfx_toml_takes_precedence_over_pyproject(tmp_path):
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
 
     (tmp_path / "lfx.toml").write_text(
         f"""
@@ -132,7 +101,7 @@ local = "{__name__}:DummyAlternateAdapter"
 
 
 def test_discover_only_once(tmp_path):
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
 
     (tmp_path / "lfx.toml").write_text(
         f"""
@@ -155,7 +124,7 @@ local = "{__name__}:DummyAlternateAdapter"
 
 
 def test_invalid_import_path_is_ignored(tmp_path):
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
 
     (tmp_path / "lfx.toml").write_text(
         """
@@ -170,7 +139,7 @@ local = "invalid_without_colon"
 
 
 def test_register_class_override_false_preserves_existing():
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
     registry.register_class("local", DummyEntryPointAdapter, override=True)
     registry.register_class("local", DummyDecoratorAdapter, override=False)
 
@@ -178,7 +147,7 @@ def test_register_class_override_false_preserves_existing():
 
 
 def test_decorator_override_false_preserves_entrypoint(tmp_path, monkeypatch):
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
     monkeypatch.setattr(
         "importlib.metadata.entry_points",
         lambda group: [DummyEntryPoint("local", DummyEntryPointAdapter)] if group == "lfx.deployment.adapters" else [],
@@ -198,14 +167,14 @@ def test_decorator_override_false_skips_when_same_key_already_decorated(tmp_path
     adapter_registry_mod.register_adapter(AdapterType.DEPLOYMENT, "local")(DummyDecoratorAdapter)
     adapter_registry_mod.register_adapter(AdapterType.DEPLOYMENT, "local", override=False)(DummyAlternateAdapter)
 
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
     registry.discover(config_dir=tmp_path)
 
     assert registry.get_class("local") is DummyDecoratorAdapter
 
 
 def test_list_keys_is_sorted():
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
     registry.register_class("zeta", DummyEntryPointAdapter)
     registry.register_class("alpha", DummyDecoratorAdapter)
 
@@ -213,7 +182,7 @@ def test_list_keys_is_sorted():
 
 
 def test_repr_before_and_after_discovery(tmp_path):
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
     registry.register_class("local", DummyEntryPointAdapter)
 
     r = repr(registry)
@@ -226,7 +195,7 @@ def test_repr_before_and_after_discovery(tmp_path):
 
 
 def test_pyproject_only_discovery(tmp_path):
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
     (tmp_path / "pyproject.toml").write_text(
         f"""
 [tool.lfx.deployment.adapters]
@@ -240,7 +209,7 @@ local = "{__name__}:DummyConfigAdapter"
 
 
 def test_discovery_handles_malformed_toml(tmp_path):
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
     (tmp_path / "lfx.toml").write_text(
         """
 [deployment.adapters
@@ -253,7 +222,7 @@ local = "pathlib:Path"
 
 
 def test_discovery_ignores_missing_or_empty_section(tmp_path):
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
     (tmp_path / "lfx.toml").write_text(
         """
 [other]
@@ -266,7 +235,7 @@ key = "value"
 
 
 def test_entry_point_load_failure_does_not_abort_discovery(tmp_path, monkeypatch):
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
 
     class BrokenEntryPoint:
         name = "broken"
@@ -291,15 +260,17 @@ local = "{__name__}:DummyConfigAdapter"
 
 
 def test_get_nested_section_returns_none_for_non_dict_path():
+    from lfx.services.config_discovery import get_nested_section
+
     nested = {"tool": {"lfx": {"deployment": "not-a-dict"}}}
 
-    section = adapter_registry_mod._get_nested_section(nested, ("tool", "lfx", "deployment", "adapters"))
+    section = get_nested_section(nested, ("tool", "lfx", "deployment", "adapters"))
     assert section is None
 
 
 def test_config_with_nonexistent_module_is_ignored(tmp_path):
     """Config referencing a module that cannot be imported is skipped."""
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
 
     (tmp_path / "lfx.toml").write_text(
         """
@@ -314,7 +285,7 @@ local = "nonexistent_pkg_xyz.adapters:Adapter"
 
 def test_config_with_nonexistent_class_in_valid_module_is_ignored(tmp_path):
     """Config referencing a real module but missing class is skipped."""
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
 
     (tmp_path / "lfx.toml").write_text(
         """
@@ -328,7 +299,7 @@ local = "pathlib:TotallyMadeUpClassName"
 
 
 def test_config_with_non_string_value_is_ignored(tmp_path):
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
 
     (tmp_path / "lfx.toml").write_text(
         """
@@ -342,7 +313,7 @@ local = 42
 
 
 def test_multi_key_discovery_across_sources(tmp_path, monkeypatch):
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
 
     monkeypatch.setattr(
         "importlib.metadata.entry_points",

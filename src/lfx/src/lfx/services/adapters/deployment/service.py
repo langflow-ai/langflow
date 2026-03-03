@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING
 from lfx.log.logger import logger
 from lfx.services.adapters.deployment.base import BaseDeploymentService
 from lfx.services.adapters.deployment.exceptions import DeploymentNotConfiguredError
+from lfx.services.adapters.registry import register_adapter
+from lfx.services.schema import AdapterType
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,9 +34,7 @@ if TYPE_CHECKING:
     )
 
 
-# Not registered yet — no ServiceType.DEPLOYMENT_SERVICE enum value exists.
-# This stub defines the concrete class so the protocol and ABC are testable.
-# A future PR will add the enum value and register the service.
+@register_adapter(AdapterType.DEPLOYMENT, "lfx-not-implemented")
 class DeploymentService(BaseDeploymentService):
     """Null deployment service for LFX.
 

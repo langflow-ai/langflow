@@ -4,58 +4,26 @@ from __future__ import annotations
 
 import pytest
 from lfx.services.adapters import registry as adapter_registry_mod
-from lfx.services.adapters.deployment.base import BaseDeploymentService
-from lfx.services.schema import AdapterType
+
+from tests.unit.services.adapter_test_helpers import DeploymentAdapterStub, make_deployment_adapter_registry
 
 
-class _DeploymentAdapterStub(BaseDeploymentService):
-    """Minimal stub subclassing BaseDeploymentService for tests."""
-
-    name = "stub_deployment"
-
-    async def create(self, **kw): ...
-    async def list_types(self, **kw): ...
-    async def list(self, **kw): ...
-    async def get(self, **kw): ...
-    async def update(self, **kw): ...
-    async def redeploy(self, **kw): ...
-    async def duplicate(self, **kw): ...
-    async def delete(self, **kw): ...
-    async def get_status(self, **kw): ...
-    async def create_execution(self, **kw): ...
-    async def get_execution(self, **kw): ...
-    async def teardown(self): ...
-
-
-class DummyEntryPointAdapter(_DeploymentAdapterStub):
+class DummyEntryPointAdapter(DeploymentAdapterStub):
     pass
 
 
-class DummyTeardownAdapter(_DeploymentAdapterStub):
+class DummyTeardownAdapter(DeploymentAdapterStub):
     teardown_calls = 0
 
     async def teardown(self):
         type(self).teardown_calls += 1
 
 
-@pytest.fixture(autouse=True)
-def clean_adapter_globals():
-    """Ensure global registry state is isolated per test."""
-    adapter_registry_mod._reset_registries()
-    yield
-    adapter_registry_mod._reset_registries()
-
-
-def _registry():
-    return adapter_registry_mod.get_adapter_registry(
-        adapter_type=AdapterType.DEPLOYMENT,
-        entry_point_group="lfx.deployment.adapters",
-        config_section_path=("deployment", "adapters"),
-    )
+pytestmark = pytest.mark.usefixtures("clean_adapter_globals")
 
 
 def test_get_instance_returns_singleton_for_same_key():
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
     registry.register_class("local", DummyEntryPointAdapter)
     factory_calls = 0
 
@@ -73,7 +41,7 @@ def test_get_instance_returns_singleton_for_same_key():
 
 
 def test_get_instance_returns_none_for_unknown_key():
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
 
     instance = registry.get_instance("missing", factory=lambda adapter_class: adapter_class())
 
@@ -83,7 +51,7 @@ def test_get_instance_returns_none_for_unknown_key():
 @pytest.mark.asyncio
 async def test_teardown_instances_clears_cache_and_recreates():
     DummyTeardownAdapter.teardown_calls = 0
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
     registry.register_class("local", DummyTeardownAdapter)
 
     first = registry.get_instance("local", factory=lambda adapter_class: adapter_class())
@@ -100,7 +68,7 @@ async def test_teardown_instances_clears_cache_and_recreates():
 @pytest.mark.asyncio
 async def test_teardown_all_adapter_registries_clears_instances():
     DummyTeardownAdapter.teardown_calls = 0
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
     registry.register_class("local", DummyTeardownAdapter)
     registry.get_instance("local", factory=lambda adapter_class: adapter_class())
 
@@ -113,7 +81,7 @@ async def test_teardown_all_adapter_registries_clears_instances():
 def test_get_deployment_adapter_returns_singleton_instance():
     from lfx.services.deps import get_deployment_adapter
 
-    registry = _registry()
+    registry = make_deployment_adapter_registry()
     registry.register_class("unit", DummyEntryPointAdapter)
 
     first = get_deployment_adapter("unit")

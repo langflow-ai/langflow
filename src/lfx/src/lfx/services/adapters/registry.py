@@ -13,8 +13,8 @@ existing ServiceManager plugin model:
 
 from __future__ import annotations
 
+import asyncio
 import importlib
-import inspect
 import threading
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
@@ -163,9 +163,9 @@ class AdapterRegistry(Generic[T]):
             if not callable(teardown):
                 continue
             try:
-                result = teardown()
-                if inspect.isawaitable(result):
-                    await result
+                teardown_result = teardown()
+                if asyncio.iscoroutine(teardown_result):
+                    await teardown_result
             except Exception as exc:  # noqa: BLE001
                 logger.warning(
                     f"Failed to teardown adapter instance for adapter_type='{self.adapter_type.value}': {exc}"
@@ -198,9 +198,13 @@ class AdapterRegistry(Generic[T]):
             try:
                 adapter_class = ep.load()
                 self.register_class(ep.name, adapter_class, override=False)
-            except Exception as exc:  # noqa: BLE001
+            except (ValueError, AttributeError) as exc:
                 logger.warning(
                     f"Failed to load adapter entry point group='{self.entry_point_group}' name='{ep.name}': {exc}"
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.debug(
+                    f"Error loading adapter entry point group='{self.entry_point_group}' name='{ep.name}': {exc}"
                 )
 
     def _discover_from_decorators(self) -> None:
@@ -225,12 +229,15 @@ class AdapterRegistry(Generic[T]):
         if config is None:
             return
 
-        section = _get_nested_section(config, root_path)
+        section = get_nested_section(config, root_path)
         if section is None:
             return
 
         for key, import_path in section.items():
             self._register_adapter_from_path(key=key, import_path=import_path)
+
+        if config_path.name == "lfx.toml" or section:
+            logger.debug(f"Loaded {len(section)} adapter(s) for '{self.adapter_type.value}' from {config_path}")
 
     def _register_adapter_from_path(self, *, key: str, import_path: Any) -> None:
         if not isinstance(import_path, str) or ":" not in import_path:
@@ -296,8 +303,3 @@ async def teardown_all_adapter_registries() -> None:
         registries = list(_adapter_registries.values())
     for registry in registries:
         await registry.teardown_instances()
-
-
-def _get_nested_section(config: dict[str, Any], path: tuple[str, ...]) -> Any:
-    """Safely resolve nested section dictionaries in TOML payloads."""
-    return get_nested_section(config, path)
