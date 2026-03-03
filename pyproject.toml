@@ -276,6 +276,9 @@ external = ["RUF027"]
     "EM101",  # NotImplementedError messages as literals
     "TC003",  # Type-only imports used in signatures
 ]
+"src/lfx/src/lfx/services/deployment/service.py" = [
+    "ARG002",  # No-op stub: unused args required by interface
+]
 "src/lfx/src/lfx/base/mcp/util.py" = [
     "SLF001",  # MCP library private member access
 ]

@@ -143,19 +143,17 @@ def test_deployment_not_configured_default_message() -> None:
 
 def test_auth_errors_not_caught_by_deployment_error() -> None:
     """Ensure except DeploymentError does NOT catch auth failures."""
+    assert not issubclass(CredentialResolutionError, DeploymentError)
     with pytest.raises(AuthenticationError):
-        try:
-            raise CredentialResolutionError()
-        except DeploymentError:
-            pytest.fail("DeploymentError should not catch AuthenticationError")
+        raise CredentialResolutionError
 
 
 def test_deployment_service_error_catches_both_hierarchies() -> None:
     """DeploymentServiceError catches both deployment and auth errors."""
     with pytest.raises(DeploymentServiceError):
-        raise CredentialResolutionError()
+        raise CredentialResolutionError
     with pytest.raises(DeploymentServiceError):
-        raise DeploymentNotFoundError()
+        raise DeploymentNotFoundError
 
 
 def test_package_exports_base_and_error() -> None:
