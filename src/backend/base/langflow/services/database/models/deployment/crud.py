@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
-async def create_deployment_row(
+async def create_deployment(
     db: AsyncSession,
     *,
     user_id: UUID,
@@ -42,7 +42,7 @@ async def create_deployment_row(
     return row
 
 
-async def get_deployment_row_by_resource_key(
+async def get_deployment_by_resource_key(
     db: AsyncSession,
     *,
     user_id: UUID,
@@ -57,7 +57,7 @@ async def get_deployment_row_by_resource_key(
     return (await db.exec(stmt)).first()
 
 
-async def get_deployment_row(
+async def get_deployment(
     db: AsyncSession,
     *,
     user_id: UUID,
@@ -71,7 +71,7 @@ async def get_deployment_row(
     return (await db.exec(stmt)).first()
 
 
-async def list_deployment_rows_page(
+async def list_deployments_page(
     db: AsyncSession,
     *,
     user_id: UUID,
@@ -92,7 +92,7 @@ async def list_deployment_rows_page(
     return list((await db.exec(stmt)).all())
 
 
-async def count_deployment_rows(
+async def count_deployments(
     db: AsyncSession,
     *,
     user_id: UUID,
@@ -105,7 +105,7 @@ async def count_deployment_rows(
     return int((await db.exec(stmt)).one())
 
 
-async def delete_deployment_row_by_resource_key(
+async def delete_deployment_by_resource_key(
     db: AsyncSession,
     *,
     user_id: UUID,
@@ -123,7 +123,7 @@ async def delete_deployment_row_by_resource_key(
     return int(result.rowcount or 0)
 
 
-async def delete_deployment_row_by_id(
+async def delete_deployment_by_id(
     db: AsyncSession,
     *,
     user_id: UUID,
