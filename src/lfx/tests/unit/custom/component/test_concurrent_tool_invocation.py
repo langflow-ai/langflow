@@ -85,12 +85,10 @@ def test_should_isolate_inputs_when_tool_invoked_concurrently():
     for result in results:
         # Inputs captured before and after the delay must be identical
         assert result["product_id_before"] == result["product_id_after"], (
-            f"product_id changed during execution: "
-            f"'{result['product_id_before']}' -> '{result['product_id_after']}'"
+            f"product_id changed during execution: '{result['product_id_before']}' -> '{result['product_id_after']}'"
         )
         assert result["label_before"] == result["label_after"], (
-            f"label changed during execution: "
-            f"'{result['label_before']}' -> '{result['label_after']}'"
+            f"label changed during execution: '{result['label_before']}' -> '{result['label_after']}'"
         )
 
     # Both products must have been processed (not duplicated)
@@ -101,7 +99,7 @@ def test_should_isolate_inputs_when_tool_invoked_concurrently():
 
 
 def test_deepcopy_with_non_picklable_state():
-    """deepcopy must not fail when the component carries non-picklable objects.
+    """Deepcopy must not fail when the component carries non-picklable objects.
 
     Real components receive services (e.g. _tracing_service) that hold
     threading.RLock instances.  __deepcopy__ must handle these gracefully.
@@ -154,6 +152,7 @@ def test_should_isolate_inputs_when_component_has_non_picklable_state():
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 class _FakeServiceWithLock:
     """Mimics a service that holds a threading.RLock (like ServiceManager)."""
