@@ -102,12 +102,12 @@ export function FlowPageSlidingContainerContent({
     initial: "instant",
   });
 
-  // Scroll to bottom when user sends a new message, even if scrolled up
   const prevChatLenRef = useRef(chatHistory.length);
   useEffect(() => {
     if (chatHistory.length > prevChatLenRef.current) {
       const lastMsg = chatHistory[chatHistory.length - 1];
       if (lastMsg?.isSend) {
+        window.dispatchEvent(new Event("langflow-scroll-to-bottom"));
         stickyInstance.scrollToBottom("smooth");
       }
     }
