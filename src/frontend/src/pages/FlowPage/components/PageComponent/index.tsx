@@ -759,15 +759,14 @@ export default function Page({
   const hasSingleGenericNodeSelected =
     lastSelection?.nodes?.length === 1 &&
     lastSelection.nodes[0].type === "genericNode";
-  
+
   // Determine if InspectionPanel should be visible.
   // `!isLassoMode` prevents the panel from opening mid-selection: when the
   // rubber-band drag finishes with exactly one node inside, we do NOT want to
   // immediately open that node's inspection panel — the user may still be
   // building a larger selection.
   const showInspectionPanel =
-    inspectionPanelVisible &&
-    !isLassoMode && hasSingleGenericNodeSelected;
+    inspectionPanelVisible && !isLassoMode && hasSingleGenericNodeSelected;
 
   // Get the fresh node data from the store instead of using stale reference
   const selectedNodeId = hasSingleGenericNodeSelected
