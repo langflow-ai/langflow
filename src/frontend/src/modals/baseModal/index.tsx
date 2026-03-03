@@ -288,7 +288,10 @@ function BaseModal({
       {type === "modal" ? (
         <Modal open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <ModalContent className={contentClasses} style={customStyle}>
+          <ModalContent
+            className={contentClasses}
+            style={customHeight || customWidth ? customStyle : undefined}
+          >
             {modalContent}
           </ModalContent>
         </Modal>
@@ -306,7 +309,7 @@ function BaseModal({
               onOpenAutoFocus={onOpenAutoFocus}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
-              style={customStyle}
+              style={customHeight || customWidth ? customStyle : undefined}
             >
               {onSubmit ? (
                 <Form.Root
@@ -329,7 +332,7 @@ function BaseModal({
               onOpenAutoFocus={onOpenAutoFocus}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
-              style={customStyle}
+              style={customHeight || customWidth ? customStyle : undefined}
             >
               {onSubmit ? (
                 <Form.Root
