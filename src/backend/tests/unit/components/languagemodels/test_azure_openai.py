@@ -158,7 +158,7 @@ class TestAzureChatOpenAIComponent(ComponentTestBaseWithoutClient):
         "lfx.components.azure.azure_openai.ChatOpenAI",
         side_effect=RuntimeError("connection refused"),
     )
-    async def test_build_model_v1_connection_error(self, _mock, component_class, default_kwargs):
+    async def test_build_model_v1_connection_error(self, _mock, component_class, default_kwargs):  # noqa: PT019
         """V1 build wraps SDK errors in a descriptive ValueError."""
         component = component_class(**default_kwargs)
 
@@ -169,7 +169,7 @@ class TestAzureChatOpenAIComponent(ComponentTestBaseWithoutClient):
         "lfx.components.azure.azure_openai.AzureChatOpenAI",
         side_effect=RuntimeError("timeout"),
     )
-    async def test_build_model_legacy_connection_error(self, _mock, component_class, default_kwargs):
+    async def test_build_model_legacy_connection_error(self, _mock, component_class, default_kwargs):  # noqa: PT019
         """Legacy build wraps SDK errors in a descriptive ValueError."""
         default_kwargs["use_legacy_api"] = True
         default_kwargs["api_version"] = "2025-04-01-preview"
@@ -217,7 +217,7 @@ class TestAzureChatOpenAIComponent(ComponentTestBaseWithoutClient):
 
         assert build_config["api_version"]["show"] is False
 
-        updated = component.update_build_config(build_config, True, "use_legacy_api")
+        updated = component.update_build_config(build_config, field_value=True, field_name="use_legacy_api")
         assert updated["api_version"]["show"] is True
 
     async def test_update_build_config_use_legacy_api_false(self, component_class, default_kwargs):
@@ -228,7 +228,7 @@ class TestAzureChatOpenAIComponent(ComponentTestBaseWithoutClient):
         build_config = frontend_node["data"]["node"]["template"]
         build_config["api_version"]["show"] = True
 
-        updated = component.update_build_config(build_config, False, "use_legacy_api")
+        updated = component.update_build_config(build_config, field_value=False, field_name="use_legacy_api")
         assert updated["api_version"]["show"] is False
 
     # ------------------------------------------------------------------
@@ -240,10 +240,10 @@ class TestAzureChatOpenAIComponent(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
         sparse_config: dict = {}
 
-        result = component.update_build_config(sparse_config, True, "use_legacy_api")
+        result = component.update_build_config(sparse_config, field_value=True, field_name="use_legacy_api")
         assert result == {}
 
-        result = component.update_build_config(sparse_config, "gpt-5.1", "model_name")
+        result = component.update_build_config(sparse_config, field_value="gpt-5.1", field_name="model_name")
         assert result == {}
 
     # ------------------------------------------------------------------
@@ -348,8 +348,8 @@ class TestAzureChatOpenAIComponent(ComponentTestBaseWithoutClient):
         frontend_node = component.to_frontend_node()
         build_config = frontend_node["data"]["node"]["template"]
 
-        component.update_build_config(build_config, True, "use_legacy_api")
+        component.update_build_config(build_config, field_value=True, field_name="use_legacy_api")
         assert build_config["api_version"]["show"] is True
 
-        component.update_build_config(build_config, False, "use_legacy_api")
+        component.update_build_config(build_config, field_value=False, field_name="use_legacy_api")
         assert build_config["api_version"]["show"] is False
