@@ -4,11 +4,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from lfx.base.models.unified_models import (
-    get_language_model_options,
-    update_model_options_in_build_config,
-)
-from lfx.components.agentics.helpers import update_provider_fields_visibility
+from lfx.base.models.unified_models import handle_model_input_update
 from lfx.custom.custom_component.component import Component
 
 
@@ -41,12 +37,4 @@ class BaseAgenticComponent(Component):
         Returns:
             Updated build configuration with filtered model options and adjusted field visibility.
         """
-        build_config = update_model_options_in_build_config(
-            component=self,
-            build_config=build_config,
-            cache_key_prefix="language_model_options",
-            get_options_func=get_language_model_options,
-            field_name=field_name,
-            field_value=field_value,
-        )
-        return update_provider_fields_visibility(build_config, field_value, field_name)
+        return handle_model_input_update(self, build_config, field_value, field_name)

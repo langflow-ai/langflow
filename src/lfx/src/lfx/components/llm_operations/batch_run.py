@@ -5,9 +5,8 @@ from typing import TYPE_CHECKING, Any, cast
 import toml  # type: ignore[import-untyped]
 
 from lfx.base.models.unified_models import (
-    get_language_model_options,
     get_model_class,
-    update_model_options_in_build_config,
+    handle_model_input_update,
 )
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, DataFrameInput, MessageTextInput, ModelInput, MultilineInput, Output, SecretStrInput
@@ -90,14 +89,7 @@ class BatchRunComponent(Component):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
-        return update_model_options_in_build_config(
-            component=self,
-            build_config=build_config,
-            cache_key_prefix="language_model_options",
-            get_options_func=get_language_model_options,
-            field_name=field_name,
-            field_value=field_value,
-        )
+        return handle_model_input_update(self, build_config, field_value, field_name)
 
     def _format_row_as_toml(self, row: dict[str, Any]) -> str:
         """Convert a dictionary (row) into a TOML-formatted string."""

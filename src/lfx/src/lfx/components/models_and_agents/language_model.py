@@ -1,9 +1,7 @@
 from lfx.base.models.model import LCModelComponent
 from lfx.base.models.unified_models import (
-    apply_provider_variable_config_to_build_config,
-    get_language_model_options,
     get_llm,
-    update_model_options_in_build_config,
+    handle_model_input_update,
 )
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 from lfx.field_typing import LanguageModel
@@ -112,31 +110,4 @@ class LanguageModelComponent(LCModelComponent):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
-        # Update model options
-        build_config = update_model_options_in_build_config(
-            component=self,
-            build_config=build_config,
-            cache_key_prefix="language_model_options",
-            get_options_func=get_language_model_options,
-            field_name=field_name,
-            field_value=field_value,
-        )
-
-        # Hide all provider-specific fields by default
-        for field in ["api_key", "base_url_ibm_watsonx", "project_id", "ollama_base_url"]:
-            if field in build_config:
-                build_config[field]["show"] = False
-                build_config[field]["required"] = False
-
-        # Show/configure provider-specific fields based on selected model
-        # Get current model value - from field_value if model is being changed, otherwise from build_config
-        current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
-        if isinstance(current_model_value, list) and len(current_model_value) > 0:
-            selected_model = current_model_value[0]
-            provider = selected_model.get("provider", "")
-
-            if provider:
-                # Apply provider variable configuration (required_for_component, advanced, env var fallback)
-                build_config = apply_provider_variable_config_to_build_config(build_config, provider)
-
-        return build_config
+        return handle_model_input_update(self, build_config, field_value, field_name)

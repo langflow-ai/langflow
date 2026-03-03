@@ -1458,6 +1458,182 @@ def get_llm(
         raise
 
 
+def get_embeddings(
+    model,
+    user_id: UUID | str | None,
+    api_key=None,
+    *,
+    api_base=None,
+    dimensions=None,
+    chunk_size=None,
+    request_timeout=None,
+    max_retries=None,
+    show_progress_bar=None,
+    model_kwargs=None,
+    watsonx_url=None,
+    watsonx_project_id=None,
+    include_available_models: bool = True,
+) -> Any:
+    """Instantiate an embeddings model from a ModelInput selection.
+
+    This is the embedding counterpart of :func:`get_llm`.  It accepts the
+    ``model`` list produced by a ``ModelInput(model_type="embedding")`` field,
+    resolves credentials and provider-specific parameters, and returns an
+    ``Embeddings`` instance (wrapped in :class:`EmbeddingsWithModels` when
+    *include_available_models* is True).
+
+    If *model* is already a ``langchain_core.embeddings.Embeddings`` instance
+    (i.e. connected directly), it is returned as-is.
+    """
+    from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
+
+    # Coerce provider-specific string params
+    watsonx_url = _to_str(watsonx_url)
+    watsonx_project_id = _to_str(watsonx_project_id)
+
+    # Passthrough: already-instantiated Embeddings object from a connection
+    try:
+        from langchain_core.embeddings import Embeddings as BaseEmbeddings
+
+        if isinstance(model, BaseEmbeddings):
+            return model
+    except ImportError:
+        pass
+
+    # --- extract model config from the ModelInput list -----------------------
+    if not model or not isinstance(model, list) or len(model) == 0:
+        msg = "An embedding model selection is required"
+        raise ValueError(msg)
+
+    model_dict = model[0]
+    model_name = model_dict.get("name")
+    provider = model_dict.get("provider")
+    metadata = model_dict.get("metadata", {})
+
+    if not model_name:
+        msg = "Model name is required"
+        raise ValueError(msg)
+
+    # --- resolve API key -----------------------------------------------------
+    api_key = get_api_key_for_provider(user_id, provider, api_key)
+    if not api_key and provider != "Ollama":
+        provider_variable_map = get_model_provider_variable_mapping()
+        variable_name = provider_variable_map.get(provider, f"{provider.upper().replace(' ', '_')}_API_KEY")
+        msg = (
+            f"{provider} API key is required. "
+            f"Please provide it in the component or configure it globally as {variable_name}."
+        )
+        raise ValueError(msg)
+
+    # --- resolve embedding class ---------------------------------------------
+    embedding_class_name = metadata.get("embedding_class")
+    if not embedding_class_name:
+        msg = f"No embedding class defined in metadata for {model_name}"
+        raise ValueError(msg)
+    embedding_class = get_embedding_class(embedding_class_name)
+
+    # --- build kwargs from param_mapping -------------------------------------
+    param_mapping: dict[str, str] = metadata.get("param_mapping", {})
+    if not param_mapping:
+        msg = "Parameter mapping not found in metadata"
+        raise ValueError(msg)
+
+    kwargs: dict[str, Any] = {}
+
+    # Model name
+    if "model" in param_mapping:
+        kwargs[param_mapping["model"]] = model_name
+    elif "model_id" in param_mapping:
+        kwargs[param_mapping["model_id"]] = model_name
+
+    # API key
+    if "api_key" in param_mapping and api_key:
+        kwargs[param_mapping["api_key"]] = api_key
+
+    # Optional parameters - only add when both a value is supplied *and* the
+    # provider's param_mapping declares the corresponding key.
+    optional_params: dict[str, Any] = {
+        "api_base": _to_str(api_base) or None,
+        "dimensions": int(dimensions) if dimensions else None,
+        "chunk_size": int(chunk_size) if chunk_size else None,
+        "request_timeout": float(request_timeout) if request_timeout else None,
+        "max_retries": int(max_retries) if max_retries else None,
+        "show_progress_bar": show_progress_bar,
+        "model_kwargs": model_kwargs or None,
+    }
+    for param_name, param_value in optional_params.items():
+        if param_value is not None and param_name in param_mapping:
+            # Google wraps timeout in a dict
+            if (
+                param_name == "request_timeout"
+                and provider == "Google Generative AI"
+                and isinstance(param_value, (int, float))
+            ):
+                kwargs[param_mapping[param_name]] = {"timeout": param_value}
+            else:
+                kwargs[param_mapping[param_name]] = param_value
+
+    # --- provider-specific parameters ----------------------------------------
+    if provider in {"IBM WatsonX", "IBM watsonx.ai"}:
+        provider_vars = get_all_variables_for_provider(user_id, provider)
+        url_value = watsonx_url or provider_vars.get("WATSONX_URL") or os.environ.get("WATSONX_URL")
+        pid_value = (
+            watsonx_project_id or provider_vars.get("WATSONX_PROJECT_ID") or os.environ.get("WATSONX_PROJECT_ID")
+        )
+        if "url" in param_mapping and url_value:
+            kwargs[param_mapping["url"]] = url_value
+        if "project_id" in param_mapping and pid_value:
+            kwargs[param_mapping["project_id"]] = pid_value
+
+    elif provider == "Ollama":
+        provider_vars = get_all_variables_for_provider(user_id, provider)
+        base_url_value = (
+            _to_str(api_base)
+            or provider_vars.get("OLLAMA_BASE_URL")
+            or os.environ.get("OLLAMA_BASE_URL")
+            or "http://localhost:11434"
+        )
+        if "base_url" in param_mapping:
+            kwargs[param_mapping["base_url"]] = base_url_value
+
+    # --- instantiate primary embedding ---------------------------------------
+    primary_instance = embedding_class(**kwargs)
+
+    if not include_available_models:
+        return primary_instance
+
+    # --- build available_models dict -----------------------------------------
+    available_models_dict: dict[str, Any] = {}
+    all_embedding_models = get_unified_models_detailed(
+        providers=[provider],
+        model_type="embeddings",
+        include_deprecated=False,
+        include_unsupported=False,
+    )
+    for provider_data in all_embedding_models:
+        if provider_data.get("provider") != provider:
+            continue
+        for md in provider_data.get("models", []):
+            alt_name = md.get("model_name")
+            if not alt_name:
+                continue
+            try:
+                alt_kwargs = dict(kwargs)  # shallow copy of base kwargs
+                # Override the model name
+                if "model" in param_mapping:
+                    alt_kwargs[param_mapping["model"]] = alt_name
+                elif "model_id" in param_mapping:
+                    alt_kwargs[param_mapping["model_id"]] = alt_name
+                available_models_dict[alt_name] = embedding_class(**alt_kwargs)
+            except Exception:  # noqa: BLE001
+                logger.debug("Failed to instantiate embedding model %s: skipping", alt_name, exc_info=True)
+
+    return EmbeddingsWithModels(
+        embeddings=primary_instance,
+        available_models=available_models_dict,
+    )
+
+
 def update_model_options_in_build_config(
     component: Any,
     build_config: dict,
@@ -1630,5 +1806,90 @@ def update_model_options_in_build_config(
         build_config["model"]["input_types"] = ["Embeddings"]
     else:
         build_config["model"]["input_types"] = ["LanguageModel"]
+
+    return build_config
+
+
+@lru_cache(maxsize=1)
+def _get_all_provider_mapped_fields() -> set[str]:
+    """Collect all unique component_metadata.mapping_field values across all providers.
+
+    These are the fields that may need to be shown/hidden based on the selected provider.
+    """
+    fields: set[str] = set()
+    for meta in model_provider_metadata.values():
+        for var in meta.get("variables", []):
+            mapping_field = var.get("component_metadata", {}).get("mapping_field")
+            if mapping_field:
+                fields.add(mapping_field)
+    return fields
+
+
+def handle_model_input_update(
+    component: Any,
+    build_config: dict,
+    field_value: Any,
+    field_name: str | None = None,
+    *,
+    cache_key_prefix: str = "language_model_options",
+    get_options_func: Callable | None = None,
+) -> dict:
+    """Full update_build_config lifecycle for any component with a ModelInput.
+
+    Composes three steps:
+    1. Refresh/cache model options via update_model_options_in_build_config()
+    2. Hide all provider-specific fields by default
+    3. Show/configure the right fields for the selected provider via
+       apply_provider_variable_config_to_build_config()
+
+    Components using ModelInput can call this single function instead of
+    re-implementing the three steps individually.
+
+    Args:
+        component: The component instance (must have .cache and .user_id).
+        build_config: The build configuration dict to update.
+        field_value: The current value of the field being changed.
+        field_name: The name of the field being changed, if any.
+        cache_key_prefix: Cache key prefix for model options
+            (e.g. "language_model_options" or "embedding_model_options").
+        get_options_func: Function to fetch model options. Defaults to
+            get_language_model_options if not provided.
+
+    Returns:
+        Updated build_config dict.
+    """
+    if get_options_func is None:
+        get_options_func = get_language_model_options
+
+    # Step 1: Refresh/cache model options, set defaults and input_types
+    build_config = update_model_options_in_build_config(
+        component=component,
+        build_config=build_config,
+        cache_key_prefix=cache_key_prefix,
+        get_options_func=get_options_func,
+        field_name=field_name,
+        field_value=field_value,
+    )
+
+    # Step 2: Hide all provider-specific fields by default
+    for field in _get_all_provider_mapped_fields():
+        if field in build_config:
+            build_config[field]["show"] = False
+            build_config[field]["required"] = False
+
+    # Step 3: Show/configure the right fields for the selected provider
+    current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
+    if isinstance(current_model_value, list) and len(current_model_value) > 0:
+        provider = current_model_value[0].get("provider", "")
+        if provider:
+            build_config = apply_provider_variable_config_to_build_config(build_config, provider)
+
+        # Step 4: Watsonx-specific embedding fields (not in provider metadata)
+        if cache_key_prefix == "embedding_model_options":
+            is_watsonx = provider == "IBM WatsonX"
+            if "truncate_input_tokens" in build_config:
+                build_config["truncate_input_tokens"]["show"] = is_watsonx
+            if "input_text" in build_config:
+                build_config["input_text"]["show"] = is_watsonx
 
     return build_config
