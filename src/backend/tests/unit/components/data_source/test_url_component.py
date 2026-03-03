@@ -3,6 +3,7 @@ from unittest.mock import Mock, patch
 import pytest
 from lfx.components.data_source.url import URLComponent
 from lfx.schema import DataFrame
+from lfx.utils.ssrf_protection import SSRFProtectionError
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -252,3 +253,77 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
         # Test invalid URL
         with pytest.raises(ValueError, match="Invalid URL"):
             component.ensure_url("not a url")
+
+
+class TestURLComponentSSRFProtection:
+    """Test SSRF protection in URLComponent."""
+
+    def test_ssrf_validation_called_on_ensure_url(self):
+        """Test that SSRF validation is called when ensuring URL."""
+        component = URLComponent()
+
+        with patch("lfx.components.data_source.url.validate_url_for_ssrf") as mock_validate:
+            component.ensure_url("https://example.com")
+            mock_validate.assert_called_once_with("https://example.com", warn_only=True)
+
+    def test_ssrf_blocks_localhost(self):
+        """Test that localhost is blocked when SSRF validation raises."""
+        component = URLComponent()
+
+        with patch("lfx.components.data_source.url.validate_url_for_ssrf") as mock_validate:
+            mock_validate.side_effect = SSRFProtectionError("Access to IP address 127.0.0.1 is blocked")
+
+            with pytest.raises(ValueError, match="SSRF Protection"):
+                component.ensure_url("http://127.0.0.1:8080")
+
+    def test_ssrf_blocks_private_ip(self):
+        """Test that private IPs are blocked when SSRF validation raises."""
+        component = URLComponent()
+
+        with patch("lfx.components.data_source.url.validate_url_for_ssrf") as mock_validate:
+            mock_validate.side_effect = SSRFProtectionError("Access to IP address 192.168.1.1 is blocked")
+
+            with pytest.raises(ValueError, match="SSRF Protection"):
+                component.ensure_url("http://192.168.1.1/admin")
+
+    def test_ssrf_blocks_metadata_endpoint(self):
+        """Test that cloud metadata endpoints are blocked when SSRF validation raises."""
+        component = URLComponent()
+
+        with patch("lfx.components.data_source.url.validate_url_for_ssrf") as mock_validate:
+            mock_validate.side_effect = SSRFProtectionError("Access to IP address 169.254.169.254 is blocked")
+
+            with pytest.raises(ValueError, match="SSRF Protection"):
+                component.ensure_url("http://169.254.169.254/latest/meta-data/")
+
+    def test_ssrf_allows_public_urls(self):
+        """Test that public URLs are allowed when validation passes."""
+        component = URLComponent()
+
+        with patch("lfx.components.data_source.url.validate_url_for_ssrf") as mock_validate:
+            mock_validate.return_value = None
+
+            url = component.ensure_url("https://www.google.com")
+            assert url == "https://www.google.com"
+            mock_validate.assert_called_once()
+
+    def test_ssrf_warn_only_mode(self):
+        """Test that warn_only=True is passed to validation."""
+        component = URLComponent()
+
+        with patch("lfx.components.data_source.url.validate_url_for_ssrf") as mock_validate:
+            component.ensure_url("https://example.com")
+
+            # Verify warn_only=True is passed (current behavior for backwards compatibility)
+            mock_validate.assert_called_with("https://example.com", warn_only=True)
+
+    def test_ssrf_protection_in_fetch_content(self):
+        """Test that SSRF protection is applied during fetch_content."""
+        component = URLComponent()
+        component.set_attributes({"urls": ["http://127.0.0.1:9999"]})
+
+        with patch("lfx.components.data_source.url.validate_url_for_ssrf") as mock_validate:
+            mock_validate.side_effect = SSRFProtectionError("Access to IP address 127.0.0.1 is blocked")
+
+            with pytest.raises(ValueError, match="SSRF Protection"):
+                component.fetch_content()

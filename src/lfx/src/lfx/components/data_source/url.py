@@ -15,6 +15,7 @@ from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.utils.request_utils import get_user_agent
+from lfx.utils.ssrf_protection import SSRFProtectionError, validate_url_for_ssrf
 
 # Constants
 DEFAULT_TIMEOUT = 30
@@ -226,7 +227,7 @@ class URLComponent(Component):
             str: The normalized URL
 
         Raises:
-            ValueError: If the URL is invalid
+            ValueError: If the URL is invalid or blocked by SSRF protection
         """
         url = url.strip()
         if not url.startswith(("http://", "https://")):
@@ -235,6 +236,15 @@ class URLComponent(Component):
         if not self.validate_url(url):
             msg = f"Invalid URL: {url}"
             raise ValueError(msg)
+
+        # SSRF Protection: Validate URL to prevent access to internal resources
+        # TODO: In next major version (2.0), remove warn_only=True to enforce blocking
+        try:
+            validate_url_for_ssrf(url, warn_only=True)
+        except SSRFProtectionError as e:
+            # This will only raise if SSRF protection is enabled and warn_only=False
+            msg = f"SSRF Protection: {e}"
+            raise ValueError(msg) from e
 
         return url
 
