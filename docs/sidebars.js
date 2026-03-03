@@ -132,6 +132,7 @@ module.exports = {
           label: "Observability",
           items: [
             "Develop/logging",
+            "Develop/traces",
             {
               type: "category",
               label: "Monitoring",
