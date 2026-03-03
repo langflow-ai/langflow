@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from lfx.services.deployment.schema import (
+    from lfx.services.adapters.deployment.schema import (
         DeploymentCreate,
         DeploymentCreateResult,
         DeploymentDeleteResult,
@@ -231,6 +231,7 @@ class DeploymentServiceProtocol(Protocol):
     This protocol exposes adapter-agnostic deployment contracts:
     top-level fields are minimal generic metadata, while provider-specific
     details are carried in ``provider_data``/``provider_result`` fields.
+
     Keep this protocol intentionally narrow (consumer-facing CRUD + status).
     Adapter-specific or advanced operations are defined on concrete deployment
     service classes.
@@ -360,24 +361,4 @@ class DeploymentServiceProtocol(Protocol):
     @abstractmethod
     async def teardown(self) -> None:
         """Teardown the deployment service."""
-        ...
-
-
-class DeploymentRouterServiceProtocol(Protocol):
-    """Protocol for deployment adapter resolver services."""
-
-    @abstractmethod
-    async def resolve_adapter(
-        self,
-        *,
-        provider_id: UUID,
-        user_id: UUID | str,
-        db: Any,
-    ) -> DeploymentServiceProtocol:
-        """Resolve and return adapter for a provider account owned by a user."""
-        ...
-
-    @abstractmethod
-    def list_adapter_keys(self) -> list[str]:
-        """List available adapter keys."""
         ...

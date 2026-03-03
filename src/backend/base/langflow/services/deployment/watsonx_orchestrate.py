@@ -29,8 +29,8 @@ from ibm_watsonx_orchestrate_core.types.connections import (
     KeyValueConnectionCredentials,
 )
 from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import LangflowTool, create_langflow_tool
-from lfx.services.deployment.base import BaseDeploymentService
-from lfx.services.deployment.exceptions import (
+from lfx.services.adapters.deployment.base import BaseDeploymentService
+from lfx.services.adapters.deployment.exceptions import (
     AuthSchemeError,
     CredentialResolutionError,
     DeploymentConflictError,
@@ -40,7 +40,7 @@ from lfx.services.deployment.exceptions import (
     InvalidDeploymentOperationError,
     InvalidDeploymentTypeError,
 )
-from lfx.services.deployment.schema import (
+from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
     BaseFlowArtifact,
     ConfigItem,
@@ -68,16 +68,16 @@ from lfx.services.deployment.schema import (
     RedeployResult,
     SnapshotItems,
 )
-from lfx.services.deployment_router.context import get_current_deployment_provider_id
-from lfx.services.deployment_router.registry import register_deployment_adapter
-from lfx.services.schema import ServiceType
+from lfx.services.adapters.registry import register_adapter
+from lfx.services.adapters.schema import AdapterType
 from lfx.utils.flow_requirements import generate_requirements_from_flow
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.deployment_provider_account.crud import (
     get_provider_account_by_id,
 )
-from langflow.services.deps import get_variable_service
+from langflow.services.deployment.context import get_current_deployment_provider_id
+from langflow.services.deps import get_settings_service, get_variable_service
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
@@ -141,7 +141,7 @@ class ErrorPrefix(str, Enum):
 _WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY = "watsonx-orchestrate"
 
 
-@register_deployment_adapter(_WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
+@register_adapter(AdapterType.DEPLOYMENT, _WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
 class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     """Deployment adapter for Watsonx Orchestrate.
 
@@ -151,11 +151,16 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     - config -> WXO connection configuration (+ credentials), keyed by app_id
     """
 
-    name = ServiceType.DEPLOYMENT_SERVICE.value
+    name = "deployment_service"
     provider_name = _WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY
 
-    def __init__(self, settings_service: SettingsService):
+    def __init__(self, settings_service: SettingsService | None = None):
         super().__init__()
+        if settings_service is None:
+            settings_service = get_settings_service()
+        if settings_service is None:
+            msg = "Settings service is not available."
+            raise RuntimeError(msg)
         self.settings_service = settings_service
         # TODO: LRU + TTL hybrid cache
         self._client_managers: dict[str, WxOClient] = {}

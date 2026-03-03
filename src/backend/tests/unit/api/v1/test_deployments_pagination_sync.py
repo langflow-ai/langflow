@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 from fastapi import status
 from langflow.api.v1 import deployment as deployment_api
 from langflow.services.database.models.deployment.model import Deployment
+from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_history.model import FlowHistory
 from langflow.services.database.models.flow_history_deployment_attachment.model import (
@@ -14,7 +15,7 @@ from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NA
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.variable.model import Variable
 from langflow.services.deps import session_scope
-from lfx.services.deployment.schema import (
+from lfx.services.adapters.deployment.schema import (
     DeploymentCreateResult,
     DeploymentListResult,
     DeploymentType,
@@ -880,3 +881,86 @@ async def test_snapshot_and_config_endpoints_are_removed(client, logged_in_heade
         headers=logged_in_headers,
     )
     assert config_response.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_list_deployment_types_rejects_provider_account_without_provider_key(
+    client, logged_in_headers, monkeypatch
+):
+    provider = await _create_provider(client, logged_in_headers, "tenant-empty-provider-key")
+
+    async with session_scope() as session:
+        provider_row = (
+            await session.exec(
+                select(DeploymentProviderAccount).where(
+                    DeploymentProviderAccount.id == UUID(provider["id"]),
+                )
+            )
+        ).first()
+        assert provider_row is not None
+        provider_row.provider_key = "   "
+        session.add(provider_row)
+
+    # Prevent unrelated import side effects for this path.
+    monkeypatch.setattr(deployment_api, "_ensure_builtin_deployment_adapter_loaded", lambda *_: None)
+
+    response = await client.get(
+        "api/v1/deployments/types",
+        params={"provider_id": provider["id"]},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "provider_key" in response.json()["detail"]
+
+
+async def test_list_deployment_types_rejects_unregistered_provider_adapter(client, logged_in_headers, monkeypatch):
+    create_response = await client.post(
+        "api/v1/deployments/providers/",
+        json=_provider_payload(account_id="tenant-missing-adapter", provider_key="missing-adapter"),
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    provider = create_response.json()
+
+    monkeypatch.setattr(deployment_api, "_ensure_builtin_deployment_adapter_loaded", lambda *_: None)
+
+    response = await client.get(
+        "api/v1/deployments/types",
+        params={"provider_id": provider["id"]},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "No deployment adapter registered" in response.json()["detail"]
+
+
+async def test_create_execution_rejects_deployment_provider_mismatch(client, logged_in_headers, active_user):
+    provider_a = await _create_provider(client, logged_in_headers, "tenant-exec-provider-a")
+    provider_b = await _create_provider(client, logged_in_headers, "tenant-exec-provider-b")
+
+    async with session_scope() as session:
+        folder = Folder(name=f"proj-{uuid4().hex[:8]}", user_id=active_user.id)
+        session.add(folder)
+        await session.flush()
+
+        deployment = Deployment(
+            resource_key="provider-a-resource",
+            user_id=active_user.id,
+            project_id=folder.id,
+            provider_account_id=UUID(provider_a["id"]),
+            name=f"deployment-provider-a-{uuid4().hex[:8]}",
+        )
+        session.add(deployment)
+        await session.flush()
+        deployment_id = str(deployment.id)
+
+    response = await client.post(
+        "api/v1/deployments/executions",
+        json={
+            "provider_id": provider_b["id"],
+            "deployment_id": deployment_id,
+            "deployment_type": "agent",
+            "input": "hello",
+        },
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json()["detail"] == "Deployment not found for provider."

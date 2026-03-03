@@ -15,6 +15,157 @@ The pluggable services system supports **three** discovery mechanisms:
 2. Decorator registration
 3. Configuration files (highest priority)
 
+## Adapter Registries (Service-Scoped Plugin Registries)
+
+LFX also supports **adapter registries** -- collections of swappable implementations that share the same protocol.
+Use them when you need to choose between several adapters at runtime (for example, deployment adapters keyed as `local` and `remote` in your own config/plugin setup).
+
+### Service vs Adapter Registry
+
+| Concern | Service | Adapter registry |
+|---|---|---|
+| **Lookup key** | `ServiceType` enum | String key within a registry |
+| **Cardinality** | One implementation per type | Many adapters per registry |
+| **Type safety** | Protocol per `ServiceType` | Protocol-typed registry per `AdapterType` |
+| **Example** | `storage_service` | `deployment` adapters by key, e.g. `"local"`, `"remote"` |
+
+### Core API
+
+The public deployment adapter API is the typed helper in `lfx.services.deps`:
+
+```python
+from lfx.services.deps import get_deployment_adapter
+
+adapter = get_deployment_adapter("local")
+```
+
+To resolve singleton adapter instances managed by the registry:
+
+`get_instance`/`get_deployment_adapter` create adapters lazily and cache one instance per adapter key.
+Discovery config is resolved internally (settings `config_dir` when available, otherwise current working directory).
+Use this when you want shared, long-lived adapter objects instead of per-call construction.
+The key (`"local"` above) is an example, not a built-in requirement.
+
+### Registering Adapters
+
+#### Option A: Decorator Registration
+
+```python
+from lfx.services import register_adapter
+from lfx.services.adapters.schema import AdapterType
+
+@register_adapter(AdapterType.DEPLOYMENT, "local")
+class LocalAdapter:
+    ...
+```
+
+The decorator registers immediately on the `AdapterRegistry` singleton (same pattern as `@register_service` for top-level services).
+It preserves the concrete class type (uses a `TypeVar` internally).
+Defaults to `override=True`; set `override=False` to keep an existing key untouched.
+`"local"` is only an example adapter key.
+
+#### Option B: Configuration Files
+
+`lfx.toml` (preferred when both files exist):
+
+```toml
+[deployment.adapters]
+local = "my_package.deployment:LocalAdapter"
+remote = "my_package.deployment:RemoteAdapter"
+```
+
+`pyproject.toml`:
+
+```toml
+[tool.lfx.deployment.adapters]
+local = "my_package.deployment:LocalAdapter"
+remote = "my_package.deployment:RemoteAdapter"
+```
+
+`local`/`remote` are illustrative keys; choose names that match your adapter set.
+
+#### Option C: Entry Points
+
+Entry-point groups follow the naming convention `lfx.<adapter_type>.adapters` (e.g. `lfx.deployment.adapters`).
+
+```toml
+[project.entry-points."lfx.deployment.adapters"]
+local = "my_package.deployment:LocalAdapter"
+remote = "my_package.deployment:RemoteAdapter"
+```
+
+Entry-point names are adapter keys and are fully user-defined.
+
+### Adapter Discovery and Precedence
+
+Adapter registration mirrors the top-level `@register_service` model:
+
+1. **Decorator registration** — immediate at import time (`override=True` by default)
+2. **Entry points** (`override=False`) — discovered during `discover()`
+3. **Config files** (`override=True`) — discovered during `discover()`
+
+Effective precedence (what wins when multiple sources register the same key):
+
+Config files > Decorators > Entry points
+
+Config files are deployment-time overrides and win by default.
+
+Discovery is **one-time per registry instance**. Subsequent calls to `discover()` are no-ops.
+
+`entry_point_group` and `config_section_path` are derived from the `AdapterType` value by convention (`lfx.<type>.adapters` and `(<type>, "adapters")`) so they rarely need to be specified explicitly.
+
+### Adapter Instance Lifecycle
+
+- Class discovery and registration are separate from instance creation
+- Instance creation is lazy (`get_instance` on first access)
+- One instance is cached per adapter key
+- Registry teardown (`teardown_instances`) clears and tears down cached adapter singletons
+- Global teardown (`teardown_all_adapter_registries`) is invoked during service manager shutdown
+
+### Recommended File Structure
+
+When adapters are part of core LFX, prefer namespacing them under `services/adapters`:
+
+```text
+lfx/services/
+  adapters/
+    deployment/
+      __init__.py
+      base.py
+      service.py
+      exceptions.py
+      schema.py
+```
+
+This keeps top-level services focused on DI-managed host services while adapter implementations live under explicit adapter registries.
+
+### Error Handling Behavior
+
+- Invalid import paths (missing `module:ClassName`) are ignored with warning logs
+- Entry point load failures do not stop discovery from other sources
+- Malformed TOML is ignored with warning logs
+- Missing configured sections are treated as empty configuration
+
+### Registry Identity and Uniqueness
+
+- Exactly one registry can exist per `AdapterType`
+- Re-requesting the same `AdapterType` with conflicting entry-point/config parameters raises a conflict error
+
+### Integration Pattern in a Parent Service
+
+```python
+from lfx.services.deps import get_deployment_adapter
+
+adapter = get_deployment_adapter("local")
+if adapter is None:
+    raise ValueError("Unknown deployment adapter")
+```
+
+The host service remains the only object registered in the top-level service manager for its `ServiceType`.
+Adapters are discovered and selected inside that host service; they do not replace the host service itself.
+
+If your architecture does not require a host service, consumers may resolve adapters directly from the registry and still preserve singleton lifecycle semantics.
+
 ## Quick Start
 
 ### For CLI Users (Config File Approach)
@@ -122,70 +273,8 @@ Service keys **must** match `ServiceType` enum values exactly:
 - `shared_component_cache_service`
 - `mcp_composer_service`
 - `transaction_service`
-- `deployment_router_service`
 
 **Important:** `settings_service` is **not pluggable** and cannot be overridden. It is always created using the built-in factory and provides the foundational configuration for all other services.
-
-## Sub-Service Discovery (Generic)
-
-Some services need their own internal plugin registry (for example, a router
-service that dispatches to provider adapters). LFX now supports this pattern
-via generic sub-service discovery utilities in `lfx.services.subservice`.
-
-Sub-service discovery follows the same precedence pattern as top-level services:
-1. Entry points (lowest priority)
-2. Decorator registration
-3. Config files (highest priority)
-
-### Register sub-services with a decorator
-
-```python
-from lfx.services.subservice import register_sub_service
-
-@register_sub_service("my_service.adapters", "my-adapter")
-class MyAdapter:
-    ...
-```
-
-### Discover sub-services via entry points
-
-```toml
-[project.entry-points."lfx.my_service.adapters"]
-my-adapter = "my_package.adapters:MyAdapter"
-```
-
-### Discover sub-services via config
-
-**Standalone `lfx.toml`:**
-
-```toml
-[my_service.adapters]
-my-adapter = "my_package.adapters:MyAdapter"
-```
-
-**In `pyproject.toml`:**
-
-```toml
-[tool.lfx.my_service.adapters]
-my-adapter = "my_package.adapters:MyAdapter"
-```
-
-### Deployment router adapter example
-
-Deployment adapters are a concrete use case of generic sub-services.
-
-```python
-from lfx.services.deployment_router.registry import register_deployment_adapter
-
-@register_deployment_adapter("watsonx-orchestrate")
-class WatsonxOrchestrateDeploymentService:
-    ...
-```
-
-```toml
-[deployment.adapters]
-watsonx-orchestrate = "langflow.services.deployment.watsonx_orchestrate:WatsonxOrchestrateDeploymentService"
-```
 
 ## Creating Custom Services
 

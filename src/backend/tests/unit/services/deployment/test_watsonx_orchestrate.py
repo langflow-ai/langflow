@@ -8,12 +8,12 @@ import pytest
 from langflow.services.deployment.watsonx_orchestrate import (
     WatsonxOrchestrateDeploymentService,
 )
-from lfx.services.deployment.exceptions import (
+from lfx.services.adapters.deployment.exceptions import (
     DeploymentConflictError,
     InvalidContentError,
     InvalidDeploymentOperationError,
 )
-from lfx.services.deployment.schema import (
+from lfx.services.adapters.deployment.schema import (
     BaseFlowArtifact,
     ConfigDeploymentBindingUpdate,
     ConfigItem,
