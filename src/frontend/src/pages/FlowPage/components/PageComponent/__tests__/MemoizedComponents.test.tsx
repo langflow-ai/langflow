@@ -1,22 +1,49 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type {
+  ComponentPropsWithoutRef,
+  MouseEventHandler,
+  ReactNode,
+} from "react";
 import { MemoizedSidebarTrigger } from "../MemoizedComponents";
 
-// Mock problematic dependencies first
-jest.mock("@/components/core/logCanvasControlsComponent", () => ({
-  __esModule: true,
-  default: () => <div data-testid="log-canvas-controls">Log Controls</div>,
-}));
+type ButtonMockProps = {
+  children?: ReactNode;
+  onClick?: MouseEventHandler<HTMLButtonElement>;
+  className?: string;
+} & ComponentPropsWithoutRef<"button">;
+
+type PanelMockProps = {
+  children?: ReactNode;
+  className?: string;
+  position?: string;
+};
+
+type SidebarTriggerMockProps = {
+  children?: ReactNode;
+  className?: string;
+};
+
+type CanvasControlButtonMockProps = {
+  children?: ReactNode;
+  onClick?: MouseEventHandler<HTMLButtonElement>;
+  isActive?: boolean;
+  className?: string;
+  iconName?: string;
+  tooltipText?: string;
+  testId?: string;
+  iconClasses?: string;
+} & ComponentPropsWithoutRef<"button">;
 
 jest.mock("@/components/core/canvasControlsComponent/CanvasControls", () => ({
   __esModule: true,
-  default: ({ children }: any) => (
+  default: ({ children }: { children?: ReactNode }) => (
     <div data-testid="canvas-controls">{children}</div>
   ),
 }));
 
 jest.mock("@/components/ui/button", () => ({
-  Button: ({ children, onClick, className, ...props }: any) => (
+  Button: ({ children, onClick, className, ...props }: ButtonMockProps) => (
     <button onClick={onClick} className={className} {...props}>
       {children}
     </button>
@@ -25,7 +52,8 @@ jest.mock("@/components/ui/button", () => ({
 
 // Mock utils that might have problematic dependencies
 jest.mock("@/utils/utils", () => ({
-  cn: (...classes: any[]) => classes.filter(Boolean).join(" "),
+  cn: (...classes: Array<string | undefined | null | false>) =>
+    classes.filter(Boolean).join(" "),
 }));
 
 // Mock feature flags - default to new sidebar for most tests
@@ -36,11 +64,6 @@ jest.mock("@/customization/feature-flags", () => ({
 // Mock the sidebar hooks with proper Jest functions
 const mockToggleSidebar = jest.fn();
 const mockSetActiveSection = jest.fn();
-const mockUseSidebar = jest.fn(() => ({
-  open: false,
-  toggleSidebar: mockToggleSidebar,
-  setActiveSection: mockSetActiveSection,
-}));
 
 // Mock the UI components
 jest.mock("@/components/ui/sidebar", () => ({
@@ -49,7 +72,7 @@ jest.mock("@/components/ui/sidebar", () => ({
     toggleSidebar: mockToggleSidebar,
     setActiveSection: mockSetActiveSection,
   }),
-  SidebarTrigger: ({ children, className }: any) => (
+  SidebarTrigger: ({ children, className }: SidebarTriggerMockProps) => (
     <button data-testid="sidebar-trigger" className={className}>
       {children}
     </button>
@@ -67,7 +90,7 @@ jest.mock("../../flowSidebarComponent", () => ({
 
 // Mock the Panel component
 jest.mock("@xyflow/react", () => ({
-  Panel: ({ children, className, position }: any) => (
+  Panel: ({ children, className, position }: PanelMockProps) => (
     <div data-testid="panel" data-position={position} className={className}>
       {children}
     </div>
@@ -88,7 +111,7 @@ jest.mock(
       tooltipText,
       testId,
       ...rest
-    }: any) => {
+    }: CanvasControlButtonMockProps) => {
       // Filter out custom props that shouldn't go to DOM
       const { iconClasses, ...validProps } = rest;
       return (
@@ -116,7 +139,7 @@ jest.mock(
 // Mock genericIconComponent
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: ({ name, className }: any) => (
+  default: ({ name, className }: { name: string; className?: string }) => (
     <div data-testid={`icon-${name}`} className={className}>
       {name}
     </div>

@@ -29,7 +29,8 @@ export type SidebarSection =
   | "bundles"
   | "mcp"
   | "history"
-  | "add_note";
+  | "add_note"
+  | "traces";
 
 // Helper function to get cookie value
 function getCookie(name: string): string | null {
@@ -315,7 +316,7 @@ const Sidebar = React.forwardRef<
         {/* This is what handles the sidebar gap on desktop */}
         <div
           className={cn(
-            "relative h-full w-[--sidebar-width] bg-transparent transition-[width] duration-200 ease-linear",
+            "relative h-full w-[--sidebar-width] bg-transparent transition-[width] duration-300 ease-in-out",
             "group-data-[collapsible=offcanvas]:w-0",
             "group-data-[side=right]:rotate-180",
             variant === "floating" || variant === "inset"
@@ -329,7 +330,7 @@ const Sidebar = React.forwardRef<
         />
         <div
           className={cn(
-            "absolute inset-y-0 z-50 flex h-full transition-[left,right,width] duration-200 ease-linear",
+            "absolute inset-y-0 z-50 flex h-full transition-[left,right,width] duration-300 ease-in-out",
             // Adjust width based on state and device
             "w-[--sidebar-width]",
             "max-sm:group-data-[state=collapsed]:w-[--sidebar-width-icon]",

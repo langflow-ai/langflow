@@ -1,5 +1,5 @@
-# ruff: noqa: ARG002
 """Default (no-op) deployment service implementation."""
+# ruff: noqa: ARG002
 
 from __future__ import annotations
 

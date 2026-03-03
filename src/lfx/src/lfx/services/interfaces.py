@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
 
 class AuthUserProtocol(Protocol):
-    """Auhtenticated user object (id, username, is_active, is_superuser).
+    """Authenticated user object (id, username, is_active, is_superuser).
 
     Implementations may use User or UserRead from the database layer; this protocol
     describes the surface needed by consumers of the auth service.
@@ -224,12 +224,16 @@ class TransactionServiceProtocol(Protocol):
         ...
 
 
+@runtime_checkable
 class DeploymentServiceProtocol(Protocol):
     """Protocol for deployment provider services.
 
     This protocol exposes adapter-agnostic deployment contracts:
     top-level fields are minimal generic metadata, while provider-specific
     details are carried in ``provider_data``/``provider_result`` fields.
+    Keep this protocol intentionally narrow (consumer-facing CRUD + status).
+    Adapter-specific or advanced operations are defined on concrete deployment
+    service classes.
     """
 
     @abstractmethod
@@ -258,8 +262,8 @@ class DeploymentServiceProtocol(Protocol):
         self,
         *,
         user_id: IdLike,
-        db: AsyncSession,
         params: DeploymentListParams | None = None,
+        db: AsyncSession,
     ) -> DeploymentListResult:
         """List deployments visible to this adapter."""
         ...
@@ -351,6 +355,11 @@ class DeploymentServiceProtocol(Protocol):
         db: AsyncSession,
     ) -> ExecutionStatusResult:
         """Get provider-agnostic deployment execution state/output."""
+        ...
+
+    @abstractmethod
+    async def teardown(self) -> None:
+        """Teardown the deployment service."""
         ...
 
 
