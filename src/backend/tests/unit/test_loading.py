@@ -1,3 +1,6 @@
+import os
+
+import pytest
 from langflow.initial_setup.setup import load_starter_projects
 from langflow.load import aload_flow_from_json
 from lfx.graph import Graph
@@ -18,6 +21,10 @@ from lfx.graph import Graph
 #     assert isinstance(loaded, Graph)
 
 
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason="Flaky on CI due to SystemError: Resource temporarily unavailable",
+)
 async def test_load_flow_from_json_object():
     """Test loading a flow from a json file and applying tweaks."""
     result = await load_starter_projects()

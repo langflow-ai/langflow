@@ -1,5 +1,5 @@
 import Fuse from "fuse.js";
-import { cloneDeep } from "lodash";
+import { cloneDeep, debounce } from "lodash";
 import {
   createContext,
   memo,
@@ -51,6 +51,7 @@ import { applyComponentFilter } from "./helpers/apply-component-filter";
 import { applyEdgeFilter } from "./helpers/apply-edge-filter";
 import { applyLegacyFilter } from "./helpers/apply-legacy-filter";
 import { combinedResultsFn } from "./helpers/combined-results";
+import { computeSectionVisibility } from "./helpers/compute-section-visibility";
 import { filteredDataFn } from "./helpers/filtered-data";
 import { normalizeString } from "./helpers/normalize-string";
 import sensitiveSort from "./helpers/sensitive-sort";
@@ -67,7 +68,7 @@ export type SearchContextType = {
   // Additional properties for the sidebar to use
   search?: string;
   setSearch?: (value: string) => void;
-  searchInputRef?: React.RefObject<HTMLInputElement>;
+  searchInputRef?: React.RefObject<HTMLInputElement | null>;
   handleInputFocus?: () => void;
   handleInputBlur?: () => void;
   handleInputChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -234,6 +235,19 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const showBetaStorage = getBooleanFromStorage("showBeta", true);
   const showLegacyStorage = getBooleanFromStorage("showLegacy", false);
 
+  // Debounced search value for filtering
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+
+  const debouncedSetSearch = useMemo(
+    () => debounce((value: string) => setDebouncedSearch(value), 300),
+    [],
+  );
+
+  useEffect(() => {
+    debouncedSetSearch(search);
+    return () => debouncedSetSearch.cancel();
+  }, [search, debouncedSetSearch]);
+
   // State
   const [fuse, setFuse] = useState<Fuse<any> | null>(null);
   const [openCategories, setOpenCategories] = useState<string[]>([]);
@@ -296,10 +310,10 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   }, [data]);
 
   const searchResults = useMemo(() => {
-    if (!search || !fuse) return null;
+    if (!debouncedSearch || !fuse) return null;
 
-    const searchTerm = normalizeString(search);
-    const fuseResults = fuse.search(search).map((result) => ({
+    const searchTerm = normalizeString(debouncedSearch);
+    const fuseResults = fuse.search(debouncedSearch).map((result) => ({
       ...result,
       item: { ...result.item, score: result.score },
     }));
@@ -314,10 +328,10 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       combinedResults,
       traditionalResults,
     };
-  }, [search, fuse, baseData]);
+  }, [debouncedSearch, fuse, baseData]);
 
   const searchFilteredData = useMemo(() => {
-    if (!search || !searchResults) return cloneDeep(baseData);
+    if (!debouncedSearch || !searchResults) return cloneDeep(baseData);
 
     const filteredData = filteredDataFn(
       baseData,
@@ -326,7 +340,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     );
 
     return filteredData;
-  }, [baseData, search, searchResults]);
+  }, [baseData, debouncedSearch, searchResults]);
 
   const sortedCategories = useMemo(() => {
     if (!searchResults || !searchFilteredData) return [];
@@ -408,7 +422,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     setFilterData(finalFilteredData);
 
     if (
-      search !== "" ||
+      debouncedSearch !== "" ||
       filterType ||
       getFilterEdge.length > 0 ||
       getFilterComponent !== ""
@@ -420,7 +434,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     }
   }, [
     finalFilteredData,
-    search,
+    debouncedSearch,
     filterType,
     getFilterEdge,
     setFilterComponent,
@@ -485,13 +499,13 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   useEffect(() => {
     if (
-      search === "" &&
+      debouncedSearch === "" &&
       getFilterEdge.length === 0 &&
       getFilterComponent === ""
     ) {
       setOpenCategories([]);
     }
-  }, [search, getFilterEdge, getFilterComponent]);
+  }, [debouncedSearch, getFilterEdge, getFilterComponent]);
 
   const searchComponentsSidebar = useShortcutsStore(
     (state) => state.searchComponentsSidebar,
@@ -565,21 +579,80 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const hasMcpServers = Boolean(mcpServers && mcpServers.length > 0);
 
   const hasSearchInput =
-    search !== "" || filterType !== undefined || getFilterComponent !== "";
+    debouncedSearch !== "" ||
+    filterType !== undefined ||
+    getFilterComponent !== "";
 
-  const showComponents =
-    (ENABLE_NEW_SIDEBAR &&
-      hasCoreComponents &&
-      (activeSection === "components" || activeSection === "search")) ||
-    (hasSearchInput && hasCoreComponents && ENABLE_NEW_SIDEBAR) ||
-    !ENABLE_NEW_SIDEBAR;
-  const showBundles =
-    (hasBundleItems && ENABLE_NEW_SIDEBAR && activeSection === "bundles") ||
-    (hasSearchInput && hasBundleItems && ENABLE_NEW_SIDEBAR) ||
-    !ENABLE_NEW_SIDEBAR;
-  const showMcp =
-    (ENABLE_NEW_SIDEBAR && activeSection === "mcp") ||
-    (hasSearchInput && hasMcpComponents && ENABLE_NEW_SIDEBAR);
+  const { showComponents, showBundles, showMcp, isMcpTabActive } =
+    computeSectionVisibility({
+      enableNewSidebar: ENABLE_NEW_SIDEBAR,
+      activeSection,
+      hasSearchInput,
+      hasCoreComponents,
+      hasMcpComponents,
+      hasBundleItems,
+    });
+
+  const showTraces = ENABLE_NEW_SIDEBAR && activeSection === "traces";
+
+  const SIDEBAR_EXPAND_ANIMATION_MS = 300;
+  const [isFullSidebarPanelMounted, setIsFullSidebarPanelMounted] = useState(
+    !showTraces,
+  );
+  const [isFullSidebarPanelShown, setIsFullSidebarPanelShown] = useState(
+    !showTraces,
+  );
+  const prevShowTracesRef = useRef(showTraces);
+  const expandedSidebarWidthRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const wrapper = document.querySelector(
+      ".group\\/sidebar-wrapper",
+    ) as HTMLElement | null;
+
+    const wasShowingTraces = prevShowTracesRef.current;
+    prevShowTracesRef.current = showTraces;
+
+    if (!wrapper) {
+      setIsFullSidebarPanelMounted(!showTraces);
+      setIsFullSidebarPanelShown(!showTraces);
+      return;
+    }
+
+    if (showTraces) {
+      const computed =
+        getComputedStyle(wrapper).getPropertyValue("--sidebar-width");
+      expandedSidebarWidthRef.current = computed?.trim() || null;
+
+      wrapper.style.setProperty("--sidebar-width", "40px");
+      setIsFullSidebarPanelShown(false);
+      // Unmount immediately so nothing can "pop" during the collapse.
+      setIsFullSidebarPanelMounted(false);
+      return;
+    }
+
+    wrapper.style.setProperty(
+      "--sidebar-width",
+      expandedSidebarWidthRef.current || "17.5rem",
+    );
+
+    if (wasShowingTraces) {
+      const timeoutId = window.setTimeout(() => {
+        // Mount hidden first, then animate in next frame.
+        setIsFullSidebarPanelMounted(true);
+        setIsFullSidebarPanelShown(false);
+        requestAnimationFrame(() => {
+          setIsFullSidebarPanelShown(true);
+        });
+      }, SIDEBAR_EXPAND_ANIMATION_MS);
+
+      return () => window.clearTimeout(timeoutId);
+    }
+
+    // Non-traces transitions: show immediately.
+    setIsFullSidebarPanelMounted(true);
+    setIsFullSidebarPanelShown(true);
+  }, [showTraces]);
 
   const [category, component] = getFilterComponent?.split(".") ?? ["", ""];
 
@@ -615,25 +688,33 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
           className={cn(
             "flex flex-col h-full w-full group-data-[collapsible=icon]:hidden",
             ENABLE_NEW_SIDEBAR && "sidebar-segmented",
+            !isFullSidebarPanelMounted && "hidden",
+            isFullSidebarPanelMounted &&
+              "transition-[opacity,transform] duration-200 ease-in-out transform-gpu",
+            isFullSidebarPanelMounted &&
+              !isFullSidebarPanelShown &&
+              "opacity-0 -translate-x-1 pointer-events-none",
           )}
         >
-          <SidebarHeaderComponent
-            showConfig={showConfig}
-            setShowConfig={setShowConfig}
-            showBeta={showBeta}
-            setShowBeta={handleSetShowBeta}
-            showLegacy={showLegacy}
-            setShowLegacy={handleSetShowLegacy}
-            searchInputRef={searchInputRef}
-            isInputFocused={isSearchFocused}
-            search={search}
-            handleInputFocus={handleInputFocus}
-            handleInputBlur={handleInputBlur}
-            handleInputChange={handleInputChange}
-            filterName={filterName}
-            filterDescription={filterDescription}
-            resetFilters={resetFilters}
-          />
+          {isFullSidebarPanelMounted && (
+            <SidebarHeaderComponent
+              showConfig={showConfig}
+              setShowConfig={setShowConfig}
+              showBeta={showBeta}
+              setShowBeta={handleSetShowBeta}
+              showLegacy={showLegacy}
+              setShowLegacy={handleSetShowLegacy}
+              searchInputRef={searchInputRef}
+              isInputFocused={isSearchFocused}
+              search={search}
+              handleInputFocus={handleInputFocus}
+              handleInputBlur={handleInputBlur}
+              handleInputChange={handleInputChange}
+              filterName={filterName}
+              filterDescription={filterDescription}
+              resetFilters={resetFilters}
+            />
+          )}
 
           <SidebarContent
             segmentedSidebar={ENABLE_NEW_SIDEBAR}
@@ -653,14 +734,14 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
               <>
                 {hasResults ? (
                   <>
-                    {showComponents && (
+                    {showComponents && !isMcpTabActive && (
                       <CategoryGroup
                         dataFilter={dataFilter}
                         sortedCategories={sortedCategories}
                         CATEGORIES={CATEGORIES}
                         openCategories={openCategories}
                         setOpenCategories={setOpenCategories}
-                        search={search}
+                        search={debouncedSearch}
                         nodeColors={nodeColors}
                         onDragStart={onDragStart}
                         sensitiveSort={sensitiveSort}
@@ -680,7 +761,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                         openCategories={openCategories}
                         mcpLoading={mcpLoading}
                         mcpSuccess={mcpSuccess}
-                        search={search}
+                        search={debouncedSearch}
                         hasMcpServers={hasMcpServers}
                         showSearchConfigTrigger={
                           activeSection !== "mcp" &&
@@ -694,7 +775,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                     {showBundles && (
                       <MemoizedSidebarGroup
                         BUNDLES={BUNDLES}
-                        search={search}
+                        search={debouncedSearch}
                         sortedCategories={sortedCategories}
                         dataFilter={dataFilter}
                         nodeColors={nodeColors}
@@ -737,9 +818,10 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
               </>
             )}
           </SidebarContent>
-          {ENABLE_NEW_SIDEBAR &&
-          activeSection === "mcp" &&
-          !hasMcpServers ? null : (
+          {!isFullSidebarPanelMounted ||
+          (ENABLE_NEW_SIDEBAR &&
+            activeSection === "mcp" &&
+            !hasMcpServers) ? null : (
             <SidebarFooter className="border-t group-data-[collapsible=icon]:hidden p-1 gap-1">
               <SidebarMenuButtons
                 customComponent={customComponent}

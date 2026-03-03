@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { selectAnthropicModel } from "../../utils/select-anthropic-model";
 
 test(
   "user must not experience message duplication in mathematical expressions with agent component",
@@ -20,22 +21,7 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Simple Agent" }).first().click();
 
-    await page.getByTestId("value-dropdown-model_model").click();
-
-    await page.waitForTimeout(200);
-
-    await page.getByText("claude-3-opus-latest").last().click();
-
-    // Click the Controls button to open the modal
-    await page.getByTestId("edit-button-modal").click();
-
-    // Fill in the API Key in the modal
-    await page
-      .getByTestId("popover-anchor-input-api_key-edit")
-      .fill(process.env.ANTHROPIC_API_KEY || "");
-
-    // Close the modal
-    await page.getByText("Close").last().click();
+    await selectAnthropicModel(page);
 
     await page.getByTestId("playground-btn-flow-io").click();
 

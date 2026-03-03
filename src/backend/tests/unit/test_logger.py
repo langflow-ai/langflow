@@ -808,16 +808,22 @@ class TestSpecificBugFixes:
         # Create multiple threads for reading and writing
         threads = []
         for _ in range(3):
-            threads.append(threading.Thread(target=write_logs))
-            threads.append(threading.Thread(target=read_logs))
+            threads.append(threading.Thread(target=write_logs, daemon=False))
+            threads.append(threading.Thread(target=read_logs, daemon=False))
 
         # Start all threads
         for thread in threads:
             thread.start()
 
-        # Wait for all threads to complete
+        # Wait for all threads to complete and verify they finished
+        hung_threads = []
         for thread in threads:
             thread.join(timeout=5)
+            if thread.is_alive():
+                hung_threads.append(thread.name)
+
+        # Fail fast if any threads are still running
+        assert len(hung_threads) == 0, f"Threads did not complete within timeout: {hung_threads}"
 
         # Check that no errors occurred
         assert len(errors) == 0, f"Thread safety errors: {errors}"

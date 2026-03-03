@@ -12,15 +12,17 @@ from lfx.interface.initialize.loading import (
 async def test_update_params_fallback_to_env_when_variable_not_found():
     """Test that when a variable is not found in database and fallback_to_env_vars is True.
 
-    It falls back to environment variables.
+    It falls back to environment variables. This specifically tests the fix for the bug
+    where 'variable not found.' error would always raise, even with fallback enabled.
     """
     # Set up environment variable
     os.environ["TEST_API_KEY"] = "test-secret-key-123"
 
     # Create mock custom component
     custom_component = MagicMock()
-    # Change this error message to avoid triggering re-raise
-    custom_component.get_variable = AsyncMock(side_effect=ValueError("Database connection failed"))
+    # Use "variable not found." error to specifically test the fix
+    # Previously this would always raise, even with fallback_to_env_vars=True
+    custom_component.get_variable = AsyncMock(side_effect=ValueError("TEST_API_KEY variable not found."))
 
     # Set up params with a field that should load from db
     params = {"api_key": "TEST_API_KEY"}

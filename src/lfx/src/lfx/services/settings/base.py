@@ -18,7 +18,7 @@ from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.log.logger import logger
 from lfx.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from lfx.services.settings.constants import AGENTIC_VARIABLES, VARIABLES_TO_GET_FROM_ENVIRONMENT
-from lfx.utils.util_strings import is_valid_database_url
+from lfx.utils.util_strings import is_valid_database_url, sanitize_database_url
 
 
 def is_list_of_any(field: FieldInfo) -> bool:
@@ -276,10 +276,10 @@ class Settings(BaseSettings):
     """The maximum number of transactions to keep in the database."""
     max_vertex_builds_to_keep: int = 3000
     """The maximum number of vertex builds to keep in the database."""
-    max_vertex_builds_per_vertex: int = 2
+    max_vertex_builds_per_vertex: int = 50
     """The maximum number of builds to keep per vertex. Older builds will be deleted."""
-    webhook_polling_interval: int = 5000
-    """The polling interval for the webhook in ms."""
+    webhook_polling_interval: int = 0
+    """The polling interval for the webhook in ms. Set to 0 to disable (SSE provides real-time updates)."""
     fs_flows_polling_interval: int = 10000
     """The polling interval in milliseconds for synchronizing flows from the file system."""
     ssl_cert_file: str | None = None
@@ -312,6 +312,10 @@ class Settings(BaseSettings):
     agentic_experience: bool = False
     """If set to True, Langflow will start the agentic MCP server that provides tools for
     flow/component operations, template search, and graph visualization."""
+
+    # Developer API
+    developer_api_enabled: bool = False
+    """If set to True, Langflow will enable developer API endpoints for advanced debugging and introspection."""
 
     # Public Flow Settings
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)
@@ -350,6 +354,33 @@ class Settings(BaseSettings):
 
     Note: This setting only takes effect when ssrf_protection_enabled is True.
     When protection is disabled, all hosts are allowed regardless of this setting."""
+
+    @field_validator("runtime_port", mode="before")
+    @classmethod
+    def validate_runtime_port(cls, value):
+        """Parse port from Kubernetes service discovery env vars.
+
+        Kubernetes auto-creates env vars like LANGFLOW_RUNTIME_PORT=tcp://<ip>:<port>
+        for services, which collides with the LANGFLOW_ env prefix. Extract the port
+        number from URL-like values instead of failing.
+        """
+        if value is None:
+            return None
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str):
+            if value.isdigit():
+                return int(value)
+            if "://" in value:
+                from urllib.parse import urlparse
+
+                try:
+                    parsed_port = urlparse(value).port
+                except ValueError:
+                    return None
+                if parsed_port is not None:
+                    return parsed_port
+        return None
 
     @field_validator("cors_origins", mode="before")
     @classmethod
@@ -474,7 +505,8 @@ class Settings(BaseSettings):
     @classmethod
     def set_database_url(cls, value, info):
         if value and not is_valid_database_url(value):
-            msg = f"Invalid database_url provided: '{value}'"
+            sanitized = sanitize_database_url(value)
+            msg = f"Invalid database_url provided: '{sanitized}'"
             raise ValueError(msg)
 
         if langflow_database_url := os.getenv("LANGFLOW_DATABASE_URL"):

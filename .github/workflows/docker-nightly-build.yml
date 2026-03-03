@@ -51,10 +51,10 @@ jobs:
           - arch: amd64
             runner: [Langflow-runner]
           - arch: arm64
-            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+            runner:
+              [self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]
     runs-on: ${{ matrix.runner }}
     steps:
-
       - name: Check out the code
         uses: actions/checkout@v6
         with:
@@ -72,7 +72,7 @@ jobs:
         id: version
         run: |
           echo "Extracting base version from pyproject.toml"
-          version=$(uv tree 2>/dev/null | grep '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
+          version=$(uv tree 2>/dev/null | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
 
 
           # Verify nightly tag format
@@ -145,10 +145,10 @@ jobs:
           - arch: amd64
             runner: [Langflow-runner]
           - arch: arm64
-            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+            runner:
+              [self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]
     runs-on: ${{ matrix.runner }}
     steps:
-
       - name: Check out the code
         uses: actions/checkout@v6
         with:
@@ -238,10 +238,10 @@ jobs:
           - arch: amd64
             runner: [Langflow-runner]
           - arch: arm64
-            runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+            runner:
+              [self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]
     runs-on: ${{ matrix.runner }}
     steps:
-
       - name: Check out the code
         uses: actions/checkout@v6
         with:
@@ -345,7 +345,7 @@ jobs:
         id: version
         run: |
           if [[ "${{ inputs.release_type }}" == "nightly-base" ]]; then
-            version=$(uv tree 2>/dev/null | grep '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
+            version=$(uv tree 2>/dev/null | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
           else
             version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
           fi

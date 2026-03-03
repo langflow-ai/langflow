@@ -10,7 +10,7 @@ from langflow.services.auth.utils import get_current_active_user
 router = APIRouter(prefix="/validate", tags=["Validate"])
 
 
-@router.post("/code", status_code=200, dependencies=[Depends(get_current_active_user)])
+@router.post("/code", status_code=200, dependencies=[Depends(get_current_active_user)], include_in_schema=False)
 async def post_validate_code(code: Code) -> CodeValidationResponse:
     try:
         errors = validate_code(code.code)
@@ -23,7 +23,7 @@ async def post_validate_code(code: Code) -> CodeValidationResponse:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/prompt", status_code=200, dependencies=[Depends(get_current_active_user)])
+@router.post("/prompt", status_code=200, dependencies=[Depends(get_current_active_user)], include_in_schema=False)
 async def post_validate_prompt(
     prompt_request: ValidatePromptRequest,
 ) -> PromptValidationResponse:
@@ -40,6 +40,7 @@ async def post_validate_prompt(
             name=prompt_request.name,
             custom_fields=prompt_request.frontend_node.custom_fields,
             frontend_node_template=prompt_request.frontend_node.template,
+            is_mustache=prompt_request.mustache,
         )
 
         return PromptValidationResponse(

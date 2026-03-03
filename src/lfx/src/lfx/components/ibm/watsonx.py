@@ -1,11 +1,11 @@
 import json
 from typing import Any
 
-import requests
 from langchain_ibm import ChatWatsonx
 from pydantic.v1 import SecretStr
 
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.model_utils import get_watsonx_llm_models
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
@@ -142,18 +142,11 @@ class WatsonxAIComponent(LCModelComponent):
 
     @staticmethod
     def fetch_models(base_url: str) -> list[str]:
-        """Fetch available models from the watsonx.ai API."""
-        try:
-            endpoint = f"{base_url}/ml/v1/foundation_model_specs"
-            params = {"version": "2024-09-16", "filters": "function_text_chat,!lifecycle_withdrawn"}
-            response = requests.get(endpoint, params=params, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-            models = [model["model_id"] for model in data.get("resources", [])]
-            return sorted(models)
-        except Exception:  # noqa: BLE001
-            logger.exception("Error fetching models. Using default models.")
-            return WatsonxAIComponent._default_models
+        """Fetch available models from the watsonx.ai API.
+
+        Uses centralized model fetching from model_utils.
+        """
+        return get_watsonx_llm_models(base_url, default_models=WatsonxAIComponent._default_models)
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         """Update model options when URL or API key changes."""
