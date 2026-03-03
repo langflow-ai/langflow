@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, Self, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import httpx
 
@@ -34,7 +34,7 @@ class MergeAgentHandlerClient:
     def close(self) -> None:
         self._client.close()
 
-    def __enter__(self) -> Self:
+    def __enter__(self) -> MergeAgentHandlerClient:  # noqa: PYI034
         return self
 
     def __exit__(self, *_: object) -> None:

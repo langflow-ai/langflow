@@ -628,8 +628,9 @@ export const getNodeIcon = async (name: string): Promise<CachedIcon> => {
     return icon;
   };
 
-  if (iconCache.has(name)) {
-    return iconCache.get(name);
+  const cachedIcon = iconCache.get(name);
+  if (cachedIcon !== undefined) {
+    return cachedIcon;
   }
   const iconName = nodeIconToDisplayIconMap[name];
 

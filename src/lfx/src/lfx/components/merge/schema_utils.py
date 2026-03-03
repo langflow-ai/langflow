@@ -34,14 +34,17 @@ def json_schema_to_pydantic_model(name: str, schema: dict[str, Any]) -> type[Bas
 
 def create_dispatch_schema(tool_names: list[str]) -> type[BaseModel]:
     tool_description = "The MCP tool name to execute."
+    tool_name_annotation: Any = str
     if tool_names:
-        listed = ", ".join(sorted({name for name in tool_names if name}))
+        normalized_tool_names = sorted({name for name in tool_names if name})
+        listed = ", ".join(normalized_tool_names)
         if listed:
             tool_description = f"{tool_description} Available tools: {listed}."
+            tool_name_annotation = Literal.__getitem__(tuple(normalized_tool_names))
 
     return create_model(
         "MergeMcpDispatchInput",
-        tool_name=(str, Field(description=tool_description)),
+        tool_name=(tool_name_annotation, Field(description=tool_description)),
         arguments=(
             dict[str, Any] | None,
             Field(default=None, description="Arguments to pass to the selected tool."),

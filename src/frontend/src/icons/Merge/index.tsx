@@ -3,13 +3,12 @@ import { useDarkStore } from "@/stores/darkStore";
 
 import MergeIconSVG from "./MergeAgentHandlerIcon";
 
-export const MergeIcon = forwardRef<
-  SVGSVGElement,
-  React.SVGProps<SVGSVGElement>
->((props, ref) => {
-  const isdark = useDarkStore((state) => state.dark).toString();
-  return <MergeIconSVG ref={ref} isdark={isdark} {...props} />;
-});
+export const MergeIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(
+  (props, ref) => {
+    const isDark = useDarkStore((state) => state.dark);
+    return <MergeIconSVG ref={ref} isDark={isDark} {...props} />;
+  },
+);
 
 MergeIcon.displayName = "MergeIcon";
 

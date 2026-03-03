@@ -350,7 +350,7 @@ class MergeAgentHandlerToolsComponent(LCToolComponent):
 
             connector_summary = MergeAgentHandlerToolsComponent._summarize_option_items(connector_names)
             label = f"{name} ({tool_pack_id[:8]}) | Apps: {connector_summary or 'none'}"
-            options[label] = tool_pack_id
+            MergeAgentHandlerToolsComponent._insert_unique_option(options, label, tool_pack_id)
         return options
 
     @staticmethod
@@ -370,9 +370,33 @@ class MergeAgentHandlerToolsComponent(LCToolComponent):
             connector_names = [str(value).strip() for value in connector_values if str(value).strip()]
             connector_summary = MergeAgentHandlerToolsComponent._summarize_option_items(connector_names)
             label = f"{base_name} ({user_id[:8]}) | Connected: {connector_summary or 'none'}"
-            options[label] = user_id
+            MergeAgentHandlerToolsComponent._insert_unique_option(options, label, user_id)
 
         return options
+
+    @staticmethod
+    def _insert_unique_option(options: dict[str, str], label: str, option_id: str) -> None:
+        if label not in options:
+            options[label] = option_id
+            return
+
+        if options[label] == option_id:
+            return
+
+        prefix, separator, suffix = label.partition(" | ")
+        expanded_prefix = f"{prefix} [{option_id}]"
+        expanded_label = f"{expanded_prefix}{separator}{suffix}" if separator else expanded_prefix
+        if expanded_label not in options:
+            options[expanded_label] = option_id
+            return
+
+        counter = 2
+        while True:
+            candidate = f"{expanded_label} ({counter})"
+            if candidate not in options:
+                options[candidate] = option_id
+                return
+            counter += 1
 
     @staticmethod
     def _summarize_option_items(values: list[str], limit: int = 3) -> str:
