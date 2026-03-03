@@ -603,6 +603,67 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   const currentFlowForVersions = useFlowStore((state) => state.currentFlow);
 
+  const showTraces = ENABLE_NEW_SIDEBAR && activeSection === "traces";
+
+  const SIDEBAR_EXPAND_ANIMATION_MS = 300;
+  const [isFullSidebarPanelMounted, setIsFullSidebarPanelMounted] = useState(
+    !showTraces,
+  );
+  const [isFullSidebarPanelShown, setIsFullSidebarPanelShown] = useState(
+    !showTraces,
+  );
+  const prevShowTracesRef = useRef(showTraces);
+  const expandedSidebarWidthRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const wrapper = document.querySelector(
+      ".group\\/sidebar-wrapper",
+    ) as HTMLElement | null;
+
+    const wasShowingTraces = prevShowTracesRef.current;
+    prevShowTracesRef.current = showTraces;
+
+    if (!wrapper) {
+      setIsFullSidebarPanelMounted(!showTraces);
+      setIsFullSidebarPanelShown(!showTraces);
+      return;
+    }
+
+    if (showTraces) {
+      const computed =
+        getComputedStyle(wrapper).getPropertyValue("--sidebar-width");
+      expandedSidebarWidthRef.current = computed?.trim() || null;
+
+      wrapper.style.setProperty("--sidebar-width", "40px");
+      setIsFullSidebarPanelShown(false);
+      // Unmount immediately so nothing can "pop" during the collapse.
+      setIsFullSidebarPanelMounted(false);
+      return;
+    }
+
+    wrapper.style.setProperty(
+      "--sidebar-width",
+      expandedSidebarWidthRef.current || "17.5rem",
+    );
+
+    if (wasShowingTraces) {
+      const timeoutId = window.setTimeout(() => {
+        // Mount hidden first, then animate in next frame.
+        setIsFullSidebarPanelMounted(true);
+        setIsFullSidebarPanelShown(false);
+        requestAnimationFrame(() => {
+          setIsFullSidebarPanelShown(true);
+        });
+      }, SIDEBAR_EXPAND_ANIMATION_MS);
+
+      return () => window.clearTimeout(timeoutId);
+    }
+
+    // Non-traces transitions: show immediately.
+    setIsFullSidebarPanelMounted(true);
+    setIsFullSidebarPanelShown(true);
+  }, [showTraces]);
+
   const [category, component] = getFilterComponent?.split(".") ?? ["", ""];
 
   const filterDescription =
@@ -637,29 +698,37 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
           className={cn(
             "flex flex-col h-full w-full group-data-[collapsible=icon]:hidden",
             ENABLE_NEW_SIDEBAR && "sidebar-segmented",
+            !isFullSidebarPanelMounted && "hidden",
+            isFullSidebarPanelMounted &&
+              "transition-[opacity,transform] duration-200 ease-in-out transform-gpu",
+            isFullSidebarPanelMounted &&
+              !isFullSidebarPanelShown &&
+              "opacity-0 -translate-x-1 pointer-events-none",
           )}
         >
           {showVersions && currentFlowForVersions?.id ? (
             <FlowVersionSidebarContent flowId={currentFlowForVersions.id} />
           ) : (
             <>
-              <SidebarHeaderComponent
-                showConfig={showConfig}
-                setShowConfig={setShowConfig}
-                showBeta={showBeta}
-                setShowBeta={handleSetShowBeta}
-                showLegacy={showLegacy}
-                setShowLegacy={handleSetShowLegacy}
-                searchInputRef={searchInputRef}
-                isInputFocused={isSearchFocused}
-                search={search}
-                handleInputFocus={handleInputFocus}
-                handleInputBlur={handleInputBlur}
-                handleInputChange={handleInputChange}
-                filterName={filterName}
-                filterDescription={filterDescription}
-                resetFilters={resetFilters}
-              />
+              {isFullSidebarPanelMounted && (
+                <SidebarHeaderComponent
+                  showConfig={showConfig}
+                  setShowConfig={setShowConfig}
+                  showBeta={showBeta}
+                  setShowBeta={handleSetShowBeta}
+                  showLegacy={showLegacy}
+                  setShowLegacy={handleSetShowLegacy}
+                  searchInputRef={searchInputRef}
+                  isInputFocused={isSearchFocused}
+                  search={search}
+                  handleInputFocus={handleInputFocus}
+                  handleInputBlur={handleInputBlur}
+                  handleInputChange={handleInputChange}
+                  filterName={filterName}
+                  filterDescription={filterDescription}
+                  resetFilters={resetFilters}
+                />
+              )
 
               <SidebarContent
                 segmentedSidebar={ENABLE_NEW_SIDEBAR}
@@ -763,9 +832,10 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                   </>
                 )}
               </SidebarContent>
-              {ENABLE_NEW_SIDEBAR &&
-              activeSection === "mcp" &&
-              !hasMcpServers ? null : (
+              {!isFullSidebarPanelMounted ||
+              (ENABLE_NEW_SIDEBAR &&
+                activeSection === "mcp" &&
+                !hasMcpServers) ? null : (
                 <SidebarFooter className="border-t group-data-[collapsible=icon]:hidden p-1 gap-1">
                   <SidebarMenuButtons
                     customComponent={customComponent}

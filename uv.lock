@@ -5757,7 +5757,6 @@ postgresql = [
 dev = [
     { name = "asgi-lifespan" },
     { name = "blockbuster" },
-    { name = "codeflash" },
     { name = "dictdiffer" },
     { name = "elevenlabs", version = "1.58.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*'" },
     { name = "elevenlabs", version = "1.59.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version != '3.12.*'" },
@@ -5834,7 +5833,6 @@ provides-extras = ["docling", "audio", "couchbase", "cassio", "local", "clickhou
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
     { name = "blockbuster", specifier = ">=1.5.20,<1.6" },
-    { name = "codeflash", specifier = ">=0.8.4" },
     { name = "dictdiffer", specifier = ">=0.9.0" },
     { name = "elevenlabs", marker = "python_full_version != '3.12.*'", specifier = ">=1.52.0" },
     { name = "elevenlabs", marker = "python_full_version == '3.12.*'", specifier = "==1.58.1" },
@@ -6533,7 +6531,6 @@ zep = [
 [package.dev-dependencies]
 dev = [
     { name = "asgi-lifespan" },
-    { name = "codeflash" },
     { name = "devtools" },
     { name = "dictdiffer" },
     { name = "httpx", extra = ["http2"] },
@@ -6876,7 +6873,6 @@ provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "cl
 [package.metadata.requires-dev]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
-    { name = "codeflash", specifier = ">=0.8.4" },
     { name = "devtools", specifier = ">=0.12.2" },
     { name = "dictdiffer", specifier = ">=0.9.0" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.27" },
