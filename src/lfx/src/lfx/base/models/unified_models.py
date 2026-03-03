@@ -175,6 +175,7 @@ def get_provider_required_variable_keys(provider: str) -> list[str]:
 def apply_provider_variable_config_to_build_config(
     build_config: dict,
     provider: str,
+    user_id: UUID | str | None = None,
 ) -> dict:
     """Apply provider variable metadata to component build config fields.
 
@@ -184,17 +185,18 @@ def apply_provider_variable_config_to_build_config(
     - Sets `advanced` based on `component_metadata.advanced`
     - Sets `info` based on `component_metadata.info`
     - Sets `show` to True for fields that have a mapping_field for this provider
+    - Prefills values from VariableService (Database) or Environment Variables.
 
     Args:
         build_config: The component's build configuration dict
         provider: The selected provider name (e.g., "OpenAI", "IBM WatsonX")
+        user_id: Optional user ID to look up global variables
 
     Returns:
         Updated build_config dict
     """
-    import os
-
     provider_vars = get_provider_all_variables(provider)
+    provider_vars_values = get_all_variables_for_provider(user_id, provider)
 
     # Build a lookup by component_metadata.mapping_field
     vars_by_field = {}
@@ -227,19 +229,30 @@ def apply_provider_variable_config_to_build_config(
         # Show the field since it's relevant to this provider
         field_config["show"] = True
 
-        # If no value is set, try to get from environment variable
+        # If no value is set, try to get from combined variables (DB > Env)
         env_var_key = var_info.get("variable_key")
         if env_var_key:
             current_value = field_config.get("value")
-            # Only set from env if field is empty/None
-            if not current_value or (isinstance(current_value, str) and not current_value.strip()):
-                env_value = os.environ.get(env_var_key)
-                if env_value and env_value.strip():
-                    field_config["value"] = env_value
+
+            # Check if current value is just the hardcoded component default
+            # We want to allow the Global Variable to strictly override these specific defaults
+            from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
+
+            is_default = (field_name == "base_url_ibm_watsonx" and current_value in IBM_WATSONX_URLS) or (
+                field_name == "ollama_base_url" and current_value == "http://localhost:11434"
+            )
+
+            # Only set if field is empty OR if it matches a known hardcoded default
+            if not current_value or (isinstance(current_value, str) and not current_value.strip()) or is_default:
+                value = provider_vars_values.get(env_var_key)
+                if value and str(value).strip() and field_config.get("value") != str(value):
+                    # Only update if the value is actually different to avoid unnecessary modifications
+                    field_config["value"] = str(value)
                     logger.debug(
-                        "Set field %s from environment variable %s",
+                        "Set field %s for provider %s from variables/env (overriding default: %s)",
                         field_name,
-                        env_var_key,
+                        provider,
+                        is_default,
                     )
 
     return build_config
@@ -451,12 +464,20 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
 
     # Try to get from global variables (database)
     async def _get_all_variables():
+        values = {}
+        # Always check environment variables for all provider keys first
+        for var_info in provider_vars:
+            var_key = var_info.get("variable_key")
+            if var_key:
+                env_value = os.environ.get(var_key)
+                if env_value and env_value.strip():
+                    values[var_key] = env_value
+
         async with session_scope() as session:
             variable_service = get_variable_service()
             if variable_service is None:
-                return {}
+                return values
 
-            values = {}
             user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
 
             for var_info in provider_vars:
@@ -471,13 +492,12 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
                         field="",
                         session=session,
                     )
+                    # If found in DB, it overrides environment variable
                     if value and str(value).strip():
                         values[var_key] = str(value)
                 except (ValueError, Exception):  # noqa: BLE001
-                    # Variable not found - check environment
-                    env_value = os.environ.get(var_key)
-                    if env_value and env_value.strip():
-                        values[var_key] = env_value
+                    # Already has env value (if any)
+                    logger.debug("Variable %s not found in database", var_key)
 
             return values
 
@@ -637,7 +657,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
         if provider == "OpenAI":
             from langchain_openai import ChatOpenAI  # type: ignore  # noqa: PGH003
 
-            api_key = variables.get("OPENAI_API_KEY")
+            api_key = variables.get("OPENAI_APIKEY")
             if not api_key:
                 return
             llm = ChatOpenAI(api_key=api_key, model_name=first_model, max_tokens=1)
@@ -664,7 +684,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
         elif provider == "IBM WatsonX":
             from langchain_ibm import ChatWatsonx
 
-            api_key = variables.get("WATSONX_APIKEY")
+            api_key = variables.get("WATSONX_API_KEY")
             project_id = variables.get("WATSONX_PROJECT_ID")
             url = variables.get("WATSONX_URL", "https://us-south.ml.cloud.ibm.com")
             if not api_key or not project_id:
@@ -1556,9 +1576,12 @@ def update_model_options_in_build_config(
     cached = component.cache.get(cache_key, {"options": []})
     build_config["model"]["options"] = cached["options"]
 
-    # Set default value on initial load when field is empty
+    # Set default value on initial load ONLY when field is empty
     # Fetch from user's default model setting in the database
-    if not field_value or field_value == "":
+    current_value = build_config.get("model", {}).get("value")
+    if (not field_value or field_value == "") and (
+        not current_value or (isinstance(current_value, list) and not current_value)
+    ):
         options = cached.get("options", [])
         if options:
             # Determine model type based on cache_key_prefix

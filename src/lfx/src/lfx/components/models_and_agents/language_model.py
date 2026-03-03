@@ -137,6 +137,10 @@ class LanguageModelComponent(LCModelComponent):
 
             if provider:
                 # Apply provider variable configuration (required_for_component, advanced, env var fallback)
-                build_config = apply_provider_variable_config_to_build_config(build_config, provider)
+                build_config = apply_provider_variable_config_to_build_config(
+                    build_config,
+                    provider,
+                    user_id=self.user_id,
+                )
 
         return build_config

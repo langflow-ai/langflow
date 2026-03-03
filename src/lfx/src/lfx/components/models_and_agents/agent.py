@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.events import ExceptionWithMessageError
 from lfx.base.models.unified_models import (
+    apply_provider_variable_config_to_build_config,
     get_language_model_options,
     get_llm,
     update_model_options_in_build_config,
@@ -480,26 +481,31 @@ class AgentComponent(ToolCallingAgentComponent):
         )
         build_config = dotdict(build_config)
 
+        # Show/hide provider-specific fields based on selected model
+        # Get current model value - from field_value if model is being changed, otherwise from build_config
+        current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
+        if isinstance(current_model_value, list) and len(current_model_value) > 0:
+            selected_model = current_model_value[0]
+            provider = selected_model.get("provider", "")
+
+            # Show/hide watsonx fields
+            is_watsonx = provider == "IBM WatsonX"
+            if is_watsonx:
+                build_config = apply_provider_variable_config_to_build_config(
+                    build_config, provider, user_id=self.user_id
+                )
+
+            if "base_url_ibm_watsonx" in build_config:
+                build_config["base_url_ibm_watsonx"]["show"] = is_watsonx
+                build_config["base_url_ibm_watsonx"]["required"] = is_watsonx
+            if "project_id" in build_config:
+                build_config["project_id"]["show"] = is_watsonx
+                build_config["project_id"]["required"] = is_watsonx
+
         # Iterate over all providers in the MODEL_PROVIDERS_DICT
         if field_name == "model":
             # Update input types for all fields
             build_config = self.update_input_types(build_config)
-
-            # Show/hide provider-specific fields based on selected model
-            # Get current model value - from field_value if model is being changed, otherwise from build_config
-            current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
-            if isinstance(current_model_value, list) and len(current_model_value) > 0:
-                selected_model = current_model_value[0]
-                provider = selected_model.get("provider", "")
-
-                # Show/hide watsonx fields
-                is_watsonx = provider == "IBM WatsonX"
-                if "base_url_ibm_watsonx" in build_config:
-                    build_config["base_url_ibm_watsonx"]["show"] = is_watsonx
-                    build_config["base_url_ibm_watsonx"]["required"] = is_watsonx
-                if "project_id" in build_config:
-                    build_config["project_id"]["show"] = is_watsonx
-                    build_config["project_id"]["required"] = is_watsonx
 
             # Validate required keys
             default_keys = [
