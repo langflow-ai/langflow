@@ -25,6 +25,7 @@ import {
   ENABLE_CUSTOM_PARAM,
   ENABLE_DATASTAX_LANGFLOW,
   ENABLE_FILE_MANAGEMENT,
+  ENABLE_AGENT_BUILDER,
   ENABLE_KNOWLEDGE_BASES,
   ENABLE_MCP_NOTICE,
 } from "@/customization/feature-flags";
@@ -358,6 +359,10 @@ const SideBarFoldersButtonsComponent = ({
     _navigate("/assets/knowledge-bases");
   };
 
+  const handleAgentsNavigation = () => {
+    _navigate("/assets/agents");
+  };
+
   return (
     <Sidebar
       collapsible={isMobile ? "offcanvas" : "none"}
@@ -479,6 +484,16 @@ const SideBarFoldersButtonsComponent = ({
           <div className="grid w-full items-center gap-2 p-2">
             {/* TODO: Remove this on cleanup */}
             {ENABLE_DATASTAX_LANGFLOW && <CustomStoreButton />}{" "}
+            {ENABLE_AGENT_BUILDER && (
+              <SidebarMenuButton
+                onClick={handleAgentsNavigation}
+                size="md"
+                className="text-sm"
+              >
+                <ForwardedIconComponent name="Bot" className="h-4 w-4" />
+                Agents
+              </SidebarMenuButton>
+            )}
             {ENABLE_KNOWLEDGE_BASES && (
               <SidebarMenuButton
                 onClick={handleKnowledgeNavigation}

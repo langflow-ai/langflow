@@ -14,6 +14,7 @@ import CustomDashboardWrapperPage from "./customization/components/custom-Dashbo
 import { CustomNavigate } from "./customization/components/custom-navigate";
 import { BASENAME } from "./customization/config-constants";
 import {
+  ENABLE_AGENT_BUILDER,
   ENABLE_CUSTOM_PARAM,
   ENABLE_FILE_MANAGEMENT,
   ENABLE_KNOWLEDGE_BASES,
@@ -27,6 +28,7 @@ import FlowPage from "./pages/FlowPage";
 import LoginPage from "./pages/LoginPage";
 import FilesPage from "./pages/MainPage/pages/filesPage";
 import HomePage from "./pages/MainPage/pages/homePage";
+import AgentBuilderPage from "./pages/MainPage/pages/agentBuilderPage/agent-builder-page";
 import KnowledgePage from "./pages/MainPage/pages/knowledgePage";
 import SourceChunksPage from "./pages/MainPage/pages/knowledgePage/sourceChunksPage/SourceChunksPage";
 import CollectionPage from "./pages/MainPage/pages/main-page";
@@ -103,6 +105,12 @@ const router = createBrowserRouter(
                             element={<SourceChunksPage />}
                           />
                         </>
+                      )}
+                      {ENABLE_AGENT_BUILDER && (
+                        <Route
+                          path="agents"
+                          element={<AgentBuilderPage />}
+                        />
                       )}
                     </Route>
                   )}

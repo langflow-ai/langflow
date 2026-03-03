@@ -1,3 +1,4 @@
+from .agents import Agent
 from .api_key import ApiKey
 from .auth import SSOConfig, SSOUserProfile
 from .file import File
@@ -11,6 +12,7 @@ from .user import User
 from .variable import Variable
 
 __all__ = [
+    "Agent",
     "ApiKey",
     "File",
     "Flow",
