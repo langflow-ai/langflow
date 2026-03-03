@@ -129,6 +129,13 @@ class AzureChatOpenAIComponent(LCModelComponent):
     ]
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
+        """Toggle UI field visibility based on the changed field.
+
+        Handles two field triggers:
+        - ``use_legacy_api``: shows/hides the ``api_version`` dropdown.
+        - ``model_name``: toggles reasoning-specific vs standard parameters
+          and auto-populates the deployment name.
+        """
         if field_name == "use_legacy_api":
             self._apply_legacy_api_visibility(build_config, is_legacy=bool(field_value))
 
@@ -142,6 +149,11 @@ class AzureChatOpenAIComponent(LCModelComponent):
         return build_config
 
     def _is_reasoning_model(self, model_name: str) -> bool:
+        """Check whether *model_name* is a reasoning model.
+
+        Performs a case-insensitive substring match against the known
+        reasoning model names from ``OPENAI_MODELS_DETAILED``.
+        """
         name = model_name.lower()
         return any(model in name for model in REASONING_MODEL_NAMES)
 
@@ -154,14 +166,29 @@ class AzureChatOpenAIComponent(LCModelComponent):
         return self.azure_deployment or MODEL_TO_DEPLOYMENT.get(self.model_name, self.model_name)
 
     def _apply_legacy_api_visibility(self, build_config: dict, *, is_legacy: bool) -> None:
-        build_config["api_version"]["show"] = is_legacy
+        """Show the ``api_version`` field only when the legacy API is selected."""
+        if "api_version" in build_config and isinstance(build_config["api_version"], dict):
+            build_config["api_version"]["show"] = is_legacy
 
     def _apply_reasoning_visibility(self, build_config: dict, *, is_reasoning: bool) -> None:
-        build_config["temperature"]["show"] = not is_reasoning
-        build_config["seed"]["show"] = not is_reasoning
-        build_config["reasoning_effort"]["show"] = is_reasoning
+        """Toggle parameter visibility based on whether the model supports reasoning.
+
+        Reasoning models expose ``reasoning_effort`` and hide ``temperature``
+        and ``seed``; standard models do the inverse.
+        """
+        if "temperature" in build_config and isinstance(build_config["temperature"], dict):
+            build_config["temperature"]["show"] = not is_reasoning
+        if "seed" in build_config and isinstance(build_config["seed"], dict):
+            build_config["seed"]["show"] = not is_reasoning
+        if "reasoning_effort" in build_config and isinstance(build_config["reasoning_effort"], dict):
+            build_config["reasoning_effort"]["show"] = is_reasoning
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+        """Build and return a configured language model instance.
+
+        Routes to the V1 Foundry API (``ChatOpenAI``) or the legacy versioned
+        API (``AzureChatOpenAI``) depending on ``use_legacy_api``.
+        """
         api_key_value = self._resolve_api_key()
         model_kwargs = self._prepare_model_kwargs()
         is_reasoning = self._is_reasoning_model(self.model_name or "")
@@ -171,6 +198,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
         return self._build_v1_model(api_key_value, model_kwargs, is_reasoning=is_reasoning)
 
     def _resolve_api_key(self) -> str | None:
+        """Unwrap the API key from a ``SecretStr`` or return it as a plain string."""
         if not self.api_key:
             return None
         if isinstance(self.api_key, SecretStr):
@@ -178,11 +206,21 @@ class AzureChatOpenAIComponent(LCModelComponent):
         return str(self.api_key)
 
     def _prepare_model_kwargs(self) -> dict:
+        """Return a sanitised copy of ``model_kwargs``.
+
+        Strips ``api_key`` to prevent it from being passed twice to the
+        underlying LangChain constructor.
+        """
         model_kwargs = dict(self.model_kwargs) if self.model_kwargs else {}
         model_kwargs.pop("api_key", None)
         return model_kwargs
 
     def _build_v1_model(self, api_key: str | None, model_kwargs: dict, *, is_reasoning: bool) -> LanguageModel:
+        """Construct a ``ChatOpenAI`` instance targeting the V1 Foundry API.
+
+        Reasoning models receive ``reasoning_effort`` in *model_kwargs* and
+        ``max_completion_tokens`` instead of ``max_tokens``.
+        """
         base_url = self.azure_endpoint.rstrip("/") + "/openai/v1"
         if is_reasoning:
             model_kwargs = {**model_kwargs, "reasoning_effort": self.reasoning_effort}
@@ -212,6 +250,11 @@ class AzureChatOpenAIComponent(LCModelComponent):
             raise ValueError(msg) from e
 
     def _build_legacy_model(self, api_key: str | None, model_kwargs: dict, *, is_reasoning: bool) -> LanguageModel:
+        """Construct an ``AzureChatOpenAI`` instance using the legacy versioned API.
+
+        Reasoning models receive ``reasoning_effort`` in *model_kwargs* and
+        ``max_completion_tokens`` instead of ``max_tokens``.
+        """
         if is_reasoning:
             model_kwargs = {**model_kwargs, "reasoning_effort": self.reasoning_effort}
 
