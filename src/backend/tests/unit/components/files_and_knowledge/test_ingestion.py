@@ -2,11 +2,11 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
-from lfx.components.knowledge_bases.ingestion import KnowledgeIngestionComponent
+from lfx.base.knowledge_bases import get_knowledge_bases
+from lfx.components.knowledge_bases import KnowledgeIngestionComponent
 
 from tests.base import ComponentTestBaseWithClient
 
