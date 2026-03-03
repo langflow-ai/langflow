@@ -14,6 +14,7 @@ that may have gotten into an inconsistent state.
 
 from collections.abc import Sequence
 
+import sqlalchemy as sa
 from alembic import op
 from langflow.utils import migration
 
@@ -24,6 +25,15 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
+def _get_fk_constraint_name(conn, table_name: str, column_name: str) -> str | None:
+    """Find the foreign key constraint name for a given column."""
+    inspector = sa.inspect(conn)
+    for fk in inspector.get_foreign_keys(table_name):
+        if column_name in fk["constrained_columns"]:
+            return fk["name"]
+    return None
+
+
 def upgrade() -> None:
     conn = op.get_bind()
 
@@ -31,21 +41,30 @@ def upgrade() -> None:
     if not migration.table_exists("trace", conn):
         return
 
-    # Use batch mode for SQLite compatibility
-    # This recreates the table with the correct FK constraint
-    with op.batch_alter_table("trace", schema=None) as batch_op:
-        # Drop existing FK constraint (name may vary by database)
-        # batch_alter_table handles this gracefully
-        batch_op.drop_constraint("fk_trace_flow_id_flow", type_="foreignkey")
+    # Find the actual FK constraint name (it may vary by database)
+    fk_name = _get_fk_constraint_name(conn, "trace", "flow_id")
 
-        # Recreate FK with ondelete CASCADE
-        batch_op.create_foreign_key(
-            "fk_trace_flow_id_flow",
-            "flow",
-            ["flow_id"],
-            ["id"],
-            ondelete="CASCADE",
-        )
+    if fk_name is None:
+        # No FK exists, create one with CASCADE
+        with op.batch_alter_table("trace", schema=None) as batch_op:
+            batch_op.create_foreign_key(
+                "fk_trace_flow_id_flow",
+                "flow",
+                ["flow_id"],
+                ["id"],
+                ondelete="CASCADE",
+            )
+    else:
+        # FK exists, recreate it with CASCADE using the correct name
+        with op.batch_alter_table("trace", schema=None) as batch_op:
+            batch_op.drop_constraint(fk_name, type_="foreignkey")
+            batch_op.create_foreign_key(
+                "fk_trace_flow_id_flow",
+                "flow",
+                ["flow_id"],
+                ["id"],
+                ondelete="CASCADE",
+            )
 
 
 def downgrade() -> None:
@@ -54,11 +73,16 @@ def downgrade() -> None:
     if not migration.table_exists("trace", conn):
         return
 
+    fk_name = _get_fk_constraint_name(conn, "trace", "flow_id")
+
+    if fk_name is None:
+        return
+
     # Revert to FK without CASCADE (though this is not recommended)
     with op.batch_alter_table("trace", schema=None) as batch_op:
-        batch_op.drop_constraint("fk_trace_flow_id_flow", type_="foreignkey")
+        batch_op.drop_constraint(fk_name, type_="foreignkey")
         batch_op.create_foreign_key(
-            "fk_trace_flow_id_flow",
+            None,  # Let database auto-generate name
             "flow",
             ["flow_id"],
             ["id"],
