@@ -15,6 +15,22 @@ Trace data is presented in the **Flow Activity** and **Trace Details** pages in 
 Traces are enabled by default.
 To disable Langflow tracing and use a different tracing provider, set `LANGFLOW_NATIVE_TRACING` to `false`.
 
+## What traces capture
+
+The tracer records:
+
+- **Flow-level traces**: A trace for each flow run, including total runtime and status.
+- **Component spans**: Spans for each component in the flow, including inputs, outputs, latency, and errors.
+- **LangChain spans**: Deeper spans for chains, tools, retrievers, and LLM calls, including model name and token usage where available.
+
+Each span includes:
+
+- **Name** and **type** (for example, chain, LLM, tool, retriever)
+- **Start and end time** and **latency (ms)**
+- **Inputs and outputs** (serialized)
+- **Error details**, if the span failed
+- **Attributes** such as token counts and model metadata
+
 ## View traces in the UI
 
 To view traces in the Langflow UI, do the following:
@@ -32,22 +48,6 @@ To view traces in the Langflow UI, do the following:
 
 To programmatically query traces, use the `/monitor/traces` endpoints.
 For full parameter details and code examples in Python, TypeScript, and curl, see [Monitor endpoints: Get traces](/api-monitor#get-traces).
-
-## What traces capture
-
-The tracer records:
-
-- **Flow-level traces**: A trace for each flow run, including total runtime and status.
-- **Component spans**: Spans for each component in the flow, including inputs, outputs, latency, and errors.
-- **LangChain spans**: Deeper spans for chains, tools, retrievers, and LLM calls, including model name and token usage where available.
-
-Each span includes:
-
-- **Name** and **type** (for example, chain, LLM, tool, retriever)
-- **Start and end time** and **latency (ms)**
-- **Inputs and outputs** (serialized)
-- **Error details**, if the span failed
-- **Attributes** such as token counts and model metadata
 
 ## See also
 
