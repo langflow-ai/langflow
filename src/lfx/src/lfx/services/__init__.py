@@ -1,5 +1,11 @@
 """LFX services module - pluggable service architecture for dependency injection."""
 
+from .adapter_registry import (
+    AdapterRegistry,
+    AdapterRegistryConflictError,
+    get_adapter_registry,
+    register_adapter,
+)
 from .interfaces import (
     AuthServiceProtocol,
     CacheServiceProtocol,
@@ -14,14 +20,10 @@ from .manager import ServiceManager
 from .mcp_composer import MCPComposerService, MCPComposerServiceFactory
 from .registry import register_service
 from .session import NoopSession
-from .subservice import (
-    SubServiceRegistry,
-    SubServiceRegistryConflictError,
-    get_sub_service_registry,
-    register_sub_service,
-)
 
 __all__ = [
+    "AdapterRegistry",
+    "AdapterRegistryConflictError",
     "AuthServiceProtocol",
     "CacheServiceProtocol",
     "ChatServiceProtocol",
@@ -32,11 +34,9 @@ __all__ = [
     "ServiceManager",
     "SettingsServiceProtocol",
     "StorageServiceProtocol",
-    "SubServiceRegistry",
-    "SubServiceRegistryConflictError",
     "TracingServiceProtocol",
     "VariableServiceProtocol",
-    "get_sub_service_registry",
+    "get_adapter_registry",
+    "register_adapter",
     "register_service",
-    "register_sub_service",
 ]

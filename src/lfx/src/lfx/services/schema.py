@@ -23,7 +23,7 @@ class ServiceType(str, Enum):
     TRANSACTION_SERVICE = "transaction_service"
 
 
-class SubServiceType(str, Enum):
-    """Semantic categories for sub-service registries."""
+class AdapterType(str, Enum):
+    """Categories for adapter registries."""
 
     DEPLOYMENT = "deployment"

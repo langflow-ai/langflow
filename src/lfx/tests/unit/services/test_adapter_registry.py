@@ -1,11 +1,11 @@
-"""Tests for generic sub-service registry and discovery."""
+"""Tests for generic adapter registry and discovery."""
 
 from __future__ import annotations
 
 import pytest
-from lfx.services import subservice as subservice_mod
+from lfx.services import adapter_registry as adapter_registry_mod
 from lfx.services.deployment.base import BaseDeploymentService
-from lfx.services.schema import SubServiceType
+from lfx.services.schema import AdapterType
 
 
 class _DeploymentAdapterStub(BaseDeploymentService):
@@ -55,34 +55,34 @@ class DummyEntryPoint:
 
 
 @pytest.fixture(autouse=True)
-def clean_subservice_globals():
+def clean_adapter_globals():
     """Ensure global registry state is isolated per test."""
-    subservice_mod._reset_registries()
+    adapter_registry_mod._reset_registries()
     yield
-    subservice_mod._reset_registries()
+    adapter_registry_mod._reset_registries()
 
 
 def _registry():
-    return subservice_mod.get_sub_service_registry(
-        sub_service_type=SubServiceType.DEPLOYMENT,
+    return adapter_registry_mod.get_adapter_registry(
+        adapter_type=AdapterType.DEPLOYMENT,
         entry_point_group="lfx.deployment.adapters",
         config_section_path=("deployment", "adapters"),
     )
 
 
-def test_get_sub_service_registry_singleton():
+def test_get_adapter_registry_singleton():
     first = _registry()
     second = _registry()
 
     assert first is second
 
 
-def test_get_sub_service_registry_raises_on_parameter_mismatch_for_same_sub_service_type():
+def test_get_adapter_registry_raises_on_parameter_mismatch_for_same_adapter_type():
     _registry()
 
-    with pytest.raises(subservice_mod.SubServiceRegistryConflictError):
-        subservice_mod.get_sub_service_registry(
-            sub_service_type=SubServiceType.DEPLOYMENT,
+    with pytest.raises(adapter_registry_mod.AdapterRegistryConflictError):
+        adapter_registry_mod.get_adapter_registry(
+            adapter_type=AdapterType.DEPLOYMENT,
             entry_point_group="lfx.OTHER.group",
             config_section_path=("other", "path"),
         )
@@ -96,7 +96,7 @@ def test_discovery_precedence_entrypoint_decorator_config(tmp_path, monkeypatch)
         lambda group: [DummyEntryPoint("local", DummyEntryPointAdapter)] if group == "lfx.deployment.adapters" else [],
     )
 
-    subservice_mod.register_sub_service(SubServiceType.DEPLOYMENT, "local")(DummyDecoratorAdapter)
+    adapter_registry_mod.register_adapter(AdapterType.DEPLOYMENT, "local")(DummyDecoratorAdapter)
 
     (tmp_path / "lfx.toml").write_text(
         f"""
@@ -105,9 +105,9 @@ local = "{__name__}:DummyConfigAdapter"
 """
     )
 
-    registry.discover_sub_services(config_dir=tmp_path)
+    registry.discover(config_dir=tmp_path)
 
-    assert registry.get_sub_service_class("local") is DummyConfigAdapter
+    assert registry.get_class("local") is DummyConfigAdapter
 
 
 def test_lfx_toml_takes_precedence_over_pyproject(tmp_path):
@@ -126,9 +126,9 @@ local = "{__name__}:DummyAlternateAdapter"
 """
     )
 
-    registry.discover_sub_services(config_dir=tmp_path)
+    registry.discover(config_dir=tmp_path)
 
-    assert registry.get_sub_service_class("local") is DummyConfigAdapter
+    assert registry.get_class("local") is DummyConfigAdapter
 
 
 def test_discover_only_once(tmp_path):
@@ -140,8 +140,8 @@ def test_discover_only_once(tmp_path):
 local = "{__name__}:DummyConfigAdapter"
 """
     )
-    registry.discover_sub_services(config_dir=tmp_path)
-    assert registry.get_sub_service_class("local") is DummyConfigAdapter
+    registry.discover(config_dir=tmp_path)
+    assert registry.get_class("local") is DummyConfigAdapter
 
     (tmp_path / "lfx.toml").write_text(
         f"""
@@ -149,9 +149,9 @@ local = "{__name__}:DummyConfigAdapter"
 local = "{__name__}:DummyAlternateAdapter"
 """
     )
-    registry.discover_sub_services(config_dir=tmp_path)
+    registry.discover(config_dir=tmp_path)
 
-    assert registry.get_sub_service_class("local") is DummyConfigAdapter
+    assert registry.get_class("local") is DummyConfigAdapter
 
 
 def test_invalid_import_path_is_ignored(tmp_path):
@@ -164,17 +164,17 @@ local = "invalid_without_colon"
 """
     )
 
-    registry.discover_sub_services(config_dir=tmp_path)
+    registry.discover(config_dir=tmp_path)
 
-    assert registry.get_sub_service_class("local") is None
+    assert registry.get_class("local") is None
 
 
-def test_register_sub_service_class_override_false_preserves_existing():
+def test_register_class_override_false_preserves_existing():
     registry = _registry()
-    registry.register_sub_service_class("local", DummyEntryPointAdapter, override=True)
-    registry.register_sub_service_class("local", DummyDecoratorAdapter, override=False)
+    registry.register_class("local", DummyEntryPointAdapter, override=True)
+    registry.register_class("local", DummyDecoratorAdapter, override=False)
 
-    assert registry.get_sub_service_class("local") is DummyEntryPointAdapter
+    assert registry.get_class("local") is DummyEntryPointAdapter
 
 
 def test_decorator_override_false_preserves_entrypoint(tmp_path, monkeypatch):
@@ -183,23 +183,46 @@ def test_decorator_override_false_preserves_entrypoint(tmp_path, monkeypatch):
         "importlib.metadata.entry_points",
         lambda group: [DummyEntryPoint("local", DummyEntryPointAdapter)] if group == "lfx.deployment.adapters" else [],
     )
-    subservice_mod.register_sub_service(
-        SubServiceType.DEPLOYMENT,
+    adapter_registry_mod.register_adapter(
+        AdapterType.DEPLOYMENT,
         "local",
         override=False,
     )(DummyDecoratorAdapter)
 
-    registry.discover_sub_services(config_dir=tmp_path)
+    registry.discover(config_dir=tmp_path)
 
-    assert registry.get_sub_service_class("local") is DummyEntryPointAdapter
+    assert registry.get_class("local") is DummyEntryPointAdapter
 
 
-def test_list_sub_service_keys_is_sorted():
+def test_decorator_override_false_skips_when_same_key_already_decorated(tmp_path):
+    adapter_registry_mod.register_adapter(AdapterType.DEPLOYMENT, "local")(DummyDecoratorAdapter)
+    adapter_registry_mod.register_adapter(AdapterType.DEPLOYMENT, "local", override=False)(DummyAlternateAdapter)
+
     registry = _registry()
-    registry.register_sub_service_class("zeta", DummyEntryPointAdapter)
-    registry.register_sub_service_class("alpha", DummyDecoratorAdapter)
+    registry.discover(config_dir=tmp_path)
 
-    assert registry.list_sub_service_keys() == ["alpha", "zeta"]
+    assert registry.get_class("local") is DummyDecoratorAdapter
+
+
+def test_list_keys_is_sorted():
+    registry = _registry()
+    registry.register_class("zeta", DummyEntryPointAdapter)
+    registry.register_class("alpha", DummyDecoratorAdapter)
+
+    assert registry.list_keys() == ["alpha", "zeta"]
+
+
+def test_repr_before_and_after_discovery(tmp_path):
+    registry = _registry()
+    registry.register_class("local", DummyEntryPointAdapter)
+
+    r = repr(registry)
+    assert "adapter_type=<AdapterType.DEPLOYMENT: 'deployment'>" in r
+    assert "keys=['local']" in r
+    assert "discovered=False" in r
+
+    registry.discover(config_dir=tmp_path)
+    assert "discovered=True" in repr(registry)
 
 
 def test_pyproject_only_discovery(tmp_path):
@@ -211,9 +234,9 @@ local = "{__name__}:DummyConfigAdapter"
 """
     )
 
-    registry.discover_sub_services(config_dir=tmp_path)
+    registry.discover(config_dir=tmp_path)
 
-    assert registry.get_sub_service_class("local") is DummyConfigAdapter
+    assert registry.get_class("local") is DummyConfigAdapter
 
 
 def test_discovery_handles_malformed_toml(tmp_path):
@@ -225,8 +248,8 @@ local = "pathlib:Path"
 """
     )
 
-    registry.discover_sub_services(config_dir=tmp_path)
-    assert registry.get_sub_service_class("local") is None
+    registry.discover(config_dir=tmp_path)
+    assert registry.get_class("local") is None
 
 
 def test_discovery_ignores_missing_or_empty_section(tmp_path):
@@ -238,8 +261,8 @@ key = "value"
 """
     )
 
-    registry.discover_sub_services(config_dir=tmp_path)
-    assert registry.list_sub_service_keys() == []
+    registry.discover(config_dir=tmp_path)
+    assert registry.list_keys() == []
 
 
 def test_entry_point_load_failure_does_not_abort_discovery(tmp_path, monkeypatch):
@@ -263,14 +286,14 @@ local = "{__name__}:DummyConfigAdapter"
 """
     )
 
-    registry.discover_sub_services(config_dir=tmp_path)
-    assert registry.get_sub_service_class("local") is DummyConfigAdapter
+    registry.discover(config_dir=tmp_path)
+    assert registry.get_class("local") is DummyConfigAdapter
 
 
 def test_get_nested_section_returns_none_for_non_dict_path():
     nested = {"tool": {"lfx": {"deployment": "not-a-dict"}}}
 
-    section = subservice_mod._get_nested_section(nested, ("tool", "lfx", "deployment", "adapters"))
+    section = adapter_registry_mod._get_nested_section(nested, ("tool", "lfx", "deployment", "adapters"))
     assert section is None
 
 
@@ -288,8 +311,8 @@ local = "nonexistent_pkg_xyz.adapters:Adapter"
 """
     )
 
-    registry.discover_sub_services(config_dir=tmp_path)
-    assert registry.get_sub_service_class("local") is None
+    registry.discover(config_dir=tmp_path)
+    assert registry.get_class("local") is None
 
 
 def test_config_with_nonexistent_class_in_valid_module_is_ignored(tmp_path):
@@ -303,8 +326,8 @@ local = "pathlib:TotallyMadeUpClassName"
 """
     )
 
-    registry.discover_sub_services(config_dir=tmp_path)
-    assert registry.get_sub_service_class("local") is None
+    registry.discover(config_dir=tmp_path)
+    assert registry.get_class("local") is None
 
 
 # --- Additional coverage ---
@@ -320,8 +343,8 @@ local = 42
 """
     )
 
-    registry.discover_sub_services(config_dir=tmp_path)
-    assert registry.get_sub_service_class("local") is None
+    registry.discover(config_dir=tmp_path)
+    assert registry.get_class("local") is None
 
 
 def test_multi_key_discovery_across_sources(tmp_path, monkeypatch):
@@ -334,7 +357,7 @@ def test_multi_key_discovery_across_sources(tmp_path, monkeypatch):
         ),
     )
 
-    subservice_mod.register_sub_service(SubServiceType.DEPLOYMENT, "dec_only")(DummyDecoratorAdapter)
+    adapter_registry_mod.register_adapter(AdapterType.DEPLOYMENT, "dec_only")(DummyDecoratorAdapter)
 
     (tmp_path / "lfx.toml").write_text(
         f"""
@@ -343,12 +366,12 @@ cfg_only = "{__name__}:DummyConfigAdapter"
 """
     )
 
-    registry.discover_sub_services(config_dir=tmp_path)
+    registry.discover(config_dir=tmp_path)
 
-    assert registry.get_sub_service_class("ep_only") is DummyEntryPointAdapter
-    assert registry.get_sub_service_class("dec_only") is DummyDecoratorAdapter
-    assert registry.get_sub_service_class("cfg_only") is DummyConfigAdapter
-    assert registry.list_sub_service_keys() == ["cfg_only", "dec_only", "ep_only"]
+    assert registry.get_class("ep_only") is DummyEntryPointAdapter
+    assert registry.get_class("dec_only") is DummyDecoratorAdapter
+    assert registry.get_class("cfg_only") is DummyConfigAdapter
+    assert registry.list_keys() == ["cfg_only", "dec_only", "ep_only"]
 
 
 def test_get_deployment_registry_returns_singleton():
@@ -358,6 +381,6 @@ def test_get_deployment_registry_returns_singleton():
     second = get_deployment_registry()
 
     assert first is second
-    assert first.sub_service_type == SubServiceType.DEPLOYMENT
+    assert first.adapter_type == AdapterType.DEPLOYMENT
     assert first.entry_point_group == "lfx.deployment.adapters"
     assert first.config_section_path == ("deployment", "adapters")

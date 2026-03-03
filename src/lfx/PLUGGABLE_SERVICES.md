@@ -15,18 +15,18 @@ The pluggable services system supports **three** discovery mechanisms:
 2. Decorator registration
 3. Configuration files (highest priority)
 
-## Sub-services (Service-Scoped Plugin Registries)
+## Adapter Registries (Service-Scoped Plugin Registries)
 
-LFX also supports **sub-services**, which are typed plugin registries that live under a parent service namespace.
-Use them when one service type needs multiple selectable adapters at the same time (for example, deployment adapters like `local` and `remote`).
+LFX also supports **adapter registries** -- collections of swappable implementations that share the same protocol.
+Use them when you need to choose between several adapters at runtime (for example, deployment adapters like `local` and `remote`).
 
-### Service vs Sub-service
+### Service vs Adapter Registry
 
-| Concern | Service | Sub-service |
+| Concern | Service | Adapter registry |
 |---|---|---|
 | **Lookup key** | `ServiceType` enum | String key within a namespace |
 | **Cardinality** | One implementation per type | Many adapters per registry |
-| **Type safety** | Protocol per `ServiceType` | Generic registry typed per `SubServiceType` |
+| **Type safety** | Protocol per `ServiceType` | Protocol-typed registry per `AdapterType` |
 | **Example** | `storage_service` | `deployment` adapters: `"local"`, `"remote"` |
 
 ### Core API
@@ -37,37 +37,37 @@ The simplest way to obtain a typed registry is via the accessor in `lfx.services
 from pathlib import Path
 from lfx.services.deps import get_deployment_registry
 
-registry = get_deployment_registry()            # SubServiceRegistry[DeploymentServiceProtocol]
-registry.discover_sub_services(config_dir=Path.cwd())  # one-time discovery
+deployment_registry = get_deployment_registry()
+deployment_registry.discover(config_dir=Path.cwd())  # one-time discovery
 
-adapter_cls = registry.get_sub_service_class("local")  # type[DeploymentServiceProtocol] | None
-keys = registry.list_sub_service_keys()
+adapter_cls = deployment_registry.get_class("local")  # type[DeploymentServiceProtocol] | None
+keys = deployment_registry.list_keys()
 ```
 
-`SubServiceRegistry` is generic over `T`, so `get_sub_service_class` returns `type[T] | None` — callers get full type-checking on the resolved adapter class.
+`AdapterRegistry` is generic over `T`, so `get_class` returns `type[T] | None` -- callers get full type-checking on the resolved adapter class.
 
 For advanced use (custom entry-point groups, non-standard config paths), use the lower-level factory directly:
 
 ```python
-from lfx.services.subservice import get_sub_service_registry
-from lfx.services.schema import SubServiceType
+from lfx.services.adapter_registry import get_adapter_registry
+from lfx.services.schema import AdapterType
 
-registry = get_sub_service_registry(
-    sub_service_type=SubServiceType.DEPLOYMENT,
+deployment_registry = get_adapter_registry(
+    adapter_type=AdapterType.DEPLOYMENT,
     entry_point_group="lfx.deployment.adapters",
     config_section_path=("deployment", "adapters"),
 )
 ```
 
-### Registering Sub-services
+### Registering Adapters
 
 #### Option A: Decorator Registration
 
 ```python
-from lfx.services.subservice import register_sub_service
-from lfx.services.schema import SubServiceType
+from lfx.services.adapter_registry import register_adapter
+from lfx.services.schema import AdapterType
 
-@register_sub_service(SubServiceType.DEPLOYMENT, "local")
+@register_adapter(AdapterType.DEPLOYMENT, "local")
 class LocalAdapter:
     ...
 ```
@@ -95,15 +95,17 @@ remote = "my_package.deployment:RemoteAdapter"
 
 #### Option C: Entry Points
 
+Entry-point groups follow the naming convention `lfx.<adapter_type>.adapters` (e.g. `lfx.deployment.adapters`).
+
 ```toml
 [project.entry-points."lfx.deployment.adapters"]
 local = "my_package.deployment:LocalAdapter"
 remote = "my_package.deployment:RemoteAdapter"
 ```
 
-### Sub-service Discovery and Precedence
+### Adapter Discovery and Precedence
 
-Sub-service discovery order matches top-level services:
+Adapter discovery order matches top-level services:
 
 1. Entry points (`override=False`)
 2. Decorator registration (`override=True`)
@@ -111,7 +113,7 @@ Sub-service discovery order matches top-level services:
 
 Config files are deployment-time overrides and win by default.
 
-Discovery is **one-time per registry instance**. Subsequent calls to `discover_sub_services()` are no-ops.
+Discovery is **one-time per registry instance**. Subsequent calls to `discover()` are no-ops.
 
 ### Error Handling Behavior
 
@@ -122,8 +124,8 @@ Discovery is **one-time per registry instance**. Subsequent calls to `discover_s
 
 ### Registry Identity and Uniqueness
 
-- Exactly one registry can exist per `SubServiceType`
-- Re-requesting the same `SubServiceType` with conflicting entry-point/config parameters raises `SubServiceRegistryConflictError`
+- Exactly one registry can exist per `AdapterType`
+- Re-requesting the same `AdapterType` with conflicting entry-point/config parameters raises `AdapterRegistryConflictError`
 
 ### Integration Pattern in a Parent Service
 
@@ -131,10 +133,10 @@ Discovery is **one-time per registry instance**. Subsequent calls to `discover_s
 from pathlib import Path
 from lfx.services.deps import get_deployment_registry
 
-registry = get_deployment_registry()
-registry.discover_sub_services(config_dir=Path.cwd())
+deployment_registry = get_deployment_registry()
+deployment_registry.discover(config_dir=Path.cwd())
 
-adapter_cls = registry.get_sub_service_class("local")
+adapter_cls = deployment_registry.get_class("local")
 if adapter_cls is None:
     raise ValueError("Unknown deployment adapter")
 
@@ -142,7 +144,7 @@ adapter = adapter_cls(...)
 ```
 
 The host service remains the only object registered in the top-level service manager for its `ServiceType`.
-Sub-service adapters are discovered and selected inside that host service; they do not replace the host service itself.
+Adapters are discovered and selected inside that host service; they do not replace the host service itself.
 
 ## Quick Start
 

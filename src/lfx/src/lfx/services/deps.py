@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
+    from lfx.services.adapter_registry import AdapterRegistry
     from lfx.services.interfaces import (
         AuthServiceProtocol,
         CacheServiceProtocol,
@@ -28,7 +29,6 @@ if TYPE_CHECKING:
         TransactionServiceProtocol,
         VariableServiceProtocol,
     )
-    from lfx.services.subservice import SubServiceRegistry
 
 
 def get_service(service_type: ServiceType, default=None):
@@ -142,20 +142,20 @@ def get_auth_service() -> AuthServiceProtocol | None:
     return get_service(ServiceType.AUTH_SERVICE)
 
 
-def get_deployment_registry() -> SubServiceRegistry[DeploymentServiceProtocol]:
-    """Retrieves the deployment sub-service registry singleton.
+def get_deployment_registry() -> AdapterRegistry[DeploymentServiceProtocol]:
+    """Retrieves the deployment adapter registry singleton.
 
     This is the typed entry point for looking up deployment adapters.
     Discovery still needs to be triggered separately via
-    ``registry.discover_sub_services(config_dir=...)``.
+    ``registry.discover(config_dir=...)``.
     """
-    from lfx.services.schema import SubServiceType
-    from lfx.services.subservice import get_sub_service_registry
+    from lfx.services.adapter_registry import get_adapter_registry
+    from lfx.services.schema import AdapterType
 
     return cast(
-        "SubServiceRegistry[DeploymentServiceProtocol]",
-        get_sub_service_registry(
-            sub_service_type=SubServiceType.DEPLOYMENT,
+        "AdapterRegistry[DeploymentServiceProtocol]",
+        get_adapter_registry(
+            adapter_type=AdapterType.DEPLOYMENT,
             entry_point_group="lfx.deployment.adapters",
             config_section_path=("deployment", "adapters"),
         ),
