@@ -355,6 +355,7 @@ export function FlowInsightsContent({
             "data-[state=open]:animate-in data-[state=closed]:animate-out " +
             "data-[state=open]:slide-in-from-right-1/2 data-[state=closed]:slide-out-to-right-1/2"
           }
+          closeButtonClassName="top-1"
           data-testid="flow-insights-trace-panel"
         >
           <div className="flex h-full flex-col overflow-hidden">

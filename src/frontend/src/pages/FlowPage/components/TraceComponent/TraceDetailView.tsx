@@ -25,12 +25,7 @@ export function TraceDetailView({ traceId, flowName }: TraceDetailViewProps) {
     if (!trace) return null;
 
     const status = trace.status;
-    const name =
-      status === "ok"
-        ? "Successful Run"
-        : status === "error"
-          ? "Failed Run"
-          : "Run Summary";
+    const name = trace.name || flowName || "Run Summary";
 
     return {
       id: trace.id,
