@@ -1,21 +1,16 @@
-"""Typed deployment adapter registry helpers."""
+"""Typed deployment adapter helper."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from lfx.services.deps import get_deployment_adapter, get_deployment_registry
+from lfx.services.deps import get_deployment_adapter
 
 if TYPE_CHECKING:
     from lfx.services.interfaces import DeploymentServiceProtocol
 
 
-def get_registry():
-    """Return the deployment adapter registry singleton."""
-    return get_deployment_registry()
-
-
-def resolve_adapter(
+def get_adapter(
     adapter_key: str,
 ) -> DeploymentServiceProtocol | None:
     """Resolve a singleton deployment adapter instance by key."""

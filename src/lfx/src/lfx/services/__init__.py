@@ -1,13 +1,7 @@
 """LFX services module - pluggable service architecture for dependency injection."""
 
-from .adapter_registry import (
-    AdapterRegistry,
-    AdapterRegistryConflictError,
-    get_adapter_registry,
-    register_adapter,
-    teardown_all_adapter_registries,
-)
-from .deps import get_deployment_adapter, get_deployment_registry
+from .adapters.registry import register_adapter, teardown_all_adapter_registries
+from .deps import get_deployment_adapter
 from .interfaces import (
     AuthServiceProtocol,
     CacheServiceProtocol,
@@ -24,8 +18,6 @@ from .registry import register_service
 from .session import NoopSession
 
 __all__ = [
-    "AdapterRegistry",
-    "AdapterRegistryConflictError",
     "AuthServiceProtocol",
     "CacheServiceProtocol",
     "ChatServiceProtocol",
@@ -38,9 +30,7 @@ __all__ = [
     "StorageServiceProtocol",
     "TracingServiceProtocol",
     "VariableServiceProtocol",
-    "get_adapter_registry",
     "get_deployment_adapter",
-    "get_deployment_registry",
     "register_adapter",
     "register_service",
     "teardown_all_adapter_registries",

@@ -31,22 +31,7 @@ Use them when you need to choose between several adapters at runtime (for exampl
 
 ### Core API
 
-The simplest way to obtain a typed registry is via the accessor in `lfx.services.deps`:
-
-```python
-from pathlib import Path
-from lfx.services.deps import get_deployment_registry
-
-deployment_registry = get_deployment_registry()
-deployment_registry.discover(config_dir=Path.cwd())  # one-time discovery
-
-adapter_cls = deployment_registry.get_class("local")  # type[DeploymentServiceProtocol] | None
-keys = deployment_registry.list_keys()
-```
-
-`AdapterRegistry` is generic over `T`, so `get_class` returns `type[T] | None` -- callers get full type-checking on the resolved adapter class.
-
-To resolve singleton adapter instances managed by the registry:
+The public deployment adapter API is the typed helper in `lfx.services.deps`:
 
 ```python
 from lfx.services.deps import get_deployment_adapter
@@ -54,30 +39,19 @@ from lfx.services.deps import get_deployment_adapter
 adapter = get_deployment_adapter("local")
 ```
 
+To resolve singleton adapter instances managed by the registry:
+
 `get_instance`/`get_deployment_adapter` create adapters lazily and cache one instance per adapter key.
 Discovery config is resolved internally (settings `config_dir` when available, otherwise current working directory).
 Use this when you want shared, long-lived adapter objects instead of per-call construction.
 The key (`"local"` above) is an example, not a built-in requirement.
-
-For advanced use (custom entry-point groups, non-standard config paths), use the lower-level factory directly:
-
-```python
-from lfx.services.adapter_registry import get_adapter_registry
-from lfx.services.schema import AdapterType
-
-deployment_registry = get_adapter_registry(
-    adapter_type=AdapterType.DEPLOYMENT,
-    entry_point_group="lfx.deployment.adapters",
-    config_section_path=("deployment", "adapters"),
-)
-```
 
 ### Registering Adapters
 
 #### Option A: Decorator Registration
 
 ```python
-from lfx.services.adapter_registry import register_adapter
+from lfx.services import register_adapter
 from lfx.services.schema import AdapterType
 
 @register_adapter(AdapterType.DEPLOYMENT, "local")
@@ -169,22 +143,16 @@ This keeps top-level services focused on DI-managed host services while adapter 
 ### Registry Identity and Uniqueness
 
 - Exactly one registry can exist per `AdapterType`
-- Re-requesting the same `AdapterType` with conflicting entry-point/config parameters raises `AdapterRegistryConflictError`
+- Re-requesting the same `AdapterType` with conflicting entry-point/config parameters raises a conflict error
 
 ### Integration Pattern in a Parent Service
 
 ```python
-from pathlib import Path
-from lfx.services.deps import get_deployment_registry
+from lfx.services.deps import get_deployment_adapter
 
-deployment_registry = get_deployment_registry()
-deployment_registry.discover(config_dir=Path.cwd())
-
-adapter_cls = deployment_registry.get_class("local")
-if adapter_cls is None:
+adapter = get_deployment_adapter("local")
+if adapter is None:
     raise ValueError("Unknown deployment adapter")
-
-adapter = adapter_cls(...)
 ```
 
 The host service remains the only object registered in the top-level service manager for its `ServiceType`.

@@ -2,7 +2,7 @@
 
 from .base import BaseDeploymentService
 from .exceptions import DeploymentError, DeploymentNotConfiguredError, DeploymentServiceError
-from .registry import get_registry, resolve_adapter
+from .registry import get_adapter
 from .service import DeploymentService
 
 __all__ = [
@@ -11,6 +11,5 @@ __all__ = [
     "DeploymentNotConfiguredError",
     "DeploymentService",
     "DeploymentServiceError",
-    "get_registry",
-    "resolve_adapter",
+    "get_adapter",
 ]

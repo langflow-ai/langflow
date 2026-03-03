@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from lfx.services.adapter_registry import AdapterRegistry
+    from lfx.services.adapters.registry import AdapterRegistry
     from lfx.services.interfaces import (
         AuthServiceProtocol,
         CacheServiceProtocol,
@@ -143,14 +143,14 @@ def get_auth_service() -> AuthServiceProtocol | None:
     return get_service(ServiceType.AUTH_SERVICE)
 
 
-def get_deployment_registry() -> AdapterRegistry[DeploymentServiceProtocol]:
-    """Retrieves the deployment adapter registry singleton.
+def _get_deployment_registry() -> AdapterRegistry[DeploymentServiceProtocol]:
+    """Retrieve the deployment adapter registry singleton.
 
     This is the typed entry point for looking up deployment adapters.
     Discovery still needs to be triggered separately via
     ``registry.discover(config_dir=...)``.
     """
-    from lfx.services.adapter_registry import get_adapter_registry
+    from lfx.services.adapters.registry import get_adapter_registry
     from lfx.services.schema import AdapterType
 
     return cast(
@@ -171,7 +171,7 @@ def get_deployment_adapter(
     Args:
         adapter_key: Deployment adapter registry key (for example ``"local"``).
     """
-    registry = get_deployment_registry()
+    registry = _get_deployment_registry()
     registry.discover(config_dir=_resolve_adapter_config_dir())
     return registry.get_instance(adapter_key, factory=lambda adapter_class: adapter_class())
 

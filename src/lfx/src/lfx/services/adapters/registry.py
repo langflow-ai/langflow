@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from lfx.services.schema import AdapterType
 
 from lfx.log.logger import logger
+from lfx.services.config_discovery import get_nested_section, get_preferred_config_source, load_toml_config
 
 T = TypeVar("T")
 AdapterT = TypeVar("AdapterT")
@@ -209,32 +210,23 @@ class AdapterRegistry(Generic[T]):
             self.register_class(key, adapter_class, override=override)
 
     def _discover_from_config(self, *, config_dir: Path) -> None:
-        lfx_config = config_dir / "lfx.toml"
-        pyproject_config = config_dir / "pyproject.toml"
-
-        if lfx_config.exists():
-            self._load_config_file(config_path=lfx_config, root_path=self.config_section_path)
+        source = get_preferred_config_source(
+            config_dir,
+            lfx_root_path=self.config_section_path,
+            pyproject_root_path=("tool", "lfx", *self.config_section_path),
+        )
+        if source is None:
             return
-
-        if pyproject_config.exists():
-            root_path = ("tool", "lfx", *self.config_section_path)
-            self._load_config_file(config_path=pyproject_config, root_path=root_path)
+        config_path, root_path = source
+        self._load_config_file(config_path=config_path, root_path=root_path)
 
     def _load_config_file(self, *, config_path: Path, root_path: tuple[str, ...]) -> None:
-        try:
-            import tomllib as tomli  # Python 3.11+
-        except ImportError:
-            import tomli  # Python 3.10
-
-        try:
-            with config_path.open("rb") as file_handle:
-                config = tomli.load(file_handle)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(f"Failed to load adapter config from '{config_path}': {exc}")
+        config = load_toml_config(config_path)
+        if config is None:
             return
 
         section = _get_nested_section(config, root_path)
-        if not isinstance(section, dict):
+        if section is None:
             return
 
         for key, import_path in section.items():
@@ -308,9 +300,4 @@ async def teardown_all_adapter_registries() -> None:
 
 def _get_nested_section(config: dict[str, Any], path: tuple[str, ...]) -> Any:
     """Safely resolve nested section dictionaries in TOML payloads."""
-    node: Any = config
-    for key in path:
-        if not isinstance(node, dict):
-            return None
-        node = node.get(key)
-    return node
+    return get_nested_section(config, path)

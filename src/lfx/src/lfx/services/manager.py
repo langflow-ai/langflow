@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
+from lfx.services.config_discovery import get_nested_section, get_preferred_config_source, load_toml_config
 from lfx.services.schema import ServiceType
 from lfx.utils.concurrency import KeyedMemoryLockManager
 
@@ -290,7 +291,7 @@ class ServiceManager:
                 logger.debug(f"Error in teardown of {service.name}", exc_info=exc)
 
         # Adapter registries own singleton adapter instances and must also be cleaned up.
-        from lfx.services.adapter_registry import teardown_all_adapter_registries
+        from lfx.services.adapters.registry import teardown_all_adapter_registries
 
         await teardown_all_adapter_registries()
         self.services = {}
@@ -385,56 +386,27 @@ class ServiceManager:
     def _discover_from_config(self, config_dir: Path | None = None) -> None:
         """Discover services from config files (lfx.toml / pyproject.toml)."""
         config_dir = Path.cwd() if config_dir is None else Path(config_dir)
+        source = get_preferred_config_source(
+            config_dir,
+            lfx_root_path=("services",),
+            pyproject_root_path=("tool", "lfx", "services"),
+        )
+        if source is None:
+            return
+        self._load_services_from_config(*source)
 
-        # Try lfx.toml first
-        lfx_config = config_dir / "lfx.toml"
-        if lfx_config.exists():
-            self._load_config_file(lfx_config)
+    def _load_services_from_config(self, config_path: Path, root_path: tuple[str, ...]) -> None:
+        """Load service registrations from config section."""
+        config = load_toml_config(config_path)
+        if config is None:
             return
 
-        # Try pyproject.toml with [tool.lfx.services]
-        pyproject_config = config_dir / "pyproject.toml"
-        if pyproject_config.exists():
-            self._load_pyproject_config(pyproject_config)
+        services = get_nested_section(config, root_path) or {}
+        for service_key, service_path in services.items():
+            self._register_service_from_path(service_key, service_path)
 
-    def _load_config_file(self, config_path: Path) -> None:
-        """Load services from lfx.toml config file."""
-        try:
-            import tomllib as tomli  # Python 3.11+
-        except ImportError:
-            import tomli  # Python 3.10
-
-        try:
-            with config_path.open("rb") as f:
-                config = tomli.load(f)
-
-            services = config.get("services", {})
-            for service_key, service_path in services.items():
-                self._register_service_from_path(service_key, service_path)
-
+        if config_path.name == "lfx.toml" or services:
             logger.debug(f"Loaded {len(services)} services from {config_path}")
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(f"Failed to load config from {config_path}: {exc}")
-
-    def _load_pyproject_config(self, config_path: Path) -> None:
-        """Load services from pyproject.toml [tool.lfx.services] section."""
-        try:
-            import tomllib as tomli  # Python 3.11+
-        except ImportError:
-            import tomli  # Python 3.10
-
-        try:
-            with config_path.open("rb") as f:
-                config = tomli.load(f)
-
-            services = config.get("tool", {}).get("lfx", {}).get("services", {})
-            for service_key, service_path in services.items():
-                self._register_service_from_path(service_key, service_path)
-
-            if services:
-                logger.debug(f"Loaded {len(services)} services from {config_path}")
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(f"Failed to load config from {config_path}: {exc}")
 
     def _register_service_from_path(self, service_key: str, service_path: str) -> None:
         """Register a service from a module:class path string.
