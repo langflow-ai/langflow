@@ -129,7 +129,8 @@ class DeploymentNotConfiguredError(DeploymentError):
 
     def __init__(
         self,
-        message: str = "No deployment adapter is registered. Register a concrete adapter to enable deployment operations.",
+        message: str = "No deployment adapter is registered. "
+        "Register a concrete adapter to enable deployment operations.",
         *,
         method: str | None = None,
         cause: Exception | None = None,
