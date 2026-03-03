@@ -395,6 +395,7 @@ module.exports = {
             "Components/bundles-lmstudio",
             "Components/bundles-maritalk",
             "Components/bundles-mem0",
+            "Components/bundles-merge",
             "Components/bundles-milvus",
             "Components/bundles-mistralai",
             "Components/bundles-mongodb",
