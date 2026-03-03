@@ -115,3 +115,11 @@ class AnyIOBackend(TaskBackend):
             if task.cancel_scope:
                 task.cancel_scope.cancel()
             self.tasks.pop(task_id, None)
+
+    async def revoke_task(self, task_id: str) -> bool:
+        if task := self.tasks.get(task_id):
+            if task.cancel_scope:
+                task.cancel_scope.cancel()
+            self.tasks.pop(task_id, None)
+            return True
+        return False

@@ -2,6 +2,8 @@ import type { Page } from "@playwright/test";
 import { adjustScreenView } from "./adjust-screen-view";
 import { selectGptModel } from "./select-gpt-model";
 import { updateOldComponents } from "./update-old-components";
+import { addOpenAiInputKey } from "./add-open-ai-input-key";
+import { unselectNodes } from "./unselect-nodes";
 
 export async function initialGPTsetup(
   page: Page,
@@ -9,6 +11,7 @@ export async function initialGPTsetup(
     skipAdjustScreenView?: boolean;
     skipUpdateOldComponents?: boolean;
     skipSelectGptModel?: boolean;
+    skipAddOpenAiInputKey?: boolean;
   },
 ) {
   if (!options?.skipAdjustScreenView) {
@@ -20,4 +23,12 @@ export async function initialGPTsetup(
   if (!options?.skipSelectGptModel) {
     await selectGptModel(page);
   }
+  if (!options?.skipAddOpenAiInputKey) {
+    await addOpenAiInputKey(page);
+  }
+  if (!options?.skipAdjustScreenView) {
+    await adjustScreenView(page);
+  }
+
+  await unselectNodes(page);
 }

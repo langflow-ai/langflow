@@ -6,6 +6,8 @@ import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
+import { unselectNodes } from "../../utils/unselect-nodes";
+import { disableInspectPanel } from "../../utils/open-advanced-options";
 
 withEventDeliveryModes(
   "Market Research",
@@ -35,11 +37,19 @@ withEventDeliveryModes(
     });
 
     await initialGPTsetup(page);
-    await page
-      .getByTestId(/rf__node-TavilySearchComponent-[A-Za-z0-9]{5}/)
-      .getByTestId("popover-anchor-input-api_key")
-      .nth(0)
-      .fill(process.env.TAVILY_API_KEY ?? "");
+
+    await disableInspectPanel(page);
+
+    // TAVILY_API_KEY is auto-loaded as a global variable from the
+    // environment (see VARIABLES_TO_GET_FROM_ENVIRONMENT in constants.py).
+    // When loaded, the input is replaced by a badge and fill() would fail.
+    // Only fill manually when the input is still present.
+    const tavilyApiKeyInput = page.getByTestId("popover-anchor-input-api_key");
+    if ((await tavilyApiKeyInput.count()) > 0) {
+      await tavilyApiKeyInput.fill(process.env.TAVILY_API_KEY || "");
+    }
+
+    await unselectNodes(page);
 
     await page
       .getByTestId("handle-parsercomponent-shownode-data or dataframe-left")

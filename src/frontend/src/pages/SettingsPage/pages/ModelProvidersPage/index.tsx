@@ -3,7 +3,7 @@ import ModelProvidersContent from "@/modals/modelProviderModal/components/ModelP
 
 export default function ModelProvidersPage() {
   return (
-    <div className="flex h-full w-full flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       <div className="flex w-full items-start justify-between gap-6">
         <div className="flex flex-col">
           <h2
@@ -21,7 +21,7 @@ export default function ModelProvidersPage() {
           </p>
         </div>
       </div>
-      <div className="flex h-full w-full border rounded-lg overflow-hidden">
+      <div className="flex w-full h-[calc(100vh-305px)] border rounded-lg overflow-hidden">
         <ModelProvidersContent modelType="all" />
       </div>
     </div>

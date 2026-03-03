@@ -14,11 +14,16 @@ import orjson
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.custom.utils import abuild_custom_components, create_component_template
 from lfx.log.logger import logger
+from lfx.utils.validate_cloud import (
+    filter_disabled_components_from_dict,
+    is_component_disabled_in_astra_cloud,
+)
 
 if TYPE_CHECKING:
     from lfx.services.settings.service import SettingsService
 
 MIN_MODULE_PARTS = 2
+MIN_MODULE_PARTS_WITH_FILENAME = 4  # Minimum parts needed to have a module filename (lfx.components.type.filename)
 EXPECTED_RESULT_LENGTH = 2  # Expected length of the tuple returned by _process_single_module
 
 
@@ -142,10 +147,10 @@ def _read_component_index(custom_path: str | None = None) -> dict | None:
             )
             return None
 
-        # Version check: ensure index matches installed langflow version
+        # Version check: ensure index matches installed lfx version
         from importlib.metadata import version
 
-        installed_version = version("langflow")
+        installed_version = version("lfx")
         if blob.get("version") != installed_version:
             logger.debug(
                 f"Component index version mismatch: index={blob.get('version')}, installed={installed_version}"
@@ -284,6 +289,8 @@ async def _load_from_index_or_cache(
             if top_level not in modules_dict:
                 modules_dict[top_level] = {}
             modules_dict[top_level].update(components)
+        # Filter disabled components for Astra cloud
+        modules_dict = filter_disabled_components_from_dict(modules_dict)
         await logger.adebug(f"Loaded {len(modules_dict)} component categories from index")
         return modules_dict, "builtin"
 
@@ -303,6 +310,8 @@ async def _load_from_index_or_cache(
                     if top_level not in modules_dict:
                         modules_dict[top_level] = {}
                     modules_dict[top_level].update(components)
+                # Filter disabled components for Astra cloud
+                modules_dict = filter_disabled_components_from_dict(modules_dict)
                 await logger.adebug(f"Loaded {len(modules_dict)} component categories from cache")
                 return modules_dict, "cache"
 
@@ -335,11 +344,19 @@ async def _load_components_dynamically(
         if "deactivated" in modname:
             continue
 
-        # If specific modules requested, filter by top-level module name
-        if target_modules:
-            # Extract top-level: "lfx.components.mistral.xyz" -> "mistral"
-            parts = modname.split(".")
-            if len(parts) > MIN_MODULE_PARTS and parts[2].lower() not in target_modules:
+        # Parse module name once for all checks
+        parts = modname.split(".")
+        if len(parts) > MIN_MODULE_PARTS:
+            component_type = parts[2]
+
+            # Skip disabled components when ASTRA_CLOUD_DISABLE_COMPONENT is true
+            if len(parts) >= MIN_MODULE_PARTS_WITH_FILENAME:
+                module_filename = parts[3]
+                if is_component_disabled_in_astra_cloud(component_type.lower(), module_filename):
+                    continue
+
+            # If specific modules requested, filter by top-level module name
+            if target_modules and component_type.lower() not in target_modules:
                 continue
 
         module_names.append(modname)
@@ -549,7 +566,7 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
     return (top_level, module_components)
 
 
-async def _determine_loading_strategy(settings_service: "SettingsService") -> dict:
+async def _determine_loading_strategy(settings_service: "SettingsService") -> dict[str, Any]:
     """Determines and executes the appropriate component loading strategy.
 
     Args:
@@ -577,7 +594,7 @@ async def _determine_loading_strategy(settings_service: "SettingsService") -> di
             f"Built {component_count} custom components from {settings_service.settings.components_path}"
         )
 
-    return component_cache.all_types_dict
+    return component_cache.all_types_dict or {}
 
 
 async def get_and_cache_all_types_dict(

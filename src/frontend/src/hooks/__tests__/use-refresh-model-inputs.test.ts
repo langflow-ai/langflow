@@ -383,7 +383,7 @@ describe("refreshAllModelInputs", () => {
     });
   });
 
-  it("should skip node update when API returns empty options", async () => {
+  it("should clear model value when API returns empty options", async () => {
     mockNodes = [createMockModelNode("node-1")];
 
     (api.post as jest.Mock).mockResolvedValue({
@@ -404,7 +404,8 @@ describe("refreshAllModelInputs", () => {
 
     await refreshAllModelInputs(mockQueryClient as any);
 
-    expect(mockSetNode).not.toHaveBeenCalled();
+    // Should still call setNode to clear the invalid value
+    expect(mockSetNode).toHaveBeenCalled();
   });
 
   it("should handle API errors gracefully", async () => {
