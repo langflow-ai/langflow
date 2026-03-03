@@ -263,11 +263,12 @@ The following issues can occur when using Langflow as an MCP server or client.
 
 ### Default project MCP server only works when authentication is None
 
-If the default project MCP server works without authentication, but fails after adding an API key to the server configuration, the API key may have been added in the wrong place.
+If the default project MCP server works without authentication, but fails after adding an API key to the server configuration, the API key might have been added to the wrong section of the configuration.
 
-The default MCP server uses streamable HTTP transport, where the API key must be added to the `args` array which is passed to `mcp-proxy`, not in the `env` object.
+The default MCP server uses streamable HTTP transport.
+The API key must be added to the `args` array that is passed to `mcp-proxy`, not the `env` object.
 
-Use three separate entries in `args`: `"--headers"`, `"x-api-key"`, and your key value. For example:
+Your `args` array must include `"--headers"`, `"x-api-key"`, and your key value. For example:
 
 ```json
 {
