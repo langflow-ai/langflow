@@ -14,6 +14,7 @@ from .manager import ServiceManager
 from .mcp_composer import MCPComposerService, MCPComposerServiceFactory
 from .registry import register_service
 from .session import NoopSession
+from .subservice import SubServiceRegistry, get_sub_service_registry, register_sub_service
 
 __all__ = [
     "AuthServiceProtocol",
@@ -26,7 +27,10 @@ __all__ = [
     "ServiceManager",
     "SettingsServiceProtocol",
     "StorageServiceProtocol",
+    "SubServiceRegistry",
     "TracingServiceProtocol",
     "VariableServiceProtocol",
+    "get_sub_service_registry",
     "register_service",
+    "register_sub_service",
 ]

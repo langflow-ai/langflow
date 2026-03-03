@@ -17,39 +17,46 @@ The pluggable services system supports **three** discovery mechanisms:
 
 ## Sub-services (Service-Scoped Plugin Registries)
 
-LFX also supports **sub-services**, which are registries that live under a parent service namespace.
+LFX also supports **sub-services**, which are typed plugin registries that live under a parent service namespace.
 Use them when one service type needs multiple selectable adapters at the same time (for example, deployment adapters like `local` and `remote`).
 
 ### Service vs Sub-service
 
-- **Service**: one implementation resolved by a `ServiceType` key (e.g. `storage_service`)
-- **Sub-service**: many adapter implementations resolved by string keys within a namespace (e.g. `deployment.adapters.local`)
-
-Important distinction:
-
-- The **host/resolver service** (a normal `ServiceType`-based service) performs the lookup.
-- The **sub-service adapters** returned from that lookup are not a second `ServiceType` registration.
-- In other words, the lookup service type and the adapter class type are intentionally different concerns.
+| Concern | Service | Sub-service |
+|---|---|---|
+| **Lookup key** | `ServiceType` enum | String key within a namespace |
+| **Cardinality** | One implementation per type | Many adapters per registry |
+| **Type safety** | Protocol per `ServiceType` | Base class per `SubServiceType`, generic registry |
+| **Example** | `storage_service` | `deployment` adapters: `"local"`, `"remote"` |
 
 ### Core API
 
-Sub-services are implemented in `lfx.services.subservice`.
+The simplest way to obtain a typed registry is via the accessor in `lfx.services.deps`:
 
 ```python
-from lfx.services.subservice import get_sub_service_registry, register_sub_service
+from pathlib import Path
+from lfx.services.deps import get_deployment_registry
+
+registry = get_deployment_registry()            # SubServiceRegistry[DeploymentServiceProtocol]
+registry.discover_sub_services(config_dir=Path.cwd())  # one-time discovery
+
+adapter_cls = registry.get_sub_service_class("local")  # type[DeploymentServiceProtocol] | None
+keys = registry.list_sub_service_keys()
+```
+
+`SubServiceRegistry` is generic over the base class type `T`, so `get_sub_service_class` returns `type[T] | None` -- callers get full type-checking on the resolved adapter class.
+
+For advanced use (custom entry-point groups, non-standard config paths), use the lower-level factory directly:
+
+```python
+from lfx.services.subservice import get_sub_service_registry
+from lfx.services.schema import SubServiceType
 
 registry = get_sub_service_registry(
-    namespace="deployment.adapters",
+    sub_service_type=SubServiceType.DEPLOYMENT,
     entry_point_group="lfx.deployment.adapters",
     config_section_path=("deployment", "adapters"),
 )
-
-# One-time discovery (entry points -> decorators -> config files)
-registry.discover_sub_services()
-
-# Lookup/list available adapters
-adapter_cls = registry.get_sub_service_class("local")
-keys = registry.list_sub_service_keys()
 ```
 
 ### Registering Sub-services
@@ -58,13 +65,16 @@ keys = registry.list_sub_service_keys()
 
 ```python
 from lfx.services.subservice import register_sub_service
+from lfx.services.schema import SubServiceType
 
-@register_sub_service("deployment.adapters", "local")
+@register_sub_service(SubServiceType.DEPLOYMENT, "local")
 class LocalAdapter:
     ...
 ```
 
-Decorator registration defaults to `override=True`. Set `override=False` to keep an existing key untouched.
+The decorator preserves the concrete class type (uses a `TypeVar` internally).
+Defaults to `override=True`; set `override=False` to keep an existing key untouched.
+Base class compliance is validated at decoration time -- a `SubServiceRegistryTypeError` is raised immediately if the class does not subclass the required base.
 
 #### Option B: Configuration Files
 
@@ -100,32 +110,39 @@ Sub-service discovery order matches top-level services:
 2. Decorator registration (`override=True`)
 3. Config files (`override=True`)
 
-This means config files are deployment-time overrides and win by default.
+Config files are deployment-time overrides and win by default.
 
-Discovery is intentionally **one-time per namespace registry instance**. Re-calling `discover_sub_services()` will be a no-op after first discovery.
-If you need a different result, create a fresh process or clear/rebuild registry state in tests.
+Discovery is **one-time per registry instance**. Subsequent calls to `discover_sub_services()` are no-ops.
 
 ### Error Handling Behavior
 
 - Invalid import paths (missing `module:ClassName`) are ignored with warning logs
 - Entry point load failures do not stop discovery from other sources
 - Malformed TOML is ignored with warning logs
-- Missing namespace sections are treated as empty configuration
+- Missing configured sections are treated as empty configuration
+
+### Base Class Enforcement
+
+Each `SubServiceType` is bound to an abstract base class (e.g. `SubServiceType.DEPLOYMENT` maps to `BaseDeploymentService`).
+When a class is registered, `issubclass` is checked against that base class.
+Classes that do not subclass the required base are rejected with a `SubServiceRegistryTypeError`.
+The `@register_sub_service` decorator validates compliance at decoration time, so non-compliant classes fail immediately.
+For external discovery sources (entry points, config files), non-compliant classes are skipped with a warning log.
+
+### Registry Identity and Uniqueness
+
+- Exactly one registry can exist per `SubServiceType`
+- Re-requesting the same `SubServiceType` with conflicting entry-point/config parameters raises `SubServiceRegistryConflictError`
 
 ### Integration Pattern in a Parent Service
 
 ```python
 from pathlib import Path
-from lfx.services.subservice import get_sub_service_registry
+from lfx.services.deps import get_deployment_registry
 
-registry = get_sub_service_registry(
-    namespace="deployment.adapters",
-    entry_point_group="lfx.deployment.adapters",
-    config_section_path=("deployment", "adapters"),
-)
+registry = get_deployment_registry()
 registry.discover_sub_services(config_dir=Path.cwd())
 
-# A host service (resolved normally via ServiceType) selects an adapter by key.
 adapter_cls = registry.get_sub_service_class("local")
 if adapter_cls is None:
     raise ValueError("Unknown deployment adapter")
@@ -134,7 +151,7 @@ adapter = adapter_cls(...)
 ```
 
 The host service remains the only object registered in the top-level service manager for its `ServiceType`.
-Sub-service adapters are discovered/selected inside that host service and do not replace the host service itself.
+Sub-service adapters are discovered and selected inside that host service; they do not replace the host service itself.
 
 ## Quick Start
 

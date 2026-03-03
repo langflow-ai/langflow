@@ -15,68 +15,138 @@ from __future__ import annotations
 
 import importlib
 import threading
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 from lfx.log.logger import logger
+from lfx.services.schema import SubServiceType
 
-_decorator_subservice_registry: dict[str, dict[str, type[Any]]] = {}
-_subservice_registries: dict[str, SubServiceRegistry] = {}
+T = TypeVar("T")
+SubServiceT = TypeVar("SubServiceT")
+
+__all__ = [
+    "SubServiceRegistry",
+    "SubServiceRegistryConflictError",
+    "SubServiceRegistryTypeError",
+    "get_sub_service_registry",
+    "register_sub_service",
+]
+
+
+def _get_base_class_for_sub_service_type(sub_service_type: SubServiceType) -> type | None:
+    """Lazily resolve the base class bound to a SubServiceType."""
+    if sub_service_type == SubServiceType.DEPLOYMENT:
+        from lfx.services.deployment.base import BaseDeploymentService
+
+        return BaseDeploymentService
+    return None
+
+
+_decorator_subservice_registry: dict[SubServiceType, dict[str, tuple[type[Any], bool]]] = {}
+_decorator_lock = threading.Lock()
+_subservice_registries: dict[SubServiceType, SubServiceRegistry[Any]] = {}
 _subservice_registries_lock = threading.Lock()
 
 
-def register_sub_service(namespace: str, key: str, *, override: bool = True):
-    """Decorator to register a sub-service class for a namespace."""
+class SubServiceRegistryConflictError(ValueError):
+    """Raised when a registry identity conflict is detected."""
 
-    def decorator(sub_service_class: type[Any]) -> type[Any]:
-        registry = _decorator_subservice_registry.setdefault(namespace, {})
-        if key in registry and not override:
-            logger.debug(
-                f"Skipped sub-service registration for namespace='{namespace}' key='{key}' (override={override})."
+
+class SubServiceRegistryTypeError(TypeError):
+    """Raised when a registered class does not subclass the required base class."""
+
+
+def register_sub_service(
+    sub_service_type: SubServiceType,
+    key: str,
+    *,
+    override: bool = True,
+):
+    """Decorator to register a sub-service class for a sub-service type."""
+
+    def decorator(sub_service_class: type[SubServiceT]) -> type[SubServiceT]:
+        base_class = _get_base_class_for_sub_service_type(sub_service_type)
+        if base_class is not None and not issubclass(sub_service_class, base_class):
+            msg = (
+                f"Sub-service class '{sub_service_class.__qualname__}' for "
+                f"sub_service_type='{sub_service_type.value}' key='{key}' does not subclass "
+                f"'{base_class.__name__}'."
             )
-            return sub_service_class
+            raise SubServiceRegistryTypeError(msg)
 
-        registry[key] = sub_service_class
-        logger.debug(
-            f"Registered sub-service via decorator: namespace='{namespace}' key='{key}' "
-            f"class='{sub_service_class.__name__}'"
-        )
+        with _decorator_lock:
+            registry = _decorator_subservice_registry.setdefault(sub_service_type, {})
+            if key in registry and not override:
+                logger.debug(
+                    f"Skipped sub-service registration for sub_service_type='{sub_service_type.value}' "
+                    f"key='{key}' (override={override})."
+                )
+                return sub_service_class
+
+            registry[key] = (sub_service_class, override)
+            logger.debug(
+                f"Registered sub-service via decorator: sub_service_type='{sub_service_type.value}' key='{key}' "
+                f"class='{sub_service_class.__name__}'"
+            )
         return sub_service_class
 
     return decorator
 
 
-class SubServiceRegistry:
-    """Registry for sub-services under a parent service namespace."""
+class SubServiceRegistry(Generic[T]):
+    """Registry for sub-services under a parent service namespace.
+
+    Generic over ``T``, the base class that all registered adapter classes
+    must subclass (e.g. ``SubServiceRegistry[BaseDeploymentService]``).
+    """
 
     def __init__(
         self,
         *,
-        namespace: str,
+        sub_service_type: SubServiceType,
         entry_point_group: str,
         config_section_path: tuple[str, ...],
     ) -> None:
-        self.namespace = namespace
+        self.sub_service_type = sub_service_type
         self.entry_point_group = entry_point_group
         self.config_section_path = config_section_path
-        self.sub_service_classes: dict[str, type[Any]] = {}
+        self._base_class = _get_base_class_for_sub_service_type(sub_service_type)
+        self.sub_service_classes: dict[str, type[T]] = {}
         self._discovered = False
         self._lock = threading.RLock()
 
-    def register_sub_service_class(self, key: str, sub_service_class: type[Any], *, override: bool = True) -> None:
-        """Register a sub-service class under a key."""
-        if key in self.sub_service_classes and not override:
+    def register_sub_service_class(self, key: str, sub_service_class: type[T], *, override: bool = True) -> None:
+        """Register a sub-service class under a key.
+
+        Raises:
+            SubServiceRegistryTypeError: If the class does not subclass the
+                base class bound to this registry's ``SubServiceType``.
+        """
+        with self._lock:
+            if key in self.sub_service_classes and not override:
+                logger.debug(
+                    f"Skipped sub-service registration for sub_service_type='{self.sub_service_type.value}' "
+                    f"key='{key}' (override={override})."
+                )
+                return
+
+            if self._base_class is not None and not issubclass(sub_service_class, self._base_class):
+                msg = (
+                    f"Sub-service class '{sub_service_class.__qualname__}' for "
+                    f"sub_service_type='{self.sub_service_type.value}' key='{key}' does not subclass "
+                    f"'{self._base_class.__name__}'."
+                )
+                raise SubServiceRegistryTypeError(msg)
+
+            self.sub_service_classes[key] = sub_service_class
             logger.debug(
-                f"Skipped sub-service registration for namespace='{self.namespace}' key='{key}' (override={override})."
+                f"Registered sub-service: sub_service_type='{self.sub_service_type.value}' "
+                f"key='{key}' class='{sub_service_class.__name__}'"
             )
-            return
 
-        self.sub_service_classes[key] = sub_service_class
-        logger.debug(
-            f"Registered sub-service: namespace='{self.namespace}' key='{key}' class='{sub_service_class.__name__}'"
-        )
-
-    def get_sub_service_class(self, key: str) -> type[Any] | None:
+    def get_sub_service_class(self, key: str) -> type[T] | None:
         """Return sub-service class by key if available."""
         return self.sub_service_classes.get(key)
 
@@ -84,16 +154,19 @@ class SubServiceRegistry:
         """Return sorted list of registered sub-service keys."""
         return sorted(self.sub_service_classes.keys())
 
-    def discover_sub_services(self, config_dir: Path | None = None) -> None:
-        """Discover and register sub-services from all supported sources."""
-        with self._lock:
-            if self._discovered:
-                return
+    def discover_sub_services(self, config_dir: Path) -> None:
+        """Discover and register sub-services from all supported sources.
 
-            self._discover_from_entry_points()
-            self._discover_from_decorators()
-            self._discover_from_config(config_dir=config_dir)
-            self._discovered = True
+        Args:
+            config_dir: Directory to search for ``lfx.toml`` / ``pyproject.toml``.
+        """
+        if self._discovered:
+            return
+
+        self._discover_from_entry_points()
+        self._discover_from_decorators()
+        self._discover_from_config(config_dir=config_dir)
+        self._discovered = True
 
     def _discover_from_entry_points(self) -> None:
         from importlib.metadata import entry_points
@@ -109,12 +182,11 @@ class SubServiceRegistry:
                 )
 
     def _discover_from_decorators(self) -> None:
-        decorator_entries = _decorator_subservice_registry.get(self.namespace, {})
-        for key, sub_service_class in decorator_entries.items():
-            self.register_sub_service_class(key, sub_service_class, override=True)
+        decorator_entries = _decorator_subservice_registry.get(self.sub_service_type, {})
+        for key, (sub_service_class, override) in decorator_entries.items():
+            self.register_sub_service_class(key, sub_service_class, override=override)
 
-    def _discover_from_config(self, config_dir: Path | None = None) -> None:
-        config_dir = Path.cwd() if config_dir is None else Path(config_dir)
+    def _discover_from_config(self, *, config_dir: Path) -> None:
         lfx_config = config_dir / "lfx.toml"
         pyproject_config = config_dir / "pyproject.toml"
 
@@ -149,7 +221,7 @@ class SubServiceRegistry:
     def _register_sub_service_from_path(self, *, key: str, import_path: Any) -> None:
         if not isinstance(import_path, str) or ":" not in import_path:
             logger.warning(
-                f"Invalid sub-service path for namespace='{self.namespace}' key='{key}': "
+                f"Invalid sub-service path for sub_service_type='{self.sub_service_type.value}' key='{key}': "
                 f"'{import_path}'. Expected 'module:class'."
             )
             return
@@ -161,43 +233,47 @@ class SubServiceRegistry:
             self.register_sub_service_class(key, sub_service_class, override=True)
         except Exception as exc:  # noqa: BLE001
             logger.warning(
-                f"Failed to register sub-service namespace='{self.namespace}' key='{key}' from '{import_path}': {exc}"
+                f"Failed to register sub-service sub_service_type='{self.sub_service_type.value}' "
+                f"key='{key}' from '{import_path}': {exc}"
             )
 
 
 def get_sub_service_registry(
     *,
-    namespace: str,
+    sub_service_type: SubServiceType,
     entry_point_group: str,
     config_section_path: tuple[str, ...],
-) -> SubServiceRegistry:
-    """Get or create a singleton sub-service registry for a namespace.
-
-    If a registry already exists for *namespace*, the existing instance is
-    returned.  A warning is logged when the caller supplies *entry_point_group*
-    or *config_section_path* values that differ from those on the existing
-    registry, since the new values will be silently ignored.
-    """
+) -> SubServiceRegistry[Any]:
+    """Get or create a singleton sub-service registry for a sub-service type."""
     with _subservice_registries_lock:
-        if namespace in _subservice_registries:
-            existing = _subservice_registries[namespace]
+        if sub_service_type in _subservice_registries:
+            existing = _subservice_registries[sub_service_type]
             if existing.entry_point_group != entry_point_group or existing.config_section_path != config_section_path:
-                logger.warning(
-                    f"get_sub_service_registry called with different parameters for namespace='{namespace}'. "
+                msg = (
+                    "get_sub_service_registry called with conflicting parameters for existing "
+                    f"sub_service_type='{sub_service_type.value}'. "
                     f"Existing: entry_point_group='{existing.entry_point_group}', "
                     f"config_section_path={existing.config_section_path}. "
                     f"Requested: entry_point_group='{entry_point_group}', "
-                    f"config_section_path={config_section_path}. "
-                    f"Returning the existing registry."
+                    f"config_section_path={config_section_path}."
                 )
+                raise SubServiceRegistryConflictError(msg)
             return existing
 
-        _subservice_registries[namespace] = SubServiceRegistry(
-            namespace=namespace,
+        registry = SubServiceRegistry(
+            sub_service_type=sub_service_type,
             entry_point_group=entry_point_group,
             config_section_path=config_section_path,
         )
-        return _subservice_registries[namespace]
+        _subservice_registries[sub_service_type] = registry
+        return registry
+
+
+def _reset_registries() -> None:
+    """Reset all sub-service registry state. For testing only."""
+    with _decorator_lock, _subservice_registries_lock:
+        _decorator_subservice_registry.clear()
+        _subservice_registries.clear()
 
 
 def _get_nested_section(config: dict[str, Any], path: tuple[str, ...]) -> Any:

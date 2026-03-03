@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager, suppress
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from fastapi import HTTPException
 from sqlalchemy.exc import InvalidRequestError
@@ -21,12 +21,14 @@ if TYPE_CHECKING:
         CacheServiceProtocol,
         ChatServiceProtocol,
         DatabaseServiceProtocol,
+        DeploymentServiceProtocol,
         SettingsServiceProtocol,
         StorageServiceProtocol,
         TracingServiceProtocol,
         TransactionServiceProtocol,
         VariableServiceProtocol,
     )
+    from lfx.services.subservice import SubServiceRegistry
 
 
 def get_service(service_type: ServiceType, default=None):
@@ -138,6 +140,26 @@ def get_auth_service() -> AuthServiceProtocol | None:
     from lfx.services.schema import ServiceType
 
     return get_service(ServiceType.AUTH_SERVICE)
+
+
+def get_deployment_registry() -> SubServiceRegistry[DeploymentServiceProtocol]:
+    """Retrieves the deployment sub-service registry singleton.
+
+    This is the typed entry point for looking up deployment adapters.
+    Discovery still needs to be triggered separately via
+    ``registry.discover_sub_services(config_dir=...)``.
+    """
+    from lfx.services.schema import SubServiceType
+    from lfx.services.subservice import get_sub_service_registry
+
+    return cast(
+        "SubServiceRegistry[DeploymentServiceProtocol]",
+        get_sub_service_registry(
+            sub_service_type=SubServiceType.DEPLOYMENT,
+            entry_point_group="lfx.deployment.adapters",
+            config_section_path=("deployment", "adapters"),
+        ),
+    )
 
 
 async def get_session():
