@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 from lfx.services.adapters import registry as adapter_registry_mod
-from lfx.services.schema import AdapterType
+from lfx.services.adapters.schema import AdapterType
 
 from tests.unit.services.adapter_test_helpers import DeploymentAdapterStub, make_deployment_adapter_registry
 

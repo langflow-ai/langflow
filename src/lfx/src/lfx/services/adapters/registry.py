@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-    from lfx.services.schema import AdapterType
+    from lfx.services.adapters.schema import AdapterType
 
 from lfx.log.logger import logger
 from lfx.services.config_discovery import get_nested_section, get_preferred_config_source, load_toml_config

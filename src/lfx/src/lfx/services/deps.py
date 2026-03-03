@@ -150,7 +150,7 @@ def _get_deployment_registry() -> AdapterRegistry[DeploymentServiceProtocol]:
     ``registry.discover(config_dir=...)``.
     """
     from lfx.services.adapters.registry import get_adapter_registry
-    from lfx.services.schema import AdapterType
+    from lfx.services.adapters.schema import AdapterType
 
     return cast(
         "AdapterRegistry[DeploymentServiceProtocol]",

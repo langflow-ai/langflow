@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from lfx.services.adapters import registry as adapter_registry_mod
 from lfx.services.adapters.deployment.base import BaseDeploymentService
-from lfx.services.schema import AdapterType
+from lfx.services.adapters.schema import AdapterType
 
 
 class DeploymentAdapterStub(BaseDeploymentService):

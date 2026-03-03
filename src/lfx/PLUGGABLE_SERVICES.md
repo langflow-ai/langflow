@@ -52,7 +52,7 @@ The key (`"local"` above) is an example, not a built-in requirement.
 
 ```python
 from lfx.services import register_adapter
-from lfx.services.schema import AdapterType
+from lfx.services.adapters.schema import AdapterType
 
 @register_adapter(AdapterType.DEPLOYMENT, "local")
 class LocalAdapter:
