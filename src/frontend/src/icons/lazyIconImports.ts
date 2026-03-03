@@ -365,6 +365,10 @@ export const lazyIconsMapping = {
     import("@/icons/OpenAi").then((mod) => ({ default: mod.OpenAiIcon })),
   OpenAICopy: () =>
     import("@/icons/OpenAI copy").then((mod) => ({ default: mod.OpenAIIcon })),
+  OpenDataLoaderPDF: () =>
+    import("@/icons/OpenDataLoaderPDF").then((mod) => ({
+      default: mod.OpenDataLoaderPDFIcon,
+    })),
   OpenRouter: () =>
     import("@/icons/OpenRouter").then((mod) => ({
       default: mod.OpenRouterIcon,

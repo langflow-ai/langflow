@@ -241,6 +241,7 @@ arize = ["arize-phoenix-otel>=0.6.1"]
 pypdf = ["pypdf~=6.6.2"]
 docx = ["python-docx>=1.1.0"]
 pytube = ["pytube==15.0.0"]
+opendataloader-pdf = ["opendataloader-pdf>=1.10.0,<2.0.0"]
 
 # Individual agent frameworks
 # crewai is commented out due to httpx version conflict
@@ -387,6 +388,7 @@ complete = [
     "langflow-base[pypdf]",
     "langflow-base[docx]",
     "langflow-base[pytube]",
+    "langflow-base[opendataloader-pdf]",
     # "langflow-base[crewai]",  # commented out due to httpx version conflict
     "langflow-base[dspy]",
     "langflow-base[smolagents]",
