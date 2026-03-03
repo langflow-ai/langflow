@@ -129,7 +129,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     Langflow 1.8.0 addresses the AMD vs ARM Docker image size gap.
     We reconfigured our Python dependencies to use CPU-only PyTorch wheels through `uv` sources, which removes large CUDA-related dependencies from the AMD64 images.
-    With this change, both AMD64 and ARM64 images are now under ~2GB.
+    With this change, both AMD64 and ARM64 images are now smaller than 2 GB.
 
 - New [**Agentics** bundle](/bundles-agentics)
 
