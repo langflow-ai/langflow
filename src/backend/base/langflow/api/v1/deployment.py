@@ -21,35 +21,22 @@ from lfx.services.deployment.exceptions import (
 # this will improve readability and the separation
 # between API schemas and deployment service schemas
 from lfx.services.deployment.schema import (
-    ArtifactType,
-    BaseConfigData,
     BaseDeploymentData,
     BaseDeploymentDataUpdate,
     BaseFlowArtifact,
     ConfigDeploymentBindingUpdate,
     ConfigItem,
-    ConfigItemResult,
-    ConfigListResult,
-    ConfigResult,
-    ConfigUpdate,
     DeploymentCreateResult,
-    DeploymentDetailItem,
-    DeploymentExecution,
-    DeploymentExecutionResult,
-    DeploymentExecutionStatus,
-    DeploymentItem,
     DeploymentListParams,
-    DeploymentProviderId,
-    DeploymentRedeploymentResult,
+    DeploymentListTypesResult,
+    DeploymentOperationResult,
     DeploymentStatusResult,
     DeploymentType,
     DeploymentUpdateResult,
+    ExecutionCreate,
+    IdLike,
     SnapshotDeploymentBindingUpdate,
-    SnapshotGetResult,
     SnapshotItems,
-    SnapshotItemsCreate,
-    SnapshotListResult,
-    SnapshotResult,
 )
 from lfx.services.deployment.schema import (
     DeploymentCreate as AdapterDeploymentCreate,
@@ -116,7 +103,7 @@ router = APIRouter(prefix="/deployments", tags=["Deployments"])
 
 
 ProviderIdQuery = Annotated[
-    DeploymentProviderId,
+    UUID,
     Query(description="The registered deployment provider account id used for adapter routing."),
 ]
 
@@ -136,6 +123,39 @@ class DeploymentDuplicateRequest(BaseModel):
     """Create deployment duplicate request."""
 
     deployment_type: DeploymentType
+
+
+class DeploymentExecutionRequest(BaseModel):
+    deployment_id: IdLike
+    deployment_type: DeploymentType
+    input: str | dict[str, Any] | None = None
+    provider_input: dict[str, Any] | None = None
+
+
+class DeploymentExecutionResult(BaseModel):
+    execution_id: str | None = None
+    deployment_id: IdLike
+    deployment_type: DeploymentType | None = None
+    status: str | None = None
+    output: str | dict[str, Any] | None = None
+    provider_result: dict[str, Any] | None = None
+
+
+class DeploymentItemResponse(BaseModel):
+    id: IdLike
+    name: str
+    type: DeploymentType
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    provider_data: dict[str, Any] | None = None
+
+
+class DeploymentDetailResponse(DeploymentItemResponse):
+    description: str | None = None
+
+
+class DeploymentRedeploymentResponse(DeploymentOperationResult):
+    pass
 
 
 class DeploymentProviderAccountCreateRequest(BaseModel):
@@ -351,7 +371,7 @@ class DeploymentCreateRequest(BaseModel):
 
 
 class DeploymentCreateApiRequest(DeploymentCreateRequest):
-    provider_id: DeploymentProviderId = Field(description="Deployment provider account id for adapter routing.")
+    provider_id: UUID = Field(description="Deployment provider account id for adapter routing.")
 
 
 class DeploymentUpdateRequest(BaseModel):
@@ -363,16 +383,8 @@ class DeploymentUpdateRequest(BaseModel):
     config: ConfigDeploymentBindingUpdate | None = Field(default=None, description="Deployment config binding patch.")
 
 
-class SnapshotItemsCreateApiRequest(SnapshotItemsCreate):
-    provider_id: DeploymentProviderId = Field(description="Deployment provider account id for adapter routing.")
-
-
-class BaseConfigDataApiRequest(BaseConfigData):
-    provider_id: DeploymentProviderId = Field(description="Deployment provider account id for adapter routing.")
-
-
-class DeploymentExecutionApiRequest(DeploymentExecution):
-    provider_id: DeploymentProviderId = Field(description="Deployment provider account id for adapter routing.")
+class DeploymentExecutionApiRequest(DeploymentExecutionRequest):
+    provider_id: UUID = Field(description="Deployment provider account id for adapter routing.")
 
 
 def _to_provider_account_response(provider_account: DeploymentProviderAccount) -> DeploymentProviderAccountResponse:
@@ -462,7 +474,7 @@ async def list_provider_accounts(
     tags=["Deployment Providers"],
 )
 async def get_provider_account(
-    provider_id: DeploymentProviderId,
+    provider_id: UUID,
     user: CurrentActiveUser,
     db: DbSession,
 ):
@@ -478,7 +490,7 @@ async def get_provider_account(
     tags=["Deployment Providers"],
 )
 async def delete_provider_account(
-    provider_id: DeploymentProviderId,
+    provider_id: UUID,
     user: CurrentActiveUser,
     db: DbSession,
 ):
@@ -495,7 +507,7 @@ async def delete_provider_account(
     tags=["Deployment Providers"],
 )
 async def update_provider_account(
-    provider_id: DeploymentProviderId,
+    provider_id: UUID,
     payload: DeploymentProviderUpdateRequest,
     user: CurrentActiveUser,
     db: DbSession,
@@ -531,7 +543,7 @@ def _require_deployment_router_service() -> DeploymentRouterServiceProtocol:
 
 
 async def _resolve_deployment_adapter(
-    provider_id: DeploymentProviderId,
+    provider_id: UUID,
     *,
     user_id,
     db,
@@ -589,18 +601,8 @@ def _raise_http_for_value_error(exc: ValueError) -> None:
 def _build_execution_lookup(
     *,
     execution_id: str,
-    deployment_id: str,
-    deployment_type: DeploymentType,
-) -> DeploymentExecutionStatus:
-    provider_input: dict[str, str] = {}
-    if execution_id:
-        provider_input["run_id"] = execution_id
-
-    return DeploymentExecutionStatus(
-        deployment_id=deployment_id,
-        deployment_type=deployment_type,
-        provider_input=provider_input,
-    )
+) -> str:
+    return execution_id.strip()
 
 
 def _page_offset(page: int, size: int) -> int:
@@ -725,7 +727,6 @@ async def _build_adapter_deployment_create_payload(
     if flow_versions is None:
         return AdapterDeploymentCreate(
             spec=payload.spec,
-            project_id=project_id,
             snapshot=None,
             config=payload.config,
         )
@@ -742,12 +743,10 @@ async def _build_adapter_deployment_create_payload(
     ]
 
     adapter_snapshot_payload = SnapshotItems(
-        artifact_type=ArtifactType.FLOW,
         raw_payloads=raw_payloads,
     )
     return AdapterDeploymentCreate(
         spec=payload.spec,
-        project_id=project_id,
         snapshot=adapter_snapshot_payload,
         config=payload.config,
     )
@@ -1035,7 +1034,7 @@ async def create_deployment(
     try:
         result: AdapterDeploymentCreateResult = await deployment_adapter.create(
             user_id=user.id,
-            deployment=adapter_payload,
+            payload=adapter_payload,
             db=db,
         )
     # TODO: Create functions that handle mapping
@@ -1106,7 +1105,7 @@ async def list_deployment_types(
     """List deployment types for a provider account."""
     deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
     try:
-        deployment_types = await deployment_adapter.list_types(
+        deployment_types_result: DeploymentListTypesResult = await deployment_adapter.list_types(
             user_id=user.id,
             db=db,
         )
@@ -1114,7 +1113,7 @@ async def list_deployment_types(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-    return DeploymentTypesResponse(deployment_types=deployment_types)
+    return DeploymentTypesResponse(deployment_types=deployment_types_result.deployment_types)
 
 
 @router.get("", response_model=DeploymentListResponse)
@@ -1187,184 +1186,6 @@ async def list_deployments(
     )
 
 
-@router.get("/snapshots", response_model=SnapshotListResult)
-async def list_snapshots(
-    provider_id: ProviderIdQuery,
-    user: CurrentActiveUser,
-    db: DbSession,
-    artifact_type: Annotated[ArtifactType | None, Query()] = None,
-):
-    """List snapshots for a provider account."""
-    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
-    try:
-        snapshot_list_result = await deployment_adapter.list_snapshots(
-            user_id=user.id,
-            artifact_type=artifact_type,
-            db=db,
-        )
-    except ValueError as exc:
-        _raise_http_for_value_error(exc)
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-    return SnapshotListResult(**snapshot_list_result.model_dump(exclude_unset=True))
-
-
-@router.post("/snapshots", response_model=SnapshotResult, status_code=status.HTTP_201_CREATED)
-async def create_snapshots(
-    payload: SnapshotItemsCreateApiRequest,
-    db: DbSession,
-    user: CurrentActiveUser,
-):
-    """Create snapshots for a provider account."""
-    provider_id = payload.provider_id
-    snapshot_payload = SnapshotItemsCreate.model_validate(payload.model_dump(exclude={"provider_id"}))
-    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
-    try:
-        create_result = await deployment_adapter.create_snapshots(
-            user_id=user.id,
-            snapshot_items=snapshot_payload,
-            db=db,
-        )
-    except InvalidContentError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message) from exc
-    except ValueError as exc:
-        _raise_http_for_value_error(exc)
-    except DeploymentError as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-    return SnapshotResult(**create_result.model_dump(exclude_unset=True))
-
-
-@router.get("/snapshots/{snapshot_id}", response_model=SnapshotGetResult)
-async def get_snapshot(
-    snapshot_id: str,
-    provider_id: ProviderIdQuery,
-    db: DbSession,
-    user: CurrentActiveUser,
-):
-    """Get snapshot for a provider account."""
-    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
-    try:
-        snapshot = await deployment_adapter.get_snapshot(
-            user_id=user.id,
-            snapshot_id=snapshot_id,
-            db=db,
-        )
-    except ValueError as exc:
-        _raise_http_for_value_error(exc)
-    except DeploymentNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
-    except DeploymentError as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-    return SnapshotGetResult(**snapshot.model_dump(exclude_unset=True))
-
-
-@router.delete("/snapshots/{snapshot_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_snapshot(
-    snapshot_id: str,
-    provider_id: ProviderIdQuery,
-    db: DbSession,
-    user: CurrentActiveUser,
-):
-    """Delete snapshot for a provider account."""
-    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
-    try:
-        await deployment_adapter.delete_snapshot(
-            user_id=user.id,
-            snapshot_id=snapshot_id,
-            db=db,
-        )
-    except ValueError as exc:
-        _raise_http_for_value_error(exc)
-    except DeploymentNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
-    except DeploymentError as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-@router.post("/configs", response_model=ConfigResult, status_code=status.HTTP_201_CREATED)
-async def create_deployment_config(
-    payload: BaseConfigDataApiRequest,
-    db: DbSession,
-    user: CurrentActiveUser,
-):
-    """Create deployment config for a provider account."""
-    provider_id = payload.provider_id
-    config_payload = BaseConfigData.model_validate(payload.model_dump(exclude={"provider_id"}))
-    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
-    try:
-        create_result = await deployment_adapter.create_config(
-            config=config_payload,
-            user_id=user.id,
-            db=db,
-        )
-    except DeploymentConflictError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=exc.message) from exc
-    except InvalidContentError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message) from exc
-    except ValueError as exc:
-        _raise_http_for_value_error(exc)
-    except DeploymentError as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-    return ConfigResult(**create_result.model_dump(exclude_unset=True))
-
-
-@router.get("/configs", response_model=ConfigListResult)
-async def list_deployment_configs(
-    provider_id: ProviderIdQuery,
-    db: DbSession,
-    user: CurrentActiveUser,
-):
-    """List deployment configs for a provider account."""
-    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
-    try:
-        configs_result: ConfigListResult = await deployment_adapter.list_configs(
-            user_id=user.id,
-            db=db,
-        )
-    except ValueError as exc:
-        _raise_http_for_value_error(exc)
-    except DeploymentError as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-    return configs_result
-
-
-@router.get("/configs/{config_id}", response_model=ConfigItemResult)
-async def get_deployment_config(
-    config_id: str,
-    provider_id: ProviderIdQuery,
-    db: DbSession,
-    user: CurrentActiveUser,
-):
-    """Get deployment config for a provider account."""
-    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
-    try:
-        config = await deployment_adapter.get_config(
-            config_id=config_id,
-            user_id=user.id,
-            db=db,
-        )
-    except ValueError as exc:
-        _raise_http_for_value_error(exc)
-    except DeploymentNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
-    except DeploymentError as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-    return ConfigItemResult(**config.model_dump(exclude_unset=True))
-
-
 @router.post("/executions", response_model=DeploymentExecutionResult, status_code=status.HTTP_201_CREATED)
 async def create_deployment_execution(
     payload: DeploymentExecutionApiRequest,
@@ -1373,7 +1194,7 @@ async def create_deployment_execution(
 ):
     """Create a provider-agnostic deployment execution."""
     provider_id = payload.provider_id
-    execution_payload = DeploymentExecution.model_validate(payload.model_dump(exclude={"provider_id"}))
+    execution_payload = DeploymentExecutionRequest.model_validate(payload.model_dump(exclude={"provider_id"}))
     deployment_row = await _get_deployment_row_or_404(
         deployment_id=str(execution_payload.deployment_id),
         user_id=user.id,
@@ -1385,7 +1206,14 @@ async def create_deployment_execution(
     deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
     try:
         execution_result = await deployment_adapter.create_execution(
-            execution=execution_payload,
+            payload=ExecutionCreate(
+                deployment_id=execution_payload.deployment_id,
+                provider_data={
+                    "deployment_type": execution_payload.deployment_type.value,
+                    "input": execution_payload.input,
+                    **(execution_payload.provider_input or {}),
+                },
+            ),
             user_id=user.id,
             db=db,
         )
@@ -1403,10 +1231,16 @@ async def create_deployment_execution(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-    result_payload = execution_result.model_dump(exclude_unset=True)
     provider_result = execution_result.provider_result if isinstance(execution_result.provider_result, dict) else {}
-    result_payload["execution_id"] = provider_result.get("run_id")
-    return DeploymentExecutionResult(**result_payload)
+    execution_id = execution_result.execution_id or str(provider_result.get("run_id") or "").strip() or None
+    return DeploymentExecutionResult(
+        execution_id=execution_id,
+        deployment_id=str(deployment_row.id),
+        deployment_type=execution_payload.deployment_type,
+        status=str(provider_result.get("status") or "accepted"),
+        output=provider_result.get("output"),
+        provider_result=provider_result or None,
+    )
 
 
 @router.get("/executions/{execution_id}", response_model=DeploymentExecutionResult)
@@ -1427,14 +1261,10 @@ async def get_deployment_execution(
     if deployment_row.provider_account_id != provider_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found for provider.")
     deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
-    execution_status = _build_execution_lookup(
-        execution_id=execution_id,
-        deployment_id=deployment_row.resource_key,
-        deployment_type=deployment_type,
-    )
+    execution_lookup_id = _build_execution_lookup(execution_id=execution_id)
     try:
         execution_result = await deployment_adapter.get_execution(
-            execution_status=execution_status,
+            execution_id=execution_lookup_id,
             user_id=user.id,
             db=db,
         )
@@ -1452,68 +1282,18 @@ async def get_deployment_execution(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-    result_payload = execution_result.model_dump(exclude_unset=True)
-    result_payload["execution_id"] = execution_id
-    return DeploymentExecutionResult(**result_payload)
+    provider_result = execution_result.provider_result if isinstance(execution_result.provider_result, dict) else {}
+    return DeploymentExecutionResult(
+        execution_id=execution_result.execution_id or execution_id,
+        deployment_id=str(deployment_row.id),
+        deployment_type=deployment_type,
+        status=str(provider_result.get("status") or "unknown"),
+        output=provider_result.get("output"),
+        provider_result=provider_result or None,
+    )
 
 
-@router.patch("/configs/{config_id}", response_model=ConfigResult)
-async def update_deployment_config(
-    config_id: str,
-    provider_id: ProviderIdQuery,
-    payload: ConfigUpdate,
-    db: DbSession,
-    user: CurrentActiveUser,
-):
-    """Update deployment config for a provider account."""
-    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
-    try:
-        update_result = await deployment_adapter.update_config(
-            config_id=config_id,
-            update_data=payload,
-            user_id=user.id,
-            db=db,
-        )
-    except InvalidContentError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message) from exc
-    except ValueError as exc:
-        _raise_http_for_value_error(exc)
-    except DeploymentNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
-    except DeploymentError as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-    return ConfigResult(**update_result.model_dump(exclude_unset=True))
-
-
-@router.delete("/configs/{config_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_deployment_config(
-    config_id: str,
-    provider_id: ProviderIdQuery,
-    db: DbSession,
-    user: CurrentActiveUser,
-):
-    """Delete deployment config for a provider account."""
-    deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=user.id, db=db)
-    try:
-        await deployment_adapter.delete_config(
-            config_id=config_id,
-            user_id=user.id,
-            db=db,
-        )
-    except ValueError as exc:
-        _raise_http_for_value_error(exc)
-    except DeploymentNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
-    except DeploymentError as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-@router.get("/{deployment_id}", response_model=DeploymentDetailItem)
+@router.get("/{deployment_id}", response_model=DeploymentDetailResponse)
 async def get_deployment(
     deployment_id: str,
     user: CurrentActiveUser,
@@ -1545,7 +1325,7 @@ async def get_deployment(
         response_payload.get("provider_data") if isinstance(response_payload.get("provider_data"), dict) else {}
     )
     response_payload["provider_data"] = {**provider_data, "resource_key": deployment_row.resource_key}
-    return DeploymentDetailItem(**response_payload)
+    return DeploymentDetailResponse(**response_payload)
 
 
 @router.patch(
@@ -1581,17 +1361,18 @@ async def update_deployment(
                 project_id=deployment_row.project_id,
                 db=db,
             )
-            create_snapshot_payload = SnapshotItemsCreate(
-                artifact_type=ArtifactType.FLOW,
-                raw_payloads=[artifact for _, artifact in add_artifacts],
-            )
-            snapshot_create_result = await deployment_adapter.create_snapshots(
+            materialize_snapshots = getattr(deployment_adapter, "materialize_snapshots", None)
+            if materialize_snapshots is None:
+                msg = "Deployment adapter does not support history snapshot materialization."
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=msg)
+            created_snapshot_ids = await materialize_snapshots(
                 user_id=user.id,
-                snapshot_items=create_snapshot_payload,
+                raw_payloads=[artifact for _, artifact in add_artifacts],
+                config_id=(str(payload.config.config_id) if payload.config and payload.config.config_id else None),
                 db=db,
             )
             created_snapshot_ids = [
-                str(snapshot_id).strip() for snapshot_id in snapshot_create_result.ids if str(snapshot_id).strip()
+                str(snapshot_id).strip() for snapshot_id in created_snapshot_ids if str(snapshot_id).strip()
             ]
             if len(created_snapshot_ids) != len(add_artifacts):
                 msg = "Created snapshot ids did not match the number of history attachments requested."
@@ -1632,7 +1413,7 @@ async def update_deployment(
     try:
         update_result = await deployment_adapter.update(
             deployment_id=deployment_row.resource_key,
-            update_data=adapter_payload,
+            payload=adapter_payload,
             user_id=user.id,
             db=db,
         )
@@ -1696,7 +1477,7 @@ async def delete_deployment(
 
 @router.post(
     "/{deployment_id}/redeploy",
-    response_model=DeploymentRedeploymentResult,
+    response_model=DeploymentRedeploymentResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def redeploy_deployment(
@@ -1724,12 +1505,12 @@ async def redeploy_deployment(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-    return DeploymentRedeploymentResult(**redeploy_result.model_dump(exclude_unset=True))
+    return DeploymentRedeploymentResponse(**redeploy_result.model_dump(exclude_unset=True))
 
 
 @router.post(
     "/{deployment_id}/duplicate",
-    response_model=DeploymentItem,
+    response_model=DeploymentItemResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def duplicate_deployment(
@@ -1739,6 +1520,10 @@ async def duplicate_deployment(
     user: CurrentActiveUser,
 ):
     """Duplicate a deployment and derive provider routing from persisted deployment metadata."""
+    if payload.deployment_type is not DeploymentType.AGENT:
+        msg = f"Unsupported deployment type for duplication: {payload.deployment_type.value}"
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=msg)
+
     deployment_row, deployment_adapter = await _resolve_adapter_from_deployment(
         deployment_id=deployment_id,
         user_id=user.id,
@@ -1747,7 +1532,6 @@ async def duplicate_deployment(
     try:
         clone_result = await deployment_adapter.duplicate(
             deployment_id=deployment_row.resource_key,
-            deployment_type=payload.deployment_type,
             user_id=user.id,
             db=db,
         )
@@ -1759,7 +1543,7 @@ async def duplicate_deployment(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-    return DeploymentItem(**clone_result.model_dump(exclude_unset=True))
+    return DeploymentItemResponse(**clone_result.model_dump(exclude_unset=True))
 
 
 @router.get(

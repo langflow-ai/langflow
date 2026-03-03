@@ -1,297 +1,159 @@
-"""Deployment service base class."""
+# ruff: noqa: ARG002
+"""Default (no-op) deployment service implementation."""
 
 from __future__ import annotations
 
-from abc import abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
+from lfx.log.logger import logger
 from lfx.services.deployment.base import BaseDeploymentService
-from lfx.services.registry import register_service
-from lfx.services.schema import ServiceType
+from lfx.services.deployment.exceptions import DeploymentNotConfiguredError
 
 if TYPE_CHECKING:
-    from uuid import UUID
+    from sqlalchemy.ext.asyncio import AsyncSession
 
     from lfx.services.deployment.schema import (
-        ArtifactType,
-        BaseConfigData,
-        ConfigItemResult,
-        ConfigListFilterOptions,
-        ConfigListResult,
-        ConfigResult,
-        ConfigUpdate,
         DeploymentCreate,
         DeploymentCreateResult,
         DeploymentDeleteResult,
-        DeploymentDetailItem,
-        DeploymentExecution,
-        DeploymentExecutionResult,
-        DeploymentExecutionStatus,
-        DeploymentItem,
-        DeploymentList,
+        DeploymentDuplicateResult,
+        DeploymentGetResult,
         DeploymentListParams,
-        DeploymentRedeploymentResult,
+        DeploymentListResult,
+        DeploymentListTypesResult,
         DeploymentStatusResult,
-        DeploymentType,
         DeploymentUpdate,
         DeploymentUpdateResult,
-        SnapshotGetResult,
-        SnapshotItemsCreate,
-        SnapshotListFilterOptions,
-        SnapshotListResult,
-        SnapshotResult,
+        ExecutionCreate,
+        ExecutionCreateResult,
+        ExecutionStatusResult,
+        IdLike,
+        RedeployResult,
     )
 
 
-@register_service(ServiceType.DEPLOYMENT_SERVICE)
+# Not registered yet — no ServiceType.DEPLOYMENT_SERVICE enum value exists.
+# This stub defines the concrete class so the protocol and ABC are testable.
+# A future PR will add the enum value and register the service.
 class DeploymentService(BaseDeploymentService):
-    """Minimal deployment service implementation for LFX.
+    """Null deployment service for LFX.
 
-    This is a stub that exposes
-    crud operations of deployment
-    resources in the deployment adapter,
-    such as snapshots and configs.
-    LFX does not implement a deployment adapter.
+    All operations raise :class:`DeploymentNotConfiguredError` because LFX does
+    not ship a deployment adapter.  Concrete adapters (e.g. in Langflow) should
+    subclass :class:`BaseDeploymentService` to provide real behaviour.
     """
 
-    def __init__(self):
-        """Initialize the deployment service."""
-        super().__init__()
-        self.set_ready()
+    name = "deployment_service"
 
-    @property
-    def name(self) -> str:
-        """Service name identifier.
-
-        Returns:
-            str: The service name.
-        """
-        return ServiceType.DEPLOYMENT_SERVICE.value
-
-    @abstractmethod
     async def create(
         self,
         *,
-        user_id: UUID | str,
-        deployment: DeploymentCreate,
-        db: Any,
+        user_id: IdLike,
+        payload: DeploymentCreate,
+        db: AsyncSession,
     ) -> DeploymentCreateResult:
         """Create a new deployment in the provider."""
-        raise NotImplementedError
+        raise DeploymentNotConfiguredError(method="create")
 
-    @abstractmethod
     async def list_types(
         self,
         *,
-        user_id: UUID | str,
-        db: Any,
-    ) -> list[DeploymentType]:
+        user_id: IdLike,
+        db: AsyncSession,
+    ) -> DeploymentListTypesResult:
         """List deployment types supported by the provider."""
-        raise NotImplementedError
+        raise DeploymentNotConfiguredError(method="list_types")
 
-    @abstractmethod
     async def list(
         self,
         *,
-        user_id: UUID | str,
-        db: Any,
+        user_id: IdLike,
         params: DeploymentListParams | None = None,
-    ) -> DeploymentList:
+        db: AsyncSession,
+    ) -> DeploymentListResult:
         """List deployments visible to this adapter."""
-        raise NotImplementedError
+        raise DeploymentNotConfiguredError(method="list")
 
-    @abstractmethod
     async def get(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: UUID | str,
-        db: Any,
-    ) -> DeploymentDetailItem:
+        user_id: IdLike,
+        deployment_id: IdLike,
+        db: AsyncSession,
+    ) -> DeploymentGetResult:
         """Return deployment metadata by provider ID."""
-        raise NotImplementedError
+        raise DeploymentNotConfiguredError(method="get")
 
-    @abstractmethod
     async def update(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: UUID | str,
-        update_data: DeploymentUpdate,
-        db: Any,
+        user_id: IdLike,
+        deployment_id: IdLike,
+        payload: DeploymentUpdate,
+        db: AsyncSession,
     ) -> DeploymentUpdateResult:
         """Update deployment inputs and apply changes in the provider."""
-        raise NotImplementedError
+        raise DeploymentNotConfiguredError(method="update")
 
-    @abstractmethod
     async def redeploy(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: str,
-        db: Any,
-    ) -> DeploymentRedeploymentResult:
+        user_id: IdLike,
+        deployment_id: IdLike,
+        db: AsyncSession,
+    ) -> RedeployResult:
         """Re-apply current deployment inputs without changing them."""
-        raise NotImplementedError
+        raise DeploymentNotConfiguredError(method="redeploy")
 
-    @abstractmethod
     async def duplicate(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: str,
-        deployment_type: DeploymentType,
-        db: Any,
-    ) -> DeploymentItem:
+        user_id: IdLike,
+        deployment_id: IdLike,
+        db: AsyncSession,
+    ) -> DeploymentDuplicateResult:
         """Create a new deployment using the same inputs as the source."""
-        raise NotImplementedError
+        raise DeploymentNotConfiguredError(method="duplicate")
 
-    @abstractmethod
     async def delete(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: str,
-        db: Any,
+        user_id: IdLike,
+        deployment_id: IdLike,
+        db: AsyncSession,
     ) -> DeploymentDeleteResult:
         """Delete the deployment from the provider."""
-        raise NotImplementedError
+        raise DeploymentNotConfiguredError(method="delete")
 
-    @abstractmethod
     async def get_status(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: str,
-        db: Any,
+        user_id: IdLike,
+        deployment_id: IdLike,
+        db: AsyncSession,
     ) -> DeploymentStatusResult:
         """Return provider-reported health/status for the deployment."""
-        raise NotImplementedError
+        raise DeploymentNotConfiguredError(method="get_status")
 
-    @abstractmethod
     async def create_execution(
         self,
         *,
-        user_id: UUID | str,
-        execution: DeploymentExecution,
-        db: Any,
-    ) -> DeploymentExecutionResult:
+        user_id: IdLike,
+        payload: ExecutionCreate,
+        db: AsyncSession,
+    ) -> ExecutionCreateResult:
         """Run a provider-agnostic deployment execution."""
-        raise NotImplementedError
+        raise DeploymentNotConfiguredError(method="create_execution")
 
-    @abstractmethod
     async def get_execution(
         self,
         *,
-        user_id: UUID | str,
-        execution_status: DeploymentExecutionStatus,
-        db: Any,
-    ) -> DeploymentExecutionResult:
+        user_id: IdLike,
+        execution_id: IdLike,
+        db: AsyncSession,
+    ) -> ExecutionStatusResult:
         """Get provider-agnostic deployment execution state/output."""
-        raise NotImplementedError
+        raise DeploymentNotConfiguredError(method="get_execution")
 
-    @abstractmethod
-    async def create_config(
-        self,
-        *,
-        user_id: UUID | str,
-        config: BaseConfigData,
-        db: Any,
-    ) -> ConfigResult:
-        """Create a provider-scoped deployment configuration."""
-        raise NotImplementedError
-
-    @abstractmethod
-    async def list_configs(
-        self,
-        *,
-        user_id: UUID | str,
-        db: Any,
-        filter_options: ConfigListFilterOptions | None = None,
-    ) -> ConfigListResult:
-        """List deployment configurations for this provider."""
-        raise NotImplementedError
-
-    @abstractmethod
-    async def get_config(
-        self,
-        *,
-        user_id: UUID | str,
-        config_id: str,
-        db: Any,
-    ) -> ConfigItemResult:
-        """Return deployment configuration by provider ID."""
-        raise NotImplementedError
-
-    @abstractmethod
-    async def update_config(
-        self,
-        *,
-        config_id: str,
-        update_data: ConfigUpdate,
-        user_id: UUID | str,
-        db: Any,
-    ) -> ConfigResult:
-        """Update a deployment configuration's JSON data."""
-        raise NotImplementedError
-
-    @abstractmethod
-    async def delete_config(
-        self,
-        *,
-        user_id: UUID | str,
-        config_id: str,
-        db: Any,
-    ) -> None:
-        """Delete a deployment configuration from the provider."""
-        raise NotImplementedError
-
-    @abstractmethod
-    async def create_snapshots(
-        self,
-        *,
-        user_id: UUID | str,
-        snapshot_items: SnapshotItemsCreate,
-        db: Any,
-    ) -> SnapshotResult:
-        """Create a provider snapshot (deployed or not)."""
-        raise NotImplementedError
-
-    @abstractmethod
-    async def list_snapshots(
-        self,
-        *,
-        user_id: UUID | str,
-        artifact_type: ArtifactType | None = None,
-        db: Any,
-        filter_options: SnapshotListFilterOptions | None = None,
-    ) -> SnapshotListResult:
-        """List provider snapshots (deployed or not)."""
-        raise NotImplementedError
-
-    @abstractmethod
-    async def get_snapshot(
-        self,
-        *,
-        user_id: UUID | str,
-        snapshot_id: str,
-        db: Any,
-    ) -> SnapshotGetResult:
-        """Return snapshot payload by provider ID."""
-        raise NotImplementedError
-
-    @abstractmethod
-    async def delete_snapshot(
-        self,
-        *,
-        user_id: UUID | str,
-        snapshot_id: str,
-        db: Any,
-    ) -> None:
-        """Delete a provider snapshot."""
-        raise NotImplementedError
-
-    @abstractmethod
     async def teardown(self) -> None:
-        """Teardown the deployment service."""
-        raise NotImplementedError
+        logger.debug("Deployment service teardown")

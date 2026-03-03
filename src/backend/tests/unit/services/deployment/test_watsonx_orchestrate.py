@@ -12,19 +12,17 @@ from lfx.services.deployment.exceptions import (
     DeploymentConflictError,
     InvalidContentError,
     InvalidDeploymentOperationError,
-    InvalidDeploymentTypeError,
 )
 from lfx.services.deployment.schema import (
-    BaseConfigData,
     BaseFlowArtifact,
     ConfigDeploymentBindingUpdate,
     ConfigItem,
-    DeploymentExecution,
-    DeploymentExecutionStatus,
+    DeploymentConfig,
     DeploymentListParams,
     DeploymentType,
     DeploymentUpdate,
     EnvVarValueSpec,
+    ExecutionCreate,
 )
 
 
@@ -122,14 +120,14 @@ async def test_process_config_uses_raw_payload_but_overrides_name(monkeypatch):
         captured["name"] = config.name
         captured["env_vars"] = config.environment_variables
 
-    monkeypatch.setattr(service, "create_config", mock_create_config)
+    monkeypatch.setattr(service, "_create_config", mock_create_config)
 
     app_id = await service._process_config(
         user_id="user-1",
         db=object(),
         deployment_name="my_deployment",
         config=ConfigItem(
-            raw_payload=BaseConfigData(
+            raw_payload=DeploymentConfig(
                 name="caller_supplied_name",
                 description="from payload",
                 environment_variables=None,
@@ -206,7 +204,7 @@ async def test_update_deployment_denies_config_replacement(monkeypatch):
         await service.update(
             user_id="user-1",
             deployment_id="dep-1",
-            update_data=update_data,
+            payload=update_data,
             db=object(),
         )
 
@@ -271,7 +269,7 @@ async def test_update_deployment_denies_config_unbind(monkeypatch):
         await service.update(
             user_id="user-1",
             deployment_id="dep-1",
-            update_data=update_data,
+            payload=update_data,
             db=object(),
         )
 
@@ -453,16 +451,14 @@ async def test_create_execution_posts_runs_payload(monkeypatch):
     result = await service.create_execution(
         user_id="user-1",
         db=object(),
-        execution=DeploymentExecution(
+        payload=ExecutionCreate(
             deployment_id="dep-1",
-            deployment_type=DeploymentType.AGENT,
-            input="hello from test",
-            provider_input={"thread_id": "thread-123", "stream": False},
+            provider_data={"input": "hello from test", "thread_id": "thread-123", "stream": False},
         ),
     )
 
     assert result.deployment_id == "dep-1"
-    assert result.status == "accepted"
+    assert result.execution_id == "run-1"
     assert fake_agent.post_calls
     path, payload = fake_agent.post_calls[0]
     assert path == "/runs?stream=false"
@@ -472,27 +468,12 @@ async def test_create_execution_posts_runs_payload(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_create_execution_rejects_non_agent_type():
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    with pytest.raises(InvalidDeploymentTypeError, match="supports only agent deployments"):
-        await service.create_execution(
-            user_id="user-1",
-            db=object(),
-            execution=DeploymentExecution(
-                deployment_id="dep-1",
-                deployment_type=DeploymentType.MCP,
-                input="hello",
-            ),
-        )
-
-
-@pytest.mark.anyio
 async def test_get_execution_returns_completed_output(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_agent = FakeAgentClient(
         {"id": "dep-1", "tools": []},
         get_payloads={
-            "/runs/run-1": {"status": "completed", "output": "Final assistant response"},
+            "/runs/run-1": {"status": "completed", "agent_id": "dep-1", "output": "Final assistant response"},
         },
     )
     fake_clients = SimpleNamespace(
@@ -509,15 +490,12 @@ async def test_get_execution_returns_completed_output(monkeypatch):
     result = await service.get_execution(
         user_id="user-1",
         db=object(),
-        execution_status=DeploymentExecutionStatus(
-            deployment_id="dep-1",
-            deployment_type=DeploymentType.AGENT,
-            provider_input={"run_id": "run-1"},
-        ),
+        execution_id="run-1",
     )
 
-    assert result.status == "completed"
-    assert result.output == "Final assistant response"
+    assert result.execution_id == "run-1"
+    assert result.provider_result["status"] == "completed"
+    assert result.provider_result["output"] == "Final assistant response"
 
 
 @pytest.mark.anyio
@@ -526,8 +504,7 @@ async def test_get_execution_fetches_message_when_no_run_output(monkeypatch):
     fake_agent = FakeAgentClient(
         {"id": "dep-1", "tools": []},
         get_payloads={
-            "/runs/run-1": {"status": "completed"},
-            "/threads/thread-1/messages/message-1": {"content": "Message payload output"},
+            "/runs/run-1": {"status": "completed", "agent_id": "dep-1", "output": "Message payload output"},
         },
     )
     fake_clients = SimpleNamespace(
@@ -544,23 +521,15 @@ async def test_get_execution_fetches_message_when_no_run_output(monkeypatch):
     result = await service.get_execution(
         user_id="user-1",
         db=object(),
-        execution_status=DeploymentExecutionStatus(
-            deployment_id="dep-1",
-            deployment_type=DeploymentType.AGENT,
-            provider_input={
-                "run_id": "run-1",
-                "thread_id": "thread-1",
-                "message_id": "message-1",
-            },
-        ),
+        execution_id="run-1",
     )
 
-    assert result.status == "completed"
-    assert result.output == "Message payload output"
+    assert result.provider_result["status"] == "completed"
+    assert result.provider_result["output"] == "Message payload output"
 
 
 @pytest.mark.anyio
-async def test_get_execution_requires_run_id(monkeypatch):
+async def test_get_execution_requires_execution_id(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_agent = FakeAgentClient({"id": "dep-1", "tools": []})
     fake_clients = SimpleNamespace(
@@ -574,13 +543,9 @@ async def test_get_execution_requires_run_id(monkeypatch):
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    with pytest.raises(ValueError, match="run_id"):
+    with pytest.raises(ValueError, match="execution_id"):
         await service.get_execution(
             user_id="user-1",
             db=object(),
-            execution_status=DeploymentExecutionStatus(
-                deployment_id="dep-1",
-                deployment_type=DeploymentType.AGENT,
-                provider_input={},
-            ),
+            execution_id="",
         )

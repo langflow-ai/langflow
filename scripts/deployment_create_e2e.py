@@ -70,8 +70,6 @@ class DeploymentCreateE2E:
         self.provider_id: str | None = None
         self.provider_was_created = False
         self.created_deployment_ids: set[str] = set()
-        self.created_snapshot_ids: set[str] = set()
-        self.created_config_ids: set[str] = set()
         self.created_flow_ids: set[str] = set()
         self.created_project_ids: set[str] = set()
 
@@ -94,7 +92,6 @@ class DeploymentCreateE2E:
         exit_code = 0
         try:
             await self._create_provider_account()
-            ref_config_id = await self._create_reference_config()
             ref_checkpoint_id_primary = await self._create_reference_checkpoint(label="checkpoint-ref-primary")
             ref_checkpoint_id_secondary = await self._create_reference_checkpoint(label="checkpoint-ref-secondary")
             out_of_scope_project_id = await self._create_project(label="history-out-of-scope")
@@ -104,13 +101,10 @@ class DeploymentCreateE2E:
             )
             self.explicit_mismatch_project_id = await self._create_project(label="history-explicit-target")
 
-            snapshot_results = await self._run_snapshot_create_scenarios()
-
             scenario_results = await self._run_create_scenarios(
-                reference_config_id=ref_config_id,
                 reference_checkpoint_ids=[ref_checkpoint_id_primary, ref_checkpoint_id_secondary],
             )
-            all_results = [*snapshot_results, *scenario_results]
+            all_results = [*scenario_results]
             self._print_summary(all_results)
 
             failing = [result for result in all_results if not result.ok]
@@ -194,26 +188,6 @@ class DeploymentCreateE2E:
         account_id = path_segments[account_index].strip()
         return account_id or None
 
-    async def _create_reference_config(self) -> str:
-        self._require_provider_id()
-        config_name = self._mk_name("cfg-ref")
-        payload = {
-            "provider_id": self.provider_id,
-            "name": config_name,
-            "description": "reference config for deployment create scenarios",
-            "environment_variables": {},
-        }
-        response = await self._request(
-            "POST",
-            "/api/v1/deployments/configs",
-            json_body=payload,
-        )
-        self._expect_status(response, {201}, "create reference config")
-        config_id = str(response.json()["id"])
-        self.created_config_ids.add(config_id)
-        print(f"Reference config created: {config_id}")
-        return config_id
-
     async def _create_reference_checkpoint(self, *, label: str, folder_id: str | None = None) -> str:
         flow_id = await self._create_reference_flow(label=label, folder_id=folder_id)
         response = await self._request("POST", f"/api/v1/flows/{flow_id}/history/", json_body={})
@@ -252,72 +226,9 @@ class DeploymentCreateE2E:
         print(f"Reference flow created: {flow_id}")
         return flow_id
 
-    async def _run_snapshot_create_scenarios(self) -> list[ScenarioResult]:
-        self._require_provider_id()
-        provider_id = self.provider_id
-
-        scenarios = [
-            {
-                "name": "snapshot_create_single_raw_payload",
-                "expected": {HTTP_CREATED},
-                "payload": {
-                    "provider_id": provider_id,
-                    "artifact_type": "flow",
-                    "raw_payloads": [self._build_flow_payload(label="snapshot-single")],
-                },
-            },
-            {
-                "name": "snapshot_create_multiple_raw_payloads",
-                "expected": {HTTP_CREATED},
-                "payload": {
-                    "provider_id": provider_id,
-                    "artifact_type": "flow",
-                    "raw_payloads": [
-                        self._build_flow_payload(label="snapshot-multi-a"),
-                        self._build_flow_payload(label="snapshot-multi-b"),
-                    ],
-                },
-            },
-        ]
-
-        results: list[ScenarioResult] = []
-        for index, scenario in enumerate(scenarios, start=1):
-            print(f"[snapshot {index}/{len(scenarios)}] Running {scenario['name']} ...")
-            response = await self._request(
-                "POST",
-                "/api/v1/deployments/snapshots",
-                json_body=scenario["payload"],
-            )
-            status_code = response.status_code
-            ok = status_code in scenario["expected"]
-            print(f"[{scenario['name']}] status={status_code}, expected={sorted(scenario['expected'])}")
-
-            if status_code == HTTP_CREATED:
-                try:
-                    response_payload = response.json()
-                    for snapshot_id in response_payload.get("ids") or []:
-                        self.created_snapshot_ids.add(str(snapshot_id))
-                    print(f"[{scenario['name']}] tracked_snapshot_ids={response_payload.get('ids') or []}")
-                except Exception as exc:  # noqa: BLE001
-                    print(f"[warning] snapshot create response parse failed: {exc}")
-
-            excerpt = self._excerpt_response(response)
-            results.append(
-                ScenarioResult(
-                    name=str(scenario["name"]),
-                    expected_statuses=set(scenario["expected"]),
-                    actual_status=status_code,
-                    ok=ok,
-                    response_excerpt=excerpt,
-                )
-            )
-
-        return results
-
     async def _run_create_scenarios(
         self,
         *,
-        reference_config_id: str,
         reference_checkpoint_ids: list[str],
     ) -> list[ScenarioResult]:
         self._require_provider_id()
@@ -336,7 +247,7 @@ class DeploymentCreateE2E:
                 "payload": self._build_create_payload(
                     deployment_type="agent",
                     flow_versions={"ids": [reference_checkpoint_id]},
-                    config={"reference_id": reference_config_id},
+                    config={"reference_id": "cfg-ref-does-not-exist"},
                 ),
             },
             {
@@ -354,7 +265,7 @@ class DeploymentCreateE2E:
                 "payload": self._build_create_payload(
                     deployment_type="agent",
                     flow_versions={"raw_payloads": [self._build_flow_payload(label="flow-raw")]},
-                    config={"reference_id": reference_config_id},
+                    config={"reference_id": "cfg-ref-does-not-exist"},
                 ),
             },
             {
@@ -410,7 +321,7 @@ class DeploymentCreateE2E:
                         "ids": [reference_checkpoint_id],
                         "raw_payloads": [self._build_flow_payload(label="flow-both")],
                     },
-                    config={"reference_id": reference_config_id},
+                    config={"reference_id": "cfg-ref-does-not-exist"},
                 ),
             },
             {
@@ -420,7 +331,7 @@ class DeploymentCreateE2E:
                     deployment_type="agent",
                     flow_versions={"ids": [reference_checkpoint_id]},
                     config={
-                        "reference_id": reference_config_id,
+                        "reference_id": "cfg-ref-does-not-exist",
                         "raw_payload": self._build_config_payload(label="cfg-both"),
                     },
                 ),
@@ -454,18 +365,10 @@ class DeploymentCreateE2E:
                     deployment_id = str(response_payload["id"])
                     self.created_deployment_ids.add(deployment_id)
 
-                    created_config_id = response_payload.get("config_id")
-                    if created_config_id:
-                        self.created_config_ids.add(str(created_config_id))
-
-                    snapshot_ids = response_payload.get("snapshot_ids") or []
-                    for snapshot_id in snapshot_ids:
-                        self.created_snapshot_ids.add(str(snapshot_id))
-
                     print(
                         f"[{scenario['name']}] tracked deployment_id={deployment_id}, "
-                        f"created_config_id={created_config_id}, "
-                        f"created_snapshot_ids={snapshot_ids}"
+                        f"config_id={response_payload.get('config_id')}, "
+                        f"snapshot_ids={response_payload.get('snapshot_ids') or []}"
                     )
                 except Exception as exc:  # noqa: BLE001
                     print(f"[warning] created deployment missing id: {exc}")
@@ -602,8 +505,6 @@ class DeploymentCreateE2E:
             f"{len(self.created_deployment_ids)} deployments, "
             f"{len(self.created_flow_ids)} flows, "
             f"{len(self.created_project_ids)} projects, "
-            f"{len(self.created_snapshot_ids)} snapshots, "
-            f"{len(self.created_config_ids)} configs, "
             "1 provider account"
         )
 
@@ -629,19 +530,6 @@ class DeploymentCreateE2E:
                 resource_id=project_id,
             )
         if provider_id:
-            for snapshot_id in sorted(self.created_snapshot_ids):
-                await self._best_effort_delete(
-                    path=f"/api/v1/deployments/snapshots/{snapshot_id}?provider_id={provider_id}",
-                    resource_type="SNAPSHOT",
-                    resource_id=snapshot_id,
-                )
-            for config_id in sorted(self.created_config_ids):
-                await self._best_effort_delete(
-                    path=f"/api/v1/deployments/configs/{config_id}?provider_id={provider_id}",
-                    resource_type="CONFIG",
-                    resource_id=config_id,
-                )
-
             if self.provider_was_created:
                 await self._best_effort_delete(
                     path=f"/api/v1/deployments/providers/{provider_id}",
@@ -650,8 +538,6 @@ class DeploymentCreateE2E:
                 )
             else:
                 print(f"Skipping provider cleanup because provider is reused: {provider_id}")
-        elif self.created_snapshot_ids or self.created_config_ids:
-            print("Skipping provider-scoped cleanup because provider_id is unavailable.")
 
     async def _best_effort_delete(self, *, path: str, resource_type: str, resource_id: str) -> None:
         print(f"DELETING {resource_type}: ID={resource_id}")

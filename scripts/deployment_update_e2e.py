@@ -72,16 +72,12 @@ class DeploymentUpdateE2E:
         self.provider_id: str | None = None
         self.provider_was_created = False
         self.created_deployment_ids: set[str] = set()
-        self.created_snapshot_ids: set[str] = set()
-        self.created_config_ids: set[str] = set()
         self.created_flow_ids: set[str] = set()
         self.created_project_ids: set[str] = set()
 
         self.reference_checkpoint_id: str | None = None
         self.alternate_checkpoint_id: str | None = None
         self.out_of_scope_checkpoint_id: str | None = None
-        self.reference_config_id: str | None = None
-        self.alternate_config_id: str | None = None
         self.reference_deployment_id: str | None = None
         self.reference_deployment_name: str | None = None
 
@@ -189,31 +185,6 @@ class DeploymentUpdateE2E:
 
     async def _create_reference_resources(self) -> None:
         self._require_provider_id()
-        provider_id = self.provider_id
-
-        config_resp_a = await self._request(
-            "POST",
-            "/api/v1/deployments/configs",
-            json_body={
-                "provider_id": provider_id,
-                **self._build_config_payload(label="cfg-ref-a"),
-            },
-        )
-        self._expect_status(config_resp_a, {HTTP_CREATED}, "create reference config A")
-        self.reference_config_id = str(config_resp_a.json()["id"])
-        self.created_config_ids.add(self.reference_config_id)
-
-        config_resp_b = await self._request(
-            "POST",
-            "/api/v1/deployments/configs",
-            json_body={
-                "provider_id": provider_id,
-                **self._build_config_payload(label="cfg-ref-b"),
-            },
-        )
-        self._expect_status(config_resp_b, {HTTP_CREATED}, "create reference config B")
-        self.alternate_config_id = str(config_resp_b.json()["id"])
-        self.created_config_ids.add(self.alternate_config_id)
 
         self.reference_checkpoint_id = await self._create_reference_checkpoint(label="flow-ref-a")
         self.alternate_checkpoint_id = await self._create_reference_checkpoint(label="flow-ref-b")
@@ -225,7 +196,6 @@ class DeploymentUpdateE2E:
 
         print(
             "Reference resources created: "
-            f"configs=({self.reference_config_id}, {self.alternate_config_id}), "
             "checkpoints=("
             f"{self.reference_checkpoint_id}, "
             f"{self.alternate_checkpoint_id}, "
@@ -350,7 +320,7 @@ class DeploymentUpdateE2E:
                 "name": "update_config_set_new_reference",
                 "expected": {HTTP_CONFLICT},
                 "deployment_id": deployment_id,
-                "payload": {"config": {"config_id": self.alternate_config_id}},
+                "payload": {"config": {"config_id": "cfg-ref-b"}},
             },
             {
                 "name": "update_config_unbind",
@@ -362,7 +332,7 @@ class DeploymentUpdateE2E:
                 "name": "update_config_bind_current_reference_again",
                 "expected": {HTTP_CONFLICT},
                 "deployment_id": deployment_id,
-                "payload": {"config": {"config_id": self.alternate_config_id}},
+                "payload": {"config": {"config_id": "cfg-ref-b"}},
             },
             {
                 "name": "update_config_unknown_reference",
@@ -372,7 +342,7 @@ class DeploymentUpdateE2E:
             },
             {
                 "name": "update_empty_payload",
-                "expected": {HTTP_OK},
+                "expected": {HTTP_UNPROCESSABLE_CONTENT},
                 "deployment_id": deployment_id,
                 "payload": {},
             },
@@ -392,7 +362,7 @@ class DeploymentUpdateE2E:
                         "description": "combined update scenario",
                     },
                     "history": {"add": [self.reference_checkpoint_id]},
-                    "config": {"config_id": self.alternate_config_id},
+                    "config": {"config_id": "cfg-ref-b"},
                 },
             },
             {
@@ -563,8 +533,6 @@ class DeploymentUpdateE2E:
             f"{len(self.created_deployment_ids)} deployments, "
             f"{len(self.created_flow_ids)} flows, "
             f"{len(self.created_project_ids)} projects, "
-            f"{len(self.created_snapshot_ids)} snapshots, "
-            f"{len(self.created_config_ids)} configs, "
             "1 provider account"
         )
 
@@ -590,19 +558,6 @@ class DeploymentUpdateE2E:
                 resource_id=project_id,
             )
         if provider_id:
-            for snapshot_id in sorted(self.created_snapshot_ids):
-                await self._best_effort_delete(
-                    path=f"/api/v1/deployments/snapshots/{snapshot_id}?provider_id={provider_id}",
-                    resource_type="SNAPSHOT",
-                    resource_id=snapshot_id,
-                )
-            for config_id in sorted(self.created_config_ids):
-                await self._best_effort_delete(
-                    path=f"/api/v1/deployments/configs/{config_id}?provider_id={provider_id}",
-                    resource_type="CONFIG",
-                    resource_id=config_id,
-                )
-
             if self.provider_was_created:
                 await self._best_effort_delete(
                     path=f"/api/v1/deployments/providers/{provider_id}",
@@ -611,8 +566,6 @@ class DeploymentUpdateE2E:
                 )
             else:
                 print(f"Skipping provider cleanup because provider is reused: {provider_id}")
-        elif self.created_snapshot_ids or self.created_config_ids:
-            print("Skipping provider-scoped cleanup because provider_id is unavailable.")
 
     async def _best_effort_delete(self, *, path: str, resource_type: str, resource_id: str) -> None:
         print(f"DELETING {resource_type}: ID={resource_id}")
@@ -673,8 +626,6 @@ class DeploymentUpdateE2E:
             [
                 self.reference_checkpoint_id,
                 self.alternate_checkpoint_id,
-                self.reference_config_id,
-                self.alternate_config_id,
             ]
         )
         if not ids_present:

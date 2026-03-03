@@ -1,7 +1,8 @@
 import datetime
 import json
 from enum import Enum
-from typing import Annotated, Any, Literal
+from functools import lru_cache
+from typing import Annotated, Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
@@ -11,26 +12,17 @@ DeploymentProviderName = Annotated[
     StringConstraints(strip_whitespace=True, min_length=1, max_length=128),
 ]  # the name of the deployment provider.
 
-DeploymentProviderId = UUID  # primary key of a deployment provider account registration.
-
-AccountId = Annotated[
-    str,
-    StringConstraints(strip_whitespace=True, min_length=1, max_length=128),
-]  # the provider account / tenant id.
+NormalizedId = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+IdLike = UUID | NormalizedId
+ProviderPayload = dict[str, Any]
 
 
 class DeploymentType(str, Enum):
-    """Deployment types supported by Langflow."""
+    """Core deployment types recognized by LFX contracts."""
 
+    # First-class deployment types recognized by the core schema.
+    # Adapters may carry additional provider-specific classification in `provider_data`.
     AGENT = "agent"
-    MCP = "mcp"
-
-
-class ArtifactType(str, Enum):
-    """Artifact types supported by Langflow."""
-
-    FLOW = "flow"
-    DOCUMENT = "document"
 
 
 class BaseFlowArtifact(BaseModel):
@@ -48,26 +40,29 @@ class BaseFlowArtifact(BaseModel):
         description="Provider-specific flow metadata consumed only by the active deployment adapter.",
     )
 
-    # TODO: validate presence of nodes and edges in data
+    @field_validator("data")
+    @classmethod
+    def validate_data(cls, value: dict) -> dict:
+        """Validate flow payload shape.
+
+        Keep validation aligned with backend flow model expectations.
+        """
+        if "nodes" not in value:
+            msg = "Flow must have nodes"
+            raise ValueError(msg)
+        if "edges" not in value:
+            msg = "Flow must have edges"
+            raise ValueError(msg)
+        if not isinstance(value["nodes"], list):
+            msg = "Flow 'nodes' must be a list"
+            raise TypeError(msg)
+        if not isinstance(value["edges"], list):
+            msg = "Flow 'edges' must be a list"
+            raise TypeError(msg)
+        return value
 
 
-class BaseDocumentArtifact(BaseModel):
-    """Model representing a payload for a document."""
-
-    name: str = Field(description="The name of the document")
-    description: str | None = Field(None, description="The description of the document")
-    raw: bytes | str | dict = Field(description="The data of the document")
-
-    # TODO: validate presence of raw data
-
-
-ARTIFACT_MAP: dict[ArtifactType, type[BaseModel]] = {
-    ArtifactType.FLOW: BaseFlowArtifact,
-    ArtifactType.DOCUMENT: BaseDocumentArtifact,
-}
-
-
-SnapshotList = Annotated[list[BaseFlowArtifact] | list[BaseDocumentArtifact], Field(min_length=1)]
+SnapshotList = Annotated[list[BaseFlowArtifact], Field(min_length=1)]
 
 
 class SnapshotItem(BaseModel):
@@ -79,88 +74,18 @@ class SnapshotItem(BaseModel):
     provider_data: dict | None = Field(None, description="The data of the snapshot item from the provider")
 
 
-class SnapshotGetResult(SnapshotItem):
-    """Model representing a result for retrieving a single snapshot payload."""
-
-    artifact_type: ArtifactType = Field(description="The type of artifact stored in the snapshot.")
-    value: BaseFlowArtifact | BaseDocumentArtifact = Field(description="The artifact payload stored in the snapshot.")
-
-
-class SnapshotListResult(BaseModel):
-    """Model representing a result for a snapshot list operation."""
-
-    snapshots: list[SnapshotItem] = Field(description="The list of snapshots")
-    provider_result: dict | None = Field(
-        None, description="The result of the snapshot list operation from the provider"
-    )
-    artifact_type: ArtifactType | Literal["_ALL"] = Field(
-        default="_ALL",
-        description="The type of the snapshot items being referenced.",
-    )
-
-
-class SnapshotItemsCreate(BaseModel):
-    """Model representing a payload for a snapshot."""
-
-    artifact_type: ArtifactType = Field(description="The type of the snapshot items being referenced.")
-    raw_payloads: SnapshotList
-
-    @model_validator(mode="after")
-    def validate_value_matches_artifact_type(self) -> "SnapshotItemsCreate":
-        validate_value_matches_artifact_type(self.raw_payloads, self.artifact_type)
-        return self
-
-
-def validate_value_matches_artifact_type(value: SnapshotList, artifact_type: ArtifactType) -> None:
-    expected_model = ARTIFACT_MAP[artifact_type]
-
-    for idx, item in enumerate(value):
-        if not isinstance(item, expected_model):
-            msg = (
-                f"All items must be of type: '{expected_model.__name__}', "
-                f"but value[{idx}] is of type '{type(item).__name__}'."
-            )
-            raise TypeError(msg)
-
-
 class SnapshotItems(BaseModel):
     """Snapshot input for deployment create.
 
-    Accept either snapshot reference IDs or raw artifact payloads.
+    Accept raw snapshot artifact payloads for deployment create.
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    artifact_type: ArtifactType = Field(description="The type of the snapshot items being referenced.")
-    reference_ids: list[str] | None = Field(
-        None,
-        description="Snapshot reference ids to use for this deployment.",
-    )
-    raw_payloads: SnapshotList | None = Field(
-        None,
+    raw_payloads: SnapshotList = Field(
+        ...,
         description="Raw snapshot payloads to create and bind for this deployment.",
     )
-
-    @field_validator("reference_ids")
-    @classmethod
-    def validate_reference_ids(cls, v: list[str] | None) -> list[str] | None:
-        if v is None:
-            return None
-        return _normalize_and_validate_id_list_for_duplicates(v, field_name="reference_ids")
-
-    @model_validator(mode="after")
-    def validate_snapshot_source(self) -> "SnapshotItems":
-        has_reference_ids = self.reference_ids is not None
-        has_raw_payloads = self.raw_payloads is not None
-
-        if has_reference_ids == has_raw_payloads:
-            msg = "Exactly one of 'reference_ids' or 'raw_payloads' must be provided."
-            raise ValueError(msg)
-
-        if self.raw_payloads is not None:
-            validate_value_matches_artifact_type(self.raw_payloads, self.artifact_type)
-
-        return self
 
 
 class SnapshotDeploymentBindingUpdate(BaseModel):
@@ -169,27 +94,31 @@ class SnapshotDeploymentBindingUpdate(BaseModel):
     Add or remove snapshot bindings for the deployment by reference ids.
     """
 
-    add: list[str] | None = Field(
+    add: list[IdLike] | None = Field(
         None,
         description="Snapshot reference ids to attach to the deployment. Omit to leave unchanged.",
     )
-    remove: list[str] | None = Field(
+    remove: list[IdLike] | None = Field(
         None,
         description="Snapshot reference ids to detach from the deployment. Omit to leave unchanged.",
     )
 
     @field_validator("add", "remove")
     @classmethod
-    def validate_id_lists(cls, v: list[str] | None) -> list[str] | None:
+    def validate_id_lists(cls, v: list[IdLike] | None) -> list[str] | None:
         if v is None:
             return None
-        return _normalize_and_validate_id_list_for_duplicates(v, field_name="snapshot_id")
+        return _normalize_and_dedupe_id_list(v, field_name="snapshot_id")
 
     @model_validator(mode="after")
     def validate_operations(self):
         """Ensure patch contains explicit and non-conflicting operations."""
         add_values = self.add or []
         remove_values = self.remove or []
+
+        if not add_values and not remove_values:
+            msg = "At least one of 'add' or 'remove' must be provided."
+            raise ValueError(msg)
 
         overlap = set(add_values).intersection(remove_values)
         if overlap:
@@ -220,42 +149,14 @@ class EnvVarValueSpec(BaseModel):
     )
 
 
-EnvVarValue = EnvVarValueSpec
-
-
-class BaseConfigData(BaseModel):
+class Config(BaseModel):
     """Model representing a data for a config."""
 
     name: str = Field(description="The name of the config")
     description: str | None = Field(None, description="The description of the config")
-    environment_variables: dict[EnvVarKey, EnvVarValue] | None = Field(None, description="Environment variables")
+    environment_variables: dict[EnvVarKey, EnvVarValueSpec] | None = Field(None, description="Environment variables")
     # the provider might have additional configuration options that are not covered here
-    provider_config: dict | None = Field(None, description="Provider configuration")
-
-
-class ConfigResult(BaseModel):
-    """Model representing a result for a config creation operation."""
-
-    id: UUID | str = Field(description="The id of the created config")
-    provider_result: dict | None = Field(
-        None, description="The result of the config creation operation from the provider"
-    )
-
-
-class ConfigItemResult(BaseModel):
-    """Model representing a result for a config item."""
-
-    id: UUID | str = Field(description="The id of the config")
-    name: str | None = Field(None, description="The name of the config")
-    description: str | None = Field(None, description="The description of the config")
-    provider_data: dict | None = Field(None, description="The config data from the provider")
-
-
-class ConfigListResult(BaseModel):
-    """Model representing a result for a config list operation."""
-
-    configs: list[ConfigItemResult] = Field(description="The list of configs")
-    provider_result: dict | None = Field(None, description="The result of the config list operation from the provider")
+    provider_config: ProviderPayload | None = Field(None, description="Provider configuration")
 
 
 class ConfigItem(BaseModel):
@@ -264,11 +165,11 @@ class ConfigItem(BaseModel):
     Exactly one of `reference_id` or `raw_payload` must be provided.
     """
 
-    reference_id: str | None = Field(
+    reference_id: NormalizedId | None = Field(
         None,
         description="Existing config reference id to bind to the deployment.",
     )
-    raw_payload: BaseConfigData | None = Field(
+    raw_payload: Config | None = Field(
         None,
         description="Config payload to create and bind to the deployment.",
     )
@@ -282,28 +183,18 @@ class ConfigItem(BaseModel):
 
     @model_validator(mode="after")
     def validate_config_source(self) -> "ConfigItem":
-        has_reference_id = self.reference_id is not None
-        has_raw_payload = self.raw_payload is not None
-
-        if has_reference_id == has_raw_payload:
-            msg = "Exactly one of 'reference_id' or 'raw_payload' must be provided."
-            raise ValueError(msg)
-
+        _validate_exactly_one_of(
+            self,
+            first_field="reference_id",
+            second_field="raw_payload",
+        )
         return self
-
-
-class ConfigUpdate(BaseModel):
-    """Config update payload."""
-
-    name: str | None = Field(None, description="The name of the config")
-    description: str | None = Field(None, description="The description of the config")
-    environment_variables: dict[EnvVarKey, EnvVarValue] | None = Field(None, description="Environment variables")
 
 
 class ConfigDeploymentBindingUpdate(BaseModel):
     """Config deployment binding patch payload."""
 
-    config_id: str | UUID | None = Field(
+    config_id: IdLike | None = Field(
         None,
         description="Config reference id to bind to the deployment. Use null to unbind.",
     )
@@ -316,71 +207,86 @@ class ConfigDeploymentBindingUpdate(BaseModel):
         return v
 
 
-class BaseDeploymentData(BaseModel):
+class ProviderDataModel(BaseModel):
+    """Base model for provider metadata payloads."""
+
+    provider_data: ProviderPayload | None = Field(None, description="The data from the provider")
+
+
+class ProviderResultModel(BaseModel):
+    """Base model for provider operation payloads."""
+
+    provider_result: ProviderPayload | None = Field(None, description="The result from the provider")
+
+
+class ProviderSpecModel(BaseModel):
+    """Base model for provider-specific input payloads."""
+
+    provider_spec: ProviderPayload | None = Field(None, description="The data of the deployment from the provider")
+
+
+class BaseDeploymentData(ProviderSpecModel):
     """Model representing a data for a deployment."""
 
     name: str = Field(description="The name of the deployment")
     description: str = Field(default="", description="The description of the deployment")
     type: DeploymentType = Field(description="The type of the deployment")
-    provider_spec: dict | None = Field(None, description="The data of the deployment from the provider")
 
 
-class DeploymentCreateResult(BaseDeploymentData):
+class DeploymentCreateResult(BaseDeploymentData, ProviderResultModel):
     """Model representing a result for a deployment creation operation."""
 
-    id: UUID | str = Field(description="The id of the created deployment")
-    config_id: UUID | str | None = Field(
+    id: IdLike = Field(description="The id of the created deployment")
+    config_id: IdLike | None = Field(
         default=None,
         description="Config id produced or bound during deployment creation.",
     )
-    snapshot_ids: list[UUID] | list[str] = Field(
+    snapshot_ids: list[IdLike] = Field(
         default_factory=list,
         description="Snapshot ids produced during deployment creation.",
     )
-    provider_result: dict | None = Field(
-        None, description="The result of the deployment creation operation from the provider"
-    )
 
 
-class DeploymentDeleteResult(BaseModel):
+class DeploymentOperationResult(ProviderResultModel):
+    """Base model for deployment operation responses by deployment id."""
+
+    id: IdLike = Field(description="The id of the deployment")
+
+
+class DeploymentDeleteResult(DeploymentOperationResult):
     """Model representing a result for a deployment deletion operation."""
 
-    id: UUID | str = Field(description="The id of the deleted deployment")
-    provider_result: dict | None = Field(
-        None, description="The result of the deployment deletion operation from the provider"
-    )
 
-
-class DeploymentItem(BaseModel):
+class ItemResult(ProviderDataModel):
     """Model representing a result for a deployment list item."""
 
-    id: UUID | str = Field(description="The id of the deployment")
+    id: IdLike = Field(description="The id of the deployment")
     name: str = Field(description="The name of the deployment")
     type: DeploymentType = Field(description="The type of the deployment")
     created_at: datetime.datetime | None = Field(None, description="The created timestamp of the deployment")
     updated_at: datetime.datetime | None = Field(None, description="The last updated timestamp of the deployment")
-    provider_data: dict | None = Field(None, description="The data of the deployment from the provider")
 
 
-class DeploymentDetailItem(DeploymentItem):
+class DeploymentGetResult(ItemResult):
     """Model representing a detailed deployment payload."""
 
     description: str | None = Field(None, description="The description of the deployment")
 
 
-class DeploymentList(BaseModel):
+class DeploymentDuplicateResult(ItemResult):
+    """Model representing the result of a deployment duplication operation."""
+
+
+class DeploymentListResult(ProviderResultModel):
     """Model representing a result for a deployment list operation."""
 
-    deployments: list[DeploymentItem] = Field(description="The list of deployments")
-    provider_result: dict | None = Field(
-        None, description="The result of the deployment list operation from the provider"
-    )
+    deployments: list[ItemResult] = Field(description="The list of deployments")
 
 
 class DeploymentListParams(BaseModel):
     """Query params for deployment list operations."""
 
-    provider_params: dict[str, Any] | None = Field(
+    provider_params: ProviderPayload | None = Field(
         None,
         description="Provider-specific query params payload.",
     )
@@ -388,15 +294,15 @@ class DeploymentListParams(BaseModel):
         None,
         description="Deployment types to include in the result set.",
     )
-    deployment_ids: list[UUID | str] | None = Field(
+    deployment_ids: list[IdLike] | None = Field(
         None,
         description="Deployment ids to include in the result set.",
     )
-    snapshot_ids: list[UUID | str] | None = Field(
+    snapshot_ids: list[IdLike] | None = Field(
         None,
         description="Snapshot ids to include in the result set.",
     )
-    config_ids: list[UUID | str] | None = Field(
+    config_ids: list[IdLike] | None = Field(
         None,
         description="Config ids to include in the result set.",
     )
@@ -411,7 +317,7 @@ class DeploymentListParams(BaseModel):
 
     @field_validator("deployment_ids", "snapshot_ids", "config_ids")
     @classmethod
-    def validate_filter_ids(cls, value: list[UUID | str] | None, info) -> list[str] | None:
+    def validate_filter_ids(cls, value: list[IdLike] | None, info) -> list[str] | None:
         if value is None:
             return None
         normalized_ids = _normalize_and_validate_id_list(
@@ -422,32 +328,18 @@ class DeploymentListParams(BaseModel):
         return list(dict.fromkeys(normalized_ids))
 
 
-class SnapshotResult(BaseModel):
-    """Model representing a result for a snapshot creation operation."""
-
-    ids: list[UUID | str] = Field(description="The ids of the created snapshots")
-    provider_result: dict | None = Field(
-        None, description="The result of the snapshot creation operation from the provider"
-    )
-
-
 class DeploymentCreate(BaseModel):
     """Deployment create payload."""
 
-    # provider: DeploymentProviderName = Field(description="The name of the deployment provider.")
-    # account_id: str = Field(
-    #     description="The id of the account / tenant/ organization registered with the deployment provider."
-    # )
     spec: BaseDeploymentData = Field(description="The base metadata of the deployment")
-    project_id: UUID | None = Field(
-        None,
-        description="The project id associated with the deployment. Defaults to the user's default Starter Project.",
-    )
     snapshot: SnapshotItems | None = Field(None, description="The snapshots of the deployment")
     config: ConfigItem | None = Field(None, description="The config of the deployment")
 
 
-DEPLOYMENT_CREATE_SCHEMA = json.dumps(DeploymentCreate.model_json_schema(), indent=2)
+@lru_cache(maxsize=1)
+def get_deployment_create_schema() -> str:
+    """Return serialized JSON schema for deployment create payload."""
+    return json.dumps(DeploymentCreate.model_json_schema(), indent=2)
 
 
 class BaseDeploymentDataUpdate(BaseModel):
@@ -455,6 +347,13 @@ class BaseDeploymentDataUpdate(BaseModel):
 
     name: str | None = Field(None, description="The name of the deployment")
     description: str | None = Field(None, description="The description of the deployment")
+
+    @model_validator(mode="after")
+    def validate_has_changes(self) -> "BaseDeploymentDataUpdate":
+        if self.name is None and self.description is None:
+            msg = "At least one of 'name' or 'description' must be provided."
+            raise ValueError(msg)
+        return self
 
 
 class DeploymentUpdate(BaseModel):
@@ -464,110 +363,80 @@ class DeploymentUpdate(BaseModel):
     snapshot: SnapshotDeploymentBindingUpdate | None = Field(None, description="The snapshot of the deployment")
     config: ConfigDeploymentBindingUpdate | None = Field(None, description="The config of the deployment")
 
+    @model_validator(mode="after")
+    def validate_has_changes(self) -> "DeploymentUpdate":
+        if self.spec is None and self.snapshot is None and self.config is None:
+            msg = "At least one of 'spec', 'snapshot', or 'config' must be provided."
+            raise ValueError(msg)
+        return self
 
-class DeploymentUpdateResult(BaseModel):
+
+class DeploymentUpdateResult(DeploymentOperationResult):
     """Model representing a result for a deployment update operation."""
 
-    id: UUID | str = Field(description="The id of the updated deployment")
-    provider_result: dict | None = Field(
-        None, description="The result of the deployment update operation from the provider"
-    )
 
-
-class DeploymentRedeploymentResult(BaseModel):
+class RedeployResult(DeploymentOperationResult):
     """Model representing a deployment redeployment operation result."""
 
-    id: UUID | str = Field(description="The id of the redeployed deployment")
-    status: str = Field(description="The deployment status reported by the provider")
-    provider_result: dict | None = Field(
-        None, description="The result of the deployment redeployment operation from the provider"
-    )
 
-
-class DeploymentStatusResult(BaseModel):
+class DeploymentStatusResult(ProviderDataModel):
     """Model representing a deployment status response."""
 
-    id: UUID | str = Field(description="The id of the deployment")
-    status: str | None = Field(None, description="The normalized deployment health status")
-    provider_data: dict | None = Field(None, description="The provider health payload")
+    id: IdLike = Field(description="The id of the deployment")
 
 
-class DeploymentExecution(BaseModel):
+class ExecutionCreate(BaseModel):
     """Provider-agnostic deployment execution payload."""
 
-    deployment_id: UUID | str = Field(description="The id of the deployment to execute.")
-    deployment_type: DeploymentType = Field(description="The deployment type to execute.")
-    input: str | dict[str, Any] | None = Field(
+    deployment_id: IdLike = Field(description="The id of the deployment to create an execution for.")
+
+    provider_data: ProviderPayload | None = Field(
         None,
-        description="Provider-agnostic execution input payload.",
-    )
-    provider_input: dict[str, Any] | None = Field(
-        None,
-        description="Provider-specific execution options and overrides.",
+        description="Provider-specific execution data.",
     )
 
     @field_validator("deployment_id")
     @classmethod
-    def validate_deployment_id(cls, value: UUID | str) -> UUID | str:
+    def validate_deployment_id(cls, value: IdLike) -> IdLike:
         if isinstance(value, str):
             return _normalize_and_validate_id(value, field_name="deployment_id")
         return value
 
 
-class DeploymentExecutionResult(BaseModel):
-    """Model representing a deployment execution response."""
+class ExecutionResultBase(ProviderResultModel):
+    """Base model for deployment execution responses."""
 
     execution_id: str | None = Field(
         default=None,
         description="Opaque execution identifier for status polling.",
     )
-    deployment_id: UUID | str = Field(description="The id of the deployment that was executed.")
-    deployment_type: DeploymentType = Field(description="The deployment type that was executed.")
-    status: str | None = Field(default=None, description="Normalized execution status.")
-    output: str | dict[str, Any] | None = Field(
-        default=None,
-        description="Provider-agnostic output payload, when available.",
-    )
-    provider_result: dict | None = Field(
-        default=None,
-        description="Provider-specific execution metadata and identifiers.",
-    )
+    deployment_id: IdLike = Field(description="The id of the deployment that was executed.")
 
 
-class DeploymentExecutionStatus(BaseModel):
-    """Provider-agnostic execution status lookup payload."""
+class ExecutionCreateResult(ExecutionResultBase):
+    """Result returned when an execution is created.
 
-    deployment_id: UUID | str = Field(description="The id of the deployment execution owner.")
-    deployment_type: DeploymentType = Field(description="The deployment type that is being executed.")
-    provider_input: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Provider-specific identifiers for status retrieval (e.g., task_id/run_id/thread_id).",
-    )
-
-    @field_validator("deployment_id")
-    @classmethod
-    def validate_deployment_id(cls, value: UUID | str) -> UUID | str:
-        if isinstance(value, str):
-            return _normalize_and_validate_id(value, field_name="deployment_id")
-        return value
+    This model intentionally remains distinct from ``ExecutionStatusResult`` even
+    though both currently share the same shape. Callers should not mix the two
+    response types: create responses and status responses represent different API
+    stages and may diverge as the contract evolves.
+    """
 
 
-class ConfigListFilterOptions(BaseModel):
-    """Filter options for deployment config list operations."""
+class ExecutionStatusResult(ExecutionResultBase):
+    """Result returned when querying an execution status.
 
-    provider_filter: dict[str, Any] | None = Field(
-        None,
-        description="Provider-specific list filter payload.",
-    )
+    This model intentionally remains distinct from ``ExecutionCreateResult`` even
+    though both currently share the same shape. Callers should not mix the two
+    response types: create responses and status responses represent different API
+    stages and may diverge as the contract evolves.
+    """
 
 
-class SnapshotListFilterOptions(BaseModel):
-    """Filter options for snapshot list operations."""
+class DeploymentListTypesResult(ProviderResultModel):
+    """Model representing deployment types listing response."""
 
-    provider_filter: dict[str, Any] | None = Field(
-        None,
-        description="Provider-specific list filter payload.",
-    )
+    deployment_types: list[DeploymentType] = Field(description="Supported deployment types.")
 
 
 def _normalize_and_validate_id(value: str, *, field_name: str) -> str:
@@ -584,23 +453,45 @@ def _normalize_and_validate_id_list(values: list[str], *, field_name: str) -> li
     return [_normalize_and_validate_id(value, field_name=field_name) for value in values]
 
 
-def _normalize_and_validate_id_list_for_duplicates(values: list[str], *, field_name: str) -> list[str]:
-    """Normalize identifier lists and reject blank entries."""
-    normalized_values = []
-    visited = set()
-    for value in values:
-        normalized = _normalize_and_validate_id(value, field_name=field_name)
-        normalized_values.append(normalized)
-        visited.add(normalized)
-        if len(visited) < len(normalized_values):
-            msg = f"'{field_name}' must not contain duplicates: {normalized}."
-            raise ValueError(msg)
-    return normalized_values
+def _normalize_and_dedupe_id_list(values: list[IdLike], *, field_name: str) -> list[str]:
+    """Normalize identifier lists and remove duplicates while preserving order."""
+    normalized_values = _normalize_and_validate_id_list(
+        [str(value) for value in values],
+        field_name=field_name,
+    )
+    return list(dict.fromkeys(normalized_values))
 
 
-def get_str_id(v: str | UUID) -> str:
+def _validate_exactly_one_of(
+    model: BaseModel,
+    *,
+    first_field: str,
+    second_field: str,
+) -> None:
+    """Ensure exactly one of two model fields is provided."""
+    has_first = getattr(model, first_field) is not None
+    has_second = getattr(model, second_field) is not None
+
+    if has_first == has_second:
+        msg = f"Exactly one of '{first_field}' or '{second_field}' must be provided."
+        raise ValueError(msg)
+
+
+def get_str_id(v: IdLike) -> str:
     return str(v) if isinstance(v, UUID) else v
 
 
-def get_uuid(v: str | UUID) -> UUID:
-    return UUID(v) if isinstance(v, str) else v
+def get_uuid(v: UUID | str) -> UUID:
+    """Return a UUID from a UUID object or UUID-formatted string.
+
+    This helper is intentionally strict: opaque deployment identifiers like
+    ``dep_1`` are valid ``IdLike`` values, but are not valid UUIDs.
+    Use ``get_str_id`` when callers need to preserve opaque ids.
+    """
+    if isinstance(v, str):
+        try:
+            return UUID(v)
+        except ValueError as exc:
+            msg = f"Cannot convert identifier '{v}' to UUID. Use get_str_id() for opaque IDs."
+            raise ValueError(msg) from exc
+    return v

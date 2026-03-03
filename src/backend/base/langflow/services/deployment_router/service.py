@@ -20,7 +20,6 @@ from lfx.services.schema import ServiceType
 if TYPE_CHECKING:
     from uuid import UUID
 
-    from lfx.services.deployment.schema import DeploymentProviderId
     from lfx.services.interfaces import DeploymentServiceProtocol
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -45,7 +44,7 @@ class DeploymentRouterService(BaseDeploymentRouterService):
     async def resolve_adapter(
         self,
         *,
-        provider_id: DeploymentProviderId,
+        provider_id: UUID,
         user_id: UUID | str,
         db: Any,
     ) -> DeploymentServiceProtocol:
@@ -63,7 +62,7 @@ class DeploymentRouterService(BaseDeploymentRouterService):
                 await teardown_result
         self._adapter_instances = {}
 
-    def _get_adapter(self, *, adapter_key: str, provider_id: DeploymentProviderId) -> DeploymentServiceProtocol:
+    def _get_adapter(self, *, adapter_key: str, provider_id: UUID) -> DeploymentServiceProtocol:
         if adapter_key in self._adapter_instances:
             return self._adapter_instances[adapter_key]
 
@@ -82,7 +81,7 @@ class DeploymentRouterService(BaseDeploymentRouterService):
     async def _resolve_adapter_key(
         self,
         *,
-        provider_id: DeploymentProviderId,
+        provider_id: UUID,
         user_id: UUID | str,
         db: AsyncSession,
     ) -> str:

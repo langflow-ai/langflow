@@ -12,34 +12,22 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from lfx.services.deployment.schema import (
-        ArtifactType,
-        BaseConfigData,
-        ConfigItemResult,
-        ConfigListFilterOptions,
-        ConfigListResult,
-        ConfigResult,
-        ConfigUpdate,
         DeploymentCreate,
         DeploymentCreateResult,
         DeploymentDeleteResult,
-        DeploymentDetailItem,
-        DeploymentExecution,
-        DeploymentExecutionResult,
-        DeploymentExecutionStatus,
-        DeploymentItem,
-        DeploymentList,
+        DeploymentDuplicateResult,
+        DeploymentGetResult,
         DeploymentListParams,
-        DeploymentProviderId,
-        DeploymentRedeploymentResult,
+        DeploymentListResult,
+        DeploymentListTypesResult,
         DeploymentStatusResult,
-        DeploymentType,
         DeploymentUpdate,
         DeploymentUpdateResult,
-        SnapshotGetResult,
-        SnapshotItemsCreate,
-        SnapshotListFilterOptions,
-        SnapshotListResult,
-        SnapshotResult,
+        ExecutionCreate,
+        ExecutionCreateResult,
+        ExecutionStatusResult,
+        IdLike,
+        RedeployResult,
     )
     from lfx.services.settings.base import Settings
 
@@ -248,9 +236,9 @@ class DeploymentServiceProtocol(Protocol):
     async def create(
         self,
         *,
-        user_id: UUID | str,
-        deployment: DeploymentCreate,
-        db: Any,
+        user_id: IdLike,
+        payload: DeploymentCreate,
+        db: AsyncSession,
     ) -> DeploymentCreateResult:
         """Create a new deployment in the provider."""
         ...
@@ -259,9 +247,9 @@ class DeploymentServiceProtocol(Protocol):
     async def list_types(
         self,
         *,
-        user_id: UUID | str,
-        db: Any,
-    ) -> list[DeploymentType]:
+        user_id: IdLike,
+        db: AsyncSession,
+    ) -> DeploymentListTypesResult:
         """List deployment types supported by the provider."""
         ...
 
@@ -269,10 +257,10 @@ class DeploymentServiceProtocol(Protocol):
     async def list(
         self,
         *,
-        user_id: UUID | str,
-        db: Any,
+        user_id: IdLike,
+        db: AsyncSession,
         params: DeploymentListParams | None = None,
-    ) -> DeploymentList:
+    ) -> DeploymentListResult:
         """List deployments visible to this adapter."""
         ...
 
@@ -280,10 +268,10 @@ class DeploymentServiceProtocol(Protocol):
     async def get(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: UUID | str,
-        db: Any,
-    ) -> DeploymentDetailItem:
+        user_id: IdLike,
+        deployment_id: IdLike,
+        db: AsyncSession,
+    ) -> DeploymentGetResult:
         """Return deployment metadata by provider ID."""
         ...
 
@@ -291,10 +279,10 @@ class DeploymentServiceProtocol(Protocol):
     async def update(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: UUID | str,
-        update_data: DeploymentUpdate,
-        db: Any,
+        user_id: IdLike,
+        deployment_id: IdLike,
+        payload: DeploymentUpdate,
+        db: AsyncSession,
     ) -> DeploymentUpdateResult:
         """Update deployment inputs and apply changes in the provider."""
         ...
@@ -303,10 +291,10 @@ class DeploymentServiceProtocol(Protocol):
     async def redeploy(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: str,
-        db: Any,
-    ) -> DeploymentRedeploymentResult:
+        user_id: IdLike,
+        deployment_id: IdLike,
+        db: AsyncSession,
+    ) -> RedeployResult:
         """Re-apply current deployment inputs without changing them."""
         ...
 
@@ -314,11 +302,10 @@ class DeploymentServiceProtocol(Protocol):
     async def duplicate(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: str,
-        deployment_type: DeploymentType,
-        db: Any,
-    ) -> DeploymentItem:
+        user_id: IdLike,
+        deployment_id: IdLike,
+        db: AsyncSession,
+    ) -> DeploymentDuplicateResult:
         """Create a new deployment using the same inputs as the source."""
         ...
 
@@ -326,9 +313,9 @@ class DeploymentServiceProtocol(Protocol):
     async def delete(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: str,
-        db: Any,
+        user_id: IdLike,
+        deployment_id: IdLike,
+        db: AsyncSession,
     ) -> DeploymentDeleteResult:
         """Delete the deployment from the provider."""
         ...
@@ -337,9 +324,9 @@ class DeploymentServiceProtocol(Protocol):
     async def get_status(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: str,
-        db: Any,
+        user_id: IdLike,
+        deployment_id: IdLike,
+        db: AsyncSession,
     ) -> DeploymentStatusResult:
         """Return provider-reported health/status for the deployment."""
         ...
@@ -348,10 +335,10 @@ class DeploymentServiceProtocol(Protocol):
     async def create_execution(
         self,
         *,
-        user_id: UUID | str,
-        execution: DeploymentExecution,
-        db: Any,
-    ) -> DeploymentExecutionResult:
+        user_id: IdLike,
+        payload: ExecutionCreate,
+        db: AsyncSession,
+    ) -> ExecutionCreateResult:
         """Run a provider-agnostic deployment execution."""
         ...
 
@@ -359,112 +346,11 @@ class DeploymentServiceProtocol(Protocol):
     async def get_execution(
         self,
         *,
-        user_id: UUID | str,
-        execution_status: DeploymentExecutionStatus,
-        db: Any,
-    ) -> DeploymentExecutionResult:
+        user_id: IdLike,
+        execution_id: IdLike,
+        db: AsyncSession,
+    ) -> ExecutionStatusResult:
         """Get provider-agnostic deployment execution state/output."""
-        ...
-
-    @abstractmethod
-    async def create_config(
-        self,
-        *,
-        user_id: UUID | str,
-        config: BaseConfigData,
-        db: Any,
-    ) -> ConfigResult:
-        """Create a provider-scoped deployment configuration."""
-        ...
-
-    @abstractmethod
-    async def list_configs(
-        self,
-        *,
-        user_id: UUID | str,
-        db: Any,
-        filter_options: ConfigListFilterOptions | None = None,
-    ) -> ConfigListResult:
-        """List deployment configurations."""
-        ...
-
-    @abstractmethod
-    async def get_config(
-        self,
-        *,
-        user_id: UUID | str,
-        config_id: str,
-        db: Any,
-    ) -> ConfigItemResult:
-        """Return deployment configuration by provider ID."""
-        ...
-
-    @abstractmethod
-    async def update_config(
-        self,
-        *,
-        config_id: str,
-        update_data: ConfigUpdate,
-        user_id: UUID | str,
-        db: Any,
-    ) -> ConfigResult:
-        """Update a deployment configuration's JSON data."""
-        ...
-
-    @abstractmethod
-    async def delete_config(
-        self,
-        *,
-        user_id: UUID | str,
-        config_id: str,
-        db: Any,
-    ) -> None:
-        """Delete a deployment configuration from the provider."""
-        ...
-
-    @abstractmethod
-    async def create_snapshots(
-        self,
-        *,
-        user_id: UUID | str,
-        snapshot_items: SnapshotItemsCreate,
-        db: Any,
-    ) -> SnapshotResult:
-        """Create a provider snapshot (deployed or not)."""
-        ...
-
-    @abstractmethod  # TODO: allow filtering by flow id or by other criteria
-    async def list_snapshots(
-        self,
-        *,
-        user_id: UUID | str,
-        artifact_type: ArtifactType | None = None,
-        db: Any,
-        filter_options: SnapshotListFilterOptions | None = None,
-    ) -> SnapshotListResult:
-        """List provider snapshots (deployed or not)."""
-        ...
-
-    @abstractmethod
-    async def get_snapshot(
-        self,
-        *,
-        user_id: UUID | str,
-        snapshot_id: str,
-        db: Any,
-    ) -> SnapshotGetResult:
-        """Return snapshot payload by provider ID."""
-        ...
-
-    @abstractmethod
-    async def delete_snapshot(
-        self,
-        *,
-        user_id: UUID | str,
-        snapshot_id: str,
-        db: Any,
-    ) -> None:
-        """Delete a provider snapshot."""
         ...
 
 
@@ -475,7 +361,7 @@ class DeploymentRouterServiceProtocol(Protocol):
     async def resolve_adapter(
         self,
         *,
-        provider_id: DeploymentProviderId,
+        provider_id: UUID,
         user_id: UUID | str,
         db: Any,
     ) -> DeploymentServiceProtocol:
