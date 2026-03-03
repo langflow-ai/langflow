@@ -728,7 +728,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                   filterDescription={filterDescription}
                   resetFilters={resetFilters}
                 />
-              )
+              )}
 
               <SidebarContent
                 segmentedSidebar={ENABLE_NEW_SIDEBAR}
