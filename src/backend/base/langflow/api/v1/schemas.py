@@ -274,6 +274,13 @@ class ResultDataResponse(BaseModel):
     used_frozen_result: bool | None = False
     token_usage: dict | None = None
 
+    @field_validator("token_usage", mode="before")
+    @classmethod
+    def validate_token_usage(cls, v):
+        if v is not None and not isinstance(v, dict) and hasattr(v, "model_dump"):
+            return v.model_dump()
+        return v
+
     @field_serializer("results")
     @classmethod
     def serialize_results(cls, v):
