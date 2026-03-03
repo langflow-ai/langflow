@@ -26,7 +26,7 @@ Use them when one service type needs multiple selectable adapters at the same ti
 |---|---|---|
 | **Lookup key** | `ServiceType` enum | String key within a namespace |
 | **Cardinality** | One implementation per type | Many adapters per registry |
-| **Type safety** | Protocol per `ServiceType` | Base class per `SubServiceType`, generic registry |
+| **Type safety** | Protocol per `ServiceType` | Generic registry typed per `SubServiceType` |
 | **Example** | `storage_service` | `deployment` adapters: `"local"`, `"remote"` |
 
 ### Core API
@@ -44,7 +44,7 @@ adapter_cls = registry.get_sub_service_class("local")  # type[DeploymentServiceP
 keys = registry.list_sub_service_keys()
 ```
 
-`SubServiceRegistry` is generic over the base class type `T`, so `get_sub_service_class` returns `type[T] | None` -- callers get full type-checking on the resolved adapter class.
+`SubServiceRegistry` is generic over `T`, so `get_sub_service_class` returns `type[T] | None` — callers get full type-checking on the resolved adapter class.
 
 For advanced use (custom entry-point groups, non-standard config paths), use the lower-level factory directly:
 
@@ -74,7 +74,6 @@ class LocalAdapter:
 
 The decorator preserves the concrete class type (uses a `TypeVar` internally).
 Defaults to `override=True`; set `override=False` to keep an existing key untouched.
-Base class compliance is validated at decoration time -- a `SubServiceRegistryTypeError` is raised immediately if the class does not subclass the required base.
 
 #### Option B: Configuration Files
 
@@ -120,14 +119,6 @@ Discovery is **one-time per registry instance**. Subsequent calls to `discover_s
 - Entry point load failures do not stop discovery from other sources
 - Malformed TOML is ignored with warning logs
 - Missing configured sections are treated as empty configuration
-
-### Base Class Enforcement
-
-Each `SubServiceType` is bound to an abstract base class (e.g. `SubServiceType.DEPLOYMENT` maps to `BaseDeploymentService`).
-When a class is registered, `issubclass` is checked against that base class.
-Classes that do not subclass the required base are rejected with a `SubServiceRegistryTypeError`.
-The `@register_sub_service` decorator validates compliance at decoration time, so non-compliant classes fail immediately.
-For external discovery sources (entry points, config files), non-compliant classes are skipped with a warning log.
 
 ### Registry Identity and Uniqueness
 

@@ -43,10 +43,6 @@ class DummyAlternateAdapter(_DeploymentAdapterStub):
     pass
 
 
-class NonCompliantAdapter:
-    """Does not subclass BaseDeploymentService."""
-
-
 class DummyEntryPoint:
     """Simple entry point stub for importlib.metadata.entry_points()."""
 
@@ -278,42 +274,37 @@ def test_get_nested_section_returns_none_for_non_dict_path():
     assert section is None
 
 
-# --- Base class enforcement tests ---
+# --- Import / attribute error paths ---
 
 
-def test_register_rejects_non_compliant_class():
-    registry = _registry()
-
-    with pytest.raises(subservice_mod.SubServiceRegistryTypeError):
-        registry.register_sub_service_class("bad", NonCompliantAdapter)
-
-
-def test_non_compliant_entry_point_is_skipped(tmp_path, monkeypatch):
-    """Entry point loading a non-compliant class should warn and skip."""
-    registry = _registry()
-
-    monkeypatch.setattr(
-        "importlib.metadata.entry_points",
-        lambda group: [DummyEntryPoint("bad", NonCompliantAdapter)] if group == "lfx.deployment.adapters" else [],
-    )
-
-    registry.discover_sub_services(config_dir=tmp_path)
-    assert registry.get_sub_service_class("bad") is None
-
-
-def test_non_compliant_config_entry_is_skipped(tmp_path):
-    """Config referencing a non-compliant class should warn and skip."""
+def test_config_with_nonexistent_module_is_ignored(tmp_path):
+    """Config referencing a module that cannot be imported is silently skipped."""
     registry = _registry()
 
     (tmp_path / "lfx.toml").write_text(
-        f"""
+        """
 [deployment.adapters]
-bad = "{__name__}:NonCompliantAdapter"
+local = "nonexistent_pkg_xyz.adapters:Adapter"
 """
     )
 
     registry.discover_sub_services(config_dir=tmp_path)
-    assert registry.get_sub_service_class("bad") is None
+    assert registry.get_sub_service_class("local") is None
+
+
+def test_config_with_nonexistent_class_in_valid_module_is_ignored(tmp_path):
+    """Config referencing a real module but missing class is silently skipped."""
+    registry = _registry()
+
+    (tmp_path / "lfx.toml").write_text(
+        """
+[deployment.adapters]
+local = "pathlib:TotallyMadeUpClassName"
+"""
+    )
+
+    registry.discover_sub_services(config_dir=tmp_path)
+    assert registry.get_sub_service_class("local") is None
 
 
 # --- Additional coverage ---
@@ -358,12 +349,6 @@ cfg_only = "{__name__}:DummyConfigAdapter"
     assert registry.get_sub_service_class("dec_only") is DummyDecoratorAdapter
     assert registry.get_sub_service_class("cfg_only") is DummyConfigAdapter
     assert registry.list_sub_service_keys() == ["cfg_only", "dec_only", "ep_only"]
-
-
-def test_decorator_rejects_non_compliant_class():
-    """Base class validation happens at decoration time, not at discovery."""
-    with pytest.raises(subservice_mod.SubServiceRegistryTypeError):
-        subservice_mod.register_sub_service(SubServiceType.DEPLOYMENT, "bad")(NonCompliantAdapter)
 
 
 def test_get_deployment_registry_returns_singleton():
