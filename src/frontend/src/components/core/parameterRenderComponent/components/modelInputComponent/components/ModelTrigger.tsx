@@ -47,7 +47,7 @@ const ModelTrigger = ({
   // Check if we're in empty state mode (showEmptyState=true and no options)
   const isEmptyStateMode = showEmptyState && options.length === 0;
 
-  if (!hasEnabledProviders && !showEmptyState) {
+  if (!hasEnabledProviders && !showEmptyState && options.length === 0) {
     return (
       <Button
         variant="default"
