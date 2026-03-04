@@ -20,4 +20,3 @@ describe("disableItem - mutual exclusivity", () => {
     expect(disableItem("Webhook", uniqueInputs)).toBe(true);
   });
 });
-
