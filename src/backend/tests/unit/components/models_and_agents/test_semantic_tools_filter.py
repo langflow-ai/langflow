@@ -1,6 +1,7 @@
 """Tests for SemanticToolsFilterComponent."""
 
 from unittest.mock import Mock, patch
+from uuid import uuid4
 
 import numpy as np
 import pytest
@@ -16,13 +17,17 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
         return SemanticToolsFilterComponent
 
     @pytest.fixture
-    def default_kwargs(self):
+    def session_id(self):
+        return f"test_session_{uuid4().hex}"
+
+    @pytest.fixture
+    def default_kwargs(self, session_id):
         return {
             "tools": [],
             "user_query": "test query",
             "use_embeddings": False,
             "use_reranker": False,
-            "_session_id": "test_session",
+            "_session_id": session_id,
         }
 
     @pytest.fixture
@@ -84,14 +89,14 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
         mock.invoke.return_value = response
         return mock
 
-    def test_no_tools_provided(self, component_class):
+    def test_no_tools_provided(self, component_class, session_id):
         """Test behavior when no tools are provided."""
         component = component_class(
             tools=[],
             user_query="test query",
             use_embeddings=False,
             use_reranker=False,
-            _session_id="test_session",
+            _session_id=session_id,
         )
 
         result = component.filter_tools()
@@ -99,14 +104,14 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
         assert result == []
         assert "No tools provided" in component.status
 
-    def test_pass_through_mode(self, component_class, sample_tools):
+    def test_pass_through_mode(self, component_class, sample_tools, session_id):
         """Test pass-through mode when both filters are disabled."""
         component = component_class(
             tools=sample_tools,
             user_query="test query",
             use_embeddings=False,
             use_reranker=False,
-            _session_id="test_session",
+            _session_id=session_id,
         )
 
         result = component.filter_tools()
@@ -115,7 +120,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
         assert result == sample_tools
         assert "No filtering enabled" in component.status
 
-    def test_embedding_filter_only(self, component_class, sample_tools, mock_embedding_model):
+    def test_embedding_filter_only(self, component_class, sample_tools, mock_embedding_model, session_id):
         """Test embedding filter without reranker."""
         # Clear cache to ensure fresh calls
         with patch.object(component_class, "_persistent_cache", return_value={}):
@@ -127,7 +132,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
                 top_k=3,
                 similarity_threshold=0.0,
                 use_reranker=False,
-                _session_id="test_session",
+                _session_id=session_id,
             )
 
             result = component.filter_tools()
@@ -138,7 +143,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
             mock_embedding_model.embed_documents.assert_called()
             mock_embedding_model.embed_query.assert_called_once()
 
-    def test_embedding_filter_with_threshold(self, component_class, sample_tools, mock_embedding_model):
+    def test_embedding_filter_with_threshold(self, component_class, sample_tools, mock_embedding_model, session_id):
         """Test embedding filter with similarity threshold."""
         component = component_class(
             tools=sample_tools,
@@ -148,7 +153,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
             top_k=5,
             similarity_threshold=0.5,
             use_reranker=False,
-            _session_id="test_session",
+            _session_id=session_id,
         )
 
         result = component.filter_tools()
@@ -157,7 +162,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
         assert len(result) <= 5
         assert "Threshold filter applied" in component.status or len(result) > 0
 
-    def test_reranker_only(self, component_class, sample_tools, mock_llm_model):
+    def test_reranker_only(self, component_class, sample_tools, mock_llm_model, session_id):
         """Test LLM reranker without embedding filter."""
         component = component_class(
             tools=sample_tools,
@@ -166,7 +171,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
             use_reranker=True,
             reranker_model=mock_llm_model,
             top_p=2,
-            _session_id="test_session",
+            _session_id=session_id,
         )
 
         result = component.filter_tools()
@@ -175,7 +180,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
         assert len(result) <= 2
         mock_llm_model.invoke.assert_called_once()
 
-    def test_both_filters(self, component_class, sample_tools, mock_embedding_model, mock_llm_model):
+    def test_both_filters(self, component_class, sample_tools, mock_embedding_model, mock_llm_model, session_id):
         """Test both embedding filter and reranker together."""
         # Clear cache to ensure fresh calls
         with patch.object(component_class, "_persistent_cache", return_value={}):
@@ -188,7 +193,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
                 use_reranker=True,
                 reranker_model=mock_llm_model,
                 top_p=2,
-                _session_id="test_session",
+                _session_id=session_id,
             )
 
             result = component.filter_tools()
@@ -198,20 +203,20 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
             mock_embedding_model.embed_documents.assert_called()
             mock_llm_model.invoke.assert_called_once()
 
-    def test_missing_embedding_model_error(self, component_class, sample_tools):
+    def test_missing_embedding_model_error(self, component_class, sample_tools, session_id):
         """Test error when embedding model is required but not provided."""
         component = component_class(
             tools=sample_tools,
             user_query="test query",
             use_embeddings=True,
             embedding_model=None,
-            _session_id="test_session",
+            _session_id=session_id,
         )
 
         with pytest.raises(ValueError, match="Embedding Model must be connected"):
             component.filter_tools()
 
-    def test_missing_reranker_model_error(self, component_class, sample_tools):
+    def test_missing_reranker_model_error(self, component_class, sample_tools, session_id):
         """Test error when reranker model is required but not provided."""
         component = component_class(
             tools=sample_tools,
@@ -219,10 +224,55 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
             use_embeddings=False,
             use_reranker=True,
             reranker_model=None,
-            _session_id="test_session",
+            _session_id=session_id,
         )
 
         with pytest.raises(ValueError, match="Reranker Model must be connected"):
+            component.filter_tools()
+
+    def test_invalid_top_k_error(self, component_class, sample_tools, session_id):
+        """Test error when top_k is less than 1."""
+        component = component_class(
+            tools=sample_tools,
+            user_query="test query",
+            use_embeddings=True,
+            embedding_model=Mock(),
+            top_k=0,
+            _session_id=session_id,
+        )
+
+        with pytest.raises(ValueError, match="Top K must be >= 1"):
+            component.filter_tools()
+
+    def test_invalid_top_p_error(self, component_class, sample_tools, session_id):
+        """Test error when top_p is less than 1."""
+        component = component_class(
+            tools=sample_tools,
+            user_query="test query",
+            use_embeddings=False,
+            use_reranker=True,
+            reranker_model=Mock(),
+            top_p=0,
+            _session_id=session_id,
+        )
+
+        with pytest.raises(ValueError, match="Top P must be >= 1"):
+            component.filter_tools()
+
+    def test_invalid_augmentation_samples_error(self, component_class, sample_tools, session_id):
+        """Test error when augmentation_samples is less than 1."""
+        component = component_class(
+            tools=sample_tools,
+            user_query="test query",
+            use_embeddings=True,
+            embedding_model=Mock(),
+            augment_descriptions=True,
+            augmentation_model=Mock(),
+            augmentation_samples=0,
+            _session_id=session_id,
+        )
+
+        with pytest.raises(ValueError, match="Augmentation Samples must be >= 1"):
             component.filter_tools()
 
     def test_cosine_similarity_calculation(self, component_class):
@@ -300,7 +350,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
         decoded = component_class._decode_cache_value(encoded)
         assert decoded == regular_value
 
-    def test_update_build_config(self, component_class):
+    def test_update_build_config(self, component_class, session_id):
         """Test dynamic field visibility based on toggles."""
         component = component_class(
             tools=[],
@@ -308,7 +358,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
             use_embeddings=True,
             augment_descriptions=False,
             use_reranker=False,
-            _session_id="test_session",
+            _session_id=session_id,
         )
 
         build_config = {
@@ -338,7 +388,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
         # Reranker fields should be hidden
         assert result["reranker_model"]["show"] is False
 
-    def test_augmentation_with_cache(self, component_class, sample_tools, mock_llm_model):
+    def test_augmentation_with_cache(self, component_class, sample_tools, mock_llm_model, session_id):
         """Test that augmentation uses cache when available."""
         mock_embedding = Mock()
         mock_embedding.embed_documents.return_value = [[0.1, 0.2, 0.3]] * 5
@@ -355,7 +405,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
             augmentation_model=mock_llm_model,
             augmentation_samples=1,
             top_k=3,
-            _session_id="test_session",
+            _session_id=session_id,
         )
 
         # Clear cache for this test
@@ -363,10 +413,15 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
             descriptions, dependencies = component._augment_tool_descriptions(
                 sample_tools, mock_llm_model, "test prompt", 1
             )
+            descriptions2, dependencies2 = component._augment_tool_descriptions(
+                sample_tools, mock_llm_model, "test prompt", 1
+            )
 
         assert len(descriptions) == len(sample_tools)
         assert isinstance(dependencies, dict)
         assert mock_llm_model.invoke.call_count == 1
+        assert descriptions2 == descriptions
+        assert dependencies2 == dependencies
 
     def test_component_frontend_node(self, component_class, default_kwargs):
         """Test that component generates correct frontend node."""
@@ -379,7 +434,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
         assert "semantic similarity" in node_data["description"].lower()
         assert node_data["icon"] == "filter"
 
-    def test_reranker_fallback_on_parse_error(self, component_class, sample_tools, mock_llm_model):
+    def test_reranker_fallback_on_parse_error(self, component_class, sample_tools, mock_llm_model, session_id):
         """Test that reranker falls back to embedding ranking on parse error."""
         # Make LLM return unparseable response
         mock_llm_model.invoke.return_value.content = "This is not JSON"
@@ -392,7 +447,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
             use_reranker=True,
             reranker_model=mock_llm_model,
             top_p=2,
-            _session_id="test_session",
+            _session_id=session_id,
         )
 
         result = component._rerank_with_llm("test query", candidates, mock_llm_model, 2)
@@ -401,7 +456,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
         assert len(result) == 2
         assert result == candidates[:2]
 
-    def test_augmentation_fallback_on_parse_error(self, component_class, sample_tools, mock_llm_model):
+    def test_augmentation_fallback_on_parse_error(self, component_class, sample_tools, mock_llm_model, session_id):
         """Test that augmentation falls back to original descriptions on parse error."""
         # Make LLM return unparseable response
         mock_llm_model.invoke.return_value.content = "This is not JSON"
@@ -411,7 +466,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
             user_query="test",
             augment_descriptions=True,
             augmentation_model=mock_llm_model,
-            _session_id="test_session",
+            _session_id=session_id,
         )
 
         descriptions, dependencies = component._augment_tool_descriptions(
@@ -424,7 +479,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
         for i, tool in enumerate(sample_tools):
             assert descriptions[i][0] == (tool.description or "")
 
-    def test_augmentation_with_multiple_samples(self, component_class, sample_tools, mock_llm_model):
+    def test_augmentation_with_multiple_samples(self, component_class, sample_tools, mock_llm_model, session_id):
         """Test augmentation with multiple samples per tool."""
         # Return nested array for multiple samples
         mock_llm_model.invoke.return_value.content = (
@@ -438,7 +493,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
             augment_descriptions=True,
             augmentation_model=mock_llm_model,
             augmentation_samples=2,
-            _session_id="test_session",
+            _session_id=session_id,
         )
 
         with patch.object(component_class, "_persistent_cache", return_value={}):
@@ -451,7 +506,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
         for samples in descriptions:
             assert len(samples) == 2  # Each tool should have 2 samples
 
-    def test_dependency_detection(self, component_class, sample_tools, mock_llm_model):
+    def test_dependency_detection(self, component_class, sample_tools, mock_llm_model, session_id):
         """Test that dependencies are detected and cached."""
         # Return structured response with dependencies
         mock_llm_model.invoke.return_value.content = """
@@ -478,7 +533,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
             user_query="test",
             augment_descriptions=True,
             augmentation_model=mock_llm_model,
-            _session_id="test_session",
+            _session_id=session_id,
         )
 
         with patch.object(component_class, "_persistent_cache", return_value={}):
@@ -500,7 +555,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
         assert 4 in dependencies  # calendar tool
         assert "location" in dependencies[4]
 
-    def test_dependency_expansion(self, component_class, sample_tools, mock_embedding_model, mock_llm_model):
+    def test_dependency_expansion(self, component_class, sample_tools, mock_embedding_model, mock_llm_model, session_id):
         """Test that dependency expansion adds related tools."""
         # Mock augmentation to return dependencies
         mock_llm_model.invoke.return_value.content = """
@@ -538,7 +593,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
             augment_descriptions=True,
             augmentation_model=mock_llm_model,
             top_k=2,  # Only select top 2 initially
-            _session_id="test_session",
+            _session_id=session_id,
         )
 
         # Mock embeddings to favor weather tool
@@ -559,4 +614,7 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
         result_names = [t.name for t in result]
         assert "weather" in result_names
         # Location tool should be added because weather depends on "location"
-        assert "get_location" in result_names or len(result) > 2
+        assert "get_location" in result_names, (
+            f"Expected 'get_location' to be added via dependency expansion. "
+            f"Got tools: {result_names}"
+        )

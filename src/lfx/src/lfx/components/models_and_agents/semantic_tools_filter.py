@@ -510,6 +510,31 @@ class SemanticToolsFilterComponent(Component):
                 entries.append(s)
         return entries if entries else None
 
+    @staticmethod
+    def _normalize_dependency_map(raw: object) -> dict[int, list[str]]:
+        """Normalize dependency map keys from strings to integers.
+
+        JSON serialization converts integer dict keys to strings. This method
+        converts them back to integers for proper lookups during dependency expansion.
+
+        Args:
+            raw: Raw dependency map from cache (may have string keys)
+
+        Returns:
+            Normalized dependency map with integer keys
+        """
+        if not isinstance(raw, dict):
+            return {}
+        normalized: dict[int, list[str]] = {}
+        for key, value in raw.items():
+            try:
+                idx = int(key)
+            except (TypeError, ValueError):
+                continue
+            if isinstance(value, list):
+                normalized[idx] = [str(v).lower() for v in value if v]
+        return normalized
+
     def _get_tool_embeddings(
         self,
         tools: list[BaseTool],
@@ -620,6 +645,7 @@ class SemanticToolsFilterComponent(Component):
                 # Backward compat: old cache entries are just embeddings
                 embeddings = cached_value
                 dependencies = {}
+            dependencies = self._normalize_dependency_map(dependencies)
 
             logger.info(
                 "Augmented embedding cache HIT — skipping augmentation LLM",
@@ -696,7 +722,7 @@ class SemanticToolsFilterComponent(Component):
             # New format: {"descriptions": [[...]], "dependencies": {...}}
             if isinstance(cached, dict) and "descriptions" in cached:
                 descriptions = cached["descriptions"]
-                dependencies = cached.get("dependencies", {})
+                dependencies = self._normalize_dependency_map(cached.get("dependencies", {}))
             else:
                 # Backward compat: old cache entries are list[str] or list[list[str]]
                 descriptions = [[d] for d in cached] if cached and isinstance(cached[0], str) else cached
@@ -772,7 +798,7 @@ class SemanticToolsFilterComponent(Component):
         )
 
         # Parse the response - try structured format first, fall back to old format
-        dependencies: dict[str, list[str]] = {}
+        dependencies: dict[int, list[str]] = {}
         try:
             # Try to extract JSON object (new format with dependencies)
             json_start = raw_text.find("{")
@@ -831,8 +857,15 @@ class SemanticToolsFilterComponent(Component):
 
         # Normalize into list[list[str]]
         if num_samples == 1:
-            # LLM was asked for flat array of strings
-            descriptions = [[d] if isinstance(d, str) else d for d in parsed]
+            # LLM was asked for flat array of strings; normalize defensively
+            descriptions = []
+            for d in parsed:
+                if isinstance(d, str):
+                    descriptions.append([d])
+                elif isinstance(d, list):
+                    descriptions.append([str(s) for s in d])
+                else:
+                    descriptions.append([str(d)])
         else:
             # LLM was asked for nested array of sub-arrays
             descriptions = []
@@ -1092,6 +1125,17 @@ class SemanticToolsFilterComponent(Component):
         use_embeddings: bool = self.use_embeddings
         use_reranker: bool = self.use_reranker
 
+        # Validate numeric inputs before using them in slicing/reshape paths
+        if use_embeddings and self.top_k < 1:
+            msg = "Top K must be >= 1 when the embedding filter is enabled."
+            raise ValueError(msg)
+        if use_reranker and self.top_p < 1:
+            msg = "Top P must be >= 1 when the LLM reranker is enabled."
+            raise ValueError(msg)
+        if use_embeddings and self.augment_descriptions and self.augmentation_samples < 1:
+            msg = "Augmentation Samples must be >= 1 when description augmentation is enabled."
+            raise ValueError(msg)
+
         logger.info(
             "filter_tools called",
             component="SemanticToolsFilter",
@@ -1293,9 +1337,9 @@ class SemanticToolsFilterComponent(Component):
             selected = candidates
 
         stage_label = " → ".join(stages_used) if stages_used else "pass-through"
+        selected_ids = {id(t) for t, _ in selected}
         selected_names = [t.name for t, _ in selected]
-        all_candidate_names = [t.name for t, _ in candidates]
-        rejected_names = [n for n in all_candidate_names if n not in selected_names]
+        rejected_names = [t.name for t, _ in candidates if id(t) not in selected_ids]
 
         logger.debug(
             "Tool selection complete",
@@ -1334,7 +1378,7 @@ class SemanticToolsFilterComponent(Component):
             status_lines.append(f"  + {tool.name} ({score_str})")
 
         # Rejected tools
-        rejected_from_candidates = [(t, s) for t, s in candidates if t.name not in selected_names]
+        rejected_from_candidates = [(t, s) for t, s in candidates if id(t) not in selected_ids]
         rejected_from_rest = [(t, s) for t, s in scored_all[self.top_k :]] if use_embeddings else []
         if rejected_from_candidates or rejected_from_rest:
             status_lines.append("")
