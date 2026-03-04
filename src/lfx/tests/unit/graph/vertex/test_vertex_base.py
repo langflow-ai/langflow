@@ -5,11 +5,14 @@ which is responsible for processing and managing parameters in vertices.
 """
 
 from unittest.mock import Mock
+from uuid import uuid4
 
 import pytest
 from ag_ui.core import StepFinishedEvent, StepStartedEvent
 from lfx.components.input_output import ChatInput
 from lfx.graph.edge.base import Edge
+from lfx.graph.vertex import base as vertex_base_module
+from lfx.graph.vertex import vertex_types as vertex_types_module
 from lfx.graph.vertex.base import ParameterHandler, Vertex
 from lfx.services.storage.service import StorageService
 from lfx.utils.util import unescape_string
@@ -395,3 +398,43 @@ def test_vertex_raw_event_metrics_no_optional_fields():
 
     # The metrics should contain only timestamp when no optional fields are provided
     assert len(metrics) == 1
+
+
+def test_component_vertex_extract_messages_coerces_uuid_session_id():
+    """Model-level coercion should string-cast UUID in extracted messages."""
+    session_id = uuid4()
+    vertex = object.__new__(vertex_types_module.ComponentVertex)
+    vertex.id = "vertex-1"
+    vertex.artifacts_type = {"message": "chat"}
+    artifacts = {
+        "message": {
+            "text": "hi",
+            "sender": "Machine",
+            "sender_name": "AI",
+            "session_id": session_id,
+            "stream_url": None,
+            "files": [],
+        }
+    }
+
+    messages = vertex_types_module.ComponentVertex.extract_messages_from_artifacts(vertex, artifacts)
+    assert messages[0]["session_id"] == str(session_id)
+
+
+def test_vertex_base_extract_messages_coerces_uuid_session_id():
+    """Model-level coercion should string-cast UUID in base vertex messages."""
+    session_id = uuid4()
+    vertex = object.__new__(vertex_base_module.Vertex)
+    vertex.id = "vertex-2"
+    vertex.artifacts_type = "chat"
+    artifacts = {
+        "text": "hello",
+        "sender": "Machine",
+        "sender_name": "AI",
+        "session_id": session_id,
+        "stream_url": None,
+        "files": [],
+    }
+
+    messages = vertex_base_module.Vertex.extract_messages_from_artifacts(vertex, artifacts)
+    assert messages[0]["session_id"] == str(session_id)
