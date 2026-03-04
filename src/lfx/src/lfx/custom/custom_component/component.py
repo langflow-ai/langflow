@@ -1565,7 +1565,29 @@ class Component(CustomComponent):
         return has_chat_input(self.graph.get_vertex_neighbors(self._vertex))
 
     def _should_skip_message(self, message: Message) -> bool:
-        """Check if the message should be skipped based on vertex configuration and message type."""
+        """Check if the message should be skipped based on vertex configuration and message type.
+
+        When a message is skipped:
+        - It is NOT stored in the database
+        - It will NOT have an ID (message.get_id() will return None)
+        - It is still returned to the caller, but no events are sent to the frontend
+
+        Messages are skipped when:
+        - The component is not an input or output vertex
+        - The component is not connected to a Chat Output
+        - The component does not have _stream_to_playground=True (set by parent for inner graphs)
+        - The message is not an ErrorMessage
+
+        This prevents intermediate components from cluttering the database with messages
+        that aren't meant to be displayed in the chat UI.
+
+        Returns:
+            bool: True if the message should be skipped, False otherwise
+        """
+        # If parent explicitly enabled streaming for this inner graph component
+        if getattr(self, "_stream_to_playground", False):
+            return False
+
         return (
             self._vertex is not None
             and not (self._vertex.is_output or self._vertex.is_input)
@@ -1603,12 +1625,31 @@ class Component(CustomComponent):
     async def send_message(self, message: Message, id_: str | None = None, *, skip_db_update: bool = False):
         """Send a message with optional database update control.
 
+        This is the central method for sending messages in Langflow. It handles:
+        - Message storage in the database (unless skipped)
+        - Event emission to the frontend
+        - Streaming support
+        - Error handling and cleanup
+
+        Message ID Rules:
+        - Messages only have an ID after being stored in the database
+        - If _should_skip_message() returns True, the message is not stored and will not have an ID
+        - Always use message.get_id() or message.has_id() to safely check for ID existence
+        - Never access message.id directly without checking if it exists first
+
         Args:
             message: The message to send
-            id_: Optional message ID
+            id_: Optional message ID (used for event emission, not database storage)
             skip_db_update: If True, only update in-memory and send event, skip DB write.
                            Useful during streaming to avoid excessive DB round-trips.
-                           Note: This assumes the message already exists in the database with message.id set.
+                           Note: When skip_db_update=True, the message must already have an ID
+                           (i.e., it must have been stored previously).
+
+        Returns:
+            Message: The stored message (with ID if stored in database, without ID if skipped)
+
+        Raises:
+            ValueError: If skip_db_update=True but message doesn't have an ID
         """
         if self._should_skip_message(message):
             return message
@@ -1621,10 +1662,19 @@ class Component(CustomComponent):
 
         # If skip_db_update is True and message already has an ID, skip the DB write
         # This path is used during agent streaming to avoid excessive DB round-trips
-        if skip_db_update and message.id:
+        # When skip_db_update=True, we require the message to already have an ID
+        # because we're updating an existing message, not creating a new one
+        if skip_db_update:
+            if not message.has_id():
+                msg = (
+                    "skip_db_update=True requires the message to already have an ID. "
+                    "The message must have been stored in the database previously."
+                )
+                raise ValueError(msg)
+
             # Create a fresh Message instance for consistency with normal flow
             stored_message = await Message.create(**message.model_dump())
-            self._stored_message_id = stored_message.id
+            self._stored_message_id = stored_message.get_id()
             # Still send the event to update the client in real-time
             # Note: If this fails, we don't need DB cleanup since we didn't write to DB
             await self._send_message_event(stored_message, id_=id_)
@@ -1632,7 +1682,9 @@ class Component(CustomComponent):
             # Normal flow: store/update in database
             stored_message = await self._store_message(message)
 
-            self._stored_message_id = stored_message.id
+            # After _store_message, the message should always have an ID
+            # but we use get_id() for safety
+            self._stored_message_id = stored_message.get_id()
             try:
                 complete_message = ""
                 if (
@@ -1640,20 +1692,28 @@ class Component(CustomComponent):
                     and message is not None
                     and isinstance(message.text, AsyncIterator | Iterator)
                 ):
-                    complete_message = await self._stream_message(message.text, stored_message)
+                    complete_message, usage_data = await self._stream_message(message.text, stored_message)
                     stored_message.text = complete_message
                     if complete_message:
                         stored_message.properties.state = "complete"
+                    # Set usage data if captured from streaming
+                    if usage_data:
+                        from lfx.schema.properties import Usage
+
+                        stored_message.properties.usage = Usage(**usage_data)
                     stored_message = await self._update_stored_message(stored_message)
-                    # Note: We intentionally do NOT send a message event here with state="complete"
-                    # The frontend already has all the content from streaming tokens
-                    # Only the database is updated with the complete state
+                    # Send a final add_message event with state="complete" and usage data
+                    # This is needed for OpenAI Responses API to capture usage in streaming mode
+                    await self._send_message_event(stored_message, id_=self._stored_message_id)
                 else:
                     # Only send message event for non-streaming messages
                     await self._send_message_event(stored_message, id_=id_)
             except Exception:
                 # remove the message from the database
-                await delete_message(stored_message.id)
+                # Only delete if the message has an ID
+                message_id = stored_message.get_id()
+                if message_id:
+                    await delete_message(id_=message_id)
                 raise
         self.status = stored_message
         return stored_message
@@ -1672,9 +1732,15 @@ class Component(CustomComponent):
 
     async def _send_message_event(self, message: Message, id_: str | None = None, category: str | None = None) -> None:
         if hasattr(self, "_event_manager") and self._event_manager:
-            data_dict = message.model_dump()["data"] if hasattr(message, "data") else message.model_dump()
-            if id_ and not data_dict.get("id"):
-                data_dict["id"] = id_
+            # Use full model_dump() to include all Message fields (content_blocks, properties, etc.)
+            data_dict = message.model_dump()
+
+            # The message ID is stored in message.data["id"], which ends up in data_dict["data"]["id"]
+            # But the frontend expects it at data_dict["id"], so we need to copy it to the top level
+            message_id = id_ or data_dict.get("data", {}).get("id") or getattr(message, "id", None)
+            if message_id and not data_dict.get("id"):
+                data_dict["id"] = message_id
+
             category = category or data_dict.get("category", None)
 
             def _send_event():
@@ -1699,7 +1765,7 @@ class Component(CustomComponent):
         return bool(
             hasattr(self, "_event_manager")
             and self._event_manager
-            and stored_message.id
+            and stored_message.has_id()
             and not isinstance(original_message.text, str)
         )
 
@@ -1721,35 +1787,106 @@ class Component(CustomComponent):
         message_table = message_tables[0]
         return await Message.create(**message_table.model_dump())
 
-    async def _stream_message(self, iterator: AsyncIterator | Iterator, message: Message) -> str:
+    async def _stream_message(self, iterator: AsyncIterator | Iterator, message: Message) -> tuple[str, dict | None]:
+        """Stream message content from an iterator and capture usage metadata.
+
+        Returns:
+            tuple: (complete_message_text, usage_data_dict_or_none)
+        """
         if not isinstance(iterator, AsyncIterator | Iterator):
             msg = "The message must be an iterator or an async iterator."
             raise TypeError(msg)
 
+        # Get message ID safely - streaming requires an ID
+        message_id = message.get_id()
+        if not message_id:
+            msg = "Message must have an ID to stream. Messages only have IDs after being stored in the database."
+            raise ValueError(msg)
+
         if isinstance(iterator, AsyncIterator):
-            return await self._handle_async_iterator(iterator, message.id, message)
+            return await self._handle_async_iterator(iterator, message_id, message)
         try:
             complete_message = ""
             first_chunk = True
+            usage_data = None
             for chunk in iterator:
                 complete_message = await self._process_chunk(
-                    chunk.content, complete_message, message.id, message, first_chunk=first_chunk
+                    chunk.content, complete_message, message_id, message, first_chunk=first_chunk
                 )
                 first_chunk = False
+                # Capture usage metadata from chunks (usually on the last chunk)
+                if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
+                    usage_data = {
+                        "input_tokens": getattr(chunk.usage_metadata, "input_tokens", None),
+                        "output_tokens": getattr(chunk.usage_metadata, "output_tokens", None),
+                        "total_tokens": getattr(chunk.usage_metadata, "total_tokens", None),
+                    }
+                elif hasattr(chunk, "response_metadata") and chunk.response_metadata:
+                    metadata = chunk.response_metadata
+                    if "token_usage" in metadata:
+                        usage_data = {
+                            "input_tokens": metadata["token_usage"].get("prompt_tokens"),
+                            "output_tokens": metadata["token_usage"].get("completion_tokens"),
+                            "total_tokens": metadata["token_usage"].get("total_tokens"),
+                        }
+                    elif "usage" in metadata:
+                        usage_data = {
+                            "input_tokens": metadata["usage"].get("input_tokens"),
+                            "output_tokens": metadata["usage"].get("output_tokens"),
+                            "total_tokens": None,
+                        }
+                        if usage_data["input_tokens"] and usage_data["output_tokens"]:
+                            usage_data["total_tokens"] = usage_data["input_tokens"] + usage_data["output_tokens"]
         except Exception as e:
             raise StreamingError(cause=e, source=message.properties.source) from e
         else:
-            return complete_message
+            return complete_message, usage_data
 
-    async def _handle_async_iterator(self, iterator: AsyncIterator, message_id: str, message: Message) -> str:
+    async def _handle_async_iterator(
+        self, iterator: AsyncIterator, message_id: str, message: Message
+    ) -> tuple[str, dict | None]:
         complete_message = ""
         first_chunk = True
+        usage_data = None
         async for chunk in iterator:
             complete_message = await self._process_chunk(
                 chunk.content, complete_message, message_id, message, first_chunk=first_chunk
             )
             first_chunk = False
-        return complete_message
+            if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
+                usage_data = self._extract_usage_metadata(chunk.usage_metadata)
+            elif hasattr(chunk, "response_metadata") and chunk.response_metadata:
+                metadata = chunk.response_metadata
+                if "token_usage" in metadata:
+                    usage_data = {
+                        "input_tokens": metadata["token_usage"].get("prompt_tokens"),
+                        "output_tokens": metadata["token_usage"].get("completion_tokens"),
+                        "total_tokens": metadata["token_usage"].get("total_tokens"),
+                    }
+                elif "usage" in metadata:
+                    usage_data = {
+                        "input_tokens": metadata["usage"].get("input_tokens"),
+                        "output_tokens": metadata["usage"].get("output_tokens"),
+                        "total_tokens": None,
+                    }
+                    if usage_data["input_tokens"] and usage_data["output_tokens"]:
+                        usage_data["total_tokens"] = usage_data["input_tokens"] + usage_data["output_tokens"]
+        return complete_message, usage_data
+
+    @staticmethod
+    def _extract_usage_metadata(um) -> dict:
+        """Extract usage from usage_metadata, handling both dict (TypedDict) and object forms."""
+        if isinstance(um, dict):
+            return {
+                "input_tokens": um.get("input_tokens"),
+                "output_tokens": um.get("output_tokens"),
+                "total_tokens": um.get("total_tokens"),
+            }
+        return {
+            "input_tokens": getattr(um, "input_tokens", None),
+            "output_tokens": getattr(um, "output_tokens", None),
+            "total_tokens": getattr(um, "total_tokens", None),
+        }
 
     async def _process_chunk(
         self, chunk: str, complete_message: str, message_id: str, message: Message, *, first_chunk: bool = False

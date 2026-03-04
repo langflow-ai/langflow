@@ -7,4 +7,6 @@ export type GlobalVariable = {
   name: string;
   value?: string;
   category?: string;
+  is_valid?: boolean | null;
+  validation_error?: string | null;
 };

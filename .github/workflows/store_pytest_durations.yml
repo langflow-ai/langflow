@@ -38,7 +38,7 @@ jobs:
 
 
       - name: Close existing PRs
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -60,7 +60,7 @@ jobs:
             }
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch-token: ${{ secrets.GITHUB_TOKEN }}

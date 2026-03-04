@@ -58,11 +58,12 @@ If you're creating custom components in a different location using the `LANGFLOW
         └── custom_component.py
 ```
 
-You can have multiple category folders to organize components into different categories:
+You can have multiple category folders to organize components into different categories, with multiple components inside each folder:
 ```
 /app/custom_components/
     ├── data/
     │   ├── __init__.py
+    │   ├── custom_component.py
     │   └── dataframe_processor.py
     └── tools/
         ├── __init__.py

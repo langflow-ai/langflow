@@ -47,7 +47,11 @@ test(
 
     await page.waitForTimeout(1000);
 
-    await page.getByTestId("button_open_list_selection").click();
+    await page
+      .getByTestId(
+        "button_open_list_selection_sortablelist_sortablelist_action_button",
+      )
+      .click();
 
     await page.getByTestId(`list_item_fetch_emails`).click();
 

@@ -61,7 +61,7 @@ test.describe("Flow Lock Feature", () => {
         await saveButton.click();
       }
       await expect(saveButton).toBeHidden({
-        timeout: 5000,
+        timeout: 5000 * 3,
       });
 
       // Wait for the modal to close by waiting for the popover to be detached

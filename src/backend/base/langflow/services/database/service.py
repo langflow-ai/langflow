@@ -25,6 +25,7 @@ from sqlmodel import SQLModel, select, text
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 from tenacity import retry, stop_after_attempt, wait_fixed
 
+from langflow.helpers.windows_postgres_helper import configure_windows_postgres_event_loop
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.base import Service
 from langflow.services.database import models
@@ -48,6 +49,9 @@ class DatabaseService(Service):
             msg = "No database URL provided"
             raise ValueError(msg)
         self.database_url: str = settings_service.settings.database_url
+
+        configure_windows_postgres_event_loop(source="database_service")
+
         self._sanitize_database_url()
 
         # This file is in langflow.services.database.manager.py
@@ -305,6 +309,7 @@ class DatabaseService(Service):
             "flow": models.Flow,
             "user": models.User,
             "apikey": models.ApiKey,
+            "job": models.Job,
             # Add other SQLModel classes here
         }
 
@@ -365,7 +370,7 @@ class DatabaseService(Service):
                 try:
                     self.init_alembic(alembic_cfg)
                 except Exception as exc:
-                    msg = "Error initializing alembic"
+                    msg = f"Error initializing alembic: {exc}"
                     logger.exception(msg)
                     raise RuntimeError(msg) from exc
             else:
@@ -463,7 +468,17 @@ class DatabaseService(Service):
 
         inspector = inspect(connection)
         table_names = inspector.get_table_names()
-        current_tables = ["flow", "user", "apikey", "folder", "message", "variable", "transaction", "vertex_build"]
+        current_tables = [
+            "flow",
+            "user",
+            "apikey",
+            "folder",
+            "message",
+            "variable",
+            "transaction",
+            "vertex_build",
+            "job",
+        ]
 
         if table_names and all(table in table_names for table in current_tables):
             logger.debug("Database and tables already exist")

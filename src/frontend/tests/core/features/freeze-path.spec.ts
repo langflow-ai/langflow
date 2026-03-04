@@ -1,4 +1,3 @@
-import { type Page } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { expect, test } from "../../fixtures";
@@ -36,11 +35,16 @@ test(
 
     await initialGPTsetup(page);
 
+    // Use unique prompts to avoid OpenAI caching returning identical responses
+    const timestamp = Date.now();
+
+    await page.getByText("Chat Input", { exact: true }).click();
+
     await page
       .getByTestId("textarea_str_input_value")
       .first()
       .fill(
-        "say a random number between 1 and 300000 and a random animal that lives in the sea",
+        `say a random number between 1 and 300000 and a random animal that lives in the sea. Request ID: ${timestamp}-1`,
       );
 
     await adjustScreenView(page);
@@ -65,9 +69,15 @@ test(
 
     await page.getByText("Close").last().click();
 
-    // Change model to force different output
-    await page.getByTestId("model_model").click();
-    await page.getByTestId("gpt-4o-option").click();
+    await page.getByText("Chat Input", { exact: true }).click();
+
+    // Change the prompt to ensure different output (avoid OpenAI caching)
+    await page
+      .getByTestId("textarea_str_input_value")
+      .first()
+      .fill(
+        `say a random number between 1 and 300000 and a random animal that lives in the sea. Request ID: ${timestamp}-2`,
+      );
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 3000,
@@ -92,7 +102,12 @@ test(
       timeout: 3000,
     });
 
-    await page.getByText("Language Model", { exact: true }).last().click();
+    await page
+      .locator(".react-flow__node", {
+        has: page.getByText("Language Model", { exact: true }),
+      })
+      .last()
+      .click();
 
     await page.waitForSelector('[data-testid="more-options-modal"]', {
       timeout: 3000,
@@ -133,27 +148,3 @@ test(
     expect(secondRandomTextGeneratedByAI).toEqual(thirdRandomTextGeneratedByAI);
   },
 );
-
-async function _moveSlider(
-  page: Page,
-  side: "left" | "right",
-  advanced: boolean = false,
-) {
-  const thumbSelector = `slider_thumb${advanced ? "_advanced" : ""}`;
-  const trackSelector = `slider_track${advanced ? "_advanced" : ""}`;
-
-  await page.getByTestId(thumbSelector).click();
-
-  const trackBoundingBox = await page.getByTestId(trackSelector).boundingBox();
-
-  if (trackBoundingBox) {
-    const moveDistance =
-      trackBoundingBox.width * 0.1 * (side === "left" ? -1 : 1);
-    const centerX = trackBoundingBox.x + trackBoundingBox.width / 2;
-    const centerY = trackBoundingBox.y + trackBoundingBox.height / 2;
-
-    await page.mouse.move(centerX + moveDistance, centerY);
-    await page.mouse.down();
-    await page.mouse.up();
-  }
-}

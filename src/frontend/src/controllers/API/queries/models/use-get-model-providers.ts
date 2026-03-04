@@ -10,6 +10,8 @@ export interface ModelProviderInfo {
     metadata: Record<string, any>;
   }>;
   is_enabled: boolean;
+  is_configured?: boolean;
+  api_docs_url?: string;
 }
 
 export interface ModelProviderWithStatus extends ModelProviderInfo {
@@ -78,7 +80,7 @@ const getProviderIcon = (providerName: string): string => {
   const iconMap: Record<string, string> = {
     OpenAI: "OpenAI",
     Anthropic: "Anthropic",
-    "Google Generative AI": "Google",
+    "Google Generative AI": "GoogleGenerativeAI",
     Groq: "Groq",
     "Amazon Bedrock": "Bedrock",
     NVIDIA: "NVIDIA",
@@ -86,6 +88,8 @@ const getProviderIcon = (providerName: string): string => {
     "Azure OpenAI": "AzureOpenAI",
     SambaNova: "SambaNova",
     Ollama: "Ollama",
+    "IBM WatsonX": "IBM",
+    "IBM watsonx.ai": "IBM",
   };
 
   return iconMap[providerName] || "Bot";

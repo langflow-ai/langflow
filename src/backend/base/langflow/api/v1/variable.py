@@ -97,7 +97,7 @@ async def _cleanup_provider_models(
     await _cleanup_model_list_variable(variable_service, user_id, ENABLED_MODELS_VAR, provider_models, session)
 
 
-@router.post("/", response_model=VariableRead, status_code=201)
+@router.post("/", response_model=VariableRead, status_code=201, include_in_schema=False)
 async def create_variable(
     *,
     session: DbSession,
@@ -120,12 +120,14 @@ async def create_variable(
 
     # Check if the variable is a reserved model provider variable
     if variable.name in model_provider_variable_mapping.values():
-        # Validate that the key actually works using the Language Model Service
-        # Run validation off the event loop to avoid blocking
-        try:
-            await asyncio.to_thread(validate_model_provider_key, variable.name, variable.value)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e)) from e
+        provider = get_provider_from_variable_name(variable.name)
+        if provider is not None:
+            # Validate that the key actually works using the Language Model Service
+            # Run validation off the event loop to avoid blocking
+            try:
+                await asyncio.to_thread(validate_model_provider_key, provider, {variable.name: variable.value})
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e)) from e
 
     try:
         return await variable_service.create_variable(
@@ -142,28 +144,50 @@ async def create_variable(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/", response_model=list[VariableRead], status_code=200)
+@router.get("/", response_model=list[VariableRead], status_code=200, include_in_schema=False)
 async def read_variables(
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
 ):
-    """Read all variables."""
+    """Read all variables.
+
+    Model provider credentials are validated when they are created or updated,
+    not on every read. This avoids latency from external API calls on read operations.
+
+    Returns a list of variables.
+    """
     variable_service = get_variable_service()
     if not isinstance(variable_service, DatabaseVariableService):
         msg = "Variable service is not an instance of DatabaseVariableService"
         raise TypeError(msg)
     try:
         all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
+
         # Filter out internal variables (those starting and ending with __)
-        return [
+        filtered_variables = [
             var for var in all_variables if not (var.name and var.name.startswith("__") and var.name.endswith("__"))
         ]
+
+        # Mark model provider credentials - validation status is based on existence
+        # (actual validation happens on create/update)
+        for var in filtered_variables:
+            if var.name and var.name in model_provider_variable_mapping.values() and var.type == CREDENTIAL_TYPE:
+                # Credential exists and was validated on save
+                var.is_valid = True
+                var.validation_error = None
+            else:
+                # Not a model provider credential
+                var.is_valid = None
+                var.validation_error = None
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+    else:
+        return filtered_variables
 
 
-@router.patch("/{variable_id}", response_model=VariableRead, status_code=200)
+@router.patch("/{variable_id}", response_model=VariableRead, status_code=200, include_in_schema=False)
 async def update_variable(
     *,
     session: DbSession,
@@ -184,11 +208,17 @@ async def update_variable(
 
         # Validate API key if updating a model provider variable
         if existing_variable.name in model_provider_variable_mapping.values() and variable.value:
-            # Run validation off the event loop to avoid blocking
-            try:
-                await asyncio.to_thread(validate_model_provider_key, existing_variable.name, variable.value)
-            except ValueError as e:
-                raise HTTPException(status_code=400, detail=str(e)) from e
+            provider = get_provider_from_variable_name(existing_variable.name)
+            if provider is not None:
+                # Run validation off the event loop to avoid blocking
+                try:
+                    await asyncio.to_thread(
+                        validate_model_provider_key,
+                        provider,
+                        {existing_variable.name: variable.value},
+                    )
+                except ValueError as e:
+                    raise HTTPException(status_code=400, detail=str(e)) from e
 
         return await variable_service.update_variable_fields(
             user_id=current_user.id,
@@ -206,7 +236,7 @@ async def update_variable(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.delete("/{variable_id}", status_code=204)
+@router.delete("/{variable_id}", status_code=204, include_in_schema=False)
 async def delete_variable(
     *,
     session: DbSession,

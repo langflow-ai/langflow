@@ -6,7 +6,7 @@ from datetime import timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any
 
-from fastapi import Depends, HTTPException, Query
+from fastapi import Depends, HTTPException, Path, Query
 from fastapi_pagination import Params
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
@@ -17,6 +17,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth.utils import get_current_active_user, get_current_active_user_mcp
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User
@@ -41,6 +42,19 @@ DbSession = Annotated[AsyncSession, Depends(injectable_session_scope)]
 # DbSessionReadOnly for read-only operations (no auto-commit, reduces lock contention)
 DbSessionReadOnly = Annotated[AsyncSession, Depends(injectable_session_scope_readonly)]
 
+
+def _get_validated_file_name(file_name: str = Path()) -> str:
+    """Validate file_name path parameter to prevent path traversal attacks."""
+    if ".." in file_name or "/" in file_name or "\\" in file_name:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file name. Use a simple file name without directory paths or '..'.",
+        )
+    return file_name
+
+
+ValidatedFileName = Annotated[str, Depends(_get_validated_file_name)]
+
 # Message to raise if we're in an Astra cloud environment and a component or endpoint is not supported
 disable_endpoint_in_astra_cloud_msg = "This endpoint is not supported in Astra cloud environment."
 
@@ -58,8 +72,15 @@ def has_api_terms(word: str):
 def remove_api_keys(flow: dict):
     """Remove api keys from flow data."""
     for node in flow.get("data", {}).get("nodes", []):
-        node_data = node.get("data").get("node")
-        template = node_data.get("template")
+        node_data = node.get("data")
+        if not isinstance(node_data, dict):
+            continue
+        node_inner = node_data.get("node")
+        if not isinstance(node_inner, dict):
+            continue
+        template = node_inner.get("template")
+        if not isinstance(template, dict):
+            continue
         for value in template.values():
             if isinstance(value, dict) and "name" in value and has_api_terms(value["name"]) and value.get("password"):
                 value["value"] = None
@@ -137,7 +158,7 @@ def format_elapsed_time(elapsed_time: float) -> str:
     """Format elapsed time to a human-readable format coming from perf_counter().
 
     - Less than 1 second: returns milliseconds
-    - Less than 1 minute: returns seconds rounded to 2 decimals
+    - Less than 1 minute: returns seconds rounded to 1 decimal
     - 1 minute or more: returns minutes and seconds
     """
     delta = timedelta(seconds=elapsed_time)
@@ -146,12 +167,12 @@ def format_elapsed_time(elapsed_time: float) -> str:
         return f"{milliseconds} ms"
 
     if delta < timedelta(minutes=1):
-        seconds = round(elapsed_time, 2)
+        seconds = round(elapsed_time, 1)
         unit = "second" if seconds == 1 else "seconds"
         return f"{seconds} {unit}"
 
     minutes = delta // timedelta(minutes=1)
-    seconds = round((delta - timedelta(minutes=minutes)).total_seconds(), 2)
+    seconds = round((delta - timedelta(minutes=minutes)).total_seconds(), 1)
     minutes_unit = "minute" if minutes == 1 else "minutes"
     seconds_unit = "second" if seconds == 1 else "seconds"
     return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
@@ -314,6 +335,10 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
         await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
         await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))
         await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
+        # Explicit delete despite FK CASCADE — SQLite doesn't enforce FK cascades
+        # by default (requires PRAGMA foreign_keys = ON), and this function follows
+        # the existing pattern of explicitly deleting all child records.
+        await session.exec(delete(FlowVersion).where(FlowVersion.flow_id == flow_id))
         await session.exec(delete(Flow).where(Flow.id == flow_id))
     except Exception as e:
         msg = f"Unable to cascade delete flow: {flow_id}"
