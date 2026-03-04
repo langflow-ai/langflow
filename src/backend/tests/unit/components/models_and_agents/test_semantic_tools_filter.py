@@ -8,7 +8,7 @@ import pytest
 from langchain_core.tools import Tool
 from lfx.components.models_and_agents.semantic_tools_filter import SemanticToolsFilterComponent
 
-from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient
+from tests.base import ComponentTestBaseWithoutClient, DID_NOT_EXIST, VersionComponentMapping
 
 
 class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
@@ -31,15 +31,15 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
         }
 
     @pytest.fixture
-    def file_names_mapping(self):
+    def file_names_mapping(self) -> list[VersionComponentMapping]:
         """Return the file names mapping for different versions.
 
         SemanticToolsFilter is a new component that didn't exist in previous versions.
         """
         return [
-            {"version": "1.0.19", "module": "models_and_agents", "file_name": DID_NOT_EXIST},
-            {"version": "1.1.0", "module": "models_and_agents", "file_name": DID_NOT_EXIST},
-            {"version": "1.1.1", "module": "models_and_agents", "file_name": DID_NOT_EXIST},
+            {"version": "1.0.19", "module": "models_and_agents", "file_name": DID_NOT_EXIST},  # type: ignore[typeddict-item]
+            {"version": "1.1.0", "module": "models_and_agents", "file_name": DID_NOT_EXIST},  # type: ignore[typeddict-item]
+            {"version": "1.1.1", "module": "models_and_agents", "file_name": DID_NOT_EXIST},  # type: ignore[typeddict-item]
         ]
 
     @pytest.fixture
@@ -168,7 +168,9 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
 
         # Should filter by threshold
         assert len(result) <= 5
-        assert "Threshold filter applied" in component.status or len(result) > 0
+        # Verify that filtering occurred and results were returned
+        assert len(result) > 0
+        assert "threshold=0.5" in component.status
 
     def test_reranker_only(self, component_class, sample_tools, mock_llm_model, session_id):
         """Test LLM reranker without embedding filter."""
