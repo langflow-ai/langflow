@@ -1317,7 +1317,7 @@ class TestSanitizeJson:
                 {
                     "type": "text",
                     "text": "hello",
-                    "duration": float("inf"),   # <-- the actual Infinity being tested
+                    "duration": float("inf"),  # <-- the actual Infinity being tested
                     "header": {},
                 }
             ],
