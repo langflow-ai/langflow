@@ -1,7 +1,46 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import type { Page } from "@playwright/test";
 
 test.describe("Invalid JSON Upload Error Handling", () => {
+  // Helper function to verify error appears
+  async function verifyErrorAppears(page: Page) {
+    // Wait for error alert to appear
+    await page.waitForTimeout(2000);
+
+    const statusElements = await page.locator('[role="status"]').all();
+
+    let errorFound = false;
+
+    if (statusElements.length > 0) {
+      for (const element of statusElements) {
+        const isVisible = await element.isVisible().catch(() => false);
+        if (isVisible) {
+          const text = await element.textContent();
+          if (text && /error|upload|json|parse/i.test(text.toLowerCase())) {
+            errorFound = true;
+            expect(text).toBeTruthy();
+            break;
+          }
+        }
+      }
+    }
+
+    if (!errorFound) {
+      const errorTextLocator = page.getByText(/Error/i).first();
+      const errorVisible = await errorTextLocator
+        .isVisible()
+        .catch(() => false);
+      if (errorVisible) {
+        const text = await errorTextLocator.textContent();
+        expect(text?.toLowerCase()).toMatch(/error/i);
+        errorFound = true;
+      }
+    }
+
+    expect(errorFound).toBeTruthy();
+  }
+
   test(
     "should show error popup when uploading invalid JSON via upload button",
     { tag: ["@release", "@workspace"] },
@@ -38,46 +77,39 @@ test.describe("Invalid JSON Upload Error Handling", () => {
         buffer: Buffer.from(invalidJsonContent),
       });
 
-      // Wait for error alert to appear
-      // The error notification should appear after file upload
-      await page.waitForTimeout(2000); // Give time for file processing
+      // Verify error appears
+      await verifyErrorAppears(page);
+    },
+  );
 
-      // Look for error notification with multiple strategies
-      // Strategy 1: Check for role="status" (toast/alert notifications)
-      const statusElements = await page.locator('[role="status"]').all();
-      
-      let errorFound = false;
-      
-      if (statusElements.length > 0) {
-        // Check each status element for error text
-        for (const element of statusElements) {
-          const isVisible = await element.isVisible().catch(() => false);
-          if (isVisible) {
-            const text = await element.textContent();
-            if (text && /error|upload|json|parse/i.test(text.toLowerCase())) {
-              errorFound = true;
-              expect(text).toBeTruthy();
-              break;
-            }
-          }
-        }
-      }
-      
-      // Strategy 2: If not found, look for any visible text containing "Error"
-      if (!errorFound) {
-        const errorTextLocator = page.getByText(/Error/i).first();
-        const errorVisible = await errorTextLocator.isVisible().catch(() => false);
-        if (errorVisible) {
-          const text = await errorTextLocator.textContent();
-          expect(text?.toLowerCase()).toMatch(/error/i);
-          errorFound = true;
-        }
-      }
-      
-      // Assert that we found an error somewhere
-      expect(errorFound).toBe(true);
+  test(
+    "should show error popup when uploading invalid JSON via drag and drop",
+    { tag: ["@release", "@workspace"] },
+    async ({ page }) => {
+      await awaitBootstrapTest(page);
+
+      // Navigate to main page
+      await page.goto("/");
+      await page.waitForSelector('[data-testid="mainpage_title"]', {
+        timeout: 30000,
+      });
+
+      // Create invalid JSON file content
+      const invalidJsonContent = '{"invalid": json content}';
+
+      const dataTransfer = await page.evaluateHandle((data) => {
+        const dt = new DataTransfer();
+        const file = new File([data], "invalid-flow.json", {
+          type: "application/json",
+        });
+        dt.items.add(file);
+        return dt;
+      }, invalidJsonContent);
+
+      await page.getByTestId("cards-wrapper").dispatchEvent("drop", {
+        dataTransfer,
+      });
+      await verifyErrorAppears(page);
     },
   );
 });
-
-// Made with Bob
