@@ -432,3 +432,60 @@ input[type="search"]::-webkit-search-cancel-button {
 .jse-button.jse-search:active {
   background-color: hsl(var(--border)) !important;
 }
+
+@keyframes version-item-drop-in {
+  0% {
+    transform: translateY(-16px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.version-item-drop-in {
+  animation: version-item-drop-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.version-preview-overlay {
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: rgba(255, 255, 255, 0);
+  box-shadow:
+    0 0 18px 2px rgba(99, 102, 241, 0.25) inset,
+    0 0 9px 1px rgba(99, 102, 241, 0.15) inset;
+}
+
+@keyframes banner-slide-up {
+  from {
+    transform: translateX(-50%) translateY(calc(100% + 2.5rem));
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes banner-slide-down {
+  from {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-50%) translateY(calc(100% + 2.5rem));
+    opacity: 0;
+  }
+}
+
+.version-preview-banner {
+  box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.12);
+}
+
+.version-preview-banner-enter {
+  animation: banner-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.version-preview-banner-exit {
+  animation: banner-slide-down 0.25s ease-in forwards;
+}
