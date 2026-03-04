@@ -27,15 +27,23 @@ For more information, see [Language model components](/components-models).
 
 | Name | Type | Description |
 |------|------|-------------|
-| Model Name | String | Input parameter. Specifies the name of the Azure OpenAI model to be used for text generation. |
 | Azure Endpoint | String | Input parameter. Your Azure endpoint, including the resource. |
-| Deployment Name | String | Input parameter. Specifies the name of the deployment. |
-| API Version | String | Input parameter. Specifies the version of the Azure OpenAI API to be used. |
+| Model | Dropdown | Input parameter. Specifies the Azure OpenAI model to use for text generation. |
+| Deployment Name | String | Input parameter. The Azure deployment name. Auto-populated from model selection; can be overridden for custom deployments. |
 | API Key | SecretString | Input parameter. Your Azure OpenAI API key. |
-| Temperature | Float | Input parameter. Specifies the sampling temperature. Defaults to `1.0`. |
-| Max Tokens | Integer | Input parameter. Specifies the maximum number of tokens to generate. Defaults to `1000`. |
+| Use Legacy API | Boolean | Advanced parameter. Use the legacy versioned API instead of the V1 Foundry API. Defaults to `false`. |
+| API Version | Dropdown | Input parameter. Specifies the version of the Azure OpenAI API to use (only visible when using legacy API). |
+| Reasoning Effort | Dropdown | Input parameter. Controls reasoning depth for reasoning models. Options: none, minimal, low, medium, high. Defaults to `medium`. |
+| Temperature | Float | Advanced parameter. Specifies the sampling temperature (hidden for reasoning models). Defaults to `0.7`. |
+| Seed | Integer | Advanced parameter. Controls reproducibility of the job (hidden for reasoning models). |
+| Max Tokens | Integer | Advanced parameter. Specifies the maximum number of tokens to generate. Set to 0 for unlimited tokens. |
+| Model Kwargs | Dict | Advanced parameter. Additional keyword arguments to pass to the model. |
 | Input Value | String | Input parameter. Specifies the input text for text generation. |
-| Stream | Boolean | Input parameter. Specifies whether to stream the response from the model. Default to `false`. |
+| Stream | Boolean | Input parameter. Specifies whether to stream the response from the model. Defaults to `false`. |
+
+:::info
+By default, this component uses the **V1 Foundry API** (`/openai/v1` endpoint). To use the legacy versioned API, enable the **Use Legacy API** toggle.
+:::
 
 ## Azure OpenAI Embeddings
 
