@@ -10,9 +10,9 @@ import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import { useWebhookEvents } from "@/hooks/use-webhook-events";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
@@ -90,7 +90,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
 
   const { mutateAsync: getFlow } = useGetFlow();
-  const { refreshAllModelInputs } = useRefreshModelInputs();
+  const applyFlowToCanvas = useApplyFlowToCanvas();
 
   // Connect to webhook events SSE for real-time feedback
   useWebhookEvents();
@@ -167,8 +167,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
     return () => {
       setOnFlowPage(false);
-      console.warn("unmounting");
-
       setCurrentFlow(undefined);
       // Reset playground state when leaving the flow
       setSlidingContainerOpen(false);
@@ -199,8 +197,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const getFlowToAddToCanvas = async (id: string) => {
     const flow = await getFlow({ id });
-    setCurrentFlow(flow);
-    refreshAllModelInputs({ silent: true });
+    applyFlowToCanvas(flow);
   };
 
   const isMobile = useIsMobile();

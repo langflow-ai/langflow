@@ -1600,7 +1600,13 @@ def update_model_options_in_build_config(
                                     return parsed_value.get("model_name"), parsed_value.get("provider")
                         except (ValueError, json.JSONDecodeError, TypeError):
                             # Variable not found or invalid format
-                            logger.info("Variable not found or invalid format", exc_info=True)
+                            logger.info(
+                                "Variable not found or invalid format: var_name=%s, user_id=%s, model_type=%s",
+                                var_name,
+                                component.user_id,
+                                model_type,
+                                exc_info=True,
+                            )
                         return None, None
 
                 default_model_name, default_model_provider = run_until_complete(_get_default_model())
