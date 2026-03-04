@@ -14,7 +14,7 @@ when presented with too many options. This leads to:
 This component solves these problems by intelligently filtering tools BEFORE they reach
 the agent, ensuring only the most relevant tools are presented based on the user's query.
 
-## What It Does
+## Functionality
 
 Filters tools from MCP servers (or any tool source) based on semantic similarity
 to the user's query. Place between a tool source and an Agent to reduce the number
@@ -987,6 +987,11 @@ class SemanticToolsFilterComponent(Component):
             component="SemanticToolsFilter",
             candidate_count=len(candidates),
             top_p=top_p,
+        )
+        # Query may contain sensitive data - only log in debug mode
+        logger.debug(
+            "LLM reranker query",
+            component="SemanticToolsFilter",
             query=query[:80],
         )
 
@@ -1181,11 +1186,29 @@ class SemanticToolsFilterComponent(Component):
 
             stage1_elapsed = time.perf_counter() - stage1_start
 
+            # Calculate score statistics for top_k candidates
+            candidate_scores = [s for _, s in candidates]
+            min_score = min(candidate_scores) if candidate_scores else 0.0
+            max_score = max(candidate_scores) if candidate_scores else 0.0
+            avg_score = sum(candidate_scores) / len(candidate_scores) if candidate_scores else 0.0
+
             logger.debug(
-                "Stage 1 (embedding) complete",
+                "Stage 1 (embedding) complete - candidates",
                 component="SemanticToolsFilter",
                 candidates=[t.name for t, _ in candidates],
                 candidate_count=len(candidates),
+            )
+            logger.info(
+                "Stage 1 (embedding) complete",
+                component="SemanticToolsFilter",
+                candidate_count=len(candidates),
+                score_min=round(min_score, 4),
+                score_max=round(max_score, 4),
+                score_avg=round(avg_score, 4),
+            )
+            logger.info(
+                "Stage 1 (embedding) timing",
+                component="SemanticToolsFilter",
                 elapsed_seconds=round(stage1_elapsed, 2),
             )
             self.log(f"Stage 1 (embedding filter) completed in {stage1_elapsed:.2f}s — {len(candidates)} candidates")
