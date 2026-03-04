@@ -144,8 +144,6 @@ export const useGetAddSessions: UseGetAddSessionsReturnType = ({
       updated.delete(sessionId);
       return updated;
     });
-    // Note: No need to manually update sessionStorage here as the useEffect
-    // will handle it automatically when localSessions changes
   };
 
   const renameLocalSession = (oldSessionId: string, newSessionId: string) => {
