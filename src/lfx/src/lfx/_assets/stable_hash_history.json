@@ -771,7 +771,7 @@
   },
   "KnowledgeIngestion": {
     "versions": {
-      "0.3.0": "c37fd1b357d1"
+      "0.3.0": "f74dd1ddff98"
     }
   },
   "KnowledgeRetrieval": {
@@ -1776,12 +1776,27 @@
   },
   "GuardrailValidator": {
     "versions": {
-      "0.3.0": "48e23a3e0848"
+      "0.3.0": "70918cbb8522"
     }
   },
   "LiteLLMProxyModel": {
     "versions": {
       "0.3.0": "386ae52865b5"
+    }
+  },
+  "SemanticAggregator": {
+    "versions": {
+      "0.3.0": "4e631c501d33"
+    }
+  },
+  "SemanticMap": {
+    "versions": {
+      "0.3.0": "9fe34c926467"
+    }
+  },
+  "SyntheticDataGenerator": {
+    "versions": {
+      "0.3.0": "efd180878996"
     }
   }
 }

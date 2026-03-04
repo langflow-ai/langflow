@@ -111,7 +111,9 @@ class GuardrailsComponent(Component):
             value=0.7,
             range_spec=RangeSpec(min=0, max=1, step=0.1),
             min_label="Strict",
+            min_label_icon="lock",
             max_label="Permissive",
+            max_label_icon="lock-open",
             advanced=True,
         ),
     ]

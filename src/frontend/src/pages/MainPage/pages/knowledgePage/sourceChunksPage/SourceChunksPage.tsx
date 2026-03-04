@@ -227,7 +227,7 @@ export const SourceChunksPage = () => {
                                     );
                                   }
                                 }}
-                                className="h-7 w-16 rounded border border-input bg-background px-2 text-center text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                className="h-7 w-16 rounded border border-input bg-background px-2 text-center text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                               />
                               <span>of {totalPages}</span>
                             </div>

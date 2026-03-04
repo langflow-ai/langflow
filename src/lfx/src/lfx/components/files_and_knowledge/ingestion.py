@@ -144,9 +144,10 @@ class KnowledgeIngestionComponent(Component):
             display_name="Input",
             info=(
                 "Table with all original columns (already chunked / processed). "
-                "Accepts Data or DataFrame. If Data is provided, it is converted to a DataFrame automatically."
+                "Accepts Message, Data, or DataFrame. If Message or Data is provided, "
+                "it is converted to a DataFrame automatically."
             ),
-            input_types=["Data", "DataFrame"],
+            input_types=["Message", "Data", "DataFrame"],
             required=True,
         ),
         TableInput(
