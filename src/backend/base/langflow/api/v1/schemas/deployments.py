@@ -52,8 +52,10 @@ def _normalize_optional_str(value: str | None) -> str | None:
 
 
 class ProviderAccountCreate(BaseModel):
+    model_config = {"extra": "forbid"}
+
     account_id: str | None = Field(default=None, min_length=1, description="Provider tenant/organization identifier.")
-    provider_key: str = Field(min_length=1, description="Deployment adapter routing key.")
+    provider_key: str = Field(min_length=1, description="Deployment provider key.")
     backend_url: str = Field(min_length=1, description="Deployment provider backend URL.")
     api_key: str = Field(min_length=1, description="Deployment provider API key.")
 
@@ -73,8 +75,10 @@ class ProviderAccountCreate(BaseModel):
 
 
 class ProviderAccountUpdate(BaseModel):
+    model_config = {"extra": "forbid"}
+
     account_id: str | None = Field(default=None, min_length=1, description="Provider tenant/organization identifier.")
-    provider_key: str | None = Field(default=None, min_length=1, description="Deployment adapter routing key.")
+    provider_key: str | None = Field(default=None, min_length=1, description="Deployment provider key.")
     backend_url: str | None = Field(default=None, min_length=1, description="Deployment provider backend URL.")
     api_key: str | None = Field(default=None, min_length=1, description="Deployment provider API key.")
 
@@ -127,15 +131,11 @@ class DeploymentGetResponse(DeploymentSummary):
     description: str | None = None
 
 
-class DeploymentListItem(BaseModel):
-    id: str
+class DeploymentListItem(DeploymentSummary):
+    """Extended deployment summary with list-specific fields."""
+
     resource_key: str
-    type: DeploymentType
-    name: str
     attached_count: int = Field(default=0, ge=0)
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
-    provider_data: dict | None = None
 
 
 class DeploymentListResponse(BaseModel):
@@ -153,6 +153,30 @@ class ProviderAccountListResponse(BaseModel):
     total: int = Field(default=0, ge=0)
 
 
+class DeploymentCreateResponse(BaseModel):
+    """API response for deployment creation, wrapping service-layer fields."""
+
+    id: IdLike
+    name: str
+    description: str = ""
+    type: DeploymentType | None = None
+    provider_result: dict[str, Any] | None = None
+
+
+class DeploymentUpdateResponse(BaseModel):
+    """API response for deployment update."""
+
+    id: IdLike
+    provider_result: dict[str, Any] | None = None
+
+
+class DeploymentStatusResponse(BaseModel):
+    """API response for deployment status/health."""
+
+    id: IdLike
+    provider_data: dict[str, Any] | None = None
+
+
 class RedeployResponse(DeploymentOperationResult):
     pass
 
@@ -163,6 +187,8 @@ class DeploymentDuplicateResponse(DeploymentSummary):
 
 class DeploymentDuplicateParams(BaseModel):
     """Parameters for duplicating a deployment."""
+
+    model_config = {"extra": "forbid"}
 
     deployment_type: DeploymentType
 
@@ -191,6 +217,8 @@ class FlowVersionsAttach(BaseModel):
 class FlowVersionsPatch(BaseModel):
     """Add or remove flow version bindings on an existing deployment."""
 
+    model_config = {"extra": "forbid"}
+
     add: list[str] | None = Field(
         None,
         description="Flow version ids to attach to the deployment. Omit to leave unchanged.",
@@ -211,6 +239,11 @@ class FlowVersionsPatch(BaseModel):
     def validate_operations(self):
         add_values = self.add or []
         remove_values = self.remove or []
+
+        if not add_values and not remove_values:
+            msg = "At least one of 'add' or 'remove' must be provided."
+            raise ValueError(msg)
+
         overlap = set(add_values).intersection(remove_values)
         if overlap:
             ids = ", ".join(sorted(overlap))
@@ -225,26 +258,37 @@ class FlowVersionsPatch(BaseModel):
 
 
 class DeploymentCreateRequest(BaseModel):
-    provider_id: UUID = Field(description="Deployment provider account id for adapter routing.")
-    spec: BaseDeploymentData = Field(description="The base metadata of the deployment.")
+    model_config = {"extra": "forbid"}
+
+    provider_id: UUID = Field(description="Deployment provider account id.")
+    spec: BaseDeploymentData = Field(description="Deployment metadata.")
     project_id: UUID | None = Field(
         default=None,
         description="Langflow Project id to persist the deployment under. Defaults to user's Starter Project.",
     )
-    flow_versions: FlowVersionsAttach | None = Field(
+    flow_version_ids: FlowVersionsAttach | None = Field(
         default=None,
-        description="Flow version ids used to build provider snapshots during deployment creation.",
+        description="Flow version ids to attach to the deployment.",
     )
-    config: ConfigItem | None = Field(default=None, description="Deployment config binding/create payload.")
+    config: ConfigItem | None = Field(default=None, description="Deployment configuration.")
 
 
 class DeploymentUpdateRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
     spec: BaseDeploymentDataUpdate | None = Field(default=None, description="Deployment metadata updates.")
-    flow_versions: FlowVersionsPatch | None = Field(
+    flow_version_ids: FlowVersionsPatch | None = Field(
         default=None,
-        description="Flow version attach/detach patch payload.",
+        description="Flow version attach/detach operations.",
     )
-    config: ConfigDeploymentBindingUpdate | None = Field(default=None, description="Deployment config binding patch.")
+    config: ConfigDeploymentBindingUpdate | None = Field(default=None, description="Deployment configuration update.")
+
+    @model_validator(mode="after")
+    def ensure_any_field_provided(self) -> DeploymentUpdateRequest:
+        if self.spec is None and self.flow_version_ids is None and self.config is None:
+            msg = "At least one of 'spec', 'flow_version_ids', or 'config' must be provided."
+            raise ValueError(msg)
+        return self
 
 
 # ---------------------------------------------------------------------------
@@ -253,21 +297,18 @@ class DeploymentUpdateRequest(BaseModel):
 
 
 class ExecutionCreateRequest(BaseModel):
-    provider_id: UUID = Field(description="Deployment provider account id for adapter routing.")
+    model_config = {"extra": "forbid"}
+
+    provider_id: UUID = Field(description="Deployment provider account id.")
     deployment_id: IdLike
-    deployment_type: DeploymentType
-    input: str | dict[str, Any] | None = None
     provider_input: dict[str, Any] | None = None
 
 
 class _ExecutionResponseBase(BaseModel):
     """Shared fields for execution responses."""
 
-    execution_id: str | None = None
+    execution_id: str
     deployment_id: IdLike
-    deployment_type: DeploymentType | None = None
-    status: str | None = None
-    output: str | dict[str, Any] | None = None
     provider_result: dict[str, Any] | None = None
 
 

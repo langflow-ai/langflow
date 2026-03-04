@@ -6,21 +6,21 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 from lfx.services.deployment.schema import (
-    DeploymentCreateResult,
-    DeploymentStatusResult,
     DeploymentType,
-    DeploymentUpdateResult,
 )
 
-from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
+    DeploymentCreateResponse,
     DeploymentDuplicateParams,
     DeploymentDuplicateResponse,
     DeploymentGetResponse,
     DeploymentListResponse,
+    DeploymentStatusResponse,
     DeploymentTypeListResponse,
     DeploymentUpdateRequest,
+    DeploymentUpdateResponse,
     ExecutionCreateRequest,
     ExecutionCreateResponse,
     ExecutionStatusResponse,
@@ -36,7 +36,7 @@ router = APIRouter(prefix="/deployments", tags=["Deployments"])
 
 ProviderIdQuery = Annotated[
     UUID,
-    Query(description="The registered deployment provider account id."),
+    Query(description="Deployment provider account id."),
 ]
 
 # API provider-context contract matrix:
@@ -67,7 +67,9 @@ async def create_provider_account(
 @router.get("/providers", response_model=ProviderAccountListResponse, tags=["Deployment Providers"])
 async def list_provider_accounts(
     user: CurrentActiveUser,
-    db: DbSession,
+    db: DbSessionReadOnly,
+    page: Annotated[int, Query(ge=1)] = 1,
+    size: Annotated[int, Query(ge=1, le=50)] = 20,
 ):
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
@@ -80,7 +82,7 @@ async def list_provider_accounts(
 async def get_provider_account(
     provider_id: UUID,
     user: CurrentActiveUser,
-    db: DbSession,
+    db: DbSessionReadOnly,
 ):
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
@@ -117,7 +119,7 @@ async def update_provider_account(
 # ---------------------------------------------------------------------------
 
 
-@router.post("", response_model=DeploymentCreateResult, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=DeploymentCreateResponse, status_code=status.HTTP_201_CREATED)
 async def create_deployment(
     user: CurrentActiveUser,
     payload: DeploymentCreateRequest,
@@ -131,7 +133,7 @@ async def create_deployment(
 async def list_deployment_types(
     provider_id: ProviderIdQuery,
     user: CurrentActiveUser,
-    db: DbSession,
+    db: DbSessionReadOnly,
 ):
     """List deployment types for a provider account."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
@@ -141,7 +143,9 @@ async def list_deployment_types(
 async def list_deployments(
     provider_id: ProviderIdQuery,
     user: CurrentActiveUser,
-    db: DbSession,
+    db: DbSessionReadOnly,
+    page: Annotated[int, Query(ge=1)] = 1,
+    size: Annotated[int, Query(ge=1, le=50)] = 20,
     deployment_type: Annotated[DeploymentType | None, Query()] = None,
     flow_version_ids: Annotated[
         list[str] | None,
@@ -152,18 +156,8 @@ async def list_deployments(
             )
         ),
     ] = None,
-    match_limit: Annotated[
-        int | None,
-        Query(
-            ge=1,
-            le=500,
-            description=(
-                "Optional cap on number of matching deployments returned per page when flow_version_ids are provided."
-            ),
-        ),
-    ] = None,
 ):
-    """List deployments for a provider account using lazy provider synchronization."""
+    """List deployments for a provider account."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
@@ -178,7 +172,7 @@ async def create_deployment_execution(
     db: DbSession,
     user: CurrentActiveUser,
 ):
-    """Create a provider-agnostic deployment execution."""
+    """Create a deployment execution."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
@@ -186,12 +180,10 @@ async def create_deployment_execution(
 async def get_deployment_execution(
     execution_id: str,
     provider_id: ProviderIdQuery,
-    deployment_id: Annotated[str, Query(description="Deployment id for execution polling.")],
-    deployment_type: Annotated[DeploymentType, Query(description="Deployment type for execution polling.")],
-    db: DbSession,
+    db: DbSessionReadOnly,
     user: CurrentActiveUser,
 ):
-    """Get provider-agnostic deployment execution state/output."""
+    """Get deployment execution status."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
@@ -204,15 +196,15 @@ async def get_deployment_execution(
 async def get_deployment(
     deployment_id: str,
     user: CurrentActiveUser,
-    db: DbSession,
+    db: DbSessionReadOnly,
 ):
-    """Get a deployment and derive provider routing from persisted deployment metadata."""
+    """Get a deployment by id."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
 @router.patch(
     "/{deployment_id}",
-    response_model=DeploymentUpdateResult,
+    response_model=DeploymentUpdateResponse,
 )
 async def update_deployment(
     deployment_id: str,
@@ -220,7 +212,7 @@ async def update_deployment(
     db: DbSession,
     user: CurrentActiveUser,
 ):
-    """Update a deployment and derive provider routing from persisted deployment metadata."""
+    """Update a deployment."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
@@ -230,7 +222,7 @@ async def delete_deployment(
     db: DbSession,
     user: CurrentActiveUser,
 ):
-    """Delete a deployment and derive provider routing from persisted deployment metadata."""
+    """Delete a deployment."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
@@ -244,7 +236,7 @@ async def redeploy_deployment(
     db: DbSession,
     user: CurrentActiveUser,
 ):
-    """Redeploy a deployment and derive provider routing from persisted deployment metadata."""
+    """Redeploy a deployment."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
@@ -259,18 +251,18 @@ async def duplicate_deployment(
     db: DbSession,
     user: CurrentActiveUser,
 ):
-    """Duplicate a deployment and derive provider routing from persisted deployment metadata."""
+    """Duplicate a deployment."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
 @router.get(
     "/{deployment_id}/status",
-    response_model=DeploymentStatusResult,
+    response_model=DeploymentStatusResponse,
 )
 async def get_deployment_status(
     deployment_id: str,
-    db: DbSession,
+    db: DbSessionReadOnly,
     user: CurrentActiveUser,
 ):
-    """Get deployment health and derive provider routing from persisted deployment metadata."""
+    """Get deployment status."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
