@@ -8,7 +8,10 @@ export const disableItem = (
   if (SBItemName === CHAT_INPUT_COMPONENT && uniqueInputsComponents.chatInput) {
     return true;
   }
-  if (SBItemName === CHAT_INPUT_COMPONENT && uniqueInputsComponents.webhookInput) {
+  if (
+    SBItemName === CHAT_INPUT_COMPONENT &&
+    uniqueInputsComponents.webhookInput
+  ) {
     return true;
   }
   if (SBItemName === WEBHOOK_COMPONENT && uniqueInputsComponents.webhookInput) {

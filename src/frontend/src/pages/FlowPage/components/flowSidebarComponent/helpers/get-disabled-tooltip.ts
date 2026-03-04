@@ -12,7 +12,10 @@ export const getDisabledTooltip = (
   if (SBItemName === CHAT_INPUT_COMPONENT && uniqueInputsComponents.chatInput) {
     return TOOLTIP_MESSAGES.CHAT_INPUT_ALREADY_ADDED;
   }
-  if (SBItemName === CHAT_INPUT_COMPONENT && uniqueInputsComponents.webhookInput) {
+  if (
+    SBItemName === CHAT_INPUT_COMPONENT &&
+    uniqueInputsComponents.webhookInput
+  ) {
     return TOOLTIP_MESSAGES.CANNOT_ADD_CHAT_INPUT_WITH_WEBHOOK;
   }
   if (SBItemName === WEBHOOK_COMPONENT && uniqueInputsComponents.webhookInput) {
