@@ -68,7 +68,7 @@ const ModelProvidersContent = ({
     <div className="flex flex-row w-full h-full overflow-hidden">
       <div
         className={cn(
-          "flex p-2 flex-col transition-all duration-300 ease-in-out",
+          "flex p-2 flex-col flex-shrink-0 transition-all duration-300 ease-in-out",
           syncedSelectedProvider ? "w-1/3 border-r" : "w-full",
         )}
       >
