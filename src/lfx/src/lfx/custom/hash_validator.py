@@ -5,13 +5,17 @@ hash history files by comparing code hashes. When allow_custom_components is Fal
 only components whose hash matches an entry in the hash history are allowed.
 """
 
+from __future__ import annotations
+
 import threading
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import orjson
 
 from lfx.custom.utils import _generate_code_hash
+from lfx.custom.validate import extract_display_name
+from lfx.exceptions.component import CustomComponentNotAllowedError
 from lfx.log.logger import logger
 from lfx.services.deps import get_settings_service
 
@@ -120,7 +124,7 @@ def _extract_hashes_from_history(history: dict, *, allow_code_execution: bool = 
     return allowed_hashes, code_execution_hashes
 
 
-def _load_hash_history(settings_service: "SettingsService") -> set[str]:
+def _load_hash_history(settings_service: SettingsService) -> set[str]:
     """Load and cache component hashes from hash history files.
 
     Loads from stable_hash_history.json and optionally from nightly_hash_history.json
@@ -205,7 +209,7 @@ def _load_hash_history(settings_service: "SettingsService") -> set[str]:
     return all_hashes
 
 
-def _get_cached_hashes(settings_service: "SettingsService") -> set[str]:
+def _get_cached_hashes(settings_service: SettingsService) -> set[str]:
     """Get cached component hashes from hash history, loading if necessary.
 
     Thread-safe cache access using a lock to prevent race conditions.
@@ -239,7 +243,7 @@ def _get_cached_hashes(settings_service: "SettingsService") -> set[str]:
         return _component_hash_cache
 
 
-def is_code_hash_allowed(source_code: str, settings_service: "SettingsService | None" = None) -> bool:
+def is_code_hash_allowed(source_code: str, settings_service: SettingsService | None = None) -> bool:
     """Check if source code hash is allowed based on hash history.
 
     CRITICAL: This function fails fast on any errors. Hash validation is a security-critical
@@ -296,3 +300,76 @@ def is_code_hash_allowed(source_code: str, settings_service: "SettingsService | 
             "Set LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true to allow custom code."
         )
     return is_allowed
+
+
+def validate_flow_nodes(nodes: list[dict[str, Any]]) -> None:
+    """Validate all nodes in a flow, raising if any custom components are blocked.
+
+    This is a no-op when allow_custom_components=True. Recursively checks
+    group/sub-flow nodes. Called from Graph.from_payload() to ensure all
+    graph construction is validated.
+
+    Args:
+        nodes: List of node dictionaries from the flow payload.
+
+    Raises:
+        CustomComponentNotAllowedError: If any nodes contain blocked custom code.
+    """
+    settings_service = get_settings_service()
+    if settings_service and settings_service.settings.allow_custom_components:
+        return
+
+    blocked_components: list[dict[str, str]] = []
+    _validate_nodes(nodes, blocked_components)
+    if blocked_components:
+        raise CustomComponentNotAllowedError(blocked_components)
+
+
+def _validate_nodes(nodes: list[dict[str, Any]], blocked_components: list[dict[str, str]]) -> None:
+    """Validate a list of nodes, recursively checking group/sub-flow nodes.
+
+    Args:
+        nodes: List of node dictionaries to validate.
+        blocked_components: List to append blocked component details to (mutated in place).
+    """
+    for node in nodes:
+        node_data = node.get("data", {})
+        node_info = node_data.get("node", {})
+
+        # Recursively validate nodes inside group/sub-flow nodes
+        nested_flow = node_info.get("flow", {})
+        if nested_flow:
+            nested_flow_data = nested_flow.get("data", {})
+            nested_nodes = nested_flow_data.get("nodes", [])
+            if nested_nodes:
+                _validate_nodes(nested_nodes, blocked_components)
+
+        # Check if node has code
+        template = node_info.get("template", {})
+        code_field = template.get("code", {})
+        code = code_field.get("value", "")
+
+        if not code:
+            logger.debug(f"Skipping node {node.get('id', 'unknown')} — no code field")
+            continue
+
+        try:
+            is_allowed = is_code_hash_allowed(code)
+        except (ValueError, FileNotFoundError, TypeError):
+            logger.error("Hash validation configuration error, blocking component", exc_info=True)
+            is_allowed = False
+        except Exception:  # noqa: BLE001
+            logger.error("Unexpected hash validation failure, blocking component", exc_info=True)
+            is_allowed = False
+
+        if not is_allowed:
+            display_name = extract_display_name(code)
+            class_name = node_info.get("display_name") or node.get("id", "Unknown")
+
+            blocked_components.append(
+                {
+                    "node_id": node.get("id", "unknown"),
+                    "display_name": display_name or class_name,
+                    "class_name": class_name,
+                }
+            )

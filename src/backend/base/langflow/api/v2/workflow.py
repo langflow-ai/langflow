@@ -28,6 +28,7 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
+from lfx.exceptions.component import CustomComponentNotAllowedError
 from lfx.graph.graph.base import Graph
 from lfx.schema.workflow import (
     WORKFLOW_EXECUTION_RESPONSES,
@@ -245,6 +246,8 @@ async def execute_workflow(
                 "flow_id": workflow_request.flow_id,
             },
         ) from err
+    except CustomComponentNotAllowedError:
+        raise
     except Exception as err:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -368,6 +371,8 @@ async def execute_sync_workflow(
         )
         # Set run_id for tracing/logging (similar to V1's simple_run_flow)
         graph.set_run_id(job_id)
+    except CustomComponentNotAllowedError:
+        raise
     except Exception as e:
         msg = f"Failed to build graph from flow data: {e!s}"
         raise WorkflowValidationError(msg) from e

@@ -8,6 +8,7 @@ from langflow.processing.process import process_tweaks_on_graph
 
 from lfx.base.tools.constants import TOOL_OUTPUT_NAME
 from lfx.custom.custom_component.component import Component, get_component_toolkit
+from lfx.exceptions.component import CustomComponentNotAllowedError
 from lfx.field_typing import Tool
 from lfx.graph.graph.base import Graph
 from lfx.graph.vertex.base import Vertex
@@ -540,6 +541,8 @@ class RunFlowBaseComponent(Component):
             raise ValueError(msg)
         try:
             return handler(*args, **kwargs)
+        except CustomComponentNotAllowedError:
+            raise
         except Exception as exc:  # noqa: BLE001
             key = kwargs.get("cache_key") or kwargs.get("flow_name") or kwargs.get("flow_name_selected")
             if not key and args:

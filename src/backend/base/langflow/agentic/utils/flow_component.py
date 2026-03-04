@@ -3,6 +3,7 @@
 from typing import Any
 from uuid import UUID
 
+from lfx.exceptions.component import CustomComponentNotAllowedError
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
 
@@ -99,6 +100,8 @@ async def get_component_details(
             "flow_name": flow.name,
         }
 
+    except CustomComponentNotAllowedError:
+        raise
     except Exception as e:  # noqa: BLE001
         await logger.aerror(f"Error getting component details for {component_id} in {flow_id_or_name}: {e}")
         return {
@@ -180,6 +183,8 @@ async def get_component_field_value(
             **field_config,
         }
 
+    except CustomComponentNotAllowedError:
+        raise
     except Exception as e:  # noqa: BLE001
         await logger.aerror(f"Error getting field {field_name} from {component_id} in {flow_id_or_name}: {e}")
         return {"error": str(e)}
@@ -368,6 +373,8 @@ async def list_component_fields(
             "field_count": len(fields_info),
         }
 
+    except CustomComponentNotAllowedError:
+        raise
     except Exception as e:  # noqa: BLE001
         await logger.aerror(f"Error listing fields for {component_id} in {flow_id_or_name}: {e}")
         return {"error": str(e)}

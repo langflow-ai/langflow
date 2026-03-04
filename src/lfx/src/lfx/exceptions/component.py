@@ -13,3 +13,12 @@ class StreamingError(Exception):
         self.cause = cause
         self.source = source
         super().__init__(cause)
+
+
+class CustomComponentNotAllowedError(Exception):
+    """Raised when a flow contains custom components that are not in the hash allowlist."""
+
+    def __init__(self, blocked_components: list[dict[str, str]]):
+        self.blocked_components = blocked_components
+        names = [c.get("display_name", "Unknown") for c in blocked_components]
+        super().__init__(f"Custom components are not allowed: {', '.join(names)}")

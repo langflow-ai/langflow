@@ -1169,6 +1169,10 @@ class Graph:
         try:
             vertices = payload["nodes"]
             edges = payload["edges"]
+            # Validate custom components before building graph
+            from lfx.custom.hash_validator import validate_flow_nodes
+
+            validate_flow_nodes(vertices)
             graph = cls(flow_id=flow_id, flow_name=flow_name, user_id=user_id, context=context)
             graph.add_nodes_and_edges(vertices, edges)
         except KeyError as exc:

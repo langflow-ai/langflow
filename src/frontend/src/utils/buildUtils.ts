@@ -294,9 +294,14 @@ export async function buildFlowVertices({
             onValidateNodes,
           });
         },
-        onError: (statusCode) => {
+        onError: (statusCode, detail) => {
           if (statusCode === 404) {
             throw new Error("Flow not found");
+          }
+          if (statusCode === 403 && detail) {
+            throw new Error(
+              typeof detail === "string" ? detail : JSON.stringify(detail),
+            );
           }
           throw new Error("Error processing build events");
         },
@@ -331,6 +336,14 @@ export async function buildFlowVertices({
     if (!buildResponse.ok) {
       if (buildResponse.status === 404) {
         throw new Error("Flow not found");
+      }
+      // Extract error detail from response body (e.g., 403 blocked component names)
+      const errorBody = await buildResponse.json().catch(() => null);
+      const detail = errorBody?.detail;
+      if (detail) {
+        throw new Error(
+          typeof detail === "string" ? detail : JSON.stringify(detail),
+        );
       }
       throw new Error("Error starting build process");
     }
@@ -376,9 +389,14 @@ export async function buildFlowVertices({
             onValidateNodes,
           });
         },
-        onError: (statusCode) => {
+        onError: (statusCode, detail) => {
           if (statusCode === 404) {
             throw new Error("Build job not found");
+          }
+          if (statusCode === 403 && detail) {
+            throw new Error(
+              typeof detail === "string" ? detail : JSON.stringify(detail),
+            );
           }
           throw new Error("Error processing build events");
         },

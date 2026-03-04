@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
+from lfx.exceptions.component import CustomComponentNotAllowedError
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
 from lfx.log.logger import logger
@@ -39,7 +40,6 @@ from langflow.api.v1.schemas import (
 from langflow.exceptions.component import ComponentBuildError
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
-from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import (
     get_chat_service,
     get_queue_service,
@@ -81,16 +81,6 @@ async def retrieve_vertices_order(
     Raises:
         HTTPException: If there is an error checking the build status.
     """
-    # Validate custom components before building (raises 403 if blocked)
-    from langflow.api.utils.flow_validation import require_flow_custom_components_valid
-
-    if data:
-        require_flow_custom_components_valid(data.model_dump())
-    else:
-        flow = await session.get(Flow, flow_id)
-        if flow and flow.data:
-            require_flow_custom_components_valid(flow.data)
-
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
     start_time = time.perf_counter()
@@ -123,6 +113,8 @@ async def retrieve_vertices_order(
             ),
         )
         return VerticesOrderResponse(ids=graph.first_layer, run_id=graph.run_id, vertices_to_run=vertices_to_run)
+    except CustomComponentNotAllowedError:
+        raise
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_playground,
@@ -178,21 +170,6 @@ async def build_flow(
     Returns:
         Dict with job_id that can be used to poll for build status
     """
-    # Validate custom components before building (raises 403 if blocked)
-    from langflow.api.utils.flow_validation import require_flow_custom_components_valid
-
-    if data:
-        require_flow_custom_components_valid(data.model_dump())
-
-    # Also validate the stored flow data
-    async with session_scope() as session:
-        flow = await session.get(Flow, flow_id)
-        if not flow:
-            raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
-
-        if flow.data:
-            require_flow_custom_components_valid(flow.data)
-
     job_id = await start_flow_build(
         flow_id=flow_id,
         background_tasks=background_tasks,
@@ -427,6 +404,8 @@ async def build_vertex(
                 component_run_id=run_id,
             ),
         )
+    except (HTTPException, CustomComponentNotAllowedError):
+        raise
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_component,
@@ -641,17 +620,6 @@ async def build_public_tmp(
         # Verify this is a public flow and get the associated user
         client_id = request.cookies.get("client_id")
         owner_user, new_flow_id = await verify_public_flow_and_get_user(flow_id=flow_id, client_id=client_id)
-
-        from langflow.api.utils.flow_validation import require_flow_custom_components_valid
-
-        # Validate custom components (raises 403 if blocked)
-        if data:
-            require_flow_custom_components_valid(data.model_dump())
-
-        async with session_scope() as session:
-            flow_record = await session.get(Flow, flow_id)
-            if flow_record and flow_record.data:
-                require_flow_custom_components_valid(flow_record.data)
 
         # Start the flow build using the new flow ID
         job_id = await start_flow_build(

@@ -6,6 +6,7 @@ import uuid
 from collections.abc import AsyncIterator
 
 from fastapi import BackgroundTasks, HTTPException, Response
+from lfx.exceptions.component import CustomComponentNotAllowedError
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
 from lfx.log.logger import logger
@@ -248,6 +249,8 @@ async def generate_flow_events(
             await chat_service.set_cache(flow_id_str, graph)
             await log_telemetry(start_time, components_count, run_id=run_id, success=True)
 
+        except CustomComponentNotAllowedError:
+            raise
         except Exception as exc:
             await log_telemetry(start_time, components_count, run_id=run_id, success=False, error_message=str(exc))
 

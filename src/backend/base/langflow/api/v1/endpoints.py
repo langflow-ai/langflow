@@ -21,6 +21,7 @@ from lfx.custom.utils import (
     get_instance_name,
     update_component_build_config,
 )
+from lfx.exceptions.component import CustomComponentNotAllowedError
 from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
 from lfx.log.logger import logger
@@ -441,12 +442,6 @@ async def _run_flow_internal(
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
 
-    # Validate custom components before running (raises 403 if blocked)
-    from langflow.api.utils.flow_validation import require_flow_custom_components_valid
-
-    if flow.data:
-        require_flow_custom_components_valid(flow.data)
-
     telemetry_service = get_telemetry_service()
 
     # If input_request is None, manually parse the request body
@@ -533,6 +528,8 @@ async def _run_flow_internal(
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
     except InvalidChatInputError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except CustomComponentNotAllowedError:
+        raise
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_run,
@@ -753,12 +750,6 @@ async def webhook_run_flow(
     Raises:
         HTTPException: If the flow is not found or if there is an error processing the request.
     """
-    # Validate custom components before running (raises 403 if blocked)
-    from langflow.api.utils.flow_validation import require_flow_custom_components_valid
-
-    if flow.data:
-        require_flow_custom_components_valid(flow.data)
-
     telemetry_service = get_telemetry_service()
     start_time = time.perf_counter()
     await logger.adebug("Received webhook request")
@@ -886,12 +877,6 @@ async def experimental_run_flow(
     # Get the flow from the id or name
     await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
 
-    # Validate custom components before running (raises 403 if blocked)
-    from langflow.api.utils.flow_validation import require_flow_custom_components_valid
-
-    if flow.data:
-        require_flow_custom_components_valid(flow.data)
-
     session_service = get_session_service()
     flow_id_str = str(flow.id)
     if outputs is None:
@@ -935,6 +920,8 @@ async def experimental_run_flow(
             graph_data = flow.data
             graph_data = process_tweaks(graph_data, tweaks or {})
             graph = Graph.from_payload(graph_data, flow_id=flow_id_str)
+        except CustomComponentNotAllowedError:
+            raise
         except Exception as exc:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 

@@ -19,6 +19,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_pagination import add_pagination
 from filelock import FileLock
+from lfx.exceptions.component import CustomComponentNotAllowedError
 from lfx.interface.utils import setup_llm_caching
 from lfx.log.logger import configure, logger
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -517,6 +518,13 @@ def create_app():
     app.include_router(router)
     app.include_router(health_check_router)
     app.include_router(log_router)
+
+    @app.exception_handler(CustomComponentNotAllowedError)
+    async def custom_component_not_allowed_handler(_request: Request, exc: CustomComponentNotAllowedError):
+        return JSONResponse(
+            status_code=HTTPStatus.FORBIDDEN,
+            content={"detail": str(exc)},
+        )
 
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):

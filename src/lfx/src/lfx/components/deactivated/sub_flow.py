@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.base.flow_processing.utils import build_data_from_result_data
 from lfx.custom.custom_component.custom_component import CustomComponent
+from lfx.exceptions.component import CustomComponentNotAllowedError
 from lfx.graph.graph.base import Graph
 from lfx.graph.vertex.base import Vertex
 from lfx.helpers import get_flow_inputs
@@ -58,6 +59,8 @@ class SubFlowComponent(CustomComponent):
                         inputs = get_flow_inputs(graph)
                         # Add inputs to the build config
                         build_config = self.add_inputs_to_build_config(inputs, build_config)
+                    except CustomComponentNotAllowedError:
+                        raise
                     except Exception:  # noqa: BLE001
                         await logger.aexception(f"Error building graph for flow {field_value}")
 

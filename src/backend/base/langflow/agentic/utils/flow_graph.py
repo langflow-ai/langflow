@@ -3,6 +3,7 @@
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
+from lfx.exceptions.component import CustomComponentNotAllowedError
 from lfx.graph.graph.ascii import draw_graph
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
@@ -90,6 +91,8 @@ async def get_flow_graph_representations(
             "description": flow.description,
         }
 
+    except CustomComponentNotAllowedError:
+        raise
     except Exception as e:  # noqa: BLE001
         await logger.aerror(f"Error getting flow graph representations for {flow_id_or_name}: {e}")
         return {
@@ -197,6 +200,8 @@ async def get_flow_graph_summary(
             "description": flow.description,
         }
 
+    except CustomComponentNotAllowedError:
+        raise
     except Exception as e:  # noqa: BLE001
         await logger.aerror(f"Error getting flow graph summary for {flow_id_or_name}: {e}")
         return {"error": str(e)}

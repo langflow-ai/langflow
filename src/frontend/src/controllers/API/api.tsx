@@ -247,7 +247,7 @@ export type StreamingRequestParams = {
   url: string;
   onData: (event: object) => Promise<boolean>;
   body?: object;
-  onError?: (statusCode: number) => void;
+  onError?: (statusCode: number, detail?: string) => void;
   onNetworkError?: (error: Error) => void;
   buildController: AbortController;
   eventDeliveryConfig?: EventDeliveryType;
@@ -294,7 +294,9 @@ async function performStreamingRequest({
     const response = await fetch(url, params);
     if (!response.ok) {
       if (onError) {
-        onError(response.status);
+        // Extract error detail from response body (e.g., 403 blocked component names)
+        const errorBody = await response.json().catch(() => null);
+        onError(response.status, errorBody?.detail);
       } else {
         throw new Error("Error in streaming request.");
       }
