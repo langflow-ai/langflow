@@ -3,7 +3,8 @@ import { useEffect, useMemo } from "react";
 import { useGetFlowId } from "@/components/core/playgroundComponent/hooks/use-get-flow-id";
 import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
 import type { ChatMessageType } from "@/types/chat";
-import type { Message, ExtendedMessageProperties } from "@/types/messages";
+import type { Message } from "@/types/messages";
+import { isMessageForSession } from "../../utils/session-filter";
 import sortSenderMessages from "../utils/sort-sender-messages";
 
 export const useChatHistory = (visibleSession: string | null) => {
@@ -45,19 +46,9 @@ export const useChatHistory = (visibleSession: string | null) => {
     if (queryData && typeof queryData === "object" && "rows" in queryData) {
       const rowsData = queryData.rows as { data?: Message[] } | undefined;
       if (rowsData && typeof rowsData === "object" && "data" in rowsData) {
-        const backendMessages = (rowsData.data || []).filter((msg: Message) => {
-          // Filter messages to only include those for the current session
-          const isCurrentFlow = msg.flow_id === currentFlowId;
-          if (visibleSession === currentFlowId) {
-            // Default session: include messages with matching session_id or no session_id
-            return (
-              isCurrentFlow &&
-              (msg.session_id === visibleSession || !msg.session_id)
-            );
-          }
-          // Non-default session: only include messages with exact session_id match
-          return isCurrentFlow && msg.session_id === visibleSession;
-        });
+        const backendMessages = (rowsData.data || []).filter((msg: Message) =>
+          isMessageForSession(msg, currentFlowId, visibleSession),
+        );
 
         const existingCache =
           queryClient.getQueryData<Message[]>(sessionCacheKey) || [];
@@ -78,20 +69,9 @@ export const useChatHistory = (visibleSession: string | null) => {
   const chatHistory = useMemo(() => {
     // Filter messages for current session
     const filteredMessages: ChatMessageType[] = messages
-      .filter((message: Message) => {
-        const isCurrentFlow = message.flow_id === currentFlowId;
-        // If visibleSession is the flow_id, it means we are in the default session
-        // In the default session, we show messages that have the same session_id as the flow_id
-        // OR messages that have NO session_id (legacy behavior)
-        if (visibleSession === currentFlowId) {
-          const matches =
-            isCurrentFlow &&
-            (message.session_id === visibleSession || !message.session_id);
-          return matches;
-        }
-        const matches = isCurrentFlow && message.session_id === visibleSession;
-        return matches;
-      })
+      .filter((message: Message) =>
+        isMessageForSession(message, currentFlowId, visibleSession),
+      )
       .map((message: Message): ChatMessageType => {
         let files = message.files;
         // Handle the "[]" case, empty string, or already parsed array
@@ -110,27 +90,25 @@ export const useChatHistory = (visibleSession: string | null) => {
         const messageText = message.text || "";
 
         // Convert Message.properties to ChatMessageType.properties (PropertiesType)
+        // Properties are now properly typed in Message, no cast needed
         let properties: ChatMessageType["properties"] = undefined;
-        if (message.properties) {
-          const props = message.properties as ExtendedMessageProperties;
-          if (props.source?.id) {
-            properties = {
-              source: {
-                id: props.source.id,
-                display_name: props.source.display_name || "",
-                source: props.source.source || "",
-              },
-              state: props.state,
-              icon: props.icon,
-              background_color: props.background_color,
-              text_color: props.text_color,
-              targets: props.targets,
-              edited: props.edited,
-              allow_markdown: props.allow_markdown,
-              positive_feedback: props.positive_feedback,
-              build_duration: props.build_duration,
-            };
-          }
+        if (message.properties?.source?.id) {
+          properties = {
+            source: {
+              id: message.properties.source.id,
+              display_name: message.properties.source.display_name || "",
+              source: message.properties.source.source || "",
+            },
+            state: message.properties.state,
+            icon: message.properties.icon,
+            background_color: message.properties.background_color,
+            text_color: message.properties.text_color,
+            targets: message.properties.targets,
+            edited: message.properties.edited,
+            allow_markdown: message.properties.allow_markdown,
+            positive_feedback: message.properties.positive_feedback,
+            build_duration: message.properties.build_duration,
+          };
         }
 
         return {
