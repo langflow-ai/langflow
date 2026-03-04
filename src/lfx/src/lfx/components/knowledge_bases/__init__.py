@@ -12,17 +12,20 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from lfx.components.files_and_knowledge.retrieval import KnowledgeBaseComponent
+    from lfx.components.files_and_knowledge.ingestion import KnowledgeIngestionComponent
+    from lfx.components.files_and_knowledge.retrieval import KnowledgeRetrievalComponent
 
 _dynamic_imports = {
-    "KnowledgeBaseComponent": "retrieval",
+    "KnowledgeIngestionComponent": "ingestion",
+    "KnowledgeRetrievalComponent": "retrieval",
 }
 
-__all__ = ["KnowledgeBaseComponent"]
+__all__ = ["KnowledgeIngestionComponent", "KnowledgeRetrievalComponent"]
 
 # Register redirected submodules in sys.modules for direct importlib.import_module() calls
-# This allows imports like: import lfx.components.knowledge_bases.retrieval
+# This allows imports like: import lfx.components.knowledge_bases.ingestion
 _redirected_submodules = {
+    "lfx.components.knowledge_bases.ingestion": "lfx.components.files_and_knowledge.ingestion",
     "lfx.components.knowledge_bases.retrieval": "lfx.components.files_and_knowledge.retrieval",
 }
 
@@ -53,6 +56,12 @@ for old_path, new_path in _redirected_submodules.items():
 def __getattr__(attr_name: str) -> Any:
     """Forward attribute access to files_and_knowledge components."""
     # Handle submodule access for backwards compatibility
+    if attr_name == "ingestion":
+        from importlib import import_module
+
+        result = import_module("lfx.components.files_and_knowledge.ingestion")
+        globals()[attr_name] = result
+        return result
     if attr_name == "retrieval":
         from importlib import import_module
 

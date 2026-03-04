@@ -159,7 +159,10 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       return rawData;
     }
 
-    const knowledgeComponentNames = ["KnowledgeBase"];
+    const knowledgeComponentNames = [
+      "KnowledgeIngestion",
+      "KnowledgeRetrieval",
+    ];
 
     // Create a deep copy to avoid mutating the original
     const filteredData = cloneDeep(rawData);
