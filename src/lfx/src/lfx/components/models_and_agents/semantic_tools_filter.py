@@ -286,6 +286,20 @@ class SemanticToolsFilterComponent(Component):
 
     _CACHE_SYS_ATTR = "_semantic_tools_filter_cache"
 
+    @staticmethod
+    def _model_cache_id(model: object) -> str:
+        """Generate a stable cache identifier for a model instance.
+
+        Returns the model class name with the first found configuration attribute
+        (model_name, model, deployment_name, or name) to distinguish between
+        different configurations of the same model class.
+        """
+        for attr in ("model_name", "model", "deployment_name", "name"):
+            value = getattr(model, attr, None)
+            if value:
+                return f"{type(model).__name__}:{value}"
+        return type(model).__name__
+
     @classmethod
     def _get_cache_file_path(cls):
         """Get the platform-specific cache file path using platformdirs."""
@@ -302,16 +316,29 @@ class SemanticToolsFilterComponent(Component):
 
         numpy arrays are wrapped in ``{"__ndarray__": <nested list>}`` so
         they can be distinguished from plain lists on deserialisation.
+        Recursively handles tuples, lists, and dicts containing numpy arrays.
         """
         if isinstance(value, np.ndarray):
             return {"__ndarray__": value.tolist()}
+        if isinstance(value, tuple):
+            return {"__tuple__": [SemanticToolsFilterComponent._encode_cache_value(v) for v in value]}
+        if isinstance(value, list):
+            return [SemanticToolsFilterComponent._encode_cache_value(v) for v in value]
+        if isinstance(value, dict):
+            return {k: SemanticToolsFilterComponent._encode_cache_value(v) for k, v in value.items()}
         return value
 
     @staticmethod
     def _decode_cache_value(value: object) -> object:
         """Restore a value that was encoded by :meth:`_encode_cache_value`."""
-        if isinstance(value, dict) and "__ndarray__" in value:
-            return np.array(value["__ndarray__"], dtype=np.float32)
+        if isinstance(value, dict):
+            if "__ndarray__" in value:
+                return np.array(value["__ndarray__"], dtype=np.float32)
+            if "__tuple__" in value:
+                return tuple(SemanticToolsFilterComponent._decode_cache_value(v) for v in value["__tuple__"])
+            return {k: SemanticToolsFilterComponent._decode_cache_value(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [SemanticToolsFilterComponent._decode_cache_value(v) for v in value]
         return value
 
     @classmethod
@@ -345,7 +372,10 @@ class SemanticToolsFilterComponent(Component):
         cache_file = cls._get_cache_file_path()
         cache_file.parent.mkdir(parents=True, exist_ok=True)
         serialisable = {k: cls._encode_cache_value(v) for k, v in cache.items()}
-        cache_file.write_text(json.dumps(serialisable))
+        payload = json.dumps(serialisable)
+        tmp_file = cache_file.with_suffix(".tmp")
+        tmp_file.write_text(payload)
+        tmp_file.replace(cache_file)
 
     # Keep old names as aliases so internal call-sites stay readable
     @classmethod
@@ -507,7 +537,7 @@ class SemanticToolsFilterComponent(Component):
 
         # Cache key = model class + hash of exact content being embedded
         content_hash = hashlib.md5("|".join(descriptions).encode()).hexdigest()  # noqa: S324
-        cache_key = f"{type(embedding_model).__name__}:{content_hash}"
+        cache_key = f"{self._model_cache_id(embedding_model)}:{content_hash}"
 
         if cache_key in cache:
             logger.info(
@@ -556,12 +586,12 @@ class SemanticToolsFilterComponent(Component):
         aug_model: BaseLanguageModel,
         instruction: str,
         num_samples: int = 1,
-    ) -> tuple[np.ndarray, dict[str, list[str]]]:
+    ) -> tuple[np.ndarray, dict[int, list[str]]]:
         """Return augmented-description embeddings and dependencies, skipping the augmentation LLM entirely when cached.
 
         Returns:
             - np.ndarray: shape ``(N * num_samples, dim)`` where N = ``len(tools)``
-            - dict[str, list[str]]: tool name -> dependency keywords
+            - dict[int, list[str]]: tool index -> dependency keywords
 
         Descriptions are ordered tool-major: all samples for tool 0, then
         all samples for tool 1, etc.  The caller can reshape to
@@ -577,7 +607,8 @@ class SemanticToolsFilterComponent(Component):
         tools_hash = self._tools_hash(tools)
         prompt_hash = hashlib.md5(instruction.encode()).hexdigest()[:8]  # noqa: S324
         cache_key = (
-            f"aug:{type(embedding_model).__name__}:{type(aug_model).__name__}:{tools_hash}:{prompt_hash}:s{num_samples}"
+            f"aug:{self._model_cache_id(embedding_model)}:"
+            f"{self._model_cache_id(aug_model)}:{tools_hash}:{prompt_hash}:s{num_samples}"
         )
 
         cached_value = cache.get(cache_key)
@@ -645,12 +676,12 @@ class SemanticToolsFilterComponent(Component):
         llm: BaseLanguageModel,
         instruction: str,
         num_samples: int = 1,
-    ) -> tuple[list[list[str]], dict[str, list[str]]]:
+    ) -> tuple[list[list[str]], dict[int, list[str]]]:
         """Use an LLM to generate enriched descriptions and dependencies for embedding.
 
         Returns:
             - list[list[str]]: *num_samples* augmented description strings per tool
-            - dict[str, list[str]]: tool name -> list of dependency keywords
+            - dict[int, list[str]]: tool index -> list of dependency keywords
 
         Both are cached by tool-set hash + model class + prompt hash + sample count.
         """
@@ -658,7 +689,7 @@ class SemanticToolsFilterComponent(Component):
         cache = self._augmentation_cache()
         tools_hash = self._tools_hash(tools)
         prompt_hash = hashlib.md5(instruction.encode()).hexdigest()[:8]  # noqa: S324
-        cache_key = f"{type(llm).__name__}:{tools_hash}:{prompt_hash}:s{num_samples}"
+        cache_key = f"{self._model_cache_id(llm)}:{tools_hash}:{prompt_hash}:s{num_samples}"
 
         cached = cache.get(cache_key)
         if cached is not None:
@@ -755,10 +786,10 @@ class SemanticToolsFilterComponent(Component):
                     parsed = parsed_obj["descriptions"]
                     raw_deps = parsed_obj.get("dependencies", [])
 
-                    # Build dependencies dict: tool_name -> [keywords]
-                    for _i, (tool, deps) in enumerate(zip(tools, raw_deps, strict=False)):
-                        if isinstance(deps, list):
-                            dependencies[tool.name] = [str(d).lower() for d in deps if d]
+                    # Build dependencies dict: tool_index -> [keywords]
+                    for i, deps in enumerate(raw_deps):
+                        if isinstance(deps, list) and deps:
+                            dependencies[i] = [str(d).lower() for d in deps if d]
 
                     logger.info(
                         "Parsed structured response with dependencies",
@@ -854,7 +885,7 @@ class SemanticToolsFilterComponent(Component):
             f"({dep_count} with dependencies)"
         )
 
-        for t, samples in zip(tools, descriptions, strict=False):
+        for i, (t, samples) in enumerate(zip(tools, descriptions, strict=False)):
             for j, desc in enumerate(samples):
                 logger.debug(
                     "Augmented description",
@@ -865,12 +896,13 @@ class SemanticToolsFilterComponent(Component):
                 )
 
             # Log dependencies if present
-            if t.name in dependencies:
+            if i in dependencies:
                 logger.debug(
                     "Tool dependencies",
                     component="SemanticToolsFilter",
                     tool=t.name,
-                    dependencies=dependencies[t.name],
+                    tool_index=i,
+                    dependencies=dependencies[i],
                 )
 
         return descriptions, dependencies
@@ -883,7 +915,7 @@ class SemanticToolsFilterComponent(Component):
         self,
         candidates: list[tuple[BaseTool, float]],
         all_tools: list[BaseTool],
-        tool_dependencies: dict[str, list[str]],
+        tool_dependencies: dict[int, list[str]],
         scored_all: list[tuple[BaseTool, float]],
         logger,
     ) -> list[tuple[BaseTool, float]]:
@@ -895,28 +927,37 @@ class SemanticToolsFilterComponent(Component):
         Args:
             candidates: Current top-k candidates
             all_tools: All available tools
-            tool_dependencies: Dict mapping tool names to dependency keywords
+            tool_dependencies: Dict mapping tool indices to dependency keywords
             scored_all: All tools with their similarity scores
             logger: Logger instance
 
         Returns:
             Expanded list of candidates (may be larger than original)
         """
-        candidate_names = {t.name for t, _ in candidates}
+        # Track candidates by object identity to handle duplicate names
+        candidate_ids = {id(t) for t, _ in candidates}
         added_tools: list[tuple[BaseTool, float]] = []
 
-        # Build a map of tool name -> (tool, score) for quick lookup
-        tool_score_map = {t.name: (t, s) for t, s in scored_all}
+        # Build a map of tool id -> (tool, score) for quick lookup
+        tool_score_map = {id(t): (t, s) for t, s in scored_all}
+
+        # Build index map: tool object id -> index in all_tools
+        tool_index_map = {id(t): i for i, t in enumerate(all_tools)}
 
         # For each candidate, check if any other tools match its dependencies
         for candidate_tool, _ in candidates:
-            deps = tool_dependencies.get(candidate_tool.name, [])
+            candidate_idx = tool_index_map.get(id(candidate_tool))
+            if candidate_idx is None:
+                continue
+
+            deps = tool_dependencies.get(candidate_idx, [])
             if not deps:
                 continue
 
             # Check all other tools for dependency matches
-            for other_tool in all_tools:
-                if other_tool.name in candidate_names:
+            for other_idx, other_tool in enumerate(all_tools):
+                other_id = id(other_tool)
+                if other_id in candidate_ids:
                     continue  # Already a candidate
 
                 # Check if tool name or description contains any dependency keyword
@@ -925,10 +966,10 @@ class SemanticToolsFilterComponent(Component):
                 for dep_keyword in deps:
                     if dep_keyword in tool_text:
                         # Found a dependency match - add this tool
-                        if other_tool.name in tool_score_map:
-                            tool_score_pair = tool_score_map[other_tool.name]
+                        if other_id in tool_score_map:
+                            tool_score_pair = tool_score_map[other_id]
                             added_tools.append(tool_score_pair)
-                            candidate_names.add(other_tool.name)
+                            candidate_ids.add(other_id)
 
                             logger.info(
                                 "Added dependency tool",
@@ -936,6 +977,8 @@ class SemanticToolsFilterComponent(Component):
                                 required_by=candidate_tool.name,
                                 dependency_keyword=dep_keyword,
                                 added_tool=other_tool.name,
+                                candidate_index=candidate_idx,
+                                added_index=other_idx,
                             )
                         break  # Only add once per tool
 
@@ -1120,7 +1163,7 @@ class SemanticToolsFilterComponent(Component):
             similarities = self._cosine_similarity(query_embedding, tool_embeddings)
 
             # Optionally embed augmented descriptions as alternatives
-            tool_dependencies: dict[str, list[str]] = {}
+            tool_dependencies: dict[int, list[str]] = {}
             if self.augment_descriptions:
                 aug_model = getattr(self, "augmentation_model", None)
                 if aug_model is None:

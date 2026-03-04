@@ -1266,7 +1266,7 @@
   },
   "SemanticToolsFilter": {
     "versions": {
-      "0.3.0": "0ab726d09c93"
+      "0.3.0": "502497c5a2b0"
     }
   },
   "MongoDBAtlasVector": {
