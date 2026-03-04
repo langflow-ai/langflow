@@ -651,7 +651,7 @@
   },
   "AstraDB": {
     "versions": {
-      "0.3.0": "d52094e54e96"
+      "0.3.0": "9ca3747e73d6"
     }
   },
   "AssistantsCreateAssistant": {
@@ -826,7 +826,7 @@
   },
   "LoopComponent": {
     "versions": {
-      "0.3.0": "9f88705635cd"
+      "0.3.0": "e516ea99611c"
     }
   },
   "Notify": {
@@ -1381,7 +1381,7 @@
   },
   "DataFrameOperations": {
     "versions": {
-      "0.3.0": "904f4eaebccd"
+      "0.3.0": "e2b4323d4ed5"
     }
   },
   "DynamicCreateData": {
