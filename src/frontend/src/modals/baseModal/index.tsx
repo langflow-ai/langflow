@@ -190,6 +190,7 @@ interface BaseModalProps {
   size?:
     | "notice"
     | "x-small"
+    | "x-small-h-full"
     | "retangular"
     | "smaller"
     | "small"
