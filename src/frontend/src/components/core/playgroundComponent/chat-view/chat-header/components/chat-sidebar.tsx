@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -83,7 +83,7 @@ export function ChatSidebar({
         </div>
       ) : (
         <div className="flex flex-col gap-1">
-          {sessionIds.map((session, index) => (
+          {sessionIds.map((session) => (
             <SessionSelector
               key={session}
               session={session}

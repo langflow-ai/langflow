@@ -109,6 +109,17 @@ export function FlowPageSlidingContainerContent({
   };
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [setOpen]);
+
+  useEffect(() => {
     setSidebarOpen(isFullscreen);
   }, [isFullscreen]);
 
@@ -165,7 +176,7 @@ export function FlowPageSlidingContainerContent({
     >
       <div className="flex-1 flex overflow-hidden">
         <AnimatedConditional isOpen={sidebarOpen} width="236px">
-          <div className="h-full overflow-y-auto border-r border-border w-218">
+          <div className="h-full overflow-y-auto border-r border-border w-218 bg-primary-foreground">
             <div className="p-4">
               <ChatSidebar
                 sessions={orderedSessions}
