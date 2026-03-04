@@ -1,7 +1,5 @@
-import { Square } from "lucide-react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import useFlowStore from "@/stores/flowStore";
 import type { FilePreviewType } from "@/types/components";
 import { cn } from "@/utils/utils";
 
@@ -16,16 +14,14 @@ type ButtonSendWrapperProps = {
   noInput: boolean;
   chatValue: string;
   files: FilePreviewType[];
-  isBuilding?: boolean;
 };
 
 const ButtonSendWrapper = ({
   send,
   noInput,
+  chatValue,
   files,
-  isBuilding,
 }: ButtonSendWrapperProps) => {
-  const stopBuilding = useFlowStore((state) => state.stopBuilding);
   const isLoading = files.some((file) => file.loading);
 
   const getButtonState = () => {
@@ -37,10 +33,7 @@ const ButtonSendWrapper = ({
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
-
-    if (isBuilding) {
-      stopBuilding();
-    } else if (!isLoading) {
+    if (!isLoading) {
       send();
     }
   };
@@ -55,14 +48,9 @@ const ButtonSendWrapper = ({
       disabled={isLoading}
       unstyled
       data-testid="button-send"
-      title={isBuilding ? "Cancel" : "Send"}
     >
       <div className="flex h-fit w-fit items-center gap-2 text-sm font-medium">
-        {isBuilding ? (
-          <Square className="h-3.5 w-3.5" fill="currentColor" />
-        ) : (
-          <ForwardedIconComponent name="ArrowUp" className="h-4 w-4" />
-        )}
+        <ForwardedIconComponent name="ArrowUp" className="h-4 w-4" />
       </div>
     </Button>
   );

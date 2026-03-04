@@ -87,7 +87,7 @@ export function SessionSelector({
     }
   };
 
-  // Default session (flowId) cannot be renamed, but can be deleted if it has messages
+  // Default session (flowId) cannot be renamed or deleted
   const isDefaultSession = session === currentFlowId;
 
   const hasMessages = useSessionHasMessages({
@@ -96,7 +96,6 @@ export function SessionSelector({
   });
 
   const canModifySession = !isDefaultSession;
-  const canDeleteSession = hasMessages;
   const canRenameSession = canModifySession && hasMessages;
 
   return (
@@ -145,7 +144,7 @@ export function SessionSelector({
           onMessageLogs={() => inspectSession?.(session)}
           onDelete={() => deleteSession(session)}
           showRename={canRenameSession}
-          showDelete={canDeleteSession}
+          showDelete={canModifySession}
           side="bottom"
           align="end"
           dataTestid={`session-${session}-more-menu`}

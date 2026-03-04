@@ -129,7 +129,6 @@ const InputWrapper = ({
               isSupported={isAudioSupported}
             />
             <ButtonSendWrapper
-              isBuilding={isBuilding}
               send={send}
               noInput={noInput}
               chatValue={chatValue}
