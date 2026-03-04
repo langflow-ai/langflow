@@ -17,7 +17,10 @@ from lfx.template.field.base import Output
 
 class LoopComponent(Component):
     display_name = "Loop"
-    description = "Iterates through Data or Message objects, processing items individually and aggregating results from loop inputs."
+    description = (
+        "Iterates through Data or Message objects, processing items individually "
+        "and aggregating results from loop inputs."
+    )
     documentation: str = "https://docs.langflow.org/loop"
     icon = "infinity"
 
