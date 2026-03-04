@@ -201,7 +201,7 @@ export const useProviderConfiguration = ({
 
     const providerName = syncedSelectedProvider.provider;
     const apiVariables = providerVariablesMapping[providerName];
-    if (apiVariables && apiVariables.length > 0) {
+    if (Array.isArray(apiVariables) && apiVariables.length > 0) {
       return apiVariables;
     }
 
