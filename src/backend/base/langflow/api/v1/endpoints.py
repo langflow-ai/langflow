@@ -441,17 +441,11 @@ async def _run_flow_internal(
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
 
-    # Validate custom components before running
-    from langflow.api.utils.flow_validation import validate_flow_custom_components
+    # Validate custom components before running (raises 403 if blocked)
+    from langflow.api.utils.flow_validation import require_flow_custom_components_valid
 
     if flow.data:
-        blocked_components = validate_flow_custom_components(flow.data)
-        if blocked_components:
-            component_names = [comp["display_name"] for comp in blocked_components]
-            raise HTTPException(
-                status_code=400,
-                detail=f"Flow execution blocked: custom components are not allowed: {', '.join(component_names)}",
-            )
+        require_flow_custom_components_valid(flow.data)
 
     telemetry_service = get_telemetry_service()
 
@@ -759,17 +753,11 @@ async def webhook_run_flow(
     Raises:
         HTTPException: If the flow is not found or if there is an error processing the request.
     """
-    # Validate custom components before running
-    from langflow.api.utils.flow_validation import validate_flow_custom_components
+    # Validate custom components before running (raises 403 if blocked)
+    from langflow.api.utils.flow_validation import require_flow_custom_components_valid
 
     if flow.data:
-        blocked_components = validate_flow_custom_components(flow.data)
-        if blocked_components:
-            component_names = [comp["display_name"] for comp in blocked_components]
-            raise HTTPException(
-                status_code=400,
-                detail=f"Webhook execution blocked: custom components are not allowed: {', '.join(component_names)}",
-            )
+        require_flow_custom_components_valid(flow.data)
 
     telemetry_service = get_telemetry_service()
     start_time = time.perf_counter()
@@ -898,17 +886,11 @@ async def experimental_run_flow(
     # Get the flow from the id or name
     await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
 
-    # Validate custom components before running
-    from langflow.api.utils.flow_validation import validate_flow_custom_components
+    # Validate custom components before running (raises 403 if blocked)
+    from langflow.api.utils.flow_validation import require_flow_custom_components_valid
 
     if flow.data:
-        blocked_components = validate_flow_custom_components(flow.data)
-        if blocked_components:
-            component_names = [comp["display_name"] for comp in blocked_components]
-            raise HTTPException(
-                status_code=400,
-                detail=f"Flow execution blocked: custom components are not allowed: {', '.join(component_names)}",
-            )
+        require_flow_custom_components_valid(flow.data)
 
     session_service = get_session_service()
     flow_id_str = str(flow.id)
@@ -1131,6 +1113,8 @@ async def custom_component_update(
                 field_value=code_request.field_value,
             )
 
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

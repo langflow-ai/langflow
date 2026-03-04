@@ -21,7 +21,7 @@ class MyCustomComponent(Component):
 """
 
 
-def _make_node(node_id, node_type, code, edited=False, nested_flow=None):
+def _make_node(node_id, node_type, code, *, edited=False, nested_flow=None):
     """Helper to create a node dict for testing."""
     node = {
         "id": node_id,
@@ -79,15 +79,15 @@ from lfx.custom import Component
 class KnownComponent(Component):
     display_name = "Known"
 """
-        # Mock validate_code to return no errors (simulating hash match)
-        with patch("langflow.api.utils.flow_validation.validate_code") as mock_validate:
-            mock_validate.return_value = {"function": {"errors": []}, "imports": {"errors": []}}
+        # Mock is_code_hash_allowed to return True (simulating hash match)
+        with patch("langflow.api.utils.flow_validation.is_code_hash_allowed") as mock_hash:
+            mock_hash.return_value = True
             flow_data = {
                 "nodes": [_make_node("n1", "ChatInput", known_code, edited=False)],
             }
             blocked = validate_flow_custom_components(flow_data)
             assert len(blocked) == 0
-            mock_validate.assert_called_once_with(known_code)
+            mock_hash.assert_called_once_with(known_code)
 
 
 class TestRecursiveGroupNodeValidation:
@@ -149,8 +149,8 @@ class TestRecursiveGroupNodeValidation:
 
     def test_allows_group_with_no_custom_code(self):
         """Group nodes with only built-in code should pass."""
-        with patch("langflow.api.utils.flow_validation.validate_code") as mock_validate:
-            mock_validate.return_value = {"function": {"errors": []}, "imports": {"errors": []}}
+        with patch("langflow.api.utils.flow_validation.is_code_hash_allowed") as mock_hash:
+            mock_hash.return_value = True
 
             inner_node = _make_node("inner-1", "ChatInput", "some_builtin_code", edited=False)
             group_flow = {"data": {"nodes": [inner_node], "edges": []}}

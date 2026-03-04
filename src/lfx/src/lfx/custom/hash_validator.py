@@ -258,8 +258,10 @@ def is_code_hash_allowed(source_code: str, settings_service: "SettingsService | 
     """
     # Edge case: empty or whitespace-only code
     if not source_code or not source_code.strip():
-        # Empty code should be allowed (will fail validation elsewhere if needed)
-        return True
+        # Fail closed: empty code is never a legitimate component template.
+        # Log for visibility so operators can investigate.
+        logger.warning("is_code_hash_allowed called with empty/whitespace-only code — blocking (fail-closed)")
+        return False
 
     # If no settings service provided, try to get it
     if settings_service is None:

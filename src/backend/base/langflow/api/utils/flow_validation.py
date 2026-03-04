@@ -1,10 +1,54 @@
 """Utility functions for validating flows during upload."""
 
+from http import HTTPStatus
 from typing import Any
 
+from fastapi import HTTPException
 from lfx.custom.hash_validator import is_code_hash_allowed
 from lfx.custom.validate import extract_display_name
 from lfx.log.logger import logger
+
+
+def require_flow_custom_components_valid(flow_data: dict[str, Any]) -> None:
+    """Validate flow components and raise HTTPException(403) if any are blocked.
+
+    This is the recommended entry point for endpoint validation. It raises
+    directly so callers cannot accidentally forget to check the return value.
+
+    Args:
+        flow_data: The flow data dictionary containing nodes.
+
+    Raises:
+        HTTPException: 403 Forbidden if any components are blocked.
+    """
+    blocked = validate_flow_custom_components(flow_data)
+    if blocked:
+        component_names = [comp["display_name"] for comp in blocked]
+        raise HTTPException(
+            status_code=HTTPStatus.FORBIDDEN,
+            detail=f"Flow build blocked: custom components are not allowed: {', '.join(component_names)}",
+        )
+
+
+def require_flows_custom_components_valid(flows: list[dict[str, Any]]) -> None:
+    """Validate multiple flows and raise HTTPException(403) if any are blocked.
+
+    Args:
+        flows: List of flow dictionaries.
+
+    Raises:
+        HTTPException: 403 Forbidden if any flow contains blocked components.
+    """
+    blocked_by_flow = validate_flows_custom_components(flows)
+    if blocked_by_flow:
+        details = []
+        for flow_name, blocked_components in blocked_by_flow.items():
+            component_names = [comp["display_name"] for comp in blocked_components]
+            details.append(f"{flow_name}: {', '.join(component_names)}")
+        raise HTTPException(
+            status_code=HTTPStatus.FORBIDDEN,
+            detail=f"Flow build blocked: custom components are not allowed: {'; '.join(details)}",
+        )
 
 
 def validate_flow_custom_components(flow_data: dict[str, Any]) -> list[dict[str, str | bool]]:
@@ -51,8 +95,10 @@ def _validate_nodes(nodes: list[dict[str, Any]], blocked_components: list[dict[s
         code_field = template.get("code", {})
         code = code_field.get("value", "")
 
-        # Skip nodes without code
+        # Skip nodes without code (e.g. note nodes, group wrappers).
+        # These have no executable code, so there is nothing to validate.
         if not code:
+            logger.debug(f"Skipping node {node.get('id', 'unknown')} — no code field")
             continue
 
         # Validate ALL nodes with code directly against the hash allowlist.

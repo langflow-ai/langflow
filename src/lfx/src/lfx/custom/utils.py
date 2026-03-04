@@ -64,7 +64,9 @@ def _generate_code_hash(source_code: str, modname: str) -> str:
         raise ValueError(msg)
 
     # Generate SHA256 hash of the source code
-    return hashlib.sha256(source_code.encode("utf-8")).hexdigest()[:12]  # First 12 chars for brevity
+    # Use 32 hex chars (128 bits) to make collision attacks infeasible.
+    # With ~1000 allowed hashes, an attacker would need ~2^128/1000 ≈ 3.4e35 attempts.
+    return hashlib.sha256(source_code.encode("utf-8")).hexdigest()[:32]
 
 
 class UpdateBuildConfigError(Exception):

@@ -253,7 +253,7 @@
             "icon": "prompts",
             "legacy": false,
             "metadata": {
-              "code_hash": "595f7c9c8463",
+              "code_hash": "595f7c9c8463c7af8126a86a8805ff99",
               "dependencies": {
                 "dependencies": [
                   {
@@ -440,7 +440,7 @@
             "is_output": null,
             "legacy": false,
             "metadata": {
-              "code_hash": "595f7c9c8463",
+              "code_hash": "595f7c9c8463c7af8126a86a8805ff99",
               "dependencies": {
                 "dependencies": [
                   {
@@ -622,7 +622,7 @@
             "icon": "prompts",
             "legacy": false,
             "metadata": {
-              "code_hash": "595f7c9c8463",
+              "code_hash": "595f7c9c8463c7af8126a86a8805ff99",
               "dependencies": {
                 "dependencies": [
                   {
@@ -812,7 +812,7 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "metadata": {
-              "code_hash": "8c87e536cca4",
+              "code_hash": "8c87e536cca4b50e0355fd01c8f24a67",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1094,7 +1094,7 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "metadata": {
-              "code_hash": "8c87e536cca4",
+              "code_hash": "8c87e536cca4b50e0355fd01c8f24a67",
               "dependencies": {
                 "dependencies": [
                   {
@@ -2585,7 +2585,7 @@
             "icon": "file-text",
             "legacy": false,
             "metadata": {
-              "code_hash": "12a5841f1a03",
+              "code_hash": "12a5841f1a0326603e9b7e148f186eb0",
               "dependencies": {
                 "dependencies": [
                   {

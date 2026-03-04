@@ -283,7 +283,7 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "metadata": {
-              "code_hash": "7a26c54d89ed",
+              "code_hash": "7a26c54d89edcbffa23f8efd479c7555",
               "dependencies": {
                 "dependencies": [
                   {
@@ -556,7 +556,7 @@
             "legacy": false,
             "lf_version": "1.0.19.post2",
             "metadata": {
-              "code_hash": "518f16485886",
+              "code_hash": "518f16485886e33d92bd44b4830ca748",
               "dependencies": {
                 "dependencies": [
                   {
@@ -702,7 +702,7 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "metadata": {
-              "code_hash": "8c87e536cca4",
+              "code_hash": "8c87e536cca4b50e0355fd01c8f24a67",
               "dependencies": {
                 "dependencies": [
                   {
@@ -980,7 +980,7 @@
             "legacy": false,
             "lf_version": "1.0.19.post2",
             "metadata": {
-              "code_hash": "518f16485886",
+              "code_hash": "518f16485886e33d92bd44b4830ca748",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1116,7 +1116,7 @@
             "legacy": false,
             "lf_version": "1.0.19.post2",
             "metadata": {
-              "code_hash": "518f16485886",
+              "code_hash": "518f16485886e33d92bd44b4830ca748",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1252,7 +1252,7 @@
             "legacy": false,
             "lf_version": "1.0.19.post2",
             "metadata": {
-              "code_hash": "518f16485886",
+              "code_hash": "518f16485886e33d92bd44b4830ca748",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1388,7 +1388,7 @@
             "legacy": false,
             "lf_version": "1.0.19.post2",
             "metadata": {
-              "code_hash": "518f16485886",
+              "code_hash": "518f16485886e33d92bd44b4830ca748",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1524,7 +1524,7 @@
             "legacy": false,
             "lf_version": "1.0.19.post2",
             "metadata": {
-              "code_hash": "518f16485886",
+              "code_hash": "518f16485886e33d92bd44b4830ca748",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1708,7 +1708,7 @@
             "icon": "prompts",
             "legacy": false,
             "metadata": {
-              "code_hash": "595f7c9c8463",
+              "code_hash": "595f7c9c8463c7af8126a86a8805ff99",
               "dependencies": {
                 "dependencies": [
                   {

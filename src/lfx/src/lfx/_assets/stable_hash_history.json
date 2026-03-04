@@ -1,1786 +1,1789 @@
 {
   "FAISS": {
     "versions": {
-      "0.3.0": "2bd7a064d724"
+      "0.3.0": "2bd7a064d7247873ab3eac6e1626b854"
     }
   },
   "AddContentToPage": {
     "versions": {
-      "0.3.0": "ffcd44201c09"
+      "0.3.0": "ffcd44201c09b90210acee0fed101194"
     }
   },
   "NotionPageCreator": {
     "versions": {
-      "0.3.0": "640438ed3d7b"
+      "0.3.0": "640438ed3d7b8eead4c1e73160e8574d"
     }
   },
   "NotionDatabaseProperties": {
     "versions": {
-      "0.3.0": "adce99660f9e"
+      "0.3.0": "adce99660f9eb73f2f308758efe4c260"
     }
   },
   "NotionListPages": {
     "versions": {
-      "0.3.0": "373f9ad32937"
+      "0.3.0": "373f9ad32937060f8693622d5a0d6362"
     }
   },
   "NotionUserList": {
     "versions": {
-      "0.3.0": "8966397da1d5"
+      "0.3.0": "8966397da1d5d16ca605508a7c6494ae"
     }
   },
   "NotionPageContent": {
     "versions": {
-      "0.3.0": "ba15d6a01d04"
+      "0.3.0": "ba15d6a01d04715b2b6eb4cdf6c1937d"
     }
   },
   "NotionSearch": {
     "versions": {
-      "0.3.0": "793b8818a3b4"
+      "0.3.0": "793b8818a3b4ed42ab8b855b9252aa77"
     }
   },
   "NotionPageUpdate": {
     "versions": {
-      "0.3.0": "32ccdf34df73"
+      "0.3.0": "32ccdf34df73552a80c863b7361f178b"
     }
   },
   "AgentQL": {
     "versions": {
-      "0.3.0": "37de3210aed9"
+      "0.3.0": "37de3210aed9b90088b05065afff1daa"
     }
   },
   "AIMLModel": {
     "versions": {
-      "0.3.0": "db72277a0d5a"
+      "0.3.0": "db72277a0d5a8e50a8a97816829e7423"
     }
   },
   "AIMLEmbeddings": {
     "versions": {
-      "0.3.0": "dae370391ba3"
+      "0.3.0": "dae370391ba3e799b19f649f2db87ba0"
     }
   },
   "ALTK Agent": {
     "versions": {
-      "0.3.0": "d1caf0d1db88"
+      "0.3.0": "d1caf0d1db8853293737d2c9b0cfd457"
     }
   },
   "AmazonBedrockConverseModel": {
     "versions": {
-      "0.3.0": "66b9519f4f62"
+      "0.3.0": "66b9519f4f6253052258d1336dc28b76"
     }
   },
   "AmazonBedrockEmbeddings": {
     "versions": {
-      "0.3.0": "70d039ff79f0"
+      "0.3.0": "70d039ff79f091e8164b7058ef921f8c"
     }
   },
   "AmazonBedrockModel": {
     "versions": {
-      "0.3.0": "922093a831b6"
+      "0.3.0": "922093a831b62ab6ded22e58046f5438"
     }
   },
   "s3bucketuploader": {
     "versions": {
-      "0.3.0": "6e4ba2dafc3c"
+      "0.3.0": "6e4ba2dafc3c89b820e1d494619ef200"
     }
   },
   "AnthropicModel": {
     "versions": {
-      "0.3.0": "7c894c5a66ba"
+      "0.3.0": "7c894c5a66baaec7d0e3df6f9242d258"
     }
   },
   "ApifyActors": {
     "versions": {
-      "0.3.0": "e84290d462c2"
+      "0.3.0": "e84290d462c2143e102f72d719381bf9"
     }
   },
   "ArXivComponent": {
     "versions": {
-      "0.3.0": "219239ee2b48"
+      "0.3.0": "219239ee2b48fe88aefc1037abd41044"
     }
   },
   "AssemblyAIGetSubtitles": {
     "versions": {
-      "0.3.0": "533d1fcf7c7a"
+      "0.3.0": "533d1fcf7c7a9e7a652d2f7ad05f0af2"
     }
   },
   "AssemblyAILeMUR": {
     "versions": {
-      "0.3.0": "8c96738ab967"
+      "0.3.0": "8c96738ab967c25c53d12368b7ef5e6b"
     }
   },
   "AssemblyAIListTranscripts": {
     "versions": {
-      "0.3.0": "267dcda48ad4"
+      "0.3.0": "267dcda48ad47b8cd70941be524859c7"
     }
   },
   "AssemblyAITranscriptionJobPoller": {
     "versions": {
-      "0.3.0": "935c9296b149"
+      "0.3.0": "935c9296b14944c1618091398f23d964"
     }
   },
   "AssemblyAITranscriptionJobCreator": {
     "versions": {
-      "0.3.0": "7ff7b3f90298"
+      "0.3.0": "7ff7b3f90298f0b0cd9251b076f8d0c8"
     }
   },
   "AzureOpenAIModel": {
     "versions": {
-      "0.3.0": "cc8d003556d8"
+      "0.3.0": "cc8d003556d842893e68433fa8e777b1"
     }
   },
   "AzureOpenAIEmbeddings": {
     "versions": {
-      "0.3.0": "6b54f3243a6a"
+      "0.3.0": "6b54f3243a6a80b4dab7e160034e1e61"
     }
   },
   "BaiduQianfanChatModel": {
     "versions": {
-      "0.3.0": "a5fdfdb5757f"
+      "0.3.0": "a5fdfdb5757f7dd89d6b673bdd4c5a06"
     }
   },
   "BingSearchAPI": {
     "versions": {
-      "0.3.0": "84334607b325"
+      "0.3.0": "84334607b325f50aefacbad69836be69"
     }
   },
   "Cassandra": {
     "versions": {
-      "0.3.0": "833f277daab7"
+      "0.3.0": "833f277daab7b5aea1ff35641d59fcb9"
     }
   },
   "CassandraChatMemory": {
     "versions": {
-      "0.3.0": "f6497182984e"
+      "0.3.0": "f6497182984e2f138fbb7d9cc1e4ade9"
     }
   },
   "CassandraGraph": {
     "versions": {
-      "0.3.0": "26c63f80745e"
+      "0.3.0": "26c63f80745ec48da9dd4eae890bb280"
     }
   },
   "Chroma": {
     "versions": {
-      "0.3.0": "82d38624f19a"
+      "0.3.0": "82d38624f19a2c2a3cad499d9de92a57"
     }
   },
   "CleanlabEvaluator": {
     "versions": {
-      "0.3.0": "06963c804ffe"
+      "0.3.0": "06963c804ffe1e786b9dfa8714e980fb"
     }
   },
   "CleanlabRAGEvaluator": {
     "versions": {
-      "0.3.0": "f48b57ff7ca3"
+      "0.3.0": "f48b57ff7ca3ff4819b97dffbd55515e"
     }
   },
   "CleanlabRemediator": {
     "versions": {
-      "0.3.0": "a5b19d338991"
+      "0.3.0": "a5b19d338991c7cbf7a8c1d7ebedc267"
     }
   },
   "Clickhouse": {
     "versions": {
-      "0.3.0": "ab991e83da44"
+      "0.3.0": "ab991e83da449cd5a6bc8166e232576c"
     }
   },
   "CloudflareWorkersAIEmbeddings": {
     "versions": {
-      "0.3.0": "1ea6e4857c14"
+      "0.3.0": "1ea6e4857c1461a72897c1a41dc8590f"
     }
   },
   "CohereEmbeddings": {
     "versions": {
-      "0.3.0": "9c0f413a2c64"
+      "0.3.0": "9c0f413a2c64e77e32259ca625aba406"
     }
   },
   "CohereModel": {
     "versions": {
-      "0.3.0": "594852e1d706"
+      "0.3.0": "594852e1d706f0505c266d9d09f8620e"
     }
   },
   "CohereRerank": {
     "versions": {
-      "0.3.0": "a94a0d11eeac"
+      "0.3.0": "a94a0d11eeac8d49ef9131e40b3c1ac8"
     }
   },
   "CometAPIModel": {
     "versions": {
-      "0.3.0": "4ec4a8852e9c"
+      "0.3.0": "4ec4a8852e9cc7c5ee3cd62af395d43a"
     }
   },
   "ComposioAgentQLAPIComponent": {
     "versions": {
-      "0.3.0": "cca708a10ab6"
+      "0.3.0": "cca708a10ab65a663f89fddbedee8dd1"
     }
   },
   "ComposioAgiledAPIComponent": {
     "versions": {
-      "0.3.0": "3294a951a1a8"
+      "0.3.0": "3294a951a1a8d2dd8bbbe2b31e9bf835"
     }
   },
   "ComposioAirtableAPIComponent": {
     "versions": {
-      "0.3.0": "e47ad011c33c"
+      "0.3.0": "e47ad011c33c6d6ef1bf8004e4d216c8"
     }
   },
   "ComposioApolloAPIComponent": {
     "versions": {
-      "0.3.0": "3af16f5d6ceb"
+      "0.3.0": "3af16f5d6ceb2dabd6e0e7e63c3933aa"
     }
   },
   "ComposioAsanaAPIComponent": {
     "versions": {
-      "0.3.0": "290d6d61d049"
+      "0.3.0": "290d6d61d04928e86d3aa235d6bf31d8"
     }
   },
   "ComposioAttioAPIComponent": {
     "versions": {
-      "0.3.0": "de43b3cf5671"
+      "0.3.0": "de43b3cf5671e3fb1712a198dba977af"
     }
   },
   "ComposioBitbucketAPIComponent": {
     "versions": {
-      "0.3.0": "7528a8928646"
+      "0.3.0": "7528a89286465e3c85d75a07733e36c7"
     }
   },
   "ComposioBolnaAPIComponent": {
     "versions": {
-      "0.3.0": "dde7d2ee80a2"
+      "0.3.0": "dde7d2ee80a26315ceb77b2e1d248352"
     }
   },
   "ComposioBrightdataAPIComponent": {
     "versions": {
-      "0.3.0": "49a04c5a23cb"
+      "0.3.0": "49a04c5a23cba1243c688741a2125b68"
     }
   },
   "ComposioCalendlyAPIComponent": {
     "versions": {
-      "0.3.0": "4a282e413d55"
+      "0.3.0": "4a282e413d552a243517fb09b34646b4"
     }
   },
   "ComposioCanvaAPIComponent": {
     "versions": {
-      "0.3.0": "d149aa178e80"
+      "0.3.0": "d149aa178e80716c39700a78a8c1d159"
     }
   },
   "ComposioCanvasAPIComponent": {
     "versions": {
-      "0.3.0": "6510d212a720"
+      "0.3.0": "6510d212a720f6af599ec4ca84eaaec7"
     }
   },
   "ComposioCodaAPIComponent": {
     "versions": {
-      "0.3.0": "f7693920313f"
+      "0.3.0": "f7693920313f53f3a7fada0323326565"
     }
   },
   "ComposioAPI": {
     "versions": {
-      "0.3.0": "764255821307"
+      "0.3.0": "764255821307ec0d1b0d6504cef73bfc"
     }
   },
   "ComposioContentfulAPIComponent": {
     "versions": {
-      "0.3.0": "36befb1ec8fc"
+      "0.3.0": "36befb1ec8fc47e07f4002d563869a6d"
     }
   },
   "ComposioDigicertAPIComponent": {
     "versions": {
-      "0.3.0": "0fcbc1b899f8"
+      "0.3.0": "0fcbc1b899f8f1420757cbbf94115350"
     }
   },
   "ComposioDiscordAPIComponent": {
     "versions": {
-      "0.3.0": "2ec988f25784"
+      "0.3.0": "2ec988f257846e8b4c51f32ab8b1f56e"
     }
   },
   "ComposioDropboxAPIComponent": {
     "versions": {
-      "0.3.0": "d05825599def"
+      "0.3.0": "d05825599def658405368f0e25c20ca0"
     }
   },
   "ComposioElevenLabsAPIComponent": {
     "versions": {
-      "0.3.0": "e0c91533558b"
+      "0.3.0": "e0c91533558b1b0fc7bc7b3a0bc8f31d"
     }
   },
   "ComposioExaAPIComponent": {
     "versions": {
-      "0.3.0": "3b5cecdefab8"
+      "0.3.0": "3b5cecdefab887c4ad7cd8ef5009f2dd"
     }
   },
   "ComposioFigmaAPIComponent": {
     "versions": {
-      "0.3.0": "7443d213546b"
+      "0.3.0": "7443d213546b24c16e5badd1f4a3dcdc"
     }
   },
   "ComposioFinageAPIComponent": {
     "versions": {
-      "0.3.0": "50a2bdee4cd1"
+      "0.3.0": "50a2bdee4cd1660c01359b0eb984ccb5"
     }
   },
   "ComposioFirecrawlAPIComponent": {
     "versions": {
-      "0.3.0": "2ab1c4b00071"
+      "0.3.0": "2ab1c4b0007170f4218df0e56fba452b"
     }
   },
   "ComposioFirefliesAPIComponent": {
     "versions": {
-      "0.3.0": "233cd91dbdad"
+      "0.3.0": "233cd91dbdade0611f9443cc0ed9961f"
     }
   },
   "ComposioFixerAPIComponent": {
     "versions": {
-      "0.3.0": "9e4c00f9dcd8"
+      "0.3.0": "9e4c00f9dcd888da48aca811835a98cf"
     }
   },
   "ComposioFlexisignAPIComponent": {
     "versions": {
-      "0.3.0": "c69bbee0005d"
+      "0.3.0": "c69bbee0005d88ebb315be2d2157d3c7"
     }
   },
   "ComposioFreshdeskAPIComponent": {
     "versions": {
-      "0.3.0": "1dde03d615ca"
+      "0.3.0": "1dde03d615ca9974de73425d47b5851b"
     }
   },
   "ComposioGitHubAPIComponent": {
     "versions": {
-      "0.3.0": "ee201105d924"
+      "0.3.0": "ee201105d9244f75cc5936087c87386a"
     }
   },
   "ComposioGmailAPIComponent": {
     "versions": {
-      "0.3.0": "d4b13ac8a3a1"
+      "0.3.0": "d4b13ac8a3a196c5fd56449968d99f7c"
     }
   },
   "ComposioGoogleBigQueryAPIComponent": {
     "versions": {
-      "0.3.0": "f7d84aaae78f"
+      "0.3.0": "f7d84aaae78f596aee5d4d3f906cb988"
     }
   },
   "ComposioGoogleCalendarAPIComponent": {
     "versions": {
-      "0.3.0": "28adb6fff093"
+      "0.3.0": "28adb6fff09383f4b93d749b38172b26"
     }
   },
   "ComposioGoogleclassroomAPIComponent": {
     "versions": {
-      "0.3.0": "85a5c37c13f6"
+      "0.3.0": "85a5c37c13f69a43e09d1525eb679a63"
     }
   },
   "ComposioGoogleDocsAPIComponent": {
     "versions": {
-      "0.3.0": "ac2e88b6f706"
+      "0.3.0": "ac2e88b6f7065c1e71758b1dce73af3a"
     }
   },
   "ComposioGooglemeetAPIComponent": {
     "versions": {
-      "0.3.0": "cdbf16c4b42f"
+      "0.3.0": "cdbf16c4b42fa5a69a9369af8d1f9d52"
     }
   },
   "ComposioGoogleSheetsAPIComponent": {
     "versions": {
-      "0.3.0": "b0db7a3abe1f"
+      "0.3.0": "b0db7a3abe1fae4c90982687269efb07"
     }
   },
   "ComposioGoogleTasksAPIComponent": {
     "versions": {
-      "0.3.0": "2ba9c1661f41"
+      "0.3.0": "2ba9c1661f41d7f1fa5fb23438de89bd"
     }
   },
   "ComposioHeygenAPIComponent": {
     "versions": {
-      "0.3.0": "c72fd5d0350f"
+      "0.3.0": "c72fd5d0350ff0043364cc50004ec20f"
     }
   },
   "ComposioInstagramAPIComponent": {
     "versions": {
-      "0.3.0": "a6691c905833"
+      "0.3.0": "a6691c905833da02ed07d244fee27c15"
     }
   },
   "ComposioJiraAPIComponent": {
     "versions": {
-      "0.3.0": "3e62396f3868"
+      "0.3.0": "3e62396f3868372e7213d71f57cea05a"
     }
   },
   "ComposioJotformAPIComponent": {
     "versions": {
-      "0.3.0": "7c1c6a676814"
+      "0.3.0": "7c1c6a676814f63c0d375073304a9ea6"
     }
   },
   "ComposioKlaviyoAPIComponent": {
     "versions": {
-      "0.3.0": "3be7e8a5e3fe"
+      "0.3.0": "3be7e8a5e3fefd1a137592c795195c4b"
     }
   },
   "ComposioLinearAPIComponent": {
     "versions": {
-      "0.3.0": "be2b2ebbeea7"
+      "0.3.0": "be2b2ebbeea7422ce06c43360ba1b0bc"
     }
   },
   "ComposioListennotesAPIComponent": {
     "versions": {
-      "0.3.0": "b85f2fe51906"
+      "0.3.0": "b85f2fe5190641e5b2f4e2cba323a4e2"
     }
   },
   "ComposioMem0APIComponent": {
     "versions": {
-      "0.3.0": "68871a483786"
+      "0.3.0": "68871a483786a5e3ef9b90ec4434f96b"
     }
   },
   "ComposioMiroAPIComponent": {
     "versions": {
-      "0.3.0": "1e9c421e1ac4"
+      "0.3.0": "1e9c421e1ac41970fca423f323d057de"
     }
   },
   "ComposioMissiveAPIComponent": {
     "versions": {
-      "0.3.0": "6def944a7739"
+      "0.3.0": "6def944a7739cdfa53e4d76bdc294328"
     }
   },
   "ComposioNotionAPIComponent": {
     "versions": {
-      "0.3.0": "590aa6ff30d1"
+      "0.3.0": "590aa6ff30d1c4cb62aa8998bb31f443"
     }
   },
   "ComposioOneDriveAPIComponent": {
     "versions": {
-      "0.3.0": "497cc4625121"
+      "0.3.0": "497cc4625121c873713eeff5fc6b9017"
     }
   },
   "ComposioOutlookAPIComponent": {
     "versions": {
-      "0.3.0": "bf6998d60b63"
+      "0.3.0": "bf6998d60b63518b130c10f64dd28052"
     }
   },
   "ComposioPandadocAPIComponent": {
     "versions": {
-      "0.3.0": "21d92aabc1bf"
+      "0.3.0": "21d92aabc1bfe69aaab0f1742ed51218"
     }
   },
   "ComposioPeopleDataLabsAPIComponent": {
     "versions": {
-      "0.3.0": "bd05ce58f55c"
+      "0.3.0": "bd05ce58f55ca179caae3e4aae3d5da6"
     }
   },
   "ComposioPerplexityAIAPIComponent": {
     "versions": {
-      "0.3.0": "e40b0651344f"
+      "0.3.0": "e40b0651344f682f2ccc5fa489107aae"
     }
   },
   "ComposioRedditAPIComponent": {
     "versions": {
-      "0.3.0": "a86794073c22"
+      "0.3.0": "a86794073c2252593fa230e1b8c7d7a4"
     }
   },
   "ComposioSerpAPIComponent": {
     "versions": {
-      "0.3.0": "74b0a07ee54b"
+      "0.3.0": "74b0a07ee54b00a52cc7dd51fb3ed6ec"
     }
   },
   "ComposioSlackAPIComponent": {
     "versions": {
-      "0.3.0": "fa340cae1330"
+      "0.3.0": "fa340cae13308b7bd4e960f75846cbc4"
     }
   },
   "ComposioSlackbotAPIComponent": {
     "versions": {
-      "0.3.0": "ddeb26bc04e6"
+      "0.3.0": "ddeb26bc04e6b21f35526b86c65514cc"
     }
   },
   "ComposioSnowflakeAPIComponent": {
     "versions": {
-      "0.3.0": "d0d1af5686d2"
+      "0.3.0": "d0d1af5686d21cdcd8fbce5945eeb8b8"
     }
   },
   "ComposioSupabaseAPIComponent": {
     "versions": {
-      "0.3.0": "7ad58ce34cc0"
+      "0.3.0": "7ad58ce34cc0c2b0a62d0ad078df8f6b"
     }
   },
   "ComposioTavilyAPIComponent": {
     "versions": {
-      "0.3.0": "97af05e37911"
+      "0.3.0": "97af05e3791112fcb940f00d6b2713de"
     }
   },
   "ComposioTimelinesAIAPIComponent": {
     "versions": {
-      "0.3.0": "76e70e2de4d3"
+      "0.3.0": "76e70e2de4d3964e8f832c2b0bea3b7b"
     }
   },
   "ComposioTodoistAPIComponent": {
     "versions": {
-      "0.3.0": "4dd9852f2058"
+      "0.3.0": "4dd9852f20580714daf3c1ead7c65a16"
     }
   },
   "ComposioWrikeAPIComponent": {
     "versions": {
-      "0.3.0": "a5f2cf00ca08"
+      "0.3.0": "a5f2cf00ca08dfdad8f1a16d1699d2c8"
     }
   },
   "ComposioYoutubeAPIComponent": {
     "versions": {
-      "0.3.0": "d1af2ea00e8b"
+      "0.3.0": "d1af2ea00e8bb19639b985275184ccde"
     }
   },
   "Confluence": {
     "versions": {
-      "0.3.0": "8a7ef34b66e4"
+      "0.3.0": "8a7ef34b66e4e6aa5b33c5905a1f9319"
     }
   },
   "Couchbase": {
     "versions": {
-      "0.3.0": "70ed475a6f48"
+      "0.3.0": "70ed475a6f488ac59655cc4a8ebed3ba"
     }
   },
   "CrewAIAgentComponent": {
     "versions": {
-      "0.3.0": "a23f0923049d"
+      "0.3.0": "a23f0923049d05732dfa2c74fbd398af"
     }
   },
   "HierarchicalCrewComponent": {
     "versions": {
-      "0.3.0": "144be482cfb0"
+      "0.3.0": "144be482cfb00857e2a6f3fb5c040bb8"
     }
   },
   "HierarchicalTaskComponent": {
     "versions": {
-      "0.3.0": "25071652dc20"
+      "0.3.0": "25071652dc207c8e8aa13b23f369024c"
     }
   },
   "SequentialCrewComponent": {
     "versions": {
-      "0.3.0": "42e59f6d6572"
+      "0.3.0": "42e59f6d6572333d1b85b23247e122c4"
     }
   },
   "SequentialTaskComponent": {
     "versions": {
-      "0.3.0": "b1f17b8fcc5c"
+      "0.3.0": "b1f17b8fcc5c16b8b924203f00478f61"
     }
   },
   "SequentialTaskAgentComponent": {
     "versions": {
-      "0.3.0": "0a5483ef82c3"
+      "0.3.0": "0a5483ef82c313574e20bf62d038f439"
     }
   },
   "Cuga": {
     "versions": {
-      "0.3.0": "35e838f89d13"
+      "0.3.0": "35e838f89d1369c46a7dac51badd2c03"
     }
   },
   "CustomComponent": {
     "versions": {
-      "0.3.0": "d50a68a6fa57"
+      "0.3.0": "d50a68a6fa57933437560ed3cc52364e"
     }
   },
   "APIRequest": {
     "versions": {
-      "0.3.0": "7f013aba27c9"
+      "0.3.0": "7f013aba27c9409f8f4c569ce356f758"
     }
   },
   "CSVtoData": {
     "versions": {
-      "0.3.0": "85c7d6df7473"
+      "0.3.0": "85c7d6df7473ab095b7424a2cce3a52f"
     }
   },
   "JSONtoData": {
     "versions": {
-      "0.3.0": "0d9d78d496a2"
+      "0.3.0": "0d9d78d496a289b2b228b7d09951926e"
     }
   },
   "MockDataGenerator": {
     "versions": {
-      "0.3.0": "d21dce7b329b"
+      "0.3.0": "d21dce7b329bf0fe71e97586cd927c26"
     }
   },
   "NewsSearch": {
     "versions": {
-      "0.3.0": "b8cb11f78518"
+      "0.3.0": "b8cb11f78518ad54fea4bed5640217d8"
     }
   },
   "RSSReaderSimple": {
     "versions": {
-      "0.3.0": "6eb8fb48c9b5"
+      "0.3.0": "6eb8fb48c9b595ac0d160afbf1226f95"
     }
   },
   "SQLComponent": {
     "versions": {
-      "0.3.0": "a8dd79af50b8"
+      "0.3.0": "a8dd79af50b86c571b2f32507b25d773"
     }
   },
   "URLComponent": {
     "versions": {
-      "0.3.0": "f773f55e3820"
+      "0.3.0": "f773f55e3820ce6e2266d35091652110"
     }
   },
   "UnifiedWebSearch": {
     "versions": {
-      "0.3.0": "cbeeaef8889a"
+      "0.3.0": "cbeeaef8889a67dc4cb2f5ac2bfc932c"
     }
   },
   "Astra Assistant Agent": {
     "versions": {
-      "0.3.0": "4716d3b7c350"
+      "0.3.0": "4716d3b7c3505c3ae3268b7c7ee41e96"
     }
   },
   "AstraDBChatMemory": {
     "versions": {
-      "0.3.0": "bafc81f78c76"
+      "0.3.0": "bafc81f78c763bfe8b1fb08178da7ac1"
     }
   },
   "AstraDBCQLToolComponent": {
     "versions": {
-      "0.3.0": "70c4523f841d"
+      "0.3.0": "70c4523f841de3d3ef33a2b182fba4b5"
     }
   },
   "AstraDBGraph": {
     "versions": {
-      "0.3.0": "9f5d576b30ca"
+      "0.3.0": "9f5d576b30caba0598cb57b88c4541c4"
     }
   },
   "AstraDBTool": {
     "versions": {
-      "0.3.0": "44719b6ed1a3"
+      "0.3.0": "44719b6ed1a312d842e4271edf02fbb8"
     }
   },
   "AstraVectorize": {
     "versions": {
-      "0.3.0": "3d976690c262"
+      "0.3.0": "3d976690c2623c09d36a79178c58dd1b"
     }
   },
   "AstraDB": {
     "versions": {
-      "0.3.0": "d52094e54e96"
+      "0.3.0": "d52094e54e96501e5693ff6c60e84355"
     }
   },
   "AssistantsCreateAssistant": {
     "versions": {
-      "0.3.0": "8d9869d9a89d"
+      "0.3.0": "8d9869d9a89dedfc47ef2ac314e1029a"
     }
   },
   "AssistantsCreateThread": {
     "versions": {
-      "0.3.0": "5d40a73accfd"
+      "0.3.0": "5d40a73accfdf1f551b938281a00f96b"
     }
   },
   "Dotenv": {
     "versions": {
-      "0.3.0": "343ea9aaca1b"
+      "0.3.0": "343ea9aaca1bb995d483a7582621e4ad"
     }
   },
   "AssistantsGetAssistantName": {
     "versions": {
-      "0.3.0": "1f60da161fd3"
+      "0.3.0": "1f60da161fd3decfb73fde90834f9a9c"
     }
   },
   "GetEnvVar": {
     "versions": {
-      "0.3.0": "083f0a94f380"
+      "0.3.0": "083f0a94f380599db0a8b63a337de69a"
     }
   },
   "GraphRAG": {
     "versions": {
-      "0.3.0": "4d83709a5f5f"
+      "0.3.0": "4d83709a5f5fb481a2c9b21e9b15513e"
     }
   },
   "HCD": {
     "versions": {
-      "0.3.0": "25f009b9e171"
+      "0.3.0": "25f009b9e171e641e1cb379e857fe1da"
     }
   },
   "AssistantsListAssistants": {
     "versions": {
-      "0.3.0": "17e9c5c78a6e"
+      "0.3.0": "17e9c5c78a6eea13cadca6b91f72df7f"
     }
   },
   "AssistantsRun": {
     "versions": {
-      "0.3.0": "5e219cd290d3"
+      "0.3.0": "5e219cd290d36873cc39ff1c8a861f48"
     }
   },
   "DeepSeekModelComponent": {
     "versions": {
-      "0.3.0": "c8dac7a258d7"
+      "0.3.0": "c8dac7a258d738c49c2a783ea1207e71"
     }
   },
   "ChunkDoclingDocument": {
     "versions": {
-      "0.3.0": "d84ce7ffc6cb"
+      "0.3.0": "d84ce7ffc6cb2604c254d61205473d75"
     }
   },
   "DoclingInline": {
     "versions": {
-      "0.3.0": "519d12bd6451"
+      "0.3.0": "519d12bd6451816284db7127aa0ccc2d"
     }
   },
   "DoclingRemote": {
     "versions": {
-      "0.3.0": "5723576d00e5"
+      "0.3.0": "5723576d00e5f52c2a3ee63e863fda65"
     }
   },
   "ExportDoclingDocument": {
     "versions": {
-      "0.3.0": "32577a7e396b"
+      "0.3.0": "32577a7e396b5b41724cddcd7757fe44"
     }
   },
   "DuckDuckGoSearchComponent": {
     "versions": {
-      "0.3.0": "2e522a5a4389"
+      "0.3.0": "2e522a5a43893c875ed731338a7e9702"
     }
   },
   "Elasticsearch": {
     "versions": {
-      "0.3.0": "23ea4383039e"
+      "0.3.0": "23ea4383039ec24ce85748c939c35d8a"
     }
   },
   "OpenSearchVectorStoreComponent": {
     "versions": {
-      "0.3.0": "c1153ba96287"
+      "0.3.0": "c1153ba9628761ebc18f129fe7c7f7b0"
     }
   },
   "OpenSearchVectorStoreComponentMultimodalMultiEmbedding": {
     "versions": {
-      "0.3.0": "1a656a1610f9"
+      "0.3.0": "1a656a1610f9cbb035bc43872aafd013"
     }
   },
   "EmbeddingSimilarityComponent": {
     "versions": {
-      "0.3.0": "d94c7d791f69"
+      "0.3.0": "d94c7d791f69d35af9ee14e4a413371d"
     }
   },
   "TextEmbedderComponent": {
     "versions": {
-      "0.3.0": "541a2fb78066"
+      "0.3.0": "541a2fb780660dd3c6c210cba91cc139"
     }
   },
   "ExaSearch": {
     "versions": {
-      "0.3.0": "26039e2a8b78"
+      "0.3.0": "26039e2a8b78ca60094b5b28d5eb4fe9"
     }
   },
   "Directory": {
     "versions": {
-      "0.3.0": "c55e0e29079d"
+      "0.3.0": "c55e0e29079d7c4c1daa494c7c745c08"
     }
   },
   "File": {
     "versions": {
-      "0.3.0": "12a5841f1a03"
+      "0.3.0": "12a5841f1a0326603e9b7e148f186eb0"
     }
   },
   "KnowledgeIngestion": {
     "versions": {
-      "0.3.0": "52a451e4f053"
+      "0.3.0": "52a451e4f05365fd3c2cdb3b2bf34ae6"
     }
   },
   "KnowledgeRetrieval": {
     "versions": {
-      "0.3.0": "af0a162c3f80"
+      "0.3.0": "af0a162c3f8033713f36e13e5ccdfe06"
     }
   },
   "SaveToFile": {
     "versions": {
-      "0.3.0": "6d0e4842271e"
+      "0.3.0": "6d0e4842271e440fd63a5035f772db81"
     }
   },
   "FirecrawlCrawlApi": {
     "versions": {
-      "0.3.0": "22fd75efce27"
+      "0.3.0": "22fd75efce273cb39e4a6441426c26d4"
     }
   },
   "FirecrawlExtractApi": {
     "versions": {
-      "0.3.0": "8083782c2c28"
+      "0.3.0": "8083782c2c2832bc4992f2862ee5569f"
     }
   },
   "FirecrawlMapApi": {
     "versions": {
-      "0.3.0": "e326e840049b"
+      "0.3.0": "e326e840049bff8d7d30bf47a5ac9d6f"
     }
   },
   "FirecrawlScrapeApi": {
     "versions": {
-      "0.3.0": "857b7da04207"
+      "0.3.0": "857b7da04207e2561cc99686f7259321"
     }
   },
   "ConditionalRouter": {
     "versions": {
-      "0.3.0": "e92b1b243e5f"
+      "0.3.0": "e92b1b243e5fb70a601dc8993487b69c"
     }
   },
   "DataConditionalRouter": {
     "versions": {
-      "0.3.0": "6fa1bf4166a3"
+      "0.3.0": "6fa1bf4166a342aa0509033eeb5e106e"
     }
   },
   "FlowTool": {
     "versions": {
-      "0.3.0": "9348d79d19f4"
+      "0.3.0": "9348d79d19f44c86ab13b730eb5c3cd1"
     }
   },
   "Listen": {
     "versions": {
-      "0.3.0": "93fc11377c96"
+      "0.3.0": "93fc11377c96e71b46d428d37466212f"
     }
   },
   "LoopComponent": {
     "versions": {
-      "0.3.0": "9f88705635cd"
+      "0.3.0": "9f88705635cd238f61b4d10e27f758e1"
     }
   },
   "Notify": {
     "versions": {
-      "0.3.0": "03d68ba28530"
+      "0.3.0": "03d68ba28530b9d454b1fd8145d13b0a"
     }
   },
   "Pass": {
     "versions": {
-      "0.3.0": "04d3e1ed3390"
+      "0.3.0": "04d3e1ed3390facbeb851dbeb8c40c31"
     }
   },
   "RunFlow": {
     "versions": {
-      "0.3.0": "0ab9e9a36313"
+      "0.3.0": "0ab9e9a3631362065668d12c3350c3cb"
     }
   },
   "SubFlow": {
     "versions": {
-      "0.3.0": "8ba6fbc5ca3a"
+      "0.3.0": "8ba6fbc5ca3aefc0bdad4792847eecc8"
     }
   },
   "GitLoaderComponent": {
     "versions": {
-      "0.3.0": "ac5de0564a4f"
+      "0.3.0": "ac5de0564a4f6bef5477787e20f3650a"
     }
   },
   "GitExtractorComponent": {
     "versions": {
-      "0.3.0": "79f338765b69"
+      "0.3.0": "79f338765b69a98dc71e2e72314e6e75"
     }
   },
   "GleanSearchAPIComponent": {
     "versions": {
-      "0.3.0": "493ca281d420"
+      "0.3.0": "493ca281d420fe0b58826c6f3f3d98ac"
     }
   },
   "GmailLoaderComponent": {
     "versions": {
-      "0.3.0": "b973c5a1987b"
+      "0.3.0": "b973c5a1987b7342dfa6b89fe204a13b"
     }
   },
   "BigQueryExecutor": {
     "versions": {
-      "0.3.0": "7f61159743ec"
+      "0.3.0": "7f61159743ec89c79e20a29a9f2053dd"
     }
   },
   "GoogleDriveComponent": {
     "versions": {
-      "0.3.0": "1727f517e814"
+      "0.3.0": "1727f517e814dfe508556cd0d532e614"
     }
   },
   "GoogleDriveSearchComponent": {
     "versions": {
-      "0.3.0": "8f8dbdf04aaf"
+      "0.3.0": "8f8dbdf04aaf4862c7adc56f10277791"
     }
   },
   "GoogleGenerativeAIModel": {
     "versions": {
-      "0.3.0": "ffb6e75b6684"
+      "0.3.0": "ffb6e75b66846e3401594e370f3ada93"
     }
   },
   "Google Generative AI Embeddings": {
     "versions": {
-      "0.3.0": "7756ad70a221"
+      "0.3.0": "7756ad70a221ca36e9205685041cb9f0"
     }
   },
   "GoogleOAuthToken": {
     "versions": {
-      "0.3.0": "151778572099"
+      "0.3.0": "1517785720997f26256f3c7af28e0bc9"
     }
   },
   "GoogleSearchAPICore": {
     "versions": {
-      "0.3.0": "853c193aa41c"
+      "0.3.0": "853c193aa41c7fba9c50721c0ffa4f7c"
     }
   },
   "GoogleSerperAPICore": {
     "versions": {
-      "0.3.0": "527183dcb201"
+      "0.3.0": "527183dcb201ad62c1fcbfcf706166ef"
     }
   },
   "GroqModel": {
     "versions": {
-      "0.3.0": "2aee7de6ee88"
+      "0.3.0": "2aee7de6ee88912749468acc9e340e8c"
     }
   },
   "HomeAssistantControl": {
     "versions": {
-      "0.3.0": "32b34baf3c7d"
+      "0.3.0": "32b34baf3c7da7bea5b6789b600a2e61"
     }
   },
   "ListHomeAssistantStates": {
     "versions": {
-      "0.3.0": "c7bb91632474"
+      "0.3.0": "c7bb91632474ac502b9fe28d167134a3"
     }
   },
   "HuggingFaceModel": {
     "versions": {
-      "0.3.0": "ba9d7c28859d"
+      "0.3.0": "ba9d7c28859dfffbf5c2329ee847b88f"
     }
   },
   "HuggingFaceInferenceAPIEmbeddings": {
     "versions": {
-      "0.3.0": "af0546658974"
+      "0.3.0": "af0546658974b84f8011e4b030e9a706"
     }
   },
   "IBMwatsonxModel": {
     "versions": {
-      "0.3.0": "769869108e5e"
+      "0.3.0": "769869108e5eb84402f37064788a2e1f"
     }
   },
   "WatsonxEmbeddingsComponent": {
     "versions": {
-      "0.3.0": "ffded413ea90"
+      "0.3.0": "ffded413ea900c28e459f5f734558d0a"
     }
   },
   "Combinatorial Reasoner": {
     "versions": {
-      "0.3.0": "48557047ff23"
+      "0.3.0": "48557047ff231875436863bcd638f6bf"
     }
   },
   "ChatInput": {
     "versions": {
-      "0.3.0": "7a26c54d89ed"
+      "0.3.0": "7a26c54d89edcbffa23f8efd479c7555"
     }
   },
   "ChatOutput": {
     "versions": {
-      "0.3.0": "8c87e536cca4"
+      "0.3.0": "8c87e536cca4b50e0355fd01c8f24a67"
     }
   },
   "TextInput": {
     "versions": {
-      "0.3.0": "518f16485886"
+      "0.3.0": "518f16485886e33d92bd44b4830ca748"
     }
   },
   "TextOutput": {
     "versions": {
-      "0.3.0": "6aba888f4632"
+      "0.3.0": "6aba888f46320472b028539a9ebbf527"
     }
   },
   "Webhook": {
     "versions": {
-      "0.3.0": "eb561ef21f3d"
+      "0.3.0": "eb561ef21f3d938b7522796111fe0599"
     }
   },
   "JigsawStackAIScraper": {
     "versions": {
-      "0.3.0": "08a0063e2564"
+      "0.3.0": "08a0063e256492c6c4de3e08f6403fae"
     }
   },
   "JigsawStackAISearch": {
     "versions": {
-      "0.3.0": "5e821ee44040"
+      "0.3.0": "5e821ee44040524662bfafe348783c85"
     }
   },
   "JigsawStackFileRead": {
     "versions": {
-      "0.3.0": "84d122f46fb1"
+      "0.3.0": "84d122f46fb1c5b9c1f993cd3a7d4e56"
     }
   },
   "JigsawStackFileUpload": {
     "versions": {
-      "0.3.0": "8261dc72a655"
+      "0.3.0": "8261dc72a65563faf049c9d15361f460"
     }
   },
   "JigsawStackImageGeneration": {
     "versions": {
-      "0.3.0": "463f8efbaa18"
+      "0.3.0": "463f8efbaa18f314717818535f3d349b"
     }
   },
   "JigsawStackNSFW": {
     "versions": {
-      "0.3.0": "88b5eee38906"
+      "0.3.0": "88b5eee389067ee2447186f7fe4e3d2e"
     }
   },
   "JigsawStackObjectDetection": {
     "versions": {
-      "0.3.0": "fceaf0286f20"
+      "0.3.0": "fceaf0286f209c28ea5b8528d5510d62"
     }
   },
   "JigsawStackSentiment": {
     "versions": {
-      "0.3.0": "00d0377e5c2e"
+      "0.3.0": "00d0377e5c2e5d80eab06814a6a9c851"
     }
   },
   "JigsawStackTextToSQL": {
     "versions": {
-      "0.3.0": "30aa0cc15fb8"
+      "0.3.0": "30aa0cc15fb84230cb7c4b34a3f1f064"
     }
   },
   "JigsawStackTextTranslate": {
     "versions": {
-      "0.3.0": "46233e19961f"
+      "0.3.0": "46233e19961fde844129aabb164cecb0"
     }
   },
   "JigsawStackVOCR": {
     "versions": {
-      "0.3.0": "a44491947ba7"
+      "0.3.0": "a44491947ba727cbb5425986dfaef666"
     }
   },
   "CharacterTextSplitter": {
     "versions": {
-      "0.3.0": "995b35c5296c"
+      "0.3.0": "995b35c5296caa483ed8a07866e19566"
     }
   },
   "ConversationChain": {
     "versions": {
-      "0.3.0": "b0e4044d3f08"
+      "0.3.0": "b0e4044d3f081e881cff166ee0f20428"
     }
   },
   "CSVAgent": {
     "versions": {
-      "0.3.0": "97947e212da9"
+      "0.3.0": "97947e212da9fc83df42662e5c7016c6"
     }
   },
   "LangChainFakeEmbeddings": {
     "versions": {
-      "0.3.0": "faaa1be642a1"
+      "0.3.0": "faaa1be642a160887cb4bf4913c9fe0f"
     }
   },
   "HtmlLinkExtractor": {
     "versions": {
-      "0.3.0": "13cc6457f84c"
+      "0.3.0": "13cc6457f84c35000979074a08846cd7"
     }
   },
   "JsonAgent": {
     "versions": {
-      "0.3.0": "117a41e142c6"
+      "0.3.0": "117a41e142c6fea6445ee450befb7077"
     }
   },
   "LangChain Hub Prompt": {
     "versions": {
-      "0.3.0": "9f59bf236231"
+      "0.3.0": "9f59bf236231216524ae01a640653560"
     }
   },
   "LanguageRecursiveTextSplitter": {
     "versions": {
-      "0.3.0": "207a88b20a7e"
+      "0.3.0": "207a88b20a7e9a8843bd9f06e2405088"
     }
   },
   "SemanticTextSplitter": {
     "versions": {
-      "0.3.0": "e9178757dea0"
+      "0.3.0": "e9178757dea066ccceb00b6ac692c11f"
     }
   },
   "LLMCheckerChain": {
     "versions": {
-      "0.3.0": "81aa2c9910db"
+      "0.3.0": "81aa2c9910dbaed76ea561fce56d1594"
     }
   },
   "LLMMathChain": {
     "versions": {
-      "0.3.0": "422d8e0d4614"
+      "0.3.0": "422d8e0d46141b98ed5cc1da5a923128"
     }
   },
   "NaturalLanguageTextSplitter": {
     "versions": {
-      "0.3.0": "aed1e0bb411e"
+      "0.3.0": "aed1e0bb411eeed6edf90cfc9e56c885"
     }
   },
   "OpenAIToolsAgent": {
     "versions": {
-      "0.3.0": "b2ad248a3e6c"
+      "0.3.0": "b2ad248a3e6c2dd7228d2c647d625a98"
     }
   },
   "OpenAPIAgent": {
     "versions": {
-      "0.3.0": "3b817f0cd966"
+      "0.3.0": "3b817f0cd9667f9e0d4c59dbcc96e591"
     }
   },
   "RecursiveCharacterTextSplitter": {
     "versions": {
-      "0.3.0": "9ed58a212804"
+      "0.3.0": "9ed58a212804e97cc38b62ad7479a9c1"
     }
   },
   "RetrievalQA": {
     "versions": {
-      "0.3.0": "16c80b234abf"
+      "0.3.0": "16c80b234abf63d4409fcc26613f135d"
     }
   },
   "RunnableExecutor": {
     "versions": {
-      "0.3.0": "32135f41efe5"
+      "0.3.0": "32135f41efe510205bc07f48d8bfc009"
     }
   },
   "SelfQueryRetriever": {
     "versions": {
-      "0.3.0": "a18169f36371"
+      "0.3.0": "a18169f36371960dd77291949fbcbcd4"
     }
   },
   "SpiderTool": {
     "versions": {
-      "0.3.0": "08c823a20237"
+      "0.3.0": "08c823a20237509013822e984904bff4"
     }
   },
   "SQLAgent": {
     "versions": {
-      "0.3.0": "8d02598705fc"
+      "0.3.0": "8d02598705fc80dbaf35ecab3bf1d942"
     }
   },
   "SQLDatabase": {
     "versions": {
-      "0.3.0": "7d07b7faa341"
+      "0.3.0": "7d07b7faa341be21af2d9e490f4c2180"
     }
   },
   "SQLGenerator": {
     "versions": {
-      "0.3.0": "971a82407ec6"
+      "0.3.0": "971a82407ec655959fa533d977c8fa16"
     }
   },
   "ToolCallingAgent": {
     "versions": {
-      "0.3.0": "a5afe724de9c"
+      "0.3.0": "a5afe724de9cddf3c919651226c7491d"
     }
   },
   "VectorStoreInfo": {
     "versions": {
-      "0.3.0": "62f06efeec2c"
+      "0.3.0": "62f06efeec2cab99d8e599672b271784"
     }
   },
   "VectorStoreRouterAgent": {
     "versions": {
-      "0.3.0": "b16515f6e722"
+      "0.3.0": "b16515f6e72285b6af62eab756d5a1d2"
     }
   },
   "XMLAgent": {
     "versions": {
-      "0.3.0": "338332984901"
+      "0.3.0": "3383329849014ec78b46e62dd6cfab52"
     }
   },
   "LangWatchEvaluator": {
     "versions": {
-      "0.3.0": "6db3bccd5945"
+      "0.3.0": "6db3bccd5945ed8542702ea2687735d0"
     }
   },
   "BatchRunComponent": {
     "versions": {
-      "0.3.0": "53935e54dfe7"
+      "0.3.0": "53935e54dfe7a27d83f09ec2d5773db1"
     }
   },
   "Smart Transform": {
     "versions": {
       "0.3.0": {
-        "hash": "a941e962d6f2",
+        "hash": "a941e962d6f2acea7fba8b2f33ff9db3",
         "executes_code": true
       }
     }
   },
   "SmartRouter": {
     "versions": {
-      "0.3.0": "7bdefeec6280"
+      "0.3.0": "7bdefeec6280355830a5d2ff32bdc680"
     }
   },
   "LLMSelectorComponent": {
     "versions": {
-      "0.3.0": "59de3f4015ff"
+      "0.3.0": "59de3f4015ff959e4735421a38c80860"
     }
   },
   "StructuredOutput": {
     "versions": {
-      "0.3.0": "058ca1f51e9f"
+      "0.3.0": "058ca1f51e9fdbbb7a8fb69e5b240ad0"
     }
   },
   "LMStudioEmbeddingsComponent": {
     "versions": {
-      "0.3.0": "ecd584b7a486"
+      "0.3.0": "ecd584b7a486dc53a282bc4b679f9320"
     }
   },
   "LMStudioModel": {
     "versions": {
-      "0.3.0": "da4b3b155dc4"
+      "0.3.0": "da4b3b155dc4da778a4bd2cef51efc50"
     }
   },
   "Maritalk": {
     "versions": {
-      "0.3.0": "25c5da31181e"
+      "0.3.0": "25c5da31181eae789909629310062339"
     }
   },
   "mem0_chat_memory": {
     "versions": {
-      "0.3.0": "b6addbcccf9a"
+      "0.3.0": "b6addbcccf9a3f1ea65b5fbf247dabef"
     }
   },
   "Milvus": {
     "versions": {
-      "0.3.0": "2b5efe313b31"
+      "0.3.0": "2b5efe313b31ddc0152e3ff9bf87bf60"
     }
   },
   "MistralModel": {
     "versions": {
-      "0.3.0": "e21780948144"
+      "0.3.0": "e217809481447aafe58d46433e9346c8"
     }
   },
   "MistalAIEmbeddings": {
     "versions": {
-      "0.3.0": "42ea92fd2df2"
+      "0.3.0": "42ea92fd2df21d609a72cf8d737a9a96"
     }
   },
   "Agent": {
     "versions": {
-      "0.3.0": "60401f4e0ff8"
+      "0.3.0": "60401f4e0ff819d63dfc90a7ebbc7700"
     }
   },
   "EmbeddingModel": {
     "versions": {
-      "0.3.0": "3e0b64afc9a2"
+      "0.3.0": "3e0b64afc9a29db610af36f78ac1f31a"
     }
   },
   "LanguageModelComponent": {
     "versions": {
-      "0.3.0": "07d0ce9ea77e"
+      "0.3.0": "07d0ce9ea77ebbb130002a008e912437"
     }
   },
   "MCPTools": {
     "versions": {
-      "0.3.0": "a3700ab467a1"
+      "0.3.0": "a3700ab467a1920a23a36d96f582c9f1"
     }
   },
   "Memory": {
     "versions": {
-      "0.3.0": "efd064ef48ff"
+      "0.3.0": "efd064ef48ff598e53efb0891658da76"
     }
   },
   "Prompt Template": {
     "versions": {
-      "0.3.0": "595f7c9c8463"
+      "0.3.0": "595f7c9c8463c7af8126a86a8805ff99"
     }
   },
   "MongoDBAtlasVector": {
     "versions": {
-      "0.3.0": "3a502cb4d313"
+      "0.3.0": "3a502cb4d313a07baf188fbc7639221a"
     }
   },
   "needle": {
     "versions": {
-      "0.3.0": "5f6cedaa0217"
+      "0.3.0": "5f6cedaa0217a24f349650f866d8e5ad"
     }
   },
   "NotDiamond": {
     "versions": {
-      "0.3.0": "a26ebf501f67"
+      "0.3.0": "a26ebf501f67e6bb754fec97c6030504"
     }
   },
   "NovitaModel": {
     "versions": {
-      "0.3.0": "2142c4dd2b64"
+      "0.3.0": "2142c4dd2b64430102c4e4771cc26c13"
     }
   },
   "NVIDIAModelComponent": {
     "versions": {
-      "0.3.0": "fd6cae31c2a0"
+      "0.3.0": "fd6cae31c2a04d782d5539e7df47ec52"
     }
   },
   "NVIDIAEmbeddingsComponent": {
     "versions": {
-      "0.3.0": "0fded038082d"
+      "0.3.0": "0fded038082d644cf01ef0660c34a14e"
     }
   },
   "NvidiaIngestComponent": {
     "versions": {
-      "0.3.0": "ff0c6660d991"
+      "0.3.0": "ff0c6660d9914369017c0c5a5cbca404"
     }
   },
   "NvidiaRerankComponent": {
     "versions": {
-      "0.3.0": "cf3976b241f1"
+      "0.3.0": "cf3976b241f17f6a1720d0d90661bcf8"
     }
   },
   "NvidiaSystemAssistComponent": {
     "versions": {
-      "0.3.0": "1affc5dcebe1"
+      "0.3.0": "1affc5dcebe19e88ffcd416ff728859c"
     }
   },
   "OlivyaComponent": {
     "versions": {
-      "0.3.0": "b5a5c201c4e0"
+      "0.3.0": "b5a5c201c4e0ad928f6a180f886be62f"
     }
   },
   "OllamaModel": {
     "versions": {
-      "0.3.0": "12e5c1954fe1"
+      "0.3.0": "12e5c1954fe1ccdc7690f8df268d5113"
     }
   },
   "OllamaEmbeddings": {
     "versions": {
-      "0.3.0": "c1f138e1f771"
+      "0.3.0": "c1f138e1f771751d8ec0db9a8a4938a9"
     }
   },
   "OpenAIEmbeddings": {
     "versions": {
-      "0.3.0": "8a658ed6d4c9"
+      "0.3.0": "8a658ed6d4c9d2d4cba9ac75bf96cd04"
     }
   },
   "OpenAIModel": {
     "versions": {
-      "0.3.0": "128d8ef661d4"
+      "0.3.0": "128d8ef661d42daf4dc96a7ce4b12de8"
     }
   },
   "OpenRouterComponent": {
     "versions": {
-      "0.3.0": "83c3c312a7a2"
+      "0.3.0": "83c3c312a7a23f70b988ce500d2fc004"
     }
   },
   "PerplexityModel": {
     "versions": {
-      "0.3.0": "b970844e376e"
+      "0.3.0": "b970844e376eed76881fd5c962111e28"
     }
   },
   "pgvector": {
     "versions": {
-      "0.3.0": "50117607bf5e"
+      "0.3.0": "50117607bf5e55f8e3de11e8c6b1f399"
     }
   },
   "Pinecone": {
     "versions": {
-      "0.3.0": "564ca0a0e9ab"
+      "0.3.0": "564ca0a0e9ab728e35ee16089e360817"
     }
   },
   "AlterMetadata": {
     "versions": {
-      "0.3.0": "0b2fe62eaec4"
+      "0.3.0": "0b2fe62eaec4f27109777ea4982570aa"
     }
   },
   "CombineText": {
     "versions": {
-      "0.3.0": "10ffb6543dd9"
+      "0.3.0": "10ffb6543dd96b9baca0d8fcec6b636e"
     }
   },
   "TypeConverterComponent": {
     "versions": {
-      "0.3.0": "be7797f8df1c"
+      "0.3.0": "be7797f8df1c80814f671a1c55752983"
     }
   },
   "CreateData": {
     "versions": {
-      "0.3.0": "3e313525090d"
+      "0.3.0": "3e313525090dad7b56a64d8a1e8c36ed"
     }
   },
   "CreateList": {
     "versions": {
-      "0.3.0": "9ec770d03310"
+      "0.3.0": "9ec770d03310e992f2bc9d2641ab01d0"
     }
   },
   "DataOperations": {
     "versions": {
-      "0.3.0": "f5d9680f8644"
+      "0.3.0": "f5d9680f8644bf0969430a55d938a0ea"
     }
   },
   "DataToDataFrame": {
     "versions": {
-      "0.3.0": "57b9f79028e9"
+      "0.3.0": "57b9f79028e9eafeaf75cb2b755250c6"
     }
   },
   "DataFrameOperations": {
     "versions": {
-      "0.3.0": "904f4eaebccd"
+      "0.3.0": "904f4eaebccd717c511480ebc46e94f4"
     }
   },
   "DynamicCreateData": {
     "versions": {
-      "0.3.0": "0457c4acdf45"
+      "0.3.0": "0457c4acdf45dda57288882e2f86aabd"
     }
   },
   "ExtractaKey": {
     "versions": {
-      "0.3.0": "eded3f4e1533"
+      "0.3.0": "eded3f4e1533bc07ba6e562e8f403ccd"
     }
   },
   "FilterData": {
     "versions": {
-      "0.3.0": "04c50937216d"
+      "0.3.0": "04c50937216d4cb45d9aec5cc8f787fd"
     }
   },
   "FilterDataValues": {
     "versions": {
-      "0.3.0": "847522549c67"
+      "0.3.0": "847522549c676c44556efcb272606652"
     }
   },
   "JSONCleaner": {
     "versions": {
-      "0.3.0": "5c150997aec4"
+      "0.3.0": "5c150997aec4d2a23ddf22ba2fff2e1e"
     }
   },
   "MergeDataComponent": {
     "versions": {
-      "0.3.0": "a2ecb813aac5"
+      "0.3.0": "a2ecb813aac58b6038ff10ba4fc56bdc"
     }
   },
   "MessagetoData": {
     "versions": {
-      "0.3.0": "d0af1222aeaf"
+      "0.3.0": "d0af1222aeafb80bd0dcaeec897b2d36"
     }
   },
   "OutputParser": {
     "versions": {
-      "0.3.0": "9beb62a3e8fb"
+      "0.3.0": "9beb62a3e8fb3362298e681bdfbc32e4"
     }
   },
   "ParseData": {
     "versions": {
-      "0.3.0": "3fac44a9bb37"
+      "0.3.0": "3fac44a9bb3781e58fd2060c752f5021"
     }
   },
   "ParseDataFrame": {
     "versions": {
-      "0.3.0": "9d4b05cf1564"
+      "0.3.0": "9d4b05cf1564057261a0f3fd7fa36698"
     }
   },
   "ParseJSONData": {
     "versions": {
-      "0.3.0": "5268ca4c42d6"
+      "0.3.0": "5268ca4c42d6340037d6915986267943"
     }
   },
   "ParserComponent": {
     "versions": {
-      "0.3.0": "3cda25c3f7b5"
+      "0.3.0": "3cda25c3f7b5f21602b93b8209bde3ca"
     }
   },
   "RegexExtractorComponent": {
     "versions": {
-      "0.3.0": "f67d7bd7f65e"
+      "0.3.0": "f67d7bd7f65efbee60a4a14927226561"
     }
   },
   "SelectData": {
     "versions": {
-      "0.3.0": "0512bd98ce4d"
+      "0.3.0": "0512bd98ce4db87bde0ab30ec885e3cf"
     }
   },
   "SplitText": {
     "versions": {
-      "0.3.0": "b9d63ae59e8a"
+      "0.3.0": "b9d63ae59e8a19a6b31a0d0f4d0fa6a6"
     }
   },
   "StoreMessage": {
     "versions": {
-      "0.3.0": "9ad1aa08b597"
+      "0.3.0": "9ad1aa08b597b81d919c7b9faa3d456e"
     }
   },
   "TextOperations": {
     "versions": {
-      "0.3.0": "2c2991ef0a37"
+      "0.3.0": "2c2991ef0a379d2c6810ec9f25b024d7"
     }
   },
   "UpdateData": {
     "versions": {
-      "0.3.0": "d0790af3ac9b"
+      "0.3.0": "d0790af3ac9ba74bd673f28a3160f48f"
     }
   },
   "PythonFunction": {
     "versions": {
-      "0.3.0": "7da7d856a545"
+      "0.3.0": "7da7d856a545aaeb089093f88e098731"
     }
   },
   "QdrantVectorStoreComponent": {
     "versions": {
-      "0.3.0": "bcfc1728e7b1"
+      "0.3.0": "bcfc1728e7b1695e5f9b3988dcb7bbf8"
     }
   },
   "Redis": {
     "versions": {
-      "0.3.0": "fec4041f4017"
+      "0.3.0": "fec4041f4017a675957b4de9e6069729"
     }
   },
   "RedisChatMemory": {
     "versions": {
-      "0.3.0": "01ec6e1e34a8"
+      "0.3.0": "01ec6e1e34a83904af079a8c9c611dc2"
     }
   },
   "SambaNovaModel": {
     "versions": {
-      "0.3.0": "f12728900b8d"
+      "0.3.0": "f12728900b8dd7f45638e3736be77b50"
     }
   },
   "ScrapeGraphMarkdownifyApi": {
     "versions": {
-      "0.3.0": "0f5f12091af6"
+      "0.3.0": "0f5f12091af6769f4d93b30d81fc3d2f"
     }
   },
   "ScrapeGraphSearchApi": {
     "versions": {
-      "0.3.0": "002d2af653ef"
+      "0.3.0": "002d2af653ef985293f055e2e8818507"
     }
   },
   "ScrapeGraphSmartScraperApi": {
     "versions": {
-      "0.3.0": "cb419bec02ed"
+      "0.3.0": "cb419bec02edebeecb54dcb192fc8aa3"
     }
   },
   "SearchComponent": {
     "versions": {
-      "0.3.0": "625d1f5b3290"
+      "0.3.0": "625d1f5b329023a31672ec2fa19c9838"
     }
   },
   "Serp": {
     "versions": {
-      "0.3.0": "dcc2ecb44ff6"
+      "0.3.0": "dcc2ecb44ff6ea5ed6394d236b8d26e4"
     }
   },
   "SupabaseVectorStore": {
     "versions": {
-      "0.3.0": "5045b81c340b"
+      "0.3.0": "5045b81c340bffa1a43c1b2cce8c21ae"
     }
   },
   "TavilyExtractComponent": {
     "versions": {
-      "0.3.0": "fec95e2181d8"
+      "0.3.0": "fec95e2181d8f6bbda8e2d37eab6990f"
     }
   },
   "TavilySearchComponent": {
     "versions": {
-      "0.3.0": "e602eaec8316"
+      "0.3.0": "e602eaec83164bb1a5a68404130bc018"
     }
   },
   "CalculatorTool": {
     "versions": {
-      "0.3.0": "30008a17eb27"
+      "0.3.0": "30008a17eb274bdc2ad041fd50959311"
     }
   },
   "GoogleSearchAPI": {
     "versions": {
-      "0.3.0": "5f47bcd2163c"
+      "0.3.0": "5f47bcd2163c06eb708c3bd5b7dcd290"
     }
   },
   "GoogleSerperAPI": {
     "versions": {
-      "0.3.0": "f51b15d26440"
+      "0.3.0": "f51b15d26440e5d9a21e250048f79cda"
     }
   },
   "PythonCodeStructuredTool": {
     "versions": {
       "0.3.0": {
-        "hash": "27a339f95737",
+        "hash": "27a339f95737e0803d218e53b2500331",
         "executes_code": true
       }
     }
   },
   "PythonREPLTool": {
     "versions": {
-      "0.3.0": "695ab612478d"
+      "0.3.0": {
+        "hash": "a679093494c0fb8dedda3906e7f2139d",
+        "executes_code": true
+      }
     }
   },
   "SearchAPI": {
     "versions": {
-      "0.3.0": "4a9c8b914b68"
+      "0.3.0": "4a9c8b914b68c0c66523610775ddc94e"
     }
   },
   "SearXNGTool": {
     "versions": {
-      "0.3.0": "154e292dad2b"
+      "0.3.0": "154e292dad2beaf115745d17fb947f5e"
     }
   },
   "SerpAPI": {
     "versions": {
-      "0.3.0": "882d7b35a9d7"
+      "0.3.0": "882d7b35a9d74aa37bcf399bc2de14ab"
     }
   },
   "TavilyAISearch": {
     "versions": {
-      "0.3.0": "70b5611e8fd6"
+      "0.3.0": "70b5611e8fd623a82c1dffdd6f3d27c1"
     }
   },
   "WikidataAPI": {
     "versions": {
-      "0.3.0": "4752066f8971"
+      "0.3.0": "4752066f8971f2fa0eb84979c7c20a1b"
     }
   },
   "WikipediaAPI": {
     "versions": {
-      "0.3.0": "d7ae953444c9"
+      "0.3.0": "d7ae953444c936c32d08b24c654fae16"
     }
   },
   "YahooFinanceTool": {
     "versions": {
-      "0.3.0": "fda358f6395e"
+      "0.3.0": "fda358f6395ec1937ef921db86b261e9"
     }
   },
   "ConvertAstraToTwelveLabs": {
     "versions": {
-      "0.3.0": "90ad7b9b59eb"
+      "0.3.0": "90ad7b9b59eb8ed58766686e212f45cb"
     }
   },
   "TwelveLabsPegasusIndexVideo": {
     "versions": {
-      "0.3.0": "a2c0865be096"
+      "0.3.0": "a2c0865be09675e4d7ddbd3e85ae636f"
     }
   },
   "SplitVideo": {
     "versions": {
-      "0.3.0": "4d3a4a724aa5"
+      "0.3.0": "4d3a4a724aa577617e84094c72e6c777"
     }
   },
   "TwelveLabsTextEmbeddings": {
     "versions": {
-      "0.3.0": "5c7501f5088c"
+      "0.3.0": "5c7501f5088cfeeb6c578b3ee3b2c286"
     }
   },
   "TwelveLabsPegasus": {
     "versions": {
-      "0.3.0": "92cc032822a6"
+      "0.3.0": "92cc032822a6b7d15f22db215169f44f"
     }
   },
   "TwelveLabsVideoEmbeddings": {
     "versions": {
-      "0.3.0": "294e3539629c"
+      "0.3.0": "294e3539629c2e10261e3e15f8c3036a"
     }
   },
   "VideoFile": {
     "versions": {
-      "0.3.0": "8dc827e42377"
+      "0.3.0": "8dc827e423773060fa717cf8e1006d4a"
     }
   },
   "Unstructured": {
     "versions": {
-      "0.3.0": "bbb4e71aee8e"
+      "0.3.0": "bbb4e71aee8e148ff21586bb1de42e15"
     }
   },
   "Upstash": {
     "versions": {
-      "0.3.0": "b5b2d78e8c44"
+      "0.3.0": "b5b2d78e8c44df014c6b0cbf7283c542"
     }
   },
   "CalculatorComponent": {
     "versions": {
-      "0.3.0": "acbe2603b034"
+      "0.3.0": "acbe2603b034d8047a2789588a3c4922"
     }
   },
   "CurrentDate": {
     "versions": {
-      "0.3.0": "4a93d7b489e6"
+      "0.3.0": "4a93d7b489e6fe00a1f381e490b892ed"
     }
   },
   "IDGenerator": {
     "versions": {
-      "0.3.0": "cddb8b4edbc3"
+      "0.3.0": "cddb8b4edbc35fd59f1c8486852bd8e6"
     }
   },
   "PythonREPLComponent": {
     "versions": {
       "0.3.0": {
-        "hash": "ffad84f921d6",
+        "hash": "ffad84f921d67618e47347cba724de38",
         "executes_code": true
       }
     }
   },
   "Vectara": {
     "versions": {
-      "0.3.0": "a2309e046c06"
+      "0.3.0": "a2309e046c060466e9b923eba13ab3e0"
     }
   },
   "VectaraRAG": {
     "versions": {
-      "0.3.0": "123c9eef9191"
+      "0.3.0": "123c9eef9191dfb5b2f4e75f0b0eda25"
     }
   },
   "LocalDB": {
     "versions": {
-      "0.3.0": "767988a11f4a"
+      "0.3.0": "767988a11f4a29038e1ce39281fdc1c6"
     }
   },
   "VertexAiModel": {
     "versions": {
-      "0.3.0": "d9f75281d3fa"
+      "0.3.0": "d9f75281d3fa95f5586449715afbb08b"
     }
   },
   "VertexAIEmbeddings": {
     "versions": {
-      "0.3.0": "3abd5c15264a"
+      "0.3.0": "3abd5c15264a294a74eb7c99567cbba2"
     }
   },
   "vLLMModel": {
     "versions": {
-      "0.3.0": "ed6c1aa73200"
+      "0.3.0": "ed6c1aa73200d013ef874a78907fc7fd"
     }
   },
   "vLLMEmbeddings": {
     "versions": {
-      "0.3.0": "079b6a2dd397"
+      "0.3.0": "079b6a2dd39729de01f725459029b5d4"
     }
   },
   "VLMRunTranscription": {
     "versions": {
-      "0.3.0": "37232d071b96"
+      "0.3.0": "37232d071b968a06fbb674567210f983"
     }
   },
   "Weaviate": {
     "versions": {
-      "0.3.0": "ccc9f1e0149d"
+      "0.3.0": "ccc9f1e0149db7b1e65e3e2bfc21cb12"
     }
   },
   "WikidataComponent": {
     "versions": {
-      "0.3.0": "59df9d399440"
+      "0.3.0": "59df9d399440c97ab20cf935a7c469a2"
     }
   },
   "WikipediaComponent": {
     "versions": {
-      "0.3.0": "cc13e26c79c4"
+      "0.3.0": "cc13e26c79c40dd9471c6d04fa800f1f"
     }
   },
   "WolframAlphaAPI": {
     "versions": {
-      "0.3.0": "86caf22224ad"
+      "0.3.0": "86caf22224ad2ad426c61e19d9306e7b"
     }
   },
   "xAIModel": {
     "versions": {
-      "0.3.0": "ef0eb1cfadeb"
+      "0.3.0": "ef0eb1cfadeb323c5f1389a137025df8"
     }
   },
   "YfinanceComponent": {
     "versions": {
-      "0.3.0": "d6bf628ab821"
+      "0.3.0": "d6bf628ab8217b9ef3d62b473090cf9b"
     }
   },
   "YouTubeChannelComponent": {
     "versions": {
-      "0.3.0": "c889afb883fa"
+      "0.3.0": "c889afb883fa36289bce3b18b6ea847d"
     }
   },
   "YouTubeCommentsComponent": {
     "versions": {
-      "0.3.0": "20398e0d18df"
+      "0.3.0": "20398e0d18dfb40ba4ad859c1310e903"
     }
   },
   "YouTubePlaylistComponent": {
     "versions": {
-      "0.3.0": "2d6ac9665d53"
+      "0.3.0": "2d6ac9665d53d1b788d3891f7e7f67f1"
     }
   },
   "YouTubeSearchComponent": {
     "versions": {
-      "0.3.0": "1c4a94a094e2"
+      "0.3.0": "1c4a94a094e279b162349431d9831f56"
     }
   },
   "YouTubeTrendingComponent": {
     "versions": {
-      "0.3.0": "1450a5529486"
+      "0.3.0": "1450a5529486f12958db4ae4972e0a99"
     }
   },
   "YouTubeVideoDetailsComponent": {
     "versions": {
-      "0.3.0": "6c2be0d5450b"
+      "0.3.0": "6c2be0d5450b3226f1c04583d76af44a"
     }
   },
   "YouTubeTranscripts": {
     "versions": {
-      "0.3.0": "0ed75539d58d"
+      "0.3.0": "0ed75539d58d44b6c8d941e8f39cc48e"
     }
   },
   "ZepChatMemory": {
     "versions": {
-      "0.3.0": "ec825c33caf6"
+      "0.3.0": "ec825c33caf6a68d75f319de1ecdb53d"
     }
   }
 }

@@ -189,7 +189,7 @@
             "legacy": false,
             "lf_version": "1.7.0",
             "metadata": {
-              "code_hash": "219239ee2b48",
+              "code_hash": "219239ee2b48fe88aefc1037abd41044",
               "dependencies": {
                 "dependencies": [
                   {
@@ -363,7 +363,7 @@
             "legacy": false,
             "lf_version": "1.7.0",
             "metadata": {
-              "code_hash": "8c87e536cca4",
+              "code_hash": "8c87e536cca4b50e0355fd01c8f24a67",
               "dependencies": {
                 "dependencies": [
                   {
@@ -645,7 +645,7 @@
             "legacy": false,
             "lf_version": "1.7.0",
             "metadata": {
-              "code_hash": "7a26c54d89ed",
+              "code_hash": "7a26c54d89edcbffa23f8efd479c7555",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1460,7 +1460,7 @@
             "icon": "infinity",
             "legacy": false,
             "metadata": {
-              "code_hash": "9f88705635cd",
+              "code_hash": "9f88705635cd238f61b4d10e27f758e1",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1594,7 +1594,7 @@
             "icon": "braces",
             "legacy": false,
             "metadata": {
-              "code_hash": "3cda25c3f7b5",
+              "code_hash": "3cda25c3f7b5f21602b93b8209bde3ca",
               "dependencies": {
                 "dependencies": [
                   {
