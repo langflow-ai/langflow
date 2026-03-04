@@ -21,4 +21,22 @@ type Message = {
   content_blocks?: ContentBlock[];
 };
 
-export type { Message };
+// Extended type for Message properties that includes all runtime fields
+// Used when converting Message to ChatMessageType
+type ExtendedMessageProperties = Message["properties"] & {
+  source?: {
+    id?: string;
+    display_name?: string;
+    source?: string;
+  };
+  icon?: string;
+  background_color?: string;
+  text_color?: string;
+  targets?: string[];
+  edited?: boolean;
+  allow_markdown?: boolean;
+  positive_feedback?: boolean | null;
+  build_duration?: number | null;
+};
+
+export type { Message, ExtendedMessageProperties };

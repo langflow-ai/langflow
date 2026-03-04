@@ -143,6 +143,25 @@ export const useGetAddSessions: UseGetAddSessionsReturnType = ({
       updated.delete(sessionId);
       return updated;
     });
+
+    // clean up sessionStorage immediately to prevent stale data
+    if (flowId && isPlaygroundPage) {
+      try {
+        const stored = window.sessionStorage.getItem(
+          LOCAL_SESSIONS_STORAGE_KEY(flowId),
+        );
+        if (stored) {
+          const parsed = JSON.parse(stored) as string[];
+          const filtered = parsed.filter((s) => s !== sessionId);
+          window.sessionStorage.setItem(
+            LOCAL_SESSIONS_STORAGE_KEY(flowId),
+            JSON.stringify(filtered),
+          );
+        }
+      } catch (error) {
+        console.error("Error cleaning up session from sessionStorage:", error);
+      }
+    }
   };
 
   const renameLocalSession = (oldSessionId: string, newSessionId: string) => {

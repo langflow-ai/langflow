@@ -3,7 +3,7 @@ import { useEffect, useMemo } from "react";
 import { useGetFlowId } from "@/components/core/playgroundComponent/hooks/use-get-flow-id";
 import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
 import type { ChatMessageType } from "@/types/chat";
-import type { Message } from "@/types/messages";
+import type { Message, ExtendedMessageProperties } from "@/types/messages";
 import sortSenderMessages from "../utils/sort-sender-messages";
 
 export const useChatHistory = (visibleSession: string | null) => {
@@ -45,17 +45,30 @@ export const useChatHistory = (visibleSession: string | null) => {
     if (queryData && typeof queryData === "object" && "rows" in queryData) {
       const rowsData = queryData.rows as { data?: Message[] } | undefined;
       if (rowsData && typeof rowsData === "object" && "data" in rowsData) {
-        const backendMessages = rowsData.data || [];
+        const backendMessages = (rowsData.data || []).filter((msg: Message) => {
+          // Filter messages to only include those for the current session
+          const isCurrentFlow = msg.flow_id === currentFlowId;
+          if (visibleSession === currentFlowId) {
+            // Default session: include messages with matching session_id or no session_id
+            return (
+              isCurrentFlow &&
+              (msg.session_id === visibleSession || !msg.session_id)
+            );
+          }
+          // Non-default session: only include messages with exact session_id match
+          return isCurrentFlow && msg.session_id === visibleSession;
+        });
+
         const existingCache =
           queryClient.getQueryData<Message[]>(sessionCacheKey) || [];
 
-        // Only initialize if cache is empty and we have backend messages
+        // Only initialize if cache is empty and we have backend messages for this session
         if (existingCache.length === 0 && backendMessages.length > 0) {
           queryClient.setQueryData(sessionCacheKey, backendMessages);
         }
       }
     }
-  }, [queryData, queryClient, sessionCacheKey]);
+  }, [queryData, queryClient, sessionCacheKey, currentFlowId, visibleSession]);
 
   // Use session cache as the single source of truth
   // updateMessage and addUserMessage handle all updates (placeholders, streaming, etc.)
@@ -79,7 +92,7 @@ export const useChatHistory = (visibleSession: string | null) => {
         const matches = isCurrentFlow && message.session_id === visibleSession;
         return matches;
       })
-      .map((message: Message) => {
+      .map((message: Message): ChatMessageType => {
         let files = message.files;
         // Handle the "[]" case, empty string, or already parsed array
         if (Array.isArray(files)) {
@@ -96,6 +109,30 @@ export const useChatHistory = (visibleSession: string | null) => {
         }
         const messageText = message.text || "";
 
+        // Convert Message.properties to ChatMessageType.properties (PropertiesType)
+        let properties: ChatMessageType["properties"] = undefined;
+        if (message.properties) {
+          const props = message.properties as ExtendedMessageProperties;
+          if (props.source?.id) {
+            properties = {
+              source: {
+                id: props.source.id,
+                display_name: props.source.display_name || "",
+                source: props.source.source || "",
+              },
+              state: props.state,
+              icon: props.icon,
+              background_color: props.background_color,
+              text_color: props.text_color,
+              targets: props.targets,
+              edited: props.edited,
+              allow_markdown: props.allow_markdown,
+              positive_feedback: props.positive_feedback,
+              build_duration: props.build_duration,
+            };
+          }
+        }
+
         return {
           isSend: message.sender === "User",
           message: messageText,
@@ -110,7 +147,7 @@ export const useChatHistory = (visibleSession: string | null) => {
           text_color: message.text_color,
           content_blocks: message.content_blocks,
           category: message.category,
-          properties: message.properties,
+          properties: properties,
         };
       });
 
