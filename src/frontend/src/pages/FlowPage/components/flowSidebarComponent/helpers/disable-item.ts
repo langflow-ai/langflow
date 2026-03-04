@@ -1,19 +1,20 @@
 import type { UniqueInputsComponents } from "../types";
+import { CHAT_INPUT_COMPONENT, WEBHOOK_COMPONENT } from "./constants";
 
 export const disableItem = (
   SBItemName: string,
   uniqueInputsComponents: UniqueInputsComponents,
 ) => {
-  if (SBItemName === "ChatInput" && uniqueInputsComponents.chatInput) {
+  if (SBItemName === CHAT_INPUT_COMPONENT && uniqueInputsComponents.chatInput) {
     return true;
   }
-  if (SBItemName === "ChatInput" && uniqueInputsComponents.webhookInput) {
+  if (SBItemName === CHAT_INPUT_COMPONENT && uniqueInputsComponents.webhookInput) {
     return true;
   }
-  if (SBItemName === "Webhook" && uniqueInputsComponents.webhookInput) {
+  if (SBItemName === WEBHOOK_COMPONENT && uniqueInputsComponents.webhookInput) {
     return true;
   }
-  if (SBItemName === "Webhook" && uniqueInputsComponents.chatInput) {
+  if (SBItemName === WEBHOOK_COMPONENT && uniqueInputsComponents.chatInput) {
     return true;
   }
   return false;
