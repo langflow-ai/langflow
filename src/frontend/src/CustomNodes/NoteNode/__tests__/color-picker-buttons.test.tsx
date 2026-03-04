@@ -66,7 +66,9 @@ describe("ColorPickerButtons", () => {
       />,
     );
     const btn = screen.getByTestId("color_picker_button_amber");
-    expect(btn.querySelector("div")?.className).toContain("border-accent-indigo-foreground");
+    expect(btn.querySelector("div")?.className).toContain(
+      "border-accent-indigo-foreground",
+    );
   });
 
   it("calls setNode when preset color clicked", async () => {

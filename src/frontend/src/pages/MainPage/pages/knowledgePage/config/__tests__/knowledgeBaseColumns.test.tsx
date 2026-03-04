@@ -17,8 +17,14 @@ jest.mock("@/utils/stringManipulation", () => ({
 }));
 jest.mock("@/utils/styleUtils", () => ({
   FILE_ICONS: {
-    pdf: { icon: "FileText", color: "text-datatype-red dark:text-datatype-red-foreground" },
-    txt: { icon: "FileCode", color: "text-datatype-purple dark:text-datatype-purple-foreground" },
+    pdf: {
+      icon: "FileText",
+      color: "text-datatype-red dark:text-datatype-red-foreground",
+    },
+    txt: {
+      icon: "FileCode",
+      color: "text-datatype-purple dark:text-datatype-purple-foreground",
+    },
   },
 }));
 

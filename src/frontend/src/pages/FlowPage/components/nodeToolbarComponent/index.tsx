@@ -524,7 +524,10 @@ const NodeToolbarComponent = memo(
               shortcut={shortcuts.find((s) =>
                 s.name.toLowerCase().startsWith("freeze"),
               )}
-              className={cn("node-toolbar-buttons", frozen && "text-accent-indigo-foreground")}
+              className={cn(
+                "node-toolbar-buttons",
+                frozen && "text-accent-indigo-foreground",
+              )}
             />
           )}
           {hasToolMode && (
@@ -768,7 +771,10 @@ const NodeToolbarComponent = memo(
                     dataTestId="download-button-modal"
                   />
                 </SelectItem>
-                <SelectItem value={"delete"} className="focus:bg-destructive/[.20]">
+                <SelectItem
+                  value={"delete"}
+                  className="focus:bg-destructive/[.20]"
+                >
                   <div className="font-red flex text-status-red">
                     <IconComponent
                       name="Trash2"
