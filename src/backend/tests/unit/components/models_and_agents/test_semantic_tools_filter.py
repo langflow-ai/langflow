@@ -555,7 +555,9 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
         assert 4 in dependencies  # calendar tool
         assert "location" in dependencies[4]
 
-    def test_dependency_expansion(self, component_class, sample_tools, mock_embedding_model, mock_llm_model, session_id):
+    def test_dependency_expansion(
+        self, component_class, sample_tools, mock_embedding_model, mock_llm_model, session_id
+    ):
         """Test that dependency expansion adds related tools."""
         # Mock augmentation to return dependencies
         mock_llm_model.invoke.return_value.content = """
@@ -615,6 +617,5 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
         assert "weather" in result_names
         # Location tool should be added because weather depends on "location"
         assert "get_location" in result_names, (
-            f"Expected 'get_location' to be added via dependency expansion. "
-            f"Got tools: {result_names}"
+            f"Expected 'get_location' to be added via dependency expansion. Got tools: {result_names}"
         )
