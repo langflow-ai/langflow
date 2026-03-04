@@ -1641,6 +1641,7 @@ def update_model_options_in_build_config(
     get_options_func: Callable,
     field_name: str | None = None,
     field_value: Any = None,
+    model_field_name: str = "model",
 ) -> dict:
     """Helper function to update build config with cached model options.
 
@@ -1649,7 +1650,7 @@ def update_model_options_in_build_config(
     - api_key changes (may enable/disable providers)
     - Initial load (field_name is None)
     - Cache is empty or expired
-    - Model field is being refreshed (field_name == "model")
+    - Model field is being refreshed (field_name == model_field_name)
 
     If the component specifies static options, those are preserved and not refreshed.
 
@@ -1660,6 +1661,7 @@ def update_model_options_in_build_config(
         get_options_func: Function to call to get model options (e.g., get_language_model_options)
         field_name: The name of the field being changed, if any
         field_value: The current value of the field being changed, if any
+        model_field_name: The name of the model field in the build_config (default: "model")
 
     Returns:
         Updated build_config dict with model options and providers set
@@ -1710,7 +1712,7 @@ def update_model_options_in_build_config(
     should_refresh = (
         field_name == "api_key"  # API key changed
         or field_name is None  # Initial load
-        or field_name == "model"  # Model field refresh button clicked
+        or field_name == model_field_name  # Model field refresh button clicked
         or cache_key not in component.cache  # Cache miss
         or cache_expired  # Cache expired
     )
@@ -1730,7 +1732,7 @@ def update_model_options_in_build_config(
 
     # Use cached results
     cached = component.cache.get(cache_key, {"options": []})
-    build_config["model"]["options"] = cached["options"]
+    build_config[model_field_name]["options"] = cached["options"]
 
     # Set default value on initial load when field is empty
     # Fetch from user's default model setting in the database
@@ -1805,13 +1807,13 @@ def update_model_options_in_build_config(
 
             # Set the value
             if default_model:
-                build_config["model"]["value"] = [default_model]
+                build_config[model_field_name]["value"] = [default_model]
 
-    # Always set input_types based on model type to enable connection handles
+    # Handle visibility of the model input handle based on selection
     if cache_key_prefix == "embedding_model_options":
-        build_config["model"]["input_types"] = ["Embeddings"]
+        build_config[model_field_name]["input_types"] = ["Embeddings"]
     else:
-        build_config["model"]["input_types"] = ["LanguageModel"]
+        build_config[model_field_name]["input_types"] = ["LanguageModel"]
 
     return build_config
 
