@@ -9,11 +9,6 @@
       "0.3.0": "ffcd44201c09"
     }
   },
-  "NotionPageCreator": {
-    "versions": {
-      "0.3.0": "640438ed3d7b"
-    }
-  },
   "NotionDatabaseProperties": {
     "versions": {
       "0.3.0": "adce99660f9e"
@@ -24,19 +19,14 @@
       "0.3.0": "373f9ad32937"
     }
   },
-  "NotionUserList": {
-    "versions": {
-      "0.3.0": "8966397da1d5"
-    }
-  },
   "NotionPageContent": {
     "versions": {
       "0.3.0": "ba15d6a01d04"
     }
   },
-  "NotionSearch": {
+  "NotionPageCreator": {
     "versions": {
-      "0.3.0": "793b8818a3b4"
+      "0.3.0": "640438ed3d7b"
     }
   },
   "NotionPageUpdate": {
@@ -44,19 +34,29 @@
       "0.3.0": "32ccdf34df73"
     }
   },
+  "NotionSearch": {
+    "versions": {
+      "0.3.0": "793b8818a3b4"
+    }
+  },
+  "NotionUserList": {
+    "versions": {
+      "0.3.0": "8966397da1d5"
+    }
+  },
   "AgentQL": {
     "versions": {
       "0.3.0": "37de3210aed9"
     }
   },
-  "AIMLModel": {
-    "versions": {
-      "0.3.0": "db72277a0d5a"
-    }
-  },
   "AIMLEmbeddings": {
     "versions": {
       "0.3.0": "dae370391ba3"
+    }
+  },
+  "AIMLModel": {
+    "versions": {
+      "0.3.0": "db72277a0d5a"
     }
   },
   "ALTK Agent": {
@@ -114,24 +114,24 @@
       "0.3.0": "267dcda48ad4"
     }
   },
-  "AssemblyAITranscriptionJobPoller": {
-    "versions": {
-      "0.3.0": "935c9296b149"
-    }
-  },
   "AssemblyAITranscriptionJobCreator": {
     "versions": {
       "0.3.0": "7ff7b3f90298"
     }
   },
-  "AzureOpenAIModel": {
+  "AssemblyAITranscriptionJobPoller": {
     "versions": {
-      "0.3.0": "2ba26202203e"
+      "0.3.0": "935c9296b149"
     }
   },
   "AzureOpenAIEmbeddings": {
     "versions": {
       "0.3.0": "6b54f3243a6a"
+    }
+  },
+  "AzureOpenAIModel": {
+    "versions": {
+      "0.3.0": "2ba26202203e"
     }
   },
   "BaiduQianfanChatModel": {
@@ -209,6 +209,11 @@
       "0.3.0": "4ec4a8852e9c"
     }
   },
+  "ComposioAPI": {
+    "versions": {
+      "0.3.0": "764255821307"
+    }
+  },
   "ComposioAgentQLAPIComponent": {
     "versions": {
       "0.3.0": "cca708a10ab6"
@@ -272,11 +277,6 @@
   "ComposioCodaAPIComponent": {
     "versions": {
       "0.3.0": "f7693920313f"
-    }
-  },
-  "ComposioAPI": {
-    "versions": {
-      "0.3.0": "764255821307"
     }
   },
   "ComposioContentfulAPIComponent": {
@@ -364,19 +364,9 @@
       "0.3.0": "28adb6fff093"
     }
   },
-  "ComposioGoogleclassroomAPIComponent": {
-    "versions": {
-      "0.3.0": "85a5c37c13f6"
-    }
-  },
   "ComposioGoogleDocsAPIComponent": {
     "versions": {
       "0.3.0": "ac2e88b6f706"
-    }
-  },
-  "ComposioGooglemeetAPIComponent": {
-    "versions": {
-      "0.3.0": "cdbf16c4b42f"
     }
   },
   "ComposioGoogleSheetsAPIComponent": {
@@ -387,6 +377,16 @@
   "ComposioGoogleTasksAPIComponent": {
     "versions": {
       "0.3.0": "2ba9c1661f41"
+    }
+  },
+  "ComposioGoogleclassroomAPIComponent": {
+    "versions": {
+      "0.3.0": "85a5c37c13f6"
+    }
+  },
+  "ComposioGooglemeetAPIComponent": {
+    "versions": {
+      "0.3.0": "cdbf16c4b42f"
     }
   },
   "ComposioHeygenAPIComponent": {
@@ -554,14 +554,14 @@
       "0.3.0": "42e59f6d6572"
     }
   },
-  "SequentialTaskComponent": {
-    "versions": {
-      "0.3.0": "b1f17b8fcc5c"
-    }
-  },
   "SequentialTaskAgentComponent": {
     "versions": {
       "0.3.0": "0a5483ef82c3"
+    }
+  },
+  "SequentialTaskComponent": {
+    "versions": {
+      "0.3.0": "b1f17b8fcc5c"
     }
   },
   "Cuga": {
@@ -619,19 +619,49 @@
       "0.3.0": "cbeeaef8889a"
     }
   },
+  "AssistantsCreateAssistant": {
+    "versions": {
+      "0.3.0": "8d9869d9a89d"
+    }
+  },
+  "AssistantsCreateThread": {
+    "versions": {
+      "0.3.0": "5d40a73accfd"
+    }
+  },
+  "AssistantsGetAssistantName": {
+    "versions": {
+      "0.3.0": "1f60da161fd3"
+    }
+  },
+  "AssistantsListAssistants": {
+    "versions": {
+      "0.3.0": "17e9c5c78a6e"
+    }
+  },
+  "AssistantsRun": {
+    "versions": {
+      "0.3.0": "5e219cd290d3"
+    }
+  },
   "Astra Assistant Agent": {
     "versions": {
       "0.3.0": "4716d3b7c350"
     }
   },
-  "AstraDBChatMemory": {
+  "AstraDB": {
     "versions": {
-      "0.3.0": "bafc81f78c76"
+      "0.3.0": "d52094e54e96"
     }
   },
   "AstraDBCQLToolComponent": {
     "versions": {
       "0.3.0": "70c4523f841d"
+    }
+  },
+  "AstraDBChatMemory": {
+    "versions": {
+      "0.3.0": "bafc81f78c76"
     }
   },
   "AstraDBGraph": {
@@ -649,29 +679,9 @@
       "0.3.0": "3d976690c262"
     }
   },
-  "AstraDB": {
-    "versions": {
-      "0.3.0": "d52094e54e96"
-    }
-  },
-  "AssistantsCreateAssistant": {
-    "versions": {
-      "0.3.0": "8d9869d9a89d"
-    }
-  },
-  "AssistantsCreateThread": {
-    "versions": {
-      "0.3.0": "5d40a73accfd"
-    }
-  },
   "Dotenv": {
     "versions": {
       "0.3.0": "343ea9aaca1b"
-    }
-  },
-  "AssistantsGetAssistantName": {
-    "versions": {
-      "0.3.0": "1f60da161fd3"
     }
   },
   "GetEnvVar": {
@@ -687,16 +697,6 @@
   "HCD": {
     "versions": {
       "0.3.0": "25f009b9e171"
-    }
-  },
-  "AssistantsListAssistants": {
-    "versions": {
-      "0.3.0": "17e9c5c78a6e"
-    }
-  },
-  "AssistantsRun": {
-    "versions": {
-      "0.3.0": "5e219cd290d3"
     }
   },
   "DeepSeekModelComponent": {
@@ -849,14 +849,14 @@
       "0.3.0": "8ba6fbc5ca3a"
     }
   },
-  "GitLoaderComponent": {
-    "versions": {
-      "0.3.0": "ac5de0564a4f"
-    }
-  },
   "GitExtractorComponent": {
     "versions": {
       "0.3.0": "79f338765b69"
+    }
+  },
+  "GitLoaderComponent": {
+    "versions": {
+      "0.3.0": "ac5de0564a4f"
     }
   },
   "GleanSearchAPIComponent": {
@@ -864,14 +864,19 @@
       "0.3.0": "493ca281d420"
     }
   },
+  "BigQueryExecutor": {
+    "versions": {
+      "0.3.0": "7f61159743ec"
+    }
+  },
   "GmailLoaderComponent": {
     "versions": {
       "0.3.0": "b973c5a1987b"
     }
   },
-  "BigQueryExecutor": {
+  "Google Generative AI Embeddings": {
     "versions": {
-      "0.3.0": "7f61159743ec"
+      "0.3.0": "7756ad70a221"
     }
   },
   "GoogleDriveComponent": {
@@ -887,11 +892,6 @@
   "GoogleGenerativeAIModel": {
     "versions": {
       "0.3.0": "049f38001189"
-    }
-  },
-  "Google Generative AI Embeddings": {
-    "versions": {
-      "0.3.0": "7756ad70a221"
     }
   },
   "GoogleOAuthToken": {
@@ -924,14 +924,14 @@
       "0.3.0": "c7bb91632474"
     }
   },
-  "HuggingFaceModel": {
-    "versions": {
-      "0.3.0": "ba9d7c28859d"
-    }
-  },
   "HuggingFaceInferenceAPIEmbeddings": {
     "versions": {
       "0.3.0": "af0546658974"
+    }
+  },
+  "HuggingFaceModel": {
+    "versions": {
+      "0.3.0": "ba9d7c28859d"
     }
   },
   "IBMwatsonxModel": {
@@ -1029,6 +1029,11 @@
       "0.3.0": "a44491947ba7"
     }
   },
+  "CSVAgent": {
+    "versions": {
+      "0.3.0": "1888a727f9dd"
+    }
+  },
   "CharacterTextSplitter": {
     "versions": {
       "0.3.0": "995b35c5296c"
@@ -1037,16 +1042,6 @@
   "ConversationChain": {
     "versions": {
       "0.3.0": "b0e4044d3f08"
-    }
-  },
-  "CSVAgent": {
-    "versions": {
-      "0.3.0": "1888a727f9dd"
-    }
-  },
-  "LangChainFakeEmbeddings": {
-    "versions": {
-      "0.3.0": "faaa1be642a1"
     }
   },
   "HtmlLinkExtractor": {
@@ -1059,21 +1054,6 @@
       "0.3.0": "117a41e142c6"
     }
   },
-  "LangChain Hub Prompt": {
-    "versions": {
-      "0.3.0": "9f59bf236231"
-    }
-  },
-  "LanguageRecursiveTextSplitter": {
-    "versions": {
-      "0.3.0": "207a88b20a7e"
-    }
-  },
-  "SemanticTextSplitter": {
-    "versions": {
-      "0.3.0": "e9178757dea0"
-    }
-  },
   "LLMCheckerChain": {
     "versions": {
       "0.3.0": "81aa2c9910db"
@@ -1082,6 +1062,21 @@
   "LLMMathChain": {
     "versions": {
       "0.3.0": "422d8e0d4614"
+    }
+  },
+  "LangChain Hub Prompt": {
+    "versions": {
+      "0.3.0": "9f59bf236231"
+    }
+  },
+  "LangChainFakeEmbeddings": {
+    "versions": {
+      "0.3.0": "faaa1be642a1"
+    }
+  },
+  "LanguageRecursiveTextSplitter": {
+    "versions": {
+      "0.3.0": "207a88b20a7e"
     }
   },
   "NaturalLanguageTextSplitter": {
@@ -1114,16 +1109,6 @@
       "0.3.0": "32135f41efe5"
     }
   },
-  "SelfQueryRetriever": {
-    "versions": {
-      "0.3.0": "a18169f36371"
-    }
-  },
-  "SpiderTool": {
-    "versions": {
-      "0.3.0": "08c823a20237"
-    }
-  },
   "SQLAgent": {
     "versions": {
       "0.3.0": "550c16461236"
@@ -1137,6 +1122,21 @@
   "SQLGenerator": {
     "versions": {
       "0.3.0": "971a82407ec6"
+    }
+  },
+  "SelfQueryRetriever": {
+    "versions": {
+      "0.3.0": "a18169f36371"
+    }
+  },
+  "SemanticTextSplitter": {
+    "versions": {
+      "0.3.0": "e9178757dea0"
+    }
+  },
+  "SpiderTool": {
+    "versions": {
+      "0.3.0": "08c823a20237"
     }
   },
   "ToolCallingAgent": {
@@ -1164,9 +1164,24 @@
       "0.3.0": "6db3bccd5945"
     }
   },
+  "LiteLLMProxyModel": {
+    "versions": {
+      "0.3.0": "386ae52865b5"
+    }
+  },
   "BatchRunComponent": {
     "versions": {
       "0.3.0": "8b1ec3b03475"
+    }
+  },
+  "GuardrailValidator": {
+    "versions": {
+      "0.3.0": "675232be19cc"
+    }
+  },
+  "LLMSelectorComponent": {
+    "versions": {
+      "0.3.0": "59de3f4015ff"
     }
   },
   "Smart Transform": {
@@ -1177,11 +1192,6 @@
   "SmartRouter": {
     "versions": {
       "0.3.0": "7bdefeec6280"
-    }
-  },
-  "LLMSelectorComponent": {
-    "versions": {
-      "0.3.0": "59de3f4015ff"
     }
   },
   "StructuredOutput": {
@@ -1214,14 +1224,14 @@
       "0.3.0": "2b5efe313b31"
     }
   },
-  "MistralModel": {
-    "versions": {
-      "0.3.0": "e21780948144"
-    }
-  },
   "MistalAIEmbeddings": {
     "versions": {
       "0.3.0": "42ea92fd2df2"
+    }
+  },
+  "MistralModel": {
+    "versions": {
+      "0.3.0": "e21780948144"
     }
   },
   "Agent": {
@@ -1254,6 +1264,11 @@
       "0.3.0": "5b3e6730923e"
     }
   },
+  "SemanticToolsFilter": {
+    "versions": {
+      "0.3.0": "a603b664f885"
+    }
+  },
   "MongoDBAtlasVector": {
     "versions": {
       "0.3.0": "3a502cb4d313"
@@ -1274,14 +1289,14 @@
       "0.3.0": "2142c4dd2b64"
     }
   },
-  "NVIDIAModelComponent": {
-    "versions": {
-      "0.3.0": "fd6cae31c2a0"
-    }
-  },
   "NVIDIAEmbeddingsComponent": {
     "versions": {
       "0.3.0": "0fded038082d"
+    }
+  },
+  "NVIDIAModelComponent": {
+    "versions": {
+      "0.3.0": "fd6cae31c2a0"
     }
   },
   "NvidiaIngestComponent": {
@@ -1304,14 +1319,14 @@
       "0.3.0": "b5a5c201c4e0"
     }
   },
-  "OllamaModel": {
-    "versions": {
-      "0.3.0": "cd3dc38272a7"
-    }
-  },
   "OllamaEmbeddings": {
     "versions": {
       "0.3.0": "a8c56d0835de"
+    }
+  },
+  "OllamaModel": {
+    "versions": {
+      "0.3.0": "cd3dc38272a7"
     }
   },
   "OpenAIEmbeddings": {
@@ -1354,11 +1369,6 @@
       "0.3.0": "10ffb6543dd9"
     }
   },
-  "TypeConverterComponent": {
-    "versions": {
-      "0.3.0": "be7797f8df1c"
-    }
-  },
   "CreateData": {
     "versions": {
       "0.3.0": "3e313525090d"
@@ -1369,6 +1379,11 @@
       "0.3.0": "9ec770d03310"
     }
   },
+  "DataFrameOperations": {
+    "versions": {
+      "0.3.0": "904f4eaebccd"
+    }
+  },
   "DataOperations": {
     "versions": {
       "0.3.0": "1e5bfda1706b"
@@ -1377,11 +1392,6 @@
   "DataToDataFrame": {
     "versions": {
       "0.3.0": "57b9f79028e9"
-    }
-  },
-  "DataFrameOperations": {
-    "versions": {
-      "0.3.0": "904f4eaebccd"
     }
   },
   "DynamicCreateData": {
@@ -1467,6 +1477,11 @@
   "TextOperations": {
     "versions": {
       "0.3.0": "2c2991ef0a37"
+    }
+  },
+  "TypeConverterComponent": {
+    "versions": {
+      "0.3.0": "be7797f8df1c"
     }
   },
   "UpdateData": {
@@ -1564,14 +1579,14 @@
       "0.3.0": "695ab612478d"
     }
   },
-  "SearchAPI": {
-    "versions": {
-      "0.3.0": "4a9c8b914b68"
-    }
-  },
   "SearXNGTool": {
     "versions": {
       "0.3.0": "154e292dad2b"
+    }
+  },
+  "SearchAPI": {
+    "versions": {
+      "0.3.0": "4a9c8b914b68"
     }
   },
   "SerpAPI": {
@@ -1604,24 +1619,24 @@
       "0.3.0": "90ad7b9b59eb"
     }
   },
-  "TwelveLabsPegasusIndexVideo": {
-    "versions": {
-      "0.3.0": "a2c0865be096"
-    }
-  },
   "SplitVideo": {
     "versions": {
       "0.3.0": "4d3a4a724aa5"
     }
   },
-  "TwelveLabsTextEmbeddings": {
-    "versions": {
-      "0.3.0": "5c7501f5088c"
-    }
-  },
   "TwelveLabsPegasus": {
     "versions": {
       "0.3.0": "92cc032822a6"
+    }
+  },
+  "TwelveLabsPegasusIndexVideo": {
+    "versions": {
+      "0.3.0": "a2c0865be096"
+    }
+  },
+  "TwelveLabsTextEmbeddings": {
+    "versions": {
+      "0.3.0": "5c7501f5088c"
     }
   },
   "TwelveLabsVideoEmbeddings": {
@@ -1679,24 +1694,24 @@
       "0.3.0": "767988a11f4a"
     }
   },
-  "VertexAiModel": {
-    "versions": {
-      "0.3.0": "d9f75281d3fa"
-    }
-  },
   "VertexAIEmbeddings": {
     "versions": {
       "0.3.0": "3abd5c15264a"
     }
   },
-  "vLLMModel": {
+  "VertexAiModel": {
     "versions": {
-      "0.3.0": "ed6c1aa73200"
+      "0.3.0": "d9f75281d3fa"
     }
   },
   "vLLMEmbeddings": {
     "versions": {
       "0.3.0": "079b6a2dd397"
+    }
+  },
+  "vLLMModel": {
+    "versions": {
+      "0.3.0": "ed6c1aa73200"
     }
   },
   "VLMRunTranscription": {
@@ -1754,6 +1769,11 @@
       "0.3.0": "1c4a94a094e2"
     }
   },
+  "YouTubeTranscripts": {
+    "versions": {
+      "0.3.0": "0ed75539d58d"
+    }
+  },
   "YouTubeTrendingComponent": {
     "versions": {
       "0.3.0": "1450a5529486"
@@ -1764,24 +1784,9 @@
       "0.3.0": "6c2be0d5450b"
     }
   },
-  "YouTubeTranscripts": {
-    "versions": {
-      "0.3.0": "0ed75539d58d"
-    }
-  },
   "ZepChatMemory": {
     "versions": {
       "0.3.0": "ec825c33caf6"
-    }
-  },
-  "GuardrailValidator": {
-    "versions": {
-      "0.3.0": "675232be19cc"
-    }
-  },
-  "LiteLLMProxyModel": {
-    "versions": {
-      "0.3.0": "386ae52865b5"
     }
   }
 }

@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
     from lfx.components.models_and_agents.memory import MemoryComponent
     from lfx.components.models_and_agents.prompt import PromptComponent
+    from lfx.components.models_and_agents.semantic_tools_filter import SemanticToolsFilterComponent
 
 _dynamic_imports = {
     "AgentComponent": "agent",
@@ -19,6 +20,7 @@ _dynamic_imports = {
     "MCPToolsComponent": "mcp_component",
     "MemoryComponent": "memory",
     "PromptComponent": "prompt",
+    "SemanticToolsFilterComponent": "semantic_tools_filter",
 }
 
 __all__ = [
@@ -28,6 +30,7 @@ __all__ = [
     "MCPToolsComponent",
     "MemoryComponent",
     "PromptComponent",
+    "SemanticToolsFilterComponent",
 ]
 
 
