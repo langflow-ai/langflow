@@ -10,7 +10,7 @@ from sqlmodel import col, select
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
-from langflow.services.database.utils import parse_uuid
+from langflow.services.database.utils import normalize_string_or_none, parse_uuid
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -100,7 +100,7 @@ async def create_provider_account(
         raise
     provider_account = DeploymentProviderAccount(
         user_id=user_uuid,
-        provider_tenant_id=provider_tenant_id.strip() if provider_tenant_id is not None else None,
+        provider_tenant_id=normalize_string_or_none(provider_tenant_id),
         provider_key=provider_key_s,
         provider_url=provider_url_s,
         api_key=encrypted_key,
@@ -112,7 +112,12 @@ async def create_provider_account(
         await db.flush()
     except IntegrityError as exc:
         await db.rollback()
-        await logger.aerror("IntegrityError creating provider account: %s", exc)
+        await logger.aerror(
+            "IntegrityError creating provider account (user_id=%s, provider_url=%s, provider_tenant_id=%s)",
+            user_uuid,
+            provider_url_s,
+            provider_tenant_id,
+        )
         msg = (
             f"Provider account already exists "
             f"(provider_url={provider_url!r}, provider_tenant_id={provider_tenant_id!r})"
@@ -132,12 +137,7 @@ async def update_provider_account(
     api_key: str | None = None,
 ) -> DeploymentProviderAccount:
     if provider_tenant_id is not _UNSET:
-        if provider_tenant_id is not None:
-            stripped = provider_tenant_id.strip()  # type: ignore[union-attr]
-            # Normalize empty string to None (no tenant)
-            provider_account.provider_tenant_id = stripped if stripped else None
-        else:
-            provider_account.provider_tenant_id = None
+        provider_account.provider_tenant_id = normalize_string_or_none(provider_tenant_id)  # type: ignore[arg-type]
     if provider_key is not None:
         provider_account.provider_key = _strip_or_raise(provider_key, "provider_key")
     if provider_url is not None:
@@ -157,7 +157,7 @@ async def update_provider_account(
         await db.flush()
     except IntegrityError as exc:
         await db.rollback()
-        await logger.aerror("IntegrityError updating provider account id=%s: %s", provider_account.id, exc)
+        await logger.aerror("IntegrityError updating provider account id=%s", provider_account.id)
         msg = "Provider account update conflicts with an existing record"
         raise ValueError(msg) from exc
     await db.refresh(provider_account)
@@ -174,6 +174,6 @@ async def delete_provider_account(
         await db.flush()
     except IntegrityError as exc:
         await db.rollback()
-        await logger.aerror("Failed to delete provider account id=%s: %s", provider_account.id, exc)
+        await logger.aerror("Failed to delete provider account id=%s", provider_account.id)
         msg = f"Failed to delete provider account id={provider_account.id}"
         raise ValueError(msg) from exc

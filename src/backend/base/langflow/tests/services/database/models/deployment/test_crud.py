@@ -209,6 +209,48 @@ async def test_get_deployment_by_resource_key_not_found():
 
 
 @pytest.mark.asyncio
+async def test_list_deployments_page_negative_offset_raises():
+    db = _make_db()
+
+    with pytest.raises(ValueError, match="offset must be greater than or equal to 0"):
+        await list_deployments_page(
+            db,
+            user_id=uuid4(),
+            deployment_provider_account_id=uuid4(),
+            offset=-1,
+            limit=10,
+        )
+
+
+@pytest.mark.asyncio
+async def test_list_deployments_page_zero_limit_raises():
+    db = _make_db()
+
+    with pytest.raises(ValueError, match="limit must be greater than 0"):
+        await list_deployments_page(
+            db,
+            user_id=uuid4(),
+            deployment_provider_account_id=uuid4(),
+            offset=0,
+            limit=0,
+        )
+
+
+@pytest.mark.asyncio
+async def test_list_deployments_page_negative_limit_raises():
+    db = _make_db()
+
+    with pytest.raises(ValueError, match="limit must be greater than 0"):
+        await list_deployments_page(
+            db,
+            user_id=uuid4(),
+            deployment_provider_account_id=uuid4(),
+            offset=0,
+            limit=-5,
+        )
+
+
+@pytest.mark.asyncio
 async def test_list_deployments_page_returns_list():
     db = _make_db()
     mock_items = [MagicMock(), MagicMock()]

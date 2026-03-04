@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from datetime import datetime  # noqa: TC003 - needed at runtime for SQLModel fields and Pydantic schemas
+from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
@@ -8,7 +6,11 @@ from pydantic import field_validator
 from sqlalchemy import UniqueConstraint
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
-from langflow.services.database.utils import validate_non_empty_string, validate_non_empty_string_optional
+from langflow.services.database.utils import (
+    normalize_string_or_none,
+    validate_non_empty_string,
+    validate_non_empty_string_optional,
+)
 
 if TYPE_CHECKING:
     from langflow.services.database.models.deployment.model import Deployment
@@ -46,11 +48,16 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False),
     )
 
-    user: User = Relationship(back_populates="deployment_provider_accounts")
-    deployments: list[Deployment] = Relationship(
+    user: "User" = Relationship(back_populates="deployment_provider_accounts")
+    deployments: list["Deployment"] = Relationship(
         back_populates="deployment_provider_account",
         sa_relationship_kwargs={"cascade": "all, delete, delete-orphan"},
     )
+
+    @field_validator("provider_tenant_id", mode="before")
+    @classmethod
+    def normalize_tenant_id(cls, v: str | None) -> str | None:
+        return normalize_string_or_none(v)
 
     @field_validator("provider_key", "provider_url", "api_key")
     @classmethod
@@ -63,6 +70,11 @@ class DeploymentProviderAccountCreate(SQLModel):
     provider_key: str
     provider_url: str
     api_key: str
+
+    @field_validator("provider_tenant_id", mode="before")
+    @classmethod
+    def normalize_tenant_id(cls, v: str | None) -> str | None:
+        return normalize_string_or_none(v)
 
     @field_validator("provider_key", "provider_url", "api_key")
     @classmethod
@@ -91,6 +103,11 @@ class DeploymentProviderAccountUpdate(SQLModel):
     provider_key: str | None = None
     provider_url: str | None = None
     api_key: str | None = None
+
+    @field_validator("provider_tenant_id", mode="before")
+    @classmethod
+    def normalize_tenant_id(cls, v: str | None) -> str | None:
+        return normalize_string_or_none(v)
 
     @field_validator("provider_key", "provider_url", "api_key", mode="before")
     @classmethod

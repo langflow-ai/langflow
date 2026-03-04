@@ -45,6 +45,22 @@ class TestDeploymentProviderAccountValidation:
         result = DeploymentProviderAccount.validate_non_empty("  watsonx  ", self._make_info("provider_key"))
         assert result == "watsonx"
 
+    def test_normalizes_blank_tenant_id_to_none(self):
+        result = DeploymentProviderAccount.normalize_tenant_id("   ")
+        assert result is None
+
+    def test_normalizes_empty_tenant_id_to_none(self):
+        result = DeploymentProviderAccount.normalize_tenant_id("")
+        assert result is None
+
+    def test_strips_tenant_id(self):
+        result = DeploymentProviderAccount.normalize_tenant_id("  tenant-1  ")
+        assert result == "tenant-1"
+
+    def test_none_tenant_id_passthrough(self):
+        result = DeploymentProviderAccount.normalize_tenant_id(None)
+        assert result is None
+
 
 class TestDeploymentProviderAccountRead:
     """Tests for DeploymentProviderAccountRead schema."""
@@ -70,19 +86,49 @@ class TestDeploymentProviderAccountCreate:
 
     def test_rejects_empty_provider_key(self):
         with pytest.raises(ValueError, match="provider_key must not be empty"):
-            DeploymentProviderAccountCreate(provider_key="", provider_url="https://example.com", api_key="key")
+            DeploymentProviderAccountCreate(
+                provider_key="",
+                provider_url="https://example.com",
+                api_key="key",  # pragma: allowlist secret
+            )
 
     def test_rejects_empty_provider_url(self):
         with pytest.raises(ValueError, match="provider_url must not be empty"):
-            DeploymentProviderAccountCreate(provider_key="watsonx", provider_url="", api_key="key")
+            DeploymentProviderAccountCreate(
+                provider_key="watsonx",
+                provider_url="",
+                api_key="key",  # pragma: allowlist secret
+            )
 
     def test_rejects_empty_api_key(self):
         with pytest.raises(ValueError, match="api_key must not be empty"):
             DeploymentProviderAccountCreate(provider_key="watsonx", provider_url="https://example.com", api_key="")
 
     def test_valid_create(self):
-        obj = DeploymentProviderAccountCreate(provider_key="watsonx", provider_url="https://example.com", api_key="key")
+        obj = DeploymentProviderAccountCreate(
+            provider_key="watsonx",
+            provider_url="https://example.com",
+            api_key="key",  # pragma: allowlist secret
+        )
         assert obj.provider_key == "watsonx"
+
+    def test_blank_tenant_id_normalizes_to_none(self):
+        obj = DeploymentProviderAccountCreate(
+            provider_tenant_id="   ",
+            provider_key="watsonx",
+            provider_url="https://example.com",
+            api_key="key",  # pragma: allowlist secret
+        )
+        assert obj.provider_tenant_id is None
+
+    def test_strips_tenant_id(self):
+        obj = DeploymentProviderAccountCreate(
+            provider_tenant_id="  tenant-1  ",
+            provider_key="watsonx",
+            provider_url="https://example.com",
+            api_key="key",  # pragma: allowlist secret
+        )
+        assert obj.provider_tenant_id == "tenant-1"
 
 
 class TestDeploymentProviderAccountUpdate:
@@ -113,3 +159,11 @@ class TestDeploymentProviderAccountUpdate:
     def test_valid_update(self):
         obj = DeploymentProviderAccountUpdate(provider_key="new-key")
         assert obj.provider_key == "new-key"
+
+    def test_blank_tenant_id_normalizes_to_none(self):
+        obj = DeploymentProviderAccountUpdate(provider_tenant_id="   ")
+        assert obj.provider_tenant_id is None
+
+    def test_strips_tenant_id(self):
+        obj = DeploymentProviderAccountUpdate(provider_tenant_id="  tenant-1  ")
+        assert obj.provider_tenant_id == "tenant-1"

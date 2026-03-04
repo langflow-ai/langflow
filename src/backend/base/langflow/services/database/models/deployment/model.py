@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from datetime import datetime  # noqa: TC003 - needed at runtime for SQLModel fields and Pydantic schemas
+from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
@@ -42,9 +40,9 @@ class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False),
     )
 
-    user: User = Relationship(back_populates="deployments")
-    deployment_provider_account: DeploymentProviderAccount = Relationship(back_populates="deployments")
-    folder: Folder = Relationship(back_populates="deployments")
+    user: "User" = Relationship(back_populates="deployments")
+    deployment_provider_account: "DeploymentProviderAccount" = Relationship(back_populates="deployments")
+    folder: "Folder" = Relationship(back_populates="deployments")
 
     @field_validator("name", "resource_key")
     @classmethod

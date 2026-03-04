@@ -34,7 +34,7 @@ def _make_provider_account(**overrides) -> MagicMock:
         "provider_tenant_id": "tenant-1",
         "provider_key": "watsonx",
         "provider_url": "https://example.com",
-        "api_key": "encrypted-key",
+        "api_key": "encrypted-key",  # pragma: allowlist secret
     }
     defaults.update(overrides)
     mock = MagicMock()
@@ -122,7 +122,7 @@ async def test_create_provider_account_success():
         mock_auth.encrypt_api_key.return_value = "encrypted"
         mock_obj = MagicMock()
         mock_obj.provider_key = "watsonx"
-        mock_obj.api_key = "encrypted"
+        mock_obj.api_key = "encrypted"  # pragma: allowlist secret
         mock_cls.return_value = mock_obj
 
         result = await create_provider_account(
@@ -131,7 +131,7 @@ async def test_create_provider_account_success():
             provider_tenant_id="tenant-1",
             provider_key="watsonx",
             provider_url="https://example.com",
-            api_key="secret",
+            api_key="test-token",  # pragma: allowlist secret
         )
 
     db.add.assert_called_once_with(mock_obj)
@@ -139,8 +139,8 @@ async def test_create_provider_account_success():
     db.refresh.assert_awaited_once_with(mock_obj)
     assert result is mock_obj
     assert result.provider_key == "watsonx"
-    assert result.api_key == "encrypted"
-    mock_auth.encrypt_api_key.assert_called_once_with("secret")
+    assert result.api_key == "encrypted"  # pragma: allowlist secret
+    mock_auth.encrypt_api_key.assert_called_once_with("test-token")
 
 
 @pytest.mark.asyncio
@@ -160,14 +160,14 @@ async def test_create_provider_account_strips_whitespace():
             provider_tenant_id="  tenant-1  ",
             provider_key="  watsonx  ",
             provider_url="  https://example.com  ",
-            api_key="  secret  ",
+            api_key="  test-token  ",  # pragma: allowlist secret
         )
 
     call_kwargs = mock_cls.call_args.kwargs
     assert call_kwargs["provider_tenant_id"] == "tenant-1"
     assert call_kwargs["provider_key"] == "watsonx"
     assert call_kwargs["provider_url"] == "https://example.com"
-    mock_auth.encrypt_api_key.assert_called_once_with("secret")
+    mock_auth.encrypt_api_key.assert_called_once_with("test-token")
 
 
 @pytest.mark.asyncio
@@ -187,7 +187,31 @@ async def test_create_provider_account_none_tenant_id():
             provider_tenant_id=None,
             provider_key="watsonx",
             provider_url="https://example.com",
-            api_key="secret",
+            api_key="test-token",  # pragma: allowlist secret
+        )
+
+    call_kwargs = mock_cls.call_args.kwargs
+    assert call_kwargs["provider_tenant_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_create_provider_account_blank_tenant_id_normalizes_to_none():
+    db = _make_db()
+
+    with (
+        patch(CRUD_AUTH) as mock_auth,
+        patch(MODEL_CLASS) as mock_cls,
+    ):
+        mock_auth.encrypt_api_key.return_value = "encrypted"
+        mock_cls.return_value = MagicMock()
+
+        await create_provider_account(
+            db,
+            user_id=uuid4(),
+            provider_tenant_id="   ",
+            provider_key="watsonx",
+            provider_url="https://example.com",
+            api_key="test-token",  # pragma: allowlist secret
         )
 
     call_kwargs = mock_cls.call_args.kwargs
@@ -205,7 +229,7 @@ async def test_create_provider_account_empty_provider_key_raises():
             provider_tenant_id=None,
             provider_key="   ",
             provider_url="https://example.com",
-            api_key="secret",
+            api_key="test-token",  # pragma: allowlist secret
         )
 
 
@@ -220,7 +244,7 @@ async def test_create_provider_account_empty_provider_url_raises():
             provider_tenant_id=None,
             provider_key="watsonx",
             provider_url="",
-            api_key="secret",
+            api_key="test-token",  # pragma: allowlist secret
         )
 
 
@@ -235,7 +259,7 @@ async def test_create_provider_account_empty_api_key_raises():
             provider_tenant_id=None,
             provider_key="watsonx",
             provider_url="https://example.com",
-            api_key="   ",
+            api_key="   ",  # pragma: allowlist secret
         )
 
 
@@ -258,7 +282,7 @@ async def test_create_provider_account_integrity_error_raises_value_error():
                 provider_tenant_id=None,
                 provider_key="watsonx",
                 provider_url="https://example.com",
-                api_key="secret",
+                api_key="test-token",  # pragma: allowlist secret
             )
 
     db.rollback.assert_awaited_once()
@@ -281,7 +305,7 @@ async def test_create_provider_account_encryption_value_error():
                 provider_tenant_id=None,
                 provider_key="watsonx",
                 provider_url="https://example.com",
-                api_key="secret",
+                api_key="test-token",  # pragma: allowlist secret
             )
 
 
@@ -302,7 +326,7 @@ async def test_create_provider_account_encryption_invalid_token():
                 provider_tenant_id=None,
                 provider_key="watsonx",
                 provider_url="https://example.com",
-                api_key="secret",
+                api_key="test-token",  # pragma: allowlist secret
             )
 
 
@@ -322,13 +346,13 @@ async def test_update_provider_account_success():
             provider_tenant_id="new-tenant",
             provider_key="new-key",
             provider_url="https://new.example.com",
-            api_key="new-secret",
+            api_key="updated-token",  # pragma: allowlist secret
         )
 
     assert result.provider_tenant_id == "new-tenant"
     assert result.provider_key == "new-key"
     assert result.provider_url == "https://new.example.com"
-    assert result.api_key == "new-encrypted"
+    assert result.api_key == "new-encrypted"  # pragma: allowlist secret
     db.flush.assert_awaited_once()
     db.refresh.assert_awaited_once()
 
@@ -398,7 +422,7 @@ async def test_update_provider_account_empty_api_key_raises():
     acct = _make_provider_account()
 
     with pytest.raises(ValueError, match="api_key must not be empty"):
-        await update_provider_account(db, provider_account=acct, api_key="   ")
+        await update_provider_account(db, provider_account=acct, api_key="   ")  # pragma: allowlist secret
 
 
 @pytest.mark.asyncio
@@ -427,7 +451,11 @@ async def test_update_provider_account_encryption_error():
         mock_auth.encrypt_api_key.side_effect = ValueError("bad key")
         mock_logger.aerror = AsyncMock()
         with pytest.raises(RuntimeError, match="Failed to encrypt API key"):
-            await update_provider_account(db, provider_account=acct, api_key="new-secret")
+            await update_provider_account(
+                db,
+                provider_account=acct,
+                api_key="updated-token",  # pragma: allowlist secret
+            )
 
 
 # --- delete_provider_account ---

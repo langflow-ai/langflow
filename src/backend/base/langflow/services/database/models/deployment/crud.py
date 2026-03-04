@@ -119,6 +119,13 @@ async def list_deployments_page(
     offset: int,
     limit: int,
 ) -> list[Deployment]:
+    if offset < 0:
+        msg = "offset must be greater than or equal to 0"
+        raise ValueError(msg)
+    if limit <= 0:
+        msg = "limit must be greater than 0"
+        raise ValueError(msg)
+
     stmt = (
         select(Deployment)
         .where(

@@ -37,3 +37,11 @@ class TestParseUuid:
     def test_default_field_name_in_error(self):
         with pytest.raises(ValueError, match="value is not a valid UUID"):
             parse_uuid("not-a-uuid")
+
+    def test_unsupported_type_raises_type_error(self):
+        with pytest.raises(TypeError, match="my_field must be a UUID or string, got int"):
+            parse_uuid(12345, field_name="my_field")  # type: ignore[arg-type]
+
+    def test_unsupported_type_default_field_name(self):
+        with pytest.raises(TypeError, match="value must be a UUID or string, got list"):
+            parse_uuid([], field_name="value")  # type: ignore[arg-type]
