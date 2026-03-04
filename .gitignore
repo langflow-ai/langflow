@@ -281,7 +281,6 @@ src/frontend/temp
 
 news-aggregated.json
 .claude
-
 member_servers.json
 # Component index cache (user-specific)
 **/.cache/lfx/
