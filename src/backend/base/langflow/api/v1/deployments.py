@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Path, Query, status
 from lfx.services.deployment.schema import (
     DeploymentType,
 )
@@ -14,7 +14,6 @@ from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
     DeploymentCreateResponse,
-    DeploymentDuplicateParams,
     DeploymentDuplicateResponse,
     DeploymentGetResponse,
     DeploymentListResponse,
@@ -38,14 +37,22 @@ router = APIRouter(prefix="/deployments", tags=["Deployments"])
 
 ProviderIdQuery = Annotated[
     UUID,
-    Query(description="Deployment provider account id."),
+    Query(description="Langflow DB provider-account UUID (`deployment_provider_account.id`)."),
+]
+ProviderIdPath = Annotated[
+    UUID,
+    Path(description="Langflow DB provider-account UUID (`deployment_provider_account.id`)."),
+]
+DeploymentIdPath = Annotated[
+    UUID,
+    Path(description="Langflow DB deployment UUID (`deployment.id`)."),
 ]
 
 
 # API provider-context contract matrix:
-# - Query provider_id: list/provider-capability/runtime-status GET endpoints.
-# - Body provider_id: POST create operations that cannot derive provider context.
-# - Derived provider_id: deployment-scoped endpoints using persisted deployment relationships.
+# - Query/path ``provider_id`` is a Langflow DB UUID referencing deployment_provider_account.
+# - Body ``provider_id`` is used on create operations that cannot derive provider context.
+# - Deployment-scoped routes derive provider context from persisted Langflow relationships.
 
 
 # ---------------------------------------------------------------------------
@@ -83,7 +90,7 @@ async def list_provider_accounts(
     tags=["Deployment Providers"],
 )
 async def get_provider_account(
-    provider_id: UUID,
+    provider_id: ProviderIdPath,
     user: CurrentActiveUser,
     db: DbSessionReadOnly,
 ):
@@ -96,7 +103,7 @@ async def get_provider_account(
     tags=["Deployment Providers"],
 )
 async def delete_provider_account(
-    provider_id: UUID,
+    provider_id: ProviderIdPath,
     user: CurrentActiveUser,
     db: DbSession,
 ):
@@ -109,7 +116,7 @@ async def delete_provider_account(
     tags=["Deployment Providers"],
 )
 async def update_provider_account(
-    provider_id: UUID,
+    provider_id: ProviderIdPath,
     payload: ProviderAccountUpdate,
     user: CurrentActiveUser,
     db: DbSession,
@@ -128,7 +135,7 @@ async def create_deployment(
     payload: DeploymentCreateRequest,
     db: DbSession,
 ):
-    """Create a deployment for the selected provider account."""
+    """Create a deployment for the selected Langflow provider-account UUID."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
@@ -138,7 +145,7 @@ async def list_deployment_types(
     user: CurrentActiveUser,
     db: DbSessionReadOnly,
 ):
-    """List deployment types for a provider account."""
+    """List deployment types for the selected Langflow provider-account UUID."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
@@ -154,13 +161,13 @@ async def list_deployments(
         list[str] | None,
         Query(
             description=(
-                "Optional flow version ids. When provided, deployments are filtered to those "
+                "Optional Langflow flow version ids. When provided, deployments are filtered to those "
                 "with at least one matching attachment (OR semantics across ids)."
             )
         ),
     ] = None,
 ):
-    """List deployments for a provider account."""
+    """List deployments for the selected Langflow provider-account UUID."""
     if flow_version_ids is not None:
         flow_version_ids = validate_flow_version_id_query(flow_version_ids)
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
@@ -177,18 +184,18 @@ async def create_deployment_execution(
     db: DbSession,
     user: CurrentActiveUser,
 ):
-    """Create a deployment execution."""
+    """Create a deployment execution for Langflow DB deployment/provider identifiers."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
 @router.get("/executions/{execution_id}", response_model=ExecutionStatusResponse)
 async def get_deployment_execution(
-    execution_id: UUID,
+    execution_id: Annotated[str, Path(description="Provider-owned opaque execution identifier.")],
     provider_id: ProviderIdQuery,
     db: DbSessionReadOnly,
     user: CurrentActiveUser,
 ):
-    """Get deployment execution status."""
+    """Get deployment execution status by provider-owned execution id and Langflow provider id."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
@@ -199,7 +206,7 @@ async def get_deployment_execution(
 
 @router.get("/{deployment_id}", response_model=DeploymentGetResponse)
 async def get_deployment(
-    deployment_id: UUID,
+    deployment_id: DeploymentIdPath,
     user: CurrentActiveUser,
     db: DbSessionReadOnly,
 ):
@@ -212,7 +219,7 @@ async def get_deployment(
     response_model=DeploymentUpdateResponse,
 )
 async def update_deployment(
-    deployment_id: UUID,
+    deployment_id: DeploymentIdPath,
     payload: DeploymentUpdateRequest,
     db: DbSession,
     user: CurrentActiveUser,
@@ -223,7 +230,7 @@ async def update_deployment(
 
 @router.delete("/{deployment_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_deployment(
-    deployment_id: UUID,
+    deployment_id: DeploymentIdPath,
     db: DbSession,
     user: CurrentActiveUser,
 ):
@@ -236,7 +243,7 @@ async def delete_deployment(
     response_model=RedeployResponse,
 )
 async def redeploy_deployment(
-    deployment_id: UUID,
+    deployment_id: DeploymentIdPath,
     db: DbSession,
     user: CurrentActiveUser,
 ):
@@ -250,8 +257,7 @@ async def redeploy_deployment(
     status_code=status.HTTP_201_CREATED,
 )
 async def duplicate_deployment(
-    deployment_id: UUID,
-    payload: DeploymentDuplicateParams,
+    deployment_id: DeploymentIdPath,
     db: DbSession,
     user: CurrentActiveUser,
 ):
@@ -264,7 +270,7 @@ async def duplicate_deployment(
     response_model=DeploymentStatusResponse,
 )
 async def get_deployment_status(
-    deployment_id: UUID,
+    deployment_id: DeploymentIdPath,
     db: DbSessionReadOnly,
     user: CurrentActiveUser,
 ):
