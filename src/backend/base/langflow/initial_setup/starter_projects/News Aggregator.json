@@ -825,7 +825,7 @@
         "data": {
           "id": "note-reU70",
           "node": {
-            "description": "# News Aggregator\n\nThis flow extracts structured data from a URL and saves it into a JSON file.\n\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quick Start\n\n1. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n2. Add your [OpenAI API Key](https://platform.openai.com/) to the **Agent** component.\n3. Click **Playground** and enter a question.\n\nThe **Agent** component populates the **AgentQL** component's **URL** and **Query** fields, and returns a structured response to your question. Then the extracted data is saved into a JSON file `news-aggregated.json`, which can be found in your current project directory.",
+            "description": "# 📖 README\nThis flow extracts structured data from a URL and saves it into a JSON file.\n\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n2. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n3. Click **Playground** and enter a question.\n\nThe **Agent** component populates the **AgentQL** component's **URL** and **Query** fields, and returns a structured response to your question. Then the extracted data is saved into a JSON file `news-aggregated.json`, which can be found in your current project directory.",
             "display_name": "",
             "documentation": "",
             "template": {

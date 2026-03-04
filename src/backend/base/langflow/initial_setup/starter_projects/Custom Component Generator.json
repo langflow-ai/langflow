@@ -852,7 +852,7 @@
         "data": {
           "id": "note-yh0aK",
           "node": {
-            "description": "# 🛠️ Custom Component Generator 🚀\n\nHi! I'm here to help you create custom components for Langflow. Think of me as your technical partner who can help turn your ideas into working components! \n\n## 🎯 How to Work With Me\n\n1. Add your **Anthropic API Key** to the **Language Model** Component\n\n2. 💭 Tell Me What You Want to Build.\nSimply describe what you want your component to do in plain English. For example:\n- \"I need a component that sends Slack messages\"\n- \"I want to create a tool that can process CSV files\"\n- \"I need something that can translate text\"\n\n\nReady to build something awesome? 🚀 Let's get started!",
+            "description": "# 📖 README\nHi! I'm here to help you create custom components for Langflow. Think of me as your technical partner who can help turn your ideas into working components! \n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n\n2. 💭 Tell Me What You Want to Build.\nSimply describe what you want your component to do in plain English. For example:\n- \"I need a component that sends Slack messages\"\n- \"I want to create a tool that can process CSV files\"\n- \"I need something that can translate text\"\n\n\nReady to build something awesome? 🚀 Let's get started!",
             "display_name": "",
             "documentation": "",
             "template": {}
