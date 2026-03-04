@@ -46,9 +46,9 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
         """Return the file names mapping for version-specific files."""
         return []
 
-    @patch("lfx.components.models_and_agents.embedding_model.get_unified_models_detailed")
-    @patch("lfx.components.models_and_agents.embedding_model.get_api_key_for_provider")
-    @patch("lfx.components.models_and_agents.embedding_model.get_embedding_class")
+    @patch("lfx.base.models.unified_models.get_unified_models_detailed")
+    @patch("lfx.base.models.unified_models.get_api_key_for_provider")
+    @patch("lfx.base.models.unified_models.get_embedding_class")
     def test_build_embeddings_openai(
         self, mock_get_embedding_class, mock_get_api_key, mock_get_unified_models, component_class, default_kwargs
     ):
@@ -94,7 +94,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
         assert embeddings.embeddings == mock_instance
         assert embeddings.available_models == {}
 
-    @patch("lfx.components.models_and_agents.embedding_model.get_api_key_for_provider")
+    @patch("lfx.base.models.unified_models.get_api_key_for_provider")
     def test_build_embeddings_openai_missing_api_key(self, mock_get_api_key, component_class, default_kwargs):
         # Setup mock to return None (no API key)
         mock_get_api_key.return_value = None
@@ -110,11 +110,11 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
         component.model = None
 
-        with pytest.raises(ValueError, match="Model must be a non-empty list"):
+        with pytest.raises(ValueError, match="An embedding model selection is required"):
             component.build_embeddings()
 
-    @patch("lfx.components.models_and_agents.embedding_model.get_api_key_for_provider")
-    @patch("lfx.components.models_and_agents.embedding_model.get_embedding_class")
+    @patch("lfx.base.models.unified_models.get_api_key_for_provider")
+    @patch("lfx.base.models.unified_models.get_embedding_class")
     def test_build_embeddings_unknown_embedding_class(
         self, mock_get_embedding_class, mock_get_api_key, component_class, default_kwargs
     ):
@@ -139,9 +139,9 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(ValueError, match="Unknown embedding class: UnknownEmbeddingClass"):
             component.build_embeddings()
 
-    @patch("lfx.components.models_and_agents.embedding_model.get_unified_models_detailed")
-    @patch("lfx.components.models_and_agents.embedding_model.get_api_key_for_provider")
-    @patch("lfx.components.models_and_agents.embedding_model.get_embedding_class")
+    @patch("lfx.base.models.unified_models.get_unified_models_detailed")
+    @patch("lfx.base.models.unified_models.get_api_key_for_provider")
+    @patch("lfx.base.models.unified_models.get_embedding_class")
     def test_build_embeddings_google(
         self, mock_get_embedding_class, mock_get_api_key, mock_get_unified_models, component_class
     ):
@@ -201,9 +201,9 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
         assert embeddings.embeddings == mock_instance
         assert embeddings.available_models == {}
 
-    @patch("lfx.components.models_and_agents.embedding_model.get_unified_models_detailed")
-    @patch("lfx.components.models_and_agents.embedding_model.get_api_key_for_provider")
-    @patch("lfx.components.models_and_agents.embedding_model.get_embedding_class")
+    @patch("lfx.base.models.unified_models.get_unified_models_detailed")
+    @patch("lfx.base.models.unified_models.get_api_key_for_provider")
+    @patch("lfx.base.models.unified_models.get_embedding_class")
     def test_build_embeddings_with_available_models(
         self, mock_get_embedding_class, mock_get_api_key, mock_get_unified_models, component_class, default_kwargs
     ):
