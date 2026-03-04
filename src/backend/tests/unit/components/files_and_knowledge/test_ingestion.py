@@ -107,7 +107,9 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         mock_get_settings.return_value = mock_settings
         mock_encrypt.return_value = "encrypted_key"
 
-        model_selection = [{"name": "sentence-transformers/all-MiniLM-L6-v2", "provider": "HuggingFace", "metadata": {}}]
+        model_selection = [
+            {"name": "sentence-transformers/all-MiniLM-L6-v2", "provider": "HuggingFace", "metadata": {}}
+        ]
         metadata = component._build_embedding_metadata(model_selection, "test-key")
 
         assert metadata["embedding_provider"] == "HuggingFace"
@@ -237,7 +239,9 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
 
         build_config = {"knowledge_base": {"value": None, "options": [], "dialog_inputs": {}}}
 
-        model_selection = [{"name": "sentence-transformers/all-MiniLM-L6-v2", "provider": "HuggingFace", "metadata": {}}]
+        model_selection = [
+            {"name": "sentence-transformers/all-MiniLM-L6-v2", "provider": "HuggingFace", "metadata": {}}
+        ]
         field_value = {
             "01_new_kb_name": "new_test_kb",
             "02_embedding_model": model_selection,
@@ -255,9 +259,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert "new_test_kb" in result["knowledge_base"]["options"]
 
     @patch("lfx.components.files_and_knowledge.ingestion.get_embeddings")
-    async def test_build_kb_info_with_message_input(
-        self, mock_get_embeddings, component_class, default_kwargs
-    ):
+    async def test_build_kb_info_with_message_input(self, mock_get_embeddings, component_class, default_kwargs):
         """Test that Message input is accepted and converted to DataFrame."""
         # Replace the DataFrame input with a Message
         default_kwargs["input_df"] = Message(text="Sample text 1")
