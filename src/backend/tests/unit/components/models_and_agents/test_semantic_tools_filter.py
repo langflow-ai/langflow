@@ -489,15 +489,16 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
         # Check descriptions
         assert len(descriptions) == len(sample_tools)
 
-        # Check dependencies
+        # Check dependencies (now keyed by tool index, not name)
         assert isinstance(dependencies, dict)
-        assert "weather" in dependencies
-        assert "location" in dependencies["weather"]
-        assert "geocoding" in dependencies["weather"]
-        assert "translator" in dependencies
-        assert "language_detection" in dependencies["translator"]
-        assert "calendar" in dependencies
-        assert "location" in dependencies["calendar"]
+        # Tool indices: 0=calculator, 1=weather, 2=search, 3=translator, 4=calendar
+        assert 1 in dependencies  # weather tool
+        assert "location" in dependencies[1]
+        assert "geocoding" in dependencies[1]
+        assert 3 in dependencies  # translator tool
+        assert "language_detection" in dependencies[3]
+        assert 4 in dependencies  # calendar tool
+        assert "location" in dependencies[4]
 
     def test_dependency_expansion(self, component_class, sample_tools, mock_embedding_model, mock_llm_model):
         """Test that dependency expansion adds related tools."""
