@@ -8,7 +8,7 @@ import pytest
 from langchain_core.tools import Tool
 from lfx.components.models_and_agents.semantic_tools_filter import SemanticToolsFilterComponent
 
-from tests.base import ComponentTestBaseWithoutClient
+from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient
 
 
 class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
@@ -32,7 +32,15 @@ class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
 
     @pytest.fixture
     def file_names_mapping(self):
-        return []
+        """Return the file names mapping for different versions.
+
+        SemanticToolsFilter is a new component that didn't exist in previous versions.
+        """
+        return [
+            {"version": "1.0.19", "module": "models_and_agents", "file_name": DID_NOT_EXIST},
+            {"version": "1.1.0", "module": "models_and_agents", "file_name": DID_NOT_EXIST},
+            {"version": "1.1.1", "module": "models_and_agents", "file_name": DID_NOT_EXIST},
+        ]
 
     @pytest.fixture
     def sample_tools(self):

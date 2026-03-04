@@ -227,11 +227,11 @@ class SemanticToolsFilterComponent(Component):
         self,
         build_config: dict,
         field_value: object,
-        field_name: str,
+        field_name: str | None = None,
     ) -> dict:
         """Show/hide fields based on toggle states."""
         # Apply the incoming change so we read consistent state
-        if field_name in build_config:
+        if field_name is not None and field_name in build_config:
             build_config[field_name]["value"] = field_value
 
         use_emb = build_config["use_embeddings"]["value"]
@@ -455,7 +455,12 @@ class SemanticToolsFilterComponent(Component):
         """
         text = text.strip()
         if text.startswith("```"):
-            text = text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+            lines = text.splitlines()
+            if lines and lines[0].strip().startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].strip().startswith("```"):
+                lines = lines[:-1]
+            text = "\n".join(lines).strip()
         start = text.find("[")
         if start == -1:
             return None
