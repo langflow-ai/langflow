@@ -530,17 +530,25 @@ class KnowledgeIngestionComponent(Component):
                                 (o for o in all_options if o.get("name") == embedding_model_name),
                                 None,
                             )
-                            model_selection = [match] if match else [{
-                                "name": embedding_model_name,
-                                "provider": embedding_provider,
-                                "metadata": {},
-                            }]
+                            model_selection = (
+                                [match]
+                                if match
+                                else [
+                                    {
+                                        "name": embedding_model_name,
+                                        "provider": embedding_provider,
+                                        "metadata": {},
+                                    }
+                                ]
+                            )
                         except Exception:  # noqa: BLE001
-                            model_selection = [{
-                                "name": embedding_model_name,
-                                "provider": embedding_provider,
-                                "metadata": {},
-                            }]
+                            model_selection = [
+                                {
+                                    "name": embedding_model_name,
+                                    "provider": embedding_provider,
+                                    "metadata": {},
+                                }
+                            ]
 
                 # Decrypt stored API key
                 encrypted_key = stored_metadata.get("api_key")
