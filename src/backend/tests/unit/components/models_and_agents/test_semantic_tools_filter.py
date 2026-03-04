@@ -8,7 +8,7 @@ import pytest
 from langchain_core.tools import Tool
 from lfx.components.models_and_agents.semantic_tools_filter import SemanticToolsFilterComponent
 
-from tests.base import ComponentTestBaseWithoutClient, DID_NOT_EXIST, VersionComponentMapping
+from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient, VersionComponentMapping
 
 
 class TestSemanticToolsFilterComponent(ComponentTestBaseWithoutClient):
