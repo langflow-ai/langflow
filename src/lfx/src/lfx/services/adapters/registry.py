@@ -78,7 +78,7 @@ def register_adapter(
         except ValueError:
             # Re-raise ValueError (used for registry identity conflicts)
             raise
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception(f"Failed to register adapter {adapter_type.value}.{key} from decorator")
             raise
         return adapter_class
