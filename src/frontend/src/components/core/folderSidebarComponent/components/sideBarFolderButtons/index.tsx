@@ -146,7 +146,9 @@ const SideBarFoldersButtonsComponent = ({
               .catch((error) => {
                 setErrorData({
                   title: UPLOAD_ERROR_ALERT,
-                  list: [(error as Error).message],
+                  list: [
+                    error instanceof Error ? error.message : String(error),
+                  ],
                 });
               });
           } else {
@@ -174,10 +176,9 @@ const SideBarFoldersButtonsComponent = ({
           }
         })
         .catch((error) => {
-          console.error("Error parsing files:", error);
           setErrorData({
             title: UPLOAD_ERROR_ALERT,
-            list: [(error as Error).message],
+            list: [error instanceof Error ? error.message : String(error)],
           });
         });
     });
