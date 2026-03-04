@@ -1,16 +1,20 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ProviderList from "@/modals/modelProviderModal/components/ProviderList";
 import { Provider } from "@/modals/modelProviderModal/components/types";
 import { cn } from "@/utils/utils";
+import { useProviderConfiguration } from "../hooks/useProviderConfiguration";
 import ModelSelection from "./ModelSelection";
 import ProviderConfigurationForm from "./ProviderConfigurationForm";
-import { useProviderConfiguration } from "../hooks/useProviderConfiguration";
 
 interface ModelProvidersContentProps {
   modelType: "llm" | "embeddings" | "all";
+  onFlushRef?: React.MutableRefObject<(() => Promise<void>) | null>;
 }
 
-const ModelProvidersContent = ({ modelType }: ModelProvidersContentProps) => {
+const ModelProvidersContent = ({
+  modelType,
+  onFlushRef,
+}: ModelProvidersContentProps) => {
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
     null,
   );
@@ -36,10 +40,23 @@ const ModelProvidersContent = ({ modelType }: ModelProvidersContentProps) => {
     providerVariables,
     syncedSelectedProvider,
     handleModelToggle,
+    flushPendingChanges,
     requiresConfiguration,
   } = useProviderConfiguration({
     selectedProvider,
   });
+
+  // Expose flushPendingChanges to the parent (ModelProviderModal) via ref
+  useEffect(() => {
+    if (onFlushRef) {
+      onFlushRef.current = flushPendingChanges;
+    }
+    return () => {
+      if (onFlushRef) {
+        onFlushRef.current = null;
+      }
+    };
+  }, [onFlushRef, flushPendingChanges]);
 
   const handleProviderSelect = (provider: Provider) => {
     setSelectedProvider((prev) =>
