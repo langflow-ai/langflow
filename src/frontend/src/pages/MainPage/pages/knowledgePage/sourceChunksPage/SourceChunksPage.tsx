@@ -71,7 +71,7 @@ export const SourceChunksPage = () => {
     setPageInput(value);
   };
 
-  const handlePageInputBlur = () => {
+  const commitPageInput = () => {
     const value = parseInt(pageInput, 10);
     if (!isNaN(value) && value >= 1 && value <= totalPages) {
       setCurrentPage(value);
@@ -81,15 +81,13 @@ export const SourceChunksPage = () => {
     }
   };
 
+  const handlePageInputBlur = () => {
+    commitPageInput();
+  };
+
   const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      const value = parseInt(pageInput, 10);
-      if (!isNaN(value) && value >= 1 && value <= totalPages) {
-        setCurrentPage(value);
-        setPageInput(String(value));
-      } else {
-        setPageInput(String(currentPage));
-      }
+      commitPageInput();
       e.currentTarget.blur();
     }
   };
