@@ -51,9 +51,7 @@ export default function TableAdvancedToggleCellRender({
             id={"show" + parameterId}
             checked={!parameter.advanced}
             disabled={disabled}
-            onToggle={() =>
-              handleOnNewValue({ advanced: !parameter.advanced })
-            }
+            onToggle={() => handleOnNewValue({ advanced: !parameter.advanced })}
           />
         </div>
       </ShadTooltip>
