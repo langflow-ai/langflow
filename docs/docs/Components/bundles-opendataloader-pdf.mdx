@@ -1,0 +1,558 @@
+---
+title: OpenDataLoader PDF
+slug: /bundles-opendataloader-pdf
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+Langflow integrates with [OpenDataLoader PDF](https://opendataloader.org/) through a component for parsing PDF documents into LLM-ready formats.
+
+## Overview
+
+OpenDataLoader PDF converts PDFs into structured formats (JSON, Markdown, HTML, Text) optimized for RAG and LLM pipelines:
+
+- **Fast** — High-throughput processing on CPU
+- **Local** — 100% local processing, no data transmission
+- **Accurate** — Correct reading order, table extraction, bounding boxes
+- **Safe** — Built-in AI safety filters against prompt injection
+
+## Prerequisites
+
+* **Java 11 or later**: OpenDataLoader PDF requires Java to be installed and available in your system PATH.
+
+* **Install OpenDataLoader PDF dependency**:
+
+    ```bash
+    pip install -U opendataloader-pdf
+    ```
+
+    Or with uv:
+
+    ```bash
+    uv pip install opendataloader-pdf
+    ```
+
+## Verify your installation
+
+Before building flows, confirm that OpenDataLoader PDF and Java are correctly installed.
+
+1. Verify that Java 11 or later is available:
+
+    ```bash
+    java -version
+    ```
+
+    You should see output similar to `openjdk version "11.0.x"` or later.
+
+2. Verify that the OpenDataLoader PDF package is installed:
+
+    ```bash
+    python -c "import opendataloader_pdf; print('opendataloader-pdf is installed')"
+    ```
+
+If both commands succeed, your environment is ready.
+
+## Use OpenDataLoader PDF in a flow
+
+### Quick test
+
+Extract text from a PDF and view the output immediately with just two components:
+
+![OpenDataLoader PDF component connected to a Chat Output component](/img/component-opendataloader-pdf-quick-test.png)
+
+1. Add an **OpenDataLoader PDF** component to your flow.
+
+2. Add a [**Chat Output**](/chat-input-and-output) component and connect it to the **OpenDataLoader PDF** component's **Text** output port.
+
+3. In the **OpenDataLoader PDF** component, add a PDF file and select your preferred **Output Format** (e.g., `markdown`).
+
+4. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
+
+    The extracted PDF content is displayed in the chat window.
+
+### Chat with a PDF
+
+Build a chatbot that answers questions about PDF content by connecting an LLM:
+
+![OpenDataLoader PDF, Prompt Template, OpenAI, Chat Input, and Chat Output components connected in a flow](/img/component-opendataloader-pdf-chat-with-pdf.png)
+
+1. Add an **OpenDataLoader PDF** component to your flow and upload a PDF file.
+
+2. Add a [**Prompt**](/components-prompts) component. In the **Template** field, create a prompt that combines the PDF content with the user's question. For example:
+
+    ```text
+    Given the context:
+    {context}
+
+    Answer the question:
+    {user_question}
+    ```
+
+3. Connect the **OpenDataLoader PDF** component's **Text** output to the **Prompt** component's `context` input.
+
+4. Add a [**Chat Input**](/chat-input-and-output) component and connect it to the **Prompt** component's `user_question` input.
+
+5. Add an [LLM component](/components-models) (e.g., **OpenAI**) and connect the **Prompt** output to it.
+
+6. Add a [**Chat Output**](/chat-input-and-output) component and connect the LLM output to it.
+
+7. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground** and ask a question about the PDF.
+
+    The LLM answers based on the content extracted from your PDF.
+
+### Store PDF in a vector database
+
+Use the **Pages** output port to chunk and store PDF content in a vector database for RAG:
+
+![OpenDataLoader PDF, Split Text, Chroma DB, and OpenAI Embeddings components connected in a flow](/img/component-opendataloader-pdf-vector-store.png)
+
+1. Add an **OpenDataLoader PDF** component to your flow.
+
+2. Connect the **OpenDataLoader PDF** component's **Pages** output to a [**Split Text** component](/split-text) to chunk the extracted content.
+
+    The **OpenDataLoader PDF** component loads and parses the PDF. For text-based RAG pipelines, use `text`, `markdown`, or `html` format. The `pdf` format outputs a binary annotated file and is not suitable for text splitting.
+    The **Pages** output provides one row per page with clean text and `page_number` metadata. The **Split Text** component splits the content into chunks for the vector database.
+
+3. Connect a vector store component (e.g., [**Chroma DB**](/bundles-chroma#chroma-db)) to store the chunks.
+
+4. Connect an [embedding model component](/components-embedding-models) to the vector store's **Embedding** port.
+
+5. Add PDF files to the **OpenDataLoader PDF** component.
+
+6. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
+
+    The chunked document is loaded as vectors into your vector database.
+
+:::tip
+For a complete tutorial using a vector database with chat, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
+
+### RAG with page-level citations
+
+Build a RAG pipeline where retrieved chunks carry page-number metadata for citation.
+
+This flow has two paths: a **data loading path** that ingests the PDF into a vector store, and a **retrieval path** that searches the store and generates answers with page citations.
+
+#### Data loading path
+
+1. Add an **OpenDataLoader PDF** component and upload a PDF file.
+
+2. Connect the **Pages** output to a [**Split Text**](/split-text) component. Each chunk inherits the `page_number` and `source` metadata from the page it belongs to.
+
+3. Connect the **Split Text** output to a vector store component (e.g., [**Chroma DB**](/bundles-chroma#chroma-db)).
+
+4. Connect an [embedding model](/components-embedding-models) (e.g., **OpenAI Embeddings**) to the vector store's **Embedding** input.
+
+#### Retrieval path
+
+5. Add a [**Chat Input**](/chat-input-and-output) component. Connect it to both:
+    - The vector store's **Search Query** input (to trigger a similarity search).
+    - A [**Prompt**](/components-prompts) component's `question` variable.
+
+6. Connect the vector store's **Search Results** output to a [**Parser**](/parser) component. Set the Parser's **Template** to extract the text and page number from each retrieved chunk. For example:
+
+    ```text
+    [Page {page_number}] {text}
+    ```
+
+7. Connect the **Parser** output to the **Prompt** component's `context` variable. Use a prompt template such as:
+
+    ```text
+    Answer the question based on the following document excerpts.
+    Each excerpt includes its page number in brackets.
+    Include page numbers in your answer as citations.
+
+    Context:
+    {context}
+
+    Question:
+    {question}
+    ```
+
+8. Add an [LLM component](/components-models) (e.g., **OpenAI**) and connect the **Prompt** output to it.
+
+9. Add a [**Chat Output**](/chat-input-and-output) component and connect the LLM output to it.
+
+10. To run the flow:
+    - First, click the vector store component and then click <Icon name="Play" aria-hidden="true" /> to ingest the PDF data.
+    - Then click <Icon name="Play" aria-hidden="true" /> **Playground** and ask a question about the PDF.
+
+    The LLM can now cite specific page numbers from the original PDF because the `page_number` metadata flows through the entire pipeline: **Pages** output preserves page numbers per page, **Split Text** propagates the metadata to each chunk, the vector store stores and retrieves it, and the **Parser** formats it for the prompt.
+
+:::tip
+This pattern follows the same architecture as the **Vector Store RAG** starter project. For a complete walkthrough, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
+
+### Use as an Agent tool
+
+Let an AI agent read PDFs on demand using the **Toolset** output:
+
+![OpenDataLoader PDF component in Tool Mode connected to an Agent component with Chat Input and Chat Output](/img/component-opendataloader-pdf-agent-tool.png)
+
+1. Add an **OpenDataLoader PDF** component and upload one or more PDF files.
+
+2. Add an [**Agent**](/components-agents) component. Connect the **OpenDataLoader PDF** component's **Toolset** output to the Agent's **Tools** input.
+
+3. Add a [language model](/components-models) (must support tool calling) and connect it to the Agent.
+
+4. Connect [**Chat Input**](/chat-input-and-output) to the Agent and the output to [**Chat Output**](/chat-input-and-output).
+
+5. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground** and ask a question about the PDF.
+
+    The agent has access to two tools:
+    - **read_pdf**: Extracts all text from the uploaded PDFs.
+    - **read_pdf_page**: Extracts text from a specific page number — useful for targeted analysis or follow-up questions.
+
+### Upload PDF during chat
+
+Let users upload a PDF in the Playground chat and analyze it dynamically, instead of pre-uploading files to the component:
+
+1. Add a [**Chat Input**](/chat-input-and-output) component and an **OpenDataLoader PDF** component to your flow.
+
+2. Connect the **Chat Input** output to the **OpenDataLoader PDF** component's **Server File Path** input (found under Advanced settings).
+
+3. Add a [**Prompt**](/components-prompts) component with a template such as:
+
+    ```text
+    Answer the question based on the following document.
+
+    Document:
+    {context}
+
+    Question:
+    {question}
+    ```
+
+4. Connect the **OpenDataLoader PDF** component's **Text** output to the **Prompt** component's `context` variable.
+
+5. Connect the **Chat Input** output to the **Prompt** component's `question` variable.
+
+6. Add an [LLM component](/components-models) (e.g., **OpenAI**) and connect the **Prompt** output to it.
+
+7. Add a [**Chat Output**](/chat-input-and-output) component and connect the LLM output to it.
+
+8. To run the flow, click <Icon name="Play" aria-hidden="true" /> **Playground**, attach a PDF file in the chat, and type your question.
+
+    The component receives the PDF from the chat attachment, extracts the content, and the LLM answers based on the uploaded document.
+
+:::note
+The **Server File Path** input accepts files attached via Chat Input. When the chat message includes both text and a file attachment, the component uses the attached file for processing. When no file is attached, the component uses the message text as a file path (for backward compatibility with server-side file paths).
+:::
+
+## OpenDataLoader PDF component
+
+This component provides four output ports:
+
+- **Files** ([`DataFrame`](/data-types#dataframe)): Structured tabular output with `text`, `file_path`, `format`, `source`, `total_pages`, and `word_count` columns. Use this for data analysis or when you need one row per PDF file.
+- **Pages** ([`DataFrame`](/data-types#dataframe)): One row per page with `text`, `page_number`, `total_pages`, `source`, `file_path`, and `format` columns. Connect this to **Split Text** for RAG pipelines with page-level citation support.
+- **Text** ([`Message`](/data-types#message)): Clean text output of the extracted content with internal page markers stripped. Use this to connect to **Text Output**, **Chat Output**, or LLM components for chatbot and prompt-based workflows.
+- **Toolset** ([`Tool`](/data-types#tool)): Exposes PDF reading as agent tools. Connect this to an **Agent** component's **Tools** input to let agents read PDFs on demand. Provides two tools:
+    - **read_pdf**: Returns the full text of all uploaded PDFs (no parameters).
+    - **read_pdf_page**: Returns text from a specific page number (takes `page_number` parameter).
+
+### Parameters
+
+<PartialParams />
+
+#### Basic
+
+| Name | Type | Description |
+|------|------|-------------|
+| files | File | The PDF files to process. |
+| format | String | Output format. See [Output formats](#output-formats) for options. Default: `json`. |
+
+#### Output Options
+
+| Name | Type | Description |
+|------|------|-------------|
+| image_output | String | How to handle images: `external` (save as files), `embedded` (Base64 in output), or `off` (exclude). Default: `external`. |
+| image_format | String | Output format for extracted images: `png` or `jpeg`. Default: `png`. |
+| image_dir | String | Directory to save extracted images when `image_output` is `external`. Leave empty to save images alongside the output files. Default: empty. |
+| replace_invalid_chars | String | Replacement character for invalid or unrecognized characters. Default: space character (`" "`). |
+| keep_line_breaks | Boolean | Preserve original line breaks in extracted text. Default: `False`. |
+| include_header_footer | Boolean | Include page headers and footers in output. Default: `False`. |
+| text_page_separator | String | Separator between pages in text output. Use `%page-number%` for page numbers. Default: empty (no separator). |
+| markdown_page_separator | String | Separator between pages in Markdown output. Use `%page-number%` for page numbers. Default: empty (no separator). |
+| html_page_separator | String | Separator between pages in HTML output. Use `%page-number%` for page numbers. Default: empty (no separator). |
+| output_dir | String | Directory to save converted files. Leave empty to use a temporary directory (files are not persisted). Default: empty. |
+
+#### Processing Options
+
+| Name | Type | Description |
+|------|------|-------------|
+| password | SecretString | Password for encrypted PDF files. |
+| pages | String | Pages to extract (e.g., `1,3,5-7`). Leave empty for all pages. |
+| use_struct_tree | Boolean | Use native PDF structure tags when available for improved accuracy. Default: `True`. |
+| table_method | String | Table detection method: `default` (border-based) or `cluster` (border + clustering for borderless tables). Default: `default`. |
+| reading_order | String | Reading order algorithm: `xycut` (handles multi-column layouts) or `off`. Default: `xycut`. |
+| quiet | Boolean | Suppress CLI logging output. Default: `True`. |
+
+#### AI Safety
+
+| Name | Type | Description |
+|------|------|-------------|
+| content_safety | String | AI safety filter mode: `enabled` or `disabled`. Default: `enabled`. |
+| content_safety_filters | String (multiline) | Comma-separated list of safety filters to disable. Options: `all`, `hidden-text`, `off-page`, `tiny`, `hidden-ocg`. Default: `all`. Only used when content_safety is `disabled`. When content_safety is `enabled` (default), all filters are active regardless of this setting. |
+
+#### Hybrid Mode
+
+| Name | Type | Description |
+|------|------|-------------|
+| hybrid | String | AI backend for complex pages: `off` or `docling-fast`. Default: `off`. |
+| hybrid_mode | String | Triage mode: `auto` (dynamic) or `full` (all pages to AI). Default: `auto`. |
+| hybrid_url | String | Custom URL for hybrid backend server. Leave empty to use the default (`http://localhost:5002`). |
+| hybrid_timeout | Integer | Timeout for hybrid backend requests in milliseconds. Default: `30000`. |
+| hybrid_fallback | Boolean | Fall back to local processing if hybrid backend fails. Default: `True`. |
+
+### Output formats
+
+| Format | Use Case |
+|--------|----------|
+| **text** | Clean plaintext for general LLM context |
+| **markdown** | Structured text with headings, lists, tables preserved |
+| **markdown-with-html** | Markdown with inline HTML for complex elements (e.g., nested tables) |
+| **markdown-with-images** | Markdown with image references included |
+| **html** | Web display with styling |
+| **json** | Structured data with bounding boxes, semantic types |
+| **pdf** | Annotated PDF for visual debugging — see detected structures such as headings, paragraphs, tables, and images highlighted with bounding boxes ([sample](https://opendataloader.org/demo/samples/01030000000000?view1=annot&view2=json)) |
+
+### Output format examples
+
+The following examples show what each output format looks like when extracting the same PDF content.
+
+#### Text output
+
+```text
+Document Title
+
+This is the first paragraph of the document.
+
+Table Header 1    Table Header 2
+Row 1 Col 1       Row 1 Col 2
+Row 2 Col 1       Row 2 Col 2
+```
+
+#### Markdown output
+
+```markdown
+# Document Title
+
+This is the first paragraph of the document.
+
+| Table Header 1 | Table Header 2 |
+|----------------|----------------|
+| Row 1 Col 1    | Row 1 Col 2    |
+| Row 2 Col 1    | Row 2 Col 2    |
+```
+
+#### HTML output
+
+```html
+<h1>Document Title</h1>
+<p>This is the first paragraph of the document.</p>
+<table>
+  <tr><th>Table Header 1</th><th>Table Header 2</th></tr>
+  <tr><td>Row 1 Col 1</td><td>Row 1 Col 2</td></tr>
+  <tr><td>Row 2 Col 1</td><td>Row 2 Col 2</td></tr>
+</table>
+```
+
+#### JSON output
+
+```json
+{
+  "file name": "document.pdf",
+  "number of pages": 1,
+  "kids": [
+    {
+      "type": "heading",
+      "page number": 1,
+      "content": "Document Title",
+      "bounding box": [72.0, 720.0, 300.0, 750.0],
+      "font": "Helvetica-Bold",
+      "font size": 24.0
+    },
+    {
+      "type": "paragraph",
+      "page number": 1,
+      "content": "This is the first paragraph of the document."
+    },
+    {
+      "type": "table",
+      "page number": 1,
+      "content": "Table Header 1\tTable Header 2\nRow 1 Col 1\tRow 1 Col 2"
+    }
+  ]
+}
+```
+
+:::tip
+The JSON format includes bounding box coordinates (`bounding box`) and `page number` for each element, which is useful for document layout analysis, visual grounding tasks, and page-level citation.
+:::
+
+### AI Safety
+
+OpenDataLoader PDF includes built-in protection against prompt injection attacks hidden in PDFs:
+
+- **hidden-text**: Filters transparent or zero-size text
+- **off-page**: Filters content outside page boundaries
+- **tiny**: Filters suspiciously small text
+- **hidden-ocg**: Filters hidden optional content groups
+
+These filters are enabled by default. Only disable them if you trust the PDF source.
+
+### Tagged PDF Support
+
+When `use_struct_tree` is enabled (default), OpenDataLoader PDF uses native PDF structure tags to extract the exact layout the author intended. This provides pixel-perfect semantic extraction for accessible PDFs with:
+
+- Headings, lists, and tables preserved from source
+- Correct reading order without guessing
+- Better accuracy for documents created with accessibility in mind
+
+### Image Handling
+
+Control how images are processed with the `image_output` parameter:
+
+| Mode | Description |
+|------|-------------|
+| **external** | Images saved as separate files (default) |
+| **embedded** | Images included as Base64 in the output |
+| **off** | Images excluded from output |
+
+:::tip
+When using `external` mode, set `output_dir` or `image_dir` to persist extracted images. Without either, images are saved to a temporary directory that is deleted after processing. Use `image_dir` to save images to a separate directory from the converted output files.
+:::
+
+### Hybrid Mode
+
+For documents with complex tables or OCR needs, enable hybrid mode to route challenging pages to an AI backend while keeping simple pages fast and local.
+
+To use hybrid mode:
+
+1. Install the hybrid extra:
+
+    ```bash
+    pip install -U "opendataloader-pdf[hybrid]"
+    ```
+
+2. Start the backend server:
+
+    ```bash
+    opendataloader-pdf-hybrid --port 5002
+    ```
+
+    The server starts on `http://localhost:5002` by default. This is also the default URL that the component connects to when the **Hybrid Backend URL** field is left empty.
+
+3. Verify the server is running:
+
+    ```bash
+    curl http://localhost:5002/health
+    ```
+
+    You should receive a successful response (e.g., HTTP 200). If the command fails, check that the server started without errors and that port 5002 is not blocked by a firewall or occupied by another process.
+
+4. In the **OpenDataLoader PDF** component, set the **Hybrid Mode** parameter to `docling-fast`.
+
+| Mode | Description |
+|------|-------------|
+| **off** | Local processing only (default) |
+| **docling-fast** | Routes complex pages to AI backend |
+
+#### Hybrid Backend URL
+
+When the **Hybrid Backend URL** field is left empty, the component uses the opendataloader-pdf library's built-in default of `http://localhost:5002`. To connect to a remote or custom-port server, enter the full URL (e.g., `http://my-server:8080`).
+
+#### Hybrid Fallback behavior
+
+The **Hybrid Fallback** parameter (default: `True`) controls what happens when the hybrid backend is unreachable or returns an error:
+
+- **Enabled** (default): The component silently falls back to local-only processing. Pages that would have been routed to the AI backend are processed using the standard rule-based pipeline instead. A log message is recorded to help you identify that fallback occurred.
+- **Disabled**: The component raises an error if the hybrid backend fails, which stops the flow execution.
+
+:::caution
+When hybrid fallback is enabled, a connection failure to the backend server does **not** cause an error. If you notice lower-than-expected accuracy on complex pages, verify that the hybrid server is running and reachable. Check the component logs for fallback warnings.
+:::
+
+Hybrid mode can improve table extraction accuracy while maintaining fast processing for simple pages.
+
+## Troubleshooting
+
+### Java 11 or later is required but not found
+
+Ensure Java is installed and the `java` command is available in your system PATH. Install Java from [Adoptium](https://adoptium.net/) or your system's package manager. After installation, restart Langflow so it can detect Java.
+
+### opendataloader-pdf is not installed
+
+Install the package:
+
+```bash
+pip install -U opendataloader-pdf
+```
+
+If running in Docker, add the package to your container's requirements.
+
+### Empty or missing output
+
+- Verify that your PDF is not corrupted and contains extractable text (not just scanned images).
+- For scanned documents, enable **Hybrid Mode** with an AI backend to use OCR.
+- Check that you selected the correct **Output Format** for your use case.
+
+### Slow processing
+
+- Large PDFs with many pages may take longer. Use the **Pages** parameter to process a subset (e.g., `1-10`).
+- Enable **Quiet Mode** to reduce logging overhead.
+- Set **Image Output** to `off` if you don't need images.
+
+### Tables not extracted correctly
+
+- Try changing the **Table Detection Method** to `cluster`, which can improve accuracy for borderless tables.
+- For complex tables, enable **Hybrid Mode** with `docling-fast`.
+
+### Special characters appearing as spaces
+
+The **Replace Invalid Characters** parameter controls the replacement character. Change it to `?` or another marker to identify problematic characters, then adjust your PDF source if needed.
+
+### Images not appearing in output
+
+Check the **Image Output** setting:
+
+- `embedded`: Images are included as Base64 in the output text.
+- `external`: Images are saved as separate files. Set a persistent **Output Directory** or **Image Directory** to keep them.
+- `off`: Images are excluded from output.
+
+### Hybrid backend not processing pages
+
+If you enabled hybrid mode but processing seems to use local-only extraction:
+
+- **Verify the server is running**: Run `curl http://localhost:5002/health` (or your custom URL) to confirm the hybrid backend is reachable.
+- **Check the port**: Ensure no other service is using port 5002, or specify a different port with `opendataloader-pdf-hybrid --port <port>` and set the corresponding **Hybrid Backend URL** in the component.
+- **Check component logs**: When hybrid fallback is enabled (default), connection failures are handled silently. Look for the hybrid configuration log message in the component logs to confirm the URL being used.
+- **Disable fallback to surface errors**: Set **Hybrid Fallback** to `False` to make the component raise an error on connection failure. This helps confirm whether the backend is truly unreachable.
+
+### Hybrid mode installed but server won't start
+
+- Ensure you installed the hybrid extra: `pip install -U "opendataloader-pdf[hybrid]"` (note the `[hybrid]` suffix).
+- Check that the required dependencies (such as PyTorch for `docling-fast`) are installed. The install command output will show any missing dependencies.
+- On systems with limited memory, the AI backend may fail to load models. Check the server's console output for out-of-memory errors.
+
+### Page numbers missing in RAG citations
+
+If retrieved chunks don't include page numbers:
+
+- Ensure you're using the **Pages** output (not the **Files** output) from the OpenDataLoader PDF component. The **Pages** output provides one row per page with `page_number` metadata.
+- Verify that the **Split Text** component preserves metadata by checking its output in the Playground. Each chunk should carry the `page_number` field from its parent page.
+- In the **Parser** component, include `{page_number}` in your template (e.g., `[Page {page_number}] {text}`) to make page numbers visible in the context passed to the LLM.
+
+## See also
+
+- [**Split Text** component](/split-text) — Chunk documents for RAG
+- [**Agent** component](/components-agents) — Build AI agents with tools
+- [**Read File** component](/read-file) — Basic file loading
+- [OpenDataLoader PDF Documentation](https://opendataloader.org/docs/quick-start-python)
+- [OpenDataLoader PDF GitHub](https://github.com/opendataloader-project/opendataloader-pdf)
+- [LangChain Integration](https://docs.langchain.com/oss/python/integrations/document_loaders/opendataloader_pdf)
+- [PyPI Package](https://pypi.org/project/opendataloader-pdf/)
+

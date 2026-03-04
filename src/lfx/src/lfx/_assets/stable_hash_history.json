@@ -761,17 +761,17 @@
   },
   "Directory": {
     "versions": {
-      "0.3.0": "328e6f996926"
+      "0.3.0": "c55e0e29079d"
     }
   },
   "File": {
     "versions": {
-      "0.3.0": "12a5841f1a03"
+      "0.3.0": "96a5f6aa89da"
     }
   },
   "KnowledgeIngestion": {
     "versions": {
-      "0.3.0": "c37fd1b357d1"
+      "0.3.0": "52a451e4f053"
     }
   },
   "KnowledgeRetrieval": {
@@ -936,12 +936,12 @@
   },
   "IBMwatsonxModel": {
     "versions": {
-      "0.3.0": "689a87ecc73a"
+      "0.3.0": "769869108e5e"
     }
   },
   "WatsonxEmbeddingsComponent": {
     "versions": {
-      "0.3.0": "011bcac795de"
+      "0.3.0": "ffded413ea90"
     }
   },
   "Combinatorial Reasoner": {
@@ -1041,7 +1041,7 @@
   },
   "CSVAgent": {
     "versions": {
-      "0.3.0": "1888a727f9dd"
+      "0.3.0": "4978be110e63"
     }
   },
   "LangChainFakeEmbeddings": {
@@ -1091,12 +1091,12 @@
   },
   "OpenAIToolsAgent": {
     "versions": {
-      "0.3.0": "21bfd16796e5"
+      "0.3.0": "b2ad248a3e6c"
     }
   },
   "OpenAPIAgent": {
     "versions": {
-      "0.3.0": "a4a7564100da"
+      "0.3.0": "3b817f0cd966"
     }
   },
   "RecursiveCharacterTextSplitter": {
@@ -1126,7 +1126,7 @@
   },
   "SQLAgent": {
     "versions": {
-      "0.3.0": "550c16461236"
+      "0.3.0": "8d02598705fc"
     }
   },
   "SQLDatabase": {
@@ -1141,7 +1141,7 @@
   },
   "ToolCallingAgent": {
     "versions": {
-      "0.3.0": "cdeb13ac7430"
+      "0.3.0": "a5afe724de9c"
     }
   },
   "VectorStoreInfo": {
@@ -1156,7 +1156,7 @@
   },
   "XMLAgent": {
     "versions": {
-      "0.3.0": "17a0cb4c48a8"
+      "0.3.0": "338332984901"
     }
   },
   "LangWatchEvaluator": {
@@ -1236,7 +1236,7 @@
   },
   "LanguageModelComponent": {
     "versions": {
-      "0.3.0": "4af3c0cc0dcf"
+      "0.3.0": "a2006b90cbd1"
     }
   },
   "MCPTools": {
@@ -1306,12 +1306,12 @@
   },
   "OllamaModel": {
     "versions": {
-      "0.3.0": "cd3dc38272a7"
+      "0.3.0": "4fac4a29daff"
     }
   },
   "OllamaEmbeddings": {
     "versions": {
-      "0.3.0": "a8c56d0835de"
+      "0.3.0": "c1f138e1f771"
     }
   },
   "OpenAIEmbeddings": {
@@ -1631,7 +1631,7 @@
   },
   "VideoFile": {
     "versions": {
-      "0.3.0": "8dc827e42377"
+      "0.3.0": "479d6216272d"
     }
   },
   "Unstructured": {
@@ -1779,9 +1779,14 @@
       "0.3.0": "675232be19cc"
     }
   },
+  "OpenDataLoaderPDF": {
+    "versions": {
+      "0.3.0": "42b81d294b9b"
+    }
+  },
   "LiteLLMProxyModel": {
     "versions": {
-      "0.3.0": "386ae52865b5"
+      "0.3.0": "89b5d2281c93"
     }
   }
 }

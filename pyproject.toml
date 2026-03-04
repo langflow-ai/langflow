@@ -340,6 +340,11 @@ external = ["RUF027"]
     "SLF001",
     "BLE001",  # allow broad-exception catching in tests
 ]
+"src/backend/tests/unit/components/bundles/opendataloader_pdf/*" = [
+    "ARG002",  # Unused args from @patch decorators
+    "PT019",  # @patch-injected mocks without value
+    "S105",  # Hardcoded test passwords/secrets
+]
 "src/backend/base/langflow/tests/*" = [
     "D1",
     "PLR2004",

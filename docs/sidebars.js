@@ -403,6 +403,7 @@ module.exports = {
             "Components/bundles-nvidia",
             "Components/bundles-ollama",
             "Components/bundles-openai",
+            "Components/bundles-opendataloader-pdf",
             "Components/bundles-openrouter",
             "Components/bundles-perplexity",
             "Components/bundles-pgvector",
