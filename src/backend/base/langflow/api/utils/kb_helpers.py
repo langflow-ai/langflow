@@ -163,15 +163,30 @@ class KBAnalysisHelper:
             metadata["chunks"] = collection.count()
 
             if metadata["chunks"] > 0:
-                results = collection.get(include=["documents", "metadatas"])
-                source_chunks = pd.DataFrame({"document": results["documents"], "metadata": results["metadatas"]})
+                total_words = 0
+                total_characters = 0
+                # Use a robust batch size to avoid SQLite limits and memory pressure
+                batch_size = 5000
 
-                # Chroma collections always return the text content within the 'documents' field
-                words, characters = KBAnalysisHelper._calculate_text_metrics(source_chunks, ["document"])
-                metadata["words"] = words
-                metadata["characters"] = characters
+                for offset in range(0, metadata["chunks"], batch_size):
+                    results = collection.get(
+                        include=["documents"],
+                        limit=batch_size,
+                        offset=offset,
+                    )
+                    if not results["documents"]:
+                        break
+
+                    # Chroma collections always return the text content within the 'documents' field
+                    source_chunks = pd.DataFrame({"document": results["documents"]})
+                    words, characters = KBAnalysisHelper._calculate_text_metrics(source_chunks, ["document"])
+                    total_words += words
+                    total_characters += characters
+
+                metadata["words"] = total_words
+                metadata["characters"] = total_characters
                 metadata["avg_chunk_size"] = (
-                    round(characters / metadata["chunks"], 1) if metadata["chunks"] > 0 else 0.0
+                    round(total_characters / metadata["chunks"], 1) if metadata["chunks"] > 0 else 0.0
                 )
         except (OSError, ValueError, TypeError, json.JSONDecodeError, chromadb.errors.ChromaError) as e:
             logger.debug(f"Metrics update failed for {kb_path.name}: {e}")
