@@ -1783,5 +1783,10 @@
     "versions": {
       "0.3.0": "386ae52865b5"
     }
+  },
+  "SemanticToolsFilter": {
+    "versions": {
+      "0.3.0": "502497c5a2b0"
+    }
   }
 }
