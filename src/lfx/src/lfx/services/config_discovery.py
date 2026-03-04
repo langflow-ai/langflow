@@ -25,7 +25,9 @@ def resolve_config_dir(config_dir: Path | str | None, *, settings_service: Any |
     if settings_config_dir:
         return Path(settings_config_dir)
 
-    return Path.cwd()
+    cwd = Path.cwd()
+    logger.debug(f"No config_dir provided and no settings config_dir found; falling back to cwd: {cwd}")
+    return cwd
 
 
 def get_preferred_config_source(
@@ -56,7 +58,7 @@ def load_toml_config(config_path: Path) -> dict[str, Any] | None:
     try:
         with config_path.open("rb") as file_handle:
             return tomli.load(file_handle)
-    except ValueError as exc:
+    except (ValueError, OSError) as exc:
         logger.warning(f"Failed to load config from {config_path}: {exc}")
         return None
 
@@ -92,9 +94,15 @@ def load_object_from_import_path(
     except (ModuleNotFoundError, AttributeError) as exc:
         logger.warning(f"Failed to load {object_kind} for key='{object_key}' from '{import_path}': {exc}")
         return None
+    except (ImportError, SyntaxError) as exc:
+        logger.error(
+            f"Failed to import {object_kind} for key='{object_key}' from '{import_path}': {exc}",
+            exc_info=True,
+        )
+        return None
     except Exception as exc:  # noqa: BLE001
-        logger.warning(
-            f"Failed to load {object_kind} for key='{object_key}' from '{import_path}': {exc}",
+        logger.error(
+            f"Unexpected error loading {object_kind} for key='{object_key}' from '{import_path}': {exc}",
             exc_info=True,
         )
         return None

@@ -297,9 +297,13 @@ class ServiceManager:
                 logger.debug(f"Error in teardown of {service.name}", exc_info=exc)
 
         # Adapter registries own singleton adapter instances and must also be cleaned up.
-        from lfx.services.adapters.registry import teardown_all_adapter_registries
+        try:
+            from lfx.services.adapters.registry import teardown_all_adapter_registries
 
-        await teardown_all_adapter_registries()
+            await teardown_all_adapter_registries()
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"Error during adapter registry teardown: {exc}", exc_info=True)
+
         self.services = {}
         self.factories = {}
 
@@ -391,9 +395,8 @@ class ServiceManager:
             except Exception as exc:  # noqa: BLE001
                 logger.debug(f"Error loading entry point {ep.name}: {exc}")
 
-    def _discover_from_config(self, config_dir: Path | None = None) -> None:
+    def _discover_from_config(self, config_dir: Path) -> None:
         """Discover services from config files (lfx.toml / pyproject.toml)."""
-        config_dir = resolve_config_dir(config_dir)
         source = get_preferred_config_source(
             config_dir,
             lfx_root_path=("services",),

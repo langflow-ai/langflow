@@ -91,6 +91,59 @@ def test_get_deployment_adapter_returns_singleton_instance():
     assert first is second
 
 
+def test_get_deployment_adapter_returns_none_for_unknown_key():
+    from lfx.services.deps import get_deployment_adapter
+
+    registry = make_deployment_adapter_registry()
+    registry.register_class("known", DummyEntryPointAdapter)
+
+    result = get_deployment_adapter("nonexistent")
+
+    assert result is None
+
+
+def test_register_class_evicts_stale_cached_instance():
+    """Re-registering a key with a different class evicts the cached instance."""
+
+    class AdapterA(DeploymentAdapterStub):
+        pass
+
+    class AdapterB(DeploymentAdapterStub):
+        pass
+
+    registry = make_deployment_adapter_registry()
+    registry.register_class("local", AdapterA)
+    first = registry.get_instance("local", factory=lambda cls: cls())
+    assert isinstance(first, AdapterA)
+
+    registry.register_class("local", AdapterB, override=True)
+    second = registry.get_instance("local", factory=lambda cls: cls())
+    assert isinstance(second, AdapterB)
+    assert second is not first
+
+
+def test_factory_exception_does_not_poison_cache():
+    """A failing factory should not prevent subsequent successful creation."""
+    registry = make_deployment_adapter_registry()
+    registry.register_class("local", DummyEntryPointAdapter)
+    call_count = 0
+
+    def failing_then_succeeding_factory(adapter_class):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            msg = "factory failed"
+            raise RuntimeError(msg)
+        return adapter_class()
+
+    with pytest.raises(RuntimeError, match="factory failed"):
+        registry.get_instance("local", factory=failing_then_succeeding_factory)
+
+    instance = registry.get_instance("local", factory=failing_then_succeeding_factory)
+    assert instance is not None
+    assert isinstance(instance, DummyEntryPointAdapter)
+
+
 @pytest.mark.asyncio
 async def test_teardown_exception_does_not_prevent_other_teardowns():
     """If one adapter's teardown raises, other adapters still get torn down."""

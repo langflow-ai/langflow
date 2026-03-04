@@ -170,7 +170,13 @@ def get_deployment_adapter(
     registry = _get_deployment_registry()
     if not registry.is_discovered:
         registry.discover(config_dir=_resolve_adapter_config_dir())
-    return registry.get_instance(adapter_key, factory=lambda adapter_class: adapter_class())
+    instance = registry.get_instance(adapter_key, factory=lambda adapter_class: adapter_class())
+    if instance is None:
+        logger.debug(
+            f"No deployment adapter found for key='{adapter_key}'. "
+            f"Available keys: {registry.list_keys()}"
+        )
+    return instance
 
 
 def _resolve_adapter_config_dir() -> Path:

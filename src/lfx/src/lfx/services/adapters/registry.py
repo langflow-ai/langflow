@@ -122,11 +122,13 @@ class AdapterRegistry(Generic[T]):
 
     @property
     def is_discovered(self) -> bool:
-        return self._discovered
+        with self._lock:
+            return self._discovered
 
     def has_cached_instances(self) -> bool:
         """Return whether any adapter instances are currently cached."""
-        return bool(self._adapter_instances)
+        with self._lock:
+            return bool(self._adapter_instances)
 
     def __repr__(self) -> str:
         return (
@@ -159,11 +161,13 @@ class AdapterRegistry(Generic[T]):
 
     def get_class(self, key: str) -> type[T] | None:
         """Return adapter class by key if available."""
-        return self._adapter_classes.get(key)
+        with self._lock:
+            return self._adapter_classes.get(key)
 
     def list_keys(self) -> list[str]:
         """Return sorted list of registered adapter keys."""
-        return sorted(self._adapter_classes.keys())
+        with self._lock:
+            return sorted(self._adapter_classes.keys())
 
     def get_instance(self, key: str, *, factory: Callable[[type[T]], T]) -> T | None:
         """Get or create a singleton adapter instance for a key.
@@ -207,7 +211,7 @@ class AdapterRegistry(Generic[T]):
                 if asyncio.iscoroutine(teardown_result):
                     await teardown_result
             except Exception as exc:  # noqa: BLE001
-                logger.warning(
+                logger.error(
                     f"Failed to teardown adapter instance for adapter_type='{self._adapter_type.value}' "
                     f"key='{key}': {exc}",
                     exc_info=True,
@@ -243,9 +247,15 @@ class AdapterRegistry(Generic[T]):
                 logger.warning(
                     f"Failed to load adapter entry point group='{self._entry_point_group}' name='{ep.name}': {exc}"
                 )
+            except (ImportError, SyntaxError) as exc:
+                logger.error(
+                    f"Failed to import adapter entry point group='{self._entry_point_group}' name='{ep.name}': {exc}",
+                    exc_info=True,
+                )
             except Exception as exc:  # noqa: BLE001
-                logger.warning(
-                    f"Error loading adapter entry point group='{self._entry_point_group}' name='{ep.name}': {exc}",
+                logger.error(
+                    f"Unexpected error loading adapter entry point "
+                    f"group='{self._entry_point_group}' name='{ep.name}': {exc}",
                     exc_info=True,
                 )
 
@@ -287,14 +297,6 @@ class AdapterRegistry(Generic[T]):
         self.register_class(key, adapter_class, override=True)
 
 
-def _default_entry_point_group(adapter_type: AdapterType) -> str:
-    return f"lfx.{adapter_type.value}.adapters"
-
-
-def _default_config_section_path(adapter_type: AdapterType) -> tuple[str, ...]:
-    return (adapter_type.value, "adapters")
-
-
 def get_adapter_registry(
     *,
     adapter_type: AdapterType,
@@ -309,8 +311,8 @@ def get_adapter_registry(
     * ``entry_point_group`` → ``"lfx.<adapter_type>.adapters"``
     * ``config_section_path`` → ``("<adapter_type>", "adapters")``
     """
-    resolved_epg = entry_point_group or _default_entry_point_group(adapter_type)
-    resolved_csp = config_section_path or _default_config_section_path(adapter_type)
+    resolved_epg = entry_point_group or adapter_type.entry_point_group
+    resolved_csp = config_section_path or adapter_type.config_section_path
 
     with _adapter_registries_lock:
         if adapter_type in _adapter_registries:
