@@ -20,7 +20,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
     @pytest.fixture(autouse=True)
     def mock_knowledge_base_path(self, tmp_path):
         """Mock the knowledge base root path directly."""
-        with patch("langflow.components.knowledge_bases.ingestion._KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
+        with patch("lfx.components.files_and_knowledge.ingestion._KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
             yield
 
     @pytest.fixture
@@ -97,91 +97,8 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         with pytest.raises(ValueError, match="Column 'nonexistent' not found in DataFrame"):
             component._validate_column_config(data_df)
 
-    def test_get_embedding_provider(self, component_class, default_kwargs):
-        """Test embedding provider detection."""
-        component = component_class(**default_kwargs)
-
-        # Test OpenAI provider
-        assert component._get_embedding_provider("text-embedding-ada-002") == "OpenAI"
-
-        # Test HuggingFace provider
-        assert component._get_embedding_provider("sentence-transformers/all-MiniLM-L6-v2") == "HuggingFace"
-
-        # Test Cohere provider
-        assert component._get_embedding_provider("embed-english-v3.0") == "Cohere"
-
-        # Test custom provider
-        assert component._get_embedding_provider("custom-model") == "Custom"
-
-    @patch("langchain_huggingface.HuggingFaceEmbeddings")
-    def test_build_embeddings_huggingface(self, mock_hf_embeddings, component_class, default_kwargs):
-        """Test building HuggingFace embeddings."""
-        component = component_class(**default_kwargs)
-
-        mock_embeddings = MagicMock()
-        mock_hf_embeddings.return_value = mock_embeddings
-
-        result = component._build_embeddings("sentence-transformers/all-MiniLM-L6-v2", None)
-
-        mock_hf_embeddings.assert_called_once_with(model="sentence-transformers/all-MiniLM-L6-v2")
-        assert result == mock_embeddings
-
-    @patch("langchain_openai.OpenAIEmbeddings")
-    def test_build_embeddings_openai(self, mock_openai_embeddings, component_class, default_kwargs):
-        """Test building OpenAI embeddings."""
-        component = component_class(**default_kwargs)
-
-        mock_embeddings = MagicMock()
-        mock_openai_embeddings.return_value = mock_embeddings
-
-        result = component._build_embeddings("text-embedding-ada-002", "test-api-key")
-
-        mock_openai_embeddings.assert_called_once_with(
-            model="text-embedding-ada-002",
-            api_key="test-api-key",  # pragma:allowlist secret
-            chunk_size=1000,  # pragma:allowlist secret
-        )
-        assert result == mock_embeddings
-
-    def test_build_embeddings_openai_no_key(self, component_class, default_kwargs):
-        """Test building OpenAI embeddings without API key raises error."""
-        component = component_class(**default_kwargs)
-
-        with pytest.raises(ValueError, match="OpenAI API key is required"):
-            component._build_embeddings("text-embedding-ada-002", None)
-
-    @patch("langchain_cohere.CohereEmbeddings")
-    def test_build_embeddings_cohere(self, mock_cohere_embeddings, component_class, default_kwargs):
-        """Test building Cohere embeddings."""
-        component = component_class(**default_kwargs)
-
-        mock_embeddings = MagicMock()
-        mock_cohere_embeddings.return_value = mock_embeddings
-
-        result = component._build_embeddings("embed-english-v3.0", "test-api-key")
-
-        mock_cohere_embeddings.assert_called_once_with(
-            model="embed-english-v3.0",
-            cohere_api_key="test-api-key",  # pragma:allowlist secret
-        )  # pragma:allowlist secret
-        assert result == mock_embeddings
-
-    def test_build_embeddings_cohere_no_key(self, component_class, default_kwargs):
-        """Test building Cohere embeddings without API key raises error."""
-        component = component_class(**default_kwargs)
-
-        with pytest.raises(ValueError, match="Cohere API key is required"):
-            component._build_embeddings("embed-english-v3.0", None)
-
-    def test_build_embeddings_custom_not_supported(self, component_class, default_kwargs):
-        """Test building custom embeddings raises NotImplementedError."""
-        component = component_class(**default_kwargs)
-
-        with pytest.raises(NotImplementedError, match="Custom embedding models not yet supported"):
-            component._build_embeddings("custom-model", "test-key")
-
-    @patch("langflow.components.knowledge_bases.ingestion.get_settings_service")
-    @patch("langflow.components.knowledge_bases.ingestion.encrypt_api_key")
+    @patch("lfx.components.files_and_knowledge.ingestion.get_settings_service")
+    @patch("lfx.components.files_and_knowledge.ingestion.encrypt_api_key")
     def test_build_embedding_metadata(self, mock_encrypt, mock_get_settings, component_class, default_kwargs):
         """Test building embedding metadata."""
         component = component_class(**default_kwargs)
@@ -190,7 +107,8 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         mock_get_settings.return_value = mock_settings
         mock_encrypt.return_value = "encrypted_key"
 
-        metadata = component._build_embedding_metadata("sentence-transformers/all-MiniLM-L6-v2", "test-key")
+        model_selection = [{"name": "sentence-transformers/all-MiniLM-L6-v2", "provider": "HuggingFace", "metadata": {}}]
+        metadata = component._build_embedding_metadata(model_selection, "test-key")
 
         assert metadata["embedding_provider"] == "HuggingFace"
         assert metadata["embedding_model"] == "sentence-transformers/all-MiniLM-L6-v2"
@@ -221,7 +139,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         config_list = default_kwargs["column_config"]
 
         # Mock Chroma to avoid actual vector store operations
-        with patch("langflow.components.knowledge_bases.ingestion.Chroma") as mock_chroma:
+        with patch("lfx.components.files_and_knowledge.ingestion.Chroma") as mock_chroma:
             mock_chroma_instance = MagicMock()
             mock_chroma_instance.get.return_value = {"metadatas": []}
             mock_chroma.return_value = mock_chroma_instance
@@ -246,7 +164,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         config_list = default_kwargs["column_config"]
 
         # Mock Chroma with existing hash
-        with patch("langflow.components.knowledge_bases.ingestion.Chroma") as mock_chroma:
+        with patch("lfx.components.files_and_knowledge.ingestion.Chroma") as mock_chroma:
             # Simulate existing document with same hash
             existing_hash = "some_existing_hash"
             mock_chroma_instance = MagicMock()
@@ -254,7 +172,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
             mock_chroma.return_value = mock_chroma_instance
 
             # Mock hashlib to return the existing hash for first row
-            with patch("langflow.components.knowledge_bases.ingestion.hashlib.sha256") as mock_hash:
+            with patch("lfx.components.files_and_knowledge.ingestion.hashlib.sha256") as mock_hash:
                 mock_hash_obj = MagicMock()
                 mock_hash_obj.hexdigest.side_effect = [existing_hash, "different_hash"]
                 mock_hash.return_value = mock_hash_obj
@@ -280,18 +198,13 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert component.is_valid_collection_name("invalid_") is False  # Ends with underscore
         assert component.is_valid_collection_name("invalid@name") is False  # Invalid character
 
-    @patch("langflow.components.knowledge_bases.ingestion.json.loads")
-    @patch("langflow.components.knowledge_bases.ingestion.decrypt_api_key")
-    async def test_build_kb_info_success(self, mock_decrypt, mock_json_loads, component_class, default_kwargs):
+    @patch("lfx.components.files_and_knowledge.ingestion.get_embeddings")
+    async def test_build_kb_info_success(self, mock_get_embeddings, component_class, default_kwargs):
         """Test successful KB info building."""
         component = component_class(**default_kwargs)
 
-        # Mock metadata loading
-        mock_json_loads.return_value = {
-            "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-            "api_key": "encrypted_key",  # pragma:allowlist secret
-        }
-        mock_decrypt.return_value = "decrypted_key"
+        mock_embedding_fn = MagicMock()
+        mock_get_embeddings.return_value = mock_embedding_fn
 
         # Mock vector store creation
         with patch.object(component, "_create_vector_store"), patch.object(component, "_save_kb_files"):
@@ -317,36 +230,33 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert "kb2" in kb_list
         assert ".hidden" not in kb_list
 
-    async def test_update_build_config_new_kb(self, component_class, default_kwargs):
+    @patch("lfx.components.files_and_knowledge.ingestion.get_embeddings")
+    async def test_update_build_config_new_kb(self, mock_get_embeddings, component_class, default_kwargs):
         """Test updating build config for new knowledge base creation."""
         component = component_class(**default_kwargs)
 
-        build_config = {"knowledge_base": {"value": None, "options": []}}
+        build_config = {"knowledge_base": {"value": None, "options": [], "dialog_inputs": {}}}
 
+        model_selection = [{"name": "sentence-transformers/all-MiniLM-L6-v2", "provider": "HuggingFace", "metadata": {}}]
         field_value = {
             "01_new_kb_name": "new_test_kb",
-            "02_embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-            "03_api_key": "abc123",  # pragma:allowlist secret
+            "02_embedding_model": model_selection,
         }
 
         # Mock embedding validation
-        with (
-            patch.object(component, "_build_embeddings") as mock_build_emb,
-            patch.object(component, "_save_embedding_metadata"),
-        ):
-            mock_embeddings = MagicMock()
-            mock_embeddings.embed_query.return_value = [0.1, 0.2, 0.3]
-            mock_build_emb.return_value = mock_embeddings
+        mock_embeddings = MagicMock()
+        mock_embeddings.embed_query.return_value = [0.1, 0.2, 0.3]
+        mock_get_embeddings.return_value = mock_embeddings
 
+        with patch.object(component, "_save_embedding_metadata"):
             result = await component.update_build_config(build_config, field_value, "knowledge_base")
 
         assert result["knowledge_base"]["value"] == "new_test_kb"
         assert "new_test_kb" in result["knowledge_base"]["options"]
 
-    @patch("langflow.components.knowledge_bases.ingestion.json.loads")
-    @patch("langflow.components.knowledge_bases.ingestion.decrypt_api_key")
+    @patch("lfx.components.files_and_knowledge.ingestion.get_embeddings")
     async def test_build_kb_info_with_message_input(
-        self, mock_decrypt, mock_json_loads, component_class, default_kwargs
+        self, mock_get_embeddings, component_class, default_kwargs
     ):
         """Test that Message input is accepted and converted to DataFrame."""
         # Replace the DataFrame input with a Message
@@ -356,11 +266,8 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         ]
         component = component_class(**default_kwargs)
 
-        mock_json_loads.return_value = {
-            "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-            "api_key": "encrypted_key",  # pragma:allowlist secret
-        }
-        mock_decrypt.return_value = "decrypted_key"
+        mock_embedding_fn = MagicMock()
+        mock_get_embeddings.return_value = mock_embedding_fn
 
         with patch.object(component, "_create_vector_store"), patch.object(component, "_save_kb_files"):
             result = await component.build_kb_info()
