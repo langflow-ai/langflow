@@ -18,7 +18,25 @@ import {
 import type { BaseInputProps } from "../../types";
 import ModelList from "./components/ModelList";
 import ModelTrigger from "./components/ModelTrigger";
-import { ModelInputComponentType, ModelOption } from "./types";
+
+/** Represents a single model option in the dropdown */
+export interface ModelOption {
+  id?: string;
+  name: string;
+  icon: string;
+  provider: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ModelInputComponentType {
+  options?: ModelOption[];
+  placeholder?: string;
+  externalOptions?: any;
+  /** When true and options are empty, shows "No models enabled" in a clickable dropdown instead of loading state */
+  showEmptyState?: boolean;
+}
+
+export type SelectedModel = ModelOption;
 
 export default function ModelInputComponent({
   id,
@@ -248,8 +266,8 @@ export default function ModelInputComponent({
     return null;
   }
 
-  // Loading state
-  if (!options || options.length === 0) {
+  // Loading state (skip if showEmptyState is true - we want to show the empty dropdown instead)
+  if ((!options || options.length === 0) && !showEmptyState) {
     return <div className="w-full">{renderLoadingButton()}</div>;
   }
 
@@ -268,6 +286,7 @@ export default function ModelInputComponent({
             onOpenManageProviders={() => setOpenManageProvidersDialog(true)}
             id={id}
             refButton={refButton}
+            showEmptyState={showEmptyState}
           />
         </div>
         {renderPopoverContent()}
