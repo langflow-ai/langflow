@@ -87,12 +87,12 @@ def validate_flow_version_id_query(values: list[str]) -> list[str]:
 class ProviderAccountCreate(BaseModel):
     model_config = {"extra": "forbid"}
 
-    account_id: str | None = Field(default=None, min_length=1, description="Provider tenant/organization identifier.")
+    provider_tenant_id: str | None = Field(default=None, min_length=1, description="Provider tenant/organization id.")
     provider_key: str = Field(min_length=1, description="Deployment provider key.")
-    backend_url: str = Field(min_length=1, description="Deployment provider backend URL.")
+    provider_url: str = Field(min_length=1, description="Deployment provider URL.")
     api_key: str = Field(min_length=1, description="Deployment provider API key.")
 
-    @field_validator("provider_key", "backend_url", "api_key")
+    @field_validator("provider_key", "provider_url", "api_key")
     @classmethod
     def normalize_required_strings(cls, value: str) -> str:
         normalized = value.strip()
@@ -101,28 +101,30 @@ class ProviderAccountCreate(BaseModel):
             raise ValueError(msg)
         return normalized
 
-    @field_validator("account_id")
+    @field_validator("provider_tenant_id")
     @classmethod
-    def normalize_account_id(cls, value: str | None) -> str | None:
+    def normalize_provider_tenant_id(cls, value: str | None) -> str | None:
         return _normalize_optional_str(value)
 
 
 class ProviderAccountUpdate(BaseModel):
     model_config = {"extra": "forbid"}
 
-    account_id: str | None = Field(default=None, description="Provider tenant/organization identifier.")
+    provider_tenant_id: str | None = Field(default=None, description="Provider tenant/organization id.")
     provider_key: str | None = Field(default=None, description="Deployment provider key.")
-    backend_url: str | None = Field(default=None, description="Deployment provider backend URL.")
+    provider_url: str | None = Field(default=None, description="Deployment provider URL.")
     api_key: str | None = Field(default=None, description="Deployment provider API key.")
 
-    @field_validator("account_id", "provider_key", "backend_url", "api_key")
+    @field_validator("provider_tenant_id", "provider_key", "provider_url", "api_key")
     @classmethod
     def normalize_optional_strings(cls, value: str | None) -> str | None:
         return _normalize_optional_str(value)
 
     @model_validator(mode="after")
     def ensure_any_field_provided(self) -> ProviderAccountUpdate:
-        if all(value is None for value in (self.account_id, self.provider_key, self.backend_url, self.api_key)):
+        if all(
+            value is None for value in (self.provider_tenant_id, self.provider_key, self.provider_url, self.api_key)
+        ):
             msg = "At least one field must be provided for update."
             raise ValueError(msg)
         return self
@@ -130,10 +132,11 @@ class ProviderAccountUpdate(BaseModel):
 
 class ProviderAccountResponse(BaseModel):
     id: UUID  # Langflow DB
-    account_id: str | None  # provider-owned tenant/org identifier
+    provider_tenant_id: str | None  # provider-owned tenant/org identifier
     provider_key: str
-    backend_url: str
-    registered_at: datetime | None
+    provider_url: str
+    created_at: datetime | None
+    updated_at: datetime | None
 
 
 # ---------------------------------------------------------------------------
