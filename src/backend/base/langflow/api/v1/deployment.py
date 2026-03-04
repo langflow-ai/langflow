@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib
 from datetime import datetime
 from typing import Annotated, Any
 from urllib.parse import urlparse
@@ -56,6 +55,7 @@ from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.initial_setup.setup import get_or_create_default_folder
+from langflow.services.adapters.deployment.context import deployment_provider_scope
 from langflow.services.database.models.deployment.crud import (
     count_deployment_rows,
     create_deployment_row,
@@ -94,14 +94,9 @@ from langflow.services.database.models.flow_history_deployment_attachment.crud i
     update_deployment_attachment_snapshot_id,
 )
 from langflow.services.database.models.folder.model import Folder
-from langflow.services.deployment.context import deployment_provider_scope
 from langflow.services.deps import get_variable_service
 
 router = APIRouter(prefix="/deployments", tags=["Deployments"])
-
-_BUILTIN_DEPLOYMENT_ADAPTER_MODULES: dict[str, str] = {
-    "watsonx-orchestrate": "langflow.services.deployment.watsonx_orchestrate",
-}
 
 
 ProviderIdQuery = Annotated[
@@ -564,8 +559,6 @@ async def _resolve_deployment_adapter(
             detail="Deployment provider account has no provider_key configured.",
         )
 
-    _ensure_builtin_deployment_adapter_loaded(adapter_key)
-
     try:
         deployment_adapter = get_deployment_adapter(adapter_key)
     except Exception as exc:
@@ -576,13 +569,6 @@ async def _resolve_deployment_adapter(
             detail=f"No deployment adapter registered for provider_key '{adapter_key}'.",
         )
     return deployment_adapter
-
-
-def _ensure_builtin_deployment_adapter_loaded(adapter_key: str) -> None:
-    module_path = _BUILTIN_DEPLOYMENT_ADAPTER_MODULES.get(adapter_key)
-    if not module_path:
-        return
-    importlib.import_module(module_path)
 
 
 async def _get_deployment_row_or_404(

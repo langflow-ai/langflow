@@ -3,9 +3,9 @@ from __future__ import annotations
 import importlib.metadata as md
 from types import SimpleNamespace
 
-import langflow.services.deployment.watsonx_orchestrate as watsonx_orchestrate_module
+import langflow.services.adapters.deployment.watsonx_orchestrate as watsonx_orchestrate_module
 import pytest
-from langflow.services.deployment.watsonx_orchestrate import (
+from langflow.services.adapters.deployment.watsonx_orchestrate import (
     WatsonxOrchestrateDeploymentService,
 )
 from lfx.services.adapters.deployment.exceptions import (
@@ -316,7 +316,7 @@ def test_resolve_lfx_runner_requirement_uses_tool_runner_requirement(monkeypatch
         assert package_name == "lfx-nightly"
         return "1.2.3"
 
-    monkeypatch.setattr("langflow.services.deployment.watsonx_orchestrate.md.version", fake_version)
+    monkeypatch.setattr("langflow.services.adapters.deployment.watsonx_orchestrate.md.version", fake_version)
 
     assert service._resolve_lfx_runner_requirement(tool) == "lfx-nightly==1.2.3"
 
@@ -333,7 +333,7 @@ def test_resolve_lfx_runner_requirement_falls_back_to_installed_lfx(monkeypatch)
             return "0.9.0"
         raise md.PackageNotFoundError
 
-    monkeypatch.setattr("langflow.services.deployment.watsonx_orchestrate.md.version", fake_version)
+    monkeypatch.setattr("langflow.services.adapters.deployment.watsonx_orchestrate.md.version", fake_version)
 
     assert service._resolve_lfx_runner_requirement(tool) == "lfx==0.9.0"
 
