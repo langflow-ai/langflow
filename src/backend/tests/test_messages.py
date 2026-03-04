@@ -1150,10 +1150,7 @@ class TestMessageResponseFromMessage:
 
 
 class TestSanitizeJson:
-    """Unit tests for MessageTable._sanitize_json and its integration with
-
-    the properties / content_blocks validators.
-    """
+    """Unit tests for MessageTable._sanitize_json and the properties/content_blocks validators."""
 
     # ------------------------------------------------------------------
     # Direct _sanitize_json unit tests
@@ -1272,8 +1269,8 @@ class TestSanitizeJson:
 
     def test_from_message_with_nan_in_properties(self):
         """from_message correctly sanitizes NaN values inside message.properties."""
-        from langflow.services.database.models.message.model import MessageTable
         from langflow.schema.properties import Properties
+        from langflow.services.database.models.message.model import MessageTable
 
         props = Properties()
         # Inject a NaN via a workaround (bypass Pydantic validation)
