@@ -56,7 +56,7 @@ def load_toml_config(config_path: Path) -> dict[str, Any] | None:
     try:
         with config_path.open("rb") as file_handle:
             return tomli.load(file_handle)
-    except Exception as exc:  # noqa: BLE001
+    except ValueError as exc:
         logger.warning(f"Failed to load config from {config_path}: {exc}")
         return None
 
@@ -89,6 +89,12 @@ def load_object_from_import_path(
         module_path, attribute_name = import_path.split(":", 1)
         module = importlib.import_module(module_path)
         return getattr(module, attribute_name)
-    except Exception as exc:  # noqa: BLE001
+    except (ModuleNotFoundError, AttributeError) as exc:
         logger.warning(f"Failed to load {object_kind} for key='{object_key}' from '{import_path}': {exc}")
+        return None
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            f"Failed to load {object_kind} for key='{object_key}' from '{import_path}': {exc}",
+            exc_info=True,
+        )
         return None

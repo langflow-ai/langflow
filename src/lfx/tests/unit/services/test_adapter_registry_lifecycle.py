@@ -74,7 +74,7 @@ async def test_teardown_all_adapter_registries_clears_instances():
 
     await adapter_registry_mod.teardown_all_adapter_registries()
 
-    assert registry.adapter_instances == {}
+    assert not registry.has_cached_instances()
     assert DummyTeardownAdapter.teardown_calls == 1
 
 
@@ -89,3 +89,66 @@ def test_get_deployment_adapter_returns_singleton_instance():
 
     assert first is not None
     assert first is second
+
+
+@pytest.mark.asyncio
+async def test_teardown_exception_does_not_prevent_other_teardowns():
+    """If one adapter's teardown raises, other adapters still get torn down."""
+
+    class FailingTeardownAdapter(DeploymentAdapterStub):
+        async def teardown(self):
+            msg = "boom"
+            raise RuntimeError(msg)
+
+    class TrackingTeardownAdapter(DeploymentAdapterStub):
+        teardown_called = False
+
+        async def teardown(self):
+            type(self).teardown_called = True
+
+    TrackingTeardownAdapter.teardown_called = False
+    registry = make_deployment_adapter_registry()
+    registry.register_class("failing", FailingTeardownAdapter)
+    registry.register_class("tracking", TrackingTeardownAdapter)
+    registry.get_instance("failing", factory=lambda cls: cls())
+    registry.get_instance("tracking", factory=lambda cls: cls())
+
+    await registry.teardown_instances()
+
+    assert TrackingTeardownAdapter.teardown_called
+    assert not registry.has_cached_instances()
+
+
+@pytest.mark.asyncio
+async def test_sync_teardown_is_called():
+    """Adapters with a synchronous teardown() should still be called."""
+    calls: list[str] = []
+
+    class SyncTeardownAdapter(DeploymentAdapterStub):
+        def teardown(self):
+            calls.append("torn_down")
+
+    registry = make_deployment_adapter_registry()
+    registry.register_class("sync", SyncTeardownAdapter)
+    registry.get_instance("sync", factory=lambda cls: cls())
+
+    await registry.teardown_instances()
+
+    assert calls == ["torn_down"]
+    assert not registry.has_cached_instances()
+
+
+@pytest.mark.asyncio
+async def test_adapter_without_teardown_does_not_raise():
+    """Adapters with no teardown method should be cleaned up without error."""
+
+    class NoTeardownAdapter(DeploymentAdapterStub):
+        teardown = None  # type: ignore[assignment]
+
+    registry = make_deployment_adapter_registry()
+    registry.register_class("plain", NoTeardownAdapter)
+    registry.get_instance("plain", factory=lambda cls: cls())
+
+    await registry.teardown_instances()
+
+    assert not registry.has_cached_instances()

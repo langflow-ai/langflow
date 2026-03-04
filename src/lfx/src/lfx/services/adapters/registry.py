@@ -78,8 +78,9 @@ def register_adapter(
         except ValueError:
             # Re-raise ValueError (used for registry identity conflicts)
             raise
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(f"Failed to register adapter {adapter_type.value}.{key} from decorator: {exc}")
+        except Exception:  # noqa: BLE001
+            logger.exception(f"Failed to register adapter {adapter_type.value}.{key} from decorator")
+            raise
         return adapter_class
 
     return decorator
@@ -99,41 +100,70 @@ class AdapterRegistry(Generic[T]):
         entry_point_group: str,
         config_section_path: tuple[str, ...],
     ) -> None:
-        self.adapter_type = adapter_type
-        self.entry_point_group = entry_point_group
-        self.config_section_path = config_section_path
-        self.adapter_classes: dict[str, type[T]] = {}
-        self.adapter_instances: dict[str, T] = {}
+        self._adapter_type = adapter_type
+        self._entry_point_group = entry_point_group
+        self._config_section_path = config_section_path
+        self._adapter_classes: dict[str, type[T]] = {}
+        self._adapter_instances: dict[str, T] = {}
         self._discovered = False
         self._lock = threading.RLock()
 
+    @property
+    def adapter_type(self) -> AdapterType:
+        return self._adapter_type
+
+    @property
+    def entry_point_group(self) -> str:
+        return self._entry_point_group
+
+    @property
+    def config_section_path(self) -> tuple[str, ...]:
+        return self._config_section_path
+
+    @property
+    def is_discovered(self) -> bool:
+        return self._discovered
+
+    def has_cached_instances(self) -> bool:
+        """Return whether any adapter instances are currently cached."""
+        return bool(self._adapter_instances)
+
     def __repr__(self) -> str:
         return (
-            f"AdapterRegistry(adapter_type={self.adapter_type!r}, "
+            f"AdapterRegistry(adapter_type={self._adapter_type!r}, "
             f"keys={self.list_keys()}, discovered={self._discovered})"
         )
 
     def register_class(self, key: str, adapter_class: type[T], *, override: bool = True) -> None:
         """Register an adapter class under a key."""
-        if key in self.adapter_classes and not override:
-            logger.debug(
-                f"Skipped adapter registration for adapter_type='{self.adapter_type.value}' "
-                f"key='{key}' (override={override})."
-            )
-            return
+        with self._lock:
+            if key in self._adapter_classes and not override:
+                logger.debug(
+                    f"Skipped adapter registration for adapter_type='{self._adapter_type.value}' "
+                    f"key='{key}' (override={override})."
+                )
+                return
 
-        self.adapter_classes[key] = adapter_class
-        logger.debug(
-            f"Registered adapter: adapter_type='{self.adapter_type.value}' key='{key}' class='{adapter_class.__name__}'"
-        )
+            # Evict stale cached instance when class is changing
+            if key in self._adapter_instances and self._adapter_classes.get(key) is not adapter_class:
+                logger.debug(
+                    f"Evicting stale cached instance for adapter_type='{self._adapter_type.value}' "
+                    f"key='{key}' (class changed)."
+                )
+                del self._adapter_instances[key]
+
+            self._adapter_classes[key] = adapter_class
+            logger.debug(
+                f"Registered adapter: adapter_type='{self._adapter_type.value}' key='{key}' class='{adapter_class.__name__}'"
+            )
 
     def get_class(self, key: str) -> type[T] | None:
         """Return adapter class by key if available."""
-        return self.adapter_classes.get(key)
+        return self._adapter_classes.get(key)
 
     def list_keys(self) -> list[str]:
         """Return sorted list of registered adapter keys."""
-        return sorted(self.adapter_classes.keys())
+        return sorted(self._adapter_classes.keys())
 
     def get_instance(self, key: str, *, factory: Callable[[type[T]], T]) -> T | None:
         """Get or create a singleton adapter instance for a key.
@@ -144,24 +174,31 @@ class AdapterRegistry(Generic[T]):
         - Cached instances are torn down via ``teardown_instances``.
         """
         with self._lock:
-            if key in self.adapter_instances:
-                return self.adapter_instances[key]
+            if key in self._adapter_instances:
+                return self._adapter_instances[key]
 
             adapter_class = self.get_class(key)
             if adapter_class is None:
                 return None
 
-            instance = factory(adapter_class)
-            self.adapter_instances[key] = instance
+            try:
+                instance = factory(adapter_class)
+            except Exception:
+                logger.exception(
+                    f"Failed to create adapter instance for adapter_type='{self._adapter_type.value}' "
+                    f"key='{key}' class='{adapter_class.__name__}'"
+                )
+                raise
+            self._adapter_instances[key] = instance
             return instance
 
     async def teardown_instances(self) -> None:
         """Teardown and clear all cached adapter instances in this registry."""
         with self._lock:
-            instances = list(self.adapter_instances.values())
-            self.adapter_instances.clear()
+            instances = list(self._adapter_instances.items())
+            self._adapter_instances.clear()
 
-        for instance in instances:
+        for key, instance in instances:
             teardown = getattr(instance, "teardown", None)
             if not callable(teardown):
                 continue
@@ -171,7 +208,9 @@ class AdapterRegistry(Generic[T]):
                     await teardown_result
             except Exception as exc:  # noqa: BLE001
                 logger.warning(
-                    f"Failed to teardown adapter instance for adapter_type='{self.adapter_type.value}': {exc}"
+                    f"Failed to teardown adapter instance for adapter_type='{self._adapter_type.value}' "
+                    f"key='{key}': {exc}",
+                    exc_info=True,
                 )
 
     def discover(self, config_dir: Path) -> None:
@@ -183,7 +222,7 @@ class AdapterRegistry(Generic[T]):
         with self._lock:
             if self._discovered:
                 logger.debug(
-                    f"Adapter discovery for '{self.adapter_type.value}' already complete, "
+                    f"Adapter discovery for '{self._adapter_type.value}' already complete, "
                     f"ignoring call with config_dir='{config_dir}'."
                 )
                 return
@@ -195,25 +234,26 @@ class AdapterRegistry(Generic[T]):
     def _discover_from_entry_points(self) -> None:
         from importlib.metadata import entry_points
 
-        eps = entry_points(group=self.entry_point_group)
+        eps = entry_points(group=self._entry_point_group)
         for ep in eps:
             try:
                 adapter_class = ep.load()
                 self.register_class(ep.name, adapter_class, override=False)
             except (ValueError, AttributeError) as exc:
                 logger.warning(
-                    f"Failed to load adapter entry point group='{self.entry_point_group}' name='{ep.name}': {exc}"
+                    f"Failed to load adapter entry point group='{self._entry_point_group}' name='{ep.name}': {exc}"
                 )
             except Exception as exc:  # noqa: BLE001
-                logger.debug(
-                    f"Error loading adapter entry point group='{self.entry_point_group}' name='{ep.name}': {exc}"
+                logger.warning(
+                    f"Error loading adapter entry point group='{self._entry_point_group}' name='{ep.name}': {exc}",
+                    exc_info=True,
                 )
 
     def _discover_from_config(self, *, config_dir: Path) -> None:
         source = get_preferred_config_source(
             config_dir,
-            lfx_root_path=self.config_section_path,
-            pyproject_root_path=("tool", "lfx", *self.config_section_path),
+            lfx_root_path=self._config_section_path,
+            pyproject_root_path=("tool", "lfx", *self._config_section_path),
         )
         if source is None:
             return
@@ -233,12 +273,12 @@ class AdapterRegistry(Generic[T]):
             self._register_adapter_from_path(key=key, import_path=import_path)
 
         if config_path.name == "lfx.toml" or section:
-            logger.debug(f"Loaded {len(section)} adapter(s) for '{self.adapter_type.value}' from {config_path}")
+            logger.debug(f"Loaded {len(section)} adapter(s) for '{self._adapter_type.value}' from {config_path}")
 
     def _register_adapter_from_path(self, *, key: str, import_path: Any) -> None:
         adapter_class = load_object_from_import_path(
             import_path,
-            object_kind=f"adapter for adapter_type='{self.adapter_type.value}'",
+            object_kind=f"adapter for adapter_type='{self._adapter_type.value}'",
             object_key=key,
         )
         if adapter_class is None:

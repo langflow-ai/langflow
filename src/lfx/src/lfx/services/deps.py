@@ -168,7 +168,8 @@ def get_deployment_adapter(
         adapter_key: Deployment adapter registry key (for example ``"local"``).
     """
     registry = _get_deployment_registry()
-    registry.discover(config_dir=_resolve_adapter_config_dir())
+    if not registry.is_discovered:
+        registry.discover(config_dir=_resolve_adapter_config_dir())
     return registry.get_instance(adapter_key, factory=lambda adapter_class: adapter_class())
 
 
