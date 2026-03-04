@@ -1294,31 +1294,61 @@ class TestSanitizeJson:
             assert v is None or v != float("nan")
 
     def test_from_message_with_inf_in_content_blocks(self):
-        """from_message sanitizes Infinity inside content_blocks."""
-        from langflow.schema.content_block import ContentBlock
-        from langflow.schema.content_types import TextContent
+        """from_message sanitizes Infinity inside content_blocks.
+
+        TextContent.duration is typed as int | None, so Pydantic rejects
+        float('inf') at construction time. We inject Infinity via a raw dict
+        (the same pattern used by corrupt/partial data arriving from the DB or
+        an external source) to actually exercise the sanitization path.
+        """
+        import json
+        import math
+
         from langflow.services.database.models.message.model import MessageTable
 
-        text_content = TextContent(type="text", text="hello", duration=5)
-        block = ContentBlock(title="Block", contents=[text_content], allow_markdown=False)
+        # Build a raw content-block dict with float('inf') in duration —
+        # this bypasses Pydantic so the forbidden value reaches _sanitize_json.
+        raw_block = {
+            "title": "Block",
+            "allow_markdown": False,
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "hello",
+                    "duration": float("inf"),   # <-- the actual Infinity being tested
+                    "header": {},
+                }
+            ],
+            "media_url": [],
+        }
 
         message = Message(
             text="Test",
             sender="AI",
             sender_name="Bot",
             session_id="session",
-            content_blocks=[block],
         )
 
-        result = MessageTable.from_message(message, flow_id=uuid4())
+        # Use MessageTable directly with the raw dict so the field_validator
+        # (_sanitize_json) is triggered on the Infinity value.
+        msg_table = MessageTable(
+            sender=message.sender,
+            sender_name=message.sender_name,
+            text=message.text,
+            session_id=message.session_id,
+            content_blocks=[raw_block],
+        )
 
-        import json
-        import math
+        # The validator must have replaced float('inf') with None
+        block = msg_table.content_blocks[0]
+        content = block["contents"][0]
+        assert content["duration"] is None, (
+            "float('inf') in duration must be sanitized to None before hitting PostgreSQL"
+        )
 
-        # Serialise to JSON string to ensure no NaN/Inf would break PostgreSQL
-        blocks_json = json.dumps(result.content_blocks)
+        # Full JSON round-trip must succeed (no NaN/Inf would raise ValueError)
+        blocks_json = json.dumps(msg_table.content_blocks)
         parsed = json.loads(blocks_json)
-        assert parsed is not None  # must be valid JSON
 
         def _has_nan_or_inf(obj):
             if isinstance(obj, float):
@@ -1329,4 +1359,4 @@ class TestSanitizeJson:
                 return any(_has_nan_or_inf(item) for item in obj)
             return False
 
-        assert not _has_nan_or_inf(parsed)
+        assert not _has_nan_or_inf(parsed), "No NaN/Inf values should survive sanitization"
