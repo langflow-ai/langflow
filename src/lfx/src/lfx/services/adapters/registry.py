@@ -146,11 +146,14 @@ class AdapterRegistry(Generic[T]):
                 )
                 return
 
-            # Evict stale cached instance when class is changing
+            # Evict stale cached instance when class is changing.
+            # Note: teardown cannot be called here (sync context); callers should
+            # call teardown_instances() before re-registration when resources need cleanup.
             if key in self._adapter_instances and self._adapter_classes.get(key) is not adapter_class:
-                logger.debug(
+                logger.warning(
                     f"Evicting stale cached instance for adapter_type='{self._adapter_type.value}' "
-                    f"key='{key}' (class changed)."
+                    f"key='{key}' (class changed). The evicted instance was NOT torn down; "
+                    f"call teardown_instances() beforehand if the old adapter holds resources."
                 )
                 del self._adapter_instances[key]
 
@@ -200,7 +203,6 @@ class AdapterRegistry(Generic[T]):
         """Teardown and clear all cached adapter instances in this registry."""
         with self._lock:
             instances = list(self._adapter_instances.items())
-            self._adapter_instances.clear()
 
         for key, instance in instances:
             teardown = getattr(instance, "teardown", None)
@@ -216,6 +218,9 @@ class AdapterRegistry(Generic[T]):
                     f"key='{key}': {exc}",
                     exc_info=True,
                 )
+
+        with self._lock:
+            self._adapter_instances.clear()
 
     def discover(self, config_dir: Path) -> None:
         """Discover and register adapters from all supported sources.
@@ -238,7 +243,14 @@ class AdapterRegistry(Generic[T]):
     def _discover_from_entry_points(self) -> None:
         from importlib.metadata import entry_points
 
-        eps = entry_points(group=self._entry_point_group)
+        try:
+            eps = entry_points(group=self._entry_point_group)
+        except Exception:  # noqa: BLE001
+            logger.exception(
+                f"Failed to enumerate entry points for group='{self._entry_point_group}'. "
+                f"Entry-point-based adapter discovery will be skipped."
+            )
+            return
         for ep in eps:
             try:
                 adapter_class = ep.load()

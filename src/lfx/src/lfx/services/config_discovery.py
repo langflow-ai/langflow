@@ -100,9 +100,9 @@ def load_object_from_import_path(
             exc_info=True,
         )
         return None
-    except Exception as exc:  # noqa: BLE001
-        logger.error(
-            f"Unexpected error loading {object_kind} for key='{object_key}' from '{import_path}': {exc}",
-            exc_info=True,
+    except Exception:
+        logger.exception(
+            f"Unexpected error loading {object_kind} for key='{object_key}' from '{import_path}'. "
+            f"This may indicate a bug in the module or a misconfigured import path."
         )
-        return None
+        raise

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from contextlib import asynccontextmanager, suppress
 from typing import TYPE_CHECKING, cast
 
@@ -159,6 +160,9 @@ def _get_deployment_registry() -> AdapterRegistry[DeploymentServiceProtocol]:
     )
 
 
+_deployment_discovery_lock = threading.Lock()
+
+
 def get_deployment_adapter(
     adapter_key: str,
 ) -> DeploymentServiceProtocol | None:
@@ -169,10 +173,17 @@ def get_deployment_adapter(
     """
     registry = _get_deployment_registry()
     if not registry.is_discovered:
-        registry.discover(config_dir=_resolve_adapter_config_dir())
+        with _deployment_discovery_lock:
+            # Double-check after acquiring lock to avoid redundant discovery.
+            if not registry.is_discovered:
+                registry.discover(config_dir=_resolve_adapter_config_dir())
     instance = registry.get_instance(adapter_key, factory=lambda adapter_class: adapter_class())
     if instance is None:
-        logger.debug(f"No deployment adapter found for key='{adapter_key}'. Available keys: {registry.list_keys()}")
+        logger.warning(
+            f"No deployment adapter found for key='{adapter_key}'. "
+            f"Available keys: {registry.list_keys()}. "
+            f"Check your lfx.toml or adapter registration."
+        )
     return instance
 
 

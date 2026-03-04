@@ -13,10 +13,17 @@ class DummyEntryPointAdapter(DeploymentAdapterStub):
 
 
 class DummyTeardownAdapter(DeploymentAdapterStub):
-    teardown_calls = 0
+    """Adapter stub that tracks teardown calls via an external list.
+
+    Each test that uses this must provide its own ``teardown_log`` list
+    to avoid shared mutable class-level state across parallel tests.
+    """
+
+    def __init__(self, *, teardown_log: list[str] | None = None):
+        self._teardown_log = teardown_log if teardown_log is not None else []
 
     async def teardown(self):
-        type(self).teardown_calls += 1
+        self._teardown_log.append("teardown")
 
 
 pytestmark = pytest.mark.usefixtures("clean_adapter_globals")
@@ -50,32 +57,32 @@ def test_get_instance_returns_none_for_unknown_key():
 
 @pytest.mark.asyncio
 async def test_teardown_instances_clears_cache_and_recreates():
-    DummyTeardownAdapter.teardown_calls = 0
+    teardown_log: list[str] = []
     registry = make_deployment_adapter_registry()
     registry.register_class("local", DummyTeardownAdapter)
 
-    first = registry.get_instance("local", factory=lambda adapter_class: adapter_class())
+    first = registry.get_instance("local", factory=lambda cls: cls(teardown_log=teardown_log))
     assert first is not None
 
     await registry.teardown_instances()
 
-    second = registry.get_instance("local", factory=lambda adapter_class: adapter_class())
+    second = registry.get_instance("local", factory=lambda cls: cls(teardown_log=teardown_log))
     assert second is not None
     assert second is not first
-    assert DummyTeardownAdapter.teardown_calls == 1
+    assert len(teardown_log) == 1
 
 
 @pytest.mark.asyncio
 async def test_teardown_all_adapter_registries_clears_instances():
-    DummyTeardownAdapter.teardown_calls = 0
+    teardown_log: list[str] = []
     registry = make_deployment_adapter_registry()
     registry.register_class("local", DummyTeardownAdapter)
-    registry.get_instance("local", factory=lambda adapter_class: adapter_class())
+    registry.get_instance("local", factory=lambda cls: cls(teardown_log=teardown_log))
 
     await adapter_registry_mod.teardown_all_adapter_registries()
 
     assert not registry.has_cached_instances()
-    assert DummyTeardownAdapter.teardown_calls == 1
+    assert len(teardown_log) == 1
 
 
 def test_get_deployment_adapter_returns_singleton_instance():
@@ -205,3 +212,46 @@ async def test_adapter_without_teardown_does_not_raise():
     await registry.teardown_instances()
 
     assert not registry.has_cached_instances()
+
+
+@pytest.mark.asyncio
+async def test_reset_registries_clears_global_state():
+    """_reset_registries tears down instances and clears the global registry dict."""
+    teardown_log: list[str] = []
+    registry = make_deployment_adapter_registry()
+    registry.register_class("local", DummyTeardownAdapter)
+    registry.get_instance("local", factory=lambda cls: cls(teardown_log=teardown_log))
+
+    await adapter_registry_mod._reset_registries()
+
+    assert len(teardown_log) == 1
+    # A new call should create a fresh registry (not the same object).
+    new_registry = make_deployment_adapter_registry()
+    assert new_registry is not registry
+    assert new_registry.list_keys() == []
+
+
+def test_get_deployment_adapter_triggers_auto_discovery(tmp_path, monkeypatch):
+    """get_deployment_adapter should auto-discover from config on first call."""
+    from lfx.services.deps import get_deployment_adapter
+
+    (tmp_path / "lfx.toml").write_text(
+        f"""
+[deployment.adapters]
+local = "{__name__}:DummyEntryPointAdapter"
+"""
+    )
+    monkeypatch.setattr(
+        "lfx.services.deps._resolve_adapter_config_dir",
+        lambda: tmp_path,
+    )
+
+    # Registry should not be discovered yet.
+    registry = make_deployment_adapter_registry()
+    assert not registry.is_discovered
+
+    result = get_deployment_adapter("local")
+
+    assert registry.is_discovered
+    assert result is not None
+    assert isinstance(result, DummyEntryPointAdapter)
