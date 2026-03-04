@@ -31,20 +31,17 @@ Use them when you need to choose between several adapters at runtime (for exampl
 
 ### Core API
 
-The public deployment adapter API is the typed helper in `lfx.services.deps`:
+Each adapter type exposes a typed accessor in `lfx.services.deps`:
 
 ```python
 from lfx.services.deps import get_deployment_adapter
 
-adapter = get_deployment_adapter("local")
+adapter = get_deployment_adapter("local")   # returns None if key is unknown
 ```
 
-To resolve singleton adapter instances managed by the registry:
-
-`get_instance`/`get_deployment_adapter` create adapters lazily and cache one instance per adapter key.
+Adapters are created lazily on first access and cached as singletons — subsequent calls with the same key return the same instance.
 Discovery config is resolved internally (settings `config_dir` when available, otherwise current working directory).
-Use this when you want shared, long-lived adapter objects instead of per-call construction.
-The key (`"local"` above) is an example, not a built-in requirement.
+The key (`"local"` above) is an example; adapter keys are fully user-defined.
 
 ### Registering Adapters
 
@@ -59,8 +56,7 @@ class LocalAdapter:
     ...
 ```
 
-The decorator registers immediately on the `AdapterRegistry` singleton (same pattern as `@register_service` for top-level services).
-It preserves the concrete class type (uses a `TypeVar` internally).
+The decorator registers the class immediately at import time (same pattern as `@register_service` for top-level services).
 Defaults to `override=True`; set `override=False` to keep an existing key untouched.
 `"local"` is only an example adapter key.
 
@@ -108,19 +104,18 @@ Effective precedence (what wins when multiple sources register the same key):
 
 Config files > Decorators > Entry points
 
-Config files are deployment-time overrides and win by default.
+Config files are intended as deploy-time overrides and take highest priority.
 
 Discovery is **one-time per registry instance**. Subsequent calls to `discover()` are no-ops.
 
-`entry_point_group` and `config_section_path` are derived from the `AdapterType` value by convention (`lfx.<type>.adapters` and `(<type>, "adapters")`) so they rarely need to be specified explicitly.
+Entry-point groups and config section paths are derived from the `AdapterType` value automatically (e.g. `lfx.deployment.adapters` and `[deployment.adapters]`).
 
 ### Adapter Instance Lifecycle
 
-- Class discovery and registration are separate from instance creation
-- Instance creation is lazy (`get_instance` on first access)
-- One instance is cached per adapter key
-- Registry teardown (`teardown_instances`) clears and tears down cached adapter singletons
-- Global teardown (`teardown_all_adapter_registries`) is invoked during service manager shutdown
+- Adapter **classes** are discovered and registered first; **instances** are created separately
+- Instances are created lazily on first `get_<type>_adapter()` call
+- One instance is cached per adapter key (singleton per key)
+- All cached adapter instances are torn down automatically during service manager shutdown
 
 ### Recommended File Structure
 
@@ -137,7 +132,7 @@ lfx/services/
       schema.py
 ```
 
-This keeps top-level services focused on DI-managed host services while adapter implementations live under explicit adapter registries.
+This keeps top-level services (DI-managed singletons) separate from adapter implementations (keyed registries with multiple implementations per type).
 
 ### Error Handling Behavior
 
@@ -146,25 +141,9 @@ This keeps top-level services focused on DI-managed host services while adapter 
 - Malformed TOML is ignored with warning logs
 - Missing configured sections are treated as empty configuration
 
-### Registry Identity and Uniqueness
+### Registry Uniqueness
 
-- Exactly one registry can exist per `AdapterType`
-- Re-requesting the same `AdapterType` with conflicting entry-point/config parameters raises a conflict error
-
-### Integration Pattern in a Parent Service
-
-```python
-from lfx.services.deps import get_deployment_adapter
-
-adapter = get_deployment_adapter("local")
-if adapter is None:
-    raise ValueError("Unknown deployment adapter")
-```
-
-The host service remains the only object registered in the top-level service manager for its `ServiceType`.
-Adapters are discovered and selected inside that host service; they do not replace the host service itself.
-
-If your architecture does not require a host service, consumers may resolve adapters directly from the registry and still preserve singleton lifecycle semantics.
+- Exactly one registry exists per `AdapterType`
 
 ## Quick Start
 
