@@ -13,6 +13,7 @@ from langflow.api.utils.core import (
     CurrentActiveMCPUser,
     CurrentActiveUser,
     DbSession,
+    DbSessionReadOnly,
     EventDeliveryType,
     ValidatedFileName,
     build_and_cache_graph_from_data,
@@ -50,6 +51,7 @@ __all__ = [
     # Type annotations
     "CurrentActiveUser",
     "DbSession",
+    "DbSessionReadOnly",
     # Enums
     "EventDeliveryType",
     "ValidatedFileName",

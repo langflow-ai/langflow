@@ -393,7 +393,7 @@ describe("SidebarSegmentedNav", () => {
   });
 
   it("exports NAV_ITEMS correctly", () => {
-    expect(NAV_ITEMS).toHaveLength(6);
+    expect(NAV_ITEMS).toHaveLength(7);
     expect(NAV_ITEMS[0]).toEqual({
       id: "search",
       icon: "search",
@@ -413,6 +413,12 @@ describe("SidebarSegmentedNav", () => {
       tooltip: "Add Sticky Notes",
     });
     expect(NAV_ITEMS[5]).toEqual({
+      id: "versions",
+      icon: "History",
+      label: "Versions",
+      tooltip: "Version History",
+    });
+    expect(NAV_ITEMS[6]).toEqual({
       id: "traces",
       icon: "Activity",
       label: "Traces",

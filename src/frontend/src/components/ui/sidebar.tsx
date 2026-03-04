@@ -28,6 +28,7 @@ export type SidebarSection =
   | "components"
   | "bundles"
   | "mcp"
+  | "versions"
   | "add_note"
   | "traces";
 
@@ -61,6 +62,7 @@ function getInitialSidebarSection(
   ) {
     return cookieValue;
   }
+  // "versions" is not persisted — always start on a content section after refresh
   return defaultSection;
 }
 

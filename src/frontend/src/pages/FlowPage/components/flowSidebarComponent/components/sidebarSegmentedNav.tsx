@@ -54,6 +54,12 @@ export const NAV_ITEMS: NavItem[] = [
     tooltip: "Add Sticky Notes",
   },
   {
+    id: "versions",
+    icon: "History",
+    label: "Versions",
+    tooltip: "Version History",
+  },
+  {
     id: "traces",
     icon: "Activity",
     label: "Traces",
