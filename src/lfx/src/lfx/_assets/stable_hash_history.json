@@ -1776,7 +1776,7 @@
   },
   "GuardrailValidator": {
     "versions": {
-      "0.3.0": "48e23a3e0848"
+      "0.3.0": "70918cbb8522"
     }
   },
   "LiteLLMProxyModel": {
