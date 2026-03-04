@@ -1,3 +1,34 @@
+"""Deployment API schemas.
+
+Identifier domains
+------------------
+This module draws a strict boundary between two identifier domains:
+
+* **Langflow-managed (UUID)** -- database primary keys owned by the Langflow
+  backend.  All ``id``, ``provider_id``, ``project_id``, and ``deployment_id``
+  fields on API request/response schemas are UUIDs that reference rows in the
+  Langflow database.
+
+* **Provider-owned (str)** -- opaque references assigned by the external
+  deployment provider.  These appear as ``reference_id``, ``config_id``,
+  ``resource_key``, ``execution_id``, and inside ``provider_*`` payload dicts.
+  They are typed as ``str`` because the provider may use any format.
+
+The ``provider_data`` / ``provider_result`` / ``provider_spec`` /
+``provider_input`` dicts are transparent pass-through containers whose
+contents are entirely defined by the provider adapter.
+
+Service-layer schema reuse
+--------------------------
+A small number of service-layer schemas are imported directly because they
+carry no identifier fields and their shapes are stable:
+
+* ``BaseDeploymentData`` -- name, description, type, provider_spec
+* ``BaseDeploymentDataUpdate`` -- name, description
+* ``DeploymentConfig`` -- config payload (name, description, env vars, provider config)
+* ``DeploymentType`` -- shared vocabulary enum
+"""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -7,11 +38,8 @@ from uuid import UUID
 from lfx.services.deployment.schema import (
     BaseDeploymentData,
     BaseDeploymentDataUpdate,
-    ConfigDeploymentBindingUpdate,
-    ConfigItem,
-    DeploymentOperationResult,
+    DeploymentConfig,
     DeploymentType,
-    IdLike,
 )
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -46,6 +74,11 @@ def _normalize_optional_str(value: str | None) -> str | None:
     return normalized
 
 
+def validate_flow_version_id_query(values: list[str]) -> list[str]:
+    """Validate and deduplicate flow_version_ids received as query parameters."""
+    return _validate_str_id_list(values, field_name="flow_version_ids")
+
+
 # ---------------------------------------------------------------------------
 # Provider sub-resource schemas
 # ---------------------------------------------------------------------------
@@ -77,10 +110,10 @@ class ProviderAccountCreate(BaseModel):
 class ProviderAccountUpdate(BaseModel):
     model_config = {"extra": "forbid"}
 
-    account_id: str | None = Field(default=None, min_length=1, description="Provider tenant/organization identifier.")
-    provider_key: str | None = Field(default=None, min_length=1, description="Deployment provider key.")
-    backend_url: str | None = Field(default=None, min_length=1, description="Deployment provider backend URL.")
-    api_key: str | None = Field(default=None, min_length=1, description="Deployment provider API key.")
+    account_id: str | None = Field(default=None, description="Provider tenant/organization identifier.")
+    provider_key: str | None = Field(default=None, description="Deployment provider key.")
+    backend_url: str | None = Field(default=None, description="Deployment provider backend URL.")
+    api_key: str | None = Field(default=None, description="Deployment provider API key.")
 
     @field_validator("account_id", "provider_key", "backend_url", "api_key")
     @classmethod
@@ -96,8 +129,8 @@ class ProviderAccountUpdate(BaseModel):
 
 
 class ProviderAccountResponse(BaseModel):
-    id: UUID
-    account_id: str | None
+    id: UUID  # Langflow DB
+    account_id: str | None  # provider-owned tenant/org identifier
     provider_key: str
     backend_url: str
     registered_at: datetime | None
@@ -117,12 +150,12 @@ class DeploymentTypeListResponse(BaseModel):
 class DeploymentSummary(BaseModel):
     """Compact deployment representation used for list items and duplicate results."""
 
-    id: IdLike
+    id: UUID  # Langflow DB
     name: str
     type: DeploymentType
     created_at: datetime | None = None
     updated_at: datetime | None = None
-    provider_data: dict[str, Any] | None = None
+    provider_data: dict[str, Any] | None = None  # provider-owned passthrough
 
 
 class DeploymentGetResponse(DeploymentSummary):
@@ -134,8 +167,8 @@ class DeploymentGetResponse(DeploymentSummary):
 class DeploymentListItem(DeploymentSummary):
     """Extended deployment summary with list-specific fields."""
 
-    resource_key: str
-    attached_count: int = Field(default=0, ge=0)
+    resource_key: str = Field(description="Provider-owned stable resource identifier.")
+    attached_count: int = Field(default=0, ge=0, description="Number of flow versions attached to this deployment.")
 
 
 class DeploymentListResponse(BaseModel):
@@ -154,31 +187,34 @@ class ProviderAccountListResponse(BaseModel):
 
 
 class DeploymentCreateResponse(BaseModel):
-    """API response for deployment creation, wrapping service-layer fields."""
+    """API response for deployment creation."""
 
-    id: IdLike
+    id: UUID  # Langflow DB
     name: str
     description: str = ""
     type: DeploymentType | None = None
-    provider_result: dict[str, Any] | None = None
+    provider_result: dict[str, Any] | None = None  # provider-owned passthrough
 
 
 class DeploymentUpdateResponse(BaseModel):
     """API response for deployment update."""
 
-    id: IdLike
-    provider_result: dict[str, Any] | None = None
+    id: UUID  # Langflow DB
+    provider_result: dict[str, Any] | None = None  # provider-owned passthrough
 
 
 class DeploymentStatusResponse(BaseModel):
     """API response for deployment status/health."""
 
-    id: IdLike
-    provider_data: dict[str, Any] | None = None
+    id: UUID  # Langflow DB
+    provider_data: dict[str, Any] | None = None  # provider-owned passthrough
 
 
-class RedeployResponse(DeploymentOperationResult):
-    pass
+class RedeployResponse(BaseModel):
+    """API response for redeployment."""
+
+    id: UUID  # Langflow DB
+    provider_result: dict[str, Any] | None = None  # provider-owned passthrough
 
 
 class DeploymentDuplicateResponse(DeploymentSummary):
@@ -190,7 +226,13 @@ class DeploymentDuplicateParams(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    deployment_type: DeploymentType
+    name: str | None = Field(default=None, description="Name for the duplicated deployment. Auto-generated if omitted.")
+    description: str | None = Field(default=None, description="Description for the duplicated deployment.")
+
+    @field_validator("name")
+    @classmethod
+    def normalize_name(cls, value: str | None) -> str | None:
+        return _normalize_optional_str(value)
 
 
 # ---------------------------------------------------------------------------
@@ -253,6 +295,70 @@ class FlowVersionsPatch(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Deployment config sub-resource schemas (API-owned)
+# ---------------------------------------------------------------------------
+
+
+class DeploymentConfigCreate(BaseModel):
+    """Config input for deployment creation.
+
+    Exactly one of ``reference_id`` or ``raw_payload`` must be provided.
+    """
+
+    model_config = {"extra": "forbid"}
+
+    reference_id: str | None = Field(
+        default=None,
+        min_length=1,
+        description="Provider-owned config reference id to bind to the deployment.",
+    )
+    raw_payload: DeploymentConfig | None = Field(
+        default=None,
+        description="Config payload to create and bind to the deployment.",
+    )
+
+    @field_validator("reference_id")
+    @classmethod
+    def normalize_reference_id(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        if not normalized:
+            msg = "reference_id must not be empty or whitespace."
+            raise ValueError(msg)
+        return normalized
+
+    @model_validator(mode="after")
+    def validate_exactly_one(self) -> DeploymentConfigCreate:
+        if (self.reference_id is None) == (self.raw_payload is None):
+            msg = "Exactly one of 'reference_id' or 'raw_payload' must be provided."
+            raise ValueError(msg)
+        return self
+
+
+class DeploymentConfigBindingUpdate(BaseModel):
+    """Config binding patch for an existing deployment."""
+
+    model_config = {"extra": "forbid"}
+
+    config_id: str | None = Field(
+        default=None,
+        description="Provider-owned config id to bind to the deployment. Use null to unbind.",
+    )
+
+    @field_validator("config_id")
+    @classmethod
+    def normalize_config_id(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        if not normalized:
+            msg = "config_id must not be empty or whitespace."
+            raise ValueError(msg)
+        return normalized
+
+
+# ---------------------------------------------------------------------------
 # Deployment create / update request schemas
 # ---------------------------------------------------------------------------
 
@@ -260,28 +366,30 @@ class FlowVersionsPatch(BaseModel):
 class DeploymentCreateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
-    provider_id: UUID = Field(description="Deployment provider account id.")
-    spec: BaseDeploymentData = Field(description="Deployment metadata.")
+    provider_id: UUID = Field(description="Langflow DB provider account id.")
+    spec: BaseDeploymentData = Field(description="Deployment metadata (service-layer schema, no ID fields).")
     project_id: UUID | None = Field(
         default=None,
-        description="Langflow Project id to persist the deployment under. Defaults to user's Starter Project.",
+        description="Langflow DB project id to persist the deployment under. Defaults to user's Starter Project.",
     )
     flow_version_ids: FlowVersionsAttach | None = Field(
         default=None,
         description="Flow version ids to attach to the deployment.",
     )
-    config: ConfigItem | None = Field(default=None, description="Deployment configuration.")
+    config: DeploymentConfigCreate | None = Field(default=None, description="Deployment configuration.")
 
 
 class DeploymentUpdateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
-    spec: BaseDeploymentDataUpdate | None = Field(default=None, description="Deployment metadata updates.")
+    spec: BaseDeploymentDataUpdate | None = Field(
+        default=None, description="Deployment metadata updates (service-layer schema, no ID fields)."
+    )
     flow_version_ids: FlowVersionsPatch | None = Field(
         default=None,
         description="Flow version attach/detach operations.",
     )
-    config: ConfigDeploymentBindingUpdate | None = Field(default=None, description="Deployment configuration update.")
+    config: DeploymentConfigBindingUpdate | None = Field(default=None, description="Deployment configuration update.")
 
     @model_validator(mode="after")
     def ensure_any_field_provided(self) -> DeploymentUpdateRequest:
@@ -299,17 +407,20 @@ class DeploymentUpdateRequest(BaseModel):
 class ExecutionCreateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
-    provider_id: UUID = Field(description="Deployment provider account id.")
-    deployment_id: IdLike
-    provider_input: dict[str, Any] | None = None
+    provider_id: UUID = Field(description="Langflow DB provider account id.")
+    deployment_id: UUID = Field(description="Langflow DB deployment id.")
+    provider_input: dict[str, Any] | None = Field(
+        default=None,
+        description="Provider-owned execution input payload.",
+    )
 
 
 class _ExecutionResponseBase(BaseModel):
     """Shared fields for execution responses."""
 
-    execution_id: str
-    deployment_id: IdLike
-    provider_result: dict[str, Any] | None = None
+    execution_id: str  # provider-owned opaque identifier
+    deployment_id: UUID  # Langflow DB
+    provider_result: dict[str, Any] | None = None  # provider-owned passthrough
 
 
 class ExecutionCreateResponse(_ExecutionResponseBase):

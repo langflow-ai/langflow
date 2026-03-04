@@ -1,4 +1,5 @@
 # ruff: noqa: ARG001
+# TODO: Remove noqa once endpoint stubs are replaced with real implementations.
 from __future__ import annotations
 
 from typing import Annotated
@@ -29,6 +30,7 @@ from langflow.api.v1.schemas.deployments import (
     ProviderAccountResponse,
     ProviderAccountUpdate,
     RedeployResponse,
+    validate_flow_version_id_query,
 )
 
 router = APIRouter(prefix="/deployments", tags=["Deployments"])
@@ -38,6 +40,7 @@ ProviderIdQuery = Annotated[
     UUID,
     Query(description="Deployment provider account id."),
 ]
+
 
 # API provider-context contract matrix:
 # - Query provider_id: list/provider-capability/runtime-status GET endpoints.
@@ -158,6 +161,8 @@ async def list_deployments(
     ] = None,
 ):
     """List deployments for a provider account."""
+    if flow_version_ids is not None:
+        flow_version_ids = validate_flow_version_id_query(flow_version_ids)
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
@@ -178,7 +183,7 @@ async def create_deployment_execution(
 
 @router.get("/executions/{execution_id}", response_model=ExecutionStatusResponse)
 async def get_deployment_execution(
-    execution_id: str,
+    execution_id: UUID,
     provider_id: ProviderIdQuery,
     db: DbSessionReadOnly,
     user: CurrentActiveUser,
@@ -194,7 +199,7 @@ async def get_deployment_execution(
 
 @router.get("/{deployment_id}", response_model=DeploymentGetResponse)
 async def get_deployment(
-    deployment_id: str,
+    deployment_id: UUID,
     user: CurrentActiveUser,
     db: DbSessionReadOnly,
 ):
@@ -207,7 +212,7 @@ async def get_deployment(
     response_model=DeploymentUpdateResponse,
 )
 async def update_deployment(
-    deployment_id: str,
+    deployment_id: UUID,
     payload: DeploymentUpdateRequest,
     db: DbSession,
     user: CurrentActiveUser,
@@ -218,7 +223,7 @@ async def update_deployment(
 
 @router.delete("/{deployment_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_deployment(
-    deployment_id: str,
+    deployment_id: UUID,
     db: DbSession,
     user: CurrentActiveUser,
 ):
@@ -229,10 +234,9 @@ async def delete_deployment(
 @router.post(
     "/{deployment_id}/redeploy",
     response_model=RedeployResponse,
-    status_code=status.HTTP_201_CREATED,
 )
 async def redeploy_deployment(
-    deployment_id: str,
+    deployment_id: UUID,
     db: DbSession,
     user: CurrentActiveUser,
 ):
@@ -246,7 +250,7 @@ async def redeploy_deployment(
     status_code=status.HTTP_201_CREATED,
 )
 async def duplicate_deployment(
-    deployment_id: str,
+    deployment_id: UUID,
     payload: DeploymentDuplicateParams,
     db: DbSession,
     user: CurrentActiveUser,
@@ -260,7 +264,7 @@ async def duplicate_deployment(
     response_model=DeploymentStatusResponse,
 )
 async def get_deployment_status(
-    deployment_id: str,
+    deployment_id: UUID,
     db: DbSessionReadOnly,
     user: CurrentActiveUser,
 ):
