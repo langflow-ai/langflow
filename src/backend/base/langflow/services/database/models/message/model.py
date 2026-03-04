@@ -61,7 +61,8 @@ class MessageBase(SQLModel):
     @classmethod
     def from_message(cls, message: "Message", flow_id: str | UUID | None = None):
         if message.text is None or not message.sender or not message.sender_name:
-            raise ValueError("The message does not have the required fields (text, sender, sender_name).")
+            msg = "The message does not have the required fields (text, sender, sender_name)."
+            raise ValueError(msg)
 
         if message.files:
             image_paths = []
@@ -108,7 +109,8 @@ class MessageBase(SQLModel):
             try:
                 flow_id = UUID(flow_id)
             except ValueError as exc:
-                raise ValueError(f"Flow ID {flow_id} is not a valid UUID") from exc
+                msg = f"Flow ID {flow_id} is not a valid UUID"
+                raise ValueError(msg) from exc
 
         return cls(
             sender=message.sender,

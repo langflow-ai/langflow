@@ -1151,7 +1151,9 @@ class TestMessageResponseFromMessage:
 
 class TestSanitizeJson:
     """Unit tests for MessageTable._sanitize_json and its integration with
-    the properties / content_blocks validators."""
+
+    the properties / content_blocks validators.
+    """
 
     # ------------------------------------------------------------------
     # Direct _sanitize_json unit tests
@@ -1211,7 +1213,8 @@ class TestSanitizeJson:
 
         assert MessageTable._sanitize_json("hello") == "hello"
         assert MessageTable._sanitize_json(42) == 42
-        assert MessageTable._sanitize_json(True) is True
+        bool_true = True
+        assert MessageTable._sanitize_json(bool_true) is True
         assert MessageTable._sanitize_json(None) is None
 
     def test_sanitize_decimal_nan(self):
@@ -1289,9 +1292,11 @@ class TestSanitizeJson:
         result = MessageTable.from_message(message, flow_id=uuid4())
 
         # After from_message + validator, no NaN should survive
+        import math
+
         props_dict = result.properties if isinstance(result.properties, dict) else result.properties.model_dump()
         for v in props_dict.values():
-            assert v is None or v != float("nan")
+            assert v is None or not (isinstance(v, float) and math.isnan(v))
 
     def test_from_message_with_inf_in_content_blocks(self):
         """from_message sanitizes Infinity inside content_blocks.
