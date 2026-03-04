@@ -1,4 +1,5 @@
 import json
+import math
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
@@ -75,8 +76,6 @@ class MessageBase(SQLModel):
                             image_paths.append(file.path)
                     else:
                         image_paths.append(file.path)
-                else:
-                    image_paths.append(file.path)
 
             if image_paths:
                 message.files = image_paths
@@ -126,7 +125,7 @@ class MessageBase(SQLModel):
         )
 
 
-class MessageTable(MessageBase, table=True):
+class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
     model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)
 
     __tablename__ = "message"
@@ -135,12 +134,12 @@ class MessageTable(MessageBase, table=True):
     flow_id: UUID | None = Field(default=None)
 
     files: list[str] = Field(sa_column=Column(JSON))
-    properties: dict | Properties = Field(
+    properties: dict | Properties = Field(  # type: ignore[assignment]
         default_factory=lambda: Properties().model_dump(),
         sa_column=Column(JSON),
     )
     category: str = Field(sa_column=Column(Text))
-    content_blocks: list[dict | ContentBlock] = Field(
+    content_blocks: list[dict | ContentBlock] = Field(  # type: ignore[assignment]
         default_factory=list,
         sa_column=Column(JSON),
     )
@@ -156,8 +155,6 @@ class MessageTable(MessageBase, table=True):
 
     @staticmethod
     def _sanitize_json(value):
-        import math
-
         if isinstance(value, float):
             if math.isnan(value) or math.isinf(value):
                 return None

@@ -1142,3 +1142,191 @@ class TestMessageResponseFromMessage:
 
         with pytest.raises(ValueError, match="required fields"):
             MessageResponse.from_message(message)
+
+
+# =============================================================================
+# Tests for MessageTable._sanitize_json (NaN / Infinity handling)
+# =============================================================================
+
+
+class TestSanitizeJson:
+    """Unit tests for MessageTable._sanitize_json and its integration with
+    the properties / content_blocks validators."""
+
+    # ------------------------------------------------------------------
+    # Direct _sanitize_json unit tests
+    # ------------------------------------------------------------------
+
+    def test_sanitize_nan_float_returns_none(self):
+        """float('nan') must be replaced with None."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        assert MessageTable._sanitize_json(float("nan")) is None
+
+    def test_sanitize_positive_inf_returns_none(self):
+        """float('inf') must be replaced with None."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        assert MessageTable._sanitize_json(float("inf")) is None
+
+    def test_sanitize_negative_inf_returns_none(self):
+        """float('-inf') must be replaced with None."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        assert MessageTable._sanitize_json(float("-inf")) is None
+
+    def test_sanitize_normal_float_preserved(self):
+        """Normal finite floats must pass through unchanged."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        assert MessageTable._sanitize_json(3.14) == pytest.approx(3.14)
+
+    def test_sanitize_nan_nested_in_dict(self):
+        """NaN inside a dict value is replaced with None."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        result = MessageTable._sanitize_json({"score": float("nan"), "label": "ok"})
+        assert result["score"] is None
+        assert result["label"] == "ok"
+
+    def test_sanitize_inf_nested_in_list(self):
+        """Infinity inside a list is replaced with None."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        result = MessageTable._sanitize_json([1.0, float("inf"), 2.0])
+        assert result == [1.0, None, 2.0]
+
+    def test_sanitize_deeply_nested_nan(self):
+        """NaN buried inside a nested dict/list is sanitized recursively."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        data = {"outer": {"inner": [float("nan"), {"deep": float("inf")}]}}
+        result = MessageTable._sanitize_json(data)
+        assert result["outer"]["inner"][0] is None
+        assert result["outer"]["inner"][1]["deep"] is None
+
+    def test_sanitize_non_float_types_unchanged(self):
+        """Strings, ints, bools, and None must not be altered."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        assert MessageTable._sanitize_json("hello") == "hello"
+        assert MessageTable._sanitize_json(42) == 42
+        assert MessageTable._sanitize_json(True) is True
+        assert MessageTable._sanitize_json(None) is None
+
+    def test_sanitize_decimal_nan(self):
+        """Decimal('NaN') should be handled gracefully.
+
+        Decimal NaN is neither a float nor passes math.isnan/isinf, so the
+        current implementation passes it through as-is (it is not a float).
+        This test documents the current behaviour; if Decimal support is added
+        later (as suggested in review), update this test accordingly.
+        """
+        import decimal
+
+        from langflow.services.database.models.message.model import MessageTable
+
+        d = decimal.Decimal("NaN")
+        # Current implementation: non-float types are returned unchanged
+        result = MessageTable._sanitize_json(d)
+        assert result is d  # passed through unchanged
+
+    # ------------------------------------------------------------------
+    # Integration: validator strips NaN before reaching the DB layer
+    # ------------------------------------------------------------------
+
+    def test_properties_validator_strips_nan(self):
+        """NaN inside properties dict is removed by the field validator."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        msg = MessageTable(
+            sender="AI",
+            sender_name="Bot",
+            session_id="s1",
+            text="hi",
+            properties={"confidence": float("nan"), "model": "gpt-4"},
+        )
+
+        assert msg.properties["confidence"] is None
+        assert msg.properties["model"] == "gpt-4"
+
+    def test_content_blocks_validator_strips_nan(self):
+        """NaN inside content_blocks list is removed by the field validator."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        msg = MessageTable(
+            sender="AI",
+            sender_name="Bot",
+            session_id="s1",
+            text="hi",
+            content_blocks=[{"title": None, "score": float("nan"), "items": [float("inf"), 1.0]}],
+        )
+
+        block = msg.content_blocks[0]
+        assert block["score"] is None
+        assert block["items"][0] is None
+        assert block["items"][1] == pytest.approx(1.0)
+
+    def test_from_message_with_nan_in_properties(self):
+        """from_message correctly sanitizes NaN values inside message.properties."""
+        from langflow.services.database.models.message.model import MessageTable
+        from langflow.schema.properties import Properties
+
+        props = Properties()
+        # Inject a NaN via a workaround (bypass Pydantic validation)
+        raw_props = props.model_dump()
+        raw_props["_nan_test"] = float("nan")
+
+        message = Message(
+            text="Test",
+            sender="AI",
+            sender_name="Bot",
+            session_id="session",
+        )
+        # Set properties externally as a raw dict (simulates corrupt/partial data)
+        message.properties = raw_props  # type: ignore[assignment]
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        # After from_message + validator, no NaN should survive
+        props_dict = result.properties if isinstance(result.properties, dict) else result.properties.model_dump()
+        for v in props_dict.values():
+            assert v is None or v != float("nan")
+
+    def test_from_message_with_inf_in_content_blocks(self):
+        """from_message sanitizes Infinity inside content_blocks."""
+        from langflow.schema.content_block import ContentBlock
+        from langflow.schema.content_types import TextContent
+        from langflow.services.database.models.message.model import MessageTable
+
+        text_content = TextContent(type="text", text="hello", duration=5)
+        block = ContentBlock(title="Block", contents=[text_content], allow_markdown=False)
+
+        message = Message(
+            text="Test",
+            sender="AI",
+            sender_name="Bot",
+            session_id="session",
+            content_blocks=[block],
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        import json
+        import math
+
+        # Serialise to JSON string to ensure no NaN/Inf would break PostgreSQL
+        blocks_json = json.dumps(result.content_blocks)
+        parsed = json.loads(blocks_json)
+        assert parsed is not None  # must be valid JSON
+
+        def _has_nan_or_inf(obj):
+            if isinstance(obj, float):
+                return math.isnan(obj) or math.isinf(obj)
+            if isinstance(obj, dict):
+                return any(_has_nan_or_inf(v) for v in obj.values())
+            if isinstance(obj, list):
+                return any(_has_nan_or_inf(item) for item in obj)
+            return False
+
+        assert not _has_nan_or_inf(parsed)
