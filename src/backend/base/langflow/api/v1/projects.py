@@ -38,10 +38,12 @@ from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
+    FlowReadNoData,
     Folder,
     FolderCreate,
     FolderRead,
     FolderReadWithFlows,
+    FolderReadWithFlowsNoData,
     FolderUpdate,
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
@@ -236,7 +238,11 @@ async def read_projects(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/{project_id}", response_model=FolderWithPaginatedFlows | FolderReadWithFlows, status_code=200)
+@router.get(
+    "/{project_id}",
+    response_model=FolderWithPaginatedFlows | FolderReadWithFlows | FolderReadWithFlowsNoData,
+    status_code=200,
+)
 async def read_project(
     *,
     session: DbSession,
@@ -248,6 +254,15 @@ async def read_project(
     is_component: bool = False,
     is_flow: bool = False,
     search: str = "",
+    exclude_flows_data: Annotated[
+        bool,
+        Query(
+            description=(
+                "When true, omits the flow graph data from each flow in the response. "
+                "Useful for listing flows or performing existence checks without fetching heavy graph data."
+            ),
+        ),
+    ] = False,
 ):
     try:
         project = (
@@ -292,6 +307,18 @@ async def read_project(
         # If no pagination requested, return all flows for the current user
         flows_from_current_user_in_project = [flow for flow in project.flows if flow.user_id == current_user.id]
         project.flows = flows_from_current_user_in_project
+
+        # When exclude_flows_data is requested, return flows without the heavy graph data field
+        if exclude_flows_data:
+            flows_no_data = [FlowReadNoData.model_validate(flow, from_attributes=True) for flow in project.flows]
+            return FolderReadWithFlowsNoData(
+                id=project.id,
+                name=project.name,
+                description=project.description,
+                parent_id=project.parent_id,
+                auth_settings=project.auth_settings,
+                flows=flows_no_data,
+            )
 
         # Convert to FolderReadWithFlows while session is still active to avoid detached instance errors
         return FolderReadWithFlows.model_validate(project, from_attributes=True)

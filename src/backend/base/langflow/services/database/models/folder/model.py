@@ -1,10 +1,11 @@
+from datetime import datetime
 from typing import Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import Text, UniqueConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
-from langflow.services.database.models.flow.model import Flow, FlowRead
+from langflow.services.database.models.flow.model import AccessTypeEnum, Flow, FlowRead
 from langflow.services.database.models.user.model import User
 
 
@@ -50,6 +51,37 @@ class FolderReadWithFlows(FolderBase):
     id: UUID
     parent_id: UUID | None = Field()
     flows: list[FlowRead] = Field(default=[])
+
+
+class FlowReadNoData(SQLModel):
+    """Lightweight flow read model that omits the heavy graph data field."""
+
+    id: UUID
+    name: str
+    description: str | None = None
+    folder_id: UUID | None = None
+    user_id: UUID | None = None
+    is_component: bool | None = None
+    updated_at: datetime | None = None
+    endpoint_name: str | None = None
+    tags: list[str] | None = None
+    access_type: AccessTypeEnum = AccessTypeEnum.PRIVATE
+    icon: str | None = None
+    icon_bg_color: str | None = None
+    gradient: str | None = None
+    locked: bool | None = None
+    mcp_enabled: bool | None = None
+    webhook: bool | None = None
+    action_name: str | None = None
+    action_description: str | None = None
+
+
+class FolderReadWithFlowsNoData(FolderBase):
+    """Folder read model whose flows list omits the heavy graph data field from each flow."""
+
+    id: UUID
+    parent_id: UUID | None = Field(default=None)
+    flows: list[FlowReadNoData] = Field(default=[])
 
 
 class FolderUpdate(SQLModel):
