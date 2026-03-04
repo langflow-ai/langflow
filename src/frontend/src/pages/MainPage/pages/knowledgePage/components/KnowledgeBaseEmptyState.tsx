@@ -13,6 +13,7 @@ const KnowledgeBaseEmptyState = ({
 }) => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [wasSubmitted, setWasSubmitted] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const queryClient = useQueryClient();
 
@@ -50,14 +51,16 @@ const KnowledgeBaseEmptyState = ({
         open={isUploadModalOpen}
         setOpen={(open) => {
           setIsUploadModalOpen(open);
-          if (!open) {
+          if (!open && wasSubmitted) {
             setIsCreating(true);
             queryClient.invalidateQueries({
               queryKey: ["useGetKnowledgeBases"],
             });
+            setWasSubmitted(false);
           }
         }}
         onSubmit={(data) => {
+          setWasSubmitted(true);
           setSuccessData({
             title: `Knowledge base "${data.sourceName}" created`,
           });
