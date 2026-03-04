@@ -153,9 +153,7 @@ class TestBaseExecutorApplyOutputHandlers:
     async def test_recurses_into_dicts(self, executor):
         """Test that dicts are recursed into."""
         handlers = executor._get_output_handlers()
-        result = await executor._apply_output_handlers(
-            {"key": "value", "count": 42}, handlers
-        )
+        result = await executor._apply_output_handlers({"key": "value", "count": 42}, handlers)
         assert result == {"key": "value", "count": 42}
 
     @pytest.mark.asyncio

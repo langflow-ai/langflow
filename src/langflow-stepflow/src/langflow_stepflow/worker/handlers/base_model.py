@@ -20,9 +20,7 @@ def _has_class_name_marker(value: Any) -> bool:
     if isinstance(value, dict) and "__class_name__" in value:
         return True
     if isinstance(value, list):
-        return any(
-            isinstance(item, dict) and "__class_name__" in item for item in value
-        )
+        return any(isinstance(item, dict) and "__class_name__" in item for item in value)
     return False
 
 
@@ -37,11 +35,7 @@ def _deserialize_base_model(obj: dict[str, Any]) -> Any:
         module = importlib.import_module(module_name)
         class_type = getattr(module, class_name)
 
-        obj_data = {
-            k: v
-            for k, v in obj.items()
-            if k not in ("__class_name__", "__module_name__")
-        }
+        obj_data = {k: v for k, v in obj.items() if k not in ("__class_name__", "__module_name__")}
 
         return class_type(**obj_data)
     except Exception:
@@ -59,9 +53,7 @@ class BaseModelInputHandler(InputHandler):
     def matches(self, *, template_field: dict[str, Any], value: Any) -> bool:
         return _has_class_name_marker(value)
 
-    async def prepare(
-        self, fields: dict[str, tuple[Any, dict[str, Any]]], context: Any
-    ) -> dict[str, Any]:
+    async def prepare(self, fields: dict[str, tuple[Any, dict[str, Any]]], context: Any) -> dict[str, Any]:
         result: dict[str, Any] = {}
 
         for key, (value, _template_field) in fields.items():
@@ -69,9 +61,7 @@ class BaseModelInputHandler(InputHandler):
                 result[key] = _deserialize_base_model(value)
             elif isinstance(value, list):
                 result[key] = [
-                    _deserialize_base_model(item)
-                    if isinstance(item, dict) and "__class_name__" in item
-                    else item
+                    _deserialize_base_model(item) if isinstance(item, dict) and "__class_name__" in item else item
                     for item in value
                 ]
 
@@ -82,10 +72,7 @@ def _is_secret_str_type(field_type: Any) -> bool:
     """Check if a field type is SecretStr or similar secret type."""
     try:
         if hasattr(field_type, "__origin__"):
-            if (
-                field_type.__origin__ is type(None)
-                or str(field_type.__origin__) == "typing.Union"
-            ):
+            if field_type.__origin__ is type(None) or str(field_type.__origin__) == "typing.Union":
                 if hasattr(field_type, "__args__"):
                     for arg in field_type.__args__:
                         if _is_secret_str_type(arg):
@@ -127,9 +114,7 @@ def _resolve_secret_value(secret_value: Any) -> Any:
     return resolved if resolved is not None else secret_value
 
 
-def _handle_special_pydantic_types(
-    obj: Any, serialized: dict[str, Any]
-) -> dict[str, Any]:
+def _handle_special_pydantic_types(obj: Any, serialized: dict[str, Any]) -> dict[str, Any]:
     """Handle SecretStr and other special Pydantic types during serialization."""
     try:
         if hasattr(obj, "model_fields"):
@@ -142,9 +127,7 @@ def _handle_special_pydantic_types(
                         if field_value is not None:
                             try:
                                 secret_value = field_value.get_secret_value()
-                                serialized[field_name] = _resolve_secret_value(
-                                    secret_value
-                                )
+                                serialized[field_name] = _resolve_secret_value(secret_value)
                             except Exception:
                                 pass
         elif hasattr(obj, "__fields__"):

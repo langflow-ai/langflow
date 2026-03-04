@@ -20,9 +20,7 @@ class KnownComponent:
     """A known core component mapping."""
 
     code_hash: str
-    module: (
-        str  # Full module path, e.g., "lfx.components.docling.DoclingInlineComponent"
-    )
+    module: str  # Full module path, e.g., "lfx.components.docling.DoclingInlineComponent"
     description: str = ""
     # Alternative module paths that are functionally equivalent
     # (e.g., custom_components variants)
@@ -97,9 +95,7 @@ KNOWN_COMPONENTS: dict[str, KnownComponent] = {
 }
 
 
-def lookup_known_component(
-    code_hash: str, module: str | None = None
-) -> KnownComponent | None:
+def lookup_known_component(code_hash: str, module: str | None = None) -> KnownComponent | None:
     """Look up a known component by code hash.
 
     Args:

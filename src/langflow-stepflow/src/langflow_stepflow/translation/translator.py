@@ -22,12 +22,8 @@ class WorkflowAnalysis:
     edge_count: int  # Total number of connections/edges between nodes
     # Map of component type names to their counts (e.g., {"ChatInput": 1, "OpenAI": 2})
     component_types: dict[str, int]
-    dependencies: dict[
-        str, list[str]
-    ]  # Map of node IDs to lists of their dependency node IDs
-    potential_issues: list[
-        str
-    ]  # List of warnings or potential problems detected during analysis
+    dependencies: dict[str, list[str]]  # Map of node IDs to lists of their dependency node IDs
+    potential_issues: list[str]  # List of warnings or potential problems detected during analysis
 
 
 class LangflowConverter:
@@ -156,9 +152,7 @@ class LangflowConverter:
 
             # Set variable schema
             if self.node_processor.variables:
-                builder.set_variables_schema(
-                    {"type": "object", "properties": self.node_processor.variables}
-                )
+                builder.set_variables_schema({"type": "object", "properties": self.node_processor.variables})
 
             # Build and return the flow
             flow = builder.build()
@@ -231,9 +225,7 @@ class LangflowConverter:
                 if not node.get("id"):
                     analysis["potential_issues"].append("Node missing ID")
                 if not node_data.get("node", {}).get("template"):
-                    analysis["potential_issues"].append(
-                        f"Node {node.get('id', 'unknown')} missing template"
-                    )
+                    analysis["potential_issues"].append(f"Node {node.get('id', 'unknown')} missing template")
 
             # Analyze dependencies
             dependencies = self.dependency_analyzer.build_dependency_graph(edges)
@@ -264,9 +256,7 @@ class LangflowConverter:
         # Fallback to generic name
         return "Converted Langflow Workflow"
 
-    def _build_field_mapping_from_edges(
-        self, edges: list[dict[str, Any]]
-    ) -> dict[str, dict[str, str]]:
+    def _build_field_mapping_from_edges(self, edges: list[dict[str, Any]]) -> dict[str, dict[str, str]]:
         """Build field mapping from edges for proper input handling.
 
         Args:
@@ -309,9 +299,7 @@ class LangflowConverter:
 
         return field_mapping
 
-    def _build_output_mapping_from_edges(
-        self, edges: list[dict[str, Any]]
-    ) -> dict[str, str]:
+    def _build_output_mapping_from_edges(self, edges: list[dict[str, Any]]) -> dict[str, str]:
         """Build output mapping from edges to track output usage per component.
 
         Args:
@@ -369,9 +357,7 @@ class LangflowConverter:
             node_output_refs: Mapping of node IDs to their output references
         """
         # Look for ChatOutput nodes first
-        chat_output_nodes = [
-            n for n in nodes if n.get("data", {}).get("type") == "ChatOutput"
-        ]
+        chat_output_nodes = [n for n in nodes if n.get("data", {}).get("type") == "ChatOutput"]
 
         if chat_output_nodes:
             # Use the first ChatOutput node
@@ -390,9 +376,7 @@ class LangflowConverter:
             # it's a simple passthrough
             if chat_output_nodes and len(nodes) <= 2:
                 # Simple ChatInput -> ChatOutput workflow
-                chat_input_nodes = [
-                    n for n in nodes if n.get("data", {}).get("type") == "ChatInput"
-                ]
+                chat_input_nodes = [n for n in nodes if n.get("data", {}).get("type") == "ChatInput"]
                 if chat_input_nodes:
                     builder.set_output(Value.input.add_path("message"))
                     return
@@ -423,9 +407,7 @@ class LangflowConverter:
             # Multiple leaf nodes - create structured output using incremental building
             for node_id, component_type in leaf_nodes:
                 # Generate a clean field name from the component type
-                field_name = (
-                    component_type.lower().replace("component", "").replace("_", "")
-                )
+                field_name = component_type.lower().replace("component", "").replace("_", "")
                 if not field_name:
                     field_name = node_id.lower().replace("-", "_")
 

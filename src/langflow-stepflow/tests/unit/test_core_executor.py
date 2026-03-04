@@ -120,9 +120,7 @@ class TestCoreExecutorErrors:
             "input": {},
         }
         with pytest.raises(ExecutionError, match="Failed to import module"):
-            await executor.execute(
-                "nonexistent/module/path/ClassName", input_data, mock_context
-            )
+            await executor.execute("nonexistent/module/path/ClassName", input_data, mock_context)
 
     @pytest.mark.asyncio
     async def test_execute_class_not_found(self, executor, mock_context):

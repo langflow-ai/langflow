@@ -5,9 +5,7 @@ from typing import Any
 from stepflow_py.worker import StepflowContext
 
 
-async def _resolve_step_references(
-    inputs: dict[str, Any], context: StepflowContext
-) -> dict[str, Any]:
+async def _resolve_step_references(inputs: dict[str, Any], context: StepflowContext) -> dict[str, Any]:
     """Resolve any step references in inputs to actual values.
 
     Args:
@@ -34,9 +32,7 @@ async def _resolve_step_references(
     return resolved
 
 
-async def component_tool_executor(
-    input_data: dict[str, Any], context: StepflowContext
-) -> dict[str, Any]:
+async def component_tool_executor(input_data: dict[str, Any], context: StepflowContext) -> dict[str, Any]:
     """Create a tool wrapper from Langflow component code and inputs.
 
     This component takes a Langflow component's code/JSON and static inputs,

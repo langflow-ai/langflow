@@ -1,13 +1,13 @@
 """Tests for Stepflow-level tweaks functionality."""
 
 import pytest
+from tests.helpers.tweaks_builder import TweaksBuilder
 
 from langflow_stepflow.translation.stepflow_tweaks import (
     apply_stepflow_tweaks_to_dict,
     convert_tweaks_to_overrides,
 )
 from langflow_stepflow.translation.translator import LangflowConverter
-from tests.helpers.tweaks_builder import TweaksBuilder
 
 
 class TestStepflowTweaks:
@@ -75,12 +75,7 @@ class TestStepflowTweaksIntegration:
         from pathlib import Path
 
         converter = LangflowConverter()
-        fixture_path = (
-            Path(__file__).parent.parent
-            / "fixtures"
-            / "langflow"
-            / "basic_prompting.json"
-        )
+        fixture_path = Path(__file__).parent.parent / "fixtures" / "langflow" / "basic_prompting.json"
 
         if fixture_path.exists():
             with open(fixture_path) as f:
@@ -107,15 +102,12 @@ class TestStepflowTweaksIntegration:
         langflow_step = None
         for step in modified_dict["steps"]:
             if step["id"] == "langflow_LanguageModelComponent-kBOja" and (
-                step["component"] == "/langflow/custom_code"
-                or step["component"].startswith("/langflow/core/")
+                step["component"] == "/langflow/custom_code" or step["component"].startswith("/langflow/core/")
             ):
                 langflow_step = step
                 break
 
-        assert langflow_step is not None, (
-            "LanguageModelComponent executor step not found"
-        )
+        assert langflow_step is not None, "LanguageModelComponent executor step not found"
 
         # Verify tweaks were applied
         input_section = langflow_step.get("input", {}).get("input", {})
@@ -223,9 +215,7 @@ class TestTweaksBuilder:
         assert "MISSING_API_KEY" in builder.missing_env_vars
 
         # Should raise error on build
-        with pytest.raises(
-            ValueError, match="Missing required environment variables: MISSING_API_KEY"
-        ):
+        with pytest.raises(ValueError, match="Missing required environment variables: MISSING_API_KEY"):
             builder.build()
 
     def test_build_or_skip_with_missing_env_vars(self, monkeypatch):
@@ -246,11 +236,7 @@ class TestTweaksBuilder:
         """Test that build_or_skip works normally when all env vars are present."""
         monkeypatch.setenv("PRESENT_VAR", "test_value")
 
-        tweaks = (
-            TweaksBuilder()
-            .add_env_tweak("Component-123", "field", "PRESENT_VAR")
-            .build_or_skip()
-        )
+        tweaks = TweaksBuilder().add_env_tweak("Component-123", "field", "PRESENT_VAR").build_or_skip()
 
         expected = {"Component-123": {"field": "test_value"}}
 

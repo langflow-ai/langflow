@@ -72,9 +72,7 @@ class SimpleTestComponent(Component):
                     "required": False,
                 }
             },
-            "outputs": [
-                {"name": "result", "method": "process_text", "types": ["Message"]}
-            ],
+            "outputs": [{"name": "result", "method": "process_text", "types": ["Message"]}],
             "selected_output": "result",
         }
 
@@ -155,16 +153,12 @@ class ChatInput(ChatComponent):
                     "info": "Name of the sender",
                 },
             },
-            "outputs": [
-                {"name": "message", "method": "message_response", "types": ["Message"]}
-            ],
+            "outputs": [{"name": "message", "method": "message_response", "types": ["Message"]}],
             "selected_output": "message",
         }
 
     @pytest.mark.asyncio
-    async def test_execute_missing_blob_id(
-        self, executor: CustomCodeExecutor, mock_context
-    ):
+    async def test_execute_missing_blob_id(self, executor: CustomCodeExecutor, mock_context):
         """Test execution fails when blob_id is missing."""
         input_data = {"input": {"text": "test"}}
 
@@ -299,9 +293,7 @@ class ChatInput(ChatComponent):
         assert message_data["text"] == "Processed: Runtime Override"
 
     @pytest.mark.asyncio
-    async def test_execute_component_with_missing_code(
-        self, executor: CustomCodeExecutor, mock_context
-    ):
+    async def test_execute_component_with_missing_code(self, executor: CustomCodeExecutor, mock_context):
         """Test execution fails when component code is missing."""
         blob_data = {
             "component_type": "TestComponent",
@@ -317,9 +309,7 @@ class ChatInput(ChatComponent):
             await executor.execute(input_data, mock_context)
 
     @pytest.mark.asyncio
-    async def test_execute_component_with_invalid_code(
-        self, executor: CustomCodeExecutor, mock_context
-    ):
+    async def test_execute_component_with_invalid_code(self, executor: CustomCodeExecutor, mock_context):
         """Test execution fails when component code is invalid Python."""
         blob_data = {
             "code": "invalid python syntax !!!",
@@ -335,9 +325,7 @@ class ChatInput(ChatComponent):
             await executor.execute(input_data, mock_context)
 
     @pytest.mark.asyncio
-    async def test_execute_component_class_not_found(
-        self, executor: CustomCodeExecutor, mock_context
-    ):
+    async def test_execute_component_class_not_found(self, executor: CustomCodeExecutor, mock_context):
         """Test execution fails when component class is not found in code."""
         blob_data = {
             "code": """
@@ -360,9 +348,7 @@ def some_function():
             await executor.execute(input_data, mock_context)
 
     @pytest.mark.asyncio
-    async def test_execute_component_instantiation_fails(
-        self, executor: CustomCodeExecutor, mock_context
-    ):
+    async def test_execute_component_instantiation_fails(self, executor: CustomCodeExecutor, mock_context):
         """Test execution fails when component cannot be instantiated."""
         blob_data = {
             "code": """
@@ -392,15 +378,11 @@ class FailingComponent(Component):
 
         input_data = {"blob_id": "failing_init_blob", "input": {}}
 
-        with pytest.raises(
-            ExecutionError, match="Failed to instantiate FailingComponent"
-        ):
+        with pytest.raises(ExecutionError, match="Failed to instantiate FailingComponent"):
             await executor.execute(input_data, mock_context)
 
     @pytest.mark.asyncio
-    async def test_execute_component_method_not_found(
-        self, executor: CustomCodeExecutor, mock_context
-    ):
+    async def test_execute_component_method_not_found(self, executor: CustomCodeExecutor, mock_context):
         """Test execution fails when execution method is not found."""
         blob_data = {
             "code": """
@@ -411,9 +393,7 @@ class NoMethodComponent(Component):
 """,
             "component_type": "NoMethodComponent",
             "template": {},
-            "outputs": [
-                {"name": "result", "method": "nonexistent_method", "types": ["str"]}
-            ],
+            "outputs": [{"name": "result", "method": "nonexistent_method", "types": ["str"]}],
             "selected_output": "result",
         }
         mock_context.get_blob.return_value = blob_data
@@ -424,9 +404,7 @@ class NoMethodComponent(Component):
             await executor.execute(input_data, mock_context)
 
     @pytest.mark.asyncio
-    async def test_execute_component_method_execution_fails(
-        self, executor: CustomCodeExecutor, mock_context
-    ):
+    async def test_execute_component_method_execution_fails(self, executor: CustomCodeExecutor, mock_context):
         """Test execution fails when component method throws exception."""
         blob_data = {
             "code": """
@@ -438,9 +416,7 @@ class FailingMethodComponent(Component):
 """,
             "component_type": "FailingMethodComponent",
             "template": {},
-            "outputs": [
-                {"name": "result", "method": "failing_method", "types": ["str"]}
-            ],
+            "outputs": [{"name": "result", "method": "failing_method", "types": ["str"]}],
             "selected_output": "result",
         }
         mock_context.get_blob.return_value = blob_data
@@ -450,9 +426,7 @@ class FailingMethodComponent(Component):
         with pytest.raises(ExecutionError, match="Failed to execute failing_method"):
             await executor.execute(input_data, mock_context)
 
-    def test_environment_variable_handling_deprecated(
-        self, executor: CustomCodeExecutor
-    ):
+    def test_environment_variable_handling_deprecated(self, executor: CustomCodeExecutor):
         """Test that environment variable handling is now handled via preprocessing.
 
         This test documents that environment variable resolution was moved from
@@ -531,9 +505,7 @@ class DataFrameComponent(Component):
 ''',
             "component_type": "DataFrameComponent",
             "template": {},
-            "outputs": [
-                {"name": "content", "method": "fetch_content", "types": ["DataFrame"]}
-            ],
+            "outputs": [{"name": "content", "method": "fetch_content", "types": ["DataFrame"]}],
             "selected_output": "content",
         }
 
@@ -581,9 +553,7 @@ class TestCustomCodeExecutorIntegration:
         return LangflowConverter()
 
     @pytest.mark.asyncio
-    async def test_component_parameter_preparation(
-        self, executor_with_mocks: CustomCodeExecutor
-    ):
+    async def test_component_parameter_preparation(self, executor_with_mocks: CustomCodeExecutor):
         """Test component parameter preparation logic.
 
         Note: Environment variable resolution is now handled by preprocessing,
@@ -609,9 +579,7 @@ class TestCustomCodeExecutorIntegration:
             "extra_field": "extra_value",
         }
 
-        params = await executor_with_mocks._prepare_component_parameters(
-            template, runtime_inputs
-        )
+        params = await executor_with_mocks._prepare_component_parameters(template, runtime_inputs)
 
         # Should have runtime override
         assert params["text_field"] == "runtime_override"
@@ -650,9 +618,7 @@ class TestCustomCodeExecutorWithRealLangflowComponents:
         return LangflowConverter()
 
     @pytest.mark.asyncio
-    async def test_execute_converted_workflow_components(
-        self, executor: CustomCodeExecutor, mock_context, converter
-    ):
+    async def test_execute_converted_workflow_components(self, executor: CustomCodeExecutor, mock_context, converter):
         """Test that components from converted workflows execute correctly."""
         # Create simple workflow data to test UDF component creation
         langflow_data = {
@@ -676,9 +642,7 @@ class TestPrompt(Component):
 """
                                     }
                                 },
-                                "outputs": [
-                                    {"name": "prompt", "method": "build_prompt"}
-                                ],
+                                "outputs": [{"name": "prompt", "method": "build_prompt"}],
                                 "base_classes": ["Message"],
                                 "display_name": "Test Prompt",
                             },
@@ -694,33 +658,21 @@ class TestPrompt(Component):
         stepflow_workflow = converter.convert(langflow_data)
 
         # Find steps that use /langflow/custom_code
-        custom_code_steps = [
-            step
-            for step in stepflow_workflow.steps
-            if step.component == "/langflow/custom_code"
-        ]
+        custom_code_steps = [step for step in stepflow_workflow.steps if step.component == "/langflow/custom_code"]
 
-        assert len(custom_code_steps) > 0, (
-            "No custom code executor steps found in test workflow"
-        )
+        assert len(custom_code_steps) > 0, "No custom code executor steps found in test workflow"
 
         # Test the first custom code step
         first_step = custom_code_steps[0]
 
         # The step input should have blob_id reference
-        assert "blob_id" in str(first_step.input), (
-            f"No blob_id found in step input: {first_step.input}"
-        )
+        assert "blob_id" in str(first_step.input), f"No blob_id found in step input: {first_step.input}"
 
         print(f"✅ Found {len(custom_code_steps)} custom code components")
-        print(
-            f"✅ First custom code step: {first_step.id} using {first_step.component}"
-        )
+        print(f"✅ First custom code step: {first_step.id} using {first_step.component}")
 
     @pytest.mark.asyncio
-    async def test_component_metadata_extraction_and_usage(
-        self, executor: CustomCodeExecutor, mock_context
-    ):
+    async def test_component_metadata_extraction_and_usage(self, executor: CustomCodeExecutor, mock_context):
         # Create blob with enhanced metadata (from Phase 1 improvements)
         enhanced_blob = {
             "code": """
@@ -741,9 +693,7 @@ class EnhancedTestComponent(Component):
 """,
             "template": {"input_field": {"type": "str", "value": "test"}},
             "component_type": "EnhancedTestComponent",
-            "outputs": [
-                {"name": "message", "method": "create_message", "types": ["Message"]}
-            ],
+            "outputs": [{"name": "message", "method": "create_message", "types": ["Message"]}],
             "selected_output": "message",
             # Enhanced metadata from Phase 1
             "base_classes": ["Message"],
@@ -780,12 +730,7 @@ class EnhancedTestComponent(Component):
         import json
         from pathlib import Path
 
-        flow_path = (
-            Path(__file__).parent.parent
-            / "fixtures"
-            / "langflow"
-            / "basic_prompting.json"
-        )
+        flow_path = Path(__file__).parent.parent / "fixtures" / "langflow" / "basic_prompting.json"
         with open(flow_path) as f:
             return json.load(f)
 
@@ -814,9 +759,7 @@ class EnhancedTestComponent(Component):
             "component_type": "ChatInput",
             "template": chat_input_node["data"]["node"]["template"],
             "outputs": chat_input_node["data"]["node"]["outputs"],
-            "selected_output": chat_input_node["data"].get(
-                "selected_output", "message"
-            ),
+            "selected_output": chat_input_node["data"].get("selected_output", "message"),
         }
 
     @pytest.fixture
@@ -856,9 +799,7 @@ class EnhancedTestComponent(Component):
         raise ValueError("Agent component not found in simple_agent.json")
 
     @pytest.mark.asyncio
-    async def test_agent_component(
-        self, executor: CustomCodeExecutor, mock_context, agent_component_blob
-    ):
+    async def test_agent_component(self, executor: CustomCodeExecutor, mock_context, agent_component_blob):
         """Test that Agent component can be compiled and instantiated.
 
         This test validates the PlaceholderGraph.vertices fix by:
@@ -925,17 +866,13 @@ class EnhancedTestComponent(Component):
         except Exception as e:
             error_msg = str(e)
             # Should NOT have PlaceholderGraph.vertices error
-            assert "vertices" not in error_msg.lower(), (
-                f"PlaceholderGraph.vertices error detected: {error_msg}"
-            )
+            assert "vertices" not in error_msg.lower(), f"PlaceholderGraph.vertices error detected: {error_msg}"
             # Expected errors: API key, authentication, model errors
             error_info = f"{type(e).__name__}: {error_msg[:200]}"
             print(f"Expected error (not PlaceholderGraph): {error_info}")
 
     @pytest.mark.asyncio
-    async def test_prompt_component(
-        self, executor: CustomCodeExecutor, mock_context, prompt_component_data
-    ):
+    async def test_prompt_component(self, executor: CustomCodeExecutor, mock_context, prompt_component_data):
         """Test executing Prompt component with string-type system_message field.
 
         This test verifies that:
@@ -1000,9 +937,7 @@ class EnhancedTestComponent(Component):
         expect string values for MultilineInput fields, not Message objects.
         """
         nodes = basic_prompting_flow["data"]["nodes"]
-        lm_node = next(
-            n for n in nodes if n["data"].get("type") == "LanguageModelComponent"
-        )
+        lm_node = next(n for n in nodes if n["data"].get("type") == "LanguageModelComponent")
 
         # Create blob data for LanguageModelComponent component
         lm_blob_data = {
@@ -1043,9 +978,9 @@ class EnhancedTestComponent(Component):
         except Exception as e:
             error_msg = str(e)
             # Should NOT have validation error about Message type
-            assert (
-                "Invalid value type" not in error_msg or "Message" not in error_msg
-            ), f"Should not have Message type validation error. Got: {error_msg}"
+            assert "Invalid value type" not in error_msg or "Message" not in error_msg, (
+                f"Should not have Message type validation error. Got: {error_msg}"
+            )
             # Other errors (like missing API key) are expected
             assert (
                 "api_key" in error_msg.lower()

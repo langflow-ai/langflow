@@ -111,10 +111,7 @@ class SchemaMapper:
                     if "max" in range_spec:
                         property["maximum"] = range_spec["max"]
 
-            if (
-                field_config.get("password", False)
-                or field_config.get("_input_type", "") == "SecretStrInput"
-            ):
+            if field_config.get("password", False) or field_config.get("_input_type", "") == "SecretStrInput":
                 property["is_secret"] = True
 
             if field_config.get("required", False):
@@ -128,9 +125,7 @@ class SchemaMapper:
             "required": required,
         }
 
-    def _convert_langflow_outputs_to_schema(
-        self, outputs: list[dict[str, Any]]
-    ) -> dict[str, Any]:
+    def _convert_langflow_outputs_to_schema(self, outputs: list[dict[str, Any]]) -> dict[str, Any]:
         """Convert Langflow outputs metadata to JSON schema."""
         if not outputs:
             return {"type": "object"}
@@ -142,9 +137,7 @@ class SchemaMapper:
 
         return self._convert_langflow_types_to_schema(output_types)
 
-    def _convert_langflow_types_to_schema(
-        self, langflow_types: list[str]
-    ) -> dict[str, Any]:
+    def _convert_langflow_types_to_schema(self, langflow_types: list[str]) -> dict[str, Any]:
         """Convert Langflow types to JSON schema.
 
         Args:

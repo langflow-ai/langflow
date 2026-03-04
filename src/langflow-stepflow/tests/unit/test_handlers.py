@@ -50,10 +50,7 @@ class TestStringCoercionInputHandler:
 
     def test_no_match_str_type_with_plain_string(self):
         handler = StringCoercionInputHandler()
-        assert (
-            handler.matches(template_field={"type": "str"}, value="already a string")
-            is False
-        )
+        assert handler.matches(template_field={"type": "str"}, value="already a string") is False
 
     @pytest.mark.asyncio
     async def test_coerces_message_to_text(self):
@@ -92,27 +89,16 @@ class TestDataFrameConversionInputHandler:
 
     def test_no_match_without_dataframe(self):
         handler = DataFrameConversionInputHandler()
-        assert (
-            handler.matches(template_field={"input_types": ["Message"]}, value=[])
-            is False
-        )
+        assert handler.matches(template_field={"input_types": ["Message"]}, value=[]) is False
         assert handler.matches(template_field={}, value=[]) is False
 
     def test_no_match_empty_list(self):
         handler = DataFrameConversionInputHandler()
-        assert (
-            handler.matches(template_field={"input_types": ["DataFrame"]}, value=[])
-            is False
-        )
+        assert handler.matches(template_field={"input_types": ["DataFrame"]}, value=[]) is False
 
     def test_no_match_non_list(self):
         handler = DataFrameConversionInputHandler()
-        assert (
-            handler.matches(
-                template_field={"input_types": ["DataFrame"]}, value="not a list"
-            )
-            is False
-        )
+        assert handler.matches(template_field={"input_types": ["DataFrame"]}, value="not a list") is False
 
     @pytest.mark.asyncio
     async def test_converts_data_list(self):

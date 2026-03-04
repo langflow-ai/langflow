@@ -21,23 +21,13 @@ class StringCoercionInputHandler(InputHandler):
     def matches(self, *, template_field: dict[str, Any], value: Any) -> bool:
         if template_field.get("type") != "str":
             return False
-        return (
-            hasattr(value, "__class__")
-            and value.__class__.__name__ == "Message"
-            and hasattr(value, "text")
-        )
+        return hasattr(value, "__class__") and value.__class__.__name__ == "Message" and hasattr(value, "text")
 
-    async def prepare(
-        self, fields: dict[str, tuple[Any, dict[str, Any]]], context: Any
-    ) -> dict[str, Any]:
+    async def prepare(self, fields: dict[str, tuple[Any, dict[str, Any]]], context: Any) -> dict[str, Any]:
         result: dict[str, Any] = {}
 
         for key, (value, _template_field) in fields.items():
-            if (
-                hasattr(value, "__class__")
-                and value.__class__.__name__ == "Message"
-                and hasattr(value, "text")
-            ):
+            if hasattr(value, "__class__") and value.__class__.__name__ == "Message" and hasattr(value, "text"):
                 result[key] = value.text
 
         return result

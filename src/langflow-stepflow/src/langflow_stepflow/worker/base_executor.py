@@ -118,9 +118,7 @@ class BaseExecutor(ABC):
 
             yield result, output_handlers
 
-    async def _apply_output_handlers(
-        self, value: Any, handlers: list[OutputHandler]
-    ) -> Any:
+    async def _apply_output_handlers(self, value: Any, handlers: list[OutputHandler]) -> Any:
         """Recursively walk a value tree, applying output handlers.
 
         For each value, tries handlers in order (first match wins).
@@ -134,10 +132,7 @@ class BaseExecutor(ABC):
         if isinstance(value, list):
             return [await self._apply_output_handlers(item, handlers) for item in value]
         if isinstance(value, dict):
-            return {
-                k: await self._apply_output_handlers(v, handlers)
-                for k, v in value.items()
-            }
+            return {k: await self._apply_output_handlers(v, handlers) for k, v in value.items()}
         if isinstance(value, str | int | float | bool | type(None)):
             return value
 
@@ -180,9 +175,7 @@ class BaseExecutor(ABC):
             output_handlers,
         ):
             # Apply component input defaults
-            component_parameters = self._apply_component_input_defaults(
-                component_instance, component_parameters
-            )
+            component_parameters = self._apply_component_input_defaults(component_instance, component_parameters)
 
             # Set session_id and graph context
             session_id = component_parameters.get("session_id", "default_session")
@@ -196,13 +189,8 @@ class BaseExecutor(ABC):
 
             # Verify execution method exists
             if not hasattr(component_instance, execution_method):
-                available = [
-                    m for m in dir(component_instance) if not m.startswith("_")
-                ]
-                raise ExecutionError(
-                    f"Method {execution_method} not found in "
-                    f"{component_name}. Available: {available}"
-                )
+                available = [m for m in dir(component_instance) if not m.startswith("_")]
+                raise ExecutionError(f"Method {execution_method} not found in {component_name}. Available: {available}")
 
             method = getattr(component_instance, execution_method)
 
@@ -271,9 +259,7 @@ class BaseExecutor(ABC):
 
         return parameters
 
-    def _determine_execution_method(
-        self, outputs: list[dict[str, Any]], selected_output: str | None
-    ) -> str | None:
+    def _determine_execution_method(self, outputs: list[dict[str, Any]], selected_output: str | None) -> str | None:
         """Determine which method to call based on outputs configuration.
 
         Args:
@@ -301,9 +287,7 @@ class BaseExecutor(ABC):
 
         return None
 
-    def _apply_component_input_defaults(
-        self, component_instance: Any, parameters: dict[str, Any]
-    ) -> dict[str, Any]:
+    def _apply_component_input_defaults(self, component_instance: Any, parameters: dict[str, Any]) -> dict[str, Any]:
         """Apply default values from component's input definitions.
 
         Args:

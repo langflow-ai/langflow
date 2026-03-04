@@ -47,9 +47,7 @@ class MockOpenAIEmbeddings(BaseModel):
 class ConcreteTestExecutor(BaseExecutor):
     """Concrete BaseExecutor subclass for tree walker tests."""
 
-    async def _instantiate_component(
-        self, component_info: dict[str, Any]
-    ) -> tuple[Any, str]:
+    async def _instantiate_component(self, component_info: dict[str, Any]) -> tuple[Any, str]:
         return component_info.get("instance"), component_info.get("name", "test")
 
 
@@ -208,9 +206,7 @@ class TestBaseModelOutputHandler:
     async def test_serialized_data_structure_debugging(self):
         """Test to show what serialized data looks like for debugging."""
         api_key = "sk-debug-key-12345"
-        model = MockOpenAIEmbeddings(
-            model="test-model", openai_api_key=SecretStr(api_key), chunk_size=123
-        )
+        model = MockOpenAIEmbeddings(model="test-model", openai_api_key=SecretStr(api_key), chunk_size=123)
 
         serialized = await self.handler.process(model)
 
@@ -333,9 +329,7 @@ class TestOutputTreeWalker:
     @pytest.mark.asyncio
     async def test_simple_types_pass_through(self):
         """Test that simple types pass through the tree walker unchanged."""
-        assert (
-            await self.executor._apply_output_handlers("test", self.handlers) == "test"
-        )
+        assert await self.executor._apply_output_handlers("test", self.handlers) == "test"
         assert await self.executor._apply_output_handlers(42, self.handlers) == 42
         assert await self.executor._apply_output_handlers(True, self.handlers) is True
         assert await self.executor._apply_output_handlers([1, 2, 3], self.handlers) == [
@@ -343,9 +337,7 @@ class TestOutputTreeWalker:
             2,
             3,
         ]
-        assert await self.executor._apply_output_handlers(
-            {"key": "value"}, self.handlers
-        ) == {"key": "value"}
+        assert await self.executor._apply_output_handlers({"key": "value"}, self.handlers) == {"key": "value"}
         assert await self.executor._apply_output_handlers(None, self.handlers) is None
 
     @pytest.mark.asyncio
@@ -400,9 +392,7 @@ class TestOutputTreeWalker:
             )
 
             # Serialize
-            serialized = await self.executor._apply_output_handlers(
-                embeddings, self.handlers
-            )
+            serialized = await self.executor._apply_output_handlers(embeddings, self.handlers)
 
             # Check that API key is properly extracted
             assert "openai_api_key" in serialized
@@ -433,6 +423,4 @@ class TestOutputTreeWalker:
                 assert deserialized.openai_api_key == api_key
 
         except ImportError:
-            pytest.skip(
-                "langchain_openai not available for real OpenAI embeddings test"
-            )
+            pytest.skip("langchain_openai not available for real OpenAI embeddings test")

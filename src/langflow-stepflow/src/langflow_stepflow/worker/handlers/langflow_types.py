@@ -68,17 +68,12 @@ def _deserialize_dataframe(obj_data: dict[str, Any], raw: dict[str, Any]) -> Any
         if not json_str:
             raise ValueError("DataFrame missing required json_data field")
 
-        json_io = io.StringIO(
-            json_str if isinstance(json_str, str) else json.dumps(json_str)
-        )
+        json_io = io.StringIO(json_str if isinstance(json_str, str) else json.dumps(json_str))
         pd_df = pd.read_json(json_io, orient="split")
         data_list = pd_df.to_dict(orient="records")
 
         # Replace NaN with None for JSON compliance
-        data_list = [
-            {k: (None if pd.isna(v) else v) for k, v in record.items()}
-            for record in data_list
-        ]
+        data_list = [{k: (None if pd.isna(v) else v) for k, v in record.items()} for record in data_list]
 
         return DataFrame(
             data=data_list,
@@ -115,9 +110,7 @@ def _recover_dataframe(raw_value: dict[str, Any]) -> Any:
             except (ValueError, TypeError):
                 return v
 
-        data_list = [
-            {k: clean_value(v) for k, v in record.items()} for record in records
-        ]
+        data_list = [{k: clean_value(v) for k, v in record.items()} for record in records]
 
         return LfDataFrame(
             data=data_list,
@@ -139,19 +132,14 @@ class LangflowTypeInputHandler(InputHandler):
     def matches(self, *, template_field: dict[str, Any], value: Any) -> bool:
         return _has_langflow_type_marker(value)
 
-    async def prepare(
-        self, fields: dict[str, tuple[Any, dict[str, Any]]], context: Any
-    ) -> dict[str, Any]:
+    async def prepare(self, fields: dict[str, tuple[Any, dict[str, Any]]], context: Any) -> dict[str, Any]:
         result: dict[str, Any] = {}
 
         for key, (value, _template_field) in fields.items():
             if _is_langflow_type_dict(value):
                 result[key] = _deserialize_single(value)
             elif isinstance(value, list):
-                result[key] = [
-                    _deserialize_single(item) if _is_langflow_type_dict(item) else item
-                    for item in value
-                ]
+                result[key] = [_deserialize_single(item) if _is_langflow_type_dict(item) else item for item in value]
 
         return result
 

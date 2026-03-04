@@ -6,9 +6,7 @@ from typing import Any
 class DependencyAnalyzer:
     """Analyzes Langflow edges to build step dependency graphs."""
 
-    def build_dependency_graph(
-        self, edges: list[dict[str, Any]]
-    ) -> dict[str, list[str]]:
+    def build_dependency_graph(self, edges: list[dict[str, Any]]) -> dict[str, list[str]]:
         """Build a dependency graph from Langflow edges.
 
         Args:

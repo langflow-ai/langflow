@@ -34,9 +34,7 @@ class DataFrameConversionInputHandler(InputHandler):
             return False
         return isinstance(value, list) and len(value) > 0
 
-    async def prepare(
-        self, fields: dict[str, tuple[Any, dict[str, Any]]], context: Any
-    ) -> dict[str, Any]:
+    async def prepare(self, fields: dict[str, tuple[Any, dict[str, Any]]], context: Any) -> dict[str, Any]:
         result: dict[str, Any] = {}
 
         for key, (value, _template_field) in fields.items():

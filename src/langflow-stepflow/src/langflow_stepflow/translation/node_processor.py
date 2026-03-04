@@ -117,12 +117,8 @@ class NodeProcessor:
             # Determine component path and inputs based on routing
             if known_component:
                 # Known core component - use core executor (no blob needed)
-                component_path = (
-                    f"/langflow/core/{module_to_path(known_component.module)}"
-                )
-                logger.debug(
-                    f"Routing {component_type} to core executor: {component_path}"
-                )
+                component_path = f"/langflow/core/{module_to_path(known_component.module)}"
+                logger.debug(f"Routing {component_type} to core executor: {component_path}")
 
                 # Extract outputs and selected_output for core executor
                 outputs = node_info.get("outputs", [])
@@ -131,9 +127,7 @@ class NodeProcessor:
                     selected_output = outputs[0].get("name")
 
                 # Prepare template without code field
-                template_without_code = {
-                    k: v for k, v in template.items() if k != "code"
-                }
+                template_without_code = {k: v for k, v in template.items() if k != "code"}
 
                 step_input = {
                     "template": template_without_code,
@@ -192,9 +186,7 @@ class NodeProcessor:
             return Value.step(step_handle.id, "result")
 
         except Exception as e:
-            raise ConversionError(
-                f"Error processing node {node.get('id', 'unknown')}: {e}"
-            ) from e
+            raise ConversionError(f"Error processing node {node.get('id', 'unknown')}: {e}") from e
 
     def _generate_step_id(self, node_id: str, component_type: str) -> str:
         """Generate a clean step ID from node ID and type.
@@ -303,8 +295,7 @@ class NodeProcessor:
 
         if (existing := self.variables.get(name)) is not None:
             assert input_type == existing["type"][0], (
-                f"Variable {name} has conflicting types: "
-                f"{existing['type'][0]} vs {input_type}"
+                f"Variable {name} has conflicting types: {existing['type'][0]} vs {input_type}"
             )
         else:
             self.variables[name] = {
@@ -355,9 +346,7 @@ class NodeProcessor:
                     field_inputs[field_name].append(node_output_refs[dep_id])
                 elif dep_id in node_output_refs:
                     # Fallback to generic name if no field mapping
-                    runtime_inputs[f"input_{len(runtime_inputs)}"] = node_output_refs[
-                        dep_id
-                    ]
+                    runtime_inputs[f"input_{len(runtime_inputs)}"] = node_output_refs[dep_id]
 
             # Convert to runtime inputs format
             for field_name, inputs in field_inputs.items():
@@ -409,9 +398,7 @@ class NodeProcessor:
                 continue
             if field_config.get("load_from_db", False):
                 # This field should be loaded from the database.
-                runtime_inputs[field_name] = self._add_variable(
-                    field_config["value"], field_config["type"]
-                )
+                runtime_inputs[field_name] = self._add_variable(field_config["value"], field_config["type"])
 
         return runtime_inputs
 
@@ -444,18 +431,14 @@ class NodeProcessor:
             node_info = node_data.get("node", {})
 
             # Extract component inputs from dependencies and field mapping
-            component_inputs = self._build_component_inputs(
-                node_id, dependencies, node_output_refs, field_mapping
-            )
+            component_inputs = self._build_component_inputs(node_id, dependencies, node_output_refs, field_mapping)
 
             # Create step that calls component_tool to create tool wrapper
             step_handle = builder.add_step(
                 id=step_id,
                 component="/langflow/component_tool",
                 input_data={
-                    "code": Value.literal(
-                        node_info
-                    ),  # Store entire component definition
+                    "code": Value.literal(node_info),  # Store entire component definition
                     "inputs": component_inputs,  # Static inputs from workflow
                     "component_type": component_type,
                 },
