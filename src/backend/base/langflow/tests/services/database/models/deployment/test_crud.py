@@ -5,13 +5,14 @@ from uuid import uuid4
 
 import pytest
 from langflow.services.database.models.deployment.crud import (
-    count_deployments,
+    count_deployments_by_provider,
     create_deployment,
     delete_deployment_by_id,
     delete_deployment_by_resource_key,
     get_deployment,
     get_deployment_by_resource_key,
     list_deployments_page,
+    update_deployment,
 )
 from sqlalchemy.exc import IntegrityError
 
@@ -117,7 +118,7 @@ async def test_create_deployment_integrity_error_raises_value_error():
         patch("langflow.services.database.models.deployment.crud.logger") as mock_logger,
     ):
         mock_logger.aerror = AsyncMock()
-        with pytest.raises(ValueError, match="Deployment already exists"):
+        with pytest.raises(ValueError, match="Deployment conflicts with an existing record"):
             await create_deployment(
                 db,
                 user_id=uuid4(),
@@ -139,6 +140,31 @@ async def test_get_deployment_invalid_uuid_raises():
 
     with pytest.raises(ValueError, match="deployment_id is not a valid UUID"):
         await get_deployment(db, user_id=uuid4(), deployment_id="not-a-uuid")
+
+
+@pytest.mark.asyncio
+async def test_get_deployment_found():
+    db = _make_db()
+    mock_deployment = MagicMock()
+    mock_result = MagicMock()
+    mock_result.first.return_value = mock_deployment
+    db.exec.return_value = mock_result
+
+    result = await get_deployment(db, user_id=uuid4(), deployment_id=uuid4())
+
+    assert result is mock_deployment
+
+
+@pytest.mark.asyncio
+async def test_get_deployment_not_found():
+    db = _make_db()
+    mock_result = MagicMock()
+    mock_result.first.return_value = None
+    db.exec.return_value = mock_result
+
+    result = await get_deployment(db, user_id=uuid4(), deployment_id=uuid4())
+
+    assert result is None
 
 
 # --- get_deployment_by_resource_key ---
@@ -220,17 +246,17 @@ async def test_list_deployments_page_empty():
     assert result == []
 
 
-# --- count_deployments ---
+# --- count_deployments_by_provider ---
 
 
 @pytest.mark.asyncio
-async def test_count_deployments_returns_int():
+async def test_count_deployments_by_provider_returns_int():
     db = _make_db()
     mock_result = MagicMock()
     mock_result.one.return_value = 5
     db.exec.return_value = mock_result
 
-    result = await count_deployments(
+    result = await count_deployments_by_provider(
         db,
         user_id=uuid4(),
         deployment_provider_account_id=uuid4(),
@@ -240,13 +266,13 @@ async def test_count_deployments_returns_int():
 
 
 @pytest.mark.asyncio
-async def test_count_deployments_returns_zero():
+async def test_count_deployments_by_provider_returns_zero():
     db = _make_db()
     mock_result = MagicMock()
     mock_result.one.return_value = 0
     db.exec.return_value = mock_result
 
-    result = await count_deployments(
+    result = await count_deployments_by_provider(
         db,
         user_id=uuid4(),
         deployment_provider_account_id=uuid4(),
@@ -331,3 +357,91 @@ async def test_delete_by_id_none_rowcount_logs_error():
 
     assert count == 0
     mock_logger.aerror.assert_awaited_once()
+
+
+# --- update_deployment ---
+
+
+def _make_deployment(**overrides) -> MagicMock:
+    defaults = {
+        "id": uuid4(),
+        "user_id": uuid4(),
+        "project_id": uuid4(),
+        "deployment_provider_account_id": uuid4(),
+        "resource_key": "rk-1",
+        "name": "my-deploy",
+    }
+    defaults.update(overrides)
+    mock = MagicMock()
+    for k, v in defaults.items():
+        setattr(mock, k, v)
+    return mock
+
+
+@pytest.mark.asyncio
+async def test_update_deployment_name():
+    db = _make_db()
+    deploy = _make_deployment()
+
+    result = await update_deployment(db, deployment=deploy, name="new-name")
+
+    assert result.name == "new-name"
+    db.flush.assert_awaited_once()
+    db.refresh.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_update_deployment_project_id():
+    db = _make_db()
+    deploy = _make_deployment()
+    new_pid = uuid4()
+
+    result = await update_deployment(db, deployment=deploy, project_id=new_pid)
+
+    assert result.project_id == new_pid
+    db.flush.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_update_deployment_no_changes():
+    db = _make_db()
+    deploy = _make_deployment()
+    original_name = deploy.name
+
+    result = await update_deployment(db, deployment=deploy)
+
+    assert result.name == original_name
+    db.flush.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_update_deployment_empty_name_raises():
+    db = _make_db()
+    deploy = _make_deployment()
+
+    with pytest.raises(ValueError, match="name must not be empty"):
+        await update_deployment(db, deployment=deploy, name="   ")
+
+
+@pytest.mark.asyncio
+async def test_update_deployment_strips_whitespace():
+    db = _make_db()
+    deploy = _make_deployment()
+
+    await update_deployment(db, deployment=deploy, name="  new-name  ")
+
+    assert deploy.name == "new-name"
+
+
+@pytest.mark.asyncio
+async def test_update_deployment_integrity_error_raises_value_error():
+    db = _make_db()
+    db.flush.side_effect = IntegrityError("dup", params=None, orig=Exception())
+    deploy = _make_deployment()
+
+    with patch("langflow.services.database.models.deployment.crud.logger") as mock_logger:
+        mock_logger.aerror = AsyncMock()
+        with pytest.raises(ValueError, match="conflicts with an existing record"):
+            await update_deployment(db, deployment=deploy, name="duplicate-name")
+
+    db.rollback.assert_awaited_once()

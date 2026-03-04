@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
@@ -15,6 +16,15 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
+def _strip_or_raise(value: str, field_name: str) -> str:
+    """Return *value* stripped of whitespace, or raise if blank."""
+    stripped = value.strip()
+    if not stripped:
+        msg = f"{field_name} must not be empty"
+        raise ValueError(msg)
+    return stripped
+
+
 async def create_deployment(
     db: AsyncSession,
     *,
@@ -24,15 +34,10 @@ async def create_deployment(
     resource_key: str,
     name: str,
 ) -> Deployment:
-    # Validate required strings before DB round-trip
-    resource_key_s = resource_key.strip()
-    if not resource_key_s:
-        msg = "resource_key must not be empty"
-        raise ValueError(msg)
-    name_s = name.strip()
-    if not name_s:
-        msg = "name must not be empty"
-        raise ValueError(msg)
+    # The Deployment model has its own field validators, but pre-checking here
+    # gives clearer errors and avoids constructing the object.
+    resource_key_s = _strip_or_raise(resource_key, "resource_key")
+    name_s = _strip_or_raise(name, "name")
 
     row = Deployment(
         user_id=user_id,
@@ -47,7 +52,7 @@ async def create_deployment(
     except IntegrityError as exc:
         await db.rollback()
         await logger.aerror("IntegrityError creating deployment: %s", exc)
-        msg = f"Deployment already exists (resource_key={resource_key!r}, name={name!r})"
+        msg = f"Deployment conflicts with an existing record (resource_key={resource_key!r}, name={name!r})"
         raise ValueError(msg) from exc
     await db.refresh(row)
     return row
@@ -82,6 +87,30 @@ async def get_deployment(
     return (await db.exec(stmt)).first()
 
 
+async def update_deployment(
+    db: AsyncSession,
+    *,
+    deployment: Deployment,
+    name: str | None = None,
+    project_id: UUID | None = None,
+) -> Deployment:
+    if name is not None:
+        deployment.name = _strip_or_raise(name, "name")
+    if project_id is not None:
+        deployment.project_id = project_id
+    deployment.updated_at = datetime.now(timezone.utc)
+    db.add(deployment)
+    try:
+        await db.flush()
+    except IntegrityError as exc:
+        await db.rollback()
+        await logger.aerror("IntegrityError updating deployment id=%s: %s", deployment.id, exc)
+        msg = "Deployment update conflicts with an existing record"
+        raise ValueError(msg) from exc
+    await db.refresh(deployment)
+    return deployment
+
+
 async def list_deployments_page(
     db: AsyncSession,
     *,
@@ -103,7 +132,7 @@ async def list_deployments_page(
     return list((await db.exec(stmt)).all())
 
 
-async def count_deployments(
+async def count_deployments_by_provider(
     db: AsyncSession,
     *,
     user_id: UUID,

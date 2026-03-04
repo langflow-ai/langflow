@@ -8,7 +8,7 @@ from pydantic import field_validator
 from sqlalchemy import UniqueConstraint
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
-from langflow.services.database.utils import validate_non_empty_string
+from langflow.services.database.utils import validate_non_empty_string, validate_non_empty_string_optional
 
 if TYPE_CHECKING:
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
@@ -62,6 +62,16 @@ class DeploymentCreate(SQLModel):
     @classmethod
     def validate_non_empty(cls, v: str, info: object) -> str:
         return validate_non_empty_string(v, info)
+
+
+class DeploymentUpdate(SQLModel):
+    name: str | None = None
+    project_id: UUID | None = None
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def validate_non_empty_if_provided(cls, v: str | None, info: object) -> str | None:
+        return validate_non_empty_string_optional(v, info)
 
 
 class DeploymentRead(SQLModel):

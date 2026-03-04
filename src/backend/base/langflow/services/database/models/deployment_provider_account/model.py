@@ -82,6 +82,11 @@ class DeploymentProviderAccountRead(SQLModel):
 
 
 class DeploymentProviderAccountUpdate(SQLModel):
+    # All fields default to None.  API routes consuming this schema must check
+    # ``model_fields_set`` to distinguish "field omitted" (keep existing value)
+    # from "field explicitly set to null" (clear the value).  The CRUD layer's
+    # ``update_provider_account`` uses an ``_UNSET`` sentinel for the same
+    # purpose on ``provider_tenant_id``.
     provider_tenant_id: str | None = None
     provider_key: str | None = None
     provider_url: str | None = None

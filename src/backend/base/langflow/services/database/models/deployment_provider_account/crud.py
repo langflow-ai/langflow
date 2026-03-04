@@ -20,6 +20,15 @@ if TYPE_CHECKING:
 _UNSET = object()
 
 
+def _strip_or_raise(value: str, field_name: str) -> str:
+    """Return *value* stripped of whitespace, or raise if blank."""
+    stripped = value.strip()
+    if not stripped:
+        msg = f"{field_name} must not be empty"
+        raise ValueError(msg)
+    return stripped
+
+
 def _encrypt_api_key(raw: str) -> str:
     """Encrypt an API key, raising ``RuntimeError`` on failure."""
     stripped = raw.strip()
@@ -74,15 +83,10 @@ async def create_provider_account(
 ) -> DeploymentProviderAccount:
     user_uuid = parse_uuid(user_id, field_name="user_id")
 
-    # Validate required strings before DB round-trip
-    provider_key_s = provider_key.strip()
-    if not provider_key_s:
-        msg = "provider_key must not be empty"
-        raise ValueError(msg)
-    provider_url_s = provider_url.strip()
-    if not provider_url_s:
-        msg = "provider_url must not be empty"
-        raise ValueError(msg)
+    # The model has its own field validators, but pre-checking here gives
+    # clearer errors and avoids constructing the object.
+    provider_key_s = _strip_or_raise(provider_key, "provider_key")
+    provider_url_s = _strip_or_raise(provider_url, "provider_url")
 
     now = datetime.now(timezone.utc)
     try:
@@ -135,17 +139,9 @@ async def update_provider_account(
         else:
             provider_account.provider_tenant_id = None
     if provider_key is not None:
-        stripped = provider_key.strip()
-        if not stripped:
-            msg = "provider_key must not be empty"
-            raise ValueError(msg)
-        provider_account.provider_key = stripped
+        provider_account.provider_key = _strip_or_raise(provider_key, "provider_key")
     if provider_url is not None:
-        stripped = provider_url.strip()
-        if not stripped:
-            msg = "provider_url must not be empty"
-            raise ValueError(msg)
-        provider_account.provider_url = stripped
+        provider_account.provider_url = _strip_or_raise(provider_url, "provider_url")
     if api_key is not None:
         try:
             provider_account.api_key = _encrypt_api_key(api_key)

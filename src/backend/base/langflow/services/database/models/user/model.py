@@ -40,6 +40,9 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
     )
     store_api_key: str | None = Field(default=None, nullable=True)
     flows: list["Flow"] = Relationship(back_populates="user")
+    # User is a secondary parent, so cascade="delete" (no "delete-orphan").
+    # Orphan management is handled by the owning models
+    # (DeploymentProviderAccount, Folder) which use "all, delete, delete-orphan".
     deployment_provider_accounts: list["DeploymentProviderAccount"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
