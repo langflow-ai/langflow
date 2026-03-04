@@ -107,8 +107,6 @@ def span_to_response(span: SpanTable) -> SpanReadResponse:
             "completionTokens": safe_int_tokens(output_tokens),
             "totalTokens": total_tokens,
         }
-    inputs = span.inputs if isinstance(span.inputs, dict) or span.inputs is None else {"input": span.inputs}
-    outputs = span.outputs if isinstance(span.outputs, dict) or span.outputs is None else {"output": span.outputs}
 
     return SpanReadResponse(
         id=span.id,
@@ -118,8 +116,8 @@ def span_to_response(span: SpanTable) -> SpanReadResponse:
         start_time=span.start_time,
         end_time=span.end_time,
         latency_ms=span.latency_ms,
-        inputs=inputs,
-        outputs=outputs,
+        inputs=span.inputs,
+        outputs=span.outputs,
         error=span.error,
         model_name=(span.attributes or {}).get("gen_ai.response.model"),
         token_usage=token_usage,
