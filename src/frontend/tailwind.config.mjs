@@ -249,6 +249,10 @@ const config = {
           DEFAULT: "hsl(var(--accent-indigo))",
           foreground: "hsl(var(--accent-indigo-foreground))",
         },
+        "accent-blue": {
+          DEFAULT: "hsl(var(--accent-blue))",
+          foreground: "hsl(var(--accent-blue-foreground))",
+        },
         "accent-pink": {
           DEFAULT: "hsl(var(--accent-pink))",
           foreground: "hsl(var(--accent-pink-foreground))",
