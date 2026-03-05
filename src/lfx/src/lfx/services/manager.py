@@ -381,7 +381,14 @@ class ServiceManager:
         """Discover services from Python entry points."""
         from importlib.metadata import entry_points
 
-        eps = entry_points(group="lfx.services")
+        try:
+            eps = entry_points(group="lfx.services")
+        except Exception:  # noqa: BLE001
+            logger.exception(
+                "Failed to enumerate entry points for group='lfx.services'. "
+                "Entry-point-based service discovery will be skipped."
+            )
+            return
 
         for ep in eps:
             try:

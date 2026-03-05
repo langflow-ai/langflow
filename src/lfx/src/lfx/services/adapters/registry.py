@@ -203,22 +203,23 @@ class AdapterRegistry(Generic[T]):
     async def teardown_instances(self) -> None:
         """Teardown and clear all cached adapter instances in this registry."""
         with self._lock:
-            for key, instance in list(self._adapter_instances.items()):
-                teardown = getattr(instance, "teardown", None)
-                if not callable(teardown):
-                    continue
-                try:
-                    teardown_result = teardown()
-                    if asyncio.iscoroutine(teardown_result):
-                        await teardown_result
-                except Exception as exc:  # noqa: BLE001
-                    logger.error(
-                        f"Failed to teardown adapter instance for adapter_type='{self._adapter_type.value}' "
-                        f"key='{key}': {exc}",
-                        exc_info=True,
-                    )
-
+            instances = list(self._adapter_instances.items())
             self._adapter_instances.clear()
+
+        for key, instance in instances:
+            teardown = getattr(instance, "teardown", None)
+            if not callable(teardown):
+                continue
+            try:
+                teardown_result = teardown()
+                if asyncio.iscoroutine(teardown_result):
+                    await teardown_result
+            except Exception as exc:  # noqa: BLE001
+                logger.error(
+                    f"Failed to teardown adapter instance for adapter_type='{self._adapter_type.value}' "
+                    f"key='{key}': {exc}",
+                    exc_info=True,
+                )
 
     def discover(self, config_dir: Path) -> None:
         """Discover and register adapters from all supported sources.
