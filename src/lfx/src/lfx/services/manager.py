@@ -17,6 +17,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
+from lfx.services.config_discovery import (
+    get_nested_section,
+    get_preferred_config_source,
+    load_object_from_import_path,
+    load_toml_config,
+    resolve_config_dir,
+)
 from lfx.services.schema import ServiceType
 from lfx.utils.concurrency import KeyedMemoryLockManager
 
@@ -288,6 +295,15 @@ class ServiceManager:
                     await teardown_result
             except Exception as exc:  # noqa: BLE001
                 logger.debug(f"Error in teardown of {service.name}", exc_info=exc)
+
+        # Adapter registries own singleton adapter instances and must also be cleaned up.
+        try:
+            from lfx.services.adapters.registry import teardown_all_adapter_registries
+
+            await teardown_all_adapter_registries()
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"Error during adapter registry teardown: {exc}", exc_info=True)
+
         self.services = {}
         self.factories = {}
 
@@ -323,10 +339,15 @@ class ServiceManager:
     def discover_plugins(self, config_dir: Path | None = None) -> None:
         """Discover and register service plugins from multiple sources.
 
-        Discovery order (last wins):
-        1. Entry points (installed packages)
-        2. Config files (lfx.toml / pyproject.toml)
-        3. Decorator-registered services (already in self.service_classes)
+        Decorator-registered services are already in ``service_classes``
+        at this point (they register at import time via ``@register_service``).
+
+        This method discovers two additional sources:
+
+        1. Entry points (``override=False`` — won't overwrite decorators)
+        2. Config files (``override=True`` — will overwrite decorators)
+
+        Effective precedence: config files > decorators > entry points.
 
         Args:
             config_dir: Directory to search for config files.
@@ -342,13 +363,10 @@ class ServiceManager:
                 logger.debug("Plugins already discovered, skipping...")
                 return
 
-            # Get config_dir from settings service if not provided
-            if config_dir is None and ServiceType.SETTINGS_SERVICE in self.services:
-                settings_service = self.services[ServiceType.SETTINGS_SERVICE]
-                if hasattr(settings_service, "settings") and settings_service.settings.config_dir:
-                    config_dir = Path(settings_service.settings.config_dir)
+            settings_service = self.services.get(ServiceType.SETTINGS_SERVICE)
+            config_dir = resolve_config_dir(config_dir, settings_service=settings_service)
 
-            logger.debug(f"Starting plugin discovery (config_dir: {config_dir or 'cwd'})...")
+            logger.debug(f"Starting plugin discovery (config_dir: {config_dir})...")
 
             # 1. Discover from entry points
             self._discover_from_entry_points()
@@ -363,7 +381,14 @@ class ServiceManager:
         """Discover services from Python entry points."""
         from importlib.metadata import entry_points
 
-        eps = entry_points(group="lfx.services")
+        try:
+            eps = entry_points(group="lfx.services")
+        except Exception:  # noqa: BLE001
+            logger.exception(
+                "Failed to enumerate entry points for group='lfx.services'. "
+                "Entry-point-based service discovery will be skipped."
+            )
+            return
 
         for ep in eps:
             try:
@@ -377,59 +402,29 @@ class ServiceManager:
             except Exception as exc:  # noqa: BLE001
                 logger.debug(f"Error loading entry point {ep.name}: {exc}")
 
-    def _discover_from_config(self, config_dir: Path | None = None) -> None:
+    def _discover_from_config(self, config_dir: Path) -> None:
         """Discover services from config files (lfx.toml / pyproject.toml)."""
-        config_dir = Path.cwd() if config_dir is None else Path(config_dir)
+        source = get_preferred_config_source(
+            config_dir,
+            lfx_root_path=("services",),
+            pyproject_root_path=("tool", "lfx", "services"),
+        )
+        if source is None:
+            return
+        self._load_services_from_config(*source)
 
-        # Try lfx.toml first
-        lfx_config = config_dir / "lfx.toml"
-        if lfx_config.exists():
-            self._load_config_file(lfx_config)
+    def _load_services_from_config(self, config_path: Path, root_path: tuple[str, ...]) -> None:
+        """Load service registrations from config section."""
+        config = load_toml_config(config_path)
+        if config is None:
             return
 
-        # Try pyproject.toml with [tool.lfx.services]
-        pyproject_config = config_dir / "pyproject.toml"
-        if pyproject_config.exists():
-            self._load_pyproject_config(pyproject_config)
+        services = get_nested_section(config, root_path) or {}
+        for service_key, service_path in services.items():
+            self._register_service_from_path(service_key, service_path)
 
-    def _load_config_file(self, config_path: Path) -> None:
-        """Load services from lfx.toml config file."""
-        try:
-            import tomllib as tomli  # Python 3.11+
-        except ImportError:
-            import tomli  # Python 3.10
-
-        try:
-            with config_path.open("rb") as f:
-                config = tomli.load(f)
-
-            services = config.get("services", {})
-            for service_key, service_path in services.items():
-                self._register_service_from_path(service_key, service_path)
-
+        if config_path.name == "lfx.toml" or services:
             logger.debug(f"Loaded {len(services)} services from {config_path}")
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(f"Failed to load config from {config_path}: {exc}")
-
-    def _load_pyproject_config(self, config_path: Path) -> None:
-        """Load services from pyproject.toml [tool.lfx.services] section."""
-        try:
-            import tomllib as tomli  # Python 3.11+
-        except ImportError:
-            import tomli  # Python 3.10
-
-        try:
-            with config_path.open("rb") as f:
-                config = tomli.load(f)
-
-            services = config.get("tool", {}).get("lfx", {}).get("services", {})
-            for service_key, service_path in services.items():
-                self._register_service_from_path(service_key, service_path)
-
-            if services:
-                logger.debug(f"Loaded {len(services)} services from {config_path}")
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(f"Failed to load config from {config_path}: {exc}")
 
     def _register_service_from_path(self, service_key: str, service_path: str) -> None:
         """Register a service from a module:class path string.
@@ -445,20 +440,16 @@ class ServiceManager:
             logger.warning(f"Invalid service key '{service_key}' - must match ServiceType enum value")
             return
 
-        try:
-            # Parse module:class format
-            if ":" not in service_path:
-                logger.warning(f"Invalid service path '{service_path}' - must be 'module:class' format")
-                return
+        service_class = load_object_from_import_path(
+            service_path,
+            object_kind="service",
+            object_key=service_key,
+        )
+        if service_class is None:
+            return
 
-            module_path, class_name = service_path.split(":", 1)
-            module = importlib.import_module(module_path)
-            service_class = getattr(module, class_name)
-
-            self.register_service_class(service_type, service_class, override=True)
-            logger.debug(f"Registered service from config: {service_key} -> {service_path}")
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(f"Failed to register service {service_key} from {service_path}: {exc}")
+        self.register_service_class(service_type, service_class, override=True)
+        logger.debug(f"Registered service from config: {service_key} -> {service_path}")
 
 
 # Global variables for lazy initialization

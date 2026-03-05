@@ -10,7 +10,7 @@ from lfx.services.base import Service
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from lfx.services.deployment.schema import (
+    from lfx.services.adapters.deployment.schema import (
         DeploymentCreate,
         DeploymentCreateResult,
         DeploymentDeleteResult,
@@ -28,6 +28,7 @@ if TYPE_CHECKING:
         IdLike,
         RedeployResult,
     )
+    from lfx.services.interfaces import DeploymentServiceProtocol
 
 
 class BaseDeploymentService(Service, ABC):
@@ -150,3 +151,8 @@ class BaseDeploymentService(Service, ABC):
         db: AsyncSession,
     ) -> ExecutionStatusResult:
         """Get provider-agnostic deployment execution state/output."""
+
+
+if TYPE_CHECKING:
+    # Static assertion: keep ABC API in sync with the consumer protocol.
+    _: type[DeploymentServiceProtocol] = BaseDeploymentService
