@@ -122,15 +122,16 @@ class DeploymentNotFoundError(DeploymentError):
 class DeploymentNotConfiguredError(DeploymentError):
     """Raised when no concrete deployment adapter has been registered.
 
-    The stub :class:`~lfx.services.deployment.service.DeploymentService` raises
+    The stub :class:`~lfx.services.adapters.deployment.service.DeploymentService` raises
     this for every operation so that callers receive a domain exception rather
     than a bare ``NotImplementedError``.
     """
 
     def __init__(
         self,
-        message: str = "No deployment adapter is registered. "
-        "Register a concrete adapter to enable deployment operations.",
+        message: str = (
+            "No deployment adapter is registered. Register a concrete adapter to enable deployment operations."
+        ),
         *,
         method: str | None = None,
         cause: Exception | None = None,
