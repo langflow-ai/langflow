@@ -276,9 +276,9 @@ To generate a secret encryption key for `LANGFLOW_SECRET_KEY`, do the following:
           - LANGFLOW_SECRET_KEY=${LANGFLOW_SECRET_KEY}
         ```
 
-#### Rotating the secret key {#rotating-the-secret-key}
+#### Rotate the secret key {#rotating-the-secret-key}
 
-You should rotate `LANGFLOW_SECRET_KEY` if the key may have been compromised or as part of routine security practice.
+Rotate `LANGFLOW_SECRET_KEY` if the key might have been compromised and as part of your routine credential management practices.
 Langflow provides a migration script that re-encrypts stored credentials and other sensitive data with a new key so you can rotate without losing access.
 
 For more information, see [Secret Key Rotation](https://github.com/langflow-ai/langflow/blob/main/SECURITY.md#secret-key-rotation) in the Langflow Security Policy.
