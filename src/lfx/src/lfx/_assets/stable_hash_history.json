@@ -1798,5 +1798,10 @@
     "versions": {
       "0.3.0": "efd180878996"
     }
+  },
+  "KnowledgeBase": {
+    "versions": {
+      "0.3.0": "54b54e5e574b"
+    }
   }
 }

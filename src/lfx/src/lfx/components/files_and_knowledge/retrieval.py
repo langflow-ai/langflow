@@ -36,11 +36,11 @@ def _get_knowledge_bases_root_path() -> Path:
     return _KNOWLEDGE_BASES_ROOT_PATH
 
 
-class KnowledgeRetrievalComponent(Component):
-    display_name = "Knowledge Retrieval"
+class KnowledgeBaseComponent(Component):
+    display_name = "Knowledge Base"
     description = "Search and retrieve data from knowledge."
     icon = "download"
-    name = "KnowledgeRetrieval"
+    name = "KnowledgeBase"
 
     inputs = [
         DropdownInput(
