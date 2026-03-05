@@ -128,12 +128,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
     ]
 
     def build_embeddings(self) -> Embeddings:
-        """Build and return an embeddings instance based on the selected model.
-
-        Returns an EmbeddingsWithModels wrapper that contains:
-        - The primary embedding instance (for the selected model)
-        - available_models dict mapping all available model names to their instances
-        """
+        """Build and return an embeddings instance based on the selected model."""
         return get_embeddings(
             model=self.model,
             user_id=self.user_id,

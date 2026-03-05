@@ -1616,7 +1616,7 @@ def get_embeddings(
                 kwargs[param_mapping[param_name]] = param_value
 
     try:
-        primary_instance = embedding_class(**kwargs)
+        return embedding_class(**kwargs)
     except Exception as e:
         if provider == "IBM WatsonX" and ("url" in str(e).lower() or "project" in str(e).lower()):
             msg = (
@@ -1625,26 +1625,6 @@ def get_embeddings(
             )
             raise ValueError(msg) from e
         raise
-
-    available_models: dict[str, Any] = {}
-    try:
-        all_provider_models = get_unified_models_detailed(model_type="embedding", providers=[provider])
-        model_name_key = param_mapping.get("model") or param_mapping.get("model_id", "model")
-        for provider_data in all_provider_models:
-            for model_info in provider_data.get("models", []):
-                available_model_name = model_info.get("model_name")
-                if not available_model_name:
-                    continue
-                instance_kwargs = dict(kwargs)
-                instance_kwargs[model_name_key] = available_model_name
-                with contextlib.suppress(Exception):
-                    available_models[available_model_name] = embedding_class(**instance_kwargs)
-    except (TypeError, ValueError) as exc:
-        logger.error("Exception occurred while instantiating available embedding models: %s", exc)
-
-    from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
-
-    return EmbeddingsWithModels(embeddings=primary_instance, available_models=available_models)
 
 
 def update_model_options_in_build_config(
@@ -1899,13 +1879,14 @@ def handle_model_input_update(
             build_config[field]["required"] = False
 
     # Step 3: Show/configure the right fields for the selected provider
+    # Note: use the value that was set (possibly by step 1's default-model logic) when field_name != "model".
     current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
     if isinstance(current_model_value, list) and len(current_model_value) > 0:
         provider = current_model_value[0].get("provider", "")
         if provider:
             build_config = apply_provider_variable_config_to_build_config(build_config, provider)
 
-        # Step 4: Watsonx-specific embedding fields (not in provider metadata)
+        # Also handle WatsonX-specific embedding fields that are not in provider metadata
         if cache_key_prefix == "embedding_model_options":
             is_watsonx = provider == "IBM WatsonX"
             if "truncate_input_tokens" in build_config:
