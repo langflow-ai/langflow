@@ -6,9 +6,11 @@ from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from lfx.base.knowledge_bases import get_knowledge_bases
-from lfx.components.knowledge_bases import KnowledgeIngestionComponent
+from lfx.components.deactivated.ingestion import KnowledgeIngestionComponent
 
 from tests.base import ComponentTestBaseWithClient
+
+pytestmark = pytest.mark.skip(reason="KnowledgeIngestionComponent is deactivated")
 
 
 class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
