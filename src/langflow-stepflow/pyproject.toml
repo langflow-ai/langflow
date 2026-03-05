@@ -1,0 +1,91 @@
+[project]
+name = "langflow-stepflow"
+version = "0.1.0"
+description = "Stepflow execution backend for Langflow"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Langflow Contributors"}
+]
+requires-python = ">=3.11"
+keywords = [
+    "workflow",
+    "langflow",
+    "stepflow",
+    "ai",
+    "automation",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+dependencies = [
+    "stepflow-py>=0.10.0",
+    "stepflow-orchestrator>=0.10.0",
+    "pyyaml>=6.0",
+    "msgspec>=0.19.0",
+    "jsonschema>=4.17.0",
+    "pydantic>=2.0.0",
+    "lfx",
+    "pandas>=2.0.0",
+    "langchain_core>=0.1.0",
+    "nest-asyncio>=1.6.0",
+    "opensearch-py>=2.8.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.26.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.14.1",
+    "ruff>=0.9.4",
+    "mypy==1.19.1",
+    "types-PyYAML>=6.0.0",
+    "pandas-stubs>=2.0.0",
+    "httpx>=0.25.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/langflow_stepflow"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B", "C4"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--disable-warnings",
+    "-ra",
+]
+markers = [
+    "slow: marks tests as slow",
+    "integration: marks tests as integration tests",
+    "real_execution: marks tests that use real Langflow component execution",
+]
