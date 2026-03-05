@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
@@ -40,3 +41,27 @@ def test_get_instance_is_thread_safe_singleton_creation():
     assert first is not None
     assert all(instance is first for instance in instances)
     assert factory_calls == 1
+
+
+def test_discover_is_thread_safe_runs_inner_discovery_once(tmp_path, monkeypatch):
+    registry = make_deployment_adapter_registry()
+    call_count = 0
+    call_count_lock = threading.Lock()
+
+    def counted_entry_points():
+        nonlocal call_count
+        time.sleep(0.02)
+        with call_count_lock:
+            call_count += 1
+
+    monkeypatch.setattr(registry, "_discover_from_entry_points", counted_entry_points)
+    monkeypatch.setattr(registry, "_discover_from_config", lambda _config_dir: None)
+
+    def run_discover(_):
+        registry.discover(config_dir=tmp_path)
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        list(pool.map(run_discover, range(8)))
+
+    assert registry.is_discovered is True
+    assert call_count == 1

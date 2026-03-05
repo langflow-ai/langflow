@@ -28,6 +28,7 @@ if TYPE_CHECKING:
         IdLike,
         RedeployResult,
     )
+    from lfx.services.interfaces import DeploymentServiceProtocol
 
 
 class BaseDeploymentService(Service, ABC):
@@ -150,3 +151,8 @@ class BaseDeploymentService(Service, ABC):
         db: AsyncSession,
     ) -> ExecutionStatusResult:
         """Get provider-agnostic deployment execution state/output."""
+
+
+if TYPE_CHECKING:
+    # Static assertion: keep ABC API in sync with the consumer protocol.
+    _: type[DeploymentServiceProtocol] = BaseDeploymentService

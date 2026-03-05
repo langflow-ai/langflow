@@ -159,7 +159,8 @@ class AdapterRegistry(Generic[T]):
 
             self._adapter_classes[key] = adapter_class
             logger.debug(
-                f"Registered adapter: adapter_type='{self._adapter_type.value}' key='{key}' class='{adapter_class.__name__}'"
+                f"Registered adapter: adapter_type='{self._adapter_type.value}' "
+                f"key='{key}' class='{adapter_class.__name__}'"
             )
 
     def get_class(self, key: str) -> type[T] | None:
@@ -202,24 +203,21 @@ class AdapterRegistry(Generic[T]):
     async def teardown_instances(self) -> None:
         """Teardown and clear all cached adapter instances in this registry."""
         with self._lock:
-            instances = list(self._adapter_instances.items())
+            for key, instance in list(self._adapter_instances.items()):
+                teardown = getattr(instance, "teardown", None)
+                if not callable(teardown):
+                    continue
+                try:
+                    teardown_result = teardown()
+                    if asyncio.iscoroutine(teardown_result):
+                        await teardown_result
+                except Exception as exc:  # noqa: BLE001
+                    logger.error(
+                        f"Failed to teardown adapter instance for adapter_type='{self._adapter_type.value}' "
+                        f"key='{key}': {exc}",
+                        exc_info=True,
+                    )
 
-        for key, instance in instances:
-            teardown = getattr(instance, "teardown", None)
-            if not callable(teardown):
-                continue
-            try:
-                teardown_result = teardown()
-                if asyncio.iscoroutine(teardown_result):
-                    await teardown_result
-            except Exception as exc:  # noqa: BLE001
-                logger.error(
-                    f"Failed to teardown adapter instance for adapter_type='{self._adapter_type.value}' "
-                    f"key='{key}': {exc}",
-                    exc_info=True,
-                )
-
-        with self._lock:
             self._adapter_instances.clear()
 
     def discover(self, config_dir: Path) -> None:
