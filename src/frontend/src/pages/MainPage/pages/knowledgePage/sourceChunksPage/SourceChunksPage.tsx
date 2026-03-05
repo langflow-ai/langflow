@@ -102,7 +102,7 @@ export const SourceChunksPage = () => {
       className="flex h-full w-full flex-col"
       data-testid="source-chunks-wrapper"
     >
-      <div className="flex h-full w-full flex-col overflow-hidden pt-10">
+      <div className="flex h-full w-full flex-col overflow-hidden pt-10 px-4">
         <div
           className="flex shrink-0 items-center pb-4 text-base h-[44px] font-semibold"
           data-testid="mainpage_title"
