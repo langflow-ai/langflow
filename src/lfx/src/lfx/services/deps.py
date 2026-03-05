@@ -2,25 +2,30 @@
 
 from __future__ import annotations
 
+import threading
 from contextlib import asynccontextmanager, suppress
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from fastapi import HTTPException
 from sqlalchemy.exc import InvalidRequestError
 
 from lfx.log.logger import logger
+from lfx.services.config_discovery import resolve_config_dir
 from lfx.services.schema import ServiceType
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
+    from pathlib import Path
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
+    from lfx.services.adapters.registry import AdapterRegistry
     from lfx.services.interfaces import (
         AuthServiceProtocol,
         CacheServiceProtocol,
         ChatServiceProtocol,
         DatabaseServiceProtocol,
+        DeploymentServiceProtocol,
         SettingsServiceProtocol,
         StorageServiceProtocol,
         TracingServiceProtocol,
@@ -138,6 +143,53 @@ def get_auth_service() -> AuthServiceProtocol | None:
     from lfx.services.schema import ServiceType
 
     return get_service(ServiceType.AUTH_SERVICE)
+
+
+def _get_deployment_registry() -> AdapterRegistry[DeploymentServiceProtocol]:
+    """Retrieve the deployment adapter registry singleton.
+
+    Discovery still needs to be triggered separately via
+    ``registry.discover(config_dir=...)``.
+    """
+    from lfx.services.adapters.registry import get_adapter_registry
+    from lfx.services.adapters.schema import AdapterType
+
+    return cast(
+        "AdapterRegistry[DeploymentServiceProtocol]",
+        get_adapter_registry(adapter_type=AdapterType.DEPLOYMENT),
+    )
+
+
+_deployment_discovery_lock = threading.Lock()
+
+
+def get_deployment_adapter(
+    adapter_key: str,
+) -> DeploymentServiceProtocol | None:
+    """Resolve a singleton deployment adapter instance by key.
+
+    Args:
+        adapter_key: Deployment adapter registry key (for example ``"local"``).
+    """
+    registry = _get_deployment_registry()
+    if not registry.is_discovered:
+        with _deployment_discovery_lock:
+            # Double-check after acquiring lock to avoid redundant discovery.
+            if not registry.is_discovered:
+                registry.discover(config_dir=_resolve_adapter_config_dir())
+    instance = registry.get_instance(adapter_key, factory=lambda adapter_class: adapter_class())
+    if instance is None:
+        logger.warning(
+            f"No deployment adapter found for key='{adapter_key}'. "
+            f"Available keys: {registry.list_keys()}. "
+            f"Check your lfx.toml or adapter registration."
+        )
+    return instance
+
+
+def _resolve_adapter_config_dir() -> Path:
+    """Resolve config directory for adapter discovery."""
+    return resolve_config_dir(None, settings_service=get_settings_service())
 
 
 async def get_session():

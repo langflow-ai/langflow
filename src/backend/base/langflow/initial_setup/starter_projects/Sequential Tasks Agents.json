@@ -360,7 +360,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": "2.11.10"
+                    "version": "2.12.5"
                   },
                   {
                     "name": "lfx",
@@ -945,7 +945,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": "2.11.10"
+                    "version": "2.12.5"
                   },
                   {
                     "name": "lfx",
@@ -2311,7 +2311,7 @@
         "data": {
           "id": "note-VLQWH",
           "node": {
-            "description": "This flow demonstrates how to chain multiple AI agents for comprehensive research and analysis. Each agent specializes in different aspects of the research process, building upon the previous agent's work. \n\n## Quickstart\n1. Add your **OpenAI API Key** to the three **Agent** components. If you want to use a different model or provider, change the **Model Provider**, **Model Name**, and **API Key** fields accordingly.\n2. Add your **Tavily API Key** to the **Tavily AI Search** component.\n3. Open the **Playground** and enter a query to run the flow. Be specific, clear, and include key aspects that you want the agents to analyze in a financial perspective.\nBecause this flow includes a financial analysis agent, useful queries should include a financial aspect, such as \"Should I invest in Tesla (TSLA)? Focus on AI development impact\". In contrast, asking the agent, \"Tell me about Tesla\" isn't as useful because it doesn't trigger the financial research agent or provide specific talking points for the other agents to research.\n\n## Next steps\nThis template uses financial analysis as an example. Try adapting it for other research-intensive tasks that require multiple perspectives and data sources.",
+            "description": "# 📖 README\nThis flow demonstrates how to chain multiple AI agents for comprehensive research and analysis. Each agent specializes in different aspects of the research process, building upon the previous agent's work. \n\n## Quick start\n1. Configure your **Model Provider** with your API credentials.\n2. Add your **Tavily API Key** to the **Tavily AI Search** component.\n3. Open the **Playground** and enter a query to run the flow. Be specific, clear, and include key aspects that you want the agents to analyze in a financial perspective.\nBecause this flow includes a financial analysis agent, useful queries should include a financial aspect, such as \"Should I invest in Tesla (TSLA)? Focus on AI development impact\". In contrast, asking the agent, \"Tell me about Tesla\" isn't as useful because it doesn't trigger the financial research agent or provide specific talking points for the other agents to research.\n\n## Next steps\nThis template uses financial analysis as an example. Try adapting it for other research-intensive tasks that require multiple perspectives and data sources.",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -2387,7 +2387,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": "2.11.10"
+                    "version": "2.12.5"
                   },
                   {
                     "name": "lfx",
@@ -2967,7 +2967,7 @@
                   },
                   {
                     "name": "pydantic",
-                    "version": "2.11.10"
+                    "version": "2.12.5"
                   },
                   {
                     "name": "lfx",
@@ -3780,7 +3780,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.133.1"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
