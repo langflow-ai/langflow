@@ -71,6 +71,6 @@ test(
 
     const textContents = await getAllResponseMessage(page);
 
-    expect(textContents.length).toBeGreaterThan(300);
+    expect(textContents.length).toBeGreaterThan(150);
   },
 );

@@ -2,7 +2,11 @@ from astrapy import DataAPIClient
 from langchain_core.documents import Document
 
 from lfx.base.datastax.astradb_base import AstraDBBaseComponent
-from lfx.base.models.unified_models import get_embedding_model_options, update_model_options_in_build_config
+from lfx.base.models.unified_models import (
+    get_embedding_model_options,
+    get_embeddings,
+    update_model_options_in_build_config,
+)
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
 from lfx.helpers.data import docs_to_data
@@ -142,7 +146,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
             build_config = update_model_options_in_build_config(
                 component=self,
                 build_config=build_config,
-                cache_key_prefix="astradb_embedding_model_options",
+                cache_key_prefix="embedding_model_options",
                 get_options_func=get_embedding_model_options,
                 field_name=field_name,
                 field_value=field_value if field_name == "embedding_model" else None,
@@ -293,8 +297,14 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
             )
             raise ImportError(msg) from e
 
-        # Get the embedding model and additional params
-        embedding_params = {"embedding": self.embedding_model} if self.embedding_model else {}
+        # Resolve the embedding model from ModelInput selection to an Embeddings instance
+        embedding = None
+        if self.embedding_model:
+            embedding = get_embeddings(
+                model=self.embedding_model,
+                user_id=self.user_id,
+            )
+        embedding_params = {"embedding": embedding} if embedding else {}
 
         # Get the additional parameters
         additional_params = self.astradb_vectorstore_kwargs or {}

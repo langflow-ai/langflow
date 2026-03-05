@@ -1,9 +1,8 @@
 from typing import Any
 
 from lfx.base.models.unified_models import (
-    get_language_model_options,
     get_llm,
-    update_model_options_in_build_config,
+    handle_model_input_update,
 )
 from lfx.custom import Component
 from lfx.io import (
@@ -136,14 +135,7 @@ class SmartRouterComponent(Component):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
-        return update_model_options_in_build_config(
-            component=self,
-            build_config=build_config,
-            cache_key_prefix="language_model_options",
-            get_options_func=get_language_model_options,
-            field_name=field_name,
-            field_value=field_value,
-        )
+        return handle_model_input_update(self, build_config, field_value, field_name)
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Create a dynamic output for each category in the categories table."""

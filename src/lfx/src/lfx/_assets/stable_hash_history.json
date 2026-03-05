@@ -651,7 +651,7 @@
   },
   "AstraDB": {
     "versions": {
-      "0.3.0": "9ca3747e73d6"
+      "0.3.0": "141bbfe8a16e"
     }
   },
   "AssistantsCreateAssistant": {
@@ -771,7 +771,7 @@
   },
   "KnowledgeIngestion": {
     "versions": {
-      "0.3.0": "6e27731b8315"
+      "0.3.0": "c37fd1b357d1"
     }
   },
   "KnowledgeRetrieval": {
@@ -1041,7 +1041,7 @@
   },
   "CSVAgent": {
     "versions": {
-      "0.3.0": "1888a727f9dd"
+      "0.3.0": "37c7fe430b9c"
     }
   },
   "LangChainFakeEmbeddings": {
@@ -1091,12 +1091,12 @@
   },
   "OpenAIToolsAgent": {
     "versions": {
-      "0.3.0": "21bfd16796e5"
+      "0.3.0": "71ead9b79d26"
     }
   },
   "OpenAPIAgent": {
     "versions": {
-      "0.3.0": "a4a7564100da"
+      "0.3.0": "43fa79471c67"
     }
   },
   "RecursiveCharacterTextSplitter": {
@@ -1126,7 +1126,7 @@
   },
   "SQLAgent": {
     "versions": {
-      "0.3.0": "550c16461236"
+      "0.3.0": "e55626d2bb5c"
     }
   },
   "SQLDatabase": {
@@ -1141,7 +1141,7 @@
   },
   "ToolCallingAgent": {
     "versions": {
-      "0.3.0": "cdeb13ac7430"
+      "0.3.0": "3859db02aed3"
     }
   },
   "VectorStoreInfo": {
@@ -1156,7 +1156,7 @@
   },
   "XMLAgent": {
     "versions": {
-      "0.3.0": "17a0cb4c48a8"
+      "0.3.0": "6a1885132121"
     }
   },
   "LangWatchEvaluator": {
@@ -1166,17 +1166,17 @@
   },
   "BatchRunComponent": {
     "versions": {
-      "0.3.0": "8b1ec3b03475"
+      "0.3.0": "d87bf7cc6134"
     }
   },
   "Smart Transform": {
     "versions": {
-      "0.3.0": "9912fe8c7f1b"
+      "0.3.0": "06dc1e4132a7"
     }
   },
   "SmartRouter": {
     "versions": {
-      "0.3.0": "7bdefeec6280"
+      "0.3.0": "b18d1640fd58"
     }
   },
   "LLMSelectorComponent": {
@@ -1186,7 +1186,7 @@
   },
   "StructuredOutput": {
     "versions": {
-      "0.3.0": "058ca1f51e9f"
+      "0.3.0": "61f954a564c6"
     }
   },
   "LMStudioEmbeddingsComponent": {
@@ -1226,17 +1226,17 @@
   },
   "Agent": {
     "versions": {
-      "0.3.0": "60401f4e0ff8"
+      "0.3.0": "7c1041af057b"
     }
   },
   "EmbeddingModel": {
     "versions": {
-      "0.3.0": "c6283f8fdbef"
+      "0.3.0": "36b8133fba49"
     }
   },
   "LanguageModelComponent": {
     "versions": {
-      "0.3.0": "4af3c0cc0dcf"
+      "0.3.0": "ecdba2caa9e0"
     }
   },
   "MCPTools": {
@@ -1776,7 +1776,7 @@
   },
   "GuardrailValidator": {
     "versions": {
-      "0.3.0": "48e23a3e0848"
+      "0.3.0": "2b995329aaa7"
     }
   },
   "LiteLLMProxyModel": {
