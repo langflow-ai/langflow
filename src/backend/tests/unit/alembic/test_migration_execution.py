@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -39,11 +40,16 @@ def _get_main_branch_head() -> str | None:
 
     workspace_root = Path(__file__).resolve().parents[5]
 
+    git = shutil.which("git")
+    if git is None:
+        msg = "git executable not found on PATH"
+        raise FileNotFoundError(msg)
+
     try:
         # Find migration files that are new on this branch vs origin/main
         result = subprocess.run(
             [
-                "git",
+                git,
                 "diff",
                 "--name-only",
                 "--diff-filter=A",
