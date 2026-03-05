@@ -1,4 +1,4 @@
-"""Merge cascade fix and flow history branches
+"""Merge cascade fix and flow version branches
 
 Revision ID: fc7f696a57bf
 Revises: 59a272d6669a, 7d327cfafab6
