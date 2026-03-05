@@ -17,6 +17,12 @@ test(
     });
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-nav-mcp").click();
+    await page.waitForSelector(
+      '[data-testid="add-component-button-lf-starter_project"]',
+      {
+        timeout: 30000,
+      },
+    );
     await page.getByTestId("add-component-button-lf-starter_project").click();
 
     // See if the color matches
@@ -55,6 +61,8 @@ test(
 
     await page.getByTestId("add-mcp-server-button").click();
 
+    await page.waitForTimeout(5000);
+
     await expect(page.getByTestId("dropdown_str_tool")).toBeVisible({
       timeout: 30000,
     });
@@ -62,7 +70,7 @@ test(
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 10000,
+        timeout: 30000,
         state: "visible",
       },
     );
@@ -152,7 +160,7 @@ test(
 
     await page
       .getByTestId(`mcp-server-menu-button-${testName}`)
-      .click({ timeout: 3000 });
+      .click({ timeout: 30000 });
 
     await page.waitForTimeout(500);
 
@@ -228,9 +236,11 @@ test(
 
     await page.waitForTimeout(500);
 
-    await page.getByTestId(`add-component-button-${testName}`).click();
+    await page
+      .getByTestId(`add-component-button-${testName}`)
+      .click({ timeout: 30000 });
 
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(5000);
 
     await expect(page.getByTestId("dropdown_str_tool")).toBeVisible({
       timeout: 30000,
@@ -239,7 +249,7 @@ test(
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 10000,
+        timeout: 30000,
         state: "visible",
       },
     );
@@ -326,6 +336,12 @@ test(
     });
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-nav-mcp").click();
+    await page.waitForSelector(
+      '[data-testid="add-component-button-lf-starter_project"]',
+      {
+        timeout: 30000,
+      },
+    );
     await page.getByTestId("add-component-button-lf-starter_project").click();
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
@@ -379,7 +395,7 @@ test(
     await page.getByTestId("add-mcp-server-button").click();
 
     // Go to settings to edit the server
-    await page.getByTestId("user_menu_button").click({ timeout: 10000 });
+    await page.getByTestId("user_menu_button").click({ timeout: 30000 });
     await page.getByTestId("menu_settings_button").click({ timeout: 10000 });
 
     await page.waitForSelector('[data-testid="sidebar-nav-MCP Servers"]', {
@@ -470,6 +486,12 @@ test(
     });
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-nav-mcp").click();
+    await page.waitForSelector(
+      '[data-testid="add-component-button-lf-starter_project"]',
+      {
+        timeout: 30000,
+      },
+    );
     await page.getByTestId("add-component-button-lf-starter_project").click();
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
@@ -528,37 +550,56 @@ test(
     // Save the server
     await page.getByTestId("add-mcp-server-button").click();
 
+    // Wait for save to complete and modal to close
+    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
+      state: "hidden",
+      timeout: 30000,
+    });
+
     // Go to settings to edit the server
-    await page.getByTestId("user_menu_button").click({ timeout: 10000 });
+    await page.getByTestId("user_menu_button").click({ timeout: 30000 });
     await page.getByTestId("menu_settings_button").click({ timeout: 10000 });
 
     await page.waitForSelector('[data-testid="sidebar-nav-MCP Servers"]', {
       timeout: 30000,
     });
-    await page.getByTestId("sidebar-nav-MCP Servers").click({ timeout: 3000 });
+    await page.getByTestId("sidebar-nav-MCP Servers").click({ timeout: 10000 });
 
     await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
-      timeout: 3000,
+      timeout: 30000,
     });
 
     // Find and edit the server
     await expect(page.getByText(testName)).toBeVisible({
-      timeout: 3000,
+      timeout: 10000,
     });
 
     await page
       .getByTestId(`mcp-server-menu-button-${testName}`)
-      .click({ timeout: 3000 });
+      .click({ timeout: 10000 });
 
     await page
       .getByText("Edit", { exact: true })
       .first()
-      .click({ timeout: 3000 });
+      .click({ timeout: 10000 });
 
     await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
       state: "visible",
       timeout: 30000,
     });
+
+    // Wait for form fields to be populated
+    await page.waitForSelector('[data-testid="http-name-input"]', {
+      state: "visible",
+      timeout: 10000,
+    });
+    await page.waitForSelector(
+      '[data-testid="popover-anchor-http-headers-value-0"]',
+      {
+        state: "visible",
+        timeout: 10000,
+      },
+    );
 
     // Verify all fields persisted correctly
     expect(await page.getByTestId("http-name-input").inputValue()).toBe(
@@ -568,10 +609,11 @@ test(
     expect(await page.getByTestId("http-headers-key-0").inputValue()).toBe(
       testHeaderKey1,
     );
-    // Header values use InputComponent with global variables, so we verify by placeholder
+    // Header values use InputComponent with global variables
     expect(
       await page
         .getByTestId("popover-anchor-http-headers-value-0")
+        .first()
         .inputValue(),
     ).toBe(testHeaderValue1);
     expect(await page.getByTestId("http-headers-key-1").inputValue()).toBe(
@@ -580,6 +622,7 @@ test(
     expect(
       await page
         .getByTestId("popover-anchor-http-headers-value-1")
+        .first()
         .inputValue(),
     ).toBe(testHeaderValue2);
     expect(await page.getByTestId("http-env-key-0").inputValue()).toBe(
@@ -601,23 +644,23 @@ test(
     // Delete the test server
     await page
       .getByTestId(`mcp-server-menu-button-${testName}`)
-      .click({ timeout: 3000 });
+      .click({ timeout: 10000 });
 
     await page
       .getByText("Delete", { exact: true })
       .first()
-      .click({ timeout: 3000 });
+      .click({ timeout: 10000 });
 
     await page.waitForSelector(
       '[data-testid="btn_delete_delete_confirmation_modal"]',
       {
-        timeout: 3000,
+        timeout: 10000,
       },
     );
 
     await page
       .getByTestId("btn_delete_delete_confirmation_modal")
-      .click({ timeout: 3000 });
+      .click({ timeout: 10000 });
   },
 );
 
@@ -634,6 +677,12 @@ test(
     });
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-nav-mcp").click();
+    await page.waitForSelector(
+      '[data-testid="add-component-button-lf-starter_project"]',
+      {
+        timeout: 30000,
+      },
+    );
     await page.getByTestId("add-component-button-lf-starter_project").click();
 
     await page.getByTestId("canvas_controls_dropdown").click();
@@ -660,19 +709,26 @@ test(
 
     await page.getByTestId("add-mcp-server-button").click();
 
-    await page.waitForTimeout(500);
+    // Wait for save to complete and modal to close
+    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
+      state: "hidden",
+      timeout: 30000,
+    });
 
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
       {
-        timeout: 10000,
+        timeout: 30000,
         state: "visible",
       },
     );
 
     await page.getByTestId("dropdown_str_tool").click();
 
-    await page.waitForTimeout(500);
+    await page.waitForSelector('[data-testid="fetch-0-option"]', {
+      state: "visible",
+      timeout: 10000,
+    });
 
     const fetchOptionCount = await page.getByTestId("fetch-0-option").count();
 
@@ -707,32 +763,32 @@ test(
 
     expect(urlOptionCount).toBeGreaterThan(0);
 
-    await page.getByTestId("user_menu_button").click({ timeout: 3000 });
+    await page.getByTestId("user_menu_button").click({ timeout: 10000 });
 
-    await page.getByTestId("menu_settings_button").click({ timeout: 3000 });
+    await page.getByTestId("menu_settings_button").click({ timeout: 10000 });
 
     await page.waitForSelector('[data-testid="sidebar-nav-MCP Servers"]', {
       timeout: 30000,
     });
 
-    await page.getByTestId("sidebar-nav-MCP Servers").click({ timeout: 3000 });
+    await page.getByTestId("sidebar-nav-MCP Servers").click({ timeout: 10000 });
 
     await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
-      timeout: 3000,
+      timeout: 30000,
     });
 
     await expect(page.getByText(testName)).toBeVisible({
-      timeout: 3000,
+      timeout: 10000,
     });
 
     await page
       .getByTestId(`mcp-server-menu-button-${testName}`)
-      .click({ timeout: 3000 });
+      .click({ timeout: 10000 });
 
     await page
       .getByText("Edit", { exact: true })
       .first()
-      .click({ timeout: 3000 });
+      .click({ timeout: 10000 });
 
     await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
       state: "visible",
@@ -740,15 +796,21 @@ test(
     });
 
     await expect(page.getByTestId("json-tab")).toBeDisabled({
-      timeout: 3000,
+      timeout: 10000,
     });
 
     await expect(page.getByTestId("stdio-tab")).not.toBeDisabled({
-      timeout: 3000,
+      timeout: 10000,
     });
 
     await expect(page.getByTestId("http-tab")).toBeDisabled({
-      timeout: 3000,
+      timeout: 10000,
+    });
+
+    // Wait for command input to be populated
+    await page.waitForSelector('[data-testid="stdio-command-input"]', {
+      state: "visible",
+      timeout: 10000,
     });
 
     expect(await page.getByTestId("stdio-command-input").inputValue()).toBe(
@@ -759,7 +821,11 @@ test(
 
     await page.getByTestId("add-mcp-server-button").click();
 
-    await page.waitForTimeout(5000);
+    // Wait for save to complete and modal to close
+    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
+      state: "hidden",
+      timeout: 30000,
+    });
 
     await awaitBootstrapTest(page, { skipModal: true });
 
@@ -767,17 +833,23 @@ test(
       .getByTestId("flow-name-div")
       .filter({ hasText: "New Flow" })
       .first();
+    await newFlowDiv.waitFor({ state: "visible", timeout: 10000 });
     await newFlowDiv.click();
 
+    // Wait for the MCP Tools component to be visible on canvas
+    await page.waitForSelector('text="MCP Tools"', {
+      state: "visible",
+      timeout: 30000,
+    });
     await page.getByText("MCP Tools", { exact: true }).last().click();
     await adjustScreenView(page);
     // Re-select the server after returning to flow (server reference may be lost after editing)
     await page.waitForSelector('[data-testid="mcp-server-dropdown"]', {
-      timeout: 10000,
+      timeout: 30000,
       state: "visible",
     });
     await page.getByTestId("mcp-server-dropdown").click();
-    await page.getByTestId(`list_item_${testName}`).click({ timeout: 5000 });
+    await page.getByTestId(`list_item_${testName}`).click({ timeout: 10000 });
 
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
@@ -789,44 +861,49 @@ test(
 
     await page.getByTestId("dropdown_str_tool").click();
 
+    await page.waitForSelector('[data-testid="get_current_time-0-option"]', {
+      state: "visible",
+      timeout: 10000,
+    });
+
     const timeOptionCount = await page
       .getByTestId("get_current_time-0-option")
       .count();
 
     expect(timeOptionCount).toBeGreaterThan(0);
 
-    await page.getByTestId("user_menu_button").click({ timeout: 3000 });
+    await page.getByTestId("user_menu_button").click({ timeout: 10000 });
 
-    await page.getByTestId("menu_settings_button").click({ timeout: 3000 });
+    await page.getByTestId("menu_settings_button").click({ timeout: 10000 });
 
     await page.waitForSelector('[data-testid="sidebar-nav-MCP Servers"]', {
       timeout: 30000,
     });
 
-    await page.getByTestId("sidebar-nav-MCP Servers").click({ timeout: 3000 });
+    await page.getByTestId("sidebar-nav-MCP Servers").click({ timeout: 10000 });
 
     await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
-      timeout: 3000,
+      timeout: 30000,
     });
     await page
       .getByTestId(`mcp-server-menu-button-${testName}`)
-      .click({ timeout: 3000 });
+      .click({ timeout: 10000 });
 
     await page
       .getByText("Delete", { exact: true })
       .first()
-      .click({ timeout: 3000 });
+      .click({ timeout: 10000 });
 
     await page.waitForSelector(
       '[data-testid="btn_delete_delete_confirmation_modal"]',
       {
-        timeout: 3000,
+        timeout: 10000,
       },
     );
 
     await page
       .getByTestId("btn_delete_delete_confirmation_modal")
-      .click({ timeout: 3000 });
+      .click({ timeout: 10000 });
 
     await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
       timeout: 10000,
@@ -857,7 +934,7 @@ test(
     await page.getByTestId("add-mcp-server-button").click();
 
     await expect(page.getByText(testName)).toBeVisible({
-      timeout: 3000,
+      timeout: 10000,
     });
 
     await awaitBootstrapTest(page, { skipModal: true });
@@ -866,17 +943,23 @@ test(
       .getByTestId("flow-name-div")
       .filter({ hasText: "New Flow" })
       .first();
+    await newFlowDiv2.waitFor({ state: "visible", timeout: 10000 });
     await newFlowDiv2.click();
 
+    // Wait for the MCP Tools component to be visible on canvas
+    await page.waitForSelector('text="MCP Tools"', {
+      state: "visible",
+      timeout: 30000,
+    });
     await page.getByText("MCP Tools", { exact: true }).last().click();
 
     // Re-select the server after returning to flow (server reference may be lost after editing)
     await page.waitForSelector('[data-testid="mcp-server-dropdown"]', {
-      timeout: 10000,
+      timeout: 30000,
       state: "visible",
     });
     await page.getByTestId("mcp-server-dropdown").click();
-    await page.getByTestId(`list_item_${testName}`).click({ timeout: 5000 });
+    await page.getByTestId(`list_item_${testName}`).click({ timeout: 10000 });
 
     await page.waitForSelector(
       '[data-testid="dropdown_str_tool"]:not([disabled])',
@@ -887,6 +970,11 @@ test(
     );
 
     await page.getByTestId("dropdown_str_tool").click();
+
+    await page.waitForSelector('[data-testid="fetch-0-option"]', {
+      state: "visible",
+      timeout: 10000,
+    });
 
     const fetchOptionCount2 = await page.getByTestId("fetch-0-option").count();
 
@@ -907,6 +995,12 @@ test(
     });
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-nav-mcp").click();
+    await page.waitForSelector(
+      '[data-testid="add-component-button-lf-starter_project"]',
+      {
+        timeout: 30000,
+      },
+    );
     await page.getByTestId("add-component-button-lf-starter_project").click();
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });

@@ -45,7 +45,7 @@ export default function ChatInput({
     (state) => state.setAwaitingBotResponse,
   );
 
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null!);
 
   const { mutate } = usePostUploadFile();
 
