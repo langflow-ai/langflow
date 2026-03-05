@@ -305,8 +305,7 @@ module.exports = {
               label: "Files and Knowledge",
               items: [
                 "Components/directory",
-                "Components/knowledge-ingestion",
-                "Components/knowledge-retrieval",
+                "Components/knowledge-base",
                 "Components/read-file",
                 "Components/write-file",
               ]
