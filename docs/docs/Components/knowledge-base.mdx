@@ -1,6 +1,6 @@
 ---
-title: Knowledge Retrieval
-slug: /knowledge-retrieval
+title: Knowledge Base
+slug: /knowledge-base
 ---
 
 import Icon from "@site/src/components/icon";
@@ -9,11 +9,11 @@ import PartialKbSummary from '@site/docs/_partial-kb-summary.mdx';
 
 <PartialKbSummary />
 
-The **Knowledge Retrieval** component reads from an existing knowledge base using semantic search.
+The **Knowledge Base** component reads from an existing knowledge base using semantic search.
 
 The output is a [`DataFrame`](/data-types#dataframe) containing the top matching results from the queried knowledge base.
 
-## Knowledge Retrieval parameters
+## Knowledge Base parameters
 
 <PartialParams />
 
@@ -25,11 +25,11 @@ The output is a [`DataFrame`](/data-types#dataframe) containing the top matching
 | top_k | Top K Results | Input parameter. Number of search results to return. Default: `5`. |
 | include_metadata | Include Metadata | Input parameter. Whether to include all metadata and embeddings in the output. If enabled, each output row includes all metadata, embeddings, and content. If disabled, only the content is returned. Default: Enabled (true). |
 
-## Use the Knowledge Retrieval component in a flow
+## Use the Knowledge Base component in a flow
 
-After you create and load data to a knowledge base, you can use the **Knowledge Retrieval** component in any flow to retrieve data from your knowledge base using semantic search:
+After you create and load data to a [knowledge base](/knowledge), you can use the **Knowledge Base** component in any flow to retrieve data from your knowledge base using semantic search:
 
-1. Add a **Knowledge Retrieval** component to your flow.
+1. Add a **Knowledge Base** component to your flow.
 
 2. In the **Knowledge** field, select the knowledge base you want to search, such as the customer sales data knowledge base created in the previous steps.
 
@@ -39,8 +39,8 @@ After you create and load data to a knowledge base, you can use the **Knowledge 
 
    For the customer sales data example, enter a product name like `laptop` or `wireless devices`.
 
-5. Click <Icon name="Play" aria-hidden="true"/> **Run component** on the **Knowledge Retrieval** component, and then open the **Playground** to view the output.
+5. Click <Icon name="Play" aria-hidden="true"/> **Run component** on the **Knowledge Base** component, and then open the **Playground** to view the output.
 
 ## See also
 
-* [**Knowledge Ingestion** component](/knowledge-ingestion)
+* [Manage vector data](/knowledge)
