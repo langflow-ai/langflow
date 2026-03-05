@@ -6,7 +6,6 @@ import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { RECEIVING_INPUT_VALUE, SELECT_AN_OPTION } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
-import KnowledgeBaseUploadModal from "@/modals/knowledgeBaseUploadModal/KnowledgeBaseUploadModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useTypesStore } from "@/stores/typesStore";
@@ -611,39 +610,20 @@ export default function Dropdown({
               </div>
             </CommandItem>
           )}
-          {dialogInputs?.fields?.data?.node?.display_name ===
-            "Create Knowledge" ||
-          dialogInputs?.fields?.data?.node?.name === "create_knowledge_base" ? (
-            <KnowledgeBaseUploadModal
-              open={openDialog}
-              setOpen={(isOpen) => {
-                setOpenDialog(isOpen);
-                if (!isOpen) setOpen(false);
-              }}
-              onSubmit={(data) => {
-                setOpenDialog(false);
-                setOpen(false);
-                setPendingSelect(data.sourceName);
-                handleRefreshButtonPress();
-              }}
-              hideAdvanced
-            />
-          ) : (
-            <NodeDialog
-              open={openDialog}
-              dialogInputs={dialogInputs}
-              onClose={() => {
-                setOpenDialog(false);
-                setOpen(false);
-              }}
-              onCreated={(createdValue) => {
-                setPendingSelect(createdValue);
-              }}
-              nodeId={nodeId!}
-              name={name!}
-              nodeClass={nodeClass!}
-            />
-          )}
+          <NodeDialog
+            open={openDialog}
+            dialogInputs={dialogInputs}
+            onClose={() => {
+              setOpenDialog(false);
+              setOpen(false);
+            }}
+            onCreated={(createdValue) => {
+              setPendingSelect(createdValue);
+            }}
+            nodeId={nodeId!}
+            name={name!}
+            nodeClass={nodeClass!}
+          />
         </CommandGroup>
       )}
     </CommandList>

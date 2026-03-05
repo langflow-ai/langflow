@@ -1472,22 +1472,35 @@ def get_embeddings(
     model_kwargs=None,
     watsonx_url=None,
     watsonx_project_id=None,
-    include_available_models: bool = True,
+    ollama_base_url=None,
 ) -> Any:
-    """Instantiate an embeddings model from a ModelInput selection.
+    """Instantiate an embeddings model from a model selection dict.
 
-    This is the embedding counterpart of :func:`get_llm`.  It accepts the
-    ``model`` list produced by a ``ModelInput(model_type="embedding")`` field,
-    resolves credentials and provider-specific parameters, and returns an
-    ``Embeddings`` instance (wrapped in :class:`EmbeddingsWithModels` when
-    *include_available_models* is True).
+    This mirrors :func:`get_llm` but for embedding models.  It accepts the
+    same model-selection list format produced by ``get_embedding_model_options``
+    (or a raw ``Embeddings`` instance for passthrough).
 
-    If *model* is already a ``langchain_core.embeddings.Embeddings`` instance
-    (i.e. connected directly), it is returned as-is.
+    Args:
+        model: Model selection - a list with one dict (``[{'name': ..., 'provider': ..., 'metadata': ...}]``)
+               or an already-instantiated ``Embeddings`` object.
+        user_id: Current user id (used to look up stored API keys).
+        api_key: Explicit API key override.
+        api_base: Optional base URL override.
+        dimensions: Optional output dimensions.
+        chunk_size: Optional embedding batch size.
+        request_timeout: Optional request timeout.
+        max_retries: Optional max retries.
+        show_progress_bar: Optional progress bar flag.
+        model_kwargs: Optional extra kwargs passed to the provider.
+        watsonx_url: Optional IBM WatsonX API endpoint URL.
+        watsonx_project_id: Optional IBM WatsonX project ID.
+        ollama_base_url: Optional Ollama base URL.
+
+    Returns:
+        An instantiated embeddings object.
     """
-    from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
-
     # Coerce provider-specific string params
+    ollama_base_url = _to_str(ollama_base_url)
     watsonx_url = _to_str(watsonx_url)
     watsonx_project_id = _to_str(watsonx_project_id)
 
@@ -1500,7 +1513,7 @@ def get_embeddings(
     except ImportError:
         pass
 
-    # --- extract model config from the ModelInput list -----------------------
+    # Validate input
     if not model or not isinstance(model, list) or len(model) == 0:
         msg = "An embedding model selection is required"
         raise ValueError(msg)
@@ -1509,10 +1522,6 @@ def get_embeddings(
     model_name = model_dict.get("name")
     provider = model_dict.get("provider")
     metadata = model_dict.get("metadata", {})
-
-    if not model_name:
-        msg = "Model name is required"
-        raise ValueError(msg)
 
     # --- resolve API key -----------------------------------------------------
     api_key = get_api_key_for_provider(user_id, provider, api_key)
@@ -1525,7 +1534,11 @@ def get_embeddings(
         )
         raise ValueError(msg)
 
-    # --- resolve embedding class ---------------------------------------------
+    if not model_name:
+        msg = "Embedding model name is required"
+        raise ValueError(msg)
+
+    # Get embedding class from metadata
     embedding_class_name = metadata.get("embedding_class")
     if not embedding_class_name:
         msg = f"No embedding class defined in metadata for {model_name}"
@@ -1559,8 +1572,37 @@ def get_embeddings(
         "request_timeout": float(request_timeout) if request_timeout else None,
         "max_retries": int(max_retries) if max_retries else None,
         "show_progress_bar": show_progress_bar,
-        "model_kwargs": model_kwargs or None,
+        "model_kwargs": model_kwargs if model_kwargs else None,
     }
+
+    # Watson-specific parameters
+    if provider in {"IBM WatsonX", "IBM watsonx.ai"}:
+        watsonx_provider_vars = get_all_variables_for_provider(user_id, provider)
+        if "url" in param_mapping:
+            url_value = watsonx_url or watsonx_provider_vars.get("WATSONX_URL") or os.environ.get("WATSONX_URL")
+            if url_value:
+                kwargs[param_mapping["url"]] = url_value
+        if "project_id" in param_mapping:
+            pid_value = (
+                watsonx_project_id
+                or watsonx_provider_vars.get("WATSONX_PROJECT_ID")
+                or os.environ.get("WATSONX_PROJECT_ID")
+            )
+            if pid_value:
+                kwargs[param_mapping["project_id"]] = pid_value
+
+    # Ollama-specific parameters
+    if provider == "Ollama" and "base_url" in param_mapping:
+        provider_vars = get_all_variables_for_provider(user_id, provider)
+        base_url_value = (
+            ollama_base_url
+            or provider_vars.get("OLLAMA_BASE_URL")
+            or os.environ.get("OLLAMA_BASE_URL")
+            or "http://localhost:11434"
+        )
+        kwargs[param_mapping["base_url"]] = base_url_value
+
+    # Add optional parameters if they have values and are mapped
     for param_name, param_value in optional_params.items():
         if param_value is not None and param_name in param_mapping:
             # Google wraps timeout in a dict
@@ -1573,65 +1615,16 @@ def get_embeddings(
             else:
                 kwargs[param_mapping[param_name]] = param_value
 
-    # --- provider-specific parameters ----------------------------------------
-    if provider in {"IBM WatsonX", "IBM watsonx.ai"}:
-        provider_vars = get_all_variables_for_provider(user_id, provider)
-        url_value = watsonx_url or provider_vars.get("WATSONX_URL") or os.environ.get("WATSONX_URL")
-        pid_value = (
-            watsonx_project_id or provider_vars.get("WATSONX_PROJECT_ID") or os.environ.get("WATSONX_PROJECT_ID")
-        )
-        if "url" in param_mapping and url_value:
-            kwargs[param_mapping["url"]] = url_value
-        if "project_id" in param_mapping and pid_value:
-            kwargs[param_mapping["project_id"]] = pid_value
-
-    elif provider == "Ollama":
-        provider_vars = get_all_variables_for_provider(user_id, provider)
-        base_url_value = (
-            _to_str(api_base)
-            or provider_vars.get("OLLAMA_BASE_URL")
-            or os.environ.get("OLLAMA_BASE_URL")
-            or "http://localhost:11434"
-        )
-        if "base_url" in param_mapping:
-            kwargs[param_mapping["base_url"]] = base_url_value
-
-    # --- instantiate primary embedding ---------------------------------------
-    primary_instance = embedding_class(**kwargs)
-
-    if not include_available_models:
-        return primary_instance
-
-    # --- build available_models dict -----------------------------------------
-    available_models_dict: dict[str, Any] = {}
-    all_embedding_models = get_unified_models_detailed(
-        providers=[provider],
-        model_type="embeddings",
-        include_deprecated=False,
-        include_unsupported=False,
-    )
-    for provider_data in all_embedding_models:
-        if provider_data.get("provider") != provider:
-            continue
-        for md in provider_data.get("models", []):
-            alt_name = md.get("model_name")
-            if not alt_name:
-                continue
-            try:
-                alt_kwargs = dict(kwargs)  # shallow copy of base kwargs
-                # Override the model name
-                if "model" in param_mapping:
-                    alt_kwargs[param_mapping["model"]] = alt_name
-                elif "model_id" in param_mapping:
-                    alt_kwargs[param_mapping["model_id"]] = alt_name
-                available_models_dict[alt_name] = embedding_class(**alt_kwargs)
-            except Exception:  # noqa: BLE001
-                logger.debug("Failed to instantiate embedding model %s: skipping", alt_name, exc_info=True)
-
-    return EmbeddingsWithModels(
-        embeddings=primary_instance,
-        available_models=available_models_dict,
-    )
+    try:
+        return embedding_class(**kwargs)
+    except Exception as e:
+        if provider == "IBM WatsonX" and ("url" in str(e).lower() or "project" in str(e).lower()):
+            msg = (
+                f"Failed to initialize IBM WatsonX embedding model: {e}\n\n"
+                "IBM WatsonX requires additional configuration parameters (API endpoint URL and project ID)."
+            )
+            raise ValueError(msg) from e
+        raise
 
 
 def update_model_options_in_build_config(
