@@ -1,4 +1,4 @@
-"""Deployment service implementations for LFX."""
+"""Deployment adapter package."""
 
 from .base import BaseDeploymentService
 from .exceptions import DeploymentError, DeploymentNotConfiguredError, DeploymentServiceError

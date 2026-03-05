@@ -57,10 +57,10 @@ class BaseFlowArtifact(BaseModel):
             raise ValueError(msg)
         if not isinstance(value["nodes"], list):
             msg = "Flow 'nodes' must be a list"
-            raise ValueError(msg)  # noqa: TRY004
+            raise ValueError(msg)  # noqa: TRY004 - Pydantic validators must raise ValueError
         if not isinstance(value["edges"], list):
             msg = "Flow 'edges' must be a list"
-            raise ValueError(msg)  # noqa: TRY004
+            raise ValueError(msg)  # noqa: TRY004 - Pydantic validators must raise ValueError
         return value
 
 

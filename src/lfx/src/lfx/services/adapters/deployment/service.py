@@ -1,3 +1,4 @@
+# ruff: noqa: ARG002
 """Default (no-op) deployment service implementation."""
 
 from __future__ import annotations
@@ -5,13 +6,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
-from lfx.services.deployment.base import BaseDeploymentService
-from lfx.services.deployment.exceptions import DeploymentNotConfiguredError
+from lfx.services.adapters.deployment.base import BaseDeploymentService
+from lfx.services.adapters.deployment.exceptions import DeploymentNotConfiguredError
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from lfx.services.deployment.schema import (
+    from lfx.services.adapters.deployment.schema import (
         DeploymentCreate,
         DeploymentCreateResult,
         DeploymentDeleteResult,
@@ -31,9 +32,9 @@ if TYPE_CHECKING:
     )
 
 
-# Not registered yet — no ServiceType.DEPLOYMENT_SERVICE enum value exists.
-# This stub defines the concrete class so the protocol and ABC are testable.
-# A future PR will add the enum value and register the service.
+# No adapter key registered -- this stub exists so the protocol and ABC are
+# testable.  Concrete adapters (e.g. in Langflow) subclass BaseDeploymentService
+# and register under meaningful keys like "local" or "remote".
 class DeploymentService(BaseDeploymentService):
     """Null deployment service for LFX.
 
@@ -47,9 +48,9 @@ class DeploymentService(BaseDeploymentService):
     async def create(
         self,
         *,
-        user_id: IdLike,  # noqa: ARG002
-        payload: DeploymentCreate,  # noqa: ARG002
-        db: AsyncSession,  # noqa: ARG002
+        user_id: IdLike,
+        payload: DeploymentCreate,
+        db: AsyncSession,
     ) -> DeploymentCreateResult:
         """Create a new deployment in the provider."""
         raise DeploymentNotConfiguredError(method="create")
@@ -57,8 +58,8 @@ class DeploymentService(BaseDeploymentService):
     async def list_types(
         self,
         *,
-        user_id: IdLike,  # noqa: ARG002
-        db: AsyncSession,  # noqa: ARG002
+        user_id: IdLike,
+        db: AsyncSession,
     ) -> DeploymentListTypesResult:
         """List deployment types supported by the provider."""
         raise DeploymentNotConfiguredError(method="list_types")
@@ -66,9 +67,9 @@ class DeploymentService(BaseDeploymentService):
     async def list(
         self,
         *,
-        user_id: IdLike,  # noqa: ARG002
-        params: DeploymentListParams | None = None,  # noqa: ARG002
-        db: AsyncSession,  # noqa: ARG002
+        user_id: IdLike,
+        params: DeploymentListParams | None = None,
+        db: AsyncSession,
     ) -> DeploymentListResult:
         """List deployments visible to this adapter."""
         raise DeploymentNotConfiguredError(method="list")
@@ -76,9 +77,9 @@ class DeploymentService(BaseDeploymentService):
     async def get(
         self,
         *,
-        user_id: IdLike,  # noqa: ARG002
-        deployment_id: IdLike,  # noqa: ARG002
-        db: AsyncSession,  # noqa: ARG002
+        user_id: IdLike,
+        deployment_id: IdLike,
+        db: AsyncSession,
     ) -> DeploymentGetResult:
         """Return deployment metadata by provider ID."""
         raise DeploymentNotConfiguredError(method="get")
@@ -86,10 +87,10 @@ class DeploymentService(BaseDeploymentService):
     async def update(
         self,
         *,
-        user_id: IdLike,  # noqa: ARG002
-        deployment_id: IdLike,  # noqa: ARG002
-        payload: DeploymentUpdate,  # noqa: ARG002
-        db: AsyncSession,  # noqa: ARG002
+        user_id: IdLike,
+        deployment_id: IdLike,
+        payload: DeploymentUpdate,
+        db: AsyncSession,
     ) -> DeploymentUpdateResult:
         """Update deployment inputs and apply changes in the provider."""
         raise DeploymentNotConfiguredError(method="update")
@@ -97,9 +98,9 @@ class DeploymentService(BaseDeploymentService):
     async def redeploy(
         self,
         *,
-        user_id: IdLike,  # noqa: ARG002
-        deployment_id: IdLike,  # noqa: ARG002
-        db: AsyncSession,  # noqa: ARG002
+        user_id: IdLike,
+        deployment_id: IdLike,
+        db: AsyncSession,
     ) -> RedeployResult:
         """Re-apply current deployment inputs without changing them."""
         raise DeploymentNotConfiguredError(method="redeploy")
@@ -107,9 +108,9 @@ class DeploymentService(BaseDeploymentService):
     async def duplicate(
         self,
         *,
-        user_id: IdLike,  # noqa: ARG002
-        deployment_id: IdLike,  # noqa: ARG002
-        db: AsyncSession,  # noqa: ARG002
+        user_id: IdLike,
+        deployment_id: IdLike,
+        db: AsyncSession,
     ) -> DeploymentDuplicateResult:
         """Create a new deployment using the same inputs as the source."""
         raise DeploymentNotConfiguredError(method="duplicate")
@@ -117,9 +118,9 @@ class DeploymentService(BaseDeploymentService):
     async def delete(
         self,
         *,
-        user_id: IdLike,  # noqa: ARG002
-        deployment_id: IdLike,  # noqa: ARG002
-        db: AsyncSession,  # noqa: ARG002
+        user_id: IdLike,
+        deployment_id: IdLike,
+        db: AsyncSession,
     ) -> DeploymentDeleteResult:
         """Delete the deployment from the provider."""
         raise DeploymentNotConfiguredError(method="delete")
@@ -127,9 +128,9 @@ class DeploymentService(BaseDeploymentService):
     async def get_status(
         self,
         *,
-        user_id: IdLike,  # noqa: ARG002
-        deployment_id: IdLike,  # noqa: ARG002
-        db: AsyncSession,  # noqa: ARG002
+        user_id: IdLike,
+        deployment_id: IdLike,
+        db: AsyncSession,
     ) -> DeploymentStatusResult:
         """Return provider-reported health/status for the deployment."""
         raise DeploymentNotConfiguredError(method="get_status")
@@ -137,9 +138,9 @@ class DeploymentService(BaseDeploymentService):
     async def create_execution(
         self,
         *,
-        user_id: IdLike,  # noqa: ARG002
-        payload: ExecutionCreate,  # noqa: ARG002
-        db: AsyncSession,  # noqa: ARG002
+        user_id: IdLike,
+        payload: ExecutionCreate,
+        db: AsyncSession,
     ) -> ExecutionCreateResult:
         """Run a provider-agnostic deployment execution."""
         raise DeploymentNotConfiguredError(method="create_execution")
@@ -147,9 +148,9 @@ class DeploymentService(BaseDeploymentService):
     async def get_execution(
         self,
         *,
-        user_id: IdLike,  # noqa: ARG002
-        execution_id: IdLike,  # noqa: ARG002
-        db: AsyncSession,  # noqa: ARG002
+        user_id: IdLike,
+        execution_id: IdLike,
+        db: AsyncSession,
     ) -> ExecutionStatusResult:
         """Get provider-agnostic deployment execution state/output."""
         raise DeploymentNotConfiguredError(method="get_execution")

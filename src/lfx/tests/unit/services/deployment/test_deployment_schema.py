@@ -4,7 +4,7 @@ import json
 from uuid import UUID, uuid4
 
 import pytest
-from lfx.services.deployment.schema import (
+from lfx.services.adapters.deployment.schema import (
     BaseDeploymentDataUpdate,
     BaseFlowArtifact,
     ConfigDeploymentBindingUpdate,
