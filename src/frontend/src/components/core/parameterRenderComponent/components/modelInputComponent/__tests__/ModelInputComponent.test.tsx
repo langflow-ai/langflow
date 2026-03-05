@@ -16,6 +16,20 @@ jest.mock("@/stores/alertStore", () => ({
   }),
 }));
 
+// Mock useRefreshModelInputs with controllable promise
+let mockRefreshResolve: () => void;
+const mockRefreshAllModelInputs = jest.fn(
+  () =>
+    new Promise<void>((resolve) => {
+      mockRefreshResolve = resolve;
+    }),
+);
+jest.mock("@/hooks/use-refresh-model-inputs", () => ({
+  useRefreshModelInputs: () => ({
+    refreshAllModelInputs: mockRefreshAllModelInputs,
+  }),
+}));
+
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
   default: {
@@ -307,6 +321,92 @@ describe("ModelInputComponent", () => {
       await waitFor(() => {
         expect(screen.getByText("Manage Model Providers")).toBeInTheDocument();
       });
+    });
+  });
+
+  describe("Refresh List", () => {
+    it("should close popover before entering loading state when refresh is clicked", async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      const trigger = screen.getByRole("combobox");
+      await user.click(trigger);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("refresh-model-list")).toBeInTheDocument();
+      });
+
+      const refreshButton = screen.getByTestId("refresh-model-list");
+      await user.click(refreshButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("Loading models")).toBeInTheDocument();
+      });
+
+      mockRefreshResolve();
+
+      await waitFor(() => {
+        expect(screen.getByRole("combobox")).toBeInTheDocument();
+      });
+
+      // Popover must be closed after refresh to prevent width measurement glitch
+      expect(screen.queryByTestId("gpt-4-option")).not.toBeInTheDocument();
+      expect(screen.queryByText("OpenAI")).not.toBeInTheDocument();
+    });
+
+    it("should not crash when component renders without popover open during refresh", () => {
+      mockRefreshAllModelInputs.mockImplementationOnce(() => Promise.resolve());
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
+      expect(screen.queryByTestId("gpt-4-option")).not.toBeInTheDocument();
+    });
+
+    it("should call refresh with silent flag exactly once per click", async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      const trigger = screen.getByRole("combobox");
+      await user.click(trigger);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("refresh-model-list")).toBeInTheDocument();
+      });
+
+      const refreshButton = screen.getByTestId("refresh-model-list");
+      await user.click(refreshButton);
+
+      expect(mockRefreshAllModelInputs).toHaveBeenCalledTimes(1);
+      expect(mockRefreshAllModelInputs).toHaveBeenCalledWith({ silent: true });
+
+      mockRefreshResolve();
+    });
+
+    it("should recover to normal state when refresh rejects", async () => {
+      // handleRefreshButtonPress uses try/finally, so refreshOptions resets even on error
+      mockRefreshAllModelInputs.mockImplementationOnce(() =>
+        Promise.reject(new Error("Network error")),
+      );
+
+      const user = userEvent.setup();
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      const trigger = screen.getByRole("combobox");
+      await user.click(trigger);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("refresh-model-list")).toBeInTheDocument();
+      });
+
+      const refreshButton = screen.getByTestId("refresh-model-list");
+      await user.click(refreshButton);
+
+      // finally block sets refreshOptions=false, restoring the combobox
+      await waitFor(() => {
+        expect(screen.getByRole("combobox")).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText("Loading models")).not.toBeInTheDocument();
     });
   });
 
