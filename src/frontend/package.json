@@ -50,7 +50,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
-    "dompurify": "^3.2.4",
+    "dompurify": "^3.3.2",
     "dotenv": "^16.4.5",
     "elkjs": "^0.9.3",
     "emoji-regex": "^10.3.0",
