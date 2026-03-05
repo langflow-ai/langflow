@@ -2,9 +2,8 @@ from io import BytesIO
 from unittest.mock import MagicMock, patch
 
 import pytest
-from pypdf import PdfWriter
-
 from lfx.base.data.utils import extract_text_from_bytes
+from pypdf import PdfWriter
 
 
 def _make_blank_pdf(num_pages: int = 1) -> bytes:
@@ -136,7 +135,7 @@ class TestExtractTextFromBytesDOCX:
 
 class TestExtractTextFromBytesPlainText:
     def test_should_decode_utf8_text(self):
-        content = "Hello plain text".encode("utf-8")
+        content = b"Hello plain text"
         result = extract_text_from_bytes("readme.txt", content)
         assert result == "Hello plain text"
 
@@ -151,26 +150,26 @@ class TestExtractTextFromBytesPlainText:
         assert result == ""
 
     def test_should_handle_csv_as_plain_text(self):
-        content = "col1,col2\nval1,val2".encode("utf-8")
+        content = b"col1,col2\nval1,val2"
         result = extract_text_from_bytes("data.csv", content)
         assert "col1,col2" in result
 
     def test_should_handle_json_as_plain_text(self):
-        content = '{"key": "value"}'.encode("utf-8")
+        content = b'{"key": "value"}'
         result = extract_text_from_bytes("data.json", content)
         assert '"key"' in result
 
     def test_should_handle_unknown_extension_as_plain_text(self):
-        content = "some content".encode("utf-8")
+        content = b"some content"
         result = extract_text_from_bytes("file.xyz", content)
         assert result == "some content"
 
     def test_should_handle_file_without_extension(self):
-        content = "no extension".encode("utf-8")
+        content = b"no extension"
         result = extract_text_from_bytes("Makefile", content)
         assert result == "no extension"
 
     def test_should_preserve_unicode_characters(self):
-        content = "café résumé naïve".encode("utf-8")
+        content = "café résumé naïve".encode()
         result = extract_text_from_bytes("unicode.txt", content)
         assert result == "café résumé naïve"
