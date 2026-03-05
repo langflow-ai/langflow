@@ -10,6 +10,8 @@ from lfx.components.deactivated.ingestion import KnowledgeIngestionComponent
 
 from tests.base import ComponentTestBaseWithClient
 
+pytestmark = pytest.mark.skip(reason="KnowledgeIngestionComponent is deactivated")
+
 
 class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
     @pytest.fixture
