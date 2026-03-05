@@ -776,7 +776,7 @@
   },
   "KnowledgeRetrieval": {
     "versions": {
-      "0.3.0": "af0a162c3f80"
+      "0.3.0": "1a95fca184de"
     }
   },
   "SaveToFile": {
@@ -1801,7 +1801,7 @@
   },
   "KnowledgeBase": {
     "versions": {
-      "0.3.0": "54b54e5e574b"
+      "0.3.0": "f6b6a4eaf1c4"
     }
   }
 }
