@@ -525,9 +525,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
 
         assert result == {}
 
-    async def test_resolve_provider_variables_variable_service_returns_none(
-        self, component_class, default_kwargs
-    ):
+    async def test_resolve_provider_variables_variable_service_returns_none(self, component_class, default_kwargs):
         """Test _resolve_provider_variables when variable_service is None."""
         component = component_class(**default_kwargs)
 
@@ -784,9 +782,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         assert result == mock_embeddings
 
     @patch("langchain_ibm.WatsonxEmbeddings")
-    def test_build_embeddings_watsonx_partial_vars(
-        self, mock_watsonx_embeddings, component_class, default_kwargs
-    ):
+    def test_build_embeddings_watsonx_partial_vars(self, mock_watsonx_embeddings, component_class, default_kwargs):
         """Test WatsonX with only apikey, no project_id or url."""
         component = component_class(**default_kwargs)
 
@@ -896,9 +892,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
             result = await component.retrieve_data()
 
             # Verify similarity_search_with_score was used (not similarity_search)
-            mock_chroma_instance.similarity_search_with_score.assert_called_once_with(
-                query="find me something", k=5
-            )
+            mock_chroma_instance.similarity_search_with_score.assert_called_once_with(query="find me something", k=5)
             mock_chroma_instance.similarity_search.assert_not_called()
             assert len(result) == 1
 

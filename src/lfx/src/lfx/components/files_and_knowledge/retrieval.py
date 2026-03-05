@@ -188,9 +188,7 @@ class KnowledgeBaseComponent(Component):
                     if value and str(value).strip():
                         result[var_key] = str(value)
                 except (ValueError, KeyError, AttributeError) as e:
-                    logger.debug(
-                        f"Variable service lookup failed for '{var_key}', falling back to environment: {e}"
-                    )
+                    logger.debug(f"Variable service lookup failed for '{var_key}', falling back to environment: {e}")
                     env_value = os.environ.get(var_key)
                     if env_value and env_value.strip():
                         result[var_key] = env_value
