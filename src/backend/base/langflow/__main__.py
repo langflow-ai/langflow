@@ -358,7 +358,11 @@ def run(
             pass  # Starter projects are added during app startup
 
     # Step 6: Launching Langflow
-    if platform.system() == "Windows":
+    # Use uvicorn directly (no Gunicorn fork) on Windows and Desktop mode.
+    # Gunicorn's fork() crashes on macOS when native libs like Metal Performance
+    # Shaders (MPSGraphObject) are initialized before fork.
+    _use_uvicorn = platform.system() == "Windows" or os.environ.get("LANGFLOW_DESKTOP") == "true"
+    if _use_uvicorn:
         with progress.step(6):
             import uvicorn
 
