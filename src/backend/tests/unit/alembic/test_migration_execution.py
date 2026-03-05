@@ -42,8 +42,15 @@ def _get_main_branch_head() -> str | None:
     try:
         # Find migration files that are new on this branch vs origin/main
         result = subprocess.run(
-            ["git", "diff", "--name-only", "--diff-filter=A", "origin/main...HEAD",
-             "--", "src/backend/base/langflow/alembic/versions/*.py"],
+            [
+                "git",
+                "diff",
+                "--name-only",
+                "--diff-filter=A",
+                "origin/main...HEAD",
+                "--",
+                "src/backend/base/langflow/alembic/versions/*.py",
+            ],
             capture_output=True,
             text=True,
             check=True,
