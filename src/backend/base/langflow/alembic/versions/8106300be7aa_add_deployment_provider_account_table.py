@@ -36,7 +36,7 @@ def upgrade() -> None:
         sa.Column("provider_tenant_id", AutoString(), nullable=True),
         sa.Column("provider_key", AutoString(), nullable=False),
         sa.Column("provider_url", AutoString(), nullable=False),
-        sa.Column("api_key", AutoString(), nullable=False),
+        sa.Column("api_key", AutoString(), nullable=False),  # MUST be stored encrypted
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(
