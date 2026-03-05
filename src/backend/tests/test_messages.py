@@ -1292,8 +1292,7 @@ class TestSanitizeJson:
         import math
 
         props_dict = result.properties if isinstance(result.properties, dict) else result.properties.model_dump()
-        for v in props_dict.values():
-            assert v is None or not (isinstance(v, float) and math.isnan(v))
+        assert props_dict["_nan_test"] is None
 
     def test_from_message_with_inf_in_content_blocks(self):
         """from_message sanitizes Infinity inside content_blocks.
@@ -1354,7 +1353,7 @@ class TestSanitizeJson:
 
         def _has_nan_or_inf(obj):
             if isinstance(obj, float):
-                return math.isnan(obj) or math.isinf(obj)
+                return not math.isfinite(obj)
             if isinstance(obj, dict):
                 return any(_has_nan_or_inf(v) for v in obj.values())
             if isinstance(obj, list):

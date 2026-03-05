@@ -157,8 +157,9 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
 
     @staticmethod
     def _sanitize_json(value):
+        """Replace float NaN/Infinity with None to avoid PostgreSQL jsonb rejection."""
         if isinstance(value, float):
-            if math.isnan(value) or math.isinf(value):
+            if not math.isfinite(value):
                 return None
             return value
 
@@ -185,6 +186,8 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
     @field_serializer("properties", "content_blocks")
     @classmethod
     def serialize_properties_or_content_blocks(cls, value) -> dict | list[dict]:
+        # Redundant sanitization here acts as a defensive measure for rows
+        # already in the database that might contain NaN/Infinity values.
         if isinstance(value, list):
             value = [cls.serialize_properties_or_content_blocks(item) for item in value]
         elif hasattr(value, "model_dump"):
