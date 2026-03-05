@@ -399,6 +399,7 @@ class TestProviderAccountCRUD:
             await db.commit()
 
         acct_id = acct.id
+        assert acct_id is not None
         await delete_provider_account(db, provider_account=acct)
         await db.commit()
 
@@ -442,6 +443,9 @@ class TestDeploymentCRUD:
         folder: Folder,
         provider_account: DeploymentProviderAccount,
     ):
+        assert folder.id is not None
+        assert provider_account.id is not None
+
         dep = await create_deployment(
             db,
             user_id=user.id,
@@ -464,6 +468,9 @@ class TestDeploymentCRUD:
         folder: Folder,
         provider_account: DeploymentProviderAccount,
     ):
+        assert folder.id is not None
+        assert provider_account.id is not None
+
         await create_deployment(
             db,
             user_id=user.id,
@@ -490,6 +497,9 @@ class TestDeploymentCRUD:
         folder: Folder,
         provider_account: DeploymentProviderAccount,
     ):
+        assert folder.id is not None
+        assert provider_account.id is not None
+
         for i in range(5):
             await create_deployment(
                 db,
@@ -531,6 +541,9 @@ class TestDeploymentCRUD:
         folder: Folder,
         provider_account: DeploymentProviderAccount,
     ):
+        assert folder.id is not None
+        assert provider_account.id is not None
+
         dep = await create_deployment(
             db,
             user_id=user.id,
@@ -546,6 +559,7 @@ class TestDeploymentCRUD:
 
         assert updated.name == "renamed"
 
+        assert dep.id is not None
         fetched = await get_deployment(db, user_id=user.id, deployment_id=dep.id)
         assert fetched is not None
         assert fetched.name == "renamed"
@@ -557,6 +571,9 @@ class TestDeploymentCRUD:
         folder: Folder,
         provider_account: DeploymentProviderAccount,
     ):
+        assert folder.id is not None
+        assert provider_account.id is not None
+
         dep = await create_deployment(
             db,
             user_id=user.id,
@@ -567,6 +584,7 @@ class TestDeploymentCRUD:
         )
         await db.commit()
 
+        assert dep.id is not None
         count = await delete_deployment_by_id(db, user_id=user.id, deployment_id=dep.id)
         await db.commit()
         assert count == 1
@@ -580,6 +598,9 @@ class TestDeploymentCRUD:
         folder: Folder,
         provider_account: DeploymentProviderAccount,
     ):
+        assert folder.id is not None
+        assert provider_account.id is not None
+
         await create_deployment(
             db,
             user_id=user.id,
@@ -606,6 +627,9 @@ class TestDeploymentCRUD:
         folder: Folder,
         provider_account: DeploymentProviderAccount,
     ):
+        assert folder.id is not None
+        assert provider_account.id is not None
+
         await create_deployment(
             db,
             user_id=user.id,
@@ -633,6 +657,9 @@ class TestDeploymentCRUD:
         folder: Folder,
         provider_account: DeploymentProviderAccount,
     ):
+        assert folder.id is not None
+        assert provider_account.id is not None
+
         await create_deployment(
             db,
             user_id=user.id,
@@ -661,6 +688,9 @@ class TestDeploymentCRUD:
         provider_account: DeploymentProviderAccount,
     ):
         """Deployments are scoped to user_id — another user cannot see them."""
+        assert folder.id is not None
+        assert provider_account.id is not None
+
         dep = await create_deployment(
             db,
             user_id=user.id,
@@ -676,6 +706,7 @@ class TestDeploymentCRUD:
         await db.commit()
         await db.refresh(other_user)
 
+        assert dep.id is not None
         assert await get_deployment(db, user_id=other_user.id, deployment_id=dep.id) is None
 
     async def test_cascade_delete_via_provider_crud(
@@ -686,6 +717,9 @@ class TestDeploymentCRUD:
         provider_account: DeploymentProviderAccount,
     ):
         """Deleting a provider account via CRUD cascades to its deployments."""
+        assert folder.id is not None
+        assert provider_account.id is not None
+
         dep = await create_deployment(
             db,
             user_id=user.id,
