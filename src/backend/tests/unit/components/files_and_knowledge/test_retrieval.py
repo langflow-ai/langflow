@@ -4,17 +4,17 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
-from lfx.components.knowledge_bases.retrieval import KnowledgeRetrievalComponent
+from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
+from lfx.components.files_and_knowledge.retrieval import KnowledgeBaseComponent
 
 from tests.base import ComponentTestBaseWithClient
 
 
-class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
+class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
     @pytest.fixture
     def component_class(self):
         """Return the component class to test."""
-        return KnowledgeRetrievalComponent
+        return KnowledgeBaseComponent
 
     @pytest.fixture(autouse=True)
     def mock_knowledge_base_path(self, tmp_path):
