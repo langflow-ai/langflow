@@ -7,6 +7,7 @@
   },
   "overrides": {
     "tar": "^7.5.7",
+    "tar-fs": ">=2.1.4",
     "glob": "^11.1.0",
     "test-exclude": "^7.0.0"
   },
