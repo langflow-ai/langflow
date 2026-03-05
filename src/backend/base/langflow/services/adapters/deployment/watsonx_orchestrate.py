@@ -7,7 +7,9 @@ import importlib.metadata as md
 import io
 import json
 import re
+import secrets
 import zipfile
+from contextlib import suppress
 from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any
@@ -91,6 +93,10 @@ DEFAULT_LANGFLOW_RUNNER_MODULES = {"lfx", "lfx-nightly"}
 DEFAULT_ADAPTER_SNAPSHOT_TYPE = "langflow"
 DEFAULT_ADAPTER_DEPLOYMENT_TYPE = "agent"
 SUPPORTED_ADAPTER_DEPLOYMENT_TYPES = {DEFAULT_ADAPTER_DEPLOYMENT_TYPE}
+CREATE_MAX_RETRIES = 3
+ROLLBACK_MAX_RETRIES = 5
+RETRY_INITIAL_DELAY_SECONDS = 0.5
+RANDOM_PREFIX_LENGTH_RANGE = range(6, 11)
 
 _WXO_SANITIZE_RE = re.compile(r"[^a-zA-Z0-9_]")
 _WXO_TRANSLATE = str.maketrans({" ": "_", "-": "_"})
@@ -147,7 +153,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
     Mapping used by this adapter:
     - deployment -> WXO agent bound to exactly one connection app_id and many tools
-    - snapshot -> WXO tool (langflow binding) and immutable once created
+    - snapshot -> WXO tool (langflow binding) and "immutable" once created
     - config -> WXO connection configuration (+ credentials), keyed by app_id
     """
 
@@ -174,59 +180,132 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         db: Any,
     ) -> DeploymentCreateResult:
         """Create a deployment in Watsonx Orchestrate."""
+        # The wxO API does not have an endpoint to create
+        # a connection, tool, and agent atomically.
+        # We have to make a separate api call for each resource.
+        # --
+        # If one of these resources is created successfully
+        # but the next one fails, then we end up with orphaned resources.
+        #     - We thus use a best-effort creation and rollback strategy:
+        #       Attempt to create each resource with retries.
+        #       If the creation of one resource fails,
+        #       then attempt to delete all previously created
+        #       resources with retries.
+        # --
+        # --
+        # A common failure is when the name of a resource already exists.
+        # This is true for connections, tools, and agents.
+        #     - We thus use a best-effort mitigation strategy:
+        #       Check if the names of the
+        #       connection, tools, and agent already exist.
+        #       If any of the names exist, then we
+        #       fail early with a DeploymentConflictError.
+        #       However, this strategy introduces a
+        #       read-before-write race condition,
+        #       which we attempt to work around by
+        #       generating a random prefix to attach
+        #       to the name of each created resource.
+        # --
+        # --
+        deployment_response: AgentUpsertResponse | None = None
+        created_config_id: str | None = None
+        created_snapshot_ids: list[str] = []
+        created_agent_id: str | None = None
+        created_tool_ids: list[str] = []
+        created_app_id: str | None = None
+        clients: WxOClient | None = None
         try:
             deployment_spec: BaseDeploymentData = payload.spec
-            deployment_spec.name = self._validate_wxo_name(deployment_spec.name)
-            clients = await self._get_provider_clients(user_id=user_id, db=db)
-            # absorb read-before-write race for now
-            self._assert_create_resources_available(
-                clients=clients,
-                deployment_name=deployment_spec.name,
-            )
+            normalized_deployment_name = self._validate_wxo_name(deployment_spec.name)
+            self._validate_config_create_input(payload.config)
 
-            app_id = await self._process_config(
-                user_id=user_id,
-                db=db,
-                deployment_name=deployment_spec.name,
-                config=payload.config,
-            )
-            created_config_id = (
-                app_id if payload.config is not None and payload.config.raw_payload is not None else None
-            )
-
-            tool_ids: list[str] = []
-            created_snapshot_ids: list[str] = []
-
-            if payload.snapshot:
-                tool_ids, created_snapshot_ids = await self._process_flow_snapshots(
-                    user_id=user_id,
-                    app_id=app_id,
-                    snapshots=payload.snapshot,
-                    db=db,
-                )
-                if app_id is not None and tool_ids:
-                    connection = self._validate_connection(clients.connections, app_id=app_id)
-                    self._sync_langflow_tool_connections(
-                        clients=clients,
-                        tool_ids=tool_ids,
-                        config_id=app_id,
-                        connection_id=connection.connection_id,
-                    )
-
-            if deployment_spec.type == DeploymentType.AGENT:
-                deployment_response: AgentUpsertResponse = await self._create_agent_deployment(
-                    data=deployment_spec,
-                    tool_ids=tool_ids,
-                    user_id=user_id,
-                    db=db,
-                )  # note: tool_ids can be empty here if an incompatible artifact type is provided
-            else:
+            if deployment_spec.type != DeploymentType.AGENT:
                 msg = (
                     f"{ErrorPrefix.CREATE.value}"
                     f"Deployment type '{deployment_spec.type.value}' "
                     "is not supported for watsonx Orchestrate."
                 )
                 raise InvalidDeploymentTypeError(message=msg)
+
+            clients = await self._get_provider_clients(user_id=user_id, db=db)
+
+            random_length = secrets.choice(RANDOM_PREFIX_LENGTH_RANGE)
+            random_prefix = f"lf_{uuid4().hex[:random_length]}_"
+            prefixed_deployment_name = f"{random_prefix}{normalized_deployment_name}"
+
+            prefixed_app_id = self._resolve_create_app_id(
+                prefixed_deployment_name=prefixed_deployment_name,
+                config=payload.config,
+            )
+            tool_name_prefix = f"{prefixed_deployment_name}_"
+            planned_tool_names = self._build_snapshot_tool_names(
+                snapshots=payload.snapshot,
+                tool_name_prefix=tool_name_prefix,
+            )
+
+            # there is a read-before-write race here
+            # but locking locally is not enough
+            # so we use a random prefix to avoid conflicts
+            self._assert_create_resources_available(
+                clients=clients,
+                deployment_name=prefixed_deployment_name,
+                app_id=prefixed_app_id,
+                snapshot_tool_names=planned_tool_names,
+            )
+
+            try:
+                created_app_id = prefixed_app_id
+                await self._retry_create(
+                    lambda: self._process_config(
+                        user_id=user_id,
+                        db=db,
+                        deployment_name=prefixed_app_id,
+                        config=payload.config,
+                    )
+                )
+                created_config_id = (
+                    prefixed_app_id if payload.config is not None and payload.config.raw_payload is not None else None
+                )
+
+                if payload.snapshot:
+                    created_snapshot_ids = await self._retry_create(
+                        lambda: self._process_flow_snapshots(
+                            user_id=user_id,
+                            app_id=prefixed_app_id,
+                            snapshots=payload.snapshot,
+                            db=db,
+                            tool_name_prefix=tool_name_prefix,
+                        )
+                    )
+                    created_tool_ids = list(created_snapshot_ids)
+                    if created_tool_ids:
+                        connection = self._validate_connection(clients.connections, app_id=prefixed_app_id)
+                        self._sync_langflow_tool_connections(
+                            clients=clients,
+                            tool_ids=created_tool_ids,
+                            config_id=prefixed_app_id,
+                            connection_id=connection.connection_id,
+                        )
+
+                deployment_spec = deployment_spec.model_copy(deep=True)
+                deployment_spec.name = prefixed_deployment_name
+                deployment_response = await self._retry_create(
+                    lambda: self._create_agent_deployment(
+                        data=deployment_spec,
+                        tool_ids=created_tool_ids,
+                        user_id=user_id,
+                        db=db,
+                    )
+                )
+                created_agent_id = deployment_response.id
+            except Exception:
+                await self._rollback_created_resources(
+                    clients=clients,
+                    agent_id=created_agent_id,
+                    tool_ids=created_tool_ids,
+                    app_id=created_app_id,
+                )
+                raise
 
         except (ClientAPIException, HTTPException) as exc:
             if isinstance(exc, ClientAPIException):
@@ -261,7 +340,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 "creating a deployment in Watsonx Orchestrate. "
                 f"error details: {error_detail}"
             )
-            raise DeploymentError(message=msg) from None
+            raise DeploymentError(message=msg, error_code="deployment_error") from None
         except (
             DeploymentConflictError,
             DeploymentError,
@@ -277,7 +356,16 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 "creating a deployment in Watsonx Orchestrate. "
                 f"error details: {e}"
             )
-            raise DeploymentError(message=msg) from e
+            raise DeploymentError(message=msg, error_code="deployment_error") from e
+
+        if deployment_response is None:
+            msg = (
+                f"{ErrorPrefix.CREATE.value}. "
+                "An unexpected error occurred while "
+                "creating a deployment in Watsonx Orchestrate. "
+                "error details: Deployment response was empty."
+            )
+            raise DeploymentError(message=msg, error_code="deployment_error")
 
         return DeploymentCreateResult(
             id=deployment_response.id,
@@ -337,14 +425,14 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 "Failed to list deployments from Watsonx Orchestrate. "
                 f"error details: {error_detail}"
             )
-            raise DeploymentError(message=msg) from None
+            raise DeploymentError(message=msg, error_code="deployment_error") from None
         except Exception as exc:  # noqa: BLE001
             msg = (
                 f"{ErrorPrefix.LIST.value}. "
                 "An unexpected error occurred while listing deployments from Watsonx Orchestrate. "
                 f"error details: {exc}"
             )
-            raise DeploymentError(message=msg) from None
+            raise DeploymentError(message=msg, error_code="deployment_error") from None
 
         return DeploymentListResult(
             deployments=deployments,
@@ -476,7 +564,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 raise DeploymentNotFoundError(msg) from None
         except Exception:  # noqa: BLE001
             msg = f"An unexpected error occurred while deleting deployment '{deployment_id_str}'."
-            raise DeploymentError(msg) from None
+            raise DeploymentError(msg, error_code="deployment_error") from None
 
         return DeploymentDeleteResult(id=deployment_id_str)
 
@@ -563,10 +651,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 raise InvalidContentError(message=msg) from None
 
             msg = "An error occurred while creating a deployment execution in Watsonx Orchestrate."
-            raise DeploymentError(message=msg) from None
+            raise DeploymentError(message=msg, error_code="deployment_error") from None
         except Exception as exc:
             msg = "An unexpected error occurred while creating a deployment execution in Watsonx Orchestrate."
-            raise DeploymentError(message=msg) from exc
+            raise DeploymentError(message=msg, error_code="deployment_error") from exc
 
         return ExecutionCreateResult(
             execution_id=str(provider_result.get("run_id") or "").strip() or None,
@@ -633,6 +721,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     ) -> list[str]:
         """Create provider snapshots from flow payloads for internal API orchestration."""
         clients = await self._get_provider_clients(user_id=user_id, db=db)
+        random_length = secrets.choice(RANDOM_PREFIX_LENGTH_RANGE)
+        tool_name_prefix = f"lf_{uuid4().hex[:random_length]}_"
         connections = self._resolve_snapshot_connections(
             connections_client=clients.connections,
             config_id=config_id,
@@ -642,6 +732,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             flow_payloads=raw_payloads,
             connections=connections,
             app_id=config_id,
+            tool_name_prefix=tool_name_prefix,
         )
 
     async def _create_config(
@@ -713,12 +804,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         config: ConfigItem | None,
     ) -> str:
         """Create and bind deployment config using deployment name as app_id."""
-        if config and config.reference_id is not None:
-            msg = (
-                "Config reference binding is not supported for deployment creation in "
-                "watsonx Orchestrate. Provide raw config payload or omit config."
-            )
-            raise InvalidDeploymentOperationError(message=msg)
+        self._validate_config_create_input(config)
 
         environment_variables = None
         description = ""
@@ -740,22 +826,65 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         return deployment_name
 
+    def _validate_config_create_input(self, config: ConfigItem | None) -> None:
+        if config and config.reference_id is not None:
+            msg = (
+                "Config reference binding is not supported for deployment creation in "
+                "watsonx Orchestrate. Provide raw config payload or omit config."
+            )
+            raise InvalidDeploymentOperationError(message=msg)
+
+    def _resolve_create_app_id(
+        self,
+        *,
+        prefixed_deployment_name: str,
+        config: ConfigItem | None,
+    ) -> str:
+        self._validate_config_create_input(config)
+        if config is None or config.raw_payload is None:
+            return f"{prefixed_deployment_name}_app_id"
+
+        normalized_config_name = self._validate_wxo_name(config.raw_payload.name)
+        return f"{prefixed_deployment_name}_{normalized_config_name}_app_id"
+
     def _assert_create_resources_available(
         self,
         *,
         clients: WxOClient,
         deployment_name: str,
+        app_id: str,
+        snapshot_tool_names: list[str] | None = None,
     ) -> None:
-        """Fail fast when deployment name conflicts with existing agent/config."""
+        """Fail fast when deployment resource names conflict with existing resources."""
         existing_agents = clients.agent.get_draft_by_name(deployment_name)
         if existing_agents:
             msg = f"{ErrorPrefix.CREATE.value}. Deployment '{deployment_name}' already exists."
             raise DeploymentConflictError(message=msg)
 
-        existing_connection = clients.connections.get_draft_by_app_id(app_id=deployment_name)
+        existing_connection = clients.connections.get_draft_by_app_id(app_id=app_id)
         if existing_connection:
-            msg = f"{ErrorPrefix.CREATE.value}. Deployment config '{deployment_name}' already exists."
+            msg = f"{ErrorPrefix.CREATE.value}. Deployment config '{app_id}' already exists."
             raise DeploymentConflictError(message=msg)
+
+        if not snapshot_tool_names:
+            return
+
+        seen_tool_names: set[str] = set()
+        duplicate_tool_names: set[str] = set()
+        for tool_name in snapshot_tool_names:
+            if tool_name in seen_tool_names:
+                duplicate_tool_names.add(tool_name)
+            seen_tool_names.add(tool_name)
+        if duplicate_tool_names:
+            duplicates = ", ".join(sorted(duplicate_tool_names))
+            msg = f"{ErrorPrefix.CREATE.value}. Deployment snapshot name(s) duplicated: {duplicates}."
+            raise DeploymentConflictError(message=msg)
+
+        for tool_name in snapshot_tool_names:
+            existing_tools = clients.tool.get_draft_by_name(tool_name)
+            if existing_tools:
+                msg = f"{ErrorPrefix.CREATE.value}. Deployment snapshot '{tool_name}' already exists."
+                raise DeploymentConflictError(message=msg)
 
     async def _process_flow_snapshots(
         self,
@@ -763,20 +892,24 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         app_id: str | None,
         snapshots: SnapshotItems,
         db: Any,
-    ) -> tuple[list[str], list[str]]:
+        tool_name_prefix: str,
+    ) -> list[str]:
         """Process flow snapshots."""
+        if not tool_name_prefix.strip():
+            msg = "Snapshot creation requires a non-empty tool_name_prefix."
+            raise InvalidDeploymentOperationError(message=msg)
         clients = await self._get_provider_clients(user_id=user_id, db=db)
         connections = self._resolve_snapshot_connections(
             connections_client=clients.connections,
             config_id=app_id,
         )
-        created_snapshot_ids = await self._create_and_upload_wxo_flow_tools(
+        return await self._create_and_upload_wxo_flow_tools(
             tool_client=clients.tool,
             flow_payloads=snapshots.raw_payloads,
             connections=connections,
             app_id=app_id,
+            tool_name_prefix=tool_name_prefix,
         )
-        return created_snapshot_ids, created_snapshot_ids
 
     async def _get_provider_clients(
         self,
@@ -1489,6 +1622,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         flow_payload: BaseFlowArtifact,
         connections: dict[str, str],
         app_id: str | None = None,
+        tool_name_prefix: str,
     ) -> tuple[dict[str, Any], bytes]:
         """Create a Watsonx Orchestrate flow tool specification.
 
@@ -1501,6 +1635,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             flow_payload: The flow payload to create the tool specification for.
             connections: The connections dictionary to create the tool specification for.
             app_id: Connection app id used to namespace load_from_db variable references.
+            tool_name_prefix: Deterministic prefix for the resulting tool name.
 
         Returns:
             Tuple[dict[str, Any], bytes]: a tuple containing:
@@ -1509,23 +1644,16 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     and the flow json file) for the tool.
         """
         flow_definition = flow_payload.model_dump()
+
         flow_provider_data = flow_definition.pop("provider_data", None)
+
         if not isinstance(flow_provider_data, dict):
             msg = "Flow payload must include provider_data with a non-empty project_id for Watsonx deployment."
             raise InvalidContentError(message=msg)
-
-        if not (project_id := flow_provider_data.get("project_id")):
+        project_id = str(flow_provider_data.get("project_id") or "").strip()
+        if not project_id:
             msg = "Flow payload must include provider_data with a non-empty project_id for Watsonx deployment."
             raise InvalidContentError(message=msg)
-
-        try:
-            project_id = self._require_non_empty_string(
-                str(project_id),
-                field_name="project_id",
-                error_message=("Flow provider_data.project_id must be a non-empty string for Watsonx deployment."),
-            )
-        except ValueError as exc:
-            raise InvalidContentError(message=str(exc)) from exc
 
         flow_definition.update(
             {
@@ -1533,12 +1661,15 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 "id": str(flow_definition.get("id")),
             }
         )
+
         if app_id is not None:
             flow_definition = self._prefix_flow_global_variable_references(
                 flow_definition,
                 app_id=app_id,
             )
+
         # print(f"flow_definition: {flow_definition}")
+
         # Fallback for flows that don't include last_tested_version in payload
         if not flow_definition.get("last_tested_version"):
             detected_version = (get_version_info() or {}).get("version")
@@ -1559,9 +1690,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             exclude_none=True,
             by_alias=True,
         )
+
         current_name = str(tool_payload.get("name") or "").strip()
+
         if current_name:
-            tool_payload["name"] = f"lf_{uuid4().hex[:6]}_{current_name}"
+            normalized_current_name = self._normalize_wxo_name(current_name)
+            tool_payload["name"] = f"{tool_name_prefix}{normalized_current_name}"
 
         (tool_payload.setdefault("binding", {}).setdefault("langflow", {})["project_id"]) = project_id
 
@@ -1579,12 +1713,14 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         flow_payloads: list[BaseFlowArtifact],
         connections: dict[str, str],
         app_id: str | None = None,
+        tool_name_prefix: str,
     ) -> list[str]:
         specs = [
             self._create_wxo_flow_tool(
                 flow_payload=flow_payload,
                 connections=connections,
                 app_id=app_id,
+                tool_name_prefix=tool_name_prefix,
             )
             for flow_payload in flow_payloads
         ]
@@ -1634,6 +1770,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             flow_payload=flow_payload,
             connections=connections,
             app_id=config_id,
+            tool_name_prefix=f"lf_{uuid4().hex[:6]}_",
         )
 
         return await self._upload_wxo_flow_tool(
@@ -1720,6 +1857,122 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
     def _normalize_wxo_name(self, s: str) -> str:
         return _WXO_SANITIZE_RE.sub("", s.translate(_WXO_TRANSLATE))
+
+    def _build_snapshot_tool_names(
+        self,
+        *,
+        snapshots: SnapshotItems | None,
+        tool_name_prefix: str,
+    ) -> list[str]:
+        if snapshots is None:
+            return []
+
+        tool_names: list[str] = []
+        for snapshot in snapshots.raw_payloads:
+            normalized_tool_name = self._normalize_wxo_name(str(snapshot.name))
+            if not normalized_tool_name:
+                msg = "Snapshot name must include at least one alphanumeric character."
+                raise InvalidContentError(message=msg)
+            tool_names.append(f"{tool_name_prefix}{normalized_tool_name}")
+        return tool_names
+
+    async def _retry_with_backoff(
+        self,
+        operation,
+        *,
+        max_attempts: int,
+        should_retry=None,
+    ):
+        delay_seconds = RETRY_INITIAL_DELAY_SECONDS
+        for attempt in range(1, max_attempts + 1):
+            try:
+                return await operation()
+            except Exception as exc:
+                retryable = True if should_retry is None else should_retry(exc)
+                if not retryable or attempt == max_attempts:
+                    raise
+                await asyncio.sleep(delay_seconds)
+                delay_seconds *= 2
+        msg = "Retry helper exhausted attempts without result."
+        raise RuntimeError(msg)
+
+    async def _retry_create(self, operation):
+        return await self._retry_with_backoff(
+            operation,
+            max_attempts=CREATE_MAX_RETRIES,
+            should_retry=self._is_retryable_create_exception,
+        )
+
+    async def _retry_rollback(self, operation):
+        return await self._retry_with_backoff(
+            operation,
+            max_attempts=ROLLBACK_MAX_RETRIES,
+        )
+
+    def _is_retryable_create_exception(self, exc: Exception) -> bool:
+        non_retryable_status_codes = {
+            status.HTTP_400_BAD_REQUEST,
+            status.HTTP_401_UNAUTHORIZED,
+            status.HTTP_403_FORBIDDEN,
+            status.HTTP_404_NOT_FOUND,
+            status.HTTP_409_CONFLICT,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+        }
+        if isinstance(exc, ClientAPIException):
+            return exc.response.status_code not in non_retryable_status_codes
+        if isinstance(exc, HTTPException):
+            return exc.status_code not in non_retryable_status_codes
+        return not isinstance(
+            exc,
+            (
+                DeploymentConflictError,
+                InvalidContentError,
+                InvalidDeploymentOperationError,
+                InvalidDeploymentTypeError,
+            ),
+        )
+
+    async def _rollback_created_resources(
+        self,
+        *,
+        clients: WxOClient,
+        agent_id: str | None,
+        tool_ids: list[str],
+        app_id: str | None,
+    ) -> None:
+        if agent_id:
+            with suppress(Exception):
+                await self._retry_rollback(lambda: self._delete_agent_if_exists(clients, agent_id=agent_id))
+        if tool_ids:
+            for tool_id in reversed(tool_ids):
+                with suppress(Exception):
+                    await self._retry_rollback(
+                        lambda tool_id=tool_id: self._delete_tool_if_exists(clients, tool_id=tool_id)
+                    )
+        if app_id:
+            with suppress(Exception):
+                await self._retry_rollback(lambda: self._delete_config_if_exists(clients, app_id=app_id))
+
+    async def _delete_agent_if_exists(self, clients: WxOClient, *, agent_id: str) -> None:
+        try:
+            await asyncio.to_thread(clients.agent.delete, agent_id)
+        except ClientAPIException as exc:
+            if exc.response.status_code != status.HTTP_404_NOT_FOUND:
+                raise
+
+    async def _delete_tool_if_exists(self, clients: WxOClient, *, tool_id: str) -> None:
+        try:
+            await asyncio.to_thread(clients.tool.delete, tool_id)
+        except ClientAPIException as exc:
+            if exc.response.status_code != status.HTTP_404_NOT_FOUND:
+                raise
+
+    async def _delete_config_if_exists(self, clients: WxOClient, *, app_id: str) -> None:
+        try:
+            await asyncio.to_thread(clients.connections.delete, app_id)
+        except ClientAPIException as exc:
+            if exc.response.status_code != status.HTTP_404_NOT_FOUND:
+                raise
 
 
 @func.ttl_cache(maxsize=1, ttl=2)  # only used for lfx
