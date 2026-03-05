@@ -1668,7 +1668,7 @@ def update_model_options_in_build_config(
     # On initial load, check if the component has static options
     if field_name is None and static_options_cache_key not in component.cache:
         # Check if the model field in build_config already has options set
-        existing_options = build_config.get("model", {}).get("options")
+        existing_options = build_config.get(model_field_name, {}).get("options")
         if existing_options:
             # Component specified static options - mark them as static
             component.cache[static_options_cache_key] = True
@@ -1682,12 +1682,12 @@ def update_model_options_in_build_config(
         if field_value == "connect_other_models":
             # User explicitly selected "Connect other models", show the handle
             if cache_key_prefix == "embedding_model_options":
-                build_config["model"]["input_types"] = ["Embeddings"]
+                build_config[model_field_name]["input_types"] = ["Embeddings"]
             else:
-                build_config["model"]["input_types"] = ["LanguageModel"]
+                build_config[model_field_name]["input_types"] = ["LanguageModel"]
         else:
             # Default case or model selection: hide the handle
-            build_config["model"]["input_types"] = []
+            build_config[model_field_name]["input_types"] = []
         return build_config
 
     # Cache key based on user_id

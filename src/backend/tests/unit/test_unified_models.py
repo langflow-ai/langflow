@@ -51,7 +51,7 @@ def test_include_deprecated_parameter_returns_deprecated_models():
 
 
 def test_filter_by_provider():
-    result = get_unified_models_detailed(provider="Anthropic")
+    result = get_unified_models_detailed(providers=["Anthropic"])
     # Only one provider should be returned
     assert len(result) == 1
     assert result[0]["provider"] == "Anthropic"
@@ -130,6 +130,36 @@ def test_update_model_options_with_custom_field_name():
 
     # Verify default value was set
     assert result["embedding_model"]["value"] == [result["embedding_model"]["options"][0]]
+
+
+def test_update_model_options_static_options_with_custom_field_name():
+    """Static pre-populated options should be detected using the custom field name, not 'model'."""
+    mock_component = MagicMock()
+    mock_component.user_id = "test-user-static"
+    mock_component.cache = {}
+    mock_component.log = MagicMock()
+
+    static_opts = [{"name": "embed-v1", "provider": "Custom"}]
+    build_config = {
+        "embedding_model": {
+            "options": static_opts,
+            "value": "",
+            "input_types": ["Embeddings"],
+        }
+    }
+
+    result = update_model_options_in_build_config(
+        component=mock_component,
+        build_config=build_config,
+        cache_key_prefix="test_static_custom",
+        get_options_func=lambda user_id=None: [],  # noqa: ARG005
+        field_name=None,
+        field_value="",
+        model_field_name="embedding_model",
+    )
+
+    # Static options should be preserved, not overwritten by the empty get_options_func result
+    assert result["embedding_model"]["options"] == static_opts
 
 
 def test_update_model_options_default_field_name():
@@ -560,7 +590,7 @@ def test_handle_model_input_update_watsonx_embedding_shows_special_fields():
             field_value=selected_model,
             field_name="model",
             cache_key_prefix="embedding_model_options",
-            get_options_func=list,
+            get_options_func=lambda user_id=None: [],  # noqa: ARG005
         )
 
     assert result["truncate_input_tokens"]["show"] is True
@@ -586,7 +616,7 @@ def test_handle_model_input_update_non_watsonx_embedding_hides_special_fields():
             field_value=selected_model,
             field_name="model",
             cache_key_prefix="embedding_model_options",
-            get_options_func=list,
+            get_options_func=lambda user_id=None: [],  # noqa: ARG005
         )
 
     assert result["truncate_input_tokens"]["show"] is False
@@ -613,7 +643,7 @@ def test_handle_model_input_update_language_model_prefix_skips_embedding_fields(
             field_value=selected_model,
             field_name="model",
             cache_key_prefix="language_model_options",
-            get_options_func=list,
+            get_options_func=lambda user_id=None: [],  # noqa: ARG005
         )
 
     # The embedding-specific block should not run for language_model_options
@@ -624,5 +654,7 @@ def test_handle_model_input_update_language_model_prefix_skips_embedding_fields(
 def test_handle_model_input_update_returns_dict():
     component = _make_mock_component()
     build_config = {"model": _make_model_field()}
-    result = handle_model_input_update(component, build_config, field_value="", field_name=None, get_options_func=list)
+    result = handle_model_input_update(
+        component, build_config, field_value="", field_name=None, get_options_func=lambda user_id=None: []  # noqa: ARG005
+    )
     assert isinstance(result, dict)
