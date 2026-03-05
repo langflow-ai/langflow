@@ -15,6 +15,7 @@ from chromadb.config import Settings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from lfx.base.data.utils import extract_text_from_bytes
 from lfx.base.models.unified_models import get_embedding_model_options
 from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
 from lfx.log import logger
@@ -330,7 +331,7 @@ class KBIngestionHelper:
             job_id_str = str(task_job_id)
             for file_name, file_content in files_data:
                 await logger.ainfo("Starting ingestion of %s for %s", file_name, kb_name)
-                content = file_content.decode("utf-8", errors="ignore")
+                content = extract_text_from_bytes(file_name, file_content)
                 if not content.strip():
                     continue
 
