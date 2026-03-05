@@ -61,7 +61,7 @@
         "data": {
           "id": "note-6CE3d",
           "node": {
-            "description": "## Knowledge Retrieval\n\nA stand-alone component handles the retrieval of ingested knowledge from existing knowledge bases. To retrieve knowledge:\n\n1. Select your knowledge base from the Knowledge Base dropdown. If you do not see it, choose \"Refresh List\".\n2. (Optional) Enter a Search Query to be performed against the knowledge base.\n\nNote that by default, 5 results are returned, which can be configured by clicking Controls at the top of the component.\n",
+            "description": "# 📖 README\nA stand-alone component handles the retrieval of ingested knowledge from existing knowledge bases. To retrieve knowledge:\n\n1. Select your knowledge base from the Knowledge Base dropdown. If you do not see it, choose \"Refresh List\".\n2. (Optional) Enter a Search Query to be performed against the knowledge base.\n\nNote that by default, 5 results are returned, which can be configured by clicking Controls at the top of the component.\n",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -261,7 +261,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.133.1"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",

@@ -452,7 +452,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.133.1"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
@@ -694,7 +694,7 @@
         "data": {
           "id": "note-goubF",
           "node": {
-            "description": "# Market Research\nThis flow helps you gather comprehensive information about companies for sales and business intelligence purposes.\n\n## Prerequisites\n\n- **[Tavily API Key](https://docs.tavily.com/welcome)**\n- **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quickstart\n\n1. Add your **OpenAI API key** to the **OpenAI** model and **Agent** components.\n2. Add your **Tavily API key** to the **Tavily Search** component.\n3. In the **Chat Input**, enter a company name you want to research.\n4. Open the **Playground** and research the company. The **Structured Output** component transforms the raw LLM response into structured data, and the **Parser** component presents the data as text for the **Chat output** component to present.",
+            "description": "# 📖 README\nThis flow helps you gather comprehensive information about companies for sales and business intelligence purposes.\n\n## Prerequisites\n\n- **[Tavily API Key](https://docs.tavily.com/welcome)**\n- **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n2. Add your **Tavily API key** to the **Tavily Search** component.\n3. In the **Chat Input**, enter a company name you want to research.\n4. Open the **Playground** and research the company. The **Structured Output** component transforms the raw LLM response into structured data, and the **Parser** component presents the data as text for the **Chat output** component to present.",
             "display_name": "",
             "documentation": "",
             "template": {

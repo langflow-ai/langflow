@@ -1126,7 +1126,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.133.1"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
@@ -1579,7 +1579,7 @@
         "data": {
           "id": "note-rWxDr",
           "node": {
-            "description": "# 📖 README\n\nWelcome to the Instagram Copywriter! This flow helps you create compelling Instagram posts with AI-generated content and image prompts.\n\n## Quickstart\n- Add your **OpenAI API Key** to the **Agent** and **Language Model** components or change the provider and add your credentials.\n- Add your **Tavily API Key** to the **Tavily AI Search** component.\n\n## Using the Flow\n**Enter Your Topic**\n   - In the Chat Input, enter a brief description of the topic you want to post about.\n   - Example: \"Create a post about meditation and its benefits\"",
+            "description": "# 📖 README\n\nWelcome to the Instagram Copywriter! This flow helps you create compelling Instagram posts with AI-generated content and image prompts.\n\n## Quick start\n- Configure your **Model Provider** with your API credentials.\n- Add your **Tavily API Key** to the **Tavily AI Search** component.\n\n## Using the Flow\n**Enter Your Topic**\n   - In the Chat Input, enter a brief description of the topic you want to post about.\n   - Example: \"Create a post about meditation and its benefits\"",
             "display_name": "",
             "documentation": "",
             "template": {

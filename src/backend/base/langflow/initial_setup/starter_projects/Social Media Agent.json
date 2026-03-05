@@ -638,7 +638,7 @@
         "data": {
           "id": "note-NZDOa",
           "node": {
-            "description": "# Social Media Agent\n\nExtract data with **Apify Actors** and analyze the data with an **Agent**.\n\n## Prerequisites\n\n* An [Apify API token](https://docs.apify.com/platform/integrations/api#api-token)\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quickstart\n\n1. Enter your **Apify** API token in the **Apify Token** fields of the **Apify Actors** components.  \n2. Enter your **OpenAI** API token in the **OpenAI API Key** field of the **Agent** component.\n3. Open the **Playground** and chat with the agent. For example, task it with retrieving a profile bio and the latest video by using this prompt:  \n   ```\n   Find the TikTok profile of the company OpenAI using Google search, then show me the profile bio and their latest video.\n   ```",
+            "description": "# 📖 README\nExtract data with **Apify Actors** and analyze the data with an **Agent**.\n\n## Prerequisites\n\n* An [Apify API token](https://docs.apify.com/platform/integrations/api#api-token)\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n2. Enter your **Apify** API token in the **Apify Token** fields of the **Apify Actors** components.\n3. Open the **Playground** and chat with the agent. For example, task it with retrieving a profile bio and the latest video by using this prompt:  \n   ```\n   Find the TikTok profile of the company OpenAI using Google search, then show me the profile bio and their latest video.\n   ```",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -976,7 +976,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.133.1"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",

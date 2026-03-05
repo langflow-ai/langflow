@@ -956,7 +956,7 @@
         "data": {
           "id": "note-RH5AH",
           "node": {
-            "description": "# 📖 README\n\nWelcome to the Research Agent! This flow helps you conduct in-depth research on various topics using AI-powered tools and analysis.\n\n## Quickstart\n- Add your **OpenAI API Key** to the **Language Model**s and **Agent** Components or change the provider and add your credentials.\n- Add your **Tavily API Key** to the Tavily AI Search coimponent.\n \n## Using the Flow\n   - Type your research question or topic into the Chat Input node.\n   - Be specific and clear about what you want to investigate.",
+            "description": "# 📖 README\n\nWelcome to the Research Agent! This flow helps you conduct in-depth research on various topics using AI-powered tools and analysis.\n\n## Quick start\n- Configure your **Model Provider** with your API credentials.\n- Add your **Tavily API Key** to the Tavily AI Search component.\n \n## Using the Flow\n   - Type your research question or topic into the Chat Input node.\n   - Be specific and clear about what you want to investigate.",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -1769,7 +1769,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.133.1"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",

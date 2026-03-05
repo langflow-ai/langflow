@@ -318,7 +318,7 @@
         "data": {
           "id": "note-ByFTQ",
           "node": {
-            "description": "## Knowledge Ingestion\n\nThis flow shows the basics of the creation and ingestion of knowledge bases in Langflow. Here we use the `URL` component to dynamically fetch page data from the Langflow website, split it into chunks of 100 tokens, then ingest into a Knowledge Base.\n\n1. (Optional) Change the URL or switch to a different input data source as desired.\n2. (Optional) Adjust the Chunk Size as desired.\n3. Select or Create a new knowledge base.\n4. Ensure the column you wish to Vectorize is properly reflected in the Column Configuration table.",
+            "description": "# 📖 README\nThis flow shows the basics of the creation and ingestion of knowledge bases in Langflow. Here we use the `URL` component to dynamically fetch page data from the Langflow website, split it into chunks of 100 tokens, then ingest into a Knowledge Base.\n\n1. (Optional) Change the URL or switch to a different input data source as desired.\n2. (Optional) Adjust the Chunk Size as desired.\n3. Select or Create a new knowledge base.\n4. Ensure the column you wish to Vectorize is properly reflected in the Column Configuration table.",
             "display_name": "",
             "documentation": "",
             "template": {}

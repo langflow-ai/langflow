@@ -1449,7 +1449,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.133.1"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
@@ -1961,7 +1961,7 @@
         "data": {
           "id": "note-01q9d",
           "node": {
-            "description": "# 📖 README\nThis flow performs comprehensive analysis of YouTube videos.\n1.  Extract video comments and transcripts.\n2.  Run sentiment analysis on comments using LLM.\n3.  Combine transcript content and comment sentiment for comprehensive video analysis.\n## Quickstart\n-  Add your **OpenAI API Key** to the **Language Model** and **YT-Insight** Agent Component\n-  Add your **YouTube Data API v3 key**\n- If you don't have a YoutTube API key, create one in the [Google Cloud Console](https://console.cloud.google.com).\n- Ensure the chat input is a valid YouTube video URL. A sample URL is provided in the chat input component.\n",
+            "description": "# 📖 README\nThis flow performs comprehensive analysis of YouTube videos.\n1.  Extract video comments and transcripts.\n2.  Run sentiment analysis on comments using LLM.\n3.  Combine transcript content and comment sentiment for comprehensive video analysis.\n## Quick start\n- Configure your **Model Provider** with your API credentials.\n- Add your **YouTube Data API v3 key**\n- If you don't have a YoutTube API key, create one in the [Google Cloud Console](https://console.cloud.google.com).\n- Ensure the chat input is a valid YouTube video URL. A sample URL is provided in the chat input component.\n",
             "display_name": "",
             "documentation": "",
             "template": {
