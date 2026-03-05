@@ -185,6 +185,7 @@ export default function ModelInputComponent({
   );
 
   const handleRefreshButtonPress = useCallback(async () => {
+    setOpen(false);
     setRefreshOptions(true);
     try {
       await refreshAllModelInputs({ silent: true });

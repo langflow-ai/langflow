@@ -16,6 +16,20 @@ jest.mock("@/stores/alertStore", () => ({
   }),
 }));
 
+// Mock useRefreshModelInputs with controllable promise
+let mockRefreshResolve: () => void;
+const mockRefreshAllModelInputs = jest.fn(
+  () =>
+    new Promise<void>((resolve) => {
+      mockRefreshResolve = resolve;
+    }),
+);
+jest.mock("@/hooks/use-refresh-model-inputs", () => ({
+  useRefreshModelInputs: () => ({
+    refreshAllModelInputs: mockRefreshAllModelInputs,
+  }),
+}));
+
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
   default: {
@@ -307,6 +321,44 @@ describe("ModelInputComponent", () => {
       await waitFor(() => {
         expect(screen.getByText("Manage Model Providers")).toBeInTheDocument();
       });
+    });
+  });
+
+  describe("Refresh List", () => {
+    it("should close popover before entering loading state when refresh is clicked", async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      // Open dropdown
+      const trigger = screen.getByRole("combobox");
+      await user.click(trigger);
+
+      // Wait for dropdown to be fully open with options visible
+      await waitFor(() => {
+        expect(screen.getByTestId("refresh-model-list")).toBeInTheDocument();
+      });
+
+      // Click refresh
+      const refreshButton = screen.getByTestId("refresh-model-list");
+      await user.click(refreshButton);
+
+      // The component should show loading state
+      await waitFor(() => {
+        expect(screen.getByText("Loading models")).toBeInTheDocument();
+      });
+
+      // Resolve the refresh promise
+      mockRefreshResolve();
+
+      // After refresh completes, the combobox should be back and closed (not open)
+      await waitFor(() => {
+        expect(screen.getByRole("combobox")).toBeInTheDocument();
+      });
+
+      // The popover content (model options) should NOT be visible
+      // because popover was closed before loading started
+      expect(screen.queryByTestId("gpt-4-option")).not.toBeInTheDocument();
+      expect(screen.queryByText("OpenAI")).not.toBeInTheDocument();
     });
   });
 
