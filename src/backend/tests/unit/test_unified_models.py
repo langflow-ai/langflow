@@ -655,6 +655,10 @@ def test_handle_model_input_update_returns_dict():
     component = _make_mock_component()
     build_config = {"model": _make_model_field()}
     result = handle_model_input_update(
-        component, build_config, field_value="", field_name=None, get_options_func=lambda user_id=None: []  # noqa: ARG005
+        component,
+        build_config,
+        field_value="",
+        field_name=None,
+        get_options_func=lambda user_id=None: [],  # noqa: ARG005
     )
     assert isinstance(result, dict)
