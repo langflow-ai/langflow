@@ -1289,8 +1289,6 @@ class TestSanitizeJson:
         result = MessageTable.from_message(message, flow_id=uuid4())
 
         # After from_message + validator, no NaN should survive
-        import math
-
         props_dict = result.properties if isinstance(result.properties, dict) else result.properties.model_dump()
         assert props_dict["_nan_test"] is None
 
