@@ -267,6 +267,16 @@ def register_all_service_factories() -> None:
     service_manager.set_factory_registered()
 
 
+def register_builtin_adapters() -> None:
+    """Import built-in adapter modules so @register_adapter decorators fire.
+
+    Mirrors register_all_service_factories() for the adapter registry system.
+    Each import triggers the @register_adapter decorator at module scope,
+    registering the adapter class on the AdapterRegistry singleton.
+    """
+    import langflow.services.adapters.deployment.watsonx_orchestrate  # noqa: F401
+
+
 async def initialize_services(*, fix_migration: bool = False) -> None:
     """Initialize all the services needed."""
     from langflow.helpers.windows_postgres_helper import configure_windows_postgres_event_loop
@@ -275,6 +285,7 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
 
     # Register all service factories first
     register_all_service_factories()
+    register_builtin_adapters()
 
     cache_service = get_service(ServiceType.CACHE_SERVICE, default=CacheServiceFactory())
     # Test external cache connection
