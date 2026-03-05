@@ -1,4 +1,6 @@
 import json
+import os
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -120,6 +122,13 @@ class KnowledgeBaseComponent(Component):
 
         return build_config
 
+    @property
+    def _user_uuid(self) -> uuid.UUID | None:
+        """Return self.user_id as a UUID, converting from str if necessary."""
+        if not self.user_id:
+            return None
+        return self.user_id if isinstance(self.user_id, uuid.UUID) else uuid.UUID(self.user_id)
+
     def _get_kb_metadata(self, kb_path: Path) -> dict:
         """Load and process knowledge base metadata."""
         # Check if we're in Astra cloud environment and raise an error if we are.
@@ -154,11 +163,10 @@ class KnowledgeBaseComponent(Component):
         This avoids the run_until_complete thread dance by doing the lookup
         directly in the already-running async context.
         """
-        import os
-
         result: dict[str, str] = {}
         provider_vars = get_provider_all_variables(provider)
-        if not provider_vars or not self.user_id:
+        user_id = self._user_uuid
+        if not provider_vars or not user_id:
             return result
 
         async with session_scope() as session:
@@ -166,7 +174,6 @@ class KnowledgeBaseComponent(Component):
             if variable_service is None:
                 return result
 
-            user_id = self.user_id if not isinstance(self.user_id, str) else __import__("uuid").UUID(self.user_id)
             for var_info in provider_vars:
                 var_key = var_info.get("variable_key")
                 if not var_key:
@@ -180,7 +187,10 @@ class KnowledgeBaseComponent(Component):
                     )
                     if value and str(value).strip():
                         result[var_key] = str(value)
-                except (ValueError, Exception):  # noqa: BLE001
+                except (ValueError, KeyError, AttributeError) as e:
+                    logger.debug(
+                        f"Variable service lookup failed for '{var_key}', falling back to environment: {e}"
+                    )
                     env_value = os.environ.get(var_key)
                     if env_value and env_value.strip():
                         result[var_key] = env_value
@@ -193,7 +203,8 @@ class KnowledgeBaseComponent(Component):
         """
         provider_variable_map = get_model_provider_variable_mapping()
         variable_name = provider_variable_map.get(provider)
-        if not variable_name or not self.user_id:
+        user_id = self._user_uuid
+        if not variable_name or not user_id:
             return None
 
         async with session_scope() as session:
@@ -201,14 +212,13 @@ class KnowledgeBaseComponent(Component):
             if variable_service is None:
                 return None
             try:
-                user_id = self.user_id if not isinstance(self.user_id, str) else __import__("uuid").UUID(self.user_id)
                 return await variable_service.get_variable(
                     user_id=user_id,
                     name=variable_name,
                     field="",
                     session=session,
                 )
-            except (ValueError, Exception):  # noqa: BLE001
+            except (ValueError, KeyError, AttributeError):
                 return None
 
     def _build_embeddings(self, metadata: dict, *, api_key: str | None = None, provider_vars: dict | None = None):
@@ -353,7 +363,7 @@ class KnowledgeBaseComponent(Component):
         # If a search query is provided, perform a similarity search
         if self.search_query:
             # Use the search query to perform a similarity search
-            logger.info(f"Performing similarity search with query: {self.search_query}")
+            logger.info("Performing similarity search")
             results = chroma.similarity_search_with_score(
                 query=self.search_query or "",
                 k=self.top_k,
