@@ -55,7 +55,7 @@ def test_discover_is_thread_safe_runs_inner_discovery_once(tmp_path, monkeypatch
             call_count += 1
 
     monkeypatch.setattr(registry, "_discover_from_entry_points", counted_entry_points)
-    monkeypatch.setattr(registry, "_discover_from_config", lambda _config_dir: None)
+    monkeypatch.setattr(registry, "_discover_from_config", lambda **_: None)
 
     def run_discover(_):
         registry.discover(config_dir=tmp_path)
