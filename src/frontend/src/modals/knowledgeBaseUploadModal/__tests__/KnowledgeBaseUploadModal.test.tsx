@@ -559,8 +559,8 @@ describe("KnowledgeBaseUploadModal", () => {
       const validFile = new File(["content"], "valid.md", {
         type: "text/markdown",
       });
-      const invalidFile = new File(["content"], "invalid.pdf", {
-        type: "application/pdf",
+      const invalidFile = new File(["content"], "invalid.exe", {
+        type: "application/x-msdownload",
       });
 
       // Manually trigger the change event
@@ -573,11 +573,11 @@ describe("KnowledgeBaseUploadModal", () => {
       fireEvent.change(folderInput, event);
 
       expect(screen.getByText("valid.md")).toBeInTheDocument();
-      expect(screen.queryByText("invalid.pdf")).not.toBeInTheDocument();
+      expect(screen.queryByText("invalid.exe")).not.toBeInTheDocument();
 
       expect(mockSetErrorData).toHaveBeenCalledWith(
         expect.objectContaining({
-          list: expect.arrayContaining(["invalid.pdf"]),
+          list: expect.arrayContaining(["invalid.exe"]),
         }),
       );
     });
