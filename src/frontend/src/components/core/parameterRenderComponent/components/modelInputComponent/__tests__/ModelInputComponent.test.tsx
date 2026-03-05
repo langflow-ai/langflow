@@ -329,36 +329,84 @@ describe("ModelInputComponent", () => {
       const user = userEvent.setup();
       renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
 
-      // Open dropdown
       const trigger = screen.getByRole("combobox");
       await user.click(trigger);
 
-      // Wait for dropdown to be fully open with options visible
       await waitFor(() => {
         expect(screen.getByTestId("refresh-model-list")).toBeInTheDocument();
       });
 
-      // Click refresh
       const refreshButton = screen.getByTestId("refresh-model-list");
       await user.click(refreshButton);
 
-      // The component should show loading state
       await waitFor(() => {
         expect(screen.getByText("Loading models")).toBeInTheDocument();
       });
 
-      // Resolve the refresh promise
       mockRefreshResolve();
 
-      // After refresh completes, the combobox should be back and closed (not open)
       await waitFor(() => {
         expect(screen.getByRole("combobox")).toBeInTheDocument();
       });
 
-      // The popover content (model options) should NOT be visible
-      // because popover was closed before loading started
+      // Popover must be closed after refresh to prevent width measurement glitch
       expect(screen.queryByTestId("gpt-4-option")).not.toBeInTheDocument();
       expect(screen.queryByText("OpenAI")).not.toBeInTheDocument();
+    });
+
+    it("should not crash when component renders without popover open during refresh", () => {
+      mockRefreshAllModelInputs.mockImplementationOnce(() => Promise.resolve());
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
+      expect(screen.queryByTestId("gpt-4-option")).not.toBeInTheDocument();
+    });
+
+    it("should call refresh with silent flag exactly once per click", async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      const trigger = screen.getByRole("combobox");
+      await user.click(trigger);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("refresh-model-list")).toBeInTheDocument();
+      });
+
+      const refreshButton = screen.getByTestId("refresh-model-list");
+      await user.click(refreshButton);
+
+      expect(mockRefreshAllModelInputs).toHaveBeenCalledTimes(1);
+      expect(mockRefreshAllModelInputs).toHaveBeenCalledWith({ silent: true });
+
+      mockRefreshResolve();
+    });
+
+    it("should recover to normal state when refresh rejects", async () => {
+      // handleRefreshButtonPress uses try/finally, so refreshOptions resets even on error
+      mockRefreshAllModelInputs.mockImplementationOnce(() =>
+        Promise.reject(new Error("Network error")),
+      );
+
+      const user = userEvent.setup();
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      const trigger = screen.getByRole("combobox");
+      await user.click(trigger);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("refresh-model-list")).toBeInTheDocument();
+      });
+
+      const refreshButton = screen.getByTestId("refresh-model-list");
+      await user.click(refreshButton);
+
+      // finally block sets refreshOptions=false, restoring the combobox
+      await waitFor(() => {
+        expect(screen.getByRole("combobox")).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText("Loading models")).not.toBeInTheDocument();
     });
   });
 

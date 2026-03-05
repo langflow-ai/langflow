@@ -189,6 +189,8 @@ export default function ModelInputComponent({
     setRefreshOptions(true);
     try {
       await refreshAllModelInputs({ silent: true });
+    } catch {
+      // refreshAllModelInputs handles its own error notifications via alertStore
     } finally {
       setRefreshOptions(false);
     }
