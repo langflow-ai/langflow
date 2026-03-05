@@ -29,6 +29,9 @@ jobs:
         run: |
           uv sync
 
+      - name: Fetch main branch
+        run: git fetch origin main
+
       - name: Check model/migration consistency
         run: |
           uv run pytest src/backend/tests/unit/alembic/test_migration_execution.py -x -v

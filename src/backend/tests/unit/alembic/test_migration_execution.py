@@ -84,11 +84,15 @@ def _get_main_branch_head() -> str | None:
         main_revisions = set()
         for rev_id in new_rev_ids:
             rev_script = script.get_revision(rev_id)
-            if rev_script and rev_script.down_revision:
-                down = rev_script.down_revision
-                downs = set(down) if isinstance(down, (tuple, list)) else {down}
-                # Only keep down_revisions that are NOT themselves new migrations
-                main_revisions.update(downs - new_rev_ids)
+            if rev_script is None:
+                continue
+            if rev_script.down_revision is None:
+                msg = f"New migration {rev_id} has down_revision=None — it must chain from an existing migration"
+                raise ValueError(msg)
+            down = rev_script.down_revision
+            downs = set(down) if isinstance(down, (tuple, list)) else {down}
+            # Only keep down_revisions that are NOT themselves new migrations
+            main_revisions.update(downs - new_rev_ids)
 
         # Return the single main head, or None if ambiguous
         return main_revisions.pop() if len(main_revisions) == 1 else None
