@@ -422,7 +422,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.135.1"
+                    "version": "0.133.1"
                   },
                   {
                     "name": "lfx",
@@ -1606,7 +1606,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": "2.12.5"
+                    "version": "2.11.10"
                   },
                   {
                     "name": "lfx",
