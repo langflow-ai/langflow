@@ -54,7 +54,7 @@ class CrossModuleMeta(type(BaseModel)):  # type: ignore[misc]
 
         # Check if the instance has all required fields from cls
         cls_fields = set(cls.model_fields.keys()) if hasattr(cls, "model_fields") else set()
-        instance_fields = set(instance.model_fields.keys())
+        instance_fields = set(type(instance).model_fields.keys())
 
         # The instance must have at least the same fields as the class
         # (it can have more, but not fewer required fields)
