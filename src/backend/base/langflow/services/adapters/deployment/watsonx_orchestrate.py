@@ -67,6 +67,7 @@ from lfx.services.adapters.deployment.schema import (
     ExecutionStatusResult,
     IdLike,
     ItemResult,
+    ProviderPayload,
     RedeployResult,
     SnapshotItems,
 )
@@ -208,8 +209,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         # --
         # --
         deployment_response: AgentUpsertResponse | None = None
-        created_config_id: str | None = None
-        created_snapshot_ids: list[str] = []
         created_agent_id: str | None = None
         created_tool_ids: list[str] = []
         created_app_id: str | None = None
@@ -237,10 +236,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 prefixed_deployment_name=prefixed_deployment_name,
                 config=payload.config,
             )
-            tool_name_prefix = f"{prefixed_deployment_name}_"
+
             planned_tool_names = self._build_snapshot_tool_names(
                 snapshots=payload.snapshot,
-                tool_name_prefix=tool_name_prefix,
+                tool_name_prefix=random_prefix,
             )
 
             # there is a read-before-write race here
@@ -263,35 +262,30 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                         config=payload.config,
                     )
                 )
-                created_config_id = (
-                    prefixed_app_id if payload.config is not None and payload.config.raw_payload is not None else None
-                )
 
-                if payload.snapshot:
-                    created_snapshot_ids = await self._retry_create(
-                        lambda: self._process_flow_snapshots(
+                if payload.snapshot and payload.snapshot.raw_payloads:
+                    created_tool_ids = await self._retry_create(
+                        lambda: self._process_raw_flows_with_app_id(
                             user_id=user_id,
                             app_id=prefixed_app_id,
-                            snapshots=payload.snapshot,
+                            flows=payload.snapshot.raw_payloads,
                             db=db,
-                            tool_name_prefix=tool_name_prefix,
+                            tool_name_prefix=random_prefix,
                         )
                     )
-                    created_tool_ids = list(created_snapshot_ids)
-                    if created_tool_ids:
-                        connection = self._validate_connection(clients.connections, app_id=prefixed_app_id)
-                        self._sync_langflow_tool_connections(
-                            clients=clients,
-                            tool_ids=created_tool_ids,
-                            config_id=prefixed_app_id,
-                            connection_id=connection.connection_id,
-                        )
 
-                deployment_spec = deployment_spec.model_copy(deep=True)
-                deployment_spec.name = prefixed_deployment_name
+                derived_spec = deployment_spec.model_copy(deep=True)
+                if derived_spec.provider_spec is None:
+                    derived_spec.provider_spec = {}
+                derived_spec.provider_spec.update(
+                    {
+                        "name": prefixed_deployment_name,
+                        "display_name": derived_spec.name,
+                    }
+                )
                 deployment_response = await self._retry_create(
                     lambda: self._create_agent_deployment(
-                        data=deployment_spec,
+                        data=derived_spec,
                         tool_ids=created_tool_ids,
                         user_id=user_id,
                         db=db,
@@ -367,11 +361,13 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             )
             raise DeploymentError(message=msg, error_code="deployment_error")
 
+        derived_spec.name = deployment_spec.name  # restore the original name
+
         return DeploymentCreateResult(
             id=deployment_response.id,
-            config_id=created_config_id,
-            snapshot_ids=created_snapshot_ids,
-            **deployment_spec.model_dump(exclude_unset=True),
+            config_id=created_app_id,
+            snapshot_ids=created_tool_ids,
+            **derived_spec.model_dump(exclude_unset=True),
         )
 
     async def list_types(
@@ -381,7 +377,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         db: Any,  # noqa: ARG002 - not used
     ) -> DeploymentListTypesResult:
         """List deployment types supported by the provider."""
-        return DeploymentListTypesResult(deployment_types=[DeploymentType.AGENT])
+        return DeploymentListTypesResult(deployment_types=list(SUPPORTED_ADAPTER_DEPLOYMENT_TYPES))
 
     async def list(
         self,
@@ -392,14 +388,34 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     ) -> DeploymentListResult:
         """List deployments from Watsonx Orchestrate."""
         client_manager = await self._get_provider_clients(user_id=user_id, db=db)
+        deployments: list[ItemResult] = []
         try:
-            deployments: list[ItemResult] = []
-            deployment_types = params.deployment_types or [] if params else []
-            unsupported_types = [dtype for dtype in deployment_types if dtype is not DeploymentType.AGENT]
-            if unsupported_types:
-                invalid_values = ", ".join(dtype.value for dtype in unsupported_types)
+            # validate deployment types
+            deployment_types: list[DeploymentType] = []
+            invalid_deployment_types: list[DeploymentType] = []
+
+            if params and params.deployment_types:
+                deployment_types = params.deployment_types
+                invalid_deployment_types = set(deployment_types).difference(SUPPORTED_ADAPTER_DEPLOYMENT_TYPES)
+
+            if invalid_deployment_types:
+                invalid_values = ", ".join([dtype.value for dtype in invalid_deployment_types])
                 msg = f"{ErrorPrefix.LIST.value}watsonx Orchestrate has no such deployment type(s): '{invalid_values}'."
                 raise InvalidDeploymentTypeError(message=msg)
+
+            query_params: ProviderPayload = {}
+
+            if params.provider_params:
+                query_params = params.provider_params
+
+            if params.deployment_ids and "ids" not in query_params:
+                query_params["ids"] = [str(_id) for _id in params.deployment_ids]
+
+            # if different deployment types
+            # are distinct resources in wxo
+            # then we should probably raise an error if
+            # the ids query parameter is not empty
+            # this is not a problem today, but might be in the future
 
             deployments = [
                 self._get_deployment_metadata(
@@ -412,7 +428,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 )
                 for agent in client_manager.agent._get(  # noqa: SLF001
                     "/agents",
-                    params=params.provider_params if params else None,
+                    params=query_params or None,
                 )
             ]
         except (ClientAPIException, HTTPException) as exc:
@@ -481,7 +497,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             if "name" in spec_updates:
                 normalized_name = self._validate_wxo_name(spec_updates["name"])
                 update_payload["name"] = normalized_name
-                update_payload["display_name"] = normalized_name
+                update_payload["display_name"] = spec_updates["name"]
             if "description" in spec_updates:
                 update_payload["description"] = spec_updates["description"]
 
@@ -886,27 +902,27 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 msg = f"{ErrorPrefix.CREATE.value}. Deployment snapshot '{tool_name}' already exists."
                 raise DeploymentConflictError(message=msg)
 
-    async def _process_flow_snapshots(
+    async def _process_raw_flows_with_app_id(
         self,
         user_id: UUID | str,
-        app_id: str | None,
-        snapshots: SnapshotItems,
+        app_id: str,
+        flows: list[BaseFlowArtifact],
         db: Any,
         tool_name_prefix: str,
     ) -> list[str]:
-        """Process flow snapshots."""
+        """Create langflow tools in wxo and connect them to the given app_id."""
         if not tool_name_prefix.strip():
             msg = "Snapshot creation requires a non-empty tool_name_prefix."
             raise InvalidDeploymentOperationError(message=msg)
+
         clients = await self._get_provider_clients(user_id=user_id, db=db)
-        connections = self._resolve_snapshot_connections(
-            connections_client=clients.connections,
-            config_id=app_id,
-        )
+
+        connection = self._validate_connection(clients.connections, app_id=app_id)
+
         return await self._create_and_upload_wxo_flow_tools(
             tool_client=clients.tool,
-            flow_payloads=snapshots.raw_payloads,
-            connections=connections,
+            flow_payloads=flows,
+            connections={app_id: connection.connection_id},
             app_id=app_id,
             tool_name_prefix=tool_name_prefix,
         )
@@ -1096,11 +1112,20 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         data: BaseDeploymentData,
         tool_ids: list[str],
     ) -> dict[str, Any]:
+        if data.provider_spec is None:
+            msg = "Deployment data must include provider_spec with a non-empty name and display_name."
+            raise DeploymentError(message=msg)
         return {
-            "name": data.name,
+            "name": data.provider_spec["name"],
+            "display_name": data.provider_spec["display_name"],
             "description": str(data.description or "").strip() or f"Langflow deployment {data.name}",
             "tools": tool_ids,
             "style": "default",
+            # TODO: do not hard code this?
+            # but then we need to make a api request
+            # to retrieve the available llms in wxo,
+            # which isn't great either.
+            # sadly, the llm field is required by the wxo api.
             "llm": "groq/openai/gpt-oss-120b",
         }
 
@@ -1153,31 +1178,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 # TODO: just send the request?
                 continue
 
-            update_payload = self._build_tool_update_payload(tool)
+            # update_payload = self._build_tool_update_payload(tool)
+            update_payload = {}
             update_payload.setdefault("binding", {}).setdefault("langflow", {})["connections"] = updated_connections
             clients.tool.update(tool_id, update_payload)
-
-    def _build_tool_update_payload(self, tool: dict[str, Any]) -> dict[str, Any]:
-        payload: dict[str, Any] = {
-            "description": tool.get("description") or "",
-            "permission": tool.get("permission") or "read_only",
-        }
-
-        for field in (
-            "name",
-            "display_name",
-            "input_schema",
-            "output_schema",
-            "binding",
-            "tags",
-            "is_async",
-            "restrictions",
-            "bundled_agent_id",
-        ):
-            if field in tool:
-                payload[field] = tool.get(field)
-
-        return payload
 
     def _get_deployment_metadata(
         self,
