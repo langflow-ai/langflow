@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Any
 import json
 import re
+from typing import Any
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
-from urllib.error import URLError, HTTPError
 
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
@@ -15,11 +15,11 @@ from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import (
     BoolInput,
     DictInput,
+    DropdownInput,
     IntInput,
     SecretStrInput,
     SliderInput,
     StrInput,
-    DropdownInput,
 )
 from lfx.log.logger import logger
 
@@ -56,7 +56,7 @@ class VllmComponent(LCModelComponent):
             display_name="vLLM API Base",
             advanced=False,
             info="Base URL of the vLLM OpenAI-compatible server. "
-                 "You can provide either http://host:port or http://host:port/v1",
+            "You can provide either http://host:port or http://host:port/v1",
             value="http://localhost:8000/v1",
             real_time_refresh=True,
         ),
@@ -72,7 +72,7 @@ class VllmComponent(LCModelComponent):
             display_name="Model Name Pattern (Regex)",
             advanced=True,
             info="Optional regex to pick a preferred model id from /v1/models. "
-                 "Example: 'granite|llama|mistral'. If no match, falls back to the first model.",
+            "Example: 'granite|llama|mistral'. If no match, falls back to the first model.",
             value="",
         ),
         DropdownInput(
@@ -131,12 +131,12 @@ class VllmComponent(LCModelComponent):
     # helpers: URL + model fetching
     # ----------------------------
     def _normalize_api_base(self, url: str) -> str:
-        """
-        Ensure base ends with '/v1' and has no trailing slash.
+        """Ensure base ends with '/v1' and has no trailing slash.
         Accepts:
           - http://host:port
           - http://host:port/v1
           - http://host:port/v1/
+
         Returns:
           - http://host:port/v1
         """
@@ -149,8 +149,7 @@ class VllmComponent(LCModelComponent):
         base = self._normalize_api_base(api_base)
         url = f"{base}/models"
 
-        req = Request(url, method="GET", headers={
-                      "Accept": "application/json"})
+        req = Request(url, method="GET", headers={"Accept": "application/json"})
         try:
             with urlopen(req, timeout=timeout_s) as resp:
                 raw = resp.read().decode("utf-8", errors="replace")
@@ -193,11 +192,9 @@ class VllmComponent(LCModelComponent):
             ids = self._fetch_model_ids(self.api_base)
             chosen_model = self._pick_model(ids, self.model_name_pattern)
             if chosen_model:
-                logger.debug(
-                    f"Auto-selected vLLM model at runtime: {chosen_model}")
+                logger.debug(f"Auto-selected vLLM model at runtime: {chosen_model}")
 
-        logger.debug(
-            f"Executing request with vLLM model: {chosen_model or self.model_name}")
+        logger.debug(f"Executing request with vLLM model: {chosen_model or self.model_name}")
 
         parameters = {
             "api_key": SecretStr(self.api_key).get_secret_value() if self.api_key else None,
@@ -235,7 +232,7 @@ class VllmComponent(LCModelComponent):
     # ----------------------------
     # UI config: dynamic dropdown
     # ----------------------------
-    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:  # noqa: ARG002
+    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         # Refresh model list when relevant fields change or refresh is pressed
         if field_name in {"api_base", "model_name", "auto_select_model", "model_name_pattern"}:
             api_base_to_use = field_value if field_name == "api_base" else self.api_base
@@ -247,18 +244,20 @@ class VllmComponent(LCModelComponent):
             current = (build_config["model_name"].get("value") or "").strip()
             current_valid = current in ids if ids else False
 
-            auto_on = bool(field_value) if field_name == "auto_select_model" else bool(
-                getattr(self, "auto_select_model", True))
-            pattern = (field_value if field_name == "model_name_pattern" else getattr(
-                self, "model_name_pattern", "")) or ""
+            auto_on = (
+                bool(field_value)
+                if field_name == "auto_select_model"
+                else bool(getattr(self, "auto_select_model", True))
+            )
+            pattern = (
+                field_value if field_name == "model_name_pattern" else getattr(self, "model_name_pattern", "")
+            ) or ""
 
             if auto_on:
                 if not current_valid:
-                    build_config["model_name"]["value"] = self._pick_model(
-                        ids, pattern)
-            else:
-                # if auto is off, don't force selection; but clear invalid values
-                if current and not current_valid:
-                    build_config["model_name"]["value"] = ""
+                    build_config["model_name"]["value"] = self._pick_model(ids, pattern)
+            # if auto is off, don't force selection; but clear invalid values
+            elif current and not current_valid:
+                build_config["model_name"]["value"] = ""
 
         return build_config
