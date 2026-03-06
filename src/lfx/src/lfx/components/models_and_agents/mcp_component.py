@@ -49,6 +49,7 @@ def resolve_mcp_config(
 
 
 class MCPToolsComponent(ComponentWithCache):
+    legacy = True
     schema_inputs: list = []
     tools: list[StructuredTool] = []
     _not_load_actions: bool = False
@@ -95,6 +96,7 @@ class MCPToolsComponent(ComponentWithCache):
     documentation: str = "https://docs.langflow.org/mcp-tools"
     icon = "Mcp"
     name = "MCPTools"
+    tool_mode = True
 
     inputs = [
         McpInput(

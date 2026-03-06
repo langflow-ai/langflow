@@ -15,6 +15,7 @@ from lfx.io import MessageTextInput, Output
 
 
 class MCPSse(Component):
+    tool_mode = True
     client = MCPSseClient()
     tools = types.ListToolsResult
     tool_names = [str]

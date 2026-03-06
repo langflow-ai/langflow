@@ -13,6 +13,7 @@ class CalculatorComponent(Component):
     description = "Perform basic arithmetic operations on a given expression."
     documentation: str = "https://docs.langflow.org/calculator"
     icon = "calculator"
+    tool_mode = True
 
     # Cache operators dictionary as a class variable
     OPERATORS: dict[type[ast.operator], Callable] = {

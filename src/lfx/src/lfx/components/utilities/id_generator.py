@@ -15,6 +15,7 @@ class IDGeneratorComponent(Component):
     icon = "fingerprint"
     name = "IDGenerator"
     legacy = True
+    tool_mode = True
 
     inputs = [
         MessageTextInput(

@@ -13,6 +13,7 @@ class CurrentDateComponent(Component):
     documentation: str = "https://docs.langflow.org/current-date"
     icon = "clock"
     name = "CurrentDate"
+    tool_mode = True
 
     inputs = [
         DropdownInput(

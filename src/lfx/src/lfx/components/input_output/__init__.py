@@ -7,6 +7,7 @@ from lfx.components._importing import import_mod
 if TYPE_CHECKING:
     from lfx.components.input_output.chat import ChatInput
     from lfx.components.input_output.chat_output import ChatOutput
+    from lfx.components.input_output.request_payload import JSONInputComponent
     from lfx.components.input_output.text import TextInputComponent
     from lfx.components.input_output.text_output import TextOutputComponent
     from lfx.components.input_output.webhook import WebhookComponent
@@ -14,12 +15,20 @@ if TYPE_CHECKING:
 _dynamic_imports = {
     "ChatInput": "chat",
     "ChatOutput": "chat_output",
+    "JSONInputComponent": "request_payload",
     "TextInputComponent": "text",
     "TextOutputComponent": "text_output",
     "WebhookComponent": "webhook",
 }
 
-__all__ = ["ChatInput", "ChatOutput", "TextInputComponent", "TextOutputComponent", "WebhookComponent"]
+__all__ = [
+    "ChatInput",
+    "ChatOutput",
+    "JSONInputComponent",
+    "TextInputComponent",
+    "TextOutputComponent",
+    "WebhookComponent",
+]
 
 
 def __getattr__(attr_name: str) -> Any:
