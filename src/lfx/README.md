@@ -128,6 +128,7 @@ uv run lfx run my_flow.json "What is AI?"
 - `--flow-json`: Inline JSON flow content as a string
 - `--stdin`: Read JSON flow from stdin
 - `--check-variables/--no-check-variables`: Check global variables for environment compatibility (default: check)
+- `--env-var`: Pass environment variables to the flow in the format `KEY=VALUE`. These variables take precedence over OS environment variables.
 
 **Examples:**
 
@@ -149,6 +150,9 @@ echo '{"data": {"nodes": [...], "edges": [...]}}' | uv run lfx run --stdin --inp
 
 # Inline JSON
 uv run lfx run --flow-json '{"data": {"nodes": [...], "edges": [...]}}' --input-value "Test"
+
+# Pass dynamic environment variables (overrides OS environment variables)
+uv run lfx run my_flow.json "Hello" --env-var API_KEY=my-api-key --env-var MODEL_NAME=gpt-4
 ```
 
 ### Complete Agent Example

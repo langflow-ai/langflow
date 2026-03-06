@@ -12,6 +12,7 @@ Langflow integrates with the [Model Context Protocol (MCP)](https://modelcontext
 This page describes how to use Langflow as an MCP server that exposes your flows as [tools](https://modelcontextprotocol.io/docs/concepts/tools) that [MCP clients](https://modelcontextprotocol.io/clients) can use when generating responses.
 
 Langflow MCP servers support both the **streamable HTTP** transport and **Server-Sent Events (SSE)** as a fallback.
+The default project MCP server configuration uses streamable HTTP transport at the URL path `/streamable`.
 
 For information about using Langflow as an MCP client and managing MCP server connections within flows, see [Use Langflow as an MCP client](/mcp-client).
 
@@ -146,6 +147,8 @@ For example:
           "command": "uvx",
           "args": [
             "mcp-proxy",
+            "--transport",
+            "streamablehttp",
             "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/streamable"
           ]
         }
@@ -161,7 +164,7 @@ For example:
     If your Langflow server requires authentication, you must include your Langflow API key or OAuth settings in the configuration.
     For more information, see [MCP server authentication](#authentication).
 
-6. To include other environment variables with your MCP server command, add an `env` object with key-value pairs of environment variables:
+6. To include other environment variables with your MCP server command, add an `env` object with key-value pairs of environment variables. For example:
 
     ```json
     {
@@ -170,6 +173,8 @@ For example:
           "command": "uvx",
           "args": [
             "mcp-proxy",
+            "--transport",
+            "streamablehttp",
             "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/streamable"
           ],
           "env": {
@@ -179,6 +184,10 @@ For example:
       }
     }
     ```
+
+    Don't add API keys in the `env` object, as these variables are specifically for the `mcp-proxy` process.
+    Instead, add API keys under `args`.
+    For an example, see [MCP server authentication](#authentication).
 
 7. Save and close your client's MCP configuration file.
 
@@ -226,10 +235,31 @@ To configure authentication for a Langflow MCP server, go to the **Projects** pa
 <Tabs groupId="auth-type">
 <TabItem value="API key" label="API key">
 
-When authenticating your MCP server with a Langflow API key, your project's MCP server **JSON** code snippets and **Auto install** configuration automatically include the `--headers` and `x-api-key` arguments.
+When authenticating your MCP server with a Langflow API key, your project's MCP server **JSON** code snippets and **Auto install** configuration automatically include the `--headers` and `x-api-key` arguments in the **args** array (for streamable transport).
 
 Click <Icon name="key" aria-hidden="true"/> **Generate API key** to automatically insert a new Langflow API key into the code template.
 Alternatively, you can replace `YOUR_API_KEY` with an existing Langflow API key.
+
+To add your API key to the configuration, use three separate entries in `args`: `"--headers"`, `"x-api-key"`, and your key value. For example:
+
+```json
+{
+  "mcpServers": {
+    "PROJECT_NAME": {
+      "command": "uvx",
+      "args": [
+        "mcp-proxy",
+        "--transport",
+        "streamablehttp",
+        "--headers",
+        "x-api-key",
+        "YOUR_API_KEY",
+        "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/streamable"
+      ]
+    }
+  }
+}
+```
 
 </TabItem>
 <TabItem value="OAuth" label="OAuth">
