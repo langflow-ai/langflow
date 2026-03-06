@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
 from pydantic import Field as PydanticField
 from pydantic.alias_generators import to_camel
+from sqlalchemy import ForeignKey
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, Text
 
 from langflow.serialization.serialization import serialize
