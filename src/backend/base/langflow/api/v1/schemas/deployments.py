@@ -16,10 +16,9 @@ This module draws a strict boundary between two identifier domains:
   ``provider_*`` payload dicts. They are typed as ``str`` because the provider
   may use any format.
 
-The ``provider_data`` / ``provider_result`` / ``provider_spec`` /
-``provider_input`` dicts are opaque pass-through containers whose contents are
-entirely defined by the provider adapter. Langflow forwards these payloads but
-does not define their schema.
+The ``provider_data`` / ``provider_spec`` dicts are opaque pass-through
+containers whose contents are entirely defined by the provider adapter.
+Langflow forwards these payloads but does not define their schema.
 
 Service-layer schema reuse
 --------------------------
@@ -146,9 +145,7 @@ class ProviderAccountUpdate(BaseModel):
 
     @model_validator(mode="after")
     def ensure_any_field_provided(self) -> ProviderAccountUpdate:
-        if all(
-            value is None for value in (self.provider_tenant_id, self.provider_key, self.provider_url, self.api_key)
-        ):
+        if not self.model_fields_set:
             msg = "At least one field must be provided for update."
             raise ValueError(msg)
         return self
@@ -177,104 +174,72 @@ class DeploymentTypeListResponse(BaseModel):
     deployment_types: list[DeploymentType]
 
 
-class DeploymentSummary(BaseModel):
-    """Compact deployment representation used for detail and duplicate results."""
+class _DeploymentResponseBase(BaseModel):
+    """Shared fields for deployment response schemas."""
 
     id: UUID = Field(description="Langflow DB deployment UUID.")
     name: str
-    description: str | None = None
     type: DeploymentType
     created_at: datetime | None = None
     updated_at: datetime | None = None
     provider_data: dict[str, Any] | None = Field(
         default=None,
-        description="Provider-owned opaque metadata payload returned by the deployment provider.",
+        description="Provider-owned opaque payload returned by the deployment provider.",
     )
+
+
+class DeploymentSummary(_DeploymentResponseBase):
+    """Base deployment representation used for detail and duplicate responses."""
+
+    description: str | None = None
 
 
 class DeploymentGetResponse(DeploymentSummary):
     """Full deployment detail."""
 
 
-class DeploymentListItem(BaseModel):
+class DeploymentListItem(_DeploymentResponseBase):
     """Deployment representation used in list responses."""
 
-    id: UUID = Field(description="Langflow DB deployment UUID.")
-    name: str
-    type: DeploymentType
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
-    provider_data: dict[str, Any] | None = Field(
-        default=None,
-        description="Provider-owned opaque metadata payload returned by the deployment provider.",
-    )
     resource_key: str = Field(description="Provider-owned stable resource identifier.")
     attached_count: int = Field(default=0, ge=0, description="Number of flow versions attached to this deployment.")
 
 
-class DeploymentListResponse(BaseModel):
+class _PaginatedResponse(BaseModel):
+    """Shared pagination fields for list responses."""
+
+    page: int = Field(default=1, ge=1)
+    size: int = Field(default=20, ge=1)
+    total: int = Field(default=0, ge=0)
+
+
+class DeploymentListResponse(_PaginatedResponse):
     deployments: list[DeploymentListItem]
     deployment_type: DeploymentType | None = None
-    page: int = Field(default=1, ge=1)
-    size: int = Field(default=20, ge=1)
-    total: int = Field(default=0, ge=0)
 
 
-class ProviderAccountListResponse(BaseModel):
+class ProviderAccountListResponse(_PaginatedResponse):
     providers: list[ProviderAccountResponse]
-    page: int = Field(default=1, ge=1)
-    size: int = Field(default=20, ge=1)
-    total: int = Field(default=0, ge=0)
 
 
-class DeploymentCreateResponse(BaseModel):
+class DeploymentCreateResponse(_DeploymentResponseBase):
     """API response for deployment creation."""
 
-    id: UUID = Field(description="Langflow DB deployment UUID.")
-    name: str
-    description: str = ""
-    type: DeploymentType
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
-    provider_result: dict[str, Any] | None = Field(
-        default=None,
-        description="Provider-owned opaque operation payload returned by deployment create.",
-    )
+    description: str | None = None
 
 
-class DeploymentUpdateResponse(BaseModel):
+class DeploymentUpdateResponse(_DeploymentResponseBase):
     """API response for deployment update."""
 
-    id: UUID = Field(description="Langflow DB deployment UUID.")
-    name: str
     description: str | None = None
-    type: DeploymentType
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
-    provider_result: dict[str, Any] | None = Field(
-        default=None,
-        description="Provider-owned opaque operation payload returned by deployment update.",
-    )
 
 
-class DeploymentStatusResponse(BaseModel):
+class DeploymentStatusResponse(_DeploymentResponseBase):
     """API response for deployment status/health."""
 
-    id: UUID = Field(description="Langflow DB deployment UUID.")
-    provider_data: dict[str, Any] | None = Field(
-        default=None,
-        description="Provider-owned opaque status/health payload returned by the deployment provider.",
-    )
 
-
-class RedeployResponse(BaseModel):
+class RedeployResponse(_DeploymentResponseBase):
     """API response for redeployment."""
-
-    id: UUID = Field(description="Langflow DB deployment UUID.")
-    provider_result: dict[str, Any] | None = Field(
-        default=None,
-        description="Provider-owned opaque operation payload returned by redeploy.",
-    )
 
 
 class DeploymentDuplicateResponse(DeploymentSummary):
@@ -291,6 +256,9 @@ class FlowVersionsAttach(BaseModel):
 
     model_config = {"extra": "forbid"}
 
+    # Typed as str (not UUID) because the service layer uses a flexible IdLike
+    # type (UUID | NormalizedId) and the query-parameter variant must also accept
+    # plain strings for ergonomic multi-value query params.
     ids: list[str] = Field(
         min_length=1,
         description="Langflow flow version ids to attach to the deployment.",
@@ -455,7 +423,7 @@ class ExecutionCreateRequest(BaseModel):
 
     provider_id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
     deployment_id: UUID = Field(description="Langflow DB deployment UUID.")
-    provider_input: dict[str, Any] | None = Field(
+    provider_data: dict[str, Any] | None = Field(
         default=None,
         description="Provider-owned opaque execution input payload.",
     )
@@ -464,9 +432,9 @@ class ExecutionCreateRequest(BaseModel):
 class _ExecutionResponseBase(BaseModel):
     """Shared fields for execution responses."""
 
-    execution_id: str = Field(description="Provider-owned opaque execution identifier.")
+    execution_id: str | None = Field(default=None, description="Provider-owned opaque execution identifier.")
     deployment_id: UUID = Field(description="Langflow DB deployment UUID.")
-    provider_result: dict[str, Any] | None = Field(
+    provider_data: dict[str, Any] | None = Field(
         default=None,
         description="Provider-owned opaque execution result payload.",
     )

@@ -67,17 +67,17 @@ DeploymentIdPath = Annotated[
     tags=["Deployment Providers"],
 )
 async def create_provider_account(
+    session: DbSession,
     payload: ProviderAccountCreate,
-    user: CurrentActiveUser,
-    db: DbSession,
+    current_user: CurrentActiveUser,
 ):
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
 @router.get("/providers", response_model=ProviderAccountListResponse, tags=["Deployment Providers"])
 async def list_provider_accounts(
-    user: CurrentActiveUser,
-    db: DbSessionReadOnly,
+    session: DbSessionReadOnly,
+    current_user: CurrentActiveUser,
     page: Annotated[int, Query(ge=1)] = 1,
     size: Annotated[int, Query(ge=1, le=50)] = 20,
 ):
@@ -91,8 +91,8 @@ async def list_provider_accounts(
 )
 async def get_provider_account(
     provider_id: ProviderIdPath,
-    user: CurrentActiveUser,
-    db: DbSessionReadOnly,
+    session: DbSessionReadOnly,
+    current_user: CurrentActiveUser,
 ):
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
@@ -104,8 +104,8 @@ async def get_provider_account(
 )
 async def delete_provider_account(
     provider_id: ProviderIdPath,
-    user: CurrentActiveUser,
-    db: DbSession,
+    session: DbSession,
+    current_user: CurrentActiveUser,
 ):
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
@@ -117,9 +117,9 @@ async def delete_provider_account(
 )
 async def update_provider_account(
     provider_id: ProviderIdPath,
+    session: DbSession,
     payload: ProviderAccountUpdate,
-    user: CurrentActiveUser,
-    db: DbSession,
+    current_user: CurrentActiveUser,
 ):
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
@@ -131,9 +131,9 @@ async def update_provider_account(
 
 @router.post("", response_model=DeploymentCreateResponse, status_code=status.HTTP_201_CREATED)
 async def create_deployment(
-    user: CurrentActiveUser,
+    session: DbSession,
     payload: DeploymentCreateRequest,
-    db: DbSession,
+    current_user: CurrentActiveUser,
 ):
     """Create a deployment for the selected Langflow provider-account UUID."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
@@ -142,8 +142,8 @@ async def create_deployment(
 @router.get("/types", response_model=DeploymentTypeListResponse)
 async def list_deployment_types(
     provider_id: ProviderIdQuery,
-    user: CurrentActiveUser,
-    db: DbSessionReadOnly,
+    session: DbSessionReadOnly,
+    current_user: CurrentActiveUser,
 ):
     """List deployment types for the selected Langflow provider-account UUID."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
@@ -152,8 +152,8 @@ async def list_deployment_types(
 @router.get("", response_model=DeploymentListResponse)
 async def list_deployments(
     provider_id: ProviderIdQuery,
-    user: CurrentActiveUser,
-    db: DbSessionReadOnly,
+    session: DbSessionReadOnly,
+    current_user: CurrentActiveUser,
     page: Annotated[int, Query(ge=1)] = 1,
     size: Annotated[int, Query(ge=1, le=50)] = 20,
     deployment_type: Annotated[DeploymentType | None, Query()] = None,
@@ -180,9 +180,9 @@ async def list_deployments(
 
 @router.post("/executions", response_model=ExecutionCreateResponse, status_code=status.HTTP_201_CREATED)
 async def create_deployment_execution(
+    session: DbSession,
     payload: ExecutionCreateRequest,
-    db: DbSession,
-    user: CurrentActiveUser,
+    current_user: CurrentActiveUser,
 ):
     """Create a deployment execution for Langflow DB deployment/provider identifiers."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
@@ -192,8 +192,8 @@ async def create_deployment_execution(
 async def get_deployment_execution(
     execution_id: Annotated[str, Path(description="Provider-owned opaque execution identifier.")],
     provider_id: ProviderIdQuery,
-    db: DbSessionReadOnly,
-    user: CurrentActiveUser,
+    session: DbSessionReadOnly,
+    current_user: CurrentActiveUser,
 ):
     """Get deployment execution status by provider-owned execution id and Langflow provider id."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
@@ -207,8 +207,8 @@ async def get_deployment_execution(
 @router.get("/{deployment_id}", response_model=DeploymentGetResponse)
 async def get_deployment(
     deployment_id: DeploymentIdPath,
-    user: CurrentActiveUser,
-    db: DbSessionReadOnly,
+    session: DbSessionReadOnly,
+    current_user: CurrentActiveUser,
 ):
     """Get a deployment by id."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
@@ -220,9 +220,9 @@ async def get_deployment(
 )
 async def update_deployment(
     deployment_id: DeploymentIdPath,
+    session: DbSession,
     payload: DeploymentUpdateRequest,
-    db: DbSession,
-    user: CurrentActiveUser,
+    current_user: CurrentActiveUser,
 ):
     """Update a deployment."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
@@ -231,8 +231,8 @@ async def update_deployment(
 @router.delete("/{deployment_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_deployment(
     deployment_id: DeploymentIdPath,
-    db: DbSession,
-    user: CurrentActiveUser,
+    session: DbSession,
+    current_user: CurrentActiveUser,
 ):
     """Delete a deployment."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
@@ -244,8 +244,8 @@ async def delete_deployment(
 )
 async def redeploy_deployment(
     deployment_id: DeploymentIdPath,
-    db: DbSession,
-    user: CurrentActiveUser,
+    session: DbSession,
+    current_user: CurrentActiveUser,
 ):
     """Redeploy a deployment."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
@@ -258,8 +258,8 @@ async def redeploy_deployment(
 )
 async def duplicate_deployment(
     deployment_id: DeploymentIdPath,
-    db: DbSession,
-    user: CurrentActiveUser,
+    session: DbSession,
+    current_user: CurrentActiveUser,
 ):
     """Duplicate a deployment."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
@@ -271,8 +271,8 @@ async def duplicate_deployment(
 )
 async def get_deployment_status(
     deployment_id: DeploymentIdPath,
-    db: DbSessionReadOnly,
-    user: CurrentActiveUser,
+    session: DbSessionReadOnly,
+    current_user: CurrentActiveUser,
 ):
     """Get deployment status."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
