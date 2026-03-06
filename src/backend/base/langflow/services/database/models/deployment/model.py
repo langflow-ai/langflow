@@ -2,10 +2,12 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+import sqlalchemy as sa
 from pydantic import field_validator
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
+from langflow.schema.serialize import UUIDstr
 from langflow.services.database.utils import validate_non_empty_string, validate_non_empty_string_optional
 
 if TYPE_CHECKING:
@@ -25,11 +27,18 @@ class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
 
     id: UUID | None = Field(default_factory=uuid4, primary_key=True)
     resource_key: str = Field(index=True)
-    user_id: UUID = Field(foreign_key="user.id", index=True)
+    user_id: UUIDstr = Field(
+        sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
+    )
     # "project" is represented by a Folder row in the existing schema.
-    project_id: UUID = Field(foreign_key="folder.id", index=True)
-    # CASCADE behaviour is enforced at the migration/DDL level.
-    deployment_provider_account_id: UUID = Field(foreign_key="deployment_provider_account.id", index=True)
+    project_id: UUIDstr = Field(
+        sa_column=Column(sa.Uuid(), ForeignKey("folder.id", ondelete="CASCADE"), nullable=False, index=True)
+    )
+    deployment_provider_account_id: UUIDstr = Field(
+        sa_column=Column(
+            sa.Uuid(), ForeignKey("deployment_provider_account.id", ondelete="CASCADE"), nullable=False, index=True
+        )
+    )
     name: str = Field(index=True)
     created_at: datetime | None = Field(
         default=None,
