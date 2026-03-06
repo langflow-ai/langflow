@@ -163,6 +163,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     const knowledgeComponentNames = [
       "KnowledgeIngestion",
       "KnowledgeRetrieval",
+      "KnowledgeInfo",
     ];
 
     // Create a deep copy to avoid mutating the original
