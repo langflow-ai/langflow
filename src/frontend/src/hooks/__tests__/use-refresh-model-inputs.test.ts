@@ -421,7 +421,7 @@ describe("refreshAllModelInputs", () => {
     consoleWarnSpy.mockRestore();
   });
 
-  it("should prevent concurrent refresh operations", async () => {
+  it("should queue concurrent refresh operations", async () => {
     mockNodes = [createMockModelNode("node-1")];
 
     let resolveFirst: () => void;
@@ -462,8 +462,8 @@ describe("refreshAllModelInputs", () => {
     await firstRefresh;
     await secondRefresh;
 
-    // API should only have been called once (second call was blocked)
-    expect(api.post).toHaveBeenCalledTimes(1);
+    // Second call should be queued and run after first completes (2 total calls)
+    expect(api.post).toHaveBeenCalledTimes(2);
   });
 });
 

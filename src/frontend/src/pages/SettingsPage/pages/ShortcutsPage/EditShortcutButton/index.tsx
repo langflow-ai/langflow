@@ -5,11 +5,19 @@ import { Button } from "../../../../../components/ui/button";
 import BaseModal from "../../../../../modals/baseModal";
 import useAlertStore from "../../../../../stores/alertStore";
 import { useShortcutsStore } from "../../../../../stores/shortcuts";
-import { toCamelCase, toTitleCase } from "../../../../../utils/utils";
+import { toCamelCase } from "../../../../../utils/utils";
+import {
+  checkForKeys,
+  findShortcutByName,
+  getFixedCombination,
+  isDuplicateCombination,
+  normalizeRecordedCombination,
+} from "./helpers";
 
 export default function EditShortcutButton({
   children,
   shortcut,
+  shortcuts,
   defaultShortcuts,
   open,
   setOpen,
@@ -18,6 +26,11 @@ export default function EditShortcutButton({
 }: {
   children: JSX.Element;
   shortcut: string[];
+  shortcuts: Array<{
+    name: string;
+    shortcut: string;
+    display_name: string;
+  }>;
   defaultShortcuts: Array<{
     name: string;
     shortcut: string;
@@ -28,74 +41,65 @@ export default function EditShortcutButton({
   disable?: boolean;
   setSelected: (selected: string[]) => void;
 }): JSX.Element {
-  const shortcutInitialValue =
-    defaultShortcuts.length > 0
-      ? defaultShortcuts.find(
-          (s) => toCamelCase(s.name) === toCamelCase(shortcut[0]),
-        )?.shortcut
-      : "";
+  const shortcutInitialValue = findShortcutByName(
+    shortcuts,
+    shortcut[0],
+  )?.shortcut;
   const [key, setKey] = useState<string | null>(null);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setShortcuts = useShortcutsStore((state) => state.setShortcuts);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
-  function canEditCombination(newCombination: string): boolean {
-    let canSave = true;
-    defaultShortcuts.forEach(({ shortcut }) => {
-      if (shortcut.toLowerCase() === newCombination.toLowerCase()) {
-        canSave = false;
-      }
-    });
-    return canSave;
-  }
-
   const setUniqueShortcut = useShortcutsStore(
     (state) => state.updateUniqueShortcut,
   );
 
-  function editCombination(): void {
-    if (key) {
-      if (canEditCombination(key)) {
-        const fixCombination = key.split(" ");
-        if (
-          fixCombination[0].toLowerCase().includes("ctrl") ||
-          fixCombination[0].toLowerCase().includes("cmd")
-        ) {
-          fixCombination[0] = "mod";
-        }
-        const newCombination = defaultShortcuts.map((s) => {
-          if (s.name === shortcut[0]) {
-            return {
-              name: s.name,
-              display_name: s.display_name,
-              shortcut: fixCombination.join("").toLowerCase(),
-            };
-          }
-          return {
-            name: s.name,
-            display_name: s.display_name,
-            shortcut: s.shortcut,
-          };
-        });
-        const shortcutName = toCamelCase(shortcut[0]);
-        setUniqueShortcut(shortcutName, fixCombination.join("").toLowerCase());
-        setShortcuts(newCombination);
-        localStorage.setItem(
-          "langflow-shortcuts",
-          JSON.stringify(newCombination),
-        );
-        setKey(null);
-        setOpen(false);
-        setSuccessData({
-          title: `${shortcut[0]} shortcut successfully changed`,
-        });
-        return;
+  function applyShortcutUpdate(newCombination: string, successTitle: string) {
+    const nextShortcuts = shortcuts.map((s) => {
+      if (s.name === shortcut[0]) {
+        return {
+          name: s.name,
+          display_name: s.display_name,
+          shortcut: newCombination,
+        };
       }
-    }
-    setErrorData({
-      title: "Error saving key combination",
-      list: ["This combination already exists!"],
+      return {
+        name: s.name,
+        display_name: s.display_name,
+        shortcut: s.shortcut,
+      };
     });
+    const shortcutName = toCamelCase(shortcut[0]);
+    setUniqueShortcut(shortcutName, newCombination);
+    setShortcuts(nextShortcuts);
+    localStorage.setItem("langflow-shortcuts", JSON.stringify(nextShortcuts));
+    setKey(null);
+    setOpen(false);
+    setSuccessData({
+      title: successTitle,
+    });
+  }
+
+  function editCombination(): void {
+    if (!key) {
+      setErrorData({
+        title: "Error saving key combination",
+        list: ["No key combination recorded."],
+      });
+      return;
+    }
+    const normalizedCombination = normalizeRecordedCombination(key);
+    if (isDuplicateCombination(shortcuts, shortcut[0], normalizedCombination)) {
+      setErrorData({
+        title: "Error saving key combination",
+        list: ["This combination already exists!"],
+      });
+      return;
+    }
+    applyShortcutUpdate(
+      normalizedCombination,
+      `${shortcut[0]} shortcut successfully changed`,
+    );
   }
 
   useEffect(() => {
@@ -105,26 +109,28 @@ export default function EditShortcutButton({
     }
   }, [open, setOpen, key]);
 
-  function getFixedCombination({
-    oldKey,
-    key,
-  }: {
-    oldKey: string;
-    key: string;
-  }): string {
-    if (oldKey === null) {
-      return `${key.length > 0 ? toTitleCase(key) : toTitleCase(key)}`;
+  function handleResetToDefault(): void {
+    const defaultShortcut = findShortcutByName(
+      defaultShortcuts,
+      shortcut[0],
+    )?.shortcut;
+    if (!defaultShortcut) {
+      setErrorData({
+        title: "Error resetting shortcut",
+        list: ["Default shortcut not found."],
+      });
+      return;
     }
-    return `${
-      oldKey.length > 0 ? toTitleCase(oldKey) : oldKey.toUpperCase()
-    } + ${key.length > 0 ? toTitleCase(key) : key.toUpperCase()}`;
-  }
-
-  function checkForKeys(keys: string, keyToCompare: string): boolean {
-    const keysArr = keys.split(" ");
-    const _hasNewKey = false;
-    return keysArr.some(
-      (k) => k.toLowerCase().trim() === keyToCompare.toLowerCase().trim(),
+    if (isDuplicateCombination(shortcuts, shortcut[0], defaultShortcut)) {
+      setErrorData({
+        title: "Error resetting shortcut",
+        list: ["This combination already exists!"],
+      });
+      return;
+    }
+    applyShortcutUpdate(
+      defaultShortcut,
+      `${shortcut[0]} shortcut reset to default`,
     );
   }
 
@@ -144,9 +150,7 @@ export default function EditShortcutButton({
       if (key) {
         if (checkForKeys(key, fixedKey)) return;
       }
-      setKey((oldKey) =>
-        getFixedCombination({ oldKey: oldKey!, key: fixedKey }),
-      );
+      setKey((oldKey) => getFixedCombination(oldKey, fixedKey));
     }
 
     document.addEventListener("keydown", onKeyDown);
@@ -183,7 +187,7 @@ export default function EditShortcutButton({
         <Button
           className="mr-5"
           variant={"destructive"}
-          onClick={() => setKey(null)}
+          onClick={handleResetToDefault}
         >
           Reset
         </Button>

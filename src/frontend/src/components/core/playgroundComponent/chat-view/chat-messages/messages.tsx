@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { StickToBottom } from "use-stick-to-bottom";
 import { SafariScrollFix } from "@/components/common/safari-scroll-fix";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
-import { ChatMessageType } from "@/types/chat";
+import type { ChatMessageType } from "@/types/chat";
 import { cn } from "@/utils/utils";
 import { BotMessage } from "./components/bot-message";
 import ChatMessage from "./components/chat-message";

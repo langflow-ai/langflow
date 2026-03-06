@@ -80,7 +80,8 @@ export default function ShortcutsPage() {
                 <EditShortcutButton
                   disable={selectedRows.length === 0}
                   shortcut={selectedRows}
-                  defaultShortcuts={shortcuts}
+                  shortcuts={shortcuts}
+                  defaultShortcuts={defaultShortcuts}
                   open={open}
                   setOpen={setOpen}
                   setSelected={setSelectedRows}

@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.events import ExceptionWithMessageError
 from lfx.base.models.unified_models import (
+    apply_provider_variable_config_to_build_config,
     get_language_model_options,
     get_llm,
     update_model_options_in_build_config,
@@ -492,14 +493,15 @@ class AgentComponent(ToolCallingAgentComponent):
                 selected_model = current_model_value[0]
                 provider = selected_model.get("provider", "")
 
-                # Show/hide watsonx fields
-                is_watsonx = provider == "IBM WatsonX"
-                if "base_url_ibm_watsonx" in build_config:
-                    build_config["base_url_ibm_watsonx"]["show"] = is_watsonx
-                    build_config["base_url_ibm_watsonx"]["required"] = is_watsonx
-                if "project_id" in build_config:
-                    build_config["project_id"]["show"] = is_watsonx
-                    build_config["project_id"]["required"] = is_watsonx
+                # Hide provider-specific fields by default before applying provider config
+                for field in ["base_url_ibm_watsonx", "project_id"]:
+                    if field in build_config:
+                        build_config[field]["show"] = False
+                        build_config[field]["required"] = False
+
+                # Apply provider variable configuration (advanced, required, info, env var fallback)
+                if provider:
+                    build_config = apply_provider_variable_config_to_build_config(build_config, provider)
 
             # Validate required keys
             default_keys = [

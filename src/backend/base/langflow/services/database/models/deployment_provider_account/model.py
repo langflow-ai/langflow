@@ -2,10 +2,12 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+import sqlalchemy as sa
 from pydantic import field_validator
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
+from langflow.schema.serialize import UUIDstr
 from langflow.services.database.utils import (
     normalize_string_or_none,
     validate_non_empty_string,
@@ -29,7 +31,9 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
     )
 
     id: UUID | None = Field(default_factory=uuid4, primary_key=True)
-    user_id: UUID = Field(foreign_key="user.id", index=True)
+    user_id: UUIDstr = Field(
+        sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
+    )
     # provider_tenant_id participates in a unique constraint. When NULL,
     # SQL-standard databases (PostgreSQL, SQLite) treat NULL != NULL in unique
     # constraints, so multiple rows with the same (user_id, provider_url) are

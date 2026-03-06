@@ -85,9 +85,7 @@ describe("TraceDetailView", () => {
     // Summary node should render as the root.
     expect(screen.getByTestId("span-node-trace-1")).toBeInTheDocument();
     expect(
-      within(screen.getByTestId("span-node-trace-1")).getByText(
-        "Successful Run",
-      ),
+      within(screen.getByTestId("span-node-trace-1")).getByText("My Trace"),
     ).toBeInTheDocument();
 
     // Child span should render under it by default.

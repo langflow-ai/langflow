@@ -469,8 +469,8 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         # Verify WatsonX fields are now shown
         assert updated_config["base_url_ibm_watsonx"]["show"] is True
         assert updated_config["project_id"]["show"] is True
-        assert updated_config["base_url_ibm_watsonx"]["required"] is True
-        assert updated_config["project_id"]["required"] is True
+        assert updated_config["base_url_ibm_watsonx"]["required"] is False
+        assert updated_config["project_id"]["required"] is False
 
     async def test_update_build_config_hides_watsonx_fields_for_other_providers(self, component_class, default_kwargs):
         """Test that update_build_config hides WatsonX fields when other providers are selected."""

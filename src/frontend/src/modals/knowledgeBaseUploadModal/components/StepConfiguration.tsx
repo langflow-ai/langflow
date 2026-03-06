@@ -156,8 +156,10 @@ export function StepConfiguration({
         <input
           id="folder-input"
           type="file"
+          multiple
           className="hidden"
           onChange={onFolderSelect}
+          accept={ACCEPTED_FILE_TYPES}
           {...({
             webkitdirectory: "",
             directory: "",
