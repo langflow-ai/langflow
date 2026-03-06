@@ -69,7 +69,11 @@ export default function FilePreviewDisplay({
   useEffect(() => {
     return () => {
       // Only cleanup blob URLs from File objects
-      if (file instanceof File && previewUrl && previewUrl.startsWith('blob:')) {
+      if (
+        file instanceof File &&
+        previewUrl &&
+        previewUrl.startsWith("blob:")
+      ) {
         URL.revokeObjectURL(previewUrl);
       }
     };

@@ -31,7 +31,7 @@ export function isImageFile(
   } else if (typeof file === "string") {
     // File path string - extract extension
     // Normalize Windows paths first
-    const normalizedPath = file.replace(/\\/g, '/');
+    const normalizedPath = file.replace(/\\/g, "/");
     const extension = normalizedPath.split(".").pop()?.toLowerCase() || "";
     return IMAGE_TYPES.has(extension);
   } else if (file && typeof file === "object") {
@@ -39,7 +39,7 @@ export function isImageFile(
     // For server files, check path extension first (most reliable)
     if ("path" in file && file.path) {
       // Normalize Windows paths first
-      const normalizedPath = file.path.replace(/\\/g, '/');
+      const normalizedPath = file.path.replace(/\\/g, "/");
       const extension = normalizedPath.split(".").pop()?.toLowerCase() || "";
       if (IMAGE_TYPES.has(extension)) {
         return true;
@@ -69,12 +69,12 @@ export function getFileDisplayName(
     return file.name;
   } else if (typeof file === "string") {
     // Extract name from path (normalize Windows paths first)
-    const normalizedPath = file.replace(/\\/g, '/');
+    const normalizedPath = file.replace(/\\/g, "/");
     return normalizedPath.split("/").pop() || file;
   } else if ("name" in file) {
     return file.name;
   } else if ("path" in file) {
-    const normalizedPath = file.path.replace(/\\/g, '/');
+    const normalizedPath = file.path.replace(/\\/g, "/");
     return normalizedPath.split("/").pop() || file.path;
   }
   return "";
@@ -116,7 +116,7 @@ export function getFilePreviewUrl(
   } else if (typeof file === "string") {
     // Server file path string - path format is "flow_id/filename" or "flow_id\filename" on Windows
     // Normalize Windows backslashes to forward slashes
-    const path = file.trim().replace(/\\/g, '/');
+    const path = file.trim().replace(/\\/g, "/");
     if (!path) return null;
     const encodedPath = path
       .split("/")
@@ -127,7 +127,7 @@ export function getFilePreviewUrl(
   } else if ("path" in file) {
     // Server file path object - path format is "flow_id/filename" or "flow_id\filename" on Windows
     // Normalize Windows backslashes to forward slashes
-    const path = file.path.trim().replace(/\\/g, '/');
+    const path = file.path.trim().replace(/\\/g, "/");
     if (!path) return null;
     const encodedPath = path
       .split("/")
@@ -155,7 +155,7 @@ export function extractFileInfo(
       path: file.name, // For File objects, path is just the name
     };
   } else if (typeof file === "string") {
-    const normalizedPath = file.replace(/\\/g, '/');
+    const normalizedPath = file.replace(/\\/g, "/");
     const name = normalizedPath.split("/").pop() || file;
     const type = normalizedPath.split(".").pop() || "";
     return { name, type, path: file };
