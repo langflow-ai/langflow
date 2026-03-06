@@ -1783,5 +1783,10 @@
     "versions": {
       "0.3.0": "386ae52865b5"
     }
+  },
+  "SeltzSearch": {
+    "versions": {
+      "0.3.0": "3571baea5e2d"
+    }
   }
 }
