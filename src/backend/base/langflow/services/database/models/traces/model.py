@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
 from pydantic import Field as PydanticField
 from pydantic.alias_generators import to_camel
+from sqlalchemy import ForeignKey
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, Text
 
 from langflow.serialization.serialization import serialize
@@ -69,7 +70,11 @@ class TraceBase(SQLModel):
     total_latency_ms: int = Field(default=0, description="Total execution time in milliseconds")
     total_tokens: int = Field(default=0, description="Total tokens used across all LLM calls")
     flow_id: UUID = Field(
-        foreign_key="flow.id", ondelete="CASCADE", index=True, description="ID of the flow this trace belongs to"
+        foreign_key="flow.id",
+        ondelete="CASCADE",
+        index=True,
+        sa_column=Column(ForeignKey("flow.id", ondelete="CASCADE"), index=True, nullable=False),
+        description="ID of the flow this trace belongs to",
     )
     session_id: str | None = Field(
         default=None,
