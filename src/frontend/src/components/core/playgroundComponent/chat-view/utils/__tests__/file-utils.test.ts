@@ -231,7 +231,8 @@ describe("file-utils", () => {
     describe("Windows path normalization and URL construction", () => {
       it("should_normalize_Windows_path_and_create_URL", () => {
         const windowsPath = "flow123\\subfolder\\image.jpg";
-        const expected = "http://localhost:3000/api/v1/files/images/flow123/subfolder/image.jpg";
+        const expected =
+          "http://localhost:3000/api/v1/files/images/flow123/subfolder/image.jpg";
 
         expect(getFilePreviewUrl(windowsPath)).toBe(expected);
       });
@@ -239,21 +240,24 @@ describe("file-utils", () => {
       it("should_handle_absolute_Windows_path", () => {
         // Note: This tests the current behavior, but absolute paths shouldn't typically be used
         const windowsPath = "C:\\temp\\flow123\\image.png";
-        const expected = "http://localhost:3000/api/v1/files/images/C%3A/temp/flow123/image.png";
+        const expected =
+          "http://localhost:3000/api/v1/files/images/C%3A/temp/flow123/image.png";
 
         expect(getFilePreviewUrl(windowsPath)).toBe(expected);
       });
 
       it("should_encode_special_characters_in_path_segments", () => {
         const pathWithSpaces = "flow 123\\folder name\\image file.jpg";
-        const expected = "http://localhost:3000/api/v1/files/images/flow%20123/folder%20name/image%20file.jpg";
+        const expected =
+          "http://localhost:3000/api/v1/files/images/flow%20123/folder%20name/image%20file.jpg";
 
         expect(getFilePreviewUrl(pathWithSpaces)).toBe(expected);
       });
 
       it("should_handle_mixed_path_separators", () => {
         const mixedPath = "flow123/data\\images\\photo.png";
-        const expected = "http://localhost:3000/api/v1/files/images/flow123/data/images/photo.png";
+        const expected =
+          "http://localhost:3000/api/v1/files/images/flow123/data/images/photo.png";
 
         expect(getFilePreviewUrl(mixedPath)).toBe(expected);
       });
@@ -262,7 +266,8 @@ describe("file-utils", () => {
     describe("Unix path handling", () => {
       it("should_create_URL_for_Unix_path", () => {
         const unixPath = "flow123/images/photo.jpg";
-        const expected = "http://localhost:3000/api/v1/files/images/flow123/images/photo.jpg";
+        const expected =
+          "http://localhost:3000/api/v1/files/images/flow123/images/photo.jpg";
 
         expect(getFilePreviewUrl(unixPath)).toBe(expected);
       });
@@ -274,7 +279,8 @@ describe("file-utils", () => {
           path: "flow123\\images\\photo.jpg",
           type: "image/jpeg",
         };
-        const expected = "http://localhost:3000/api/v1/files/images/flow123/images/photo.jpg";
+        const expected =
+          "http://localhost:3000/api/v1/files/images/flow123/images/photo.jpg";
 
         expect(getFilePreviewUrl(fileObj)).toBe(expected);
       });
@@ -317,7 +323,8 @@ describe("file-utils", () => {
         mockGetBaseUrl.mockReturnValue("https://example.com/api/");
 
         const path = "flow123\\image.jpg";
-        const expected = "https://example.com/api/files/images/flow123/image.jpg";
+        const expected =
+          "https://example.com/api/files/images/flow123/image.jpg";
 
         expect(getFilePreviewUrl(path)).toBe(expected);
       });
@@ -326,7 +333,8 @@ describe("file-utils", () => {
         mockGetBaseUrl.mockReturnValue("http://localhost:8000/api");
 
         const path = "flow123\\image.jpg";
-        const expected = "http://localhost:8000/apifiles/images/flow123/image.jpg";
+        const expected =
+          "http://localhost:8000/apifiles/images/flow123/image.jpg";
 
         expect(getFilePreviewUrl(path)).toBe(expected);
       });
@@ -357,7 +365,7 @@ describe("file-utils", () => {
       const name = "filename-without-extension-very-long";
       const result = formatFileName(name, 25);
 
-      // When no extension is found, lastIndexOf('.') returns -1, 
+      // When no extension is found, lastIndexOf('.') returns -1,
       // so baseName becomes entire string, fileExtension becomes the last part
       expect(result).toContain("...");
       expect(result.length).toBeGreaterThan(25);
@@ -501,7 +509,8 @@ describe("file-utils", () => {
       });
 
       it("should_handle_complex_nested_paths_consistently", () => {
-        const complexWindowsPath = "project\\data\\2024\\Q1\\reports\\image.png";
+        const complexWindowsPath =
+          "project\\data\\2024\\Q1\\reports\\image.png";
         const complexUnixPath = "project/data/2024/Q1/reports/image.png";
 
         expect(isImageFile(complexWindowsPath)).toBe(true);
@@ -520,7 +529,9 @@ describe("file-utils", () => {
 
         expect(isImageFile(unixStylePath)).toBe(true);
         expect(getFileDisplayName(unixStylePath)).toBe("test-image.jpg");
-        expect(getFilePreviewUrl(unixStylePath)).toContain("flow123/uploads/test-image.jpg");
+        expect(getFilePreviewUrl(unixStylePath)).toContain(
+          "flow123/uploads/test-image.jpg",
+        );
       });
 
       it("should_work_in_Windows_CI_environment", () => {
@@ -529,7 +540,9 @@ describe("file-utils", () => {
 
         expect(isImageFile(windowsStylePath)).toBe(true);
         expect(getFileDisplayName(windowsStylePath)).toBe("test-image.jpg");
-        expect(getFilePreviewUrl(windowsStylePath)).toContain("flow123/uploads/test-image.jpg");
+        expect(getFilePreviewUrl(windowsStylePath)).toContain(
+          "flow123/uploads/test-image.jpg",
+        );
       });
     });
   });
