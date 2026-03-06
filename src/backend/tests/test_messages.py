@@ -675,9 +675,10 @@ class TestMessageBaseFromMessageFilePaths:
 
         result = MessageTable.from_message(message, flow_id=uuid4())
 
-        # Only the Image path is included - strings are NOT preserved when image_paths is used
-        # This is the current behavior: if any Image is processed, message.files = image_paths
-        assert len(result.files) == 1
+        # Both the processed Image path AND the string file path should be preserved.
+        assert len(result.files) == 2
+        assert any("image.png" in f for f in result.files)
+        assert "string/path/file.txt" in result.files
         assert result.files[0] == f"{session_id}/image.png"
 
     def test_from_message_with_special_characters_in_session_id(self):

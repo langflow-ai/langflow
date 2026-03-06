@@ -77,6 +77,8 @@ class MessageBase(SQLModel):
                             image_paths.append(file.path)
                     else:
                         image_paths.append(file.path)
+                elif isinstance(file, str):
+                    image_paths.append(file)
 
             if image_paths:
                 message.files = image_paths
