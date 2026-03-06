@@ -65,15 +65,20 @@ def _validate_str_id_list(values: list[str], *, field_name: str) -> list[str]:
     return cleaned
 
 
-def _normalize_optional_str(value: str | None) -> str | None:
-    """Strip whitespace from an optional string, rejecting whitespace-only values."""
-    if value is None:
-        return None
+def _normalize_str(value: str) -> str:
+    """Strip whitespace from a string, rejecting empty or whitespace-only values."""
     normalized = value.strip()
     if not normalized:
         msg = "Field must not be empty or whitespace."
         raise ValueError(msg)
     return normalized
+
+
+def _normalize_optional_str(value: str | None) -> str | None:
+    """Strip whitespace from an optional string, rejecting whitespace-only values."""
+    if value is None:
+        return None
+    return _normalize_str(value)
 
 
 def validate_flow_version_id_query(values: list[str]) -> list[str]:
@@ -109,11 +114,7 @@ class ProviderAccountCreate(BaseModel):
     @field_validator("provider_key", "provider_url", "api_key")
     @classmethod
     def normalize_required_strings(cls, value: str) -> str:
-        normalized = value.strip()
-        if not normalized:
-            msg = "Field must not be empty or whitespace."
-            raise ValueError(msg)
-        return normalized
+        return _normalize_str(value)
 
     @field_validator("provider_tenant_id")
     @classmethod
@@ -179,6 +180,7 @@ class _DeploymentResponseBase(BaseModel):
 
     id: UUID = Field(description="Langflow DB deployment UUID.")
     name: str
+    description: str | None = None
     type: DeploymentType
     created_at: datetime | None = None
     updated_at: datetime | None = None
@@ -188,13 +190,7 @@ class _DeploymentResponseBase(BaseModel):
     )
 
 
-class DeploymentSummary(_DeploymentResponseBase):
-    """Base deployment representation used for detail and duplicate responses."""
-
-    description: str | None = None
-
-
-class DeploymentGetResponse(DeploymentSummary):
+class DeploymentGetResponse(_DeploymentResponseBase):
     """Full deployment detail."""
 
 
@@ -225,13 +221,9 @@ class ProviderAccountListResponse(_PaginatedResponse):
 class DeploymentCreateResponse(_DeploymentResponseBase):
     """API response for deployment creation."""
 
-    description: str | None = None
-
 
 class DeploymentUpdateResponse(_DeploymentResponseBase):
     """API response for deployment update."""
-
-    description: str | None = None
 
 
 class DeploymentStatusResponse(_DeploymentResponseBase):
@@ -242,8 +234,8 @@ class RedeployResponse(_DeploymentResponseBase):
     """API response for redeployment."""
 
 
-class DeploymentDuplicateResponse(DeploymentSummary):
-    pass
+class DeploymentDuplicateResponse(_DeploymentResponseBase):
+    """API response for deployment duplication."""
 
 
 # ---------------------------------------------------------------------------
@@ -334,13 +326,7 @@ class DeploymentConfigCreate(BaseModel):
     @field_validator("reference_id")
     @classmethod
     def normalize_reference_id(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        normalized = value.strip()
-        if not normalized:
-            msg = "reference_id must not be empty or whitespace."
-            raise ValueError(msg)
-        return normalized
+        return _normalize_optional_str(value)
 
     @model_validator(mode="after")
     def validate_exactly_one(self) -> DeploymentConfigCreate:
@@ -363,13 +349,7 @@ class DeploymentConfigBindingUpdate(BaseModel):
     @field_validator("config_id")
     @classmethod
     def normalize_config_id(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        normalized = value.strip()
-        if not normalized:
-            msg = "config_id must not be empty or whitespace."
-            raise ValueError(msg)
-        return normalized
+        return _normalize_optional_str(value)
 
 
 # ---------------------------------------------------------------------------
