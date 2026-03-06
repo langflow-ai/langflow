@@ -6,17 +6,28 @@ import pytest
 from tests.base import ComponentTestBaseWithoutClient
 
 
+class _SeltzAuthenticationError(Exception):
+    pass
+
+
+class _SeltzRateLimitError(Exception):
+    pass
+
+
+class _SeltzConnectionError(Exception):
+    pass
+
+
 @pytest.fixture(autouse=True)
 def mock_seltz_module():
     """Provide a mock seltz module so the component can be imported without the real package."""
     mock_module = MagicMock()
-    mock_types = MagicMock()
+    mock_module.SeltzAuthenticationError = _SeltzAuthenticationError
+    mock_module.SeltzRateLimitError = _SeltzRateLimitError
+    mock_module.SeltzConnectionError = _SeltzConnectionError
     sys.modules["seltz"] = mock_module
-    sys.modules["seltz.types"] = mock_types
-    mock_module.types = mock_types
     yield mock_module
     sys.modules.pop("seltz", None)
-    sys.modules.pop("seltz.types", None)
 
 
 class TestSeltzSearchToolkit(ComponentTestBaseWithoutClient):
@@ -29,7 +40,7 @@ class TestSeltzSearchToolkit(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def default_kwargs(self):
         return {
-            "api_key": "test-api-key",
+            "api_key": "test-api-key",  # pragma: allowlist secret
             "max_documents": 10,
         }
 
@@ -43,7 +54,7 @@ class TestSeltzSearchToolkit(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
         tools = component.build_toolkit()
 
-        mock_seltz_module.Seltz.assert_called_once_with(api_key="test-api-key")
+        mock_seltz_module.Seltz.assert_called_once_with(api_key="test-api-key")  # pragma: allowlist secret
         assert isinstance(tools, list)
         assert len(tools) == 1
         assert tools[0].name == "seltz_search"
@@ -65,7 +76,7 @@ class TestSeltzSearchToolkit(ComponentTestBaseWithoutClient):
         tools = component.build_toolkit()
         result = tools[0].invoke({"query": "test query"})
 
-        mock_includes = sys.modules["seltz.types"].Includes.return_value
+        mock_includes = sys.modules["seltz"].Includes.return_value
         mock_client.search.assert_called_once_with("test query", includes=mock_includes, context=None, profile=None)
         assert len(result) == 2
         assert result[0] == {"url": "https://example.com/1", "content": "First result"}
@@ -82,8 +93,8 @@ class TestSeltzSearchToolkit(ComponentTestBaseWithoutClient):
         tools = component.build_toolkit()
         tools[0].invoke({"query": "test"})
 
-        sys.modules["seltz.types"].Includes.assert_called_with(max_documents=3)
-        mock_includes = sys.modules["seltz.types"].Includes.return_value
+        sys.modules["seltz"].Includes.assert_called_with(max_documents=3)
+        mock_includes = sys.modules["seltz"].Includes.return_value
         mock_client.search.assert_called_once_with("test", includes=mock_includes, context=None, profile=None)
 
     def test_context_and_profile_passed_through(self, mock_seltz_module, component_class):
@@ -94,7 +105,7 @@ class TestSeltzSearchToolkit(ComponentTestBaseWithoutClient):
         mock_seltz_module.Seltz.return_value = mock_client
 
         component = component_class(
-            api_key="test-key",
+            api_key="test-key",  # pragma: allowlist secret
             max_documents=5,
             context="user is looking for Python docs",
             profile="technical",
@@ -102,7 +113,7 @@ class TestSeltzSearchToolkit(ComponentTestBaseWithoutClient):
         tools = component.build_toolkit()
         tools[0].invoke({"query": "python tutorial"})
 
-        mock_includes = sys.modules["seltz.types"].Includes.return_value
+        mock_includes = sys.modules["seltz"].Includes.return_value
         mock_client.search.assert_called_once_with(
             "python tutorial",
             includes=mock_includes,
@@ -121,7 +132,7 @@ class TestSeltzSearchToolkit(ComponentTestBaseWithoutClient):
         tools = component.build_toolkit()
         tools[0].invoke({"query": "test"})
 
-        mock_includes = sys.modules["seltz.types"].Includes.return_value
+        mock_includes = sys.modules["seltz"].Includes.return_value
         mock_client.search.assert_called_once_with("test", includes=mock_includes, context=None, profile=None)
 
     def test_search_empty_results(self, mock_seltz_module, component_class, default_kwargs):
@@ -166,4 +177,40 @@ class TestSeltzSearchToolkit(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
         tools = component.build_toolkit()
         with pytest.raises(RuntimeError, match="Seltz search failed: API timeout"):
+            tools[0].invoke({"query": "test"})
+
+    def test_authentication_error_message(self, mock_seltz_module, component_class, default_kwargs):
+        """Verify that a SeltzAuthenticationError produces a clear error message."""
+        mock_client = MagicMock()
+        auth_error = mock_seltz_module.SeltzAuthenticationError("Invalid API key")
+        mock_client.search.side_effect = auth_error
+        mock_seltz_module.Seltz.return_value = mock_client
+
+        component = component_class(**default_kwargs)
+        tools = component.build_toolkit()
+        with pytest.raises(RuntimeError, match="Seltz authentication failed"):
+            tools[0].invoke({"query": "test"})
+
+    def test_rate_limit_error_message(self, mock_seltz_module, component_class, default_kwargs):
+        """Verify that a SeltzRateLimitError produces a clear error message."""
+        mock_client = MagicMock()
+        rate_error = mock_seltz_module.SeltzRateLimitError("Too many requests")
+        mock_client.search.side_effect = rate_error
+        mock_seltz_module.Seltz.return_value = mock_client
+
+        component = component_class(**default_kwargs)
+        tools = component.build_toolkit()
+        with pytest.raises(RuntimeError, match="Seltz rate limit exceeded"):
+            tools[0].invoke({"query": "test"})
+
+    def test_connection_error_message(self, mock_seltz_module, component_class, default_kwargs):
+        """Verify that a SeltzConnectionError produces a clear error message."""
+        mock_client = MagicMock()
+        conn_error = mock_seltz_module.SeltzConnectionError("Connection refused")
+        mock_client.search.side_effect = conn_error
+        mock_seltz_module.Seltz.return_value = mock_client
+
+        component = component_class(**default_kwargs)
+        tools = component.build_toolkit()
+        with pytest.raises(RuntimeError, match="Failed to connect to Seltz API"):
             tools[0].invoke({"query": "test"})

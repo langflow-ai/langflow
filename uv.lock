@@ -6651,7 +6651,7 @@ requires-dist = [
     { name = "rich", specifier = ">=13.7.0,<14.0.0" },
     { name = "scipy", specifier = ">=1.15.2,<2.0.0" },
     { name = "scrapegraph-py", marker = "extra == 'scrapegraph'", specifier = ">=1.12.0" },
-    { name = "seltz", marker = "extra == 'seltz'", specifier = ">=0.1.4,<1.0.0" },
+    { name = "seltz", marker = "extra == 'seltz'", specifier = ">=0.2.0,<1.0.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.0.0" },
     { name = "sentence-transformers", marker = "extra == 'sentence-transformers'", specifier = ">=2.3.1" },
     { name = "sentry-sdk", extras = ["fastapi", "loguru"], specifier = ">=2.5.1,<3.0.0" },

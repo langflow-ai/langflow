@@ -51,15 +51,13 @@ class SeltzSearchToolkit(Component):
 
     def build_toolkit(self) -> list[Tool]:
         try:
-            from seltz import Seltz
-            from seltz.types import Includes
+            from seltz import Includes, Seltz, SeltzAuthenticationError, SeltzConnectionError, SeltzRateLimitError
         except ImportError as e:
             msg = "Could not import seltz package. Install it with `pip install seltz`."
             raise ImportError(msg) from e
 
         client = Seltz(api_key=self.api_key)
-        max_documents = self.max_documents
-        includes = Includes(max_documents=max_documents)
+        includes = Includes(max_documents=self.max_documents)
         context = self.context or None
         profile = self.profile or None
 
@@ -71,10 +69,18 @@ class SeltzSearchToolkit(Component):
             """
             try:
                 response = client.search(query, includes=includes, context=context, profile=profile)
+            except SeltzAuthenticationError as e:
+                msg = f"Seltz authentication failed. Check your API key: {e}"
+                raise RuntimeError(msg) from e
+            except SeltzRateLimitError as e:
+                msg = f"Seltz rate limit exceeded. Try again later: {e}"
+                raise RuntimeError(msg) from e
+            except SeltzConnectionError as e:
+                msg = f"Failed to connect to Seltz API: {e}"
+                raise RuntimeError(msg) from e
             except Exception as e:
                 msg = f"Seltz search failed: {e}"
                 raise RuntimeError(msg) from e
-            documents = response.documents[:max_documents]
-            return [{"url": doc.url, "content": doc.content} for doc in documents]
+            return [{"url": doc.url, "content": doc.content} for doc in response.documents]
 
         return [seltz_search]
