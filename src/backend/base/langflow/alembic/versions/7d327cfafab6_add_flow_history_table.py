@@ -29,7 +29,7 @@ def upgrade() -> None:
             "flow_version",
             sa.Column("id", sa.Uuid(), nullable=False),
             sa.Column("flow_id", sa.Uuid(), nullable=False),
-            sa.Column("user_id", sa.Uuid(), nullable=False),
+            sa.Column("user_id", sa.Uuid(), nullable=True),
             sa.Column("data", sa.JSON(), nullable=True),
             sa.Column("version_number", sa.Integer(), nullable=False),
             sa.Column("description", sa.String(), nullable=True),
