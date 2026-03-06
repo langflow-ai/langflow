@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied"})</script>
 <script>!function(){function e(){if(void 0!==window.truste&&window.truste.cma){var e=window.truste.cma.callApi("getConsent",window.location.href)||{},n=1===e[2],t=1===e[3];gtag("consent","update",{ad_storage:n?"granted":"denied",ad_user_data:n?"granted":"denied",ad_personalization:n?"granted":"denied",analytics_storage:t?"granted":"denied"})}}window.addEventListener&&(window.addEventListener("cm_data_subject_consent_changed",e),window.addEventListener("cm_consent_preferences_set",e)),"complete"===document.readyState?e():window.addEventListener("load",e)}()</script><link rel="stylesheet" href="/assets/css/styles.403c62aa.css">
-<script src="/assets/js/runtime~main.815ae4d3.js" defer="defer"></script>
-<script src="/assets/js/main.ba31319a.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.2db2753e.js" defer="defer"></script>
+<script src="/assets/js/main.4a714abe.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -83,6 +83,108 @@ If you are upgrading Windows Desktop to 1.6.0, don&#x27;t auto-upgrade with the 
 <p>If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don&#x27;t have to repeat the component upgrade process.</p>
 </li>
 </ol>
+<h2 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="18x">1.8.x<a href="#18x" class="hash-link" aria-label="Direct link to 1.8.x" title="Direct link to 1.8.x" translate="no">​</a></h2>
+<p>Highlights of this release include the following changes.
+For all changes, see the <a href="https://github.com/langflow-ai/langflow/releases" target="_blank" rel="noopener noreferrer" class="">Changelog</a>.</p>
+<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="breaking-changes">Breaking changes<a href="#breaking-changes" class="hash-link" aria-label="Direct link to Breaking changes" title="Direct link to Breaking changes" translate="no">​</a></h3>
+<ul>
+<li class="">
+<p><code>langflow-base</code> dependency structure refactored</p>
+<p>The <code>langflow-base</code> package now uses granular optional dependency groups. As a result, many dependencies that were previously included in the <code>langflow-base</code> installation were moved to optional extras.</p>
+<p>If you installed Langflow with <code>uv pip install langflow</code>, this isn&#x27;t a breaking change. Installing <code>langflow</code> automatically installs <code>langflow-base[complete]</code>, which includes all optional dependencies and maintains the same functionality as before.</p>
+<p>However, if you installed Langflow with <code>uv pip install langflow-base</code> without specifying extra dependencies, this <em>is</em> a breaking change.
+Some dependencies that were previously included by default are now available only through optional extras.
+Therefore, installing <code>langflow-base</code> directly only installs the <a href="https://github.com/langflow-ai/langflow/blob/main/src/backend/base/pyproject.toml" target="_blank" rel="noopener noreferrer" class="">core base dependencies</a>.</p>
+<p>If you installed <code>langflow-base</code>, there are two ways to resolve dependency errors that result from this breaking change:</p>
+<ul>
+<li class="">
+<p>If you need the full set of dependencies, you must install <code>langflow-base</code> with the <code>complete</code> extra:</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv pip install &quot;langflow-base[complete]&quot;</span></div></div><br></code></div></div>
+</li>
+<li class="">
+<p>If you need specific dependencies, you must install <code>langflow-base</code> with those optional dependency groups. For example:</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv pip install &quot;langflow-base[postgresql,openai,chroma]&quot;</span></div></div><br></code></div></div>
+</li>
+</ul>
+<p>For more information about available optional dependency groups, see <a class="" href="/install-custom-dependencies#install-optional-dependency-groups-for-langflow-base">Install optional dependency groups for <code>langflow-base</code></a>.</p>
+</li>
+</ul>
+<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="new-features-and-enhancements">New features and enhancements<a href="#new-features-and-enhancements" class="hash-link" aria-label="Direct link to New features and enhancements" title="Direct link to New features and enhancements" translate="no">​</a></h3>
+<ul>
+<li class="">
+<p>Global model provider configuration</p>
+<p>Model providers for language models, embedding models, and agents are now configured globally in the <strong>Model providers</strong> pane, instead of within individual components.
+For more information, see the <a class="" href="/components-models">Language Model component</a>.</p>
+</li>
+<li class="">
+<p>Component inspection panel</p>
+<p>The component inspection panel replaces the component header menu for managing component parameters and settings.
+For more information, see <a class="" href="/concepts-components#component-inspection-panel">Component inspection panel</a>.</p>
+</li>
+<li class="">
+<p>Developer API: <code>/workflow</code> synchronous endpoints (Beta)</p>
+<p>The Developer API is part of a larger effort to improve Langflow&#x27;s APIs with enhanced capabilities and better developer experience.
+The Developer API now includes <code>/v2/workflow</code> endpoints for executing flows with enhanced error handling, timeout protection, and structured responses.
+The synchronous execution endpoint is available at <code>POST /api/v2/workflows</code>.
+For more information, see <a class="" href="/workflow-api">Workflow API (Beta)</a>.</p>
+</li>
+<li class="">
+<p>Traces and trace view</p>
+<p>Langflow now records execution traces for flows and components.
+View your traces in the <strong>Trace Details</strong> pane, and inspect span trees, latencies, and errors.
+For more information, see <a class="" href="/traces">Traces</a>.</p>
+</li>
+<li class="">
+<p>Knowledge bases</p>
+<p>Knowledge bases let you organize documents and other reference data into reusable vector databases that can be attached to multiple flows.
+This makes it easier to centralize domain knowledge and reuse the same data across agents and retrieval workflows.
+For more information, see <a class="" href="/knowledge">Manage vector data</a>.</p>
+</li>
+<li class="">
+<p>Mustache templating support for Prompt Template component</p>
+<p>The <strong>Prompt Template</strong> component now supports Mustache templating syntax.
+Mustache templating eliminates the need to escape curly braces when including JSON structures in your prompts. For more information, see <a class="" href="/components-prompts#use-mustache-templating-in-prompt-templates">Prompt Template</a>.</p>
+</li>
+<li class="">
+<p>More configuration options for JWT-based session authentication</p>
+<p>Langflow 1.8 offers additional configuration options for JWT algorithms, including support for RS256/RS512 algorithms, configurable keys, and token lifetimes. For more information, see <a class="" href="/jwt-authentication">JWT authentication</a>.</p>
+</li>
+<li class="">
+<p>Global variables in MCP server headers</p>
+<p>You can now use <a class="" href="/configuration-global-variables">global variables</a> in MCP server header values to securely store and reference sensitive values. For more information, see <a class="" href="/mcp-client#use-global-variables-in-mcp-server-headers">Use global variables in MCP server headers</a>.</p>
+</li>
+<li class="">
+<p>Pass environment variables to flows in API headers and CLI</p>
+<p>The ability to pass environment variables in HTTP headers (previously available for the <a class="" href="/api-openai-responses#global-var"><code>/responses</code> endpoint</a>) is now also available for the <a class="" href="/api-flows-run#pass-global-variables-in-headers"><code>/run</code> endpoint</a>.</p>
+</li>
+<li class="">
+<p>Guardrails component</p>
+<p>The <strong>Guardrails</strong> component validates input text against security and safety guardrails by using a connected language model to check for content such as PII, tokens/passwords, or offensive content. For more information, see <a class="" href="/guardrails">Guardrails</a>.</p>
+</li>
+<li class="">
+<p>Token usage tracking for OpenAI Responses API</p>
+<p>The OpenAI Responses API endpoint now tracks and returns token usage statistics when your flow uses language model APIs that provide token usage information.
+For more information, see <a class="" href="/api-openai-responses#token-usage-tracking">Token usage tracking</a>.</p>
+</li>
+<li class="">
+<p>Docker AMD vs ARM image sizes</p>
+<p>Langflow 1.8.0 addresses the AMD vs ARM Docker image size gap.
+We reconfigured our Python dependencies to use CPU-only PyTorch wheels through <code>uv</code> sources, which removes large CUDA-related dependencies from the AMD64 images.
+With this change, both AMD64 and ARM64 images are now smaller than 2 GB.</p>
+</li>
+<li class="">
+<p>New <a class="" href="/bundles-agentics"><strong>Agentics</strong> bundle</a></p>
+<p>Uses LLMs to transform tabular data, including mapping, reducing, and generating DataFrame rows based on a defined schema.</p>
+</li>
+<li class="">
+<p>New <a class="" href="/bundles-lite-llm"><strong>LiteLLM</strong> bundle</a></p>
+<p>Connects to models through a LiteLLM proxy so you can route requests to multiple LLM providers and switch providers without changing flow credentials.</p>
+</li>
+<li class="">
+<p>New <a class="" href="/integrations-openlayer"><strong>Openlayer</strong> observability integration</a></p>
+<p>Configures Langflow to send tracing data to Openlayer for analysis, monitoring, and evaluation of your flow executions.</p>
+</li>
+</ul>
 <h2 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="17x">1.7.x<a href="#17x" class="hash-link" aria-label="Direct link to 1.7.x" title="Direct link to 1.7.x" translate="no">​</a></h2>
 <div class="theme-admonition theme-admonition-warning admonition_xJq3 alert alert--warning"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8.893 1.5c-.183-.31-.52-.5-.887-.5s-.703.19-.886.5L.138 13.499a.98.98 0 0 0 0 1.001c.193.31.53.501.886.501h13.964c.367 0 .704-.19.877-.5a1.03 1.03 0 0 0 .01-1.002L8.893 1.5zm.133 11.497H6.987v-2.003h2.039v2.003zm0-3.004H6.987V5.987h2.039v4.006z"></path></svg></span>Version yanked</div><div class="admonitionContent_BuS1"><p>Version 1.7.0 was yanked due to a critical bug. Version 1.7.0 has been replaced with version 1.7.1, which includes a fix for this issue.</p></div></div>
 <p>Highlights of this release include the following changes.
@@ -107,7 +209,7 @@ Instead, upgrade directly to version 1.7.1, which includes a fix for this bug.</
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv pip install langflow==1.7.1</span></div></div><br></code></div></div>
 </li>
 </ol>
-<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="new-features-and-enhancements">New features and enhancements<a href="#new-features-and-enhancements" class="hash-link" aria-label="Direct link to New features and enhancements" title="Direct link to New features and enhancements" translate="no">​</a></h3>
+<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="new-features-and-enhancements-1">New features and enhancements<a href="#new-features-and-enhancements-1" class="hash-link" aria-label="Direct link to New features and enhancements" title="Direct link to New features and enhancements" translate="no">​</a></h3>
 <ul>
 <li class="">
 <p>Support for streamable HTTP transport for MCP clients and servers</p>
@@ -201,7 +303,7 @@ This is expected behavior.</li>
 </ol>
 </li>
 </ol>
-<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="breaking-changes">Breaking changes<a href="#breaking-changes" class="hash-link" aria-label="Direct link to Breaking changes" title="Direct link to Breaking changes" translate="no">​</a></h3>
+<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="breaking-changes-1">Breaking changes<a href="#breaking-changes-1" class="hash-link" aria-label="Direct link to Breaking changes" title="Direct link to Breaking changes" translate="no">​</a></h3>
 <ul>
 <li class="">
 <p>Authentication enforced for Langflow API requests by default</p>
@@ -214,7 +316,7 @@ At that point, Langflow will strictly enforce API key authentication for API req
 <p>For more information, see the documentation for <a class="" href="/api-keys-and-authentication#langflow-auto-login"><code>LANGFLOW_AUTO_LOGIN</code></a>.</p>
 </li>
 </ul>
-<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="new-features-and-enhancements-1">New features and enhancements<a href="#new-features-and-enhancements-1" class="hash-link" aria-label="Direct link to New features and enhancements" title="Direct link to New features and enhancements" translate="no">​</a></h3>
+<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="new-features-and-enhancements-2">New features and enhancements<a href="#new-features-and-enhancements-2" class="hash-link" aria-label="Direct link to New features and enhancements" title="Direct link to New features and enhancements" translate="no">​</a></h3>
 <ul>
 <li class="">
 <p>OpenAI Responses API compatibility</p>
@@ -260,7 +362,7 @@ Replace this component with the <a class="" href="/bundles-chroma"><strong>Chrom
 <h2 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="150">1.5.0<a href="#150" class="hash-link" aria-label="Direct link to 1.5.0" title="Direct link to 1.5.0" translate="no">​</a></h2>
 <p>Highlights of this release include the following changes.
 For all changes, see the <a href="https://github.com/langflow-ai/langflow/releases" target="_blank" rel="noopener noreferrer" class="">Changelog</a>.</p>
-<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="new-features-and-enhancements-2">New features and enhancements<a href="#new-features-and-enhancements-2" class="hash-link" aria-label="Direct link to New features and enhancements" title="Direct link to New features and enhancements" translate="no">​</a></h3>
+<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="new-features-and-enhancements-3">New features and enhancements<a href="#new-features-and-enhancements-3" class="hash-link" aria-label="Direct link to New features and enhancements" title="Direct link to New features and enhancements" translate="no">​</a></h3>
 <ul>
 <li class="">
 <p>Langflow API requests can require authentication</p>
@@ -314,7 +416,7 @@ See an issue? <a href="https://github.com/langflow-ai/langflow/issues" target="_
 <h2 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="142">1.4.2<a href="#142" class="hash-link" aria-label="Direct link to 1.4.2" title="Direct link to 1.4.2" translate="no">​</a></h2>
 <p>Highlights of this release include the following changes.
 For all changes, see the <a href="https://github.com/langflow-ai/langflow/releases" target="_blank" rel="noopener noreferrer" class="">Changelog</a>.</p>
-<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="new-features-and-enhancements-3">New features and enhancements<a href="#new-features-and-enhancements-3" class="hash-link" aria-label="Direct link to New features and enhancements" title="Direct link to New features and enhancements" translate="no">​</a></h3>
+<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="new-features-and-enhancements-4">New features and enhancements<a href="#new-features-and-enhancements-4" class="hash-link" aria-label="Direct link to New features and enhancements" title="Direct link to New features and enhancements" translate="no">​</a></h3>
 <ul>
 <li class="">Enhanced file and flow management system with improved bulk capabilities.</li>
 <li class="">Added the <strong>BigQuery</strong> component</li>
@@ -328,14 +430,14 @@ For all changes, see the <a href="https://github.com/langflow-ai/langflow/releas
 <h2 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="141">1.4.1<a href="#141" class="hash-link" aria-label="Direct link to 1.4.1" title="Direct link to 1.4.1" translate="no">​</a></h2>
 <p>Highlights of this release include the following changes.
 For all changes, see the <a href="https://github.com/langflow-ai/langflow/releases" target="_blank" rel="noopener noreferrer" class="">Changelog</a>.</p>
-<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="new-features-and-enhancements-4">New features and enhancements<a href="#new-features-and-enhancements-4" class="hash-link" aria-label="Direct link to New features and enhancements" title="Direct link to New features and enhancements" translate="no">​</a></h3>
+<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="new-features-and-enhancements-5">New features and enhancements<a href="#new-features-and-enhancements-5" class="hash-link" aria-label="Direct link to New features and enhancements" title="Direct link to New features and enhancements" translate="no">​</a></h3>
 <ul>
 <li class="">Added an enhanced <strong>Breaking Changes</strong> feature to help update components without breaking flows after updating Langflow.</li>
 </ul>
 <h2 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="140">1.4.0<a href="#140" class="hash-link" aria-label="Direct link to 1.4.0" title="Direct link to 1.4.0" translate="no">​</a></h2>
 <p>Highlights of this release include the following changes.
 For all changes, see the <a href="https://github.com/langflow-ai/langflow/releases" target="_blank" rel="noopener noreferrer" class="">Changelog</a>.</p>
-<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="new-features-and-enhancements-5">New features and enhancements<a href="#new-features-and-enhancements-5" class="hash-link" aria-label="Direct link to New features and enhancements" title="Direct link to New features and enhancements" translate="no">​</a></h3>
+<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="new-features-and-enhancements-6">New features and enhancements<a href="#new-features-and-enhancements-6" class="hash-link" aria-label="Direct link to New features and enhancements" title="Direct link to New features and enhancements" translate="no">​</a></h3>
 <ul>
 <li class="">Introduced MCP server functionality to serve Langflow tools to MCP-compatible clients.</li>
 <li class="">Renamed <strong>Folders</strong> to <strong>Projects</strong> in the visual editor.</li>
@@ -347,7 +449,7 @@ For all changes, see the <a href="https://github.com/langflow-ai/langflow/releas
 For alternatives, see the <a class="" href="/bundles-google"><strong>Google</strong> bundle</a>.</li>
 </ul>
 <h2 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="earlier-releases">Earlier releases<a href="#earlier-releases" class="hash-link" aria-label="Direct link to Earlier releases" title="Direct link to Earlier releases" translate="no">​</a></h2>
-<p>See the <a href="https://github.com/langflow-ai/langflow/releases" target="_blank" rel="noopener noreferrer" class="">Changelog</a>.</p></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/luna-for-langflow"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">IBM Elite Support for Langflow</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#prepare-to-upgrade" class="table-of-contents__link toc-highlight">Prepare to upgrade</a></li><li><a href="#17x" class="table-of-contents__link toc-highlight">1.7.x</a><ul><li><a href="#v170-data-path" class="table-of-contents__link toc-highlight">Known issue: Data not accessible when upgrading to version 1.7.0</a></li><li><a href="#new-features-and-enhancements" class="table-of-contents__link toc-highlight">New features and enhancements</a></li></ul></li><li><a href="#160" class="table-of-contents__link toc-highlight">1.6.0</a><ul><li><a href="#env-file-bug" class="table-of-contents__link toc-highlight">Known issue, potential security vulnerability: .env file not loaded in versions 1.6.0 through 1.6.3</a></li><li><a href="#windows-desktop-update-issue" class="table-of-contents__link toc-highlight">Known issue: Don&#39;t auto-upgrade Windows Desktop</a></li><li><a href="#breaking-changes" class="table-of-contents__link toc-highlight">Breaking changes</a></li><li><a href="#new-features-and-enhancements-1" class="table-of-contents__link toc-highlight">New features and enhancements</a></li><li><a href="#deprecations" class="table-of-contents__link toc-highlight">Deprecations</a></li></ul></li><li><a href="#150" class="table-of-contents__link toc-highlight">1.5.0</a><ul><li><a href="#new-features-and-enhancements-2" class="table-of-contents__link toc-highlight">New features and enhancements</a></li></ul></li><li><a href="#142" class="table-of-contents__link toc-highlight">1.4.2</a><ul><li><a href="#new-features-and-enhancements-3" class="table-of-contents__link toc-highlight">New features and enhancements</a></li><li><a href="#deprecations-1" class="table-of-contents__link toc-highlight">Deprecations</a></li></ul></li><li><a href="#141" class="table-of-contents__link toc-highlight">1.4.1</a><ul><li><a href="#new-features-and-enhancements-4" class="table-of-contents__link toc-highlight">New features and enhancements</a></li></ul></li><li><a href="#140" class="table-of-contents__link toc-highlight">1.4.0</a><ul><li><a href="#new-features-and-enhancements-5" class="table-of-contents__link toc-highlight">New features and enhancements</a></li><li><a href="#deprecations-2" class="table-of-contents__link toc-highlight">Deprecations</a></li></ul></li><li><a href="#earlier-releases" class="table-of-contents__link toc-highlight">Earlier releases</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
+<p>See the <a href="https://github.com/langflow-ai/langflow/releases" target="_blank" rel="noopener noreferrer" class="">Changelog</a>.</p></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/luna-for-langflow"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">IBM Elite Support for Langflow</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#prepare-to-upgrade" class="table-of-contents__link toc-highlight">Prepare to upgrade</a></li><li><a href="#18x" class="table-of-contents__link toc-highlight">1.8.x</a><ul><li><a href="#breaking-changes" class="table-of-contents__link toc-highlight">Breaking changes</a></li><li><a href="#new-features-and-enhancements" class="table-of-contents__link toc-highlight">New features and enhancements</a></li></ul></li><li><a href="#17x" class="table-of-contents__link toc-highlight">1.7.x</a><ul><li><a href="#v170-data-path" class="table-of-contents__link toc-highlight">Known issue: Data not accessible when upgrading to version 1.7.0</a></li><li><a href="#new-features-and-enhancements-1" class="table-of-contents__link toc-highlight">New features and enhancements</a></li></ul></li><li><a href="#160" class="table-of-contents__link toc-highlight">1.6.0</a><ul><li><a href="#env-file-bug" class="table-of-contents__link toc-highlight">Known issue, potential security vulnerability: .env file not loaded in versions 1.6.0 through 1.6.3</a></li><li><a href="#windows-desktop-update-issue" class="table-of-contents__link toc-highlight">Known issue: Don&#39;t auto-upgrade Windows Desktop</a></li><li><a href="#breaking-changes-1" class="table-of-contents__link toc-highlight">Breaking changes</a></li><li><a href="#new-features-and-enhancements-2" class="table-of-contents__link toc-highlight">New features and enhancements</a></li><li><a href="#deprecations" class="table-of-contents__link toc-highlight">Deprecations</a></li></ul></li><li><a href="#150" class="table-of-contents__link toc-highlight">1.5.0</a><ul><li><a href="#new-features-and-enhancements-3" class="table-of-contents__link toc-highlight">New features and enhancements</a></li></ul></li><li><a href="#142" class="table-of-contents__link toc-highlight">1.4.2</a><ul><li><a href="#new-features-and-enhancements-4" class="table-of-contents__link toc-highlight">New features and enhancements</a></li><li><a href="#deprecations-1" class="table-of-contents__link toc-highlight">Deprecations</a></li></ul></li><li><a href="#141" class="table-of-contents__link toc-highlight">1.4.1</a><ul><li><a href="#new-features-and-enhancements-5" class="table-of-contents__link toc-highlight">New features and enhancements</a></li></ul></li><li><a href="#140" class="table-of-contents__link toc-highlight">1.4.0</a><ul><li><a href="#new-features-and-enhancements-6" class="table-of-contents__link toc-highlight">New features and enhancements</a></li><li><a href="#deprecations-2" class="table-of-contents__link toc-highlight">Deprecations</a></li></ul></li><li><a href="#earlier-releases" class="table-of-contents__link toc-highlight">Earlier releases</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
                   <span>© 2026 Langflow</span>
                   <span id="preferenceCenterContainer"> ·&nbsp; <a href="#" onclick='return"undefined"!=typeof window&&window.truste&&window.truste.eu&&window.truste.eu.clickListener&&window.truste.eu.clickListener(),!1' style="cursor: pointer;">Manage Privacy Choices</a></span>
                   </div></li></ul></div></div></div></footer><div style="position:fixed;right:21px;bottom:21px;z-index:100;display:flex;align-items:center;gap:10px;cursor:pointer"><div style="background-color:#f6f6f6;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.1)"><img src="/img/langflow-icon-black-transparent.svg" style="width:40px" alt="Search"></div></div></div>

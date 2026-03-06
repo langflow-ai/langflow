@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied"})</script>
 <script>!function(){function e(){if(void 0!==window.truste&&window.truste.cma){var e=window.truste.cma.callApi("getConsent",window.location.href)||{},n=1===e[2],t=1===e[3];gtag("consent","update",{ad_storage:n?"granted":"denied",ad_user_data:n?"granted":"denied",ad_personalization:n?"granted":"denied",analytics_storage:t?"granted":"denied"})}}window.addEventListener&&(window.addEventListener("cm_data_subject_consent_changed",e),window.addEventListener("cm_consent_preferences_set",e)),"complete"===document.readyState?e():window.addEventListener("load",e)}()</script><link rel="stylesheet" href="/assets/css/styles.403c62aa.css">
-<script src="/assets/js/runtime~main.815ae4d3.js" defer="defer"></script>
-<script src="/assets/js/main.ba31319a.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.2db2753e.js" defer="defer"></script>
+<script src="/assets/js/main.4a714abe.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -72,23 +72,39 @@ For a prebuilt example, use the <strong>Simple Agent</strong> template or the <a
 <p>Add an <strong>Agent</strong> component to your flow.</p>
 </li>
 <li class="">
-<p>Select the provider and model that you want to use.
-The default model for the <strong>Agent</strong> component is an OpenAI model.
-If you want to use a different provider, edit the <strong>Model Provider</strong> and <strong>Model Name</strong> fields accordingly.
-If your preferred model isn&#x27;t listed, type the complete model name into the <strong>Model Name</strong> field, and then select it from the <strong>Model Name</strong> menu.
-Make sure that the model is enabled/verified in your model provider account.
-For more information, see <a href="#agent-component-parameters" class="">Agent component parameters</a>.</p>
+<p>To edit Langflow&#x27;s global model provider configuration, do the following:</p>
+<ol>
+<li class="">
+<p>To open the <strong>Model Providers</strong> pane, click your profile icon, select <strong>Settings</strong>, and then click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-brain" aria-hidden="true"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"></path><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"></path><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"></path><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"></path><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"></path><path d="M3.477 10.896a4 4 0 0 1 .585-.396"></path><path d="M19.938 10.5a4 4 0 0 1 .585.396"></path><path d="M6 18a4 4 0 0 1-1.967-.516"></path><path d="M19.967 17.484A4 4 0 0 1 18 18"></path></svg> <strong>Model Providers</strong>.</p>
 </li>
 <li class="">
-<p>Enter a valid credential for your selected model provider.
-Make sure that the credential has permission to call the selected model.</p>
+<p>In the <strong>Model Providers</strong> pane, select a provider.</p>
+</li>
+<li class="">
+<p>In the <strong>API Key</strong> field, add your provider&#x27;s API key.</p>
+<p>The key must have permission to call the models you want to use in your flow, and your account must have sufficient credits for the actions you want to perform.</p>
+<p>You can only add one key for each provider. Make sure the key has access to <em>all</em> models that you want to use in Langflow.</p>
+</li>
+<li class="">
+<p>Enable the specific models that you want to use in Langflow.
+The available models depend on the provider and your API key&#x27;s permissions.
+Models that generate text are listed under <strong>Language Models</strong>.
+Models that generate embeddings are listed under <strong>Embedding Models</strong>.</p>
+</li>
+</ol>
+<p>After you enable a model in Langflow&#x27;s global model configuration, you can use that model in any model-driven component in your flows.</p>
+</li>
+<li class="">
+<p>Select the model that you want to use from the <strong>Language Model</strong> dropdown.
+If your preferred model isn&#x27;t listed, make sure it&#x27;s enabled in the <strong>Models</strong> configuration.
+For more information, see <a href="#agent-component-parameters" class="">Agent component parameters</a>.</p>
 </li>
 <li class="">
 <p>Add <a class="" href="/chat-input-and-output"><strong>Chat Input</strong> and <strong>Chat Output</strong> components</a> to your flow, and then connect them to the <strong>Agent</strong> component.</p>
 <p>At this point, you have created a basic LLM-based chat flow that you can test in the <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg> <strong>Playground</strong>.
 However, this flow only chats with the LLM.
 To enhance this flow and make it truly agentic, add some tools, as explained in the next steps.</p>
-<p><img decoding="async" loading="lazy" alt="A basic agent chat flow with Chat Input, Agent, and Chat Output components." src="/assets/images/agent-example-add-chat-319d1ac92915c948711d6b493f0f9742.png" width="2574" height="1868" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" alt="A basic agent chat flow with Chat Input, Agent, and Chat Output components." src="/assets/images/agent-example-add-chat-96c042592973dd0f86ed13d19ef1fa24.png" width="4000" height="2412" class="img_ev3q"></p>
 </li>
 <li class="">
 <p>Add <strong>Web Search</strong>, <strong>URL</strong>, and <strong>Calculator</strong> components to your flow.</p>
@@ -104,7 +120,7 @@ To enhance this flow and make it truly agentic, add some tools, as explained in 
 With <strong>Tool Mode</strong> enabled, a component can accept requests from an <strong>Agent</strong> component to use the component&#x27;s available actions as tools.</p>
 <p>When in <strong>Tool Mode</strong>, a component has a <strong>Toolset</strong> port that you must connect to an <strong>Agent</strong> component&#x27;s <strong>Tools</strong> port if you want to allow the agent to use that component&#x27;s actions as tools.</p>
 <p>For more information, see <a class="" href="/agents-tools">Configure tools for agents</a>.</p>
-<p><img decoding="async" loading="lazy" alt="A more complex agent chat flow where three components are connected to the Agent component as tools" src="/assets/images/agent-example-add-tools-3ffda4b115ea87569e0c92b5b2566c80.png" width="2610" height="1728" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" alt="A more complex agent chat flow where three components are connected to the Agent component as tools" src="/assets/images/agent-example-add-tools-aa545843799b2155b926b723a4f3922e.png" width="4000" height="2742" class="img_ev3q"></p>
 </li>
 <li class="">
 <p>Open the <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg> <strong>Playground</strong>, and then ask the agent, <code>What tools are you using to answer my questions?</code></p>
@@ -124,24 +140,39 @@ With the given example, the agent should call the <strong>Web Search</strong> co
 <h2 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="agent-component-parameters">Agent component parameters<a href="#agent-component-parameters" class="hash-link" aria-label="Direct link to Agent component parameters" title="Direct link to Agent component parameters" translate="no">​</a></h2>
 <p>You can configure the <strong>Agent</strong> component to use your preferred provider and model, custom instructions, and tools.</p>
 <p>Some parameters are hidden by default in the visual editor.
-You can modify all parameters through the <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sliders-horizontal" aria-hidden="true"><line x1="21" x2="14" y1="4" y2="4"></line><line x1="10" x2="3" y1="4" y2="4"></line><line x1="21" x2="12" y1="12" y2="12"></line><line x1="8" x2="3" y1="12" y2="12"></line><line x1="21" x2="16" y1="20" y2="20"></line><line x1="12" x2="3" y1="20" y2="20"></line><line x1="14" x2="14" y1="2" y2="6"></line><line x1="8" x2="8" y1="10" y2="14"></line><line x1="16" x2="16" y1="18" y2="22"></line></svg> <strong>Controls</strong> in the <a class="" href="/concepts-components#component-menus">component&#x27;s header menu</a>.</p>
+You can modify all component parameters through the <a class="" href="/concepts-components#component-inspection-panel">component inspection panel</a> that appears when you select a component.</p>
 <h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="provider-and-model">Provider and model<a href="#provider-and-model" class="hash-link" aria-label="Direct link to Provider and model" title="Direct link to Provider and model" translate="no">​</a></h3>
-<p>Use the <strong>Model Provider</strong> (<code>agent_llm</code>) and <strong>Model Name</strong> (<code>llm_model</code>) settings to select the model provider and LLM that you want the agent to use.</p>
-<p>The <strong>Agent</strong> component includes many models from several popular model providers.
-To access other providers or models, you can do either of the following:</p>
+<p>Use the <strong>Language Model</strong> (<code>agent_llm</code>) setting to select the LLM that you want the agent to use.</p>
+<p>To edit Langflow&#x27;s global model provider configuration, do the following:</p>
+<ol>
+<li class="">
+<p>To open the <strong>Model Providers</strong> pane, click your profile icon, select <strong>Settings</strong>, and then click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-brain" aria-hidden="true"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"></path><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"></path><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"></path><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"></path><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"></path><path d="M3.477 10.896a4 4 0 0 1 .585-.396"></path><path d="M19.938 10.5a4 4 0 0 1 .585.396"></path><path d="M6 18a4 4 0 0 1-1.967-.516"></path><path d="M19.967 17.484A4 4 0 0 1 18 18"></path></svg> <strong>Model Providers</strong>.</p>
+</li>
+<li class="">
+<p>In the <strong>Model Providers</strong> pane, select a provider.</p>
+</li>
+<li class="">
+<p>In the <strong>API Key</strong> field, add your provider&#x27;s API key.</p>
+<p>The key must have permission to call the models you want to use in your flow, and your account must have sufficient credits for the actions you want to perform.</p>
+<p>You can only add one key for each provider. Make sure the key has access to <em>all</em> models that you want to use in Langflow.</p>
+</li>
+<li class="">
+<p>Enable the specific models that you want to use in Langflow.
+The available models depend on the provider and your API key&#x27;s permissions.
+Models that generate text are listed under <strong>Language Models</strong>.
+Models that generate embeddings are listed under <strong>Embedding Models</strong>.</p>
+</li>
+</ol>
+<p>After you enable a model in Langflow&#x27;s global model configuration, you can use that model in any model-driven component in your flows.</p>
+<p>To use a model with the <strong>Agent</strong> component, select the model in the <strong>Agent</strong> component&#x27;s <strong>Language Model</strong> field.</p>
+<p>The <strong>Language Model</strong> field lists all language models that you&#x27;ve configured globally. If a provider doesn&#x27;t have any language models available, they aren&#x27;t listed.
+For example, if a provider offers only embeddings models, those models aren&#x27;t listed on the <strong>Agent</strong> component.</p>
+<p>To access other providers or models, you can do either of the following:</p>
 <ul>
-<li class="">Set <strong>Model Provider</strong> to <strong>Connect other models</strong>, and then connect any <a class="" href="/components-models">language model component</a>.</li>
-<li class="">Select your preferred provider, type the complete model name into the <strong>Model Name</strong> field, and then select your custom option from the <strong>Model Name</strong> menu.
-Make sure that the model is enabled/verified in your model provider account.</li>
+<li class="">Connect any <a class="" href="/components-models">language model component</a> to the <strong>Agent</strong> component&#x27;s <strong>Language Model</strong> port. This option allows you to connect a custom language model component to use models that aren&#x27;t available in the global model providers list.</li>
+<li class="">Configure additional providers in the <strong>Models</strong> pane, and then select the model from the <strong>Language Model</strong> dropdown.</li>
 </ul>
 <p>If you need to generate embeddings in your flow, use an <a class="" href="/components-embedding-models">embedding model component</a>.</p>
-<h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="model-provider-api-key">Model provider API key<a href="#model-provider-api-key" class="hash-link" aria-label="Direct link to Model provider API key" title="Direct link to Model provider API key" translate="no">​</a></h3>
-<p>In the <strong>API Key</strong> field, enter a valid authentication key for your selected model provider, if you are using a built-in provider.
-For example, to use the default OpenAI model, you must provide a valid OpenAI API key for an OpenAI account that has credits and permission to call OpenAI LLMs.</p>
-<p>You can enter the key directly, but it is recommended that you follow industry best practices for storing and referencing API keys.
-For example, you can use a <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg> <a class="" href="/configuration-global-variables">global variable</a> or <a class="" href="/environment-variables">environment variables</a>.
-For more information, see <a class="" href="/api-keys-and-authentication#component-api-keys">Add component API keys to Langflow</a>.</p>
-<p>If you select <strong>Connect other models</strong> as the model provider, authentication is handled in the incoming language model component.</p>
 <h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="agent-instructions-and-input">Agent instructions and input<a href="#agent-instructions-and-input" class="hash-link" aria-label="Direct link to Agent instructions and input" title="Direct link to Agent instructions and input" translate="no">​</a></h3>
 <p>In the <strong>Agent Instructions</strong> (<code>system_prompt</code>) field, you can provide custom instructions that you want the <strong>Agent</strong> component to use for every conversation.</p>
 <p>These instructions are applied in addition to the <strong>Input</strong> (<code>input_value</code>), which can be entered directly or provided through another component, such as a <strong>Chat Input</strong> component.</p>
@@ -169,7 +200,7 @@ For example:</p>
 <li class=""><strong>Verbose</strong> (<code>verbose</code>): When enabled (<code>true</code>), this setting records detailed logging output for debugging and analysis.</li>
 </ul>
 <p>Some parameters are hidden by default in the visual editor.
-You can modify all parameters through the <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sliders-horizontal" aria-hidden="true"><line x1="21" x2="14" y1="4" y2="4"></line><line x1="10" x2="3" y1="4" y2="4"></line><line x1="21" x2="12" y1="12" y2="12"></line><line x1="8" x2="3" y1="12" y2="12"></line><line x1="21" x2="16" y1="20" y2="20"></line><line x1="12" x2="3" y1="20" y2="20"></line><line x1="14" x2="14" y1="2" y2="6"></line><line x1="8" x2="8" y1="10" y2="14"></line><line x1="16" x2="16" y1="18" y2="22"></line></svg> <strong>Controls</strong> in the <a class="" href="/concepts-components#component-menus">component&#x27;s header menu</a>.</p>
+You can modify all component parameters through the <a class="" href="/concepts-components#component-inspection-panel">component inspection panel</a> that appears when you select a component.</p>
 <h2 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="agent-component-output">Agent component output<a href="#agent-component-output" class="hash-link" aria-label="Direct link to Agent component output" title="Direct link to Agent component output" translate="no">​</a></h2>
 <p>The <strong>Agent</strong> component outputs a <strong>Response</strong> (<code>response</code>) that is <a class="" href="/data-types#message"><code>Message</code> data</a> containing the agent&#x27;s raw response to the query.</p>
 <p>Typically, this is passed to a <strong>Chat Output</strong> component to return the response in a human-readable format.
@@ -178,7 +209,7 @@ It can also be passed to other components if you need to process the response fu
 <ul>
 <li class=""><a class="" href="/components-agents"><strong>Agent</strong> and <strong>MCP Tools</strong> components</a></li>
 <li class=""><a class="" href="/agents-tools">Configure tools for agents</a></li>
-</ul></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/concepts-flows-import"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Import and export flows</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/agents-tools"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Configure tools for agents</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#use-the-agent-component-in-a-flow" class="table-of-contents__link toc-highlight">Use the Agent component in a flow</a></li><li><a href="#agent-component-parameters" class="table-of-contents__link toc-highlight">Agent component parameters</a><ul><li><a href="#provider-and-model" class="table-of-contents__link toc-highlight">Provider and model</a></li><li><a href="#model-provider-api-key" class="table-of-contents__link toc-highlight">Model provider API key</a></li><li><a href="#agent-instructions-and-input" class="table-of-contents__link toc-highlight">Agent instructions and input</a></li><li><a href="#tools" class="table-of-contents__link toc-highlight">Tools</a></li><li><a href="#agent-memory" class="table-of-contents__link toc-highlight">Agent memory</a></li><li><a href="#additional-parameters" class="table-of-contents__link toc-highlight">Additional parameters</a></li></ul></li><li><a href="#agent-component-output" class="table-of-contents__link toc-highlight">Agent component output</a></li><li><a href="#see-also" class="table-of-contents__link toc-highlight">See also</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
+</ul></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/concepts-flows-import"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Import and export flows</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/agents-tools"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Configure tools for agents</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#use-the-agent-component-in-a-flow" class="table-of-contents__link toc-highlight">Use the Agent component in a flow</a></li><li><a href="#agent-component-parameters" class="table-of-contents__link toc-highlight">Agent component parameters</a><ul><li><a href="#provider-and-model" class="table-of-contents__link toc-highlight">Provider and model</a></li><li><a href="#agent-instructions-and-input" class="table-of-contents__link toc-highlight">Agent instructions and input</a></li><li><a href="#tools" class="table-of-contents__link toc-highlight">Tools</a></li><li><a href="#agent-memory" class="table-of-contents__link toc-highlight">Agent memory</a></li><li><a href="#additional-parameters" class="table-of-contents__link toc-highlight">Additional parameters</a></li></ul></li><li><a href="#agent-component-output" class="table-of-contents__link toc-highlight">Agent component output</a></li><li><a href="#see-also" class="table-of-contents__link toc-highlight">See also</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
                   <span>© 2026 Langflow</span>
                   <span id="preferenceCenterContainer"> ·&nbsp; <a href="#" onclick='return"undefined"!=typeof window&&window.truste&&window.truste.eu&&window.truste.eu.clickListener&&window.truste.eu.clickListener(),!1' style="cursor: pointer;">Manage Privacy Choices</a></span>
                   </div></li></ul></div></div></div></footer><div style="position:fixed;right:21px;bottom:21px;z-index:100;display:flex;align-items:center;gap:10px;cursor:pointer"><div style="background-color:#f6f6f6;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.1)"><img src="/img/langflow-icon-black-transparent.svg" style="width:40px" alt="Search"></div></div></div>

@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied"})</script>
 <script>!function(){function e(){if(void 0!==window.truste&&window.truste.cma){var e=window.truste.cma.callApi("getConsent",window.location.href)||{},n=1===e[2],t=1===e[3];gtag("consent","update",{ad_storage:n?"granted":"denied",ad_user_data:n?"granted":"denied",ad_personalization:n?"granted":"denied",analytics_storage:t?"granted":"denied"})}}window.addEventListener&&(window.addEventListener("cm_data_subject_consent_changed",e),window.addEventListener("cm_consent_preferences_set",e)),"complete"===document.readyState?e():window.addEventListener("load",e)}()</script><link rel="stylesheet" href="/assets/css/styles.403c62aa.css">
-<script src="/assets/js/runtime~main.815ae4d3.js" defer="defer"></script>
-<script src="/assets/js/main.ba31319a.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.2db2753e.js" defer="defer"></script>
+<script src="/assets/js/main.4a714abe.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -88,15 +88,40 @@ For example:</p>
 <ol>
 <li class="">In Langflow, click <strong>New Flow</strong>, and then select the <strong>Simple Agent</strong> template.</li>
 </ol>
-<p><img decoding="async" loading="lazy" alt="Simple Agent template" src="/assets/images/quickstart-simple-agent-flow-7e3f292d5ed5bbe2bcea7b4a1d9cffed.png" width="4000" height="2112" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" alt="Simple Agent template" src="/assets/images/quickstart-simple-agent-flow-fc8c6fc8913a645037e188be1ff6e019.png" width="4000" height="2300" class="img_ev3q"></p>
 <p>The <strong>Simple Agent</strong> template consists of an <a class="" href="/agents"><strong>Agent</strong> component</a> connected to <a class="" href="/chat-input-and-output"><strong>Chat Input</strong> and <strong>Chat Output</strong> components</a>, a <a class="" href="/calculator"><strong>Calculator</strong> component</a>, and a <a class="" href="/url"><strong>URL</strong> component</a>. When you run this flow, you submit a query to the agent through the <strong>Chat Input</strong> component, the agent uses the <strong>Calculator</strong> and <strong>URL</strong> tools to generate a response, and then returns the response through the <strong>Chat Output</strong> component.</p>
 <p>Many components can be tools for agents, including <a class="" href="/mcp-server">Model Context Protocol (MCP) servers</a>. The agent decides which tools to call based on the context of a given query.</p>
 <ol start="2">
 <li class="">
-<p>In the <strong>Agent</strong> component, enter your OpenAI API key directly or use a <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg> <a class="" href="/configuration-global-variables">global variable</a>.</p>
-<p>This example uses the <strong>Agent</strong> component&#x27;s built-in OpenAI model.
-If you want to use a different provider, edit the model provider, model name, and credentials accordingly.
-If your preferred provider or model isn&#x27;t listed, set <strong>Model Provider</strong> to <strong>Connect other models</strong>, and then connect any <a class="" href="/components-models#additional-language-models">language model component</a>.</p>
+<p>In the <strong>Agent</strong> component, click <strong>Setup Provider</strong> to select your language model provider.</p>
+<p>To edit Langflow&#x27;s global model provider configuration, do the following:</p>
+<ol>
+<li class="">
+<p>To open the <strong>Model Providers</strong> pane, click your profile icon, select <strong>Settings</strong>, and then click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-brain" aria-hidden="true"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"></path><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"></path><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"></path><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"></path><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"></path><path d="M3.477 10.896a4 4 0 0 1 .585-.396"></path><path d="M19.938 10.5a4 4 0 0 1 .585.396"></path><path d="M6 18a4 4 0 0 1-1.967-.516"></path><path d="M19.967 17.484A4 4 0 0 1 18 18"></path></svg> <strong>Model Providers</strong>.</p>
+</li>
+<li class="">
+<p>In the <strong>Model Providers</strong> pane, select a provider.</p>
+</li>
+<li class="">
+<p>In the <strong>API Key</strong> field, add your provider&#x27;s API key.</p>
+<p>The key must have permission to call the models you want to use in your flow, and your account must have sufficient credits for the actions you want to perform.</p>
+<p>You can only add one key for each provider. Make sure the key has access to <em>all</em> models that you want to use in Langflow.</p>
+</li>
+<li class="">
+<p>Enable the specific models that you want to use in Langflow.
+The available models depend on the provider and your API key&#x27;s permissions.
+Models that generate text are listed under <strong>Language Models</strong>.
+Models that generate embeddings are listed under <strong>Embedding Models</strong>.</p>
+</li>
+</ol>
+<p>After you enable a model in Langflow&#x27;s global model configuration, you can use that model in any model-driven component in your flows.</p>
+</li>
+<li class="">
+<p>In the <strong>Agent</strong> component, select your configured model from the <strong>Language Model</strong> dropdown.</p>
+<details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>Access more models and providers</summary><div><div class="collapsibleContent_i85q"><p>There are two ways to access more models and providers:</p><ul>
+<li class="">Edit Langflow&#x27;s global <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-brain-cog" aria-hidden="true"><path d="M12 5a3 3 0 1 0-5.997.142 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588 4 4 0 0 0 7.636 2.106 3.2 3.2 0 0 0 .164-.546c.028-.13.306-.13.335 0a3.2 3.2 0 0 0 .163.546 4 4 0 0 0 7.636-2.106 4 4 0 0 0 .556-6.588 4 4 0 0 0-2.526-5.77A3 3 0 1 0 12 5"></path><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"></path><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"></path><path d="M3.477 10.896a4 4 0 0 1 .585-.396"></path><path d="M19.938 10.5a4 4 0 0 1 .585.396"></path><path d="M6 18a4 4 0 0 1-1.967-.516"></path><path d="M19.967 17.484A4 4 0 0 1 18 18"></path><circle cx="12" cy="12" r="3"></circle><path d="m15.7 10.4-.9.4"></path><path d="m9.2 13.2-.9.4"></path><path d="m13.6 15.7-.4-.9"></path><path d="m10.8 9.2-.4-.9"></path><path d="m15.7 13.5-.9-.4"></path><path d="m9.2 10.9-.9-.4"></path><path d="m10.5 15.7.4-.9"></path><path d="m13.1 9.2.4-.9"></path></svg> <strong>Models</strong> configuration. These providers and models are part of Langflow&#x27;s core functionality. Use the <strong>Ollama</strong> provider to connect to any model hosted on a local or remote Ollama instance.</li>
+<li class="">Connect any <a class="" href="/components-models#additional-language-models">additional language model component</a> to the <strong>Agent</strong> component&#x27;s <strong>Language Model</strong> port.</li>
+</ul></div></div></details>
 </li>
 <li class="">
 <p>To run the flow, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg> <strong>Playground</strong>.</p>
@@ -107,8 +132,8 @@ To help you test and evaluate your flows, the <strong>Playground</strong> shows 
 In this case, a math question causes the agent to select the <strong>Calculator</strong> tool and use an action like <code>evaluate_expression</code>.</p>
 </li>
 </ol>
-<p><img decoding="async" loading="lazy" alt="Playground with Agent tool" src="/assets/images/quickstart-simple-agent-playground-c8eaf644f060d9095b7c552791dba677.png" width="2000" height="1093" class="img_ev3q"></p>
-<ol start="5">
+<p><img decoding="async" loading="lazy" alt="Playground with Agent tool" src="/assets/images/quickstart-simple-agent-playground-e3adf053e3da75750e5f2bc8f60b639d.png" width="4000" height="2172" class="img_ev3q"></p>
+<ol start="6">
 <li class="">
 <p>To test the <strong>URL</strong> tool, ask the agent about current events.
 For this request, the agent selects the <strong>URL</strong> tool&#x27;s <code>fetch_content</code> action, and then returns a summary of current news headlines.</p>
@@ -169,11 +194,11 @@ To assist with formatting, you can define tweaks in Langflow&#x27;s <strong>Inpu
 <li class="">To open the <strong>Input Schema</strong> pane, from the <strong>API access</strong> pane, click <strong>Input Schema</strong>.</li>
 <li class="">In the <strong>Input Schema</strong> pane, select the parameter you want to modify in your next request.
 Enabling parameters in the <strong>Input Schema</strong> pane doesn&#x27;t permanently change the listed parameters. It only adds them to the sample code snippets.</li>
-<li class="">For example, to change the LLM provider from OpenAI to Groq, and include your Groq API key with the request, select the values <strong>Model Providers</strong>, <strong>Model</strong>, and <strong>Groq API Key</strong>.
-Langflow updates the <code>tweaks</code> object in the code snippets based on your input parameters, and includes default values to guide you.
-Use the updated code snippets in your script to run your flow with your overrides.</li>
+<li class="">For example, to change the agent&#x27;s LLM model from OpenAI to Anthropic and include your Anthropic API key with the request, select the <strong>Agent</strong> component in the <strong>Input Schema</strong> pane and enable the <strong>Language Model</strong> field.</li>
 </ol>
-<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>payload = {</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>    &quot;output_type&quot;: &quot;chat&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>    &quot;input_type&quot;: &quot;chat&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>    &quot;input_value&quot;: &quot;hello world!&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>    &quot;tweaks&quot;: {</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>        &quot;Agent-ZOknz&quot;: {</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>            &quot;agent_llm&quot;: &quot;Groq&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>            &quot;api_key&quot;: &quot;GROQ_API_KEY&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>            &quot;model_name&quot;: &quot;llama-3.1-8b-instant&quot;</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>        }</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>    }</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>}</span></div></div><br></code></div></div>
+<p>Langflow updates the <code>tweaks</code> object in the code snippets based on your input parameters, and includes default values to guide you.
+Use the updated code snippets in your script to run your flow with your overrides.</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>payload = {</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>    &quot;output_type&quot;: &quot;chat&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>    &quot;input_type&quot;: &quot;chat&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>    &quot;input_value&quot;: &quot;hello world!&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>    &quot;tweaks&quot;: {</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>        &quot;Agent-ZOknz&quot;: {</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>            &quot;agent_llm&quot;: &quot;Anthropic&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>            &quot;api_key&quot;: &quot;ANTHROPIC_API_KEY&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>            &quot;model_name&quot;: &quot;claude-opus-4-5-20251101&quot;</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>        }</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>    }</span></div></div><div><span class="ch-code-line-number">_<!-- -->12</span><div style="display:inline-block;margin-left:16px"><span>}</span></div></div><br></code></div></div>
 <h2 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="next-steps">Next steps<a href="#next-steps" class="hash-link" aria-label="Direct link to Next steps" title="Direct link to Next steps" translate="no">​</a></h2>
 <ul>
 <li class=""><a class="" href="/concepts-publish">Trigger flows with the Langflow API</a></li>
