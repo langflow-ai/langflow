@@ -1691,12 +1691,12 @@
   },
   "vLLMModel": {
     "versions": {
-      "0.3.0": "ed6c1aa73200"
+      "0.3.0": "ecc834c013c1"
     }
   },
   "vLLMEmbeddings": {
     "versions": {
-      "0.3.0": "079b6a2dd397"
+      "0.3.0": "f15724f09d57"
     }
   },
   "VLMRunTranscription": {
