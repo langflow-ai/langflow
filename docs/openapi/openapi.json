@@ -1143,7 +1143,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/langflow__api__v1__schemas__UploadFileResponse"
+                  "$ref": "#/components/schemas/UploadFileResponse"
                 }
               }
             }
@@ -3490,7 +3490,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/langflow__api__v1__schemas__UploadFileResponse"
+                  "$ref": "#/components/schemas/UploadFileResponse"
                 }
               }
             }
@@ -5514,7 +5514,7 @@
         ],
         "summary": "Handle Streamable Http",
         "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_v1_mcp_streamable__post",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable__delete",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -5538,7 +5538,7 @@
         ],
         "summary": "Handle Streamable Http",
         "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_v1_mcp_streamable__post",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable__delete",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -5562,7 +5562,7 @@
         ],
         "summary": "Handle Streamable Http",
         "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_v1_mcp_streamable__post",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable__delete",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -5588,7 +5588,7 @@
         ],
         "summary": "Handle Streamable Http",
         "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_v1_mcp_streamable_post",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable_delete",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -5612,7 +5612,7 @@
         ],
         "summary": "Handle Streamable Http",
         "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_v1_mcp_streamable_post",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable_delete",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -5636,7 +5636,7 @@
         ],
         "summary": "Handle Streamable Http",
         "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_v1_mcp_streamable_post",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable_delete",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -5937,13 +5937,13 @@
       }
     },
     "/api/v1/mcp/project/{project_id}/streamable/": {
-      "post": {
+      "delete": {
         "tags": [
           "mcp_projects"
         ],
         "summary": "Handle Project Streamable Http",
         "description": "Handle Streamable HTTP connections for a specific project.",
-        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__post",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__delete",
         "parameters": [
           {
             "name": "project_id",
@@ -5978,7 +5978,7 @@
         ],
         "summary": "Handle Project Streamable Http",
         "description": "Handle Streamable HTTP connections for a specific project.",
-        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__post",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__delete",
         "parameters": [
           {
             "name": "project_id",
@@ -6007,13 +6007,13 @@
           }
         }
       },
-      "delete": {
+      "post": {
         "tags": [
           "mcp_projects"
         ],
         "summary": "Handle Project Streamable Http",
         "description": "Handle Streamable HTTP connections for a specific project.",
-        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__post",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__delete",
         "parameters": [
           {
             "name": "project_id",
@@ -6044,13 +6044,13 @@
       }
     },
     "/api/v1/mcp/project/{project_id}/streamable": {
-      "post": {
+      "delete": {
         "tags": [
           "mcp_projects"
         ],
         "summary": "Handle Project Streamable Http",
         "description": "Handle Streamable HTTP connections for a specific project.",
-        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_post",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_delete",
         "parameters": [
           {
             "name": "project_id",
@@ -6085,7 +6085,7 @@
         ],
         "summary": "Handle Project Streamable Http",
         "description": "Handle Streamable HTTP connections for a specific project.",
-        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_post",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_delete",
         "parameters": [
           {
             "name": "project_id",
@@ -6114,13 +6114,13 @@
           }
         }
       },
-      "delete": {
+      "post": {
         "tags": [
           "mcp_projects"
         ],
         "summary": "Handle Project Streamable Http",
         "description": "Handle Streamable HTTP connections for a specific project.",
-        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_post",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_delete",
         "parameters": [
           {
             "name": "project_id",
@@ -6416,7 +6416,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UploadFileResponse"
+                  "$ref": "#/components/schemas/langflow__api__schemas__UploadFileResponse"
                 }
               }
             }
@@ -6545,7 +6545,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UploadFileResponse"
+                  "$ref": "#/components/schemas/langflow__api__schemas__UploadFileResponse"
                 }
               }
             }
@@ -6844,7 +6844,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UploadFileResponse"
+                  "$ref": "#/components/schemas/langflow__api__schemas__UploadFileResponse"
                 }
               }
             }
@@ -12950,45 +12950,23 @@
       },
       "UploadFileResponse": {
         "properties": {
-          "id": {
+          "flowId": {
             "type": "string",
-            "format": "uuid",
-            "title": "Id"
+            "title": "Flowid"
           },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "path": {
+          "file_path": {
             "type": "string",
             "format": "path",
-            "title": "Path"
-          },
-          "size": {
-            "type": "integer",
-            "title": "Size"
-          },
-          "provider": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Provider"
+            "title": "File Path"
           }
         },
         "type": "object",
         "required": [
-          "id",
-          "name",
-          "path",
-          "size"
+          "flowId",
+          "file_path"
         ],
         "title": "UploadFileResponse",
-        "description": "File upload response schema."
+        "description": "Upload file response schema."
       },
       "UserCreate": {
         "properties": {
@@ -13735,25 +13713,47 @@
         ],
         "title": "ViewPort"
       },
-      "langflow__api__v1__schemas__UploadFileResponse": {
+      "langflow__api__schemas__UploadFileResponse": {
         "properties": {
-          "flowId": {
+          "id": {
             "type": "string",
-            "title": "Flowid"
+            "format": "uuid",
+            "title": "Id"
           },
-          "file_path": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "path": {
             "type": "string",
             "format": "path",
-            "title": "File Path"
+            "title": "Path"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
           }
         },
         "type": "object",
         "required": [
-          "flowId",
-          "file_path"
+          "id",
+          "name",
+          "path",
+          "size"
         ],
         "title": "UploadFileResponse",
-        "description": "Upload file response schema."
+        "description": "File upload response schema."
       },
       "lfx__utils__schemas__File": {
         "properties": {
