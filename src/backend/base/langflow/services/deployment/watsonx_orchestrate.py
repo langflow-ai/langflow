@@ -1742,11 +1742,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 "id": str(flow_definition.get("id")),
             }
         )
-        if app_id is not None:
-            flow_definition = self._prefix_flow_global_variable_references(
-                flow_definition,
-                app_id=app_id,
-            )
         # print(f"flow_definition: {flow_definition}")
         # Fallback for flows that don't include last_tested_version in payload
         if not flow_definition.get("last_tested_version"):

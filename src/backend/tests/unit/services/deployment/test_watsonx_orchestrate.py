@@ -435,6 +435,63 @@ def test_create_wxo_flow_tool_prefixes_name_for_raw_payload(monkeypatch):
     assert artifact_bytes == b"artifact"
 
 
+def test_create_wxo_flow_tool_does_not_prefix_flow_variables(monkeypatch):
+    """With app_id set, flow variable names remain unprefixed (TRM exposes both)."""
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    flow_payload = BaseFlowArtifact(
+        id="00000000-0000-0000-0000-000000000001",
+        name="testflow",
+        description="desc",
+        data={
+            "nodes": [
+                {
+                    "data": {
+                        "node": {
+                            "template": {
+                                "api_key": {"load_from_db": True, "value": "OPENAI_API_KEY"},
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        tags=[],
+        provider_data={"project_id": "project-123"},
+    )
+    captured = {}
+
+    def capture_build(**kwargs):
+        captured["flow_definition"] = kwargs["flow_definition"]
+        return b"artifact"
+
+    fake_tool = SimpleNamespace(
+        __tool_spec__=SimpleNamespace(
+            model_dump=lambda **kwargs: {"name": "testflow"},
+        ),
+    )
+    monkeypatch.setattr(
+        watsonx_orchestrate_module,
+        "create_langflow_tool",
+        lambda **kwargs: fake_tool,
+    )
+    monkeypatch.setattr(service, "_build_langflow_artifact_bytes", capture_build)
+    monkeypatch.setattr(
+        watsonx_orchestrate_module,
+        "uuid4",
+        lambda: SimpleNamespace(hex="abcdef123456"),
+    )
+
+    service._create_wxo_flow_tool(
+        flow_payload=flow_payload,
+        connections={"my_app": "conn-1"},
+        app_id="my_app",
+    )
+
+    template = captured["flow_definition"]["data"]["nodes"][0]["data"]["node"]["template"]
+    assert template["api_key"]["value"] == "OPENAI_API_KEY"
+    assert "my_app_OPENAI_API_KEY" not in str(template["api_key"]["value"])
+
+
 @pytest.mark.anyio
 async def test_create_execution_posts_runs_payload(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
