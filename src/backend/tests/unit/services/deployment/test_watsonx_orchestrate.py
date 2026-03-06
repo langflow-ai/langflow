@@ -541,31 +541,22 @@ async def test_create_wires_snapshot_ids_to_agent_and_prefixed_names(monkeypatch
         captured["config_deployment_name"] = deployment_name
         return deployment_name
 
-    async def mock_process_flow_snapshots(
+    async def mock_process_raw_flows_with_app_id(
         user_id,  # noqa: ARG001
         app_id,
-        snapshots,  # noqa: ARG001
+        flows,
         db,  # noqa: ARG001
         tool_name_prefix,
     ):
         captured["snapshot_app_id"] = app_id
+        captured["snapshot_flows"] = flows
         captured["tool_name_prefix"] = tool_name_prefix
         return ["tool-1", "tool-2"]
-
-    def mock_validate_connection(*args, **kwargs):  # noqa: ARG001
-        return SimpleNamespace(connection_id="conn-1")
-
-    def mock_sync_langflow_tool_connections(*, clients, tool_ids, config_id, connection_id):  # noqa: ARG001
-        captured["sync_tool_ids"] = tool_ids
-        captured["sync_config_id"] = config_id
-        captured["sync_connection_id"] = connection_id
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
     monkeypatch.setattr(service, "_assert_create_resources_available", mock_assert_create_resources_available)
     monkeypatch.setattr(service, "_process_config", mock_process_config)
-    monkeypatch.setattr(service, "_process_flow_snapshots", mock_process_flow_snapshots)
-    monkeypatch.setattr(service, "_validate_connection", mock_validate_connection)
-    monkeypatch.setattr(service, "_sync_langflow_tool_connections", mock_sync_langflow_tool_connections)
+    monkeypatch.setattr(service, "_process_raw_flows_with_app_id", mock_process_raw_flows_with_app_id)
     monkeypatch.setattr(
         watsonx_orchestrate_module.secrets,
         "choice",
@@ -607,14 +598,15 @@ async def test_create_wires_snapshot_ids_to_agent_and_prefixed_names(monkeypatch
     )
 
     assert result.id == "dep-created"
+    assert result.config_id == "lf_abcdef_my_deployment_ignored_app_id"
     assert result.snapshot_ids == ["tool-1", "tool-2"]
-    assert result.name == "lf_abcdef_my_deployment"
+    assert result.name == "my deployment"
     assert captured["deployment_name"] == "lf_abcdef_my_deployment"
     assert captured["app_id"] == "lf_abcdef_my_deployment_ignored_app_id"
     assert captured["config_deployment_name"] == "lf_abcdef_my_deployment_ignored_app_id"
     assert captured["snapshot_app_id"] == "lf_abcdef_my_deployment_ignored_app_id"
-    assert captured["tool_name_prefix"] == "lf_abcdef_my_deployment_"
-    assert captured["sync_tool_ids"] == ["tool-1", "tool-2"]
+    assert len(captured["snapshot_flows"]) == 1
+    assert captured["tool_name_prefix"] == "lf_abcdef_"
 
     assert fake_clients.agent.create_calls
     assert fake_clients.agent.create_calls[0]["tools"] == ["tool-1", "tool-2"]
@@ -640,10 +632,10 @@ async def test_create_rolls_back_and_preserves_original_error_when_cleanup_fails
     async def mock_process_config(*, user_id, db, deployment_name, config):  # noqa: ARG001
         return deployment_name
 
-    async def mock_process_flow_snapshots(
+    async def mock_process_raw_flows_with_app_id(
         user_id,  # noqa: ARG001
         app_id,  # noqa: ARG001
-        snapshots,  # noqa: ARG001
+        flows,  # noqa: ARG001
         db,  # noqa: ARG001
         tool_name_prefix,  # noqa: ARG001
     ):
@@ -658,7 +650,7 @@ async def test_create_rolls_back_and_preserves_original_error_when_cleanup_fails
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
     monkeypatch.setattr(service, "_assert_create_resources_available", mock_assert_create_resources_available)
     monkeypatch.setattr(service, "_process_config", mock_process_config)
-    monkeypatch.setattr(service, "_process_flow_snapshots", mock_process_flow_snapshots)
+    monkeypatch.setattr(service, "_process_raw_flows_with_app_id", mock_process_raw_flows_with_app_id)
     monkeypatch.setattr(fake_connections, "delete", failing_delete)
     monkeypatch.setattr(
         watsonx_orchestrate_module.secrets,
@@ -773,7 +765,7 @@ async def test_get_execution_fetches_message_when_no_run_output(monkeypatch):
     fake_agent = FakeAgentClient(
         {"id": "dep-1", "tools": []},
         get_payloads={
-            "/runs/run-1": {"status": "completed", "agent_id": "dep-1", "output": "Message payload output"},
+            "/runs/run-1": {"status": "completed", "agent_id": "dep-1"},
         },
     )
     fake_clients = SimpleNamespace(
@@ -786,6 +778,7 @@ async def test_get_execution_fetches_message_when_no_run_output(monkeypatch):
         return fake_clients
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+    monkeypatch.setattr(service, "_fetch_execution_message_output", lambda *_args, **_kwargs: "Message payload output")
 
     result = await service.get_execution(
         user_id="user-1",
