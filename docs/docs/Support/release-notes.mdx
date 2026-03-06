@@ -80,6 +80,38 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     For more information about available optional dependency groups, see [Install optional dependency groups for `langflow-base`](/install-custom-dependencies#install-optional-dependency-groups-for-langflow-base).
 
+-   Docker image no longer includes `uv` or `uvx`
+
+    In Langflow 1.8.x, the Langflow Docker image no longer includes `uv` or `uvx` in the runtime image.
+    This means that MCP server configurations, including the default Langflow MCP server, that rely on commands like `uvx mcp-proxy` will fail inside the container with a `command not found` error.
+
+    If you use MCP from within a Langflow 1.8.x Docker image, you must install `uv` in an image derived from the official `langflowai/langflow` image.
+
+    To install `uv` and `uvx` in a derived image based on the official `langflowai/langflow` image, do the following:
+
+    1. Create a `Dockerfile` in your project.
+    2. Use the official Langflow image as the base and install `uv` into the existing virtual environment:
+        ```dockerfile
+        FROM langflowai/langflow:1.8.0
+
+        USER root
+        RUN /app/.venv/bin/pip install uv
+        USER user
+        ```
+    3. Build the image.
+
+        ```bash
+        docker build -t YOUR_IMAGE_NAME .
+        ```
+
+        Replace `YOUR_IMAGE_NAME` with your Docker image name.
+
+    4. Run the new image:
+
+        ```bash
+        docker run -p 7860:7860 YOUR_IMAGE_NAME
+        ```
+
 ### New features and enhancements
 
 - Global model provider configuration
