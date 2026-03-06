@@ -19,6 +19,10 @@ The **Playground** allows you to quickly iterate over your flow's logic and beha
 To run a flow in the **Playground**, open the flow, and then click <Icon name="Play" aria-hidden="true"/> **Playground**.
 Then, if your flow has a [**Chat Input** component](/chat-input-and-output), enter a prompt or [use voice mode](/concepts-voice-mode) to trigger the flow and start a chat session.
 
+To expand the **Playground** view, click <Icon name="Expand" aria-hidden="true"/> **Enter fullscreen** within the **Playground** panel.
+
+![The Langflow visual builder with the Playground active](/img/playground.png)
+
 :::tip
 If there is no message input field in the **Playground**, make sure your flow has a **Chat Input** component that is connected, directly or indirectly, to the **Input** port of a **Language Model** or **Agent** component.
 
@@ -85,12 +89,11 @@ You can set custom session IDs in the visual editor and programmatically.
 In your [input and output components](/chat-input-and-output), use the **Session ID** field:
 
 1. Click the component where you want to set a custom session ID.
-2. In the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**.
-3. Enable **Session ID**.
-4. Click **Close**.
-5. Enter a custom session ID.
+2. In the [component inspection panel](/concepts-components#component-menus), enable **Session ID**.
+3. Click **Close**.
+4. Enter a custom session ID.
 If the field is empty, the flow uses the default session ID.
-6. Open the **Playground** to start a chat under your custom session ID.
+5. Open the **Playground** to start a chat under your custom session ID.
 
 Make sure to change the **Session ID** when you want to start a new chat session or continue an earlier chat session with a different session ID.
 

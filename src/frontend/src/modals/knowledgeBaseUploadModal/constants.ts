@@ -26,6 +26,8 @@ export const KB_INGEST_FORMATS: Record<string, string[]> = {
     "adoc",
     "asciidoc",
     "asc",
+    "pdf",
+    "docx",
   ],
   spreadsheets: ["csv"],
   code: ["py", "js", "ts", "tsx", "sh", "sql"],

@@ -651,7 +651,7 @@
   },
   "AstraDB": {
     "versions": {
-      "0.3.0": "141bbfe8a16e"
+      "0.3.0": "9ca3747e73d6"
     }
   },
   "AssistantsCreateAssistant": {
@@ -771,12 +771,12 @@
   },
   "KnowledgeIngestion": {
     "versions": {
-      "0.3.0": "6e27731b8315"
+      "0.3.0": "f74dd1ddff98"
     }
   },
   "KnowledgeRetrieval": {
     "versions": {
-      "0.3.0": "af0a162c3f80"
+      "0.3.0": "1a95fca184de"
     }
   },
   "SaveToFile": {
@@ -1041,7 +1041,7 @@
   },
   "CSVAgent": {
     "versions": {
-      "0.3.0": "37c7fe430b9c"
+      "0.3.0": "1888a727f9dd"
     }
   },
   "LangChainFakeEmbeddings": {
@@ -1091,12 +1091,12 @@
   },
   "OpenAIToolsAgent": {
     "versions": {
-      "0.3.0": "71ead9b79d26"
+      "0.3.0": "21bfd16796e5"
     }
   },
   "OpenAPIAgent": {
     "versions": {
-      "0.3.0": "43fa79471c67"
+      "0.3.0": "a4a7564100da"
     }
   },
   "RecursiveCharacterTextSplitter": {
@@ -1126,7 +1126,7 @@
   },
   "SQLAgent": {
     "versions": {
-      "0.3.0": "e55626d2bb5c"
+      "0.3.0": "550c16461236"
     }
   },
   "SQLDatabase": {
@@ -1141,7 +1141,7 @@
   },
   "ToolCallingAgent": {
     "versions": {
-      "0.3.0": "3859db02aed3"
+      "0.3.0": "cdeb13ac7430"
     }
   },
   "VectorStoreInfo": {
@@ -1156,7 +1156,7 @@
   },
   "XMLAgent": {
     "versions": {
-      "0.3.0": "6a1885132121"
+      "0.3.0": "17a0cb4c48a8"
     }
   },
   "LangWatchEvaluator": {
@@ -1166,17 +1166,17 @@
   },
   "BatchRunComponent": {
     "versions": {
-      "0.3.0": "d87bf7cc6134"
+      "0.3.0": "8b1ec3b03475"
     }
   },
   "Smart Transform": {
     "versions": {
-      "0.3.0": "06dc1e4132a7"
+      "0.3.0": "9912fe8c7f1b"
     }
   },
   "SmartRouter": {
     "versions": {
-      "0.3.0": "b18d1640fd58"
+      "0.3.0": "7bdefeec6280"
     }
   },
   "LLMSelectorComponent": {
@@ -1186,7 +1186,7 @@
   },
   "StructuredOutput": {
     "versions": {
-      "0.3.0": "61f954a564c6"
+      "0.3.0": "058ca1f51e9f"
     }
   },
   "LMStudioEmbeddingsComponent": {
@@ -1226,17 +1226,17 @@
   },
   "Agent": {
     "versions": {
-      "0.3.0": "7c1041af057b"
+      "0.3.0": "108da32d83f1"
     }
   },
   "EmbeddingModel": {
     "versions": {
-      "0.3.0": "287c24757be6"
+      "0.3.0": "c5ce0982da48"
     }
   },
   "LanguageModelComponent": {
     "versions": {
-      "0.3.0": "ecdba2caa9e0"
+      "0.3.0": "4af3c0cc0dcf"
     }
   },
   "MCPTools": {
@@ -1776,7 +1776,7 @@
   },
   "GuardrailValidator": {
     "versions": {
-      "0.3.0": "2b995329aaa7"
+      "0.3.0": "70918cbb8522"
     }
   },
   "LiteLLMProxyModel": {
@@ -1797,6 +1797,11 @@
   "SyntheticDataGenerator": {
     "versions": {
       "0.3.0": "efd180878996"
+    }
+  },
+  "KnowledgeBase": {
+    "versions": {
+      "0.3.0": "8b5ca1f38f6e"
     }
   }
 }
