@@ -661,7 +661,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     setIsFullSidebarPanelShown(true);
   }, [showTraces]);
 
-
   const [category, component] = getFilterComponent?.split(".") ?? ["", ""];
 
   const filterDescription =
