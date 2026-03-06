@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from alembic.util.exc import CommandError
 from lfx.log.logger import logger
@@ -73,6 +74,57 @@ async def session_getter(db_service: DatabaseService):
         raise
     finally:
         await session.close()
+
+
+def validate_non_empty_string(v: str, info: object) -> str:
+    """Validate a string field is non-empty after stripping whitespace.
+
+    Intended for use inside ``@field_validator`` methods on SQLModel/Pydantic
+    models.  Raises ``ValueError`` with the field name if the value is blank.
+    """
+    stripped = v.strip()
+    if not stripped:
+        field = getattr(info, "field_name", "Field")
+        msg = f"{field} must not be empty"
+        raise ValueError(msg)
+    return stripped
+
+
+def validate_non_empty_string_optional(v: str | None, info: object) -> str | None:
+    """Like :func:`validate_non_empty_string` but allows ``None`` (skip)."""
+    if v is None:
+        return v
+    return validate_non_empty_string(v, info)
+
+
+def normalize_string_or_none(v: str | None) -> str | None:
+    """Strip whitespace from *v* and return ``None`` if the result is blank."""
+    if v is None:
+        return None
+    stripped = v.strip()
+    return stripped if stripped else None
+
+
+def parse_uuid(value: UUID | str, *, field_name: str = "value") -> UUID:
+    """Parse a UUID from a string or pass through a UUID.
+
+    Raises ValueError if the string is empty or not a valid UUID.
+    The *field_name* parameter is included in the error message for context.
+    """
+    if isinstance(value, UUID):
+        return value
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            msg = f"{field_name} must not be empty"
+            raise ValueError(msg)
+        try:
+            return UUID(stripped)
+        except ValueError as exc:
+            msg = f"{field_name} is not a valid UUID: {stripped!r}"
+            raise ValueError(msg) from exc
+    msg = f"{field_name} must be a UUID or string, got {type(value).__name__}"
+    raise TypeError(msg)
 
 
 @dataclass
