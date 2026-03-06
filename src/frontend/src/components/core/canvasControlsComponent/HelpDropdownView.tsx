@@ -42,20 +42,20 @@ export const HelpDropdownView = ({
         <Button
           variant="ghost"
           size="icon"
-          className="group flex items-center justify-center px-2 rounded-none"
+          className="group flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
           title="Help"
           data-testid="canvas_controls_dropdown_help"
         >
           <IconComponent
             name="Circle-Help"
             aria-hidden="true"
-            className="text-muted-foreground group-hover:text-primary !h-5 !w-5"
+            className="text-muted-foreground group-hover:text-foreground !h-5 !w-5"
           />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         side="top"
-        align="end"
+        align="center"
         className="flex flex-col w-full"
       >
         <DropdownControlButton

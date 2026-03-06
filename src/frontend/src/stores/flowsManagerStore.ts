@@ -6,6 +6,7 @@ import type {
   FlowsManagerStoreType,
   UseUndoRedoOptions,
 } from "../types/zustand/flowsManager";
+import useAssistantManagerStore from "./assistantManagerStore";
 import useFlowStore from "./flowStore";
 
 const defaultOptions: UseUndoRedoOptions = {
@@ -40,6 +41,8 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       currentFlowId: flow?.id ?? "",
     });
     useFlowStore.getState().resetFlow(flow);
+    // Close assistant when changing flows
+    useAssistantManagerStore.getState().setAssistantSidebarOpen(false);
   },
   getFlowById: (id: string) => {
     return get().flows?.find((flow) => flow.id === id);

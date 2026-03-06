@@ -6,6 +6,7 @@ PYTHON_CODE_BLOCK_PATTERN = r"```python\s*([\s\S]*?)```"
 GENERIC_CODE_BLOCK_PATTERN = r"```\s*([\s\S]*?)```"
 UNCLOSED_PYTHON_BLOCK_PATTERN = r"```python\s*([\s\S]*)$"
 UNCLOSED_GENERIC_BLOCK_PATTERN = r"```\s*([\s\S]*)$"
+ANY_CODE_BLOCK_PATTERN = r"```[\s\S]*?```|```[\s\S]*$"
 
 
 def extract_python_code(text: str) -> str | None:

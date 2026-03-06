@@ -1,6 +1,7 @@
 """Tests for provider service.
 
-Tests the provider configuration and API key checking functionality.
+Tests PREFERRED_PROVIDERS, get_default_provider, get_default_model,
+check_api_key, and get_enabled_providers_for_user.
 """
 
 import os
@@ -9,7 +10,6 @@ from uuid import UUID
 
 import pytest
 from langflow.agentic.services.provider_service import (
-    DEFAULT_MODELS,
     PREFERRED_PROVIDERS,
     check_api_key,
     get_default_model,
@@ -38,18 +38,20 @@ class TestPreferredProviders:
 
 
 class TestDefaultModels:
-    """Tests for DEFAULT_MODELS configuration."""
+    """Tests for dynamic default model resolution."""
 
-    def test_should_have_model_for_each_preferred_provider(self):
-        """Should have a default model for each preferred provider."""
-        for provider in PREFERRED_PROVIDERS:
-            assert provider in DEFAULT_MODELS, f"Missing default model for {provider}"
-
-    def test_default_models_should_be_non_empty_strings(self):
-        """Default model names should be non-empty strings."""
-        for model in DEFAULT_MODELS.values():
+    def test_should_resolve_model_for_known_providers(self):
+        """Should dynamically resolve a default model for known providers."""
+        for provider in ["Anthropic", "OpenAI"]:
+            model = get_default_model(provider)
+            assert model is not None, f"No default model resolved for {provider}"
             assert isinstance(model, str)
             assert len(model) > 0
+
+    def test_should_return_none_for_unknown_provider(self):
+        """Should return None for a provider with no models."""
+        result = get_default_model("NonExistentProvider")
+        assert result is None
 
 
 class TestGetDefaultProvider:
@@ -58,40 +60,30 @@ class TestGetDefaultProvider:
     def test_should_return_first_preferred_when_available(self):
         """Should return first preferred provider when available."""
         enabled = ["OpenAI", "Anthropic", "Groq"]
-
         result = get_default_provider(enabled)
-
-        assert result == "Anthropic"  # First in PREFERRED_PROVIDERS that's enabled
+        assert result == "Anthropic"
 
     def test_should_return_second_preferred_when_first_not_available(self):
         """Should return second preferred when first is not available."""
-        enabled = ["OpenAI", "Groq"]  # Anthropic not included
-
+        enabled = ["OpenAI", "Groq"]
         result = get_default_provider(enabled)
-
-        assert result == "OpenAI"  # Second in PREFERRED_PROVIDERS
+        assert result == "OpenAI"
 
     def test_should_return_first_enabled_when_no_preferred_available(self):
         """Should return first enabled when no preferred provider available."""
         enabled = ["CustomProvider", "AnotherProvider"]
-
         result = get_default_provider(enabled)
-
         assert result == "CustomProvider"
 
     def test_should_return_none_for_empty_list(self):
         """Should return None when no providers enabled."""
         result = get_default_provider([])
-
         assert result is None
 
     def test_should_respect_preferred_order(self):
         """Should respect the order of PREFERRED_PROVIDERS."""
         enabled = ["Groq", "Google Generative AI", "OpenAI"]
-
         result = get_default_provider(enabled)
-
-        # Should be OpenAI since it comes before Groq and Google in PREFERRED_PROVIDERS
         assert result == "OpenAI"
 
 
@@ -101,7 +93,6 @@ class TestGetDefaultModel:
     def test_should_return_model_for_known_provider(self):
         """Should return default model for known provider."""
         result = get_default_model("Anthropic")
-
         assert result is not None
         assert isinstance(result, str)
         assert "claude" in result.lower()
@@ -109,15 +100,31 @@ class TestGetDefaultModel:
     def test_should_return_model_for_openai(self):
         """Should return default model for OpenAI."""
         result = get_default_model("OpenAI")
-
         assert result is not None
         assert "gpt" in result.lower()
 
     def test_should_return_none_for_unknown_provider(self):
         """Should return None for unknown provider."""
         result = get_default_model("UnknownProvider")
-
         assert result is None
+
+
+class TestProviderServiceIntegration:
+    """Integration tests for provider service."""
+
+    def test_default_provider_should_have_default_model(self):
+        """Default provider should have a corresponding default model."""
+        for provider in ["Anthropic", "OpenAI"]:
+            model = get_default_model(provider)
+            assert model is not None, f"No default model for preferred provider {provider}"
+
+    def test_get_default_provider_returns_valid_provider(self):
+        """get_default_provider should return a provider with a default model."""
+        enabled = PREFERRED_PROVIDERS.copy()
+        provider = get_default_provider(enabled)
+        assert provider is not None
+        model = get_default_model(provider)
+        assert model is not None
 
 
 class TestCheckApiKey:
@@ -157,9 +164,7 @@ class TestCheckApiKey:
         mock_session = MagicMock()
         user_id = "test-user"
 
-        # Ensure env var is not set
         with patch.dict(os.environ, {}, clear=True):
-            # Remove the key if it exists
             os.environ.pop("TEST_API_KEY", None)
             result = await check_api_key(mock_service, user_id, "TEST_API_KEY", mock_session)
 
@@ -186,7 +191,6 @@ class TestCheckApiKey:
         mock_session = MagicMock()
 
         result = await check_api_key(mock_service, "string-user-id", "API_KEY", mock_session)
-
         assert result == "key"
 
     @pytest.mark.asyncio
@@ -198,7 +202,6 @@ class TestCheckApiKey:
         user_id = UUID("12345678-1234-5678-1234-567812345678")
 
         result = await check_api_key(mock_service, user_id, "API_KEY", mock_session)
-
         assert result == "key"
 
 
@@ -212,30 +215,210 @@ class TestGetEnabledProvidersForUser:
         user_id = "test-user"
 
         with patch("langflow.agentic.services.provider_service.get_variable_service") as mock_get_service:
-            mock_get_service.return_value = MagicMock()  # Not DatabaseVariableService
-
+            mock_get_service.return_value = MagicMock()
             result = await get_enabled_providers_for_user(user_id, mock_session)
 
         assert result == ([], {})
 
-    # Note: Testing get_enabled_providers_for_user with credentials requires
-    # complex mocking of DatabaseVariableService and isinstance checks.
-    # This is better suited for integration tests with actual database setup.
+    @pytest.mark.asyncio
+    async def test_should_return_empty_when_no_credentials(self):
+        """Should return empty when user has variables but none are credentials."""
+        from langflow.services.variable.service import DatabaseVariableService
+
+        mock_var = MagicMock()
+        mock_var.name = "SOME_VAR"
+        mock_var.type = "Generic"
+
+        mock_db_service = MagicMock(spec=DatabaseVariableService)
+        mock_db_service.get_all = AsyncMock(return_value=[mock_var])
+
+        mock_session = MagicMock()
+
+        with patch("langflow.agentic.services.provider_service.get_variable_service", return_value=mock_db_service):
+            result = await get_enabled_providers_for_user("user-1", mock_session)
+
+        assert result == ([], {})
+
+    @pytest.mark.asyncio
+    async def test_should_return_enabled_providers_with_credentials(self):
+        """Should return only providers whose API key variable is in credentials."""
+        from langflow.services.variable.service import DatabaseVariableService
+
+        mock_cred = MagicMock()
+        mock_cred.name = "ANTHROPIC_API_KEY"
+        mock_cred.type = "Credential"
+
+        mock_db_service = MagicMock(spec=DatabaseVariableService)
+        mock_db_service.get_all = AsyncMock(return_value=[mock_cred])
+
+        mock_session = MagicMock()
+
+        with (
+            patch("langflow.agentic.services.provider_service.get_variable_service", return_value=mock_db_service),
+            patch(
+                "langflow.agentic.services.provider_service.get_model_provider_variable_mapping",
+                return_value={"Anthropic": "ANTHROPIC_API_KEY", "OpenAI": "OPENAI_API_KEY"},
+            ),
+        ):
+            enabled, status = await get_enabled_providers_for_user("user-1", mock_session)
+
+        assert "Anthropic" in enabled
+        assert "OpenAI" not in enabled
+        assert status["Anthropic"] is True
+        assert status["OpenAI"] is False
+
+    @pytest.mark.asyncio
+    async def test_should_return_all_providers_when_all_have_credentials(self):
+        """Should return all providers when all have matching credentials."""
+        from langflow.services.variable.service import DatabaseVariableService
+
+        creds = []
+        for name in ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"]:
+            c = MagicMock()
+            c.name = name
+            c.type = "Credential"
+            creds.append(c)
+
+        mock_db_service = MagicMock(spec=DatabaseVariableService)
+        mock_db_service.get_all = AsyncMock(return_value=creds)
+
+        mock_session = MagicMock()
+
+        with (
+            patch("langflow.agentic.services.provider_service.get_variable_service", return_value=mock_db_service),
+            patch(
+                "langflow.agentic.services.provider_service.get_model_provider_variable_mapping",
+                return_value={"Anthropic": "ANTHROPIC_API_KEY", "OpenAI": "OPENAI_API_KEY"},
+            ),
+        ):
+            enabled, status = await get_enabled_providers_for_user("user-1", mock_session)
+
+        assert len(enabled) == 2
+        assert all(v is True for v in status.values())
+
+    @pytest.mark.asyncio
+    async def test_should_return_empty_when_get_all_returns_empty(self):
+        """Should return empty when get_all returns no variables."""
+        from langflow.services.variable.service import DatabaseVariableService
+
+        mock_db_service = MagicMock(spec=DatabaseVariableService)
+        mock_db_service.get_all = AsyncMock(return_value=[])
+
+        mock_session = MagicMock()
+
+        with patch("langflow.agentic.services.provider_service.get_variable_service", return_value=mock_db_service):
+            result = await get_enabled_providers_for_user("user-1", mock_session)
+
+        assert result == ([], {})
 
 
-class TestProviderServiceIntegration:
-    """Integration tests for provider service."""
+class TestBugsAndEdgeCases:
+    """Tests that challenge the code — exposing real bugs and untested edge cases."""
 
-    def test_default_provider_should_have_default_model(self):
-        """Default provider should have a corresponding default model."""
-        for provider in PREFERRED_PROVIDERS:
-            model = get_default_model(provider)
-            assert model is not None, f"No default model for preferred provider {provider}"
+    @pytest.mark.asyncio
+    @pytest.mark.xfail(
+        reason="BUG: L62 only catches ValueError — TypeError from get_variable crashes instead of env fallback",
+        strict=True,
+    )
+    async def test_check_api_key_should_fallback_on_type_error(self):
+        """check_api_key should fallback to env when get_variable raises TypeError."""
+        mock_service = MagicMock()
+        mock_service.get_variable = AsyncMock(side_effect=TypeError("wrong type"))
+        mock_session = MagicMock()
 
-    def test_get_default_provider_returns_valid_provider(self):
-        """get_default_provider should return a provider with a default model."""
-        enabled = PREFERRED_PROVIDERS.copy()
-        provider = get_default_provider(enabled)
+        with patch.dict(os.environ, {"TEST_KEY": "env-value"}):
+            result = await check_api_key(mock_service, "user-1", "TEST_KEY", mock_session)
 
-        assert provider is not None
-        assert get_default_model(provider) is not None
+        assert result == "env-value"
+
+    @pytest.mark.asyncio
+    async def test_check_api_key_empty_string_triggers_env_fallback(self):
+        """L65: 'if not api_key' treats empty string as falsy — falls back to env.
+
+        Documents the behavior: DB returns "" -> code falls back to env var.
+        """
+        mock_service = MagicMock()
+        mock_service.get_variable = AsyncMock(return_value="")
+        mock_session = MagicMock()
+
+        with patch.dict(os.environ, {"TEST_KEY": "env-value"}):
+            result = await check_api_key(mock_service, "user-1", "TEST_KEY", mock_session)
+
+        assert result == "env-value"
+
+    @pytest.mark.asyncio
+    async def test_check_api_key_non_empty_falsy_string_not_lost(self):
+        """API key '0' is a non-empty string — 'if not api_key' is False, so no fallback.
+
+        Documents: Python truthiness means '0' is truthy (non-empty string),
+        so it's correctly NOT treated as missing. Only '' triggers fallback.
+        """
+        mock_service = MagicMock()
+        mock_service.get_variable = AsyncMock(return_value="0")
+        mock_session = MagicMock()
+
+        with patch.dict(os.environ, {"TEST_KEY": "env-value"}):
+            result = await check_api_key(mock_service, "user-1", "TEST_KEY", mock_session)
+
+        assert result == "0"
+
+    @pytest.mark.asyncio
+    async def test_get_enabled_providers_when_mapping_raises(self):
+        """L37: get_model_provider_variable_mapping() has no error handling — crashes propagate."""
+        from langflow.services.variable.service import DatabaseVariableService
+
+        mock_cred = MagicMock()
+        mock_cred.name = "ANTHROPIC_API_KEY"
+        mock_cred.type = "Credential"
+
+        mock_db_service = MagicMock(spec=DatabaseVariableService)
+        mock_db_service.get_all = AsyncMock(return_value=[mock_cred])
+
+        mock_session = MagicMock()
+
+        with (
+            patch("langflow.agentic.services.provider_service.get_variable_service", return_value=mock_db_service),
+            patch(
+                "langflow.agentic.services.provider_service.get_model_provider_variable_mapping",
+                side_effect=RuntimeError("registry unavailable"),
+            ),
+            pytest.raises(RuntimeError, match="registry unavailable"),
+        ):
+            await get_enabled_providers_for_user("user-1", mock_session)
+
+    @pytest.mark.asyncio
+    async def test_get_enabled_providers_with_none_var_name_in_mapping(self):
+        """Mapping with None var_name: 'None in credential_names' returns False."""
+        from langflow.services.variable.service import DatabaseVariableService
+
+        mock_cred = MagicMock()
+        mock_cred.name = "ANTHROPIC_API_KEY"
+        mock_cred.type = "Credential"
+
+        mock_db_service = MagicMock(spec=DatabaseVariableService)
+        mock_db_service.get_all = AsyncMock(return_value=[mock_cred])
+
+        mock_session = MagicMock()
+
+        with (
+            patch("langflow.agentic.services.provider_service.get_variable_service", return_value=mock_db_service),
+            patch(
+                "langflow.agentic.services.provider_service.get_model_provider_variable_mapping",
+                return_value={"BrokenProvider": None, "Anthropic": "ANTHROPIC_API_KEY"},
+            ),
+        ):
+            enabled, status = await get_enabled_providers_for_user("user-1", mock_session)
+
+        assert "BrokenProvider" not in enabled
+        assert status["BrokenProvider"] is False
+        assert "Anthropic" in enabled
+
+    def test_get_default_model_returns_none_for_model_without_name_key(self):
+        """L90: models[0].get('model_name') returns None when key is absent."""
+        with patch(
+            "langflow.agentic.services.provider_service.get_unified_models_detailed",
+            return_value=[{"provider": "TestProvider", "models": [{"id": "test-1"}]}],
+        ):
+            result = get_default_model("TestProvider")
+
+        assert result is None
