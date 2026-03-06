@@ -73,7 +73,6 @@ class TraceBase(SQLModel):
         foreign_key="flow.id",
         ondelete="CASCADE",
         index=True,
-        sa_column=Column(ForeignKey("flow.id", ondelete="CASCADE"), index=True, nullable=False),
         description="ID of the flow this trace belongs to",
     )
     session_id: str | None = Field(
