@@ -399,6 +399,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "ScrapeGraph AI", name: "scrapegraph", icon: "ScrapeGraph" },
   { display_name: "SearchApi", name: "searchapi", icon: "SearchAPI" },
   { display_name: "SerpApi", name: "serpapi", icon: "SerpSearch" },
+  { display_name: "Seltz", name: "seltz", icon: "Seltz" },
   { display_name: "Serper", name: "serper", icon: "Serper" },
   { display_name: "Supabase", name: "supabase", icon: "Supabase" },
   { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },

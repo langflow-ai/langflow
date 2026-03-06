@@ -5885,6 +5885,7 @@ all = [
     { name = "ragstack-ai-knowledge-store" },
     { name = "redis" },
     { name = "scrapegraph-py" },
+    { name = "seltz" },
     { name = "smolagents" },
     { name = "spider-client" },
     { name = "sseclient-py" },
@@ -6051,6 +6052,7 @@ complete = [
     { name = "ragstack-ai-knowledge-store" },
     { name = "redis" },
     { name = "scrapegraph-py" },
+    { name = "seltz" },
     { name = "smolagents" },
     { name = "spider-client" },
     { name = "sseclient-py" },
@@ -6287,6 +6289,9 @@ sambanova = [
 ]
 scrapegraph = [
     { name = "scrapegraph-py" },
+]
+seltz = [
+    { name = "seltz" },
 ]
 sentence-transformers = [
     { name = "sentence-transformers" },
@@ -6566,6 +6571,7 @@ requires-dist = [
     { name = "langflow-base", extras = ["redis"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["sambanova"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["scrapegraph"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["seltz"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["serpapi"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["smolagents"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["spider"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -6645,6 +6651,7 @@ requires-dist = [
     { name = "rich", specifier = ">=13.7.0,<14.0.0" },
     { name = "scipy", specifier = ">=1.15.2,<2.0.0" },
     { name = "scrapegraph-py", marker = "extra == 'scrapegraph'", specifier = ">=1.12.0" },
+    { name = "seltz", marker = "extra == 'seltz'", specifier = ">=0.2.0,<1.0.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.0.0" },
     { name = "sentence-transformers", marker = "extra == 'sentence-transformers'", specifier = ">=2.3.1" },
     { name = "sentry-sdk", extras = ["fastapi", "loguru"], specifier = ">=2.5.1,<3.0.0" },
@@ -6677,7 +6684,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "astradb", "openai", "anthropic", "cohere", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "llama-cpp", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "dspy", "smolagents", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "astra", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "pydantic-ai", "apify", "spider", "altk", "langchain-huggingface", "langchain-unstructured", "graph-retriever", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "complete", "all"]
+provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "astradb", "openai", "anthropic", "cohere", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "llama-cpp", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "dspy", "smolagents", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "seltz", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "astra", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "pydantic-ai", "apify", "spider", "altk", "langchain-huggingface", "langchain-unstructured", "graph-retriever", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "complete", "all"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -12948,6 +12955,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1c/03/e834bcd866f2f8a49a85eaff47340affa3bfa391ee9912a952a1faa68c7b/secretstorage-3.5.0.tar.gz", hash = "sha256:f04b8e4689cbce351744d5537bf6b1329c6fc68f91fa666f60a380edddcd11be", size = 19884, upload-time = "2025-11-23T19:02:53.191Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/46/f5af3402b579fd5e11573ce652019a67074317e18c1935cc0b4ba9b35552/secretstorage-3.5.0-py3-none-any.whl", hash = "sha256:0ce65888c0725fcb2c5bc0fdb8e5438eece02c523557ea40ce0703c266248137", size = 15554, upload-time = "2025-11-23T19:02:51.545Z" },
+]
+
+[[package]]
+name = "seltz"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "grpcio" },
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9e/9a/fb73753caabb67f59daabb4eef1dea39c8309161d2ceba325963967e3118/seltz-0.2.0.tar.gz", hash = "sha256:6549ab29507195231af180d0d665f6b90490f1d6cbd8bc2cdba1561139f3a82d", size = 9504, upload-time = "2026-03-04T19:02:23.543Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fa/27/26d7d21f44a559b7a99dce66f61db294b868f1e0f646cd954f751bb63af8/seltz-0.2.0-py3-none-any.whl", hash = "sha256:c0bc5399f48d3284dadf7860e0682e5f013ce0bc14abbd731d4491fb4b6843e5", size = 10223, upload-time = "2026-03-04T19:02:22.137Z" },
 ]
 
 [[package]]
