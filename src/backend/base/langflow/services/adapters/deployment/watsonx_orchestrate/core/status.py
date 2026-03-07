@@ -98,7 +98,7 @@ def get_deployment_detail_metadata(
     return DeploymentGetResult(**result)
 
 
-def derive_agent_mode(agent: dict[str, Any]) -> str:
+def derive_agent_environment(agent: dict[str, Any]) -> str:
     environments = agent.get("environments", [])
     if not isinstance(environments, list) or not environments:
         return "unknown"
