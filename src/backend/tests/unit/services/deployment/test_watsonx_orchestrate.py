@@ -4,13 +4,15 @@ import importlib.metadata as md
 from types import SimpleNamespace
 from uuid import UUID
 
-import langflow.services.adapters.deployment.watsonx_orchestrate as watsonx_orchestrate_module
+import langflow.services.adapters.deployment.watsonx_orchestrate.core.tools as tools_module
+import langflow.services.adapters.deployment.watsonx_orchestrate.service as service_module
 import pytest
 from langflow.services.adapters.deployment.watsonx_orchestrate import (
     WatsonxOrchestrateDeploymentService,
 )
 from lfx.services.adapters.deployment.exceptions import (
     DeploymentConflictError,
+    DeploymentError,
     InvalidContentError,
     InvalidDeploymentOperationError,
 )
@@ -147,11 +149,14 @@ async def test_process_config_uses_raw_payload_but_overrides_name(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     captured = {}
 
-    async def mock_create_config(*, config, user_id, db):  # noqa: ARG001
+    async def mock_create_config(*, config, user_id, db, provider_name, client_cache):  # noqa: ARG001
         captured["name"] = config.name
         captured["env_vars"] = config.environment_variables
 
-    monkeypatch.setattr(service, "_create_config", mock_create_config)
+    monkeypatch.setattr(
+        "langflow.services.adapters.deployment.watsonx_orchestrate.core.config.create_config",
+        mock_create_config,
+    )
 
     app_id = await service._process_config(
         user_id="user-1",
@@ -201,7 +206,11 @@ async def test_create_rejects_config_reference_before_name_precheck(monkeypatch)
         raise AssertionError(msg)
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-    monkeypatch.setattr(service, "_assert_create_resources_available", should_not_be_called)
+    monkeypatch.setattr(
+        service_module,
+        "assert_create_resources_available",
+        should_not_be_called,
+    )
 
     with pytest.raises(InvalidDeploymentOperationError, match="Config reference binding is not supported"):
         await service.create(
@@ -220,14 +229,17 @@ async def test_create_rejects_config_reference_before_name_precheck(monkeypatch)
 
 @pytest.mark.anyio
 async def test_resolve_runtime_credentials_supports_variable_and_raw_sources(monkeypatch):
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-
-    async def mock_resolve_variable_value(variable_name: str, *, user_id, db):  # noqa: ARG001
+    async def mock_resolve_variable_value(variable_name: str, *, user_id, db, **kwargs):  # noqa: ARG001
         return f"resolved::{variable_name}"
 
-    monkeypatch.setattr(service, "_resolve_variable_value", mock_resolve_variable_value)
+    monkeypatch.setattr(
+        "langflow.services.adapters.deployment.watsonx_orchestrate.client.resolve_variable_value",
+        mock_resolve_variable_value,
+    )
 
-    runtime_credentials = await service._resolve_runtime_credentials(
+    from langflow.services.adapters.deployment.watsonx_orchestrate.client import resolve_runtime_credentials
+
+    runtime_credentials = await resolve_runtime_credentials(
         user_id="user-1",
         db=object(),
         environment_variables={
@@ -340,7 +352,7 @@ async def test_update_deployment_denies_config_unbind(monkeypatch):
 
 
 def test_assert_create_resources_available_rejects_existing_agent():
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())  # noqa: F841
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient(
             {"id": "dep-1", "tools": []},
@@ -350,8 +362,10 @@ def test_assert_create_resources_available_rejects_existing_agent():
         tool=FakeToolClient([]),
     )
 
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import assert_create_resources_available
+
     with pytest.raises(DeploymentConflictError, match="Deployment 'my_deployment' already exists"):
-        service._assert_create_resources_available(
+        assert_create_resources_available(
             clients=fake_clients,
             deployment_name="my_deployment",
             app_id="my_deployment_app_id",
@@ -359,15 +373,17 @@ def test_assert_create_resources_available_rejects_existing_agent():
 
 
 def test_assert_create_resources_available_rejects_existing_config():
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())  # noqa: F841
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient({"id": "dep-1", "tools": []}),
         connections=FakeConnectionsClient(existing_app_id="my_deployment"),
         tool=FakeToolClient([]),
     )
 
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import assert_create_resources_available
+
     with pytest.raises(DeploymentConflictError, match="Deployment config 'my_deployment' already exists"):
-        service._assert_create_resources_available(
+        assert_create_resources_available(
             clients=fake_clients,
             deployment_name="my_deployment",
             app_id="my_deployment",
@@ -375,15 +391,17 @@ def test_assert_create_resources_available_rejects_existing_config():
 
 
 def test_assert_create_resources_available_rejects_existing_tool_name():
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())  # noqa: F841
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient({"id": "dep-1", "tools": []}),
         connections=FakeConnectionsClient(),
         tool=FakeToolClient([], existing_names={"my_tool"}),
     )
 
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import assert_create_resources_available
+
     with pytest.raises(DeploymentConflictError, match="Deployment snapshot 'my_tool' already exists"):
-        service._assert_create_resources_available(
+        assert_create_resources_available(
             clients=fake_clients,
             deployment_name="my_deployment",
             app_id="my_deployment_app_id",
@@ -392,23 +410,25 @@ def test_assert_create_resources_available_rejects_existing_tool_name():
 
 
 def test_resolve_lfx_runner_requirement_uses_tool_runner_requirement(monkeypatch):
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())  # noqa: F841
     tool = SimpleNamespace(requirements=["lfx-nightly>=0.0.0"])
-    watsonx_orchestrate_module._pin_requirement_name.cache_clear()
+    tools_module._pin_requirement_name.cache_clear()
 
     def fake_version(package_name: str) -> str:
         assert package_name == "lfx-nightly"
         return "1.2.3"
 
-    monkeypatch.setattr("langflow.services.adapters.deployment.watsonx_orchestrate.md.version", fake_version)
+    monkeypatch.setattr("langflow.services.adapters.deployment.watsonx_orchestrate.core.tools.md.version", fake_version)
 
-    assert service._resolve_lfx_runner_requirement(tool) == "lfx-nightly==1.2.3"
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import resolve_lfx_runner_requirement
+
+    assert resolve_lfx_runner_requirement(tool) == "lfx-nightly==1.2.3"
 
 
 def test_resolve_lfx_runner_requirement_falls_back_to_installed_lfx(monkeypatch):
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())  # noqa: F841
     tool = SimpleNamespace(requirements=[])
-    watsonx_orchestrate_module._pin_requirement_name.cache_clear()
+    tools_module._pin_requirement_name.cache_clear()
 
     def fake_version(package_name: str) -> str:
         if package_name == "lfx-nightly":
@@ -417,13 +437,15 @@ def test_resolve_lfx_runner_requirement_falls_back_to_installed_lfx(monkeypatch)
             return "0.9.0"
         raise md.PackageNotFoundError
 
-    monkeypatch.setattr("langflow.services.adapters.deployment.watsonx_orchestrate.md.version", fake_version)
+    monkeypatch.setattr("langflow.services.adapters.deployment.watsonx_orchestrate.core.tools.md.version", fake_version)
 
-    assert service._resolve_lfx_runner_requirement(tool) == "lfx==0.9.0"
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import resolve_lfx_runner_requirement
+
+    assert resolve_lfx_runner_requirement(tool) == "lfx==0.9.0"
 
 
 def test_prefix_flow_global_variable_references_rewrites_load_from_db_values():
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())  # noqa: F841
     flow_definition = {
         "data": {
             "nodes": [
@@ -451,7 +473,11 @@ def test_prefix_flow_global_variable_references_rewrites_load_from_db_values():
         }
     }
 
-    updated = service._prefix_flow_global_variable_references(flow_definition, app_id="foo")
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
+        prefix_flow_global_variable_references,
+    )
+
+    updated = prefix_flow_global_variable_references(flow_definition, app_id="foo")
 
     template = updated["data"]["nodes"][0]["data"]["node"]["template"]
     assert template["api_key"]["value"] == "foo_OPENAI_API_KEY"
@@ -460,7 +486,7 @@ def test_prefix_flow_global_variable_references_rewrites_load_from_db_values():
 
 
 def test_create_wxo_flow_tool_requires_provider_data_project_id():
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())  # noqa: F841
     flow_payload = BaseFlowArtifact(
         id="00000000-0000-0000-0000-000000000001",
         name="flow",
@@ -469,11 +495,13 @@ def test_create_wxo_flow_tool_requires_provider_data_project_id():
         tags=[],
     )
 
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import create_wxo_flow_tool
+
     with pytest.raises(
         InvalidContentError,
         match="Flow payload must include provider_data with a non-empty project_id",
     ):
-        service._create_wxo_flow_tool(
+        create_wxo_flow_tool(
             flow_payload=flow_payload,
             connections={},
             tool_name_prefix="lf_test_",
@@ -481,7 +509,7 @@ def test_create_wxo_flow_tool_requires_provider_data_project_id():
 
 
 def test_create_wxo_flow_tool_prefixes_name_for_raw_payload(monkeypatch):
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())  # noqa: F841
     flow_payload = BaseFlowArtifact(
         id="00000000-0000-0000-0000-000000000001",
         name="basicllmwxo",
@@ -497,18 +525,24 @@ def test_create_wxo_flow_tool_prefixes_name_for_raw_payload(monkeypatch):
         )
     )
     monkeypatch.setattr(
-        watsonx_orchestrate_module,
+        tools_module,
         "create_langflow_tool",
         lambda **kwargs: fake_tool,  # noqa: ARG005
     )
-    monkeypatch.setattr(service, "_build_langflow_artifact_bytes", lambda **kwargs: b"artifact")  # noqa: ARG005
     monkeypatch.setattr(
-        watsonx_orchestrate_module,
+        tools_module,
+        "build_langflow_artifact_bytes",
+        lambda **kwargs: b"artifact",  # noqa: ARG005
+    )
+    monkeypatch.setattr(
+        tools_module,
         "uuid4",
         lambda: SimpleNamespace(hex="abcdef123456"),
     )
 
-    tool_payload, artifact_bytes = service._create_wxo_flow_tool(
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import create_wxo_flow_tool
+
+    tool_payload, artifact_bytes = create_wxo_flow_tool(
         flow_payload=flow_payload,
         connections={},
         tool_name_prefix="lf_abcdef_",
@@ -532,14 +566,28 @@ async def test_create_wires_snapshot_ids_to_agent_and_prefixed_names(monkeypatch
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
         return fake_clients
 
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
     def mock_assert_create_resources_available(*, clients, deployment_name, app_id, snapshot_tool_names=None):  # noqa: ARG001
         captured["deployment_name"] = deployment_name
         captured["app_id"] = app_id
         captured["snapshot_tool_names"] = snapshot_tool_names
 
-    async def mock_process_config(*, user_id, db, deployment_name, config):  # noqa: ARG001
+    monkeypatch.setattr(
+        service_module,
+        "assert_create_resources_available",
+        mock_assert_create_resources_available,
+    )
+
+    async def mock_process_config(user_id, db, deployment_name, config, *, provider_name, client_cache):  # noqa: ARG001
         captured["config_deployment_name"] = deployment_name
         return deployment_name
+
+    monkeypatch.setattr(
+        service_module,
+        "process_config",
+        mock_process_config,
+    )
 
     async def mock_process_raw_flows_with_app_id(
         user_id,  # noqa: ARG001
@@ -547,23 +595,27 @@ async def test_create_wires_snapshot_ids_to_agent_and_prefixed_names(monkeypatch
         flows,
         db,  # noqa: ARG001
         tool_name_prefix,
+        *,
+        provider_name,  # noqa: ARG001
+        client_cache,  # noqa: ARG001
     ):
         captured["snapshot_app_id"] = app_id
         captured["snapshot_flows"] = flows
         captured["tool_name_prefix"] = tool_name_prefix
         return ["tool-1", "tool-2"]
 
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-    monkeypatch.setattr(service, "_assert_create_resources_available", mock_assert_create_resources_available)
-    monkeypatch.setattr(service, "_process_config", mock_process_config)
-    monkeypatch.setattr(service, "_process_raw_flows_with_app_id", mock_process_raw_flows_with_app_id)
     monkeypatch.setattr(
-        watsonx_orchestrate_module.secrets,
+        service_module,
+        "process_raw_flows_with_app_id",
+        mock_process_raw_flows_with_app_id,
+    )
+    monkeypatch.setattr(
+        service_module.secrets,
         "choice",
         lambda values: values[0],
     )
     monkeypatch.setattr(
-        watsonx_orchestrate_module,
+        service_module,
         "uuid4",
         lambda: SimpleNamespace(hex="abcdef123456"),
     )
@@ -629,8 +681,21 @@ async def test_create_rolls_back_and_preserves_original_error_when_cleanup_fails
     def mock_assert_create_resources_available(*, clients, deployment_name, app_id, snapshot_tool_names=None):  # noqa: ARG001
         return None
 
-    async def mock_process_config(*, user_id, db, deployment_name, config):  # noqa: ARG001
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+    monkeypatch.setattr(
+        service_module,
+        "assert_create_resources_available",
+        mock_assert_create_resources_available,
+    )
+
+    async def mock_process_config(user_id, db, deployment_name, config, *, provider_name, client_cache):  # noqa: ARG001
         return deployment_name
+
+    monkeypatch.setattr(
+        service_module,
+        "process_config",
+        mock_process_config,
+    )
 
     async def mock_process_raw_flows_with_app_id(
         user_id,  # noqa: ARG001
@@ -638,6 +703,9 @@ async def test_create_rolls_back_and_preserves_original_error_when_cleanup_fails
         flows,  # noqa: ARG001
         db,  # noqa: ARG001
         tool_name_prefix,  # noqa: ARG001
+        *,
+        provider_name,  # noqa: ARG001
+        client_cache,  # noqa: ARG001
     ):
         msg = "boom"
         raise RuntimeError(msg)
@@ -647,18 +715,19 @@ async def test_create_rolls_back_and_preserves_original_error_when_cleanup_fails
         msg = "cleanup failed"
         raise RuntimeError(msg)
 
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-    monkeypatch.setattr(service, "_assert_create_resources_available", mock_assert_create_resources_available)
-    monkeypatch.setattr(service, "_process_config", mock_process_config)
-    monkeypatch.setattr(service, "_process_raw_flows_with_app_id", mock_process_raw_flows_with_app_id)
+    monkeypatch.setattr(
+        service_module,
+        "process_raw_flows_with_app_id",
+        mock_process_raw_flows_with_app_id,
+    )
     monkeypatch.setattr(fake_connections, "delete", failing_delete)
     monkeypatch.setattr(
-        watsonx_orchestrate_module.secrets,
+        service_module.secrets,
         "choice",
         lambda values: values[0],
     )
     monkeypatch.setattr(
-        watsonx_orchestrate_module,
+        service_module,
         "uuid4",
         lambda: SimpleNamespace(hex="abcdef123456"),
     )
@@ -686,7 +755,7 @@ async def test_create_rolls_back_and_preserves_original_error_when_cleanup_fails
         ),
     )
 
-    with pytest.raises(watsonx_orchestrate_module.DeploymentError, match="error details: boom"):
+    with pytest.raises(DeploymentError, match="error details: boom"):
         await service.create(
             user_id="user-1",
             payload=deployment_payload,
@@ -778,7 +847,10 @@ async def test_get_execution_fetches_message_when_no_run_output(monkeypatch):
         return fake_clients
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-    monkeypatch.setattr(service, "_fetch_execution_message_output", lambda *_args, **_kwargs: "Message payload output")
+    monkeypatch.setattr(
+        "langflow.services.adapters.deployment.watsonx_orchestrate.service.fetch_execution_message_output",
+        lambda *_args, **_kwargs: "Message payload output",
+    )
 
     result = await service.get_execution(
         user_id="user-1",
