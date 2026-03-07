@@ -9,7 +9,7 @@ export const getSpanIcon = (type: SpanType): string => {
     retriever: "Search",
     embedding: "Hash",
     parser: "FileText",
-    none: "",
+    none: "Workflow",
   };
   const icon = iconMap[type];
   return icon === undefined ? "Circle" : icon;

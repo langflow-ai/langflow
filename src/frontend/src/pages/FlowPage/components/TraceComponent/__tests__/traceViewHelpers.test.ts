@@ -158,7 +158,7 @@ describe("traceViewHelpers", () => {
       expect(getSpanIcon("agent")).toBe("Bot");
       expect(getSpanIcon("chain")).toBe("Link");
       expect(getSpanIcon("retriever")).toBe("Search");
-      expect(getSpanIcon("none")).toBe("");
+      expect(getSpanIcon("none")).toBe("Workflow");
     });
 
     it("falls back to Circle for unknown types", () => {

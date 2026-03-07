@@ -538,7 +538,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.133.1"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
@@ -769,7 +769,7 @@
         "data": {
           "id": "note-OB8Tz",
           "node": {
-            "description": "# Blog Writing Flow Overview\n\nCreate a blog post by using content fetched from URLs and user-provided instructions.\n\n## Prerequisites\n\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quickstart\n\n1. Paste your OpenAI API key in the **Language Model** model component.\n2.  In the **URL** component, enter URLs you want to fetch content from. Ensure they start with `http://` or `https://`.\n3. Open the **Playground**. A blog post is written from the content fetched by the **URL** component.",
+            "description": "# 📖 README\nCreate a blog post by using content fetched from URLs and user-provided instructions.\n\n## Prerequisites\n\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n2.  In the **URL** component, enter URLs you want to fetch content from. Ensure they start with `http://` or `https://`.\n3. Open the **Playground**. A blog post is written from the content fetched by the **URL** component.",
             "display_name": "",
             "documentation": "",
             "template": {}

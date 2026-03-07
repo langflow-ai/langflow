@@ -5,7 +5,7 @@ import useFlowStore from "@/stores/flowStore";
 import { useTweaksStore } from "@/stores/tweaksStore";
 import type { APIClassType } from "@/types/api";
 import { isTargetHandleConnected } from "@/utils/reactflowUtils";
-import ToggleShadComponent from "../../../toggleShadComponent";
+import VisibilityToggleButton from "./VisibilityToggleButton";
 
 export default function TableAdvancedToggleCellRender({
   value: { nodeId, parameterId, isTweaks },
@@ -47,13 +47,11 @@ export default function TableAdvancedToggleCellRender({
         styleClasses="z-50"
       >
         <div className="flex h-full w-full items-center justify-center">
-          <ToggleShadComponent
-            disabled={disabled}
-            value={!parameter.advanced}
-            handleOnNewValue={handleOnNewValue}
-            editNode={true}
-            showToogle
+          <VisibilityToggleButton
             id={"show" + parameterId}
+            checked={!parameter.advanced}
+            disabled={disabled}
+            onToggle={() => handleOnNewValue({ advanced: !parameter.advanced })}
           />
         </div>
       </ShadTooltip>
