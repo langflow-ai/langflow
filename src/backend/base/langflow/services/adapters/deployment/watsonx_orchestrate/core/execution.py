@@ -42,7 +42,7 @@ def build_orchestrate_run_payload(
         "agent_id": str(provider_data.get("agent_id") or deployment_id),
     }
 
-    for key in (
+    extra_fields = [
         "thread_id",
         "llm_params",
         "guardrails",
@@ -51,9 +51,9 @@ def build_orchestrate_run_payload(
         "environment_id",
         "version",
         "context_variables",
-    ):
-        if key in provider_data and provider_data[key] is not None:
-            payload[key] = provider_data[key]
+    ]
+
+    payload.update({k: v for k in extra_fields if (v := provider_data.get(k)) is not None})
 
     return payload
 

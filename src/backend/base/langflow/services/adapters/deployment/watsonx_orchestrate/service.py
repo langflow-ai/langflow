@@ -13,6 +13,7 @@ from lfx.services.adapters.deployment.exceptions import (
     DeploymentConflictError,
     DeploymentError,
     DeploymentNotFoundError,
+    DeploymentSupportError,
     InvalidContentError,
     InvalidDeploymentOperationError,
     InvalidDeploymentTypeError,
@@ -38,6 +39,7 @@ from lfx.services.adapters.deployment.schema import (
     IdLike,
     ProviderPayload,
     RedeployResult,
+    _normalize_and_validate_id,
 )
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_provider_clients
@@ -66,12 +68,9 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import
     rollback_created_resources,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.status import (
-    derive_agent_mode,
-    fetch_agent_release_status,
+    derive_agent_environment,
     get_deployment_detail_metadata,
     get_deployment_metadata,
-    normalize_release_status,
-    resolve_health_environment_id,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
     build_snapshot_tool_names,
@@ -177,9 +176,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 msg = (
                     f"{ErrorPrefix.CREATE.value}"
                     f"Deployment type '{deployment_spec.type.value}' "
-                    "is not supported for watsonx Orchestrate."
+                    "is not supported by watsonx Orchestrate."
                 )
-                raise InvalidDeploymentTypeError(message=msg)
+                raise DeploymentSupportError(message=msg)
 
             clients = await self._get_provider_clients(user_id=user_id, db=db)
 
@@ -354,8 +353,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             invalid_deployment_types: list[DeploymentType] = []
 
             if params and params.deployment_types:
-                deployment_types = params.deployment_types
-                invalid_deployment_types = set(deployment_types).difference(SUPPORTED_ADAPTER_DEPLOYMENT_TYPES)
+                deployment_types = set(params.deployment_types)
+                invalid_deployment_types = deployment_types.difference(SUPPORTED_ADAPTER_DEPLOYMENT_TYPES)
 
             if invalid_deployment_types:
                 invalid_values = ", ".join([dtype.value for dtype in invalid_deployment_types])
@@ -373,7 +372,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             # if different deployment types
             # are distinct resources in wxo
             # then we should probably raise an error if
-            # the ids query parameter is not empty
+            # the ids query parameter is not empty or null
             # this is not a problem today, but might be in the future
 
             deployments = [
@@ -382,7 +381,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     deployment_type=DeploymentType.AGENT,
                     provider_data={
                         "snapshot_ids": extract_agent_tool_ids(agent),
-                        "mode": derive_agent_mode(agent),
+                        "environment": derive_agent_environment(agent),
                     },
                 )
                 for agent in client_manager.agent._get(  # noqa: SLF001
@@ -440,49 +439,49 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         db: Any,
     ) -> DeploymentUpdateResult:
         """Update deployment metadata, snapshot bindings, and/or connection binding."""
-        deployment_id = str(deployment_id).strip()
-        if not deployment_id:
-            msg = "'deployment_id' must not be empty or whitespace."
-            raise ValueError(msg)
         clients = await self._get_provider_clients(user_id=user_id, db=db)
-        current = clients.agent.get_draft_by_id(deployment_id)
-        if not current:
-            msg = f"Deployment '{deployment_id}' not found."
+
+        agent_id = _normalize_and_validate_id(str(deployment_id), field_name="deployment_id")
+        agent = clients.agent.get_draft_by_id(agent_id)
+
+        if not agent:
+            msg = f"Deployment '{agent_id}' not found."
             raise ValueError(msg)
 
+        config = payload.config
+
+        if config and "config_id" in config.model_fields_set:
+            msg = (
+                "Replacing or unbinding deployment "
+                "configuration/connection via patch "
+                "is not allowed for watsonx Orchestrate "
+                "deployments in Langflow. "
+                "Please do not set the config_id field."
+            )
+            raise DeploymentConflictError(message=msg)
+
         update_payload: dict[str, Any] = {}
+
         if payload.spec:
             spec_updates = payload.spec.model_dump(exclude_unset=True)
             if "name" in spec_updates:
-                normalized_name = validate_wxo_name(spec_updates["name"])
-                update_payload["name"] = normalized_name
-                update_payload["display_name"] = spec_updates["name"]
+                update_payload.update(
+                    {
+                        "name": validate_wxo_name(spec_updates["name"]),
+                        "display_name": spec_updates["name"],
+                    }
+                )
             if "description" in spec_updates:
                 update_payload["description"] = spec_updates["description"]
 
-        current_tool_ids = extract_agent_tool_ids(current)
         if payload.snapshot:
-            tool_ids_to_remove = set(payload.snapshot.remove or [])
-            updated_tool_ids = [tool_id for tool_id in current_tool_ids if tool_id not in tool_ids_to_remove]
-            for tool_id in payload.snapshot.add or []:
-                if tool_id not in updated_tool_ids:
-                    updated_tool_ids.append(tool_id)
-            if updated_tool_ids != current_tool_ids:
-                update_payload["tools"] = updated_tool_ids
+            original_tool_ids = set(extract_agent_tool_ids(agent))
 
-        if payload.config is not None and "config_id" in payload.config.model_fields_set:
-            config_id = str(payload.config.config_id) if payload.config.config_id is not None else None
-            if config_id is None:
-                msg = (
-                    "Unbinding deployment configuration/connection via patch is not allowed for "
-                    "watsonx Orchestrate deployments."
-                )
-                raise DeploymentConflictError(message=msg)
-            msg = (
-                "Replacing deployment configuration/connection via patch is not allowed for "
-                "watsonx Orchestrate deployments."
-            )
-            raise DeploymentConflictError(message=msg)
+            tool_ids = original_tool_ids.difference([str(sid) for sid in payload.snapshot.remove or []])
+            tool_ids.update([str(sid) for sid in payload.snapshot.add or []])
+
+            if tool_ids != original_tool_ids:
+                update_payload["tools"] = list(tool_ids)
 
         if update_payload:
             clients.agent.update(deployment_id, update_payload)
@@ -528,20 +527,20 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         db: Any,
     ) -> DeploymentDeleteResult:
         """Delete only the deployment agent (keep tools/configs reusable)."""
-        deployment_id_str = str(deployment_id)
+        agent_id = _normalize_and_validate_id(str(deployment_id), field_name="deployment_id")
         clients = await self._get_provider_clients(user_id=user_id, db=db)
         try:
-            clients.agent.delete(deployment_id_str)
+            clients.agent.delete(agent_id)
         except ClientAPIException as e:
             status_code = e.response.status_code
             if status_code == status.HTTP_404_NOT_FOUND:
-                msg = f"{ErrorPrefix.DELETE.value}deployment id '{deployment_id_str}' not found."
+                msg = f"{ErrorPrefix.DELETE.value}deployment id '{agent_id}' not found."
                 raise DeploymentNotFoundError(msg) from None
         except Exception:  # noqa: BLE001
-            msg = f"An unexpected error occurred while deleting deployment '{deployment_id_str}'."
+            msg = f"An unexpected error occurred while deleting deployment '{agent_id}'."
             raise DeploymentError(msg, error_code="deployment_error") from None
 
-        return DeploymentDeleteResult(id=deployment_id_str)
+        return DeploymentDeleteResult(id=agent_id)
 
     async def get_status(
         self,
@@ -551,32 +550,24 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         db: Any,
     ) -> DeploymentStatusResult:
         """Get deployment health directly from WXO release status endpoint."""
-        deployment_id_str = str(deployment_id)
-        clients = await self._get_provider_clients(user_id=user_id, db=db)
-        agent = clients.agent.get_draft_by_id(deployment_id_str)
-        if not agent:
-            # Fallback for deployments not currently in draft context.
-            all_agents = clients.agent.get(ids=[deployment_id_str])
-            if not all_agents:
-                msg = f"Deployment '{deployment_id_str}' not found."
-                raise ValueError(msg)
-            agent = all_agents[0]
+        agent_id = _normalize_and_validate_id(str(deployment_id), field_name="deployment_id")
 
-        environment_id = resolve_health_environment_id(clients.agent, deployment_id=deployment_id_str)
-        provider_status = fetch_agent_release_status(
-            clients.agent,
-            deployment_id=deployment_id_str,
-            environment_id=environment_id,
-        )
-        normalized_status = normalize_release_status(provider_status)
+        clients = await self._get_provider_clients(user_id=user_id, db=db)
+
+        status: dict[str, Any] = {}
+
+        if agent := clients.agent.get_draft_by_id(agent_id):
+            status = {
+                "status": "connected",
+                "environment": derive_agent_environment(agent),
+            }
 
         return DeploymentStatusResult(
-            id=deployment_id_str,
-            provider_data={
-                "status": normalized_status,
-                "environment_id": environment_id,
-                "mode": derive_agent_mode(agent),
-                "provider_status": provider_status,
+            id=agent_id,
+            provider_data=status
+            or {
+                "status": "not found",
+                "environment": "unknown",
             },
         )
 
@@ -588,24 +579,17 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         db: Any,
     ) -> ExecutionCreateResult:
         """Create a provider-agnostic deployment execution."""
-        deployment_id = str(payload.deployment_id).strip()
-        if not deployment_id:
-            msg = "'deployment_id' must not be empty or whitespace."
-            raise ValueError(msg)
+        agent_id = _normalize_and_validate_id(str(payload.deployment_id), field_name="deployment_id")
 
         clients = await self._get_provider_clients(user_id=user_id, db=db)
-        draft_agent = clients.agent.get_draft_by_id(deployment_id)
-        if not draft_agent:
-            live_agents = clients.agent.get_drafts_by_ids([deployment_id])
-            if not live_agents:
-                msg = f"Deployment '{deployment_id}' not found."
-                raise DeploymentNotFoundError(message=msg)
 
-        provider_data = payload.provider_data if isinstance(payload.provider_data, dict) else {}
+        provider_data: dict = payload.provider_data or {}
+
+        # query parameters and payload for the /runs endpoint
         query_suffix = build_orchestrate_runs_query(provider_data)
         run_payload = build_orchestrate_run_payload(
             provider_data=provider_data,
-            deployment_id=deployment_id,
+            deployment_id=agent_id,
         )
 
         try:
@@ -616,7 +600,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         except ClientAPIException as exc:
             status_code = exc.response.status_code
             if status_code == status.HTTP_404_NOT_FOUND:
-                msg = f"Deployment '{deployment_id}' was not found in Watsonx Orchestrate."
+                msg = f"Agent Deployment '{agent_id}' was not found in Watsonx Orchestrate."
                 raise DeploymentNotFoundError(message=msg) from None
             if status_code == status.HTTP_422_UNPROCESSABLE_CONTENT:
                 msg = (
@@ -624,16 +608,14 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     f"{extract_error_detail(exc.response.text)}"
                 )
                 raise InvalidContentError(message=msg) from None
-
-            msg = "An error occurred while creating a deployment execution in Watsonx Orchestrate."
-            raise DeploymentError(message=msg, error_code="deployment_error") from None
+            raise
         except Exception as exc:
             msg = "An unexpected error occurred while creating a deployment execution in Watsonx Orchestrate."
             raise DeploymentError(message=msg, error_code="deployment_error") from exc
 
         return ExecutionCreateResult(
             execution_id=str(provider_result.get("run_id") or "").strip() or None,
-            deployment_id=deployment_id,
+            deployment_id=agent_id,
             provider_result=provider_result,
         )
 
@@ -645,10 +627,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         db: Any,
     ) -> ExecutionStatusResult:
         """Get provider-agnostic deployment execution state/output."""
-        run_id = str(execution_id).strip()
-        if not run_id:
-            msg = "'execution_id' must not be empty or whitespace."
-            raise ValueError(msg)
+        run_id = _normalize_and_validate_id(str(execution_id), field_name="execution_id")
 
         clients = await self._get_provider_clients(user_id=user_id, db=db)
         provider_result: dict[str, Any] = {"run_id": run_id}
@@ -661,28 +640,32 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             provider_result["status_payload"] = status_payload
 
         normalized_status = normalize_execution_status(status_payload)
+
         output: str | dict[str, Any] | None = extract_execution_output(status_payload)
+
         if output is None and normalized_status in {"completed", "success", "succeeded"}:
             output = fetch_execution_message_output(
                 clients.agent,
                 provider_input=provider_result,
             )
+
         provider_result["status"] = normalized_status
+
         if output is not None:
             provider_result["output"] = output
 
-        resolved_deployment_id = ""
+        agent_id = ""
+
         if isinstance(status_payload, dict):
-            resolved_deployment_id = str(
-                status_payload.get("agent_id") or status_payload.get("deployment_id") or ""
-            ).strip()
-        if not resolved_deployment_id:
+            agent_id = str(status_payload.get("agent_id") or status_payload.get("deployment_id") or "").strip()
+
+        if not agent_id:
             msg = "Execution status payload did not include a deployment identifier."
             raise InvalidContentError(message=msg)
 
         return ExecutionStatusResult(
             execution_id=run_id,
-            deployment_id=resolved_deployment_id,
+            deployment_id=agent_id,
             provider_result=provider_result or None,
         )
 
