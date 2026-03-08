@@ -97,7 +97,7 @@ async def process_config(
         description=description,
         environment_variables=environment_variables,
     )
-    await create_config(
+    app_id: str = await create_config(
         config=config_payload,
         user_id=user_id,
         db=db,
@@ -105,7 +105,7 @@ async def process_config(
         client_cache=client_cache,
     )
 
-    return deployment_name
+    return app_id
 
 
 def validate_config_create_input(config: ConfigItem | None) -> None:

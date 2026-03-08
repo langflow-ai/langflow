@@ -6,9 +6,12 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import status
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+from lfx.services.adapters.deployment.exceptions import DeploymentNotFoundError, InvalidContentError
+
+from langflow.services.adapters.deployment.watsonx_orchestrate.utils import extract_error_detail
 
 if TYPE_CHECKING:
-    from ibm_watsonx_orchestrate_clients.agents.agent_client import AgentClient
+    from ibm_watsonx_orchestrate_clients.common.base_client import BaseWXOClient
 
 
 def build_orchestrate_runs_query(provider_input: dict[str, Any] | None) -> str:
@@ -58,6 +61,34 @@ def build_orchestrate_run_payload(
     return payload
 
 
+def create_agent_run(
+    base_client: BaseWXOClient,
+    *,
+    provider_data: dict[str, Any],
+    deployment_id: str,
+) -> dict[str, Any]:
+    """Create an orchestrate run through the low-level client for clarity."""
+    query_suffix = build_orchestrate_runs_query(provider_data)
+    run_payload = build_orchestrate_run_payload(
+        provider_data=provider_data,
+        deployment_id=deployment_id,
+    )
+    try:
+        response = base_client._post(f"/runs{query_suffix}", data=run_payload)  # noqa: SLF001
+    except ClientAPIException as exc:
+        if exc.response.status_code == status.HTTP_404_NOT_FOUND:
+            msg = f"Agent Deployment '{deployment_id}' was not found in Watsonx Orchestrate."
+            raise DeploymentNotFoundError(message=msg) from None
+        if exc.response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT:
+            msg = (
+                "Deployment execution request is unprocessable by Watsonx Orchestrate. "
+                f"{extract_error_detail(exc.response.text)}"
+            )
+            raise InvalidContentError(message=msg) from None
+        raise
+    return create_agent_run_result(response or {})
+
+
 def resolve_execution_message(execution_input: str | dict[str, Any] | None) -> dict[str, Any]:
     if isinstance(execution_input, str):
         if not execution_input.strip():
@@ -83,129 +114,36 @@ def resolve_execution_message(execution_input: str | dict[str, Any] | None) -> d
     raise ValueError(msg)
 
 
-def fetch_execution_status_payload(
-    agent_client: AgentClient,
-    *,
-    run_id: str,
-) -> dict[str, Any] | None:
-    try:
-        payload = agent_client._get(f"/runs/{run_id}")  # noqa: SLF001
-    except ClientAPIException as exc:
-        if exc.response.status_code == status.HTTP_404_NOT_FOUND:
-            return None
-        raise
-    return payload if isinstance(payload, dict) else None
-
-
-def normalize_execution_status(
-    status_payload: dict[str, Any] | None,
-) -> str:
-    candidates: list[str] = []
-    if status_payload:
-        for key in (
-            "status",
-            "state",
-            "run_status",
-            "deployment_status",
-            "phase",
-        ):
-            value = status_payload.get(key)
-            if value is not None:
-                candidates.append(str(value).strip().lower())
-
-    normalized = next((value for value in candidates if value), "")
-    if not normalized:
-        return "in_progress"
-
-    completed_statuses = {"completed", "complete", "success", "succeeded", "finished", "done"}
-    failed_statuses = {"failed", "error", "errored", "cancelled", "canceled", "timeout"}
-    in_progress_statuses = {"queued", "pending", "running", "in_progress", "processing", "accepted", "created"}
-
-    if normalized in completed_statuses:
-        return "completed"
-    if normalized in failed_statuses:
-        return "failed"
-    if normalized in in_progress_statuses:
-        return "in_progress"
-
-    return normalized
-
-
-def extract_execution_output(payload: dict[str, Any] | None) -> str | dict[str, Any] | None:
+def create_agent_run_result(payload: dict[str, Any] | None) -> dict[str, Any]:
     if not payload:
-        return None
-    for key in ("output", "result", "response", "answer"):
-        value = payload.get(key)
-        if isinstance(value, str):
-            if value.strip():
-                return value
-            continue
-        if isinstance(value, dict):
-            extracted = extract_text_from_payload(value)
-            if isinstance(extracted, str) and extracted.strip():
-                return extracted
-            return value
-    return extract_text_from_payload(payload)
+        return {"status": "accepted"}
+
+    result: dict[str, Any] = {"status": payload.get("status") or "accepted"}
+    run_id = str(payload.get("run_id") or payload.get("id") or "").strip()
+    if run_id:
+        result["run_id"] = run_id
+    return result
 
 
-def fetch_execution_message_output(
-    agent_client: AgentClient,
-    *,
-    provider_input: dict[str, Any],
-) -> str | dict[str, Any] | None:
-    thread_id = provider_input.get("thread_id")
-    message_id = provider_input.get("message_id")
+def get_agent_run(base_client: BaseWXOClient, *, run_id: str) -> dict[str, Any]:
+    payload = base_client._get(f"/runs/{run_id}")  # noqa: SLF001
 
-    message_paths: list[str] = []
-    if isinstance(thread_id, str) and thread_id.strip() and isinstance(message_id, str) and message_id.strip():
-        message_paths.append(f"/threads/{thread_id}/messages/{message_id}")
-    if isinstance(thread_id, str) and thread_id.strip():
-        message_paths.append(f"/threads/{thread_id}/messages")
-    if isinstance(message_id, str) and message_id.strip():
-        message_paths.append(f"/messages/{message_id}")
+    if not payload:
+        return {"status": "unknown"}
 
-    for path in message_paths:
-        try:
-            payload = agent_client._get(path)  # noqa: SLF001
-        except ClientAPIException as exc:
-            if exc.response.status_code == status.HTTP_404_NOT_FOUND:
-                continue
-            raise
+    status_value = str(payload.get("status") or "unknown")
+    result: dict[str, Any] = {"status": status_value}
 
-        if isinstance(payload, dict):
-            output = extract_text_from_payload(payload)
-            if output:
-                return output
-        if isinstance(payload, list):
-            for item in reversed(payload):
-                if isinstance(item, dict):
-                    output = extract_text_from_payload(item)
-                    if output:
-                        return output
+    passthrough_fields = [
+        "agent_id",
+        "run_id",
+        "started_at",
+        "completed_at",
+        "failed_at",
+        "cancelled_at",
+        "last_error",
+        "result",
+    ]
+    result.update({k: v for k in passthrough_fields if (v := payload.get(k)) is not None})
 
-    return None
-
-
-def extract_text_from_payload(payload: Any) -> str | dict[str, Any] | None:
-    if payload is None:
-        return None
-    if isinstance(payload, str):
-        stripped = payload.strip()
-        return stripped or None
-    if isinstance(payload, dict):
-        for key in ("text", "content", "message", "answer", "output"):
-            value = payload.get(key)
-            extracted = extract_text_from_payload(value)
-            if extracted:
-                return extracted
-        return None
-    if isinstance(payload, list):
-        extracted_chunks: list[str] = []
-        for item in payload:
-            extracted = extract_text_from_payload(item)
-            if isinstance(extracted, str) and extracted:
-                extracted_chunks.append(extracted)
-        if extracted_chunks:
-            return "\n".join(extracted_chunks)
-        return None
-    return None
+    return result

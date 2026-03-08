@@ -20,7 +20,6 @@ from lfx.services.adapters.deployment.exceptions import (
 )
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
-    BaseFlowArtifact,
     DeploymentCreate,
     DeploymentCreateResult,
     DeploymentDeleteResult,
@@ -56,12 +55,8 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.config impor
     validate_config_create_input,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import (
-    build_orchestrate_run_payload,
-    build_orchestrate_runs_query,
-    extract_execution_output,
-    fetch_execution_message_output,
-    fetch_execution_status_payload,
-    normalize_execution_status,
+    create_agent_run,
+    get_agent_run,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import (
     retry_create,
@@ -74,9 +69,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.status impor
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
     build_snapshot_tool_names,
-    create_and_upload_wxo_flow_tools,
     process_raw_flows_with_app_id,
-    resolve_snapshot_connections,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     build_agent_payload,
@@ -162,8 +155,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         #       to the name of each created resource.
         # --
         # --
-        deployment_response: AgentUpsertResponse | None = None
-        created_agent_id: str | None = None
+        agent_create_response: AgentUpsertResponse | None = None
         created_tool_ids: list[str] = []
         created_app_id: str | None = None
         clients: WxOClient | None = None
@@ -207,8 +199,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             )
 
             try:
-                created_app_id = prefixed_app_id
-                await retry_create(
+                created_app_id = await retry_create(
                     lambda: process_config(
                         user_id=user_id,
                         db=db,
@@ -219,12 +210,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     )
                 )
 
-                if payload.snapshot and payload.snapshot.raw_payloads:
+                if payload.snapshot and (flow_payloads := payload.snapshot.raw_payloads):
                     created_tool_ids = await retry_create(
                         lambda: process_raw_flows_with_app_id(
                             user_id=user_id,
                             app_id=prefixed_app_id,
-                            flows=payload.snapshot.raw_payloads,
+                            flows=flow_payloads,
                             db=db,
                             tool_name_prefix=random_prefix,
                             provider_name=self.provider_name,
@@ -232,16 +223,19 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                         )
                     )
 
-                derived_spec = deployment_spec.model_copy(deep=True)
+                derived_spec: BaseDeploymentData = deployment_spec.model_copy(deep=True)
+
                 if derived_spec.provider_spec is None:
                     derived_spec.provider_spec = {}
+
                 derived_spec.provider_spec.update(
                     {
                         "name": prefixed_deployment_name,
                         "display_name": derived_spec.name,
                     }
                 )
-                deployment_response = await retry_create(
+
+                agent_create_response = await retry_create(
                     lambda: self._create_agent_deployment(
                         data=derived_spec,
                         tool_ids=created_tool_ids,
@@ -249,11 +243,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                         db=db,
                     )
                 )
-                created_agent_id = deployment_response.id
             except Exception:
                 await rollback_created_resources(
                     clients=clients,
-                    agent_id=created_agent_id,
+                    agent_id=agent_create_response.id,
                     tool_ids=created_tool_ids,
                     app_id=created_app_id,
                 )
@@ -310,7 +303,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             )
             raise DeploymentError(message=msg, error_code="deployment_error") from e
 
-        if deployment_response is None:
+        if agent_create_response is None:
             msg = (
                 f"{ErrorPrefix.CREATE.value}. "
                 "An unexpected error occurred while "
@@ -322,7 +315,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         derived_spec.name = deployment_spec.name  # restore the original name
 
         return DeploymentCreateResult(
-            id=deployment_response.id,
+            id=agent_create_response.id,
             config_id=created_app_id,
             snapshot_ids=created_tool_ids,
             **derived_spec.model_dump(exclude_unset=True),
@@ -458,7 +451,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 "deployments in Langflow. "
                 "Please do not set the config_id field."
             )
-            raise DeploymentConflictError(message=msg)
+            raise InvalidDeploymentOperationError(message=msg)
 
         update_payload: dict[str, Any] = {}
 
@@ -475,16 +468,18 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 update_payload["description"] = spec_updates["description"]
 
         if payload.snapshot:
-            original_tool_ids = set(extract_agent_tool_ids(agent))
+            msg = "Updating snapshot bindings is not supported by watsonx Orchestrate."
+            raise InvalidDeploymentOperationError(message=msg)
+        #     original_tool_ids = set(extract_agent_tool_ids(agent))
 
-            tool_ids = original_tool_ids.difference([str(sid) for sid in payload.snapshot.remove or []])
-            tool_ids.update([str(sid) for sid in payload.snapshot.add or []])
+        #     tool_ids = original_tool_ids.difference([str(sid) for sid in payload.snapshot.remove or []])
+        #     tool_ids.update([str(sid) for sid in payload.snapshot.add or []])
 
-            if tool_ids != original_tool_ids:
-                update_payload["tools"] = list(tool_ids)
+        #     if tool_ids != original_tool_ids:
+        #         update_payload["tools"] = list(tool_ids)
 
-        if update_payload:
-            clients.agent.update(deployment_id, update_payload)
+        # if update_payload:
+        #     clients.agent.update(deployment_id, update_payload)
 
         return DeploymentUpdateResult(id=deployment_id)
 
@@ -534,7 +529,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         except ClientAPIException as e:
             status_code = e.response.status_code
             if status_code == status.HTTP_404_NOT_FOUND:
-                msg = f"{ErrorPrefix.DELETE.value}deployment id '{agent_id}' not found."
+                msg = f"{ErrorPrefix.DELETE.value} deployment id '{agent_id}' not found."
                 raise DeploymentNotFoundError(msg) from None
         except Exception:  # noqa: BLE001
             msg = f"An unexpected error occurred while deleting deployment '{agent_id}'."
@@ -585,38 +580,22 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         provider_data: dict = payload.provider_data or {}
 
-        # query parameters and payload for the /runs endpoint
-        query_suffix = build_orchestrate_runs_query(provider_data)
-        run_payload = build_orchestrate_run_payload(
-            provider_data=provider_data,
-            deployment_id=agent_id,
-        )
-
         try:
-            provider_result = clients.agent._post(  # noqa: SLF001
-                f"/runs{query_suffix}",
-                data=run_payload,
+            agent_run_result = create_agent_run(
+                clients.base,
+                provider_data=provider_data,
+                deployment_id=agent_id,
             )
-        except ClientAPIException as exc:
-            status_code = exc.response.status_code
-            if status_code == status.HTTP_404_NOT_FOUND:
-                msg = f"Agent Deployment '{agent_id}' was not found in Watsonx Orchestrate."
-                raise DeploymentNotFoundError(message=msg) from None
-            if status_code == status.HTTP_422_UNPROCESSABLE_CONTENT:
-                msg = (
-                    "Deployment execution request is unprocessable by Watsonx Orchestrate. "
-                    f"{extract_error_detail(exc.response.text)}"
-                )
-                raise InvalidContentError(message=msg) from None
+        except (DeploymentNotFoundError, InvalidContentError):
             raise
         except Exception as exc:
             msg = "An unexpected error occurred while creating a deployment execution in Watsonx Orchestrate."
             raise DeploymentError(message=msg, error_code="deployment_error") from exc
 
         return ExecutionCreateResult(
-            execution_id=str(provider_result.get("run_id") or "").strip() or None,
+            execution_id=agent_run_result.get("run_id"),
             deployment_id=agent_id,
-            provider_result=provider_result,
+            provider_result=agent_run_result,
         )
 
     async def get_execution(
@@ -630,84 +609,16 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         run_id = _normalize_and_validate_id(str(execution_id), field_name="execution_id")
 
         clients = await self._get_provider_clients(user_id=user_id, db=db)
-        provider_result: dict[str, Any] = {"run_id": run_id}
 
-        status_payload = fetch_execution_status_payload(
-            clients.agent,
+        agent_run_result = get_agent_run(
+            clients.base,
             run_id=run_id,
         )
-        if status_payload is not None:
-            provider_result["status_payload"] = status_payload
-
-        normalized_status = normalize_execution_status(status_payload)
-
-        output: str | dict[str, Any] | None = extract_execution_output(status_payload)
-
-        if output is None and normalized_status in {"completed", "success", "succeeded"}:
-            output = fetch_execution_message_output(
-                clients.agent,
-                provider_input=provider_result,
-            )
-
-        provider_result["status"] = normalized_status
-
-        if output is not None:
-            provider_result["output"] = output
-
-        agent_id = ""
-
-        if isinstance(status_payload, dict):
-            agent_id = str(status_payload.get("agent_id") or status_payload.get("deployment_id") or "").strip()
-
-        if not agent_id:
-            msg = "Execution status payload did not include a deployment identifier."
-            raise InvalidContentError(message=msg)
 
         return ExecutionStatusResult(
             execution_id=run_id,
-            deployment_id=agent_id,
-            provider_result=provider_result or None,
-        )
-
-    async def materialize_snapshots(
-        self,
-        *,
-        user_id: IdLike,
-        raw_payloads: list[BaseFlowArtifact],
-        config_id: str | None,
-        db: Any,
-    ) -> list[str]:
-        """Create provider snapshots from flow payloads for internal API orchestration."""
-        clients = await self._get_provider_clients(user_id=user_id, db=db)
-        random_length = secrets.choice(RANDOM_PREFIX_LENGTH_RANGE)
-        tool_name_prefix = f"lf_{uuid4().hex[:random_length]}_"
-        connections = resolve_snapshot_connections(
-            connections_client=clients.connections,
-            config_id=config_id,
-        )
-        return await create_and_upload_wxo_flow_tools(
-            tool_client=clients.tool,
-            flow_payloads=raw_payloads,
-            connections=connections,
-            app_id=config_id,
-            tool_name_prefix=tool_name_prefix,
-        )
-
-    async def _process_config(
-        self,
-        user_id: Any,
-        db: Any,
-        deployment_name: str,
-        config: Any,
-    ) -> str:
-        """Create and bind deployment config using deployment name as app_id."""
-        return await process_config(
-            user_id=user_id,
-            db=db,
-            deployment_name=deployment_name,
-            config=config,
-            provider_name=self.provider_name,
-            client_cache=self._client_managers,
+            deployment_id=agent_run_result.get("agent_id"),
+            provider_result=agent_run_result,
         )
 
     async def _create_agent_deployment(

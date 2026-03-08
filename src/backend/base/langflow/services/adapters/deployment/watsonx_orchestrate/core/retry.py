@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Awaitable, Callable
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, TypeVar
 
 from fastapi import HTTPException, status
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
@@ -24,13 +25,17 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
 if TYPE_CHECKING:
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 
+T = TypeVar("T")
+Operation = Callable[[], Awaitable[T]]
+ShouldRetry = Callable[[Exception], bool]
+
 
 async def retry_with_backoff(
-    operation: Any,
+    operation: Operation[T],
     *,
     max_attempts: int,
-    should_retry: Any = None,
-) -> Any:
+    should_retry: ShouldRetry | None = None,
+) -> T:
     delay_seconds = RETRY_INITIAL_DELAY_SECONDS
     for attempt in range(1, max_attempts + 1):
         try:
@@ -45,7 +50,7 @@ async def retry_with_backoff(
     raise RuntimeError(msg)
 
 
-async def retry_create(operation: Any) -> Any:
+async def retry_create(operation: Operation[T]) -> T:
     return await retry_with_backoff(
         operation,
         max_attempts=CREATE_MAX_RETRIES,
@@ -53,7 +58,7 @@ async def retry_create(operation: Any) -> Any:
     )
 
 
-async def retry_rollback(operation: Any) -> Any:
+async def retry_rollback(operation: Operation[T]) -> T:
     return await retry_with_backoff(
         operation,
         max_attempts=ROLLBACK_MAX_RETRIES,

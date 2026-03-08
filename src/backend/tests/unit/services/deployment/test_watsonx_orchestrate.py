@@ -144,6 +144,32 @@ class FakeConnectionsClient:
         self.delete_calls.append(app_id)
 
 
+class FakeBaseClient:
+    def __init__(
+        self,
+        *,
+        post_response: dict | None = None,
+        get_payloads: dict[str, dict] | None = None,
+    ):
+        self.post_response = post_response or {
+            "thread_id": "thread-1",
+            "run_id": "run-1",
+            "task_id": "task-1",
+            "message_id": "message-1",
+        }
+        self._get_payloads = get_payloads or {}
+        self.post_calls: list[tuple[str, dict]] = []
+        self.get_calls: list[str] = []
+
+    def _post(self, path: str, data: dict):
+        self.post_calls.append((path, data))
+        return self.post_response
+
+    def _get(self, path: str):
+        self.get_calls.append(path)
+        return self._get_payloads.get(path, {})
+
+
 @pytest.mark.anyio
 async def test_process_config_uses_raw_payload_but_overrides_name(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
@@ -767,7 +793,9 @@ async def test_create_rolls_back_and_preserves_original_error_when_cleanup_fails
 async def test_create_execution_posts_runs_payload(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_agent = FakeAgentClient({"id": "dep-1", "tools": []})
+    fake_base = FakeBaseClient()
     fake_clients = SimpleNamespace(
+        base=fake_base,
         agent=fake_agent,
         tool=FakeToolClient([]),
         connections=FakeConnectionsClient(),
@@ -789,8 +817,9 @@ async def test_create_execution_posts_runs_payload(monkeypatch):
 
     assert result.deployment_id == "dep-1"
     assert result.execution_id == "run-1"
-    assert fake_agent.post_calls
-    path, payload = fake_agent.post_calls[0]
+    assert result.provider_result == {"status": "accepted", "run_id": "run-1"}
+    assert fake_base.post_calls
+    path, payload = fake_base.post_calls[0]
     assert path == "/runs?stream=false"
     assert payload["agent_id"] == "dep-1"
     assert payload["thread_id"] == "thread-123"
@@ -800,13 +829,21 @@ async def test_create_execution_posts_runs_payload(monkeypatch):
 @pytest.mark.anyio
 async def test_get_execution_returns_completed_output(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_agent = FakeAgentClient(
-        {"id": "dep-1", "tools": []},
+    fake_agent = FakeAgentClient({"id": "dep-1", "tools": []})
+    fake_base = FakeBaseClient(
         get_payloads={
-            "/runs/run-1": {"status": "completed", "agent_id": "dep-1", "output": "Final assistant response"},
-        },
+            "/runs/run-1": {
+                "id": "run-1",
+                "status": "completed",
+                "agent_id": "dep-1",
+                "thread_id": "thread-1",
+                "completed_at": "2026-03-08T18:23:25.277362Z",
+                "output": "Final assistant response",
+            }
+        }
     )
     fake_clients = SimpleNamespace(
+        base=fake_base,
         agent=fake_agent,
         tool=FakeToolClient([]),
         connections=FakeConnectionsClient(),
@@ -824,20 +861,39 @@ async def test_get_execution_returns_completed_output(monkeypatch):
     )
 
     assert result.execution_id == "run-1"
-    assert result.provider_result["status"] == "completed"
-    assert result.provider_result["output"] == "Final assistant response"
+    assert result.provider_result == {
+        "status": "completed",
+        "run_id": "run-1",
+        "thread_id": "thread-1",
+        "completed_at": "2026-03-08T18:23:25.277362Z",
+        "output": "Final assistant response",
+    }
 
 
 @pytest.mark.anyio
 async def test_get_execution_fetches_message_when_no_run_output(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_agent = FakeAgentClient(
-        {"id": "dep-1", "tools": []},
+    fake_agent = FakeAgentClient({"id": "dep-1", "tools": []})
+    fake_base = FakeBaseClient(
         get_payloads={
-            "/runs/run-1": {"status": "completed", "agent_id": "dep-1"},
-        },
+            "/runs/run-1": {
+                "id": "run-1",
+                "status": "completed",
+                "agent_id": "dep-1",
+                "result": {
+                    "data": {
+                        "message": {
+                            "content": [
+                                {"text": "Message payload output"},
+                            ]
+                        }
+                    }
+                },
+            }
+        }
     )
     fake_clients = SimpleNamespace(
+        base=fake_base,
         agent=fake_agent,
         tool=FakeToolClient([]),
         connections=FakeConnectionsClient(),
@@ -847,10 +903,6 @@ async def test_get_execution_fetches_message_when_no_run_output(monkeypatch):
         return fake_clients
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-    monkeypatch.setattr(
-        "langflow.services.adapters.deployment.watsonx_orchestrate.service.fetch_execution_message_output",
-        lambda *_args, **_kwargs: "Message payload output",
-    )
 
     result = await service.get_execution(
         user_id="user-1",
@@ -858,15 +910,20 @@ async def test_get_execution_fetches_message_when_no_run_output(monkeypatch):
         execution_id="run-1",
     )
 
-    assert result.provider_result["status"] == "completed"
-    assert result.provider_result["output"] == "Message payload output"
+    assert result.provider_result == {
+        "status": "completed",
+        "run_id": "run-1",
+        "output": "Message payload output",
+    }
 
 
 @pytest.mark.anyio
 async def test_get_execution_requires_execution_id(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_agent = FakeAgentClient({"id": "dep-1", "tools": []})
+    fake_base = FakeBaseClient()
     fake_clients = SimpleNamespace(
+        base=fake_base,
         agent=fake_agent,
         tool=FakeToolClient([]),
         connections=FakeConnectionsClient(),
