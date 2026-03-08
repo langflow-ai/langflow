@@ -72,6 +72,7 @@ async def create_provider_account(
     payload: DeploymentProviderAccountCreate,
     current_user: CurrentActiveUser,
 ):
+    """Register a new deployment provider account."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
@@ -82,6 +83,7 @@ async def list_provider_accounts(
     page: Annotated[int, Query(ge=1)] = 1,
     size: Annotated[int, Query(ge=1, le=50)] = 20,
 ):
+    """List all deployment provider accounts for the current user."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
@@ -95,6 +97,7 @@ async def get_provider_account(
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
 ):
+    """Get a deployment provider account by id."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
@@ -108,6 +111,7 @@ async def delete_provider_account(
     session: DbSession,
     current_user: CurrentActiveUser,
 ):
+    """Delete a deployment provider account."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
@@ -122,6 +126,7 @@ async def update_provider_account(
     payload: DeploymentProviderAccountUpdate,
     current_user: CurrentActiveUser,
 ):
+    """Partially update a deployment provider account."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
@@ -162,8 +167,10 @@ async def list_deployments(
         list[str] | None,
         Query(
             description=(
-                "Optional Langflow flow version ids. When provided, deployments are filtered to those "
-                "with at least one matching attachment (OR semantics across ids)."
+                "Optional Langflow flow version ids (pass as repeated query params, "
+                "e.g. ?flow_version_ids=id1&flow_version_ids=id2). When provided, "
+                "deployments are filtered to those with at least one matching "
+                "attachment (OR semantics across ids)."
             )
         ),
     ] = None,

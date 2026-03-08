@@ -27,8 +27,11 @@ Langflow-managed identifiers:
 * ``DeploymentConfig`` -- deployment configuration payload
 * ``DeploymentType`` -- shared vocabulary enum
 
-These schemas may also carry a ``provider_spec`` dict, which is an opaque
-provider-owned payload similar to ``provider_data``.
+``BaseDeploymentData`` also carries an optional ``provider_spec`` dict
+(inherited from ``ProviderSpecModel``), an opaque provider-owned input
+payload similar to ``provider_data``.  ``DeploymentConfig`` carries an
+analogous ``provider_config`` dict.  The remaining two schemas have no
+opaque provider fields.
 """
 
 from __future__ import annotations
@@ -43,7 +46,7 @@ from lfx.services.deployment.schema import (
     DeploymentConfig,
     DeploymentType,
 )
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, SecretStr, ValidationInfo, field_validator, model_validator
 
 # ---------------------------------------------------------------------------
 # Shared validation helpers
@@ -68,20 +71,20 @@ def _validate_str_id_list(values: list[str], *, field_name: str) -> list[str]:
     return cleaned
 
 
-def _normalize_str(value: str) -> str:
+def _normalize_str(value: str, *, field_name: str = "Field") -> str:
     """Strip whitespace from a string, rejecting empty or whitespace-only values."""
     normalized = value.strip()
     if not normalized:
-        msg = "Field must not be empty or whitespace."
+        msg = f"'{field_name}' must not be empty or whitespace."
         raise ValueError(msg)
     return normalized
 
 
-def _normalize_optional_str(value: str | None) -> str | None:
+def _normalize_optional_str(value: str | None, *, field_name: str = "Field") -> str | None:
     """Strip whitespace from an optional string, rejecting whitespace-only values."""
     if value is None:
         return None
-    return _normalize_str(value)
+    return _normalize_str(value, field_name=field_name)
 
 
 def validate_flow_version_id_query(values: list[str]) -> list[str]:
@@ -107,22 +110,27 @@ class DeploymentProviderAccountCreate(BaseModel):
         min_length=1,
         description="Provider service URL persisted in Langflow DB for provider-account resolution.",
     )
-    api_key: str = Field(
+    api_key: SecretStr = Field(
         min_length=1,
         description=(
             "Provider credential material. Stored by Langflow as secret data and never returned in read responses."
         ),
     )
 
-    @field_validator("provider_key", "provider_url", "api_key")
+    @field_validator("provider_key", "provider_url")
     @classmethod
-    def normalize_required_strings(cls, value: str) -> str:
-        return _normalize_str(value)
+    def normalize_required_strings(cls, value: str, info: ValidationInfo) -> str:
+        return _normalize_str(value, field_name=info.field_name)
+
+    @field_validator("api_key", mode="before")
+    @classmethod
+    def normalize_api_key(cls, value: str, info: ValidationInfo) -> str:
+        return _normalize_str(value, field_name=info.field_name)
 
     @field_validator("provider_tenant_id")
     @classmethod
-    def normalize_provider_tenant_id(cls, value: str | None) -> str | None:
-        return _normalize_optional_str(value)
+    def normalize_provider_tenant_id(cls, value: str | None, info: ValidationInfo) -> str | None:
+        return _normalize_optional_str(value, field_name=info.field_name)
 
 
 class DeploymentProviderAccountUpdate(BaseModel):
@@ -144,14 +152,20 @@ class DeploymentProviderAccountUpdate(BaseModel):
 
     @field_validator("provider_tenant_id", "provider_key", "provider_url", "api_key")
     @classmethod
-    def normalize_optional_strings(cls, value: str | None) -> str | None:
-        return _normalize_optional_str(value)
+    def normalize_optional_strings(cls, value: str | None, info: ValidationInfo) -> str | None:
+        return _normalize_optional_str(value, field_name=info.field_name)
 
     @model_validator(mode="after")
     def ensure_any_field_provided(self) -> DeploymentProviderAccountUpdate:
         if not self.model_fields_set:
             msg = "At least one field must be provided for update."
             raise ValueError(msg)
+        # provider_key, provider_url, and api_key are required-on-create;
+        # reject explicit null to prevent clearing these fields.
+        for field_name in ("provider_key", "provider_url", "api_key"):
+            if field_name in self.model_fields_set and getattr(self, field_name) is None:
+                msg = f"'{field_name}' cannot be set to null."
+                raise ValueError(msg)
         return self
 
 
@@ -194,14 +208,23 @@ class _DeploymentResponseBase(BaseModel):
 
 
 class DeploymentGetResponse(_DeploymentResponseBase):
-    """Full deployment detail."""
+    """Full deployment detail.
+
+    Intentionally separate from ``DeploymentListItem`` even though both
+    currently share the same fields.  The detail response is expected to
+    grow (e.g. full config, attached flow versions, audit log) while the
+    list item stays lean.
+    """
 
     resource_key: str = Field(description="Provider-owned stable resource identifier.")
     attached_count: int = Field(default=0, ge=0, description="Number of flow versions attached to this deployment.")
 
 
 class DeploymentListItem(_DeploymentResponseBase):
-    """Deployment representation used in list responses."""
+    """Deployment representation used in list responses.
+
+    See ``DeploymentGetResponse`` docstring for rationale on the separate class.
+    """
 
     resource_key: str = Field(description="Provider-owned stable resource identifier.")
     attached_count: int = Field(default=0, ge=0, description="Number of flow versions attached to this deployment.")
@@ -324,15 +347,15 @@ class DeploymentConfigCreate(BaseModel):
         min_length=1,
         description="Provider-owned config reference id to bind to the deployment.",
     )
-    raw_payload: DeploymentConfig | None = Field(
+    raw_payload: _StrictDeploymentConfig | None = Field(
         default=None,
         description="Config payload to create and bind to the deployment.",
     )
 
     @field_validator("reference_id")
     @classmethod
-    def normalize_reference_id(cls, value: str | None) -> str | None:
-        return _normalize_optional_str(value)
+    def normalize_reference_id(cls, value: str | None, info: ValidationInfo) -> str | None:
+        return _normalize_optional_str(value, field_name=info.field_name)
 
     @model_validator(mode="after")
     def validate_exactly_one(self) -> DeploymentConfigCreate:
@@ -354,8 +377,29 @@ class DeploymentConfigBindingUpdate(BaseModel):
 
     @field_validator("config_id")
     @classmethod
-    def normalize_config_id(cls, value: str | None) -> str | None:
-        return _normalize_optional_str(value)
+    def normalize_config_id(cls, value: str | None, info: ValidationInfo) -> str | None:
+        return _normalize_optional_str(value, field_name=info.field_name)
+
+
+# ---------------------------------------------------------------------------
+# Strict API-layer wrappers for service-layer schemas
+# ---------------------------------------------------------------------------
+# The service-layer schemas do not set ``extra = "forbid"`` because they are
+# shared with internal consumers.  These thin subclasses add strict validation
+# so that API callers receive a 422 for misspelled/unexpected fields instead
+# of having their data silently dropped.
+
+
+class _StrictBaseDeploymentData(BaseDeploymentData):
+    model_config = {"extra": "forbid"}
+
+
+class _StrictBaseDeploymentDataUpdate(BaseDeploymentDataUpdate):
+    model_config = {"extra": "forbid"}
+
+
+class _StrictDeploymentConfig(DeploymentConfig):
+    model_config = {"extra": "forbid"}
 
 
 # ---------------------------------------------------------------------------
@@ -367,7 +411,7 @@ class DeploymentCreateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
     provider_id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
-    spec: BaseDeploymentData = Field(description="Deployment metadata (service-layer schema, no ID fields).")
+    spec: _StrictBaseDeploymentData = Field(description="Deployment metadata (service-layer schema, no ID fields).")
     project_id: UUID | None = Field(
         default=None,
         description="Langflow DB project id to persist the deployment under. Defaults to user's Starter Project.",
@@ -382,7 +426,7 @@ class DeploymentCreateRequest(BaseModel):
 class DeploymentUpdateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
-    spec: BaseDeploymentDataUpdate | None = Field(
+    spec: _StrictBaseDeploymentDataUpdate | None = Field(
         default=None, description="Deployment metadata updates (service-layer schema, no ID fields)."
     )
     flow_version_ids: FlowVersionsPatch | None = Field(
