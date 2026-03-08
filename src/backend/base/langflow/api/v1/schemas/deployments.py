@@ -1,34 +1,34 @@
-"""Deployment API schemas.
+"""Deployment API request and response schemas.
 
 Identifier domains
 ------------------
-This module draws a strict boundary between two identifier domains:
+Two identifier domains coexist in these schemas:
 
-* **Langflow-managed (UUID)** -- database primary keys owned by the Langflow
-  backend. All ``id``, ``provider_id``, ``project_id``, and ``deployment_id``
-  fields on API request/response schemas are UUIDs that reference rows in the
-  Langflow database. ``provider_id`` specifically maps to
-  ``deployment_provider_account.id`` in persistence models.
+* **Langflow-managed (UUID)** -- ``id``, ``provider_id``, ``project_id``,
+  ``deployment_id``. These reference rows in the Langflow database.
+  ``provider_id`` maps to ``deployment_provider_account.id``.
 
-* **Provider-owned (str)** -- opaque references assigned by the external
-  deployment provider. These appear as ``reference_id``, ``config_id``,
-  ``resource_key``, ``execution_id``, ``provider_tenant_id``, and inside
-  ``provider_*`` payload dicts. They are typed as ``str`` because the provider
-  may use any format.
+* **Provider-owned (str)** -- ``reference_id``, ``config_id``,
+  ``resource_key``, ``execution_id``, ``provider_tenant_id``,
+  ``provider_key``, ``provider_url``, and ``api_key``. Opaque values
+  assigned or consumed by the external deployment provider.
 
-The ``provider_data`` / ``provider_spec`` dicts are opaque pass-through
-containers whose contents are entirely defined by the provider adapter.
-Langflow forwards these payloads but does not define their schema.
+``provider_data`` dicts are opaque pass-through containers whose contents
+are defined by the provider adapter. Langflow forwards them without
+interpreting their schema.
 
 Service-layer schema reuse
 --------------------------
-A small number of service-layer schemas are imported directly because they
-carry no identifier fields and their shapes are stable:
+Four service-layer schemas are imported directly because they carry no
+Langflow-managed identifiers:
 
-* ``BaseDeploymentData`` -- name, description, type, provider_spec
-* ``BaseDeploymentDataUpdate`` -- name, description
-* ``DeploymentConfig`` -- config payload (name, description, env vars, provider config)
+* ``BaseDeploymentData`` -- deployment metadata for creation
+* ``BaseDeploymentDataUpdate`` -- deployment metadata for partial updates
+* ``DeploymentConfig`` -- deployment configuration payload
 * ``DeploymentType`` -- shared vocabulary enum
+
+These schemas may also carry a ``provider_spec`` dict, which is an opaque
+provider-owned payload similar to ``provider_data``.
 """
 
 from __future__ import annotations
@@ -51,7 +51,10 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 def _validate_str_id_list(values: list[str], *, field_name: str) -> list[str]:
-    """Strip, reject empty, and deduplicate a list of string identifiers."""
+    """Strip, reject empty values, reject empty lists, and deduplicate a list of string identifiers."""
+    if not values:
+        msg = f"{field_name} must not be empty."
+        raise ValueError(msg)
     cleaned: list[str] = []
     seen: set[str] = set()
     for raw in values:
@@ -91,7 +94,7 @@ def validate_flow_version_id_query(values: list[str]) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-class ProviderAccountCreate(BaseModel):
+class DeploymentProviderAccountCreate(BaseModel):
     model_config = {"extra": "forbid"}
 
     provider_tenant_id: str | None = Field(
@@ -122,7 +125,7 @@ class ProviderAccountCreate(BaseModel):
         return _normalize_optional_str(value)
 
 
-class ProviderAccountUpdate(BaseModel):
+class DeploymentProviderAccountUpdate(BaseModel):
     model_config = {"extra": "forbid"}
 
     provider_tenant_id: str | None = Field(
@@ -145,14 +148,14 @@ class ProviderAccountUpdate(BaseModel):
         return _normalize_optional_str(value)
 
     @model_validator(mode="after")
-    def ensure_any_field_provided(self) -> ProviderAccountUpdate:
+    def ensure_any_field_provided(self) -> DeploymentProviderAccountUpdate:
         if not self.model_fields_set:
             msg = "At least one field must be provided for update."
             raise ValueError(msg)
         return self
 
 
-class ProviderAccountResponse(BaseModel):
+class DeploymentProviderAccountResponse(BaseModel):
     id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
     provider_tenant_id: str | None = Field(
         default=None,
@@ -193,6 +196,9 @@ class _DeploymentResponseBase(BaseModel):
 class DeploymentGetResponse(_DeploymentResponseBase):
     """Full deployment detail."""
 
+    resource_key: str = Field(description="Provider-owned stable resource identifier.")
+    attached_count: int = Field(default=0, ge=0, description="Number of flow versions attached to this deployment.")
+
 
 class DeploymentListItem(_DeploymentResponseBase):
     """Deployment representation used in list responses."""
@@ -214,8 +220,8 @@ class DeploymentListResponse(_PaginatedResponse):
     deployment_type: DeploymentType | None = None
 
 
-class ProviderAccountListResponse(_PaginatedResponse):
-    providers: list[ProviderAccountResponse]
+class DeploymentProviderAccountListResponse(_PaginatedResponse):
+    providers: list[DeploymentProviderAccountResponse]
 
 
 class DeploymentCreateResponse(_DeploymentResponseBase):
@@ -249,8 +255,8 @@ class FlowVersionsAttach(BaseModel):
     model_config = {"extra": "forbid"}
 
     # Typed as str (not UUID) because the service layer uses a flexible IdLike
-    # type (UUID | NormalizedId) and the query-parameter variant must also accept
-    # plain strings for ergonomic multi-value query params.
+    # type (UUID | NormalizedId). The same str typing is used for the
+    # query-parameter variant in list_deployments for consistency.
     ids: list[str] = Field(
         min_length=1,
         description="Langflow flow version ids to attach to the deployment.",
@@ -387,7 +393,7 @@ class DeploymentUpdateRequest(BaseModel):
 
     @model_validator(mode="after")
     def ensure_any_field_provided(self) -> DeploymentUpdateRequest:
-        if self.spec is None and self.flow_version_ids is None and self.config is None:
+        if not self.model_fields_set:
             msg = "At least one of 'spec', 'flow_version_ids', or 'config' must be provided."
             raise ValueError(msg)
         return self
@@ -401,7 +407,12 @@ class DeploymentUpdateRequest(BaseModel):
 class ExecutionCreateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
-    provider_id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
+    provider_id: UUID = Field(
+        description=(
+            "Langflow DB provider-account UUID (`deployment_provider_account.id`). "
+            "Included alongside deployment_id to allow provider routing without an extra DB lookup."
+        ),
+    )
     deployment_id: UUID = Field(description="Langflow DB deployment UUID.")
     provider_data: dict[str, Any] | None = Field(
         default=None,
@@ -412,7 +423,13 @@ class ExecutionCreateRequest(BaseModel):
 class _ExecutionResponseBase(BaseModel):
     """Shared fields for execution responses."""
 
-    execution_id: str | None = Field(default=None, description="Provider-owned opaque execution identifier.")
+    execution_id: str | None = Field(
+        default=None,
+        description=(
+            "Provider-owned opaque execution identifier. "
+            "May be None when the provider acknowledges the request but has not yet assigned an id."
+        ),
+    )
     deployment_id: UUID = Field(description="Langflow DB deployment UUID.")
     provider_data: dict[str, Any] | None = Field(
         default=None,

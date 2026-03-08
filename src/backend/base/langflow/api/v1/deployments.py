@@ -24,10 +24,10 @@ from langflow.api.v1.schemas.deployments import (
     ExecutionCreateRequest,
     ExecutionCreateResponse,
     ExecutionStatusResponse,
-    ProviderAccountCreate,
-    ProviderAccountListResponse,
-    ProviderAccountResponse,
-    ProviderAccountUpdate,
+    DeploymentProviderAccountCreate,
+    DeploymentProviderAccountListResponse,
+    DeploymentProviderAccountResponse,
+    DeploymentProviderAccountUpdate,
     RedeployResponse,
     validate_flow_version_id_query,
 )
@@ -35,11 +35,11 @@ from langflow.api.v1.schemas.deployments import (
 router = APIRouter(prefix="/deployments", tags=["Deployments"])
 
 
-ProviderIdQuery = Annotated[
+DeploymentProviderAccountIdQuery = Annotated[
     UUID,
     Query(description="Langflow DB provider-account UUID (`deployment_provider_account.id`)."),
 ]
-ProviderIdPath = Annotated[
+DeploymentProviderAccountIdPath = Annotated[
     UUID,
     Path(description="Langflow DB provider-account UUID (`deployment_provider_account.id`)."),
 ]
@@ -51,7 +51,8 @@ DeploymentIdPath = Annotated[
 
 # API provider-context contract matrix:
 # - Query/path ``provider_id`` is a Langflow DB UUID referencing deployment_provider_account.
-# - Body ``provider_id`` is used on create operations that cannot derive provider context.
+# - Body ``provider_id`` is included on ``DeploymentCreateRequest`` and ``ExecutionCreateRequest``
+#   to allow provider routing without an extra DB lookup when the caller already has the context.
 # - Deployment-scoped routes derive provider context from persisted Langflow relationships.
 
 
@@ -62,19 +63,19 @@ DeploymentIdPath = Annotated[
 
 @router.post(
     "/providers",
-    response_model=ProviderAccountResponse,
+    response_model=DeploymentProviderAccountResponse,
     status_code=status.HTTP_201_CREATED,
     tags=["Deployment Providers"],
 )
 async def create_provider_account(
     session: DbSession,
-    payload: ProviderAccountCreate,
+    payload: DeploymentProviderAccountCreate,
     current_user: CurrentActiveUser,
 ):
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
-@router.get("/providers", response_model=ProviderAccountListResponse, tags=["Deployment Providers"])
+@router.get("/providers", response_model=DeploymentProviderAccountListResponse, tags=["Deployment Providers"])
 async def list_provider_accounts(
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
@@ -86,11 +87,11 @@ async def list_provider_accounts(
 
 @router.get(
     "/providers/{provider_id}",
-    response_model=ProviderAccountResponse,
+    response_model=DeploymentProviderAccountResponse,
     tags=["Deployment Providers"],
 )
 async def get_provider_account(
-    provider_id: ProviderIdPath,
+    provider_id: DeploymentProviderAccountIdPath,
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
 ):
@@ -103,7 +104,7 @@ async def get_provider_account(
     tags=["Deployment Providers"],
 )
 async def delete_provider_account(
-    provider_id: ProviderIdPath,
+    provider_id: DeploymentProviderAccountIdPath,
     session: DbSession,
     current_user: CurrentActiveUser,
 ):
@@ -112,13 +113,13 @@ async def delete_provider_account(
 
 @router.patch(
     "/providers/{provider_id}",
-    response_model=ProviderAccountResponse,
+    response_model=DeploymentProviderAccountResponse,
     tags=["Deployment Providers"],
 )
 async def update_provider_account(
-    provider_id: ProviderIdPath,
+    provider_id: DeploymentProviderAccountIdPath,
     session: DbSession,
-    payload: ProviderAccountUpdate,
+    payload: DeploymentProviderAccountUpdate,
     current_user: CurrentActiveUser,
 ):
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
@@ -135,13 +136,13 @@ async def create_deployment(
     payload: DeploymentCreateRequest,
     current_user: CurrentActiveUser,
 ):
-    """Create a deployment for the selected Langflow provider-account UUID."""
+    """Create a deployment under the provider account specified in the request body."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
 @router.get("/types", response_model=DeploymentTypeListResponse)
 async def list_deployment_types(
-    provider_id: ProviderIdQuery,
+    provider_id: DeploymentProviderAccountIdQuery,
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
 ):
@@ -151,7 +152,7 @@ async def list_deployment_types(
 
 @router.get("", response_model=DeploymentListResponse)
 async def list_deployments(
-    provider_id: ProviderIdQuery,
+    provider_id: DeploymentProviderAccountIdQuery,
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
     page: Annotated[int, Query(ge=1)] = 1,
@@ -169,7 +170,10 @@ async def list_deployments(
 ):
     """List deployments for the selected Langflow provider-account UUID."""
     if flow_version_ids is not None:
-        flow_version_ids = validate_flow_version_id_query(flow_version_ids)
+        try:
+            flow_version_ids = validate_flow_version_id_query(flow_version_ids)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
@@ -191,7 +195,7 @@ async def create_deployment_execution(
 @router.get("/executions/{execution_id}", response_model=ExecutionStatusResponse)
 async def get_deployment_execution(
     execution_id: Annotated[str, Path(description="Provider-owned opaque execution identifier.")],
-    provider_id: ProviderIdQuery,
+    provider_id: DeploymentProviderAccountIdQuery,
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
 ):
