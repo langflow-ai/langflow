@@ -4,17 +4,17 @@ import remarkGfm from "remark-gfm";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import SimplifiedCodeTabComponent from "@/components/core/codeTabsComponent";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   Disclosure,
   DisclosureContent,
   DisclosureTrigger,
 } from "@/components/ui/disclosure";
 import {
+  type DeploymentExecutionResponse,
   useGetDeploymentExecutionById,
   usePostCreateDeploymentExecution,
-  type DeploymentExecutionResponse,
 } from "@/controllers/API/queries/deployments/use-deployments";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { WatsonxOrchestrateIcon } from "@/icons/IBM";
 import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 
@@ -108,14 +108,42 @@ export const TestAgentModal = ({
   const getWatsonxOutputObject = (
     response: DeploymentExecutionResponse,
   ): Record<string, unknown> | null => {
-    if (!response.output) {
+    const outputCandidate = (() => {
+      if (response.output !== undefined && response.output !== null) {
+        return response.output;
+      }
+      if (
+        response.provider_result &&
+        typeof response.provider_result === "object"
+      ) {
+        const providerResult = response.provider_result as Record<
+          string,
+          unknown
+        >;
+        if (
+          providerResult.output !== undefined &&
+          providerResult.output !== null
+        ) {
+          return providerResult.output;
+        }
+        if (
+          providerResult.result !== undefined &&
+          providerResult.result !== null
+        ) {
+          return providerResult.result;
+        }
+      }
+      return null;
+    })();
+
+    if (!outputCandidate) {
       return null;
     }
-    if (typeof response.output === "object") {
-      return response.output as Record<string, unknown>;
+    if (typeof outputCandidate === "object") {
+      return outputCandidate as Record<string, unknown>;
     }
-    if (typeof response.output === "string") {
-      const trimmed = response.output.trim();
+    if (typeof outputCandidate === "string") {
+      const trimmed = outputCandidate.trim();
       if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) {
         return null;
       }
@@ -165,11 +193,27 @@ export const TestAgentModal = ({
       }
     }
 
-    if (typeof response.output === "string" && response.output.trim()) {
-      return response.output;
+    const executionOutput = (() => {
+      if (response.output !== undefined && response.output !== null) {
+        return response.output;
+      }
+      if (
+        response.provider_result &&
+        typeof response.provider_result === "object"
+      ) {
+        const providerResult = response.provider_result as Record<
+          string,
+          unknown
+        >;
+        return providerResult.output ?? providerResult.result ?? null;
+      }
+      return null;
+    })();
+    if (typeof executionOutput === "string" && executionOutput.trim()) {
+      return executionOutput;
     }
-    if (response.output && typeof response.output === "object") {
-      return JSON.stringify(response.output, null, 2);
+    if (executionOutput && typeof executionOutput === "object") {
+      return JSON.stringify(executionOutput, null, 2);
     }
 
     if (!isWatsonxExecutionResponse(response)) {
