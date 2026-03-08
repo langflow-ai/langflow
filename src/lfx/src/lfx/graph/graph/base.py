@@ -459,7 +459,7 @@ class Graph:
 
             try:
                 # Run the async generator
-                async_gen = self.async_start(inputs, max_iterations, event_manager)
+                async_gen = self.async_start(inputs, max_iterations, event_manager=event_manager)
 
                 while True:
                     try:
