@@ -1,0 +1,621 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Langflow V2 Workflow API",
+    "description": "Filtered API for Langflow V2 workflow operations (3 endpoints)",
+    "version": "1.8.0"
+  },
+  "paths": {
+    "/api/v2/workflows": {
+      "post": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "Execute Workflow",
+        "description": "Execute a workflow with support for sync, stream, and background modes",
+        "operationId": "execute_workflow_api_v2_workflows_post",
+        "security": [
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowExecutionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Workflow execution response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/WorkflowExecutionResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/WorkflowJobResponse"
+                    }
+                  ],
+                  "title": "Response Execute Workflow Api V2 Workflows Post",
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/WorkflowExecutionResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/WorkflowJobResponse"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "object",
+                    "mapping": {
+                      "response": "#/components/schemas/WorkflowExecutionResponse",
+                      "job": "#/components/schemas/WorkflowJobResponse"
+                    }
+                  }
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowStreamEvent"
+                },
+                "description": "Server-sent events for streaming execution"
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "Get Workflow Status",
+        "description": "Get status of workflow job by job ID",
+        "operationId": "get_workflow_status_api_v2_workflows_get",
+        "security": [
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Job ID to query",
+              "title": "Job Id"
+            },
+            "description": "Job ID to query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Workflow status response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/WorkflowExecutionResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/WorkflowJobResponse"
+                    }
+                  ],
+                  "title": "Response Get Workflow Status Api V2 Workflows Get",
+                  "$ref": "#/components/schemas/WorkflowExecutionResponse"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowStreamEvent"
+                },
+                "description": "Server-sent events for streaming status"
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/workflows/stop": {
+      "post": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "Stop Workflow",
+        "description": "Stop a running workflow execution",
+        "operationId": "stop_workflow_api_v2_workflows_stop_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowStopRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowStopResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ComponentOutput": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "Type of the component output (e.g., 'message', 'data', 'tool', 'text')"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
+          "content": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "status"
+        ],
+        "title": "ComponentOutput",
+        "description": "Component output schema."
+      },
+      "ErrorDetail": {
+        "properties": {
+          "error": {
+            "type": "string",
+            "title": "Error"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "title": "ErrorDetail",
+        "description": "Error detail schema."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "JobStatus": {
+        "type": "string",
+        "enum": [
+          "queued",
+          "in_progress",
+          "completed",
+          "failed",
+          "cancelled",
+          "timed_out"
+        ],
+        "title": "JobStatus",
+        "description": "Job execution status."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WorkflowExecutionRequest": {
+        "properties": {
+          "background": {
+            "type": "boolean",
+            "title": "Background",
+            "default": false
+          },
+          "stream": {
+            "type": "boolean",
+            "title": "Stream",
+            "default": false
+          },
+          "flow_id": {
+            "type": "string",
+            "title": "Flow Id"
+          },
+          "inputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inputs",
+            "description": "Component-specific inputs in flat format: 'component_id.param_name': value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "flow_id"
+        ],
+        "title": "WorkflowExecutionRequest",
+        "description": "Request schema for workflow execution.",
+        "examples": [
+          {
+            "background": false,
+            "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+            "inputs": {
+              "ChatInput-abc.input_value": "Hello, how can you help me today?",
+              "ChatInput-abc.session_id": "session-123",
+              "LLM-xyz.max_tokens": 100,
+              "LLM-xyz.temperature": 0.7,
+              "OpenSearch-def.opensearch_url": "https://opensearch:9200"
+            },
+            "stream": false
+          },
+          {
+            "background": true,
+            "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+            "inputs": {
+              "ChatInput-abc.input_value": "Process this in the background"
+            },
+            "stream": false
+          },
+          {
+            "background": false,
+            "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+            "inputs": {
+              "ChatInput-abc.input_value": "Stream this conversation"
+            },
+            "stream": true
+          }
+        ]
+      },
+      "WorkflowExecutionResponse": {
+        "properties": {
+          "flow_id": {
+            "type": "string",
+            "title": "Flow Id"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "object": {
+            "type": "string",
+            "const": "response",
+            "title": "Object",
+            "default": "response"
+          },
+          "created_timestamp": {
+            "type": "string",
+            "title": "Created Timestamp"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array",
+            "title": "Errors",
+            "default": []
+          },
+          "inputs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Inputs",
+            "default": {}
+          },
+          "outputs": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ComponentOutput"
+            },
+            "type": "object",
+            "title": "Outputs",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "flow_id",
+          "status"
+        ],
+        "title": "WorkflowExecutionResponse",
+        "description": "Synchronous workflow execution response."
+      },
+      "WorkflowJobResponse": {
+        "properties": {
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string",
+                "format": "uuid"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "flow_id": {
+            "type": "string",
+            "title": "Flow Id"
+          },
+          "object": {
+            "type": "string",
+            "const": "job",
+            "title": "Object",
+            "default": "job"
+          },
+          "created_timestamp": {
+            "type": "string",
+            "title": "Created Timestamp"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Links"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array",
+            "title": "Errors",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "flow_id",
+          "status"
+        ],
+        "title": "WorkflowJobResponse",
+        "description": "Background job response."
+      },
+      "WorkflowStopRequest": {
+        "properties": {
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string",
+                "format": "uuid"
+              }
+            ],
+            "title": "Job Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id"
+        ],
+        "title": "WorkflowStopRequest",
+        "description": "Request schema for stopping workflow."
+      },
+      "WorkflowStopResponse": {
+        "properties": {
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string",
+                "format": "uuid"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id"
+        ],
+        "title": "WorkflowStopResponse",
+        "description": "Response schema for stopping workflow."
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearerCookie": {
+        "type": "oauth2",
+        "flows": {
+          "password": {
+            "scopes": {},
+            "tokenUrl": "api/v1/login"
+          }
+        }
+      },
+      "API key query": {
+        "type": "apiKey",
+        "in": "query",
+        "name": "x-api-key"
+      },
+      "API key header": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key"
+      }
+    }
+  }
+}
