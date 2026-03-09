@@ -20,6 +20,7 @@ from langflow.services.database.models.flow_version.crud import (
 )
 from langflow.services.database.models.flow_version.exceptions import (
     FlowVersionConflictError,
+    FlowVersionDeployedError,
     FlowVersionError,
     FlowVersionNotFoundError,
     FlowVersionSerializationError,
@@ -78,6 +79,8 @@ def _translate_version_error(exc: FlowVersionError) -> HTTPException:
     if isinstance(exc, FlowVersionSerializationError):
         return HTTPException(status_code=422, detail=str(exc))
     if isinstance(exc, FlowVersionConflictError):
+        return HTTPException(status_code=409, detail=str(exc))
+    if isinstance(exc, FlowVersionDeployedError):
         return HTTPException(status_code=409, detail=str(exc))
     if isinstance(exc, FlowVersionNotFoundError):
         return HTTPException(status_code=404, detail=str(exc))
