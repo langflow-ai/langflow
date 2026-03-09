@@ -39,12 +39,9 @@ export function ChatSidebar({
   const visibleSession = currentSessionId;
 
   const handleDeleteSession = (session: string) => {
-    handleDelete(session);
+    // Delegate to parent which handles the full delete flow
+    // (API call, cache clearing, session switching)
     onDeleteSession?.(session);
-    // If deleted session was the current one, switch to default
-    if (session === currentSessionId) {
-      onSessionSelect?.(currentFlowId);
-    }
   };
 
   const handleSessionClick = (session: string) => {
