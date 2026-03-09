@@ -33,7 +33,7 @@ class CalculatorComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="result", type_=Data, method="evaluate_expression"),
+        Output(display_name="JSON", name="result", type_=Data, method="evaluate_expression"),
     ]
 
     def _eval_expr(self, node: ast.AST) -> float:

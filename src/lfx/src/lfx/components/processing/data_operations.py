@@ -133,7 +133,7 @@ class DataOperationsComponent(Component):
         return obj
 
     inputs = [
-        DataInput(name="data", display_name="Data", info="Data object to filter.", required=True, is_list=True),
+        DataInput(name="data", display_name="JSON", info="Data object to filter.", required=True, is_list=True),
         SortableListInput(
             name="operations",
             display_name="Operations",
@@ -261,7 +261,7 @@ class DataOperationsComponent(Component):
     }
 
     outputs = [
-        Output(display_name="Data", name="data_output", method="as_data"),
+        Output(display_name="JSON", name="data_output", method="as_data"),
     ]
 
     # Helper methods for data operations

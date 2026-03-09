@@ -45,7 +45,7 @@ class TavilyExtractComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="fetch_content"),
+        Output(display_name="Table", name="dataframe", method="fetch_content"),
     ]
 
     def run_model(self) -> DataFrame:

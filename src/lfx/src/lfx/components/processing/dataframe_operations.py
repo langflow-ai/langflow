@@ -32,7 +32,7 @@ class DataFrameOperationsComponent(Component):
     inputs = [
         DataFrameInput(
             name="df",
-            display_name="DataFrame",
+            display_name="Table",
             info="The input DataFrame to operate on. Connect multiple DataFrames for merge or concatenate operations.",
             required=True,
             is_list=True,
@@ -163,7 +163,7 @@ class DataFrameOperationsComponent(Component):
 
     outputs = [
         Output(
-            display_name="DataFrame",
+            display_name="Table",
             name="output",
             method="perform_operation",
             info="The resulting DataFrame after the operation.",

@@ -108,7 +108,7 @@ class LocalDBComponent(LCVectorStoreComponent):
         ),
     ]
     outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="perform_search"),
+        Output(display_name="Table", name="dataframe", method="perform_search"),
     ]
 
     def get_vector_store_directory(self, base_dir: str | Path) -> Path:

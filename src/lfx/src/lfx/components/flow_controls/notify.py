@@ -37,7 +37,7 @@ class NotifyComponent(Component):
 
     outputs = [
         Output(
-            display_name="Data",
+            display_name="JSON",
             name="result",
             method="notify_components",
             cache=False,
