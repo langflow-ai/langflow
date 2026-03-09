@@ -3,9 +3,18 @@
 from unittest.mock import MagicMock
 
 import pytest
+from lfx.services.adapters import registry as adapter_registry_mod
 from lfx.services.base import Service
 from lfx.services.manager import ServiceManager
 from lfx.services.schema import ServiceType
+
+
+@pytest.fixture
+async def clean_adapter_globals():
+    """Ensure global adapter registry state is isolated per test."""
+    await adapter_registry_mod._reset_registries()
+    yield
+    await adapter_registry_mod._reset_registries()
 
 
 class MockSessionService(Service):

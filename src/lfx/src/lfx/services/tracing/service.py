@@ -48,11 +48,13 @@ class TracingService(BaseTracingService):
         user_id: str | None,
         session_id: str | None,
         project_name: str | None = None,
+        flow_id: str | None = None,
     ) -> None:
         """Start tracers (minimal implementation - just logs).
 
         Args:
             run_id: Run identifier
+            flow_id: Flow identifier
             run_name: Run name
             user_id: User identifier
             session_id: Session identifier

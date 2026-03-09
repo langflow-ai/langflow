@@ -42,9 +42,9 @@ The following steps explain how to create a chat-based flow that uses **Message 
 
 2. At the beginning of the flow, add a **Message History** component, and then set it to **Retrieve** mode.
 
-3. Optional: In the **Message History** [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** to enable parameters for memory sorting, filtering, and limits.
+3. Optional: To enable parameters for memory sorting, filtering, and limits, click the **Message History** component to expose the [component inspection panel](/concepts-components#component-menus).
 
-3. Add a **Prompt Template** component, add a `{memory}` variable to the **Template** field, and then connect the **Message History** output to the **memory** input.
+4. Add a **Prompt Template** component, add a `{memory}` variable to the **Template** field, and then connect the **Message History** output to the **memory** input.
 
     The **Prompt Template** component supplies instructions and context to LLMs, separate from chat messages passed through a **Chat Input** component.
     The template can include any text and variables that you want to supply to the LLM, for example:
@@ -64,19 +64,19 @@ The following steps explain how to create a chat-based flow that uses **Message 
 
     In this example, the `{memory}` variable is populated by the retrieved chat memories, which are then passed to a **Language Model** or **Agent** component to provide additional context to the LLM.
 
-4. Connect the **Prompt Template** component's output to a **Language Model** component's **System Message** input.
+5. Connect the **Prompt Template** component's output to a **Language Model** component's **System Message** input.
 
     This example uses the **Language Model** core component as the central chat driver, but you can also use another language model component or the **Agent** component.
 
-5. Add a **Chat Input** component, and then connect it to the **Language Model** component's **Input** field.
+6. Add a **Chat Input** component, and then connect it to the **Language Model** component's **Input** field.
 
-6. Connect the **Language Model** component's output to a **Chat Output** component.
+7. Connect the **Language Model** component's output to a **Chat Output** component.
 
-7. At the end of the flow, add another **Message History** component, and then set it to **Store** mode.
+8. At the end of the flow, add another **Message History** component, and then set it to **Store** mode.
 
     Configure any additional parameters in the second **Message History** component as needed, taking into consideration that this particular component will store chat messages rather than retrieve them.
 
-8. Connect the **Chat Output** component's output to the **Message History** component's **Message** input.
+9. Connect the **Chat Output** component's output to the **Message History** component's **Message** input.
 
     Each response from the LLM is output from the **Language Model** component to the **Chat Output** component, and then stored in chat memory by the final **Message History** component.
 
@@ -94,7 +94,7 @@ Other options include the [**Mem0 Chat Memory** component](/bundles-mem0) and [*
 
    1. Configure the **Redis Chat Memory** component to connect to your Redis database. For more information, see the [Redis documentation](https://redis.io/docs/latest/).
    2. Set the **Message History** component to **Retrieve** mode.
-   3. In the **Message History** [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, enable **External Memory**, and then click **Close**.
+   3. In the **Message History** [component inspection pane](/concepts-components#component-menus), enable **External Memory**.
 
       In **Controls**, you can also enable parameters for memory sorting, filtering, and limits.
 
@@ -132,7 +132,7 @@ Other options include the [**Mem0 Chat Memory** component](/bundles-mem0) and [*
 
    1. Configure the **Redis Chat Memory** component to connect to your Redis database.
    2. Set the **Message History** component to **Store** mode.
-   3. In the **Message History** [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, enable **External Memory**, and then click **Close**.
+   3. In the **Message History** [component inspection pane](/concepts-components#component-menus), enable **External Memory**.
 
        Configure any additional parameters in this component as needed, taking into consideration that this particular component will store chat messages rather than retrieve them.
 

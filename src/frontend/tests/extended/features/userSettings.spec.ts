@@ -232,9 +232,6 @@ test("should see shortcuts", { tag: ["@release"] }, async ({ page }) => {
   await expect(page.getByText("Duplicate", { exact: true })).toBeVisible({
     timeout: 10000,
   });
-  await expect(page.getByText("Component Share", { exact: true })).toBeVisible({
-    timeout: 10000,
-  });
   await expect(page.getByText("Docs", { exact: true })).toBeVisible({
     timeout: 10000,
   });

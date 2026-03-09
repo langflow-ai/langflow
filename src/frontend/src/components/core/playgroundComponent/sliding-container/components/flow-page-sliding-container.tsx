@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { StickToBottom } from "use-stick-to-bottom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { StickToBottom, useStickToBottom } from "use-stick-to-bottom";
+import { SafariScrollFix } from "@/components/common/safari-scroll-fix";
 import { ChatHeader } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-header";
 import { ChatSidebar } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-sidebar";
 import { useSendMessage } from "@/components/core/playgroundComponent/chat-view/hooks/use-send-message";
@@ -7,6 +8,7 @@ import { useGetFlowId } from "@/components/core/playgroundComponent/hooks/use-ge
 import { AnimatedConditional } from "@/components/ui/animated-close";
 import { useSimpleSidebar } from "@/components/ui/simple-sidebar";
 import useFlowStore from "@/stores/flowStore";
+import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { FilePreviewType } from "@/types/components";
 import { useEditSessionInfo } from "../../chat-view/chat-header/hooks/use-edit-session-info";
@@ -15,6 +17,7 @@ import { ChatInput } from "../../chat-view/chat-input";
 import useDragAndDrop from "../../chat-view/chat-input/hooks/use-drag-and-drop";
 import { Messages } from "../../chat-view/chat-messages";
 import { useChatHistory } from "../../chat-view/chat-messages/hooks/use-chat-history";
+import { clearSessionMessages } from "../../chat-view/utils/message-utils";
 
 type FlowPageSlidingContainerContentProps = {
   isFullscreen: boolean;
@@ -31,6 +34,9 @@ export function FlowPageSlidingContainerContent({
   const nodes = useFlowStore((state) => state.nodes);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
+  const deleteSessionFromStore = useMessagesStore(
+    (state) => state.deleteSession,
+  );
 
   const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(
     currentFlowId,
@@ -91,6 +97,23 @@ export function FlowPageSlidingContainerContent({
     }
   }, [chatHistory.length, isBuilding, inputs, nodes, setChatValueStore]);
 
+  const stickyInstance = useStickToBottom({
+    resize: "instant",
+    initial: "instant",
+  });
+
+  const prevChatLenRef = useRef(chatHistory.length);
+  useEffect(() => {
+    if (chatHistory.length > prevChatLenRef.current) {
+      const lastMsg = chatHistory[chatHistory.length - 1];
+      if (lastMsg?.isSend) {
+        window.dispatchEvent(new Event("langflow-scroll-to-bottom"));
+        stickyInstance.scrollToBottom("smooth");
+      }
+    }
+    prevChatLenRef.current = chatHistory.length;
+  }, [chatHistory, stickyInstance]);
+
   const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
     setIsDragging,
     true,
@@ -101,6 +124,17 @@ export function FlowPageSlidingContainerContent({
     e.stopPropagation();
     setIsDragging(false);
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [setOpen]);
 
   useEffect(() => {
     setSidebarOpen(isFullscreen);
@@ -127,6 +161,8 @@ export function FlowPageSlidingContainerContent({
   const handleNewChat = () => {
     // Pass all sessions (including currentSessionId) to ensure unique IDs
     const newId = addNewSession(orderedSessions);
+    // Clear any cached messages for the new session to prevent stale data
+    clearSessionMessages(newId, currentFlowId);
     setCurrentSessionId(newId);
   };
 
@@ -134,6 +170,9 @@ export function FlowPageSlidingContainerContent({
     handleDelete(sessionId);
     // Also remove from local sessions if it's a local session
     removeLocalSession(sessionId);
+    // Clear messages from both React Query cache and Zustand store
+    clearSessionMessages(sessionId, currentFlowId);
+    deleteSessionFromStore(sessionId);
     if (sessionId === currentSessionId) {
       setCurrentSessionId(currentFlowId);
     }
@@ -153,8 +192,8 @@ export function FlowPageSlidingContainerContent({
       onDrop={onDrop}
     >
       <div className="flex-1 flex overflow-hidden">
-        <AnimatedConditional isOpen={sidebarOpen} width="218px">
-          <div className="h-full overflow-y-auto border-r border-border w-218">
+        <AnimatedConditional isOpen={sidebarOpen} width="236px">
+          <div className="h-full overflow-y-auto border-r border-border w-218 bg-primary-foreground">
             <div className="p-4">
               <ChatSidebar
                 sessions={orderedSessions}
@@ -185,20 +224,22 @@ export function FlowPageSlidingContainerContent({
             setOpenLogsModal={setOpenLogsModal}
             renameLocalSession={renameLocalSession}
           />
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden playground-messages-wrapper">
             <StickToBottom
+              instance={stickyInstance}
               className="flex-1 min-h-0 overflow-hidden"
-              resize="smooth"
-              initial="instant"
             >
-              <StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden p-4">
-                <div className="flex flex-col w-full">
+              <StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden ">
+                <div
+                  className={`flex flex-col ${isFullscreen ? "w-full max-w-[744px] p-0 mx-auto" : "w-full"}`}
+                >
                   <Messages
                     visibleSession={currentSessionId ?? currentFlowId ?? null}
                     playgroundPage={true}
                   />
                 </div>
               </StickToBottom.Content>
+              <SafariScrollFix />
             </StickToBottom>
 
             <div

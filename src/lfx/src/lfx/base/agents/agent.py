@@ -186,7 +186,7 @@ class LCAgentComponent(Component):
             input_dict = {"input": self.input_value}
 
         # Use enhanced prompt if available (set by IBM Granite handler), otherwise use original
-        system_prompt_to_use = getattr(self, "_effective_system_prompt", None) or self.system_prompt
+        system_prompt_to_use = getattr(self, "_effective_system_prompt", None) or getattr(self, "system_prompt", None)
         if system_prompt_to_use and system_prompt_to_use.strip():
             input_dict["system_prompt"] = system_prompt_to_use
 
