@@ -19,13 +19,14 @@ interpreting their schema.
 
 Service-layer schema reuse
 --------------------------
-Four service-layer schemas are imported directly because they carry no
-Langflow-managed identifiers:
+Three service-layer data schemas are imported directly because they carry
+no Langflow-managed identifiers:
 
 * ``BaseDeploymentData`` -- deployment metadata for creation
 * ``BaseDeploymentDataUpdate`` -- deployment metadata for partial updates
 * ``DeploymentConfig`` -- deployment configuration payload
-* ``DeploymentType`` -- shared vocabulary enum
+
+Additionally, ``DeploymentType`` is imported as a shared vocabulary enum.
 
 ``BaseDeploymentData`` also carries an optional ``provider_spec`` dict
 (inherited from ``ProviderSpecModel``), an opaque provider-owned input
@@ -54,7 +55,7 @@ from pydantic import BaseModel, Field, SecretStr, ValidationInfo, field_validato
 
 
 def _validate_str_id_list(values: list[str], *, field_name: str) -> list[str]:
-    """Strip, reject empty values, reject empty lists, and deduplicate a list of string identifiers."""
+    """Strip, reject empty values, reject empty lists, and reject duplicates in a list of string identifiers."""
     if not values:
         msg = f"{field_name} must not be empty."
         raise ValueError(msg)
@@ -65,9 +66,11 @@ def _validate_str_id_list(values: list[str], *, field_name: str) -> list[str]:
         if not value:
             msg = f"{field_name} must not contain empty values."
             raise ValueError(msg)
-        if value not in seen:
-            seen.add(value)
-            cleaned.append(value)
+        if value in seen:
+            msg = f"{field_name} must not contain duplicate values: '{value}'."
+            raise ValueError(msg)
+        seen.add(value)
+        cleaned.append(value)
     return cleaned
 
 
@@ -88,7 +91,7 @@ def _normalize_optional_str(value: str | None, *, field_name: str = "Field") -> 
 
 
 def validate_flow_version_id_query(values: list[str]) -> list[str]:
-    """Validate and deduplicate flow_version_ids received as query parameters."""
+    """Validate flow_version_ids received as query parameters."""
     return _validate_str_id_list(values, field_name="flow_version_ids")
 
 
@@ -140,19 +143,30 @@ class DeploymentProviderAccountUpdate(BaseModel):
         default=None,
         description="Provider-owned tenant/organization id. Omit to keep existing value, null to clear.",
     )
-    provider_key: str | None = Field(default=None, description="Deployment provider key.")
+    provider_key: str | None = Field(
+        default=None,
+        description="Deployment provider key. Omit to keep existing value; cannot be set to null.",
+    )
     provider_url: str | None = Field(
         default=None,
-        description="Provider service URL. Omit to keep existing value.",
+        description="Provider service URL. Omit to keep existing value; cannot be set to null.",
     )
-    api_key: str | None = Field(
+    api_key: SecretStr | None = Field(
         default=None,
-        description="Provider credential material. Omit to keep existing value; provided value replaces stored secret.",
+        description=(
+            "Provider credential material. Omit to keep existing value; "
+            "provided value replaces stored secret. Cannot be set to null."
+        ),
     )
 
-    @field_validator("provider_tenant_id", "provider_key", "provider_url", "api_key")
+    @field_validator("provider_tenant_id", "provider_key", "provider_url")
     @classmethod
     def normalize_optional_strings(cls, value: str | None, info: ValidationInfo) -> str | None:
+        return _normalize_optional_str(value, field_name=info.field_name)
+
+    @field_validator("api_key", mode="before")
+    @classmethod
+    def normalize_api_key(cls, value: str | None, info: ValidationInfo) -> str | None:
         return _normalize_optional_str(value, field_name=info.field_name)
 
     @model_validator(mode="after")
@@ -273,7 +287,7 @@ class DeploymentDuplicateResponse(_DeploymentResponseBase):
 
 
 class FlowVersionsAttach(BaseModel):
-    """Flow version ids to attach during deployment creation."""
+    """Flow version ids to attach to a deployment."""
 
     model_config = {"extra": "forbid"}
 
@@ -307,10 +321,10 @@ class FlowVersionsPatch(BaseModel):
 
     @field_validator("add", "remove")
     @classmethod
-    def validate_id_lists(cls, values: list[str] | None) -> list[str] | None:
+    def validate_id_lists(cls, values: list[str] | None, info: ValidationInfo) -> list[str] | None:
         if values is None:
             return None
-        return _validate_str_id_list(values, field_name="flow_version_ids")
+        return _validate_str_id_list(values, field_name=info.field_name)
 
     @model_validator(mode="after")
     def validate_operations(self):
@@ -327,6 +341,27 @@ class FlowVersionsPatch(BaseModel):
             msg = f"Flow version ids cannot be present in both 'add' and 'remove': {ids}."
             raise ValueError(msg)
         return self
+
+
+# ---------------------------------------------------------------------------
+# Strict API-layer wrappers for service-layer schemas
+# ---------------------------------------------------------------------------
+# The service-layer schemas do not set ``extra = "forbid"`` because they are
+# shared with internal consumers.  These thin subclasses add strict validation
+# so that API callers receive a 422 for misspelled/unexpected fields instead
+# of having their data silently dropped.
+
+
+class _StrictBaseDeploymentData(BaseDeploymentData):
+    model_config = {"extra": "forbid"}
+
+
+class _StrictBaseDeploymentDataUpdate(BaseDeploymentDataUpdate):
+    model_config = {"extra": "forbid"}
+
+
+class _StrictDeploymentConfig(DeploymentConfig):
+    model_config = {"extra": "forbid"}
 
 
 # ---------------------------------------------------------------------------
@@ -379,27 +414,6 @@ class DeploymentConfigBindingUpdate(BaseModel):
     @classmethod
     def normalize_config_id(cls, value: str | None, info: ValidationInfo) -> str | None:
         return _normalize_optional_str(value, field_name=info.field_name)
-
-
-# ---------------------------------------------------------------------------
-# Strict API-layer wrappers for service-layer schemas
-# ---------------------------------------------------------------------------
-# The service-layer schemas do not set ``extra = "forbid"`` because they are
-# shared with internal consumers.  These thin subclasses add strict validation
-# so that API callers receive a 422 for misspelled/unexpected fields instead
-# of having their data silently dropped.
-
-
-class _StrictBaseDeploymentData(BaseDeploymentData):
-    model_config = {"extra": "forbid"}
-
-
-class _StrictBaseDeploymentDataUpdate(BaseDeploymentDataUpdate):
-    model_config = {"extra": "forbid"}
-
-
-class _StrictDeploymentConfig(DeploymentConfig):
-    model_config = {"extra": "forbid"}
 
 
 # ---------------------------------------------------------------------------

@@ -201,7 +201,7 @@ async def create_deployment_execution(
 
 @router.get("/executions/{execution_id}", response_model=ExecutionStatusResponse)
 async def get_deployment_execution(
-    execution_id: Annotated[str, Path(description="Provider-owned opaque execution identifier.")],
+    execution_id: Annotated[str, Path(min_length=1, description="Provider-owned opaque execution identifier.")],
     provider_id: DeploymentProviderAccountIdQuery,
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
