@@ -38,7 +38,7 @@
             "id": "StructuredOutput-ZOoVy",
             "name": "dataframe_output",
             "output_types": [
-              "DataFrame"
+              "Table"
             ]
           },
           "targetHandle": {
@@ -46,17 +46,19 @@
             "id": "ParserComponent-pxQmg",
             "inputTypes": [
               "DataFrame",
-              "Data"
+              "Table",
+              "Data",
+              "JSON"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-StructuredOutput-ZOoVy{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-ZOoVyœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-pxQmg{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-pxQmgœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-StructuredOutput-ZOoVy{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-ZOoVyœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œTableœ]}-ParserComponent-pxQmg{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-pxQmgœ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-ZOoVy",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-ZOoVyœ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-ZOoVyœ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œTableœ]}",
         "target": "ParserComponent-pxQmg",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-pxQmgœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-pxQmgœ, œinputTypesœ: [œDataFrameœ,  œTableœ, œDataœ,  œJSONœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -75,18 +77,20 @@
             "id": "ChatOutput-RZUAi",
             "inputTypes": [
               "Data",
+              "JSON",
               "DataFrame",
+              "Table",
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParserComponent-pxQmg{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-pxQmgœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-RZUAi{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-RZUAiœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ParserComponent-pxQmg{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-pxQmgœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-RZUAi{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-RZUAiœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParserComponent-pxQmg",
         "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-pxQmgœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-RZUAi",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-RZUAiœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-RZUAiœ, œinputTypesœ: [œDataœ,  œJSONœ, œDataFrameœ,  œTableœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -130,7 +134,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.133.1"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
@@ -253,7 +257,9 @@
                 "info": "Message to be passed as output.",
                 "input_types": [
                   "Data",
+                  "JSON",
                   "DataFrame",
+                  "Table",
                   "Message"
                 ],
                 "list": false,
@@ -686,7 +692,7 @@
         "data": {
           "id": "note-dRvm6",
           "node": {
-            "description": "This template extracts key financial metrics from a given financial report text. The extracted data is structured and formatted for chat consumption.\n\n## Quickstart\n\n1. Add your OpenAI API key to the **Language Model** component, or select a different provider and model.\n2. Open the **Playground** to start the chat and run the flow.\nFor this example, the **Chat Input** component is pre-loaded with a sample financial report. The **Language Model** component identifies and retrieves the gross profit, EBITDA, net income, and operating expenses information from the financial report. Then, the **Structured Output** component formats extracted data into a structured format for better readability and further processing. Finally, the **Parser** component converts extracted data into a messages to be returned to the user.",
+            "description": "# 📖 README\nThis template extracts key financial metrics from a given financial report text. The extracted data is structured and formatted for chat consumption.\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n2. Open the **Playground** to start the chat and run the flow.\nFor this example, the **Chat Input** component is pre-loaded with a sample financial report. The **Language Model** component identifies and retrieves the gross profit, EBITDA, net income, and operating expenses information from the financial report. Then, the **Structured Output** component formats extracted data into a structured format for better readability and further processing. Finally, the **Parser** component converts extracted data into a messages to be returned to the user.",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -715,7 +721,9 @@
           "node": {
             "base_classes": [
               "Data",
-              "DataFrame"
+              "JSON",
+              "DataFrame",
+              "Table"
             ],
             "beta": false,
             "conditional_paths": [],
@@ -743,7 +751,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": "2.11.10"
+                    "version": "2.12.5"
                   },
                   {
                     "name": "trustcall",
@@ -768,10 +776,10 @@
                 "group_outputs": false,
                 "method": "build_structured_output",
                 "name": "structured_output",
-                "selected": "Data",
+                "selected": "JSON",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -782,10 +790,10 @@
                 "group_outputs": false,
                 "method": "build_structured_dataframe",
                 "name": "dataframe_output",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -1447,7 +1455,9 @@
                 "info": "Accepts either a DataFrame or a Data object.",
                 "input_types": [
                   "DataFrame",
-                  "Data"
+                  "Table",
+                  "Data",
+                  "JSON"
                 ],
                 "list": false,
                 "list_add_label": "Add More",

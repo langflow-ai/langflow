@@ -74,18 +74,20 @@
             "id": "ChatOutput-ZuZUq",
             "inputTypes": [
               "Data",
+              "JSON",
               "DataFrame",
+              "Table",
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-FtHFF{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-FtHFFœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-ZuZUq{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ZuZUqœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-LanguageModelComponent-FtHFF{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-FtHFFœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-ZuZUq{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ZuZUqœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-FtHFF",
         "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-FtHFFœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-ZuZUq",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-ZuZUqœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-ZuZUqœ, œinputTypesœ: [œDataœ,  œJSONœ, œDataFrameœ,  œTableœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -124,7 +126,7 @@
             "id": "StructuredOutput-jhZm4",
             "name": "dataframe_output",
             "output_types": [
-              "DataFrame"
+              "Table"
             ]
           },
           "targetHandle": {
@@ -139,10 +141,10 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-StructuredOutput-jhZm4{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-jhZm4œ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-parser-0gPPL{œfieldNameœ:œinput_dataœ,œidœ:œparser-0gPPLœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-StructuredOutput-jhZm4{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-jhZm4œ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œTableœ]}-parser-0gPPL{œfieldNameœ:œinput_dataœ,œidœ:œparser-0gPPLœ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-jhZm4",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-jhZm4œ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-jhZm4œ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œTableœ]}",
         "target": "parser-0gPPL",
         "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-0gPPLœ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œJSONœ], œtypeœ: œotherœ}"
       }
@@ -330,7 +332,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.133.1"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
@@ -453,7 +455,9 @@
                 "info": "Message to be passed as output.",
                 "input_types": [
                   "Data",
+                  "JSON",
                   "DataFrame",
+                  "Table",
                   "Message"
                 ],
                 "list": false,
@@ -609,7 +613,7 @@
         "data": {
           "id": "note-VIAIk",
           "node": {
-            "description": "## 📝 Portfolio Website Code Generator\n\nYour uploaded resume is parsed into a structured format, and output as HTML/CSS code for your own resume website!\n\n✅ **Accepted Formats:** PDF or TXT  \n✅ To ensure readability, provide clear headings, bullet points, and proper formatting. \n### 📌 Structured output fields:\n1. 🏷 **Full Name** - Candidate's full name  \n2. 📧 **Email** - A valid email address  \n3. 📞 **Phone Number** - Contact number  \n4. 🔗 **LinkedIn** - LinkedIn profile URL  \n5. 🖥 **GitHub** - GitHub profile URL (if applicable)  \n6. 🌐 **Portfolio** - Personal website or portfolio URL  \n7. 🛂 **Visa Status** - Work authorization details (if applicable)  \n8. 📝 **Summary** - A brief professional summary or objective statement  \n9. 💼 **Experience** - Work experience details (in dictionary format)  \n10. 🎓 **Education** - Education details (in dictionary format)  \n11. 🛠 **Skills** - Skills mentioned in the resume (comma-separated)  \n12. 🚀 **Projects** - Titles, descriptions, and details of projects.",
+            "description": "# 📖 README\nYour uploaded resume is parsed into a structured format, and output as HTML/CSS code for your own resume website!\n\n✅ **Accepted Formats:** PDF or TXT  \n✅ To ensure readability, provide clear headings, bullet points, and proper formatting. \n### 📌 Structured output fields:\n1. 🏷 **Full Name** - Candidate's full name  \n2. 📧 **Email** - A valid email address  \n3. 📞 **Phone Number** - Contact number  \n4. 🔗 **LinkedIn** - LinkedIn profile URL  \n5. 🖥 **GitHub** - GitHub profile URL (if applicable)  \n6. 🌐 **Portfolio** - Personal website or portfolio URL  \n7. 🛂 **Visa Status** - Work authorization details (if applicable)  \n8. 📝 **Summary** - A brief professional summary or objective statement  \n9. 💼 **Experience** - Work experience details (in dictionary format)  \n10. 🎓 **Education** - Education details (in dictionary format)  \n11. 🛠 **Skills** - Skills mentioned in the resume (comma-separated)  \n12. 🚀 **Projects** - Titles, descriptions, and details of projects.",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -928,7 +932,7 @@
                   },
                   {
                     "name": "pydantic",
-                    "version": "2.11.10"
+                    "version": "2.12.5"
                   },
                   {
                     "name": "googleapiclient",
@@ -1165,6 +1169,7 @@
                 "info": "Data object with a 'file_path' property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports same file types.",
                 "input_types": [
                   "Data",
+                  "JSON",
                   "Message"
                 ],
                 "list": true,
@@ -2287,7 +2292,9 @@
           "node": {
             "base_classes": [
               "Data",
-              "DataFrame"
+              "JSON",
+              "DataFrame",
+              "Table"
             ],
             "beta": false,
             "conditional_paths": [],
@@ -2315,7 +2322,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": "2.11.10"
+                    "version": "2.12.5"
                   },
                   {
                     "name": "trustcall",
@@ -2340,10 +2347,10 @@
                 "group_outputs": false,
                 "method": "build_structured_output",
                 "name": "structured_output",
-                "selected": "Data",
+                "selected": "JSON",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -2354,10 +2361,10 @@
                 "group_outputs": false,
                 "method": "build_structured_dataframe",
                 "name": "dataframe_output",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               }

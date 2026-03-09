@@ -68,7 +68,7 @@
             "id": "URLComponent-DFXG5",
             "name": "page_results",
             "output_types": [
-              "DataFrame"
+              "Table"
             ]
           },
           "targetHandle": {
@@ -76,17 +76,19 @@
             "id": "ParserComponent-YRRd0",
             "inputTypes": [
               "DataFrame",
-              "Data"
+              "Table",
+              "Data",
+              "JSON"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-URLComponent-DFXG5{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-DFXG5œ,œnameœ:œpage_resultsœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-YRRd0{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-YRRd0œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-URLComponent-DFXG5{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-DFXG5œ,œnameœ:œpage_resultsœ,œoutput_typesœ:[œTableœ]}-ParserComponent-YRRd0{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-YRRd0œ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "URLComponent-DFXG5",
-        "sourceHandle": "{œdataTypeœ: œURLComponentœ, œidœ: œURLComponent-DFXG5œ, œnameœ: œpage_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLComponentœ, œidœ: œURLComponent-DFXG5œ, œnameœ: œpage_resultsœ, œoutput_typesœ: [œTableœ]}",
         "target": "ParserComponent-YRRd0",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-YRRd0œ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-YRRd0œ, œinputTypesœ: [œDataFrameœ,  œTableœ, œDataœ,  œJSONœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -133,18 +135,20 @@
             "id": "ChatOutput-GOjXV",
             "inputTypes": [
               "Data",
+              "JSON",
               "DataFrame",
+              "Table",
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__LanguageModelComponent-1gwua{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-1gwuaœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-GOjXV{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-GOjXVœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "xy-edge__LanguageModelComponent-1gwua{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-1gwuaœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-GOjXV{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-GOjXVœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-1gwua",
         "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-1gwuaœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-GOjXV",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-GOjXVœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-GOjXVœ, œinputTypesœ: [œDataœ,  œJSONœ, œDataFrameœ,  œTableœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -538,7 +542,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.133.1"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
@@ -655,7 +659,9 @@
                 "info": "Message to be passed as output.",
                 "input_types": [
                   "Data",
+                  "JSON",
                   "DataFrame",
+                  "Table",
                   "Message"
                 ],
                 "list": false,
@@ -769,7 +775,7 @@
         "data": {
           "id": "note-OB8Tz",
           "node": {
-            "description": "# Blog Writing Flow Overview\n\nCreate a blog post by using content fetched from URLs and user-provided instructions.\n\n## Prerequisites\n\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quickstart\n\n1. Paste your OpenAI API key in the **Language Model** model component.\n2.  In the **URL** component, enter URLs you want to fetch content from. Ensure they start with `http://` or `https://`.\n3. Open the **Playground**. A blog post is written from the content fetched by the **URL** component.",
+            "description": "# 📖 README\nCreate a blog post by using content fetched from URLs and user-provided instructions.\n\n## Prerequisites\n\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n2.  In the **URL** component, enter URLs you want to fetch content from. Ensure they start with `http://` or `https://`.\n3. Open the **Playground**. A blog post is written from the content fetched by the **URL** component.",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -887,7 +893,9 @@
                 "info": "Accepts either a DataFrame or a Data object.",
                 "input_types": [
                   "DataFrame",
-                  "Data"
+                  "Table",
+                  "Data",
+                  "JSON"
                 ],
                 "list": false,
                 "list_add_label": "Add More",
@@ -994,7 +1002,8 @@
           "id": "URLComponent-DFXG5",
           "node": {
             "base_classes": [
-              "DataFrame"
+              "DataFrame",
+              "Table"
             ],
             "beta": false,
             "category": "data",
@@ -1061,10 +1070,10 @@
                 "group_outputs": false,
                 "method": "fetch_content",
                 "name": "page_results",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -1209,7 +1218,8 @@
                 "dynamic": false,
                 "info": "The headers to send with the request",
                 "input_types": [
-                  "DataFrame"
+                  "DataFrame",
+                  "Table"
                 ],
                 "is_list": true,
                 "list_add_label": "Add More",

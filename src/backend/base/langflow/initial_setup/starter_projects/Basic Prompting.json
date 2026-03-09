@@ -74,18 +74,20 @@
             "id": "ChatOutput-yK0AU",
             "inputTypes": [
               "Data",
+              "JSON",
               "DataFrame",
+              "Table",
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-FLeYF{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-FLeYFœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-yK0AU{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-yK0AUœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-LanguageModelComponent-FLeYF{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-FLeYFœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-yK0AU{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-yK0AUœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-FLeYF",
         "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-FLeYFœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-yK0AU",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-yK0AUœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-yK0AUœ, œinputTypesœ: [œDataœ,  œJSONœ, œDataFrameœ,  œTableœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -517,8 +519,8 @@
         "data": {
           "id": "undefined-Ua7t1",
           "node": {
-            "description": "This template demonstrates a standard chat flow with additional instructions provided by a prompt. Prompts provide instructions and inputs for a Large Language Model (LLM) beyond the standard user-provided chat input. In this example, the prompt describes the LLM's role and persona.\n\n## Quick Start\n1. Add your **OpenAI API Key** to the **Language Model** component, or select a different provider and model.\n2. Open the **Playground** to start the chat and run the flow.\n\n## Next steps\nChange the prompt template, model, or model settings, such as **Temperature**, and then see how the responses change with these different inputs.\n💡 Some component settings are hidden by default; to view all settings click **Controls** in each component's header menu.\n💡 You can use curly braces to create variables in your template, such as `{variable}`. These can be populated from other components, with Langflow global variables, or at runtime.",
-            "display_name": "Read Me",
+            "description": "# 📖 README\nThis template demonstrates a standard chat flow with additional instructions provided by a prompt. Prompts provide instructions and inputs for a Large Language Model (LLM) beyond the standard user-provided chat input. In this example, the prompt describes the LLM's role and persona.\n\n## Quick start\n1. Configure your **Model Provider** with your API credentials.\n2. Open the **Playground** to start the chat and run the flow.\n\n## Next steps\nChange the prompt template, model, or model settings, such as **Temperature**, and then see how the responses change with these different inputs.\n💡 Some component settings are hidden by default; to view all settings click **Controls** in each component's header menu.\n💡 You can use curly braces to create variables in your template, such as `{variable}`. These can be populated from other components, with Langflow global variables, or at runtime.",
+            "display_name": "",
             "documentation": "",
             "template": {
               "backgroundColor": "neutral"
@@ -624,7 +626,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.133.1"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
@@ -744,7 +746,9 @@
                 "info": "Message to be passed as output.",
                 "input_types": [
                   "Data",
+                  "JSON",
                   "DataFrame",
+                  "Table",
                   "Message"
                 ],
                 "list": false,

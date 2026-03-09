@@ -181,17 +181,19 @@
             "id": "ChatOutput-WSW39",
             "inputTypes": [
               "Data",
+              "JSON",
               "DataFrame",
+              "Table",
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__LanguageModelComponent-YIUOh{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-YIUOhœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-WSW39{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-WSW39œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "xy-edge__LanguageModelComponent-YIUOh{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-YIUOhœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-WSW39{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-WSW39œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
         "source": "LanguageModelComponent-YIUOh",
         "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-YIUOhœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-WSW39",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-WSW39œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-WSW39œ, œinputTypesœ: [œDataœ,  œJSONœ, œDataFrameœ,  œTableœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -663,7 +665,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.133.1"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
@@ -783,7 +785,9 @@
                 "info": "Message to be passed as output.",
                 "input_types": [
                   "Data",
+                  "JSON",
                   "DataFrame",
+                  "Table",
                   "Message"
                 ],
                 "list": false,
@@ -1229,7 +1233,7 @@
         "data": {
           "id": "note-RraDH",
           "node": {
-            "description": "# Prompt chaining\n\nThis flow demonstrates chaining three prompts and three language models.\nEach prompt is specifically designed to process previous output, with each LLM call building upon previous results\n\n\n## Prerequisites\n\n* [OpenAI API Key](https://platform.openai.com/)\n\n## Quickstart\n\n1. In all **Language Model** components, add your OpenAI API key.\n2. To run the flow, open the **Playground*. An example input is provided, with other suggestions listed below.\n\n    \"The increasing need for secure and user-friendly decentralized finance (DeFi) platforms that make cryptocurrency investments accessible to non-tech-savvy users.\"\n\n    \"The rising popularity of immersive, augmented reality (AR) experiences for remote collaboration and virtual team-building in distributed workforces.\"\n\n    \"The expanding market for smart, IoT-enabled urban farming solutions that allow city dwellers to grow their own food efficiently in small spaces.\"\n\n    \"The emerging demand for AI-powered personal styling and shopping assistants that consider sustainability, body positivity, and individual style preferences.\"\n\n",
+            "description": "# 📖 README\nThis flow demonstrates chaining three prompts and three language models.\nEach prompt is specifically designed to process previous output, with each LLM call building upon previous results\n\n\n## Prerequisites\n\n* [OpenAI API Key](https://platform.openai.com/)\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n2. To run the flow, open the **Playground**. An example input is provided, with other suggestions listed below.\n\n    \"The increasing need for secure and user-friendly decentralized finance (DeFi) platforms that make cryptocurrency investments accessible to non-tech-savvy users.\"\n\n    \"The rising popularity of immersive, augmented reality (AR) experiences for remote collaboration and virtual team-building in distributed workforces.\"\n\n    \"The expanding market for smart, IoT-enabled urban farming solutions that allow city dwellers to grow their own food efficiently in small spaces.\"\n\n    \"The emerging demand for AI-powered personal styling and shopping assistants that consider sustainability, body positivity, and individual style preferences.\"\n\n",
             "display_name": "",
             "documentation": "",
             "template": {}

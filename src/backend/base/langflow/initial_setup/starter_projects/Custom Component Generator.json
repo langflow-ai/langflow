@@ -162,18 +162,20 @@
             "id": "ChatOutput-VoIob",
             "inputTypes": [
               "Data",
+              "JSON",
               "DataFrame",
+              "Table",
               "Message"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-SCqm9{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-SCqm9œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-VoIob{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-VoIobœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LanguageModelComponent-SCqm9{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-SCqm9œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-VoIob{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-VoIobœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-SCqm9",
         "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-SCqm9œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-VoIob",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-VoIobœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-VoIobœ, œinputTypesœ: [œDataœ,  œJSONœ, œDataFrameœ,  œTableœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -214,6 +216,7 @@
           "node": {
             "base_classes": [
               "Data",
+              "JSON",
               "Message"
             ],
             "beta": false,
@@ -276,10 +279,10 @@
                 "group_outputs": false,
                 "method": "retrieve_messages_dataframe",
                 "name": "dataframe",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -852,7 +855,7 @@
         "data": {
           "id": "note-yh0aK",
           "node": {
-            "description": "# 🛠️ Custom Component Generator 🚀\n\nHi! I'm here to help you create custom components for Langflow. Think of me as your technical partner who can help turn your ideas into working components! \n\n## 🎯 How to Work With Me\n\n1. Add your **Anthropic API Key** to the **Language Model** Component\n\n2. 💭 Tell Me What You Want to Build.\nSimply describe what you want your component to do in plain English. For example:\n- \"I need a component that sends Slack messages\"\n- \"I want to create a tool that can process CSV files\"\n- \"I need something that can translate text\"\n\n\nReady to build something awesome? 🚀 Let's get started!",
+            "description": "# 📖 README\nHi! I'm here to help you create custom components for Langflow. Think of me as your technical partner who can help turn your ideas into working components! \n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n\n2. 💭 Tell Me What You Want to Build.\nSimply describe what you want your component to do in plain English. For example:\n- \"I need a component that sends Slack messages\"\n- \"I want to create a tool that can process CSV files\"\n- \"I need something that can translate text\"\n\n\nReady to build something awesome? 🚀 Let's get started!",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -889,6 +892,7 @@
           "node": {
             "base_classes": [
               "Data",
+              "JSON",
               "Message"
             ],
             "beta": false,
@@ -918,7 +922,7 @@
                 "name": "page_results",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -1058,7 +1062,8 @@
                 "dynamic": false,
                 "info": "The headers to send with the request",
                 "input_types": [
-                  "DataFrame"
+                  "DataFrame",
+                  "Table"
                 ],
                 "is_list": true,
                 "list_add_label": "Add More",
@@ -1243,6 +1248,7 @@
           "node": {
             "base_classes": [
               "Data",
+              "JSON",
               "Message"
             ],
             "beta": false,
@@ -1272,7 +1278,7 @@
                 "name": "page_results",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -1412,7 +1418,8 @@
                 "dynamic": false,
                 "info": "The headers to send with the request",
                 "input_types": [
-                  "DataFrame"
+                  "DataFrame",
+                  "Table"
                 ],
                 "is_list": true,
                 "list_add_label": "Add More",
@@ -1547,13 +1554,13 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": [
-                  "https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/agents/agent.py",
-                  "https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/helpers/structured_output.py",
-                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/tools/calculator.py",
-                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/tools/tavily_search.py",
-                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/models/ollama.py",
-                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/logic/conditional_router.py",
-                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/data/file.py"
+                  "https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/base/agents/agent.py",
+                  "https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/components/llm_operations/structured_output.py",
+                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/lfx/src/lfx/components/tools/calculator.py",
+                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/lfx/src/lfx/components/tavily/tavily_search.py",
+                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/lfx/src/lfx/components/ollama/ollama.py",
+                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/lfx/src/lfx/components/flow_controls/conditional_router.py",
+                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/lfx/src/lfx/components/files_and_knowledge/file.py"
                 ]
               },
               "use_async": {
@@ -1603,6 +1610,7 @@
           "node": {
             "base_classes": [
               "Data",
+              "JSON",
               "Message"
             ],
             "beta": false,
@@ -1632,7 +1640,7 @@
                 "name": "page_results",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -1772,7 +1780,8 @@
                 "dynamic": false,
                 "info": "The headers to send with the request",
                 "input_types": [
-                  "DataFrame"
+                  "DataFrame",
+                  "Table"
                 ],
                 "is_list": true,
                 "list_add_label": "Add More",
@@ -2268,7 +2277,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.133.1"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
@@ -2391,7 +2400,9 @@
                 "info": "Message to be passed as output.",
                 "input_types": [
                   "Data",
+                  "JSON",
                   "DataFrame",
+                  "Table",
                   "Message"
                 ],
                 "list": false,

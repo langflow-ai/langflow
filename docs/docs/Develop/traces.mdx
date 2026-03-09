@@ -1,0 +1,55 @@
+---
+title: Traces
+slug: /traces
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Langflow’s **Traces** feature records detailed execution traces for your flows and components so that you can debug issues, measure latency, and track token usage without relying on external observability services.
+
+Trace data is stored in the Langflow database in the `trace` and `span` tables.
+Trace data is presented in the **Flow Activity** and **Trace Details** pages in the UI, and can be retrieved from the `/monitor/traces` API endpoint.
+
+Traces are enabled by default.
+To disable Langflow tracing and use a different tracing provider, set `LANGFLOW_NATIVE_TRACING` to `false`.
+
+## What traces capture
+
+The tracer records:
+
+- **Flow-level traces**: A trace for each flow run, including total runtime and status.
+- **Component spans**: Spans for each component in the flow, including inputs, outputs, latency, and errors.
+- **LangChain spans**: Deeper spans for chains, tools, retrievers, and LLM calls, including model name and token usage where available.
+
+Each span includes:
+
+- **Name** and **type** (for example, chain, LLM, tool, retriever)
+- **Start and end time** and **latency (ms)**
+- **Inputs and outputs** (serialized)
+- **Error details**, if the span failed
+- **Attributes** such as token counts and model metadata
+
+## View traces in the UI
+
+To view traces in the Langflow UI, do the following:
+1. Run a flow, such as the Simple Agent starter flow in the [Quickstart](/get-started-quickstart).
+2. Click <Icon name="Activity" aria-hidden="true"/> **Traces**.
+   The **Flow Activity** page opens.
+   Each flow run is displayed as a single trace of all of its spans.
+   Flow runs can be sorted further by session ID, status, or time range.
+   Optionally, click <Icon name="Download" aria-hidden="true"/> **Download** to download a JSON file of that flow's trace to your local machine.
+3. Click a flow run to open the **Trace Details** pane.
+   The **Trace Details** pane displays spans for your flow run, including a flow-level span for the entire run, and a span for each component.
+   Individual component spans include the component's inputs and outputs, timing, and token usage.
+
+## Retrieve traces with the API
+
+To programmatically query traces, use the `/monitor/traces` endpoints.
+For full parameter details and code examples in Python, TypeScript, and curl, see [Monitor endpoints: Get traces](/api-monitor#get-traces).
+
+## See also
+
+- [Logs](/logging)
+- [Monitor endpoints](/api-monitor)

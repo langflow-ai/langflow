@@ -103,18 +103,20 @@
             "id": "ChatOutput-2ljRT",
             "inputTypes": [
               "Data",
+              "JSON",
               "DataFrame",
+              "Table",
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-n8KRg{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-n8KRgœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-2ljRT{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-2ljRTœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-LanguageModelComponent-n8KRg{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-n8KRgœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-2ljRT{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-2ljRTœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-n8KRg",
         "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-n8KRgœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-2ljRT",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-2ljRTœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-2ljRTœ, œinputTypesœ: [œDataœ,  œJSONœ, œDataFrameœ,  œTableœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -427,7 +429,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.133.1"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
@@ -547,7 +549,9 @@
                 "info": "Message to be passed as output.",
                 "input_types": [
                   "Data",
+                  "JSON",
                   "DataFrame",
+                  "Table",
                   "Message"
                 ],
                 "list": false,
@@ -669,7 +673,7 @@
         "data": {
           "id": "note-hLqzd",
           "node": {
-            "description": "This flow extends the **Basic Prompting** template by adding a **Message History** component that can retrieve up to 100 previous chat messages as context for the current conversation.\n\n## Quickstart\n1. In the **Language Model** component, add your OpenAI API key, or select a different provider and model.\n2. Open the **Playground**, and then tell the LLM your name.\n3. Start a new chat session in the Playground, and then ask, `what is my name`. The LLM is able to retrieve your name from the stored chat history.\n\n## About the Message History component\nThe **Language Model** and **Agent** components have built-in chat memory that is enabled by default and functionally the same as the **Message History** component.\nOnly use the **Message History** component when you want to store or retrieve chat memory from an external chat memory database, or when you need to retrieve chat memory outside of the current session context, such as in a non-chat flow or by supplying memories from other chats to a different session. For more information, see [Store chat memory](https://docs.langflow.org/memory#store-chat-memory).",
+            "description": "# 📖 README\nThis flow extends the **Basic Prompting** template by adding a **Message History** component that can retrieve up to 100 previous chat messages as context for the current conversation.\n\n## Quick start\n1. Configure your **Model Provider** with your API credentials.\n2. Open the **Playground**, and then tell the LLM your name.\n3. Start a new chat session in the Playground, and then ask, `what is my name`. The LLM is able to retrieve your name from the stored chat history.\n\n## About the Message History component\nThe **Language Model** and **Agent** components have built-in chat memory that is enabled by default and functionally the same as the **Message History** component.\nOnly use the **Message History** component when you want to store or retrieve chat memory from an external chat memory database, or when you need to retrieve chat memory outside of the current session context, such as in a non-chat flow or by supplying memories from other chats to a different session. For more information, see [Store chat memory](https://docs.langflow.org/memory#store-chat-memory).",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -895,7 +899,8 @@
           "id": "Memory-MKGtC",
           "node": {
             "base_classes": [
-              "DataFrame"
+              "DataFrame",
+              "Table"
             ],
             "beta": false,
             "category": "helpers",
@@ -960,10 +965,10 @@
                 "group_outputs": false,
                 "method": "retrieve_messages_dataframe",
                 "name": "dataframe",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               }

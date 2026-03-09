@@ -102,18 +102,20 @@
             "id": "ChatOutput-h5fAd",
             "inputTypes": [
               "Data",
+              "JSON",
               "DataFrame",
+              "Table",
               "Message"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-ZLKtg{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-ZLKtgœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-h5fAd{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-h5fAdœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LanguageModelComponent-ZLKtg{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-ZLKtgœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-h5fAd{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-h5fAdœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-ZLKtg",
         "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-ZLKtgœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-h5fAd",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-h5fAdœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-h5fAdœ, œinputTypesœ: [œDataœ,  œJSONœ, œDataFrameœ,  œTableœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -160,18 +162,20 @@
             "id": "ChatOutput-DVXkn",
             "inputTypes": [
               "Data",
+              "JSON",
               "DataFrame",
+              "Table",
               "Message"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-dZixZ{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-dZixZœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-DVXkn{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DVXknœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LanguageModelComponent-dZixZ{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-dZixZœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-DVXkn{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DVXknœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-dZixZ",
         "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-dZixZœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-DVXkn",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-DVXknœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-DVXknœ, œinputTypesœ: [œDataœ,  œJSONœ, œDataFrameœ,  œTableœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -766,7 +770,7 @@
         "data": {
           "id": "note-xEs2y",
           "node": {
-            "description": "# Sentiment Analysis Flow  \n\nThis flow processes text data, analyzes sentiment, and provides structured insights.  \n\n## Prerequisite\n\n* [OpenAI API key](https://platform.openai.com/docs/)\n\n## Quickstart\n\n1. Add your [OpenAI API key](https://platform.openai.com/docs/) to the OpenAI model components.\n2. In the **File Component**, load text data in `.txt`, `.csv`, or `.json` formats.\n3. Open the **Playground** to see the analysis and recommendation the flow constructs.\n\n## How It Works  \n\n1. The **Data to Message** component converts raw data into structured messages. \n\n2. The **NLP expert** prompt provides sentiment analysis, while the **Analyzing messages** prompt summarizes messages from a discussion board.\n\n3. The final **Prompt Component** creates a structured recommendation prompt to ensure that the AI model receives well-formatted input.  \n\n4. The **OpenAI Model Component** processes the text and classifies the sentiment as **Positive, Neutral, or Negative**.  \n\n",
+            "description": "# 📖 README\nThis flow processes text data, analyzes sentiment, and provides structured insights.  \n\n## Prerequisite\n\n* [OpenAI API key](https://platform.openai.com/docs/)\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n2. In the **File Component**, load text data in `.txt`, `.csv`, or `.json` formats.\n3. Open the **Playground** to see the analysis and recommendation the flow constructs.\n\n## How It Works  \n\n1. The **Data to Message** component converts raw data into structured messages. \n\n2. The **NLP expert** prompt provides sentiment analysis, while the **Analyzing messages** prompt summarizes messages from a discussion board.\n\n3. The final **Prompt Component** creates a structured recommendation prompt to ensure that the AI model receives well-formatted input.  \n\n4. The **OpenAI Model Component** processes the text and classifies the sentiment as **Positive, Neutral, or Negative**.  \n\n",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -826,7 +830,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.133.1"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
@@ -948,7 +952,9 @@
                 "info": "Message to be passed as output.",
                 "input_types": [
                   "Data",
+                  "JSON",
                   "DataFrame",
+                  "Table",
                   "Message"
                 ],
                 "list": false,
@@ -1106,7 +1112,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.133.1"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
@@ -1228,7 +1234,9 @@
                 "info": "Message to be passed as output.",
                 "input_types": [
                   "Data",
+                  "JSON",
                   "DataFrame",
+                  "Table",
                   "Message"
                 ],
                 "list": false,
@@ -3577,7 +3585,7 @@
                   },
                   {
                     "name": "pydantic",
-                    "version": "2.11.10"
+                    "version": "2.12.5"
                   },
                   {
                     "name": "googleapiclient",
@@ -3814,6 +3822,7 @@
                 "info": "Data object with a 'file_path' property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports same file types.",
                 "input_types": [
                   "Data",
+                  "JSON",
                   "Message"
                 ],
                 "list": true,

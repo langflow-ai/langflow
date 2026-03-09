@@ -74,18 +74,20 @@
             "id": "ChatOutput-bcQIH",
             "inputTypes": [
               "Data",
+              "JSON",
               "DataFrame",
+              "Table",
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-htMuI{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-htMuIœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-bcQIH{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-bcQIHœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-LanguageModelComponent-htMuI{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-htMuIœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-bcQIH{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-bcQIHœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-htMuI",
         "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-htMuIœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-bcQIH",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-bcQIHœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-bcQIHœ, œinputTypesœ: [œDataœ,  œJSONœ, œDataFrameœ,  œTableœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -418,7 +420,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.133.1"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
@@ -538,7 +540,9 @@
                 "info": "Message to be passed as output.",
                 "input_types": [
                   "Data",
+                  "JSON",
                   "DataFrame",
+                  "Table",
                   "Message"
                 ],
                 "list": false,
@@ -660,7 +664,7 @@
         "data": {
           "id": "note-gLzpv",
           "node": {
-            "description": "# Document Q&A\n\nThis flow loads a file and uses an LLM to answer questions based on content from the loaded document. \n\n## Prerequisites\n\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quickstart\n\n1. Paste your OpenAI API key in the **OpenAI** model component.\n2.  In the **File** component, select a file  you want to load.\n3. Open the **Playground** and chat with your document.",
+            "description": "# 📖 README\nThis flow loads a file and uses an LLM to answer questions based on content from the loaded document. \n\n## Prerequisites\n\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n2.  In the **File** component, select a file  you want to load.\n3. Open the **Playground** and chat with your document.",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -1264,7 +1268,8 @@
           "id": "File-b2gOG",
           "node": {
             "base_classes": [
-              "DataFrame"
+              "DataFrame",
+              "Table"
             ],
             "beta": false,
             "conditional_paths": [],
@@ -1318,7 +1323,7 @@
                   },
                   {
                     "name": "pydantic",
-                    "version": "2.11.10"
+                    "version": "2.12.5"
                   },
                   {
                     "name": "googleapiclient",
@@ -1555,6 +1560,7 @@
                 "info": "Data object with a 'file_path' property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports same file types.",
                 "input_types": [
                   "Data",
+                  "JSON",
                   "Message"
                 ],
                 "list": true,
