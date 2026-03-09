@@ -2,10 +2,21 @@ import re
 from unittest.mock import patch
 
 import pytest
+from langchain_core.messages import AIMessage
 from lfx.components.llm_operations.batch_run import BatchRunComponent
 from lfx.schema import DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient
+
+
+class _MockLLM:
+    """Minimal mock LLM for unit-testing batch processing without live API keys."""
+
+    def with_config(self, *_, **__):
+        return self
+
+    async def abatch(self, conversations):
+        return [AIMessage(content=f"Response to: {conv[-1]['content']}") for conv in conversations]
 
 
 class TestBatchRunComponent(ComponentTestBaseWithoutClient):
@@ -40,24 +51,12 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         """Return an empty list since this component doesn't have version-specific files."""
         return []
 
-    @pytest.mark.skip(reason="Requires API key after ModelInput migration - needs mocking refactor")
     async def test_successful_batch_run_with_system_message(self):
         # Create test data
         test_df = DataFrame({"text": ["Hello", "World", "Test"]})
 
         component = BatchRunComponent(
-            model=[
-                {
-                    "name": "gpt-4o",
-                    "provider": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                        "model_class": "ChatOpenAI",
-                        "model_name_param": "model",
-                        "api_key_param": "api_key",
-                    },
-                }
-            ],
+            model=_MockLLM(),
             system_message="You are a helpful assistant",
             df=test_df,
             column_name="text",
@@ -80,23 +79,11 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         assert all(row["metadata"]["has_system_message"] for row in result_dicts)
         assert all(row["metadata"]["processing_status"] == "success" for row in result_dicts)
 
-    @pytest.mark.skip(reason="Requires API key after ModelInput migration - needs mocking refactor")
     async def test_batch_run_without_metadata(self):
         test_df = DataFrame({"text": ["Hello", "World"]})
 
         component = BatchRunComponent(
-            model=[
-                {
-                    "name": "gpt-4o",
-                    "provider": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                        "model_class": "ChatOpenAI",
-                        "model_name_param": "model",
-                        "api_key_param": "api_key",
-                    },
-                }
-            ],
+            model=_MockLLM(),
             df=test_df,
             column_name="text",
             enable_metadata=False,
@@ -109,21 +96,9 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         assert "metadata" not in result.columns
         assert all(isinstance(resp, str) for resp in result["model_response"])
 
-    @pytest.mark.skip(reason="Requires API key after ModelInput migration - needs mocking refactor")
     async def test_batch_run_error_with_metadata(self):
         component = BatchRunComponent(
-            model=[
-                {
-                    "name": "gpt-4o",
-                    "provider": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                        "model_class": "ChatOpenAI",
-                        "model_name_param": "model",
-                        "api_key_param": "api_key",
-                    },
-                }
-            ],
+            model=_MockLLM(),
             df="not_a_dataframe",  # This will cause a TypeError
             column_name="text",
             enable_metadata=True,
@@ -132,21 +107,9 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(TypeError, match=re.escape("Expected DataFrame input, got <class 'str'>")):
             await component.run_batch()
 
-    @pytest.mark.skip(reason="Requires API key after ModelInput migration - needs mocking refactor")
     async def test_batch_run_error_without_metadata(self):
         component = BatchRunComponent(
-            model=[
-                {
-                    "name": "gpt-4o",
-                    "provider": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                        "model_class": "ChatOpenAI",
-                        "model_name_param": "model",
-                        "api_key_param": "api_key",
-                    },
-                }
-            ],
+            model=_MockLLM(),
             df="not_a_dataframe",  # This will cause a TypeError
             column_name="text",
             enable_metadata=False,
@@ -155,7 +118,6 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(TypeError, match=re.escape("Expected DataFrame input, got <class 'str'>")):
             await component.run_batch()
 
-    @pytest.mark.skip(reason="Requires API key after ModelInput migration - needs mocking refactor")
     async def test_operational_error_with_metadata(self):
         # Create a mock model that raises an AttributeError during processing
         class ErrorModel:
@@ -167,18 +129,7 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
                 raise AttributeError(msg)
 
         component = BatchRunComponent(
-            model=[
-                {
-                    "name": "gpt-4o",
-                    "provider": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                        "model_class": "ErrorModel",
-                        "model_name_param": "model",
-                        "api_key_param": "api_key",
-                    },
-                }
-            ],
+            model=ErrorModel(),
             df=DataFrame({"text": ["test1", "test2"]}),
             column_name="text",
             enable_metadata=True,
@@ -196,7 +147,6 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         assert error_row["model_response"] == ""
         assert error_row["batch_index"] == -1
 
-    @pytest.mark.skip(reason="Requires API key after ModelInput migration - needs mocking refactor")
     async def test_operational_error_without_metadata(self):
         # Create a mock model that raises an AttributeError during processing
         class ErrorModel:
@@ -208,18 +158,7 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
                 raise AttributeError(msg)
 
         component = BatchRunComponent(
-            model=[
-                {
-                    "name": "gpt-4o",
-                    "provider": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                        "model_class": "ErrorModel",
-                        "model_name_param": "model",
-                        "api_key_param": "api_key",
-                    },
-                }
-            ],
+            model=ErrorModel(),
             df=DataFrame({"text": ["test1", "test2"]}),
             column_name="text",
             enable_metadata=False,
@@ -294,21 +233,9 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         # Como o metadata está desabilitado, ele não deve existir
         assert "metadata" not in row
 
-    @pytest.mark.skip(reason="Requires API key after ModelInput migration - needs mocking refactor")
     async def test_invalid_column_name(self):
         component = BatchRunComponent(
-            model=[
-                {
-                    "name": "gpt-4o",
-                    "provider": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                        "model_class": "ChatOpenAI",
-                        "model_name_param": "model",
-                        "api_key_param": "api_key",
-                    },
-                }
-            ],
+            model=_MockLLM(),
             df=DataFrame({"text": ["Hello"]}),
             column_name="nonexistent_column",
             enable_metadata=True,
@@ -320,21 +247,9 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         ):
             await component.run_batch()
 
-    @pytest.mark.skip(reason="Requires API key after ModelInput migration - needs mocking refactor")
     async def test_empty_dataframe(self):
         component = BatchRunComponent(
-            model=[
-                {
-                    "name": "gpt-4o",
-                    "provider": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                        "model_class": "ChatOpenAI",
-                        "model_name_param": "model",
-                        "api_key_param": "api_key",
-                    },
-                }
-            ],
+            model=_MockLLM(),
             df=DataFrame({"text": []}),
             column_name="text",
             enable_metadata=True,
@@ -344,23 +259,11 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, DataFrame)
         assert len(result) == 0
 
-    @pytest.mark.skip(reason="Requires API key after ModelInput migration - needs mocking refactor")
     async def test_non_string_column_conversion(self):
         test_df = DataFrame({"text": [123, 456, 789]})  # Numeric values
 
         component = BatchRunComponent(
-            model=[
-                {
-                    "name": "gpt-4o",
-                    "provider": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                        "model_class": "ChatOpenAI",
-                        "model_name_param": "model",
-                        "api_key_param": "api_key",
-                    },
-                }
-            ],
+            model=_MockLLM(),
             df=test_df,
             column_name="text",
             enable_metadata=True,
@@ -387,8 +290,6 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
 
             async def abatch(self, conversations):
                 # Model should still work without config
-                from langchain_core.messages import AIMessage
-
                 return [AIMessage(content=f"Response to: {conv[0]['content']}") for conv in conversations]
 
         test_df = DataFrame({"text": ["test1", "test2"]})

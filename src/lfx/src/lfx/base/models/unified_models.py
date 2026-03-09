@@ -207,6 +207,7 @@ def get_provider_required_variable_keys(provider: str) -> list[str]:
 def apply_provider_variable_config_to_build_config(
     build_config: dict,
     provider: str,
+    user_id: UUID | str | None = None,
 ) -> dict:
     """Apply provider variable metadata to component build config fields.
 
@@ -220,12 +221,13 @@ def apply_provider_variable_config_to_build_config(
     Args:
         build_config: The component's build configuration dict
         provider: The selected provider name (e.g., "OpenAI", "IBM WatsonX")
+        user_id: The user ID used to retrieve stored credential values from the
+            variable service. Falls back to environment variables when None or
+            when a variable is not found in the database.
 
     Returns:
         Updated build_config dict
     """
-    import os
-
     provider_vars = get_provider_all_variables(provider)
 
     # Build a lookup by component_metadata.mapping_field
@@ -235,6 +237,11 @@ def apply_provider_variable_config_to_build_config(
         mapping_field = component_meta.get("mapping_field")
         if mapping_field:
             vars_by_field[mapping_field] = v
+
+    # Fetch all stored credential values for this provider in one call so we
+    # use the variable service (DB-first, env fallback) rather than reading
+    # os.environ directly.
+    stored_values = get_all_variables_for_provider(user_id, provider)
 
     for field_name, var_info in vars_by_field.items():
         if field_name not in build_config:
@@ -259,19 +266,19 @@ def apply_provider_variable_config_to_build_config(
         # Show the field since it's relevant to this provider
         field_config["show"] = True
 
-        # If no value is set, try to get from environment variable
-        env_var_key = var_info.get("variable_key")
-        if env_var_key:
+        # If no value is set, pre-populate from the stored credential value
+        var_key = var_info.get("variable_key")
+        if var_key:
             current_value = field_config.get("value")
-            # Only set from env if field is empty/None
+            # Only set if field is empty/None
             if not current_value or (isinstance(current_value, str) and not current_value.strip()):
-                env_value = os.environ.get(env_var_key)
-                if env_value and env_value.strip():
-                    field_config["value"] = env_value
+                stored_value = stored_values.get(var_key)
+                if stored_value and stored_value.strip():
+                    field_config["value"] = stored_value
                     logger.debug(
-                        "Set field %s from environment variable %s",
+                        "Set field %s from stored variable %s",
                         field_name,
-                        env_var_key,
+                        var_key,
                     )
 
     return build_config
@@ -1910,7 +1917,9 @@ def handle_model_input_update(
     if isinstance(current_model_value, list) and len(current_model_value) > 0:
         provider = current_model_value[0].get("provider", "")
         if provider:
-            build_config = apply_provider_variable_config_to_build_config(build_config, provider)
+            build_config = apply_provider_variable_config_to_build_config(
+                build_config, provider, user_id=getattr(component, "user_id", None)
+            )
 
         # Also handle WatsonX-specific embedding fields that are not in provider metadata
         if cache_key_prefix == "embedding_model_options":
