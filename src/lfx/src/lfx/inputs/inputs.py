@@ -897,6 +897,9 @@ InputTypes: TypeAlias = (
 )
 
 InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(InputTypes)}
+# DataInput is an alias for JSONInput, so its __name__ is "JSONInput".
+# Add explicit entry so serialized configs using "DataInput" still deserialize correctly.
+InputTypesMap["DataInput"] = JSONInput
 
 
 def instantiate_input(input_type: str, data: dict) -> InputTypes:

@@ -95,12 +95,14 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             }
             has_tool_outputs = any(output.get("types") == ["Tool"] for output in node_data.get("outputs", []))
             if "outputs" in latest_node and not has_tool_outputs and not is_tool_or_agent:
+                # Deep copy to avoid mutating the shared latest_node template across flows
+                new_outputs = deepcopy(latest_node["outputs"])
                 # Set selected output as the previous selected output with type migration support
                 type_migrations = {
                     "Data": "JSON",
                     "DataFrame": "Table",
                 }
-                for output in latest_node["outputs"]:
+                for output in new_outputs:
                     node_data_output = next(
                         (output_ for output_ in node_data["outputs"] if output_["name"] == output["name"]),
                         None,
@@ -112,7 +114,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                             migrated_selected = type_migrations.get(old_selected, old_selected)
                             if migrated_selected in output.get("types", []):
                                 output["selected"] = migrated_selected
-                node_data["outputs"] = latest_node["outputs"]
+                node_data["outputs"] = new_outputs
 
             if node_data["template"]["_type"] != latest_template["_type"]:
                 node_data["template"]["_type"] = latest_template["_type"]
