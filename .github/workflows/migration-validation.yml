@@ -29,9 +29,6 @@ jobs:
         run: |
           uv sync
 
-      - name: Fetch main branch
-        run: git fetch origin main
-
       - name: Check model/migration consistency
         run: |
           uv run pytest src/backend/tests/unit/alembic/test_migration_execution.py -x -v
@@ -54,15 +51,16 @@ jobs:
       - name: Get changed migration files
         id: changed-files
         run: |
-          CHANGED_FILES=$(git diff --name-only origin/main...HEAD | grep -E 'alembic/versions/.*\.py$' | grep -v 'test_migrations/' || echo "")
+          set -euo pipefail
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD | grep -E 'src/backend/base/langflow/alembic/versions/.*\.py$' | grep -v 'test_migrations/' || echo "")
 
           if [ -z "$CHANGED_FILES" ]; then
             echo "No migration files changed"
-            echo "files=" >> $GITHUB_OUTPUT
+            echo "files=" >> "$GITHUB_OUTPUT"
           else
             echo "Changed migration files:"
             echo "$CHANGED_FILES"
-            echo "files=$(echo $CHANGED_FILES | tr '\n' ' ')" >> $GITHUB_OUTPUT
+            echo "files=$(printf '%s' "$CHANGED_FILES" | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Validate migration patterns

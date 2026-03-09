@@ -12,12 +12,13 @@ from alembic.migration import MigrationContext
 from langflow.services.database.service import SQLModel
 from sqlalchemy import create_engine, inspect
 
+_WORKSPACE_ROOT = Path(__file__).resolve().parents[5]
+
 
 def _get_alembic_cfg(db_path: str) -> Config:
     """Create an Alembic Config pointing at the project's migration scripts."""
     alembic_cfg = Config()
-    workspace_root = Path(__file__).resolve().parents[5]
-    script_location = workspace_root / "src/backend/base/langflow/alembic"
+    script_location = _WORKSPACE_ROOT / "src/backend/base/langflow/alembic"
 
     if not script_location.exists():
         pytest.fail(f"Alembic script location not found at {script_location}")
@@ -38,16 +39,13 @@ def _get_main_branch_head() -> str | None:
     """
     from alembic.script import ScriptDirectory
 
-    workspace_root = Path(__file__).resolve().parents[5]
-
-    git = shutil.which("git")
-    if git is None:
-        msg = "git executable not found on PATH"
-        raise FileNotFoundError(msg)
-
     try:
+        git = shutil.which("git")
+        if git is None:
+            return None
+
         # Find migration files that are new on this branch vs origin/main
-        result = subprocess.run(
+        result = subprocess.run(  # noqa: S603
             [
                 git,
                 "diff",
@@ -60,25 +58,19 @@ def _get_main_branch_head() -> str | None:
             capture_output=True,
             text=True,
             check=True,
-            cwd=workspace_root,
+            cwd=_WORKSPACE_ROOT,
         )
         new_files = [f for f in result.stdout.strip().splitlines() if f.endswith(".py")]
 
-        if not new_files:
-            # No new migrations on this branch — head is same as main
-            # Use the current branch's script directory to get the head
-            alembic_cfg = Config()
-            script_location = workspace_root / "src/backend/base/langflow/alembic"
-            alembic_cfg.set_main_option("script_location", str(script_location))
-            script = ScriptDirectory.from_config(alembic_cfg)
-            heads = script.get_heads()
-            return heads[0] if len(heads) == 1 else None
-
-        # Get the down_revisions of new migrations — these point to main's head(s)
         alembic_cfg = Config()
-        script_location = workspace_root / "src/backend/base/langflow/alembic"
+        script_location = _WORKSPACE_ROOT / "src/backend/base/langflow/alembic"
         alembic_cfg.set_main_option("script_location", str(script_location))
         script = ScriptDirectory.from_config(alembic_cfg)
+
+        if not new_files:
+            # No new migrations on this branch — head is same as main
+            heads = script.get_heads()
+            return heads[0] if len(heads) == 1 else None
 
         # Collect revision IDs of all new migrations
         new_rev_ids = set()
@@ -176,8 +168,8 @@ def _filter_sqlite_noise(diffs: list) -> list:
       are real mismatches and are preserved.
     """
     significant_diffs = []
-    fk_removes: dict[tuple, object] = {}  # (table, col_tuple) -> ForeignKeyConstraint
-    fk_adds: dict[tuple, object] = {}
+    fk_removes: dict = {}  # (table, col_tuple) -> ForeignKeyConstraint
+    fk_adds: dict = {}
 
     for d in diffs:
         if not (isinstance(d, tuple) and len(d) >= 2):
@@ -198,13 +190,20 @@ def _filter_sqlite_noise(diffs: list) -> list:
 
         significant_diffs.append(d)
 
-    # Compare FK remove/add pairs: suppress only when ondelete+onupdate match
+    # Compare FK remove/add pairs: suppress only when target and actions match
     all_fk_keys = set(fk_removes) | set(fk_adds)
     for key in all_fk_keys:
         rm = fk_removes.get(key)
         add = fk_adds.get(key)
-        if rm and add and rm.ondelete == add.ondelete and rm.onupdate == add.onupdate:
-            continue  # Pure name-only diff — SQLite noise
+        if rm and add:
+            rm_targets = sorted(
+                (elem.column.table.name, elem.column.name) for elem in rm.elements if elem.column is not None
+            )
+            add_targets = sorted(
+                (elem.column.table.name, elem.column.name) for elem in add.elements if elem.column is not None
+            )
+            if rm_targets == add_targets and rm.ondelete == add.ondelete and rm.onupdate == add.onupdate:
+                continue  # Pure name-only diff — SQLite noise
         if rm:
             significant_diffs.append(("remove_fk", rm))
         if add:
