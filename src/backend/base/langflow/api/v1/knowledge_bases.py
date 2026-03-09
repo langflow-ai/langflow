@@ -16,7 +16,7 @@ from lfx.base.data.utils import extract_text_from_bytes
 from lfx.log import logger
 
 from langflow.api.utils import CurrentActiveUser
-from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBIngestionHelper, KBStorageHelper
+from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBIngestionHelper, KBStorageHelper, force_delete_knowledge_base_windows
 from langflow.api.v1.schemas import TaskResponse
 from langflow.schema.knowledge_base import (
     BulkDeleteRequest,
@@ -600,14 +600,31 @@ async def get_knowledge_base_chunks(
 @router.delete("/{kb_name}", status_code=HTTPStatus.OK)
 async def delete_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> dict[str, str]:
     """Delete a specific knowledge base."""
+    import platform
+    
     try:
         kb_path = _resolve_kb_path(kb_name, current_user)
-
-        # Explicitly teardown KB storage to flush Chroma handles before directory deletion
-        KBStorageHelper.teardown_storage(kb_path, kb_name)
-
-        # Delete the entire knowledge base directory
-        shutil.rmtree(kb_path)
+        
+        # Use enhanced Windows-aware deletion if on Windows
+        if platform.system() == "Windows":
+            success = force_delete_knowledge_base_windows(kb_path, kb_name)
+            if not success:
+                # Check if path still exists
+                if kb_path.exists():
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Failed to delete knowledge base '{kb_name}'. The database may be in use. Please try again later."
+                    )
+        else:
+            # Non-Windows systems use standard approach
+            try:
+                # Close any connections first
+                KBStorageHelper.teardown_storage(kb_path, kb_name)
+                # Delete the directory
+                shutil.rmtree(kb_path)
+            except Exception as e:
+                await logger.aerror("Error deleting knowledge base '%s': %s", kb_name, e)
+                raise HTTPException(status_code=500, detail=f"Error deleting knowledge base: {str(e)}") from e
 
     except HTTPException:
         raise
@@ -622,11 +639,14 @@ async def delete_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -
 @router.delete("/", status_code=HTTPStatus.OK)
 async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: CurrentActiveUser) -> dict[str, object]:
     """Delete multiple knowledge bases."""
+    import platform
+    
     try:
         kb_root_path = KBStorageHelper.get_root_path()
         kb_user_path = kb_root_path / current_user.username
         deleted_count = 0
         not_found_kbs = []
+        failed_kbs = []
 
         for kb_name in request.kb_names:
             kb_path = kb_user_path / kb_name
@@ -636,28 +656,50 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
                 continue
 
             try:
-                # Explicitly teardown KB storage to flush Chroma handles before directory deletion
-                KBStorageHelper.teardown_storage(kb_path, kb_name)
+                # Use enhanced Windows-aware deletion if on Windows
+                if platform.system() == "Windows":
+                    success = force_delete_knowledge_base_windows(kb_path, kb_name)
+                    if success or not kb_path.exists():
+                        deleted_count += 1
+                    else:
+                        failed_kbs.append(kb_name)
+                else:
+                    # Non-Windows systems
+                    try:
+                        KBStorageHelper.teardown_storage(kb_path, kb_name)
+                        shutil.rmtree(kb_path)
+                        deleted_count += 1
+                    except Exception as e:
+                        await logger.aexception("Error deleting knowledge base '%s': %s", kb_name, e)
+                        failed_kbs.append(kb_name)
 
-                # Delete the entire knowledge base directory
-                shutil.rmtree(kb_path)
-                deleted_count += 1
-            except (OSError, PermissionError) as e:
+            except Exception as e:
                 await logger.aexception("Error deleting knowledge base '%s': %s", kb_name, e)
-                # Continue with other deletions even if one fails
+                failed_kbs.append(kb_name)
 
-        if not_found_kbs and deleted_count == 0:
-            raise HTTPException(
-                status_code=404, detail="Knowledge bases not found: {}".format(", ".join(not_found_kbs))
-            )
-
+        # Build response
         result = {
             "message": f"Successfully deleted {deleted_count} knowledge base(s)",
             "deleted_count": deleted_count,
         }
 
         if not_found_kbs:
-            result["not_found"] = ", ".join(not_found_kbs)
+            result["not_found"] = not_found_kbs
+            
+        if failed_kbs:
+            result["failed"] = failed_kbs
+            
+        # Return appropriate status based on results
+        if deleted_count == 0 and not_found_kbs and not failed_kbs:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"Knowledge bases not found: {', '.join(not_found_kbs)}"
+            )
+        elif deleted_count == 0 and failed_kbs:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to delete knowledge bases: {', '.join(failed_kbs)}. They may be in use."
+            )
 
     except HTTPException:
         raise
