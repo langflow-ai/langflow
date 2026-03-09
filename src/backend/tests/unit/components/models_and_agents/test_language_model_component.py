@@ -390,3 +390,83 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
 
         model = component.build_model()
         assert isinstance(model, ChatGoogleGenerativeAI)
+
+    # ---------------------------------------------------------------------------
+    # update_build_config field-visibility tests (#2 + #5)
+    # ---------------------------------------------------------------------------
+
+    def _get_build_config(self, component):
+        """Helper to get a fresh build_config dict from the component's frontend node."""
+        return component.to_frontend_node()["data"]["node"]["template"]
+
+    @patch("lfx.base.models.unified_models.get_language_model_options")
+    async def test_update_build_config_shows_ollama_url_when_ollama_selected(
+        self, mock_opts, component_class, default_kwargs
+    ):
+        """Selecting Ollama shows ollama_base_url and hides WatsonX-specific fields."""
+        mock_opts.return_value = []
+        component = component_class(**default_kwargs)
+        component._user_id = None
+
+        build_config = self._get_build_config(component)
+        ollama_model = [{"name": "llama3.2", "provider": "Ollama", "metadata": {}}]
+
+        updated = component.update_build_config(build_config, ollama_model, field_name="model")
+
+        assert updated["ollama_base_url"]["show"] is True
+        assert updated["base_url_ibm_watsonx"]["show"] is False
+        assert updated["project_id"]["show"] is False
+
+    @patch("lfx.base.models.unified_models.get_language_model_options")
+    async def test_update_build_config_hides_ollama_url_when_openai_selected(
+        self, mock_opts, component_class, default_kwargs
+    ):
+        """Selecting OpenAI hides ollama_base_url and WatsonX-specific fields."""
+        mock_opts.return_value = []
+        component = component_class(**default_kwargs)
+        component._user_id = None
+
+        build_config = self._get_build_config(component)
+        openai_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+
+        updated = component.update_build_config(build_config, openai_model, field_name="model")
+
+        assert updated["ollama_base_url"]["show"] is False
+        assert updated["base_url_ibm_watsonx"]["show"] is False
+        assert updated["project_id"]["show"] is False
+
+    @patch("lfx.base.models.unified_models.get_language_model_options")
+    async def test_update_build_config_shows_watsonx_fields_when_watsonx_selected(
+        self, mock_opts, component_class, default_kwargs
+    ):
+        """Selecting IBM WatsonX shows both watsonx URL and project_id fields."""
+        mock_opts.return_value = []
+        component = component_class(**default_kwargs)
+        component._user_id = None
+
+        build_config = self._get_build_config(component)
+        watsonx_model = [{"name": "ibm/granite-13b-chat-v2", "provider": "IBM WatsonX", "metadata": {}}]
+
+        updated = component.update_build_config(build_config, watsonx_model, field_name="model")
+
+        assert updated["base_url_ibm_watsonx"]["show"] is True
+        assert updated["base_url_ibm_watsonx"]["required"] is True
+        assert updated["project_id"]["show"] is True
+        assert updated["ollama_base_url"]["show"] is False
+
+    @patch("lfx.base.models.unified_models.get_language_model_options")
+    async def test_update_build_config_hides_all_provider_fields_with_no_model(
+        self, mock_opts, component_class, default_kwargs
+    ):
+        """With no model selected all provider-specific fields should be hidden."""
+        mock_opts.return_value = []
+        component = component_class(**default_kwargs)
+        component._user_id = None
+
+        build_config = self._get_build_config(component)
+
+        updated = component.update_build_config(build_config, "", field_name=None)
+
+        assert updated["ollama_base_url"]["show"] is False
+        assert updated["base_url_ibm_watsonx"]["show"] is False
+        assert updated["project_id"]["show"] is False

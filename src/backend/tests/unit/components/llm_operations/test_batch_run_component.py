@@ -1,4 +1,5 @@
 import re
+from unittest.mock import patch
 
 import pytest
 from lfx.components.llm_operations.batch_run import BatchRunComponent
@@ -405,3 +406,46 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         assert len(result) == 2
         assert "model_response" in result.columns
         assert all(isinstance(resp, str) for resp in result["model_response"])
+
+    # ---------------------------------------------------------------------------
+    # update_build_config field-visibility tests (#2)
+    # ---------------------------------------------------------------------------
+
+    def _get_build_config(self, component):
+        """Helper to get a fresh build_config dict from the component's frontend node."""
+        return component.to_frontend_node()["data"]["node"]["template"]
+
+    @patch("lfx.base.models.unified_models.get_language_model_options")
+    async def test_update_build_config_shows_watsonx_fields_when_watsonx_selected(
+        self, mock_opts, component_class, default_kwargs
+    ):
+        """Selecting IBM WatsonX should show base_url_ibm_watsonx and project_id fields."""
+        mock_opts.return_value = []
+        component = component_class(**default_kwargs)
+        component._user_id = None
+
+        build_config = self._get_build_config(component)
+        watsonx_model = [{"name": "ibm/granite-13b-chat-v2", "provider": "IBM WatsonX", "metadata": {}}]
+
+        updated = component.update_build_config(build_config, watsonx_model, field_name="model")
+
+        assert updated["base_url_ibm_watsonx"]["show"] is True
+        assert updated["base_url_ibm_watsonx"]["required"] is True
+        assert updated["project_id"]["show"] is True
+
+    @patch("lfx.base.models.unified_models.get_language_model_options")
+    async def test_update_build_config_hides_watsonx_fields_when_openai_selected(
+        self, mock_opts, component_class, default_kwargs
+    ):
+        """Selecting OpenAI should hide WatsonX-specific fields."""
+        mock_opts.return_value = []
+        component = component_class(**default_kwargs)
+        component._user_id = None
+
+        build_config = self._get_build_config(component)
+        openai_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+
+        updated = component.update_build_config(build_config, openai_model, field_name="model")
+
+        assert updated["base_url_ibm_watsonx"]["show"] is False
+        assert updated["project_id"]["show"] is False

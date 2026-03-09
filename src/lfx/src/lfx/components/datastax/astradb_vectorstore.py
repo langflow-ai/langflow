@@ -140,8 +140,17 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
         field_name: str | None = None,
     ) -> dict:
         """Update build configuration with proper handling of embedding and search options."""
-        # Update model options for ModelInput only when relevant
-        # Only refresh when: initial load (None), embedding_model field changes, or api_key changes
+        # Update model options for ModelInput only when relevant.
+        # Only refresh when: initial load (None), embedding_model field changes, or api_key changes.
+        #
+        # Note: this intentionally uses update_model_options_in_build_config directly rather than
+        # handle_model_input_update because:
+        #   1. The model field is named "embedding_model" (not "model"), requiring model_field_name.
+        #   2. The refresh is conditional - we skip it for unrelated fields (e.g. database_name,
+        #      collection_name) to avoid unnecessary work.
+        #   3. AstraDB manages its own provider-field visibility (embedding_generation_provider
+        #      dialog), so the generic provider-field hide/show steps in handle_model_input_update
+        #      are not applicable here.
         if field_name in (None, "embedding_model", "api_key"):
             build_config = update_model_options_in_build_config(
                 component=self,
