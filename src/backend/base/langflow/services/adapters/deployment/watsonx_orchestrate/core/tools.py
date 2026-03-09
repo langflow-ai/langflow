@@ -299,7 +299,7 @@ async def process_raw_flows_with_app_id(
         client_cache=client_cache,
     )
 
-    connection = validate_connection(clients.connections, app_id=app_id)
+    connection = await validate_connection(clients.connections, app_id=app_id)
 
     return await create_and_upload_wxo_flow_tools(
         tool_client=clients.tool,

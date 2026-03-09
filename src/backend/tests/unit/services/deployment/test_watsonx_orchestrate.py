@@ -445,6 +445,66 @@ async def test_assert_create_resources_available_rejects_existing_tool_name():
         )
 
 
+@pytest.mark.anyio
+async def test_process_raw_flows_with_app_id_awaits_connection_validation(monkeypatch):
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core import tools as tools_core_module
+
+    fake_clients = SimpleNamespace(
+        tool=SimpleNamespace(),
+        connections=SimpleNamespace(),
+    )
+    captured: dict[str, object] = {}
+
+    async def mock_get_provider_clients(*, user_id, db, client_cache):  # noqa: ARG001
+        return fake_clients
+
+    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+        return SimpleNamespace(connection_id="conn-123")
+
+    async def mock_create_and_upload_wxo_flow_tools(
+        *,
+        tool_client,
+        flow_payloads,
+        connections,
+        app_id=None,
+        tool_name_prefix,
+    ):
+        captured["tool_client"] = tool_client
+        captured["flow_payloads"] = flow_payloads
+        captured["connections"] = connections
+        captured["app_id"] = app_id
+        captured["tool_name_prefix"] = tool_name_prefix
+        return ["tool-1"]
+
+    monkeypatch.setattr(
+        "langflow.services.adapters.deployment.watsonx_orchestrate.client.get_provider_clients",
+        mock_get_provider_clients,
+    )
+    monkeypatch.setattr(
+        "langflow.services.adapters.deployment.watsonx_orchestrate.core.config.validate_connection",
+        mock_validate_connection,
+    )
+    monkeypatch.setattr(
+        tools_core_module,
+        "create_and_upload_wxo_flow_tools",
+        mock_create_and_upload_wxo_flow_tools,
+    )
+
+    result = await tools_core_module.process_raw_flows_with_app_id(
+        user_id="user-1",
+        app_id="app-1",
+        flows=[],
+        db=object(),
+        tool_name_prefix="lf_test_",
+        client_cache={},
+    )
+
+    assert result == ["tool-1"]
+    assert captured["connections"] == {"app-1": "conn-123"}
+    assert captured["app_id"] == "app-1"
+    assert captured["tool_name_prefix"] == "lf_test_"
+
+
 def test_prefix_flow_global_variable_references_rewrites_load_from_db_values():
     flow_definition = {
         "data": {
