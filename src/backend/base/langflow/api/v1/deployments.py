@@ -6,7 +6,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Path, Query, status
-from lfx.services.deployment.schema import (
+from lfx.services.adapters.deployment.schema import (
     DeploymentType,
 )
 
@@ -28,8 +28,8 @@ from langflow.api.v1.schemas.deployments import (
     ExecutionCreateRequest,
     ExecutionCreateResponse,
     ExecutionStatusResponse,
+    FlowVersionIdsQuery,
     RedeployResponse,
-    validate_flow_version_id_query,
 )
 
 router = APIRouter(prefix="/deployments", tags=["Deployments"])
@@ -164,7 +164,7 @@ async def list_deployments(
     size: Annotated[int, Query(ge=1, le=50)] = 20,
     deployment_type: Annotated[DeploymentType | None, Query()] = None,
     flow_version_ids: Annotated[
-        list[str] | None,
+        FlowVersionIdsQuery,
         Query(
             description=(
                 "Optional Langflow flow version ids (pass as repeated query params, "
@@ -176,11 +176,6 @@ async def list_deployments(
     ] = None,
 ):
     """List deployments for the selected Langflow provider-account UUID."""
-    if flow_version_ids is not None:
-        try:
-            flow_version_ids = validate_flow_version_id_query(flow_version_ids)
-        except ValueError as exc:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 

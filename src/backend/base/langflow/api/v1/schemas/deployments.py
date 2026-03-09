@@ -49,7 +49,7 @@ from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
-from lfx.services.deployment.schema import (
+from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
     BaseDeploymentDataUpdate,
     DeploymentConfig,
@@ -107,9 +107,15 @@ NonEmptyStr = Annotated[str, AfterValidator(_strip_nonempty)]
 """String type that strips whitespace and rejects empty/whitespace-only values."""
 
 
-def validate_flow_version_id_query(values: list[str]) -> list[str]:
-    """Validate flow_version_ids received as query parameters."""
+def _validate_flow_version_ids(values: list[str] | None) -> list[str] | None:
+    """AfterValidator for optional flow_version_ids query parameter."""
+    if values is None:
+        return None
     return _validate_str_id_list(values, field_name="flow_version_ids")
+
+
+FlowVersionIdsQuery = Annotated[list[str] | None, AfterValidator(_validate_flow_version_ids)]
+"""Query parameter type that validates and cleans an optional list of flow version id strings."""
 
 
 # ---------------------------------------------------------------------------
