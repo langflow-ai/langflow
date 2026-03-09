@@ -38,7 +38,7 @@ opaque provider fields.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
 from lfx.services.deployment.schema import (
@@ -47,7 +47,7 @@ from lfx.services.deployment.schema import (
     DeploymentConfig,
     DeploymentType,
 )
-from pydantic import BaseModel, Field, SecretStr, ValidationInfo, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, Field, SecretStr, ValidationInfo, field_validator, model_validator
 
 # ---------------------------------------------------------------------------
 # Shared validation helpers
@@ -90,6 +90,15 @@ def _normalize_optional_str(value: str | None, *, field_name: str = "Field") -> 
     return _normalize_str(value, field_name=field_name)
 
 
+def _strip_nonempty(value: str, info: ValidationInfo) -> str:
+    """AfterValidator function: strip whitespace, reject empty/whitespace-only."""
+    return _normalize_str(value, field_name=info.field_name or "Field")
+
+
+NonEmptyStr = Annotated[str, AfterValidator(_strip_nonempty)]
+"""String type that strips whitespace and rejects empty/whitespace-only values."""
+
+
 def validate_flow_version_id_query(values: list[str]) -> list[str]:
     """Validate flow_version_ids received as query parameters."""
     return _validate_str_id_list(values, field_name="flow_version_ids")
@@ -103,14 +112,12 @@ def validate_flow_version_id_query(values: list[str]) -> list[str]:
 class DeploymentProviderAccountCreate(BaseModel):
     model_config = {"extra": "forbid"}
 
-    provider_tenant_id: str | None = Field(
+    provider_tenant_id: NonEmptyStr | None = Field(
         default=None,
-        min_length=1,
         description="Provider-owned tenant/organization id. Langflow persists this opaque value.",
     )
-    provider_key: str = Field(min_length=1, description="Deployment provider key.")
-    provider_url: str = Field(
-        min_length=1,
+    provider_key: NonEmptyStr = Field(description="Deployment provider key.")
+    provider_url: NonEmptyStr = Field(
         description="Provider service URL persisted in Langflow DB for provider-account resolution.",
     )
     api_key: SecretStr = Field(
@@ -120,34 +127,24 @@ class DeploymentProviderAccountCreate(BaseModel):
         ),
     )
 
-    @field_validator("provider_key", "provider_url")
-    @classmethod
-    def normalize_required_strings(cls, value: str, info: ValidationInfo) -> str:
-        return _normalize_str(value, field_name=info.field_name)
-
     @field_validator("api_key", mode="before")
     @classmethod
     def normalize_api_key(cls, value: str, info: ValidationInfo) -> str:
         return _normalize_str(value, field_name=info.field_name)
 
-    @field_validator("provider_tenant_id")
-    @classmethod
-    def normalize_provider_tenant_id(cls, value: str | None, info: ValidationInfo) -> str | None:
-        return _normalize_optional_str(value, field_name=info.field_name)
-
 
 class DeploymentProviderAccountUpdate(BaseModel):
     model_config = {"extra": "forbid"}
 
-    provider_tenant_id: str | None = Field(
+    provider_tenant_id: NonEmptyStr | None = Field(
         default=None,
         description="Provider-owned tenant/organization id. Omit to keep existing value, null to clear.",
     )
-    provider_key: str | None = Field(
+    provider_key: NonEmptyStr | None = Field(
         default=None,
         description="Deployment provider key. Omit to keep existing value; cannot be set to null.",
     )
-    provider_url: str | None = Field(
+    provider_url: NonEmptyStr | None = Field(
         default=None,
         description="Provider service URL. Omit to keep existing value; cannot be set to null.",
     )
@@ -158,11 +155,6 @@ class DeploymentProviderAccountUpdate(BaseModel):
             "provided value replaces stored secret. Cannot be set to null."
         ),
     )
-
-    @field_validator("provider_tenant_id", "provider_key", "provider_url")
-    @classmethod
-    def normalize_optional_strings(cls, value: str | None, info: ValidationInfo) -> str | None:
-        return _normalize_optional_str(value, field_name=info.field_name)
 
     @field_validator("api_key", mode="before")
     @classmethod
@@ -377,20 +369,14 @@ class DeploymentConfigCreate(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    reference_id: str | None = Field(
+    reference_id: NonEmptyStr | None = Field(
         default=None,
-        min_length=1,
         description="Provider-owned config reference id to bind to the deployment.",
     )
     raw_payload: _StrictDeploymentConfig | None = Field(
         default=None,
         description="Config payload to create and bind to the deployment.",
     )
-
-    @field_validator("reference_id")
-    @classmethod
-    def normalize_reference_id(cls, value: str | None, info: ValidationInfo) -> str | None:
-        return _normalize_optional_str(value, field_name=info.field_name)
 
     @model_validator(mode="after")
     def validate_exactly_one(self) -> DeploymentConfigCreate:
@@ -405,15 +391,10 @@ class DeploymentConfigBindingUpdate(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    config_id: str | None = Field(
+    config_id: NonEmptyStr | None = Field(
         default=None,
         description="Provider-owned config id to bind to the deployment. Use null to unbind.",
     )
-
-    @field_validator("config_id")
-    @classmethod
-    def normalize_config_id(cls, value: str | None, info: ValidationInfo) -> str | None:
-        return _normalize_optional_str(value, field_name=info.field_name)
 
 
 # ---------------------------------------------------------------------------
