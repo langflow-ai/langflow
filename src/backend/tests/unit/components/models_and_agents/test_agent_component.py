@@ -309,6 +309,9 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         component = await self.component_setup(component_class, default_kwargs)
 
+        # validate_model_selection requires a list — set a valid model selection
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+
         # Call get_agent_requirements which internally calls get_llm
         await component.get_agent_requirements()
 
@@ -338,6 +341,9 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             del default_kwargs["max_tokens"]
 
         component = await self.component_setup(component_class, default_kwargs)
+
+        # validate_model_selection requires a list — set a valid model selection
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
 
         # Call get_agent_requirements which internally calls get_llm
         await component.get_agent_requirements()
@@ -370,6 +376,9 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         default_kwargs["max_tokens"] = 1000
 
         component = await self.component_setup(component_class, default_kwargs)
+
+        # validate_model_selection requires a list — set a valid model selection
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
 
         # Call get_agent_requirements which internally calls get_llm
         await component.get_agent_requirements()
