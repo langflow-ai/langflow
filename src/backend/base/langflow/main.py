@@ -5,7 +5,7 @@ import re
 import sys
 import tempfile
 import warnings
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
@@ -327,10 +327,8 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             sys.stdout.flush()
             sys.stderr.flush()
-            try:
+            with suppress(ProcessLookupError, PermissionError):
                 os.kill(os.getppid(), signal.SIGTERM)
-            except (ProcessLookupError, PermissionError):
-                pass
             os._exit(3)
         except Exception as exc:
             if "langflow migration --fix" not in str(exc):
