@@ -4,10 +4,10 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { disableInspectPanel } from "../../utils/open-advanced-options";
+import { unselectNodes } from "../../utils/unselect-nodes";
 import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
-import { unselectNodes } from "../../utils/unselect-nodes";
-import { disableInspectPanel } from "../../utils/open-advanced-options";
 
 withEventDeliveryModes(
   "Market Research",
