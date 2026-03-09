@@ -19,6 +19,7 @@ from lfx.base.models.unified_models import (
     handle_model_input_update,
 )
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
+from lfx.components.agentics.helpers.model_config import validate_model_selection
 from lfx.components.helpers import CurrentDateComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.custom.custom_component.component import get_component_toolkit
@@ -188,6 +189,8 @@ class AgentComponent(ToolCallingAgentComponent):
         """Get the agent requirements for the agent."""
         from langchain_core.tools import StructuredTool
 
+        validate_model_selection(self.model)
+
         max_tokens_val = getattr(self, "max_tokens", None)
         if max_tokens_val in {"", 0}:
             max_tokens_val = None
@@ -199,9 +202,6 @@ class AgentComponent(ToolCallingAgentComponent):
             watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
             watsonx_project_id=getattr(self, "project_id", None),
         )
-        if llm_model is None:
-            msg = "No language model selected. Please choose a model to proceed."
-            raise ValueError(msg)
 
         # Get memory data
         self.chat_history = await self.get_memory_data()
