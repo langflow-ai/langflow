@@ -15,7 +15,10 @@ from lfx.io import (
     MessageTextInput,
     ModelInput,
     SecretStrInput,
+    StrInput,
 )
+
+DEFAULT_OLLAMA_URL = "http://localhost:11434"
 
 
 class EmbeddingModelComponent(LCEmbeddingsModel):
@@ -75,6 +78,15 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             display_name="Project ID",
             info="IBM watsonx.ai Project ID (required for IBM watsonx.ai)",
             show=False,
+        ),
+        # Ollama-specific input
+        StrInput(
+            name="ollama_base_url",
+            display_name="Ollama API URL",
+            info=f"Endpoint of the Ollama API (Ollama only). Defaults to {DEFAULT_OLLAMA_URL}",
+            value=DEFAULT_OLLAMA_URL,
+            show=False,
+            real_time_refresh=True,
         ),
         IntInput(
             name="dimensions",
@@ -148,4 +160,5 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             watsonx_project_id=getattr(self, "project_id", None),
             watsonx_truncate_input_tokens=getattr(self, "truncate_input_tokens", None),
             watsonx_input_text=getattr(self, "input_text", None),
+            ollama_base_url=getattr(self, "ollama_base_url", None),
         )

@@ -629,6 +629,75 @@ def _validate_and_get_enabled_providers(
     return enabled
 
 
+class _VarWithValue:
+    """Simple wrapper for passing raw variable values to _validate_and_get_enabled_providers."""
+
+    __slots__ = ("value",)
+
+    def __init__(self, value):
+        self.value = value
+
+
+async def _fetch_enabled_providers_for_user(user_id: UUID | str) -> set[str]:
+    """Shared helper for get_language_model_options and get_embedding_model_options.
+
+    Fetches provider variables from the database and returns the set of providers
+    that have valid credentials configured.
+    """
+    async with session_scope() as session:
+        variable_service = get_variable_service()
+        if variable_service is None:
+            return set()
+
+        from langflow.services.variable.service import DatabaseVariableService
+
+        if not isinstance(variable_service, DatabaseVariableService):
+            return set()
+
+        # Get all variable names (VariableRead has value=None for credentials)
+        all_vars = await variable_service.get_all(
+            user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+            session=session,
+        )
+        all_var_names = {var.name for var in all_vars}
+
+        provider_variable_map = get_model_provider_variable_mapping()
+
+        # Build dict with raw Variable values (encrypted for secrets, plaintext for others)
+        # We need to fetch raw Variable objects because VariableRead has value=None for credentials
+        all_provider_variables = {}
+        user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
+
+        for provider in provider_variable_map:
+            # Get ALL variables for this provider (not just the primary one)
+            provider_vars = get_provider_all_variables(provider)
+
+            for var_info in provider_vars:
+                var_name = var_info.get("variable_key")
+                if not var_name or var_name not in all_var_names:
+                    # Variable not configured by user
+                    continue
+
+                if var_name in all_provider_variables:
+                    # Already fetched
+                    continue
+
+                try:
+                    # Get the raw Variable object to access the actual value
+                    variable_obj = await variable_service.get_variable_object(
+                        user_id=user_id_uuid, name=var_name, session=session
+                    )
+                    if variable_obj and variable_obj.value:
+                        all_provider_variables[var_name] = _VarWithValue(variable_obj.value)
+                except Exception as e:  # noqa: BLE001
+                    # Variable not found or error accessing it - skip
+                    logger.error(f"Error accessing variable {var_name} for provider {provider}: {e}")
+                    continue
+
+        # Use shared helper to validate and get enabled providers
+        return _validate_and_get_enabled_providers(all_provider_variables, provider_variable_map)
+
+
 def get_provider_from_variable_key(variable_key: str) -> str | None:
     """Get provider name from a variable key.
 
@@ -838,71 +907,8 @@ def get_language_model_options(
     # Get enabled providers (those with credentials configured and validated)
     enabled_providers = set()
     if user_id:
-        try:
-
-            async def _get_enabled_providers():
-                async with session_scope() as session:
-                    variable_service = get_variable_service()
-                    if variable_service is None:
-                        return set()
-
-                    from langflow.services.variable.service import DatabaseVariableService
-
-                    if not isinstance(variable_service, DatabaseVariableService):
-                        return set()
-
-                    # Get all variable names (VariableRead has value=None for credentials)
-                    all_vars = await variable_service.get_all(
-                        user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
-                        session=session,
-                    )
-                    all_var_names = {var.name for var in all_vars}
-
-                    provider_variable_map = get_model_provider_variable_mapping()
-
-                    # Simple wrapper class for passing values to _validate_and_get_enabled_providers
-                    class VarWithValue:
-                        def __init__(self, value):
-                            self.value = value
-
-                    # Build dict with raw Variable values (encrypted for secrets, plaintext for others)
-                    # We need to fetch raw Variable objects because VariableRead has value=None for credentials
-                    all_provider_variables = {}
-                    user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
-
-                    for provider in provider_variable_map:
-                        # Get ALL variables for this provider (not just the primary one)
-                        provider_vars = get_provider_all_variables(provider)
-
-                        for var_info in provider_vars:
-                            var_name = var_info.get("variable_key")
-                            if not var_name or var_name not in all_var_names:
-                                # Variable not configured by user
-                                continue
-
-                            if var_name in all_provider_variables:
-                                # Already fetched
-                                continue
-
-                            try:
-                                # Get the raw Variable object to access the actual value
-                                variable_obj = await variable_service.get_variable_object(
-                                    user_id=user_id_uuid, name=var_name, session=session
-                                )
-                                if variable_obj and variable_obj.value:
-                                    all_provider_variables[var_name] = VarWithValue(variable_obj.value)
-                            except Exception as e:  # noqa: BLE001
-                                # Variable not found or error accessing it - skip
-                                logger.error(f"Error accessing variable {var_name} for provider {provider}: {e}")
-                                continue
-
-                    # Use shared helper to validate and get enabled providers
-                    return _validate_and_get_enabled_providers(all_provider_variables, provider_variable_map)
-
-            enabled_providers = run_until_complete(_get_enabled_providers())
-        except Exception:  # noqa: BLE001, S110
-            # If we can't get enabled providers, show all
-            pass
+        with contextlib.suppress(Exception):
+            enabled_providers = run_until_complete(_fetch_enabled_providers_for_user(user_id))
 
     # Replace static defaults with actual available models from configured instances
     if enabled_providers:
@@ -1053,71 +1059,8 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
     # Get enabled providers (those with credentials configured and validated)
     enabled_providers = set()
     if user_id:
-        try:
-
-            async def _get_enabled_providers():
-                async with session_scope() as session:
-                    variable_service = get_variable_service()
-                    if variable_service is None:
-                        return set()
-
-                    from langflow.services.variable.service import DatabaseVariableService
-
-                    if not isinstance(variable_service, DatabaseVariableService):
-                        return set()
-
-                    # Get all variable names (VariableRead has value=None for credentials)
-                    all_vars = await variable_service.get_all(
-                        user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
-                        session=session,
-                    )
-                    all_var_names = {var.name for var in all_vars}
-
-                    provider_variable_map = get_model_provider_variable_mapping()
-
-                    # Simple wrapper class for passing values to _validate_and_get_enabled_providers
-                    class VarWithValue:
-                        def __init__(self, value):
-                            self.value = value
-
-                    # Build dict with raw Variable values (encrypted for secrets, plaintext for others)
-                    # We need to fetch raw Variable objects because VariableRead has value=None for credentials
-                    all_provider_variables = {}
-                    user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
-
-                    for provider in provider_variable_map:
-                        # Get ALL variables for this provider (not just the primary one)
-                        provider_vars = get_provider_all_variables(provider)
-
-                        for var_info in provider_vars:
-                            var_name = var_info.get("variable_key")
-                            if not var_name or var_name not in all_var_names:
-                                # Variable not configured by user
-                                continue
-
-                            if var_name in all_provider_variables:
-                                # Already fetched
-                                continue
-
-                            try:
-                                # Get the raw Variable object to access the actual value
-                                variable_obj = await variable_service.get_variable_object(
-                                    user_id=user_id_uuid, name=var_name, session=session
-                                )
-                                if variable_obj and variable_obj.value:
-                                    all_provider_variables[var_name] = VarWithValue(variable_obj.value)
-                            except Exception as e:  # noqa: BLE001
-                                # Variable not found or error accessing it - skip
-                                logger.error(f"Error accessing variable {var_name} for provider {provider}: {e}")
-                                continue
-
-                    # Use shared helper to validate and get enabled providers
-                    return _validate_and_get_enabled_providers(all_provider_variables, provider_variable_map)
-
-            enabled_providers = run_until_complete(_get_enabled_providers())
-        except Exception:  # noqa: BLE001, S110
-            # If we can't get enabled providers, show all
-            pass
+        with contextlib.suppress(Exception):
+            enabled_providers = run_until_complete(_fetch_enabled_providers_for_user(user_id))
 
     # Replace static defaults with actual available models from configured instances
     if enabled_providers:
@@ -1615,18 +1558,30 @@ def get_embeddings(
     # Watson-specific parameters
     if provider in {"IBM WatsonX", "IBM watsonx.ai"}:
         watsonx_provider_vars = get_all_variables_for_provider(user_id, provider)
-        if "url" in param_mapping:
-            url_value = watsonx_url or watsonx_provider_vars.get("WATSONX_URL") or os.environ.get("WATSONX_URL")
-            if url_value:
+        url_value = watsonx_url or watsonx_provider_vars.get("WATSONX_URL") or os.environ.get("WATSONX_URL")
+        pid_value = (
+            watsonx_project_id
+            or watsonx_provider_vars.get("WATSONX_PROJECT_ID")
+            or os.environ.get("WATSONX_PROJECT_ID")
+        )
+
+        has_url = bool(url_value)
+        has_project_id = bool(pid_value)
+
+        if has_url and has_project_id:
+            if "url" in param_mapping:
                 kwargs[param_mapping["url"]] = url_value
-        if "project_id" in param_mapping:
-            pid_value = (
-                watsonx_project_id
-                or watsonx_provider_vars.get("WATSONX_PROJECT_ID")
-                or os.environ.get("WATSONX_PROJECT_ID")
-            )
-            if pid_value:
+            if "project_id" in param_mapping:
                 kwargs[param_mapping["project_id"]] = pid_value
+        elif has_url or has_project_id:
+            missing = "project ID (WATSONX_PROJECT_ID)" if has_url else "URL (WATSONX_URL)"
+            provided = "URL" if has_url else "project ID"
+            msg = (
+                f"IBM WatsonX requires both a URL and project ID. "
+                f"You provided a watsonx {provided} but no {missing}. "
+                f"Please configure the missing value in the component or set the environment variable."
+            )
+            raise ValueError(msg)
 
         # Build WatsonX embed params (truncate_input_tokens, return_options)
         watsonx_params = {}
