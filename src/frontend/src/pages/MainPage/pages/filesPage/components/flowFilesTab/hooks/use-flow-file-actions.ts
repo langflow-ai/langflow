@@ -16,7 +16,7 @@ export const useFlowFileActions = () => {
   const handleDownload = async (flowId: string, fileName: string) => {
     try {
       const response = await fetch(
-        `${BASE_URL_API}files/download/${flowId}/${fileName}`,
+        `${BASE_URL_API}files/download/${flowId}/${encodeURIComponent(fileName)}`,
         {
           headers: { Accept: "*/*" },
           credentials: getFetchCredentials(),
@@ -77,27 +77,36 @@ export const useFlowFileActions = () => {
     let errors = 0;
     const total = files.length;
 
+    const finalize = () => {
+      if (completed + errors !== total) return;
+
+      if (errors === 0) {
+        setSuccessData({
+          title: `${completed} file${completed > 1 ? "s" : ""} deleted successfully`,
+        });
+      } else {
+        setErrorData({
+          title:
+            completed === 0
+              ? `Failed to delete ${errors} file${errors > 1 ? "s" : ""}`
+              : `Deleted ${completed} file${completed > 1 ? "s" : ""}, failed to delete ${errors}`,
+        });
+      }
+
+      onComplete();
+    };
+
     for (const file of files) {
       deleteFile(
         { flowId: file.flow_id, fileName: file.file_name },
         {
           onSuccess: () => {
             completed++;
-            if (completed + errors === total) {
-              setSuccessData({
-                title: `${completed} file${completed > 1 ? "s" : ""} deleted successfully`,
-              });
-              onComplete();
-            }
+            finalize();
           },
           onError: () => {
             errors++;
-            if (completed + errors === total) {
-              setErrorData({
-                title: `Failed to delete ${errors} file${errors > 1 ? "s" : ""}`,
-              });
-              onComplete();
-            }
+            finalize();
           },
         },
       );

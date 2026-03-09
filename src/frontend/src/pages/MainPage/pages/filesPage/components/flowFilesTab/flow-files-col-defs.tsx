@@ -81,7 +81,11 @@ export const getFlowFilesColDefs = ({
         <div className="flex h-full cursor-default items-center justify-center">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="iconMd">
+              <Button
+                variant="ghost"
+                size="iconMd"
+                aria-label={`Open actions for ${params.data.file_name}`}
+              >
                 <ForwardedIconComponent name="EllipsisVertical" />
               </Button>
             </DropdownMenuTrigger>

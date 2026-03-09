@@ -1079,7 +1079,7 @@ async def test_list_all_flow_files_with_files(files_client, files_created_api_ke
     assert data[0]["file_size"] > 0
 
 
-async def test_list_all_flow_files_only_own_flows(files_client, files_created_api_key, files_flow, files_active_user):  # noqa: ARG001
+async def test_list_all_flow_files_only_own_flows(files_client, files_created_api_key, files_flow, json_flow: str):
     """Test that listing all flow files does not return files from other users' flows."""
     headers = {"x-api-key": files_created_api_key.api_key}
 
@@ -1091,11 +1091,10 @@ async def test_list_all_flow_files_only_own_flows(files_client, files_created_ap
     )
     assert upload_response.status_code == 201
 
-    # Create a second user and a flow for them
-    from langflow.services.auth.utils import get_password_hash
-    from langflow.services.database.models.user.model import User
-    from lfx.services.deps import session_scope
-    from sqlmodel import select
+    # Create a second user with a flow and a file
+    from langflow.services.deps import get_storage_service
+
+    loaded_json = json.loads(json_flow)
 
     async with session_scope() as session:
         other_user = User(
@@ -1104,27 +1103,43 @@ async def test_list_all_flow_files_only_own_flows(files_client, files_created_ap
             is_active=True,
             is_superuser=False,
         )
-        stmt = select(User).where(User.username == other_user.username)
-        if existing := (await session.exec(stmt)).first():
-            other_user = existing
-        else:
-            session.add(other_user)
-            await session.flush()
-            await session.refresh(other_user)
+        session.add(other_user)
+        await session.flush()
+        await session.refresh(other_user)
+
+        other_flow_data = FlowCreate(name="other_user_flow", data=loaded_json.get("data"), user_id=other_user.id)
+        other_flow = Flow.model_validate(other_flow_data)
+        session.add(other_flow)
+        await session.flush()
+        await session.refresh(other_flow)
+        other_flow_id = str(other_flow.id)
         other_user_id = other_user.id
 
-    # The list endpoint should only return files from flows owned by the authenticated user
+    # Store a file directly in the other user's flow storage
+    storage_service = get_storage_service()
+    await storage_service.save_file(flow_id=other_flow_id, file_name="other_file.txt", data=b"other content")
+
+    # The list endpoint should only return files from the authenticated user's flows
     response = await files_client.get("api/v1/files/list", headers=headers)
     assert response.status_code == 200
 
     data = response.json()
+    assert len(data) >= 1, "Should return at least the authenticated user's file"
     for file_info in data:
+        assert file_info["flow_id"] != other_flow_id, (
+            "Should not return files from other users' flows"
+        )
         assert file_info["flow_id"] == str(files_flow.id), (
             "Should only return files from the authenticated user's flows"
         )
 
-    # Clean up other user
+    # Clean up
+    with suppress(FileNotFoundError):
+        await storage_service.delete_file(flow_id=other_flow_id, file_name="other_file.txt")
     async with session_scope() as session:
+        flow_to_delete = await session.get(Flow, other_flow.id)
+        if flow_to_delete:
+            await session.delete(flow_to_delete)
         user_to_delete = await session.get(User, other_user_id)
         if user_to_delete:
             await session.delete(user_to_delete)

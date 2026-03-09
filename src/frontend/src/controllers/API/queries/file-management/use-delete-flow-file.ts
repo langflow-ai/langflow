@@ -1,7 +1,7 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import { BASE_URL_API } from "@/constants/constants";
-import type { useMutationFunctionType } from "@/types/api";
 import { api } from "@/controllers/API/api";
+import type { useMutationFunctionType } from "@/types/api";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 interface IDeleteFlowFile {
@@ -17,7 +17,7 @@ export const useDeleteFlowFile: useMutationFunctionType<
 
   const deleteFlowFileFn = async (params: IDeleteFlowFile): Promise<any> => {
     const response = await api.delete<any>(
-      `${BASE_URL_API}files/delete/${params.flowId}/${params.fileName}`,
+      `${BASE_URL_API}files/delete/${params.flowId}/${encodeURIComponent(params.fileName)}`,
     );
     return response.data;
   };
