@@ -60,18 +60,6 @@ def resolve_resource_name_prefix(
     return f"lf_{uuid4().hex[:random_length]}_"
 
 
-def require_non_empty_string(
-    s: Any,
-    *,
-    field_name: str,
-    error_message: str | None = None,
-) -> str:
-    if isinstance(s, str) and (_value := s.strip()):
-        return _value
-    msg = error_message or f"Expected non-empty string for '{field_name}'."
-    raise ValueError(msg)
-
-
 def require_tool_id(tool_response: dict[str, Any]) -> str:
     tool_id = tool_response.get("id")
     if not tool_id:
@@ -88,19 +76,6 @@ def dedupe_list(items: list[str]) -> list[str]:
             result.append(item)
             seen.add(item)
     return result
-
-
-def require_exclusive_resource(
-    *,
-    resource: str,
-    _id: str | list[str] | None,
-    payload: dict[str, Any] | None,
-    msg_prefix: str = "",
-) -> None:
-    """Require exactly one of the resource id or payload to be present and non-empty and non-null."""
-    if (not _id) == (not payload):
-        msg = f"{msg_prefix}Exactly one of {resource} id or payload should be present and non-empty and non-null."
-        raise ValueError(msg)
 
 
 def extract_error_detail(response_text: str) -> str | dict:
@@ -145,9 +120,3 @@ def extract_agent_tool_ids(agent: dict[str, Any]) -> list[str]:
     # Shape source:
     # - SDK/API agent payload uses "tools" as list[str] in this adapter flow.
     return [str(tool_id) for tool_id in agent.get("tools", []) if tool_id]
-
-
-def extract_agent_connection_ids(agent: dict[str, Any]) -> list[str]:
-    # Shape source:
-    # - SDK/API agent payload uses "connection_ids" as list[str].
-    return [str(connection_id) for connection_id in agent.get("connection_ids", []) if connection_id]

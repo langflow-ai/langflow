@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any
 
 from ibm_watsonx_orchestrate_core.types.connections import (
@@ -43,7 +44,7 @@ async def create_config(
 
     app_id = validate_wxo_name(config.name)
 
-    clients.connections.create(payload={"app_id": app_id})
+    await asyncio.to_thread(clients.connections.create, payload={"app_id": app_id})
 
     wxo_config = ConnectionConfiguration(
         app_id=app_id,
@@ -51,8 +52,10 @@ async def create_config(
         preference=ConnectionPreference.TEAM,
         security_scheme=ConnectionSecurityScheme.KEY_VALUE,
     )
-    clients.connections.create_config(
-        app_id=app_id, payload=wxo_config.model_dump(exclude_unset=True, exclude_none=True)
+    await asyncio.to_thread(
+        clients.connections.create_config,
+        app_id=app_id,
+        payload=wxo_config.model_dump(exclude_unset=True, exclude_none=True),
     )
 
     runtime_credentials = await resolve_runtime_credentials(
@@ -61,7 +64,8 @@ async def create_config(
         db=db,
     )
 
-    clients.connections.create_credentials(
+    await asyncio.to_thread(
+        clients.connections.create_credentials,
         app_id=app_id,
         env=ConnectionEnvironment.DRAFT,
         use_app_credentials=False,
@@ -126,7 +130,7 @@ def resolve_create_app_id(
     return f"{prefixed_deployment_name}_{normalized_config_name}_app_id"
 
 
-def assert_create_resources_available(
+async def assert_create_resources_available(
     *,
     clients: WxOClient,
     deployment_name: str,
@@ -134,12 +138,12 @@ def assert_create_resources_available(
     snapshot_tool_names: list[str] | None = None,
 ) -> None:
     """Fail fast when deployment resource names conflict with existing resources."""
-    existing_agents = clients.agent.get_draft_by_name(deployment_name)
+    existing_agents = await asyncio.to_thread(clients.agent.get_draft_by_name, deployment_name)
     if existing_agents:
         msg = f"{ErrorPrefix.CREATE.value}. Deployment '{deployment_name}' already exists."
         raise DeploymentConflictError(message=msg)
 
-    existing_connection = clients.connections.get_draft_by_app_id(app_id=app_id)
+    existing_connection = await asyncio.to_thread(clients.connections.get_draft_by_app_id, app_id=app_id)
     if existing_connection:
         msg = f"{ErrorPrefix.CREATE.value}. Deployment config '{app_id}' already exists."
         raise DeploymentConflictError(message=msg)
@@ -159,24 +163,25 @@ def assert_create_resources_available(
         raise DeploymentConflictError(message=msg)
 
     for tool_name in snapshot_tool_names:
-        existing_tools = clients.tool.get_draft_by_name(tool_name)
+        existing_tools = await asyncio.to_thread(clients.tool.get_draft_by_name, tool_name)
         if existing_tools:
             msg = f"{ErrorPrefix.CREATE.value}. Deployment snapshot '{tool_name}' already exists."
             raise DeploymentConflictError(message=msg)
 
 
-def validate_connection(connections_client: Any, *, app_id: str) -> Any:
+async def validate_connection(connections_client: Any, *, app_id: str) -> Any:
     from ibm_watsonx_orchestrate_core.types.connections import ConnectionEnvironment, ConnectionSecurityScheme
 
-    connection = connections_client.get_draft_by_app_id(app_id=app_id)
-    config = connections_client.get_config(app_id=app_id, env=ConnectionEnvironment.DRAFT)
+    connection = await asyncio.to_thread(connections_client.get_draft_by_app_id, app_id=app_id)
+    config = await asyncio.to_thread(connections_client.get_config, app_id=app_id, env=ConnectionEnvironment.DRAFT)
     if not connection:
         msg = f"Connection '{app_id}' is missing draft config. Deployments require draft mode."
         raise ValueError(msg)
     if config.security_scheme != ConnectionSecurityScheme.KEY_VALUE:
         msg = f"Connection '{app_id}' must use key-value credentials for Langflow flows."
         raise ValueError(msg)
-    runtime_credentials = connections_client.get_credentials(
+    runtime_credentials = await asyncio.to_thread(
+        connections_client.get_credentials,
         app_id=app_id,
         env=ConnectionEnvironment.DRAFT,
         use_app_credentials=False,

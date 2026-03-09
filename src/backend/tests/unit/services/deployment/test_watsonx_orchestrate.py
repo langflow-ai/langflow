@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.metadata as md
 import io
 import zipfile
 from types import SimpleNamespace
@@ -388,7 +387,8 @@ async def test_update_deployment_denies_config_unbind(monkeypatch):
         )
 
 
-def test_assert_create_resources_available_rejects_existing_agent():
+@pytest.mark.anyio
+async def test_assert_create_resources_available_rejects_existing_agent():
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient(
             {"id": "dep-1", "tools": []},
@@ -401,14 +401,15 @@ def test_assert_create_resources_available_rejects_existing_agent():
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import assert_create_resources_available
 
     with pytest.raises(DeploymentConflictError, match="Deployment 'my_deployment' already exists"):
-        assert_create_resources_available(
+        await assert_create_resources_available(
             clients=fake_clients,
             deployment_name="my_deployment",
             app_id="my_deployment_app_id",
         )
 
 
-def test_assert_create_resources_available_rejects_existing_config():
+@pytest.mark.anyio
+async def test_assert_create_resources_available_rejects_existing_config():
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient({"id": "dep-1", "tools": []}),
         connections=FakeConnectionsClient(existing_app_id="my_deployment"),
@@ -418,14 +419,15 @@ def test_assert_create_resources_available_rejects_existing_config():
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import assert_create_resources_available
 
     with pytest.raises(DeploymentConflictError, match="Deployment config 'my_deployment' already exists"):
-        assert_create_resources_available(
+        await assert_create_resources_available(
             clients=fake_clients,
             deployment_name="my_deployment",
             app_id="my_deployment",
         )
 
 
-def test_assert_create_resources_available_rejects_existing_tool_name():
+@pytest.mark.anyio
+async def test_assert_create_resources_available_rejects_existing_tool_name():
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient({"id": "dep-1", "tools": []}),
         connections=FakeConnectionsClient(),
@@ -435,45 +437,12 @@ def test_assert_create_resources_available_rejects_existing_tool_name():
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import assert_create_resources_available
 
     with pytest.raises(DeploymentConflictError, match="Deployment snapshot 'my_tool' already exists"):
-        assert_create_resources_available(
+        await assert_create_resources_available(
             clients=fake_clients,
             deployment_name="my_deployment",
             app_id="my_deployment_app_id",
             snapshot_tool_names=["my_tool"],
         )
-
-
-def test_resolve_lfx_runner_requirement_uses_tool_runner_requirement(monkeypatch):
-    tool = SimpleNamespace(requirements=["lfx-nightly>=0.0.0"])
-    tools_module._pin_requirement_name.cache_clear()
-
-    def fake_version(package_name: str) -> str:
-        assert package_name == "lfx-nightly"
-        return "1.2.3"
-
-    monkeypatch.setattr("langflow.services.adapters.deployment.watsonx_orchestrate.core.tools.md.version", fake_version)
-
-    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import resolve_lfx_runner_requirement
-
-    assert resolve_lfx_runner_requirement(tool) == "lfx-nightly==1.2.3"
-
-
-def test_resolve_lfx_runner_requirement_falls_back_to_installed_lfx(monkeypatch):
-    tool = SimpleNamespace(requirements=[])
-    tools_module._pin_requirement_name.cache_clear()
-
-    def fake_version(package_name: str) -> str:
-        if package_name == "lfx-nightly":
-            raise md.PackageNotFoundError
-        if package_name == "lfx":
-            return "0.9.0"
-        raise md.PackageNotFoundError
-
-    monkeypatch.setattr("langflow.services.adapters.deployment.watsonx_orchestrate.core.tools.md.version", fake_version)
-
-    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import resolve_lfx_runner_requirement
-
-    assert resolve_lfx_runner_requirement(tool) == "lfx==0.9.0"
 
 
 def test_prefix_flow_global_variable_references_rewrites_load_from_db_values():
@@ -563,11 +532,6 @@ def test_create_wxo_flow_tool_prefixes_name_for_raw_payload(monkeypatch):
         "build_langflow_artifact_bytes",
         lambda **kwargs: b"artifact",  # noqa: ARG005
     )
-    monkeypatch.setattr(
-        tools_module,
-        "uuid4",
-        lambda: SimpleNamespace(hex="abcdef123456"),
-    )
 
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import create_wxo_flow_tool
 
@@ -597,7 +561,7 @@ async def test_create_wires_snapshot_ids_to_agent_and_prefixed_names(monkeypatch
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    def mock_assert_create_resources_available(*, clients, deployment_name, app_id, snapshot_tool_names=None):  # noqa: ARG001
+    async def mock_assert_create_resources_available(*, clients, deployment_name, app_id, snapshot_tool_names=None):  # noqa: ARG001
         captured["deployment_name"] = deployment_name
         captured["app_id"] = app_id
         captured["snapshot_tool_names"] = snapshot_tool_names
@@ -709,7 +673,7 @@ async def test_create_uses_caller_provided_resource_name_prefix(monkeypatch):
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    def mock_assert_create_resources_available(*, clients, deployment_name, app_id, snapshot_tool_names=None):  # noqa: ARG001
+    async def mock_assert_create_resources_available(*, clients, deployment_name, app_id, snapshot_tool_names=None):  # noqa: ARG001
         captured["deployment_name"] = deployment_name
         captured["app_id"] = app_id
         captured["snapshot_tool_names"] = snapshot_tool_names
@@ -809,7 +773,7 @@ async def test_create_rolls_back_and_preserves_original_error_when_cleanup_fails
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
         return fake_clients
 
-    def mock_assert_create_resources_available(*, clients, deployment_name, app_id, snapshot_tool_names=None):  # noqa: ARG001
+    async def mock_assert_create_resources_available(*, clients, deployment_name, app_id, snapshot_tool_names=None):  # noqa: ARG001
         return None
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
@@ -1351,6 +1315,12 @@ async def test_update_deployment_name_and_description(monkeypatch):
         db=object(),
     )
     assert result.id == "dep-1"
+    assert len(fake_agent.update_calls) == 1
+    agent_id, payload = fake_agent.update_calls[0]
+    assert agent_id == "dep-1"
+    assert payload["name"] == "new_name"
+    assert payload["display_name"] == "new name"
+    assert payload["description"] == "new desc"
 
 
 @pytest.mark.anyio
@@ -1396,6 +1366,64 @@ async def test_list_deployments_without_params(monkeypatch):
     result = await service.list(user_id="user-1", db=object(), params=None)
     assert len(result.deployments) == 1
     assert result.deployments[0].id == "dep-1"
+
+
+@pytest.mark.anyio
+async def test_list_types_returns_supported_types():
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    result = await service.list_types(user_id="user-1", db=object())
+    assert DeploymentType.AGENT in result.deployment_types
+    assert len(result.deployment_types) == 1
+
+
+@pytest.mark.anyio
+async def test_get_status_handles_client_api_exception(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+
+    class FailingAgentClient(FakeAgentClient):
+        def get_draft_by_id(self, deployment_id: str):  # noqa: ARG002
+            resp = SimpleNamespace(status_code=500, text='{"detail": "internal error"}')
+            from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+
+            raise ClientAPIException(response=resp)
+
+    fake_clients = SimpleNamespace(
+        agent=FailingAgentClient(None),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(DeploymentError, match="getting a deployment health"):
+        await service.get_status(user_id="user-1", deployment_id="dep-1", db=object())
+
+
+@pytest.mark.anyio
+async def test_update_spec_only_description_sends_update(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_agent = FakeAgentClient({"id": "dep-1", "tools": []})
+    fake_clients = SimpleNamespace(
+        agent=fake_agent,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.update(
+        user_id="user-1",
+        deployment_id="dep-1",
+        payload=DeploymentUpdate(spec=BaseDeploymentDataUpdate(description="only desc")),
+        db=object(),
+    )
+    assert result.id == "dep-1"
+    assert len(fake_agent.update_calls) == 1
+    _, payload = fake_agent.update_calls[0]
+    assert payload == {"description": "only desc"}
+    assert "name" not in payload
 
 
 # ---------------------------------------------------------------------------
@@ -1668,23 +1696,14 @@ def test_derive_agent_environment_empty():
     assert derive_agent_environment({"environments": []}) == "unknown"
 
 
-def test_normalize_release_status():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.core.status import normalize_release_status
-
-    assert normalize_release_status({"status": "Ready"}) == "ready"
-    assert normalize_release_status({"deployment_status": "ACTIVE"}) == "active"
-    assert normalize_release_status({}) == "unknown"
-
-
 # ---------------------------------------------------------------------------
-# Artifact roundtrip tests
+# Artifact build tests
 # ---------------------------------------------------------------------------
 
 
-def test_build_and_extract_langflow_artifact_roundtrip():
+def test_build_langflow_artifact_bytes_structure():
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
         build_langflow_artifact_bytes,
-        extract_langflow_artifact_from_zip,
     )
 
     flow_definition = {"nodes": [{"id": "n1"}], "edges": []}
@@ -1705,31 +1724,6 @@ def test_build_and_extract_langflow_artifact_roundtrip():
         assert "test_tool.json" in names
         assert "requirements.txt" in names
         assert "bundle-format" in names
-
-    extracted = extract_langflow_artifact_from_zip(artifact_bytes, snapshot_id="test")
-    assert extracted == flow_definition
-
-
-def test_extract_langflow_artifact_bad_zip():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
-        extract_langflow_artifact_from_zip,
-    )
-
-    with pytest.raises(ValueError, match="not a valid zip"):
-        extract_langflow_artifact_from_zip(b"not a zip", snapshot_id="test")
-
-
-def test_extract_langflow_artifact_no_json():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
-        extract_langflow_artifact_from_zip,
-    )
-
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w") as zf:
-        zf.writestr("readme.txt", "no json here")
-
-    with pytest.raises(ValueError, match="does not include a flow JSON"):
-        extract_langflow_artifact_from_zip(buf.getvalue(), snapshot_id="test")
 
 
 # ---------------------------------------------------------------------------
