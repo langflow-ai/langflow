@@ -76,9 +76,7 @@
             "id": "SplitText-dINDR",
             "inputTypes": [
               "Data",
-              "JSON",
               "DataFrame",
-              "Table",
               "Message"
             ],
             "type": "other"
@@ -89,7 +87,7 @@
         "source": "File-CByFc",
         "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-CByFcœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "SplitText-dINDR",
-        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-dINDRœ, œinputTypesœ: [œDataœ,  œJSONœ, œDataFrameœ,  œTableœ, œMessageœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-dINDRœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -136,9 +134,7 @@
             "id": "ChatOutput-RZFDG",
             "inputTypes": [
               "Data",
-              "JSON",
               "DataFrame",
-              "Table",
               "Message"
             ],
             "type": "str"
@@ -149,7 +145,7 @@
         "source": "LanguageModelComponent-GRGRg",
         "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-GRGRgœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-RZFDG",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-RZFDGœ, œinputTypesœ: [œDataœ,  œJSONœ, œDataFrameœ,  œTableœ, œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-RZFDGœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -187,7 +183,7 @@
             "id": "SplitText-dINDR",
             "name": "dataframe",
             "output_types": [
-              "Table"
+              "DataFrame"
             ]
           },
           "targetHandle": {
@@ -195,18 +191,16 @@
             "id": "AstraDB-mGHwS",
             "inputTypes": [
               "Data",
-              "JSON",
-              "DataFrame",
-              "Table"
+              "DataFrame"
             ],
             "type": "other"
           }
         },
         "id": "xy-edge__SplitText-dINDR{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-dINDRœ,œnameœ:œdataframeœ,œoutput_typesœ:[œTableœ]}-AstraDB-mGHwS{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-mGHwSœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ],œtypeœ:œotherœ}",
         "source": "SplitText-dINDR",
-        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-dINDRœ, œnameœ: œdataframeœ, œoutput_typesœ: [œTableœ]}",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-dINDRœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "AstraDB-mGHwS",
-        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-mGHwSœ, œinputTypesœ: [œDataœ,  œJSONœ, œDataFrameœ,  œTableœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-mGHwSœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -710,10 +704,10 @@
                 "group_outputs": false,
                 "method": "split_text",
                 "name": "dataframe",
-                "selected": "Table",
+                "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
-                  "Table"
+                  "DataFrame"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -796,9 +790,7 @@
                 "info": "The data with texts to split in chunks.",
                 "input_types": [
                   "Data",
-                  "JSON",
                   "DataFrame",
-                  "Table",
                   "Message"
                 ],
                 "list": false,
@@ -1135,9 +1127,7 @@
                 "info": "Message to be passed as output.",
                 "input_types": [
                   "Data",
-                  "JSON",
                   "DataFrame",
-                  "Table",
                   "Message"
                 ],
                 "list": false,
@@ -1798,7 +1788,6 @@
                 "info": "Data object with a 'file_path' property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports same file types.",
                 "input_types": [
                   "Data",
-                  "JSON",
                   "Message"
                 ],
                 "list": true,
@@ -2882,10 +2871,10 @@
                 "group_outputs": false,
                 "method": "search_documents",
                 "name": "search_results",
-                "selected": "JSON",
+                "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "JSON"
+                  "Data"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -2896,10 +2885,10 @@
                 "group_outputs": false,
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "selected": "Table",
+                "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
-                  "Table"
+                  "DataFrame"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -3604,9 +3593,7 @@
                 "info": "",
                 "input_types": [
                   "Data",
-                  "JSON",
-                  "DataFrame",
-                  "Table"
+                  "DataFrame"
                 ],
                 "list": true,
                 "list_add_label": "Add More",
@@ -3965,10 +3952,10 @@
                 "group_outputs": false,
                 "method": "search_documents",
                 "name": "search_results",
-                "selected": "JSON",
+                "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "JSON"
+                  "Data"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -3979,10 +3966,10 @@
                 "group_outputs": false,
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "selected": "Table",
+                "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
-                  "Table"
+                  "DataFrame"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -4687,9 +4674,7 @@
                 "info": "",
                 "input_types": [
                   "Data",
-                  "JSON",
-                  "DataFrame",
-                  "Table"
+                  "DataFrame"
                 ],
                 "list": true,
                 "list_add_label": "Add More",
