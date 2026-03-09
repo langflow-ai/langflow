@@ -41,6 +41,7 @@ import type { APIClassType } from "../../../../types/api";
 import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
 import { CategoryGroup } from "./components/categoryGroup";
 import NoResultsMessage from "./components/emptySearchComponent";
+import FlowVersionSidebarContent from "./components/FlowVersionSidebarContent";
 import McpSidebarGroup from "./components/McpSidebarGroup";
 import MemoizedSidebarGroup from "./components/sidebarBundles";
 import SidebarMenuButtons from "./components/sidebarFooterButtons";
@@ -159,10 +160,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       return rawData;
     }
 
-    const knowledgeComponentNames = [
-      "KnowledgeIngestion",
-      "KnowledgeRetrieval",
-    ];
+    const knowledgeComponentNames = ["KnowledgeBase"];
 
     // Create a deep copy to avoid mutating the original
     const filteredData = cloneDeep(rawData);
@@ -197,7 +195,12 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     })),
   );
 
-  const { activeSection, setOpen, setActiveSection } = useSidebar();
+  const {
+    activeSection,
+    setOpen,
+    setActiveSection,
+    open: sidebarOpen,
+  } = useSidebar();
   const addComponent = useAddComponent();
 
   // Get MCP servers for search functionality (only when new sidebar is enabled)
@@ -592,6 +595,10 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       hasMcpComponents,
       hasBundleItems,
     });
+  const showVersions =
+    ENABLE_NEW_SIDEBAR && activeSection === "versions" && sidebarOpen;
+
+  const currentFlowForVersions = useFlowStore((state) => state.currentFlow);
 
   const showTraces = ENABLE_NEW_SIDEBAR && activeSection === "traces";
 
@@ -696,139 +703,145 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
               "opacity-0 -translate-x-1 pointer-events-none",
           )}
         >
-          {isFullSidebarPanelMounted && (
-            <SidebarHeaderComponent
-              showConfig={showConfig}
-              setShowConfig={setShowConfig}
-              showBeta={showBeta}
-              setShowBeta={handleSetShowBeta}
-              showLegacy={showLegacy}
-              setShowLegacy={handleSetShowLegacy}
-              searchInputRef={searchInputRef}
-              isInputFocused={isSearchFocused}
-              search={search}
-              handleInputFocus={handleInputFocus}
-              handleInputBlur={handleInputBlur}
-              handleInputChange={handleInputChange}
-              filterName={filterName}
-              filterDescription={filterDescription}
-              resetFilters={resetFilters}
-            />
-          )}
+          {showVersions && currentFlowForVersions?.id ? (
+            <FlowVersionSidebarContent flowId={currentFlowForVersions.id} />
+          ) : (
+            <>
+              {isFullSidebarPanelMounted && (
+                <SidebarHeaderComponent
+                  showConfig={showConfig}
+                  setShowConfig={setShowConfig}
+                  showBeta={showBeta}
+                  setShowBeta={handleSetShowBeta}
+                  showLegacy={showLegacy}
+                  setShowLegacy={handleSetShowLegacy}
+                  searchInputRef={searchInputRef}
+                  isInputFocused={isSearchFocused}
+                  search={search}
+                  handleInputFocus={handleInputFocus}
+                  handleInputBlur={handleInputBlur}
+                  handleInputChange={handleInputChange}
+                  filterName={filterName}
+                  filterDescription={filterDescription}
+                  resetFilters={resetFilters}
+                />
+              )}
 
-          <SidebarContent
-            segmentedSidebar={ENABLE_NEW_SIDEBAR}
-            className="flex-1 group-data-[collapsible=icon]:hidden gutter-stable"
-          >
-            {isLoading ? (
-              <div className="flex flex-col gap-2">
-                <div className="flex flex-col gap-1 p-3">
-                  <SkeletonGroup count={13} className="my-0.5 h-7" />
-                </div>
-                <div className="h-8" />
-                <div className="flex flex-col gap-1 px-3 pt-2">
-                  <SkeletonGroup count={21} className="my-0.5 h-7" />
-                </div>
-              </div>
-            ) : (
-              <>
-                {hasResults ? (
+              <SidebarContent
+                segmentedSidebar={ENABLE_NEW_SIDEBAR}
+                className="flex-1 group-data-[collapsible=icon]:hidden gutter-stable"
+              >
+                {isLoading ? (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-1 p-3">
+                      <SkeletonGroup count={13} className="my-0.5 h-7" />
+                    </div>
+                    <div className="h-8" />
+                    <div className="flex flex-col gap-1 px-3 pt-2">
+                      <SkeletonGroup count={21} className="my-0.5 h-7" />
+                    </div>
+                  </div>
+                ) : (
                   <>
-                    {showComponents && !isMcpTabActive && (
-                      <CategoryGroup
-                        dataFilter={dataFilter}
-                        sortedCategories={sortedCategories}
-                        CATEGORIES={CATEGORIES}
-                        openCategories={openCategories}
-                        setOpenCategories={setOpenCategories}
-                        search={debouncedSearch}
-                        nodeColors={nodeColors}
-                        onDragStart={onDragStart}
-                        sensitiveSort={sensitiveSort}
-                        showConfig={showConfig}
-                        setShowConfig={setShowConfig}
-                      />
-                    )}
-                    {showMcp && (
-                      <McpSidebarGroup
-                        mcpComponents={
-                          hasSearchInput
-                            ? Object.values(dataFilter["MCP"] || {})
-                            : mcpSearchData
-                        }
-                        nodeColors={nodeColors}
-                        onDragStart={onDragStart}
-                        openCategories={openCategories}
-                        mcpLoading={mcpLoading}
-                        mcpSuccess={mcpSuccess}
-                        search={debouncedSearch}
-                        hasMcpServers={hasMcpServers}
-                        showSearchConfigTrigger={
-                          activeSection !== "mcp" &&
-                          !showComponents &&
-                          showBundles
-                        }
-                        showConfig={showConfig}
-                        setShowConfig={setShowConfig}
-                      />
-                    )}
-                    {showBundles && (
-                      <MemoizedSidebarGroup
-                        BUNDLES={BUNDLES}
-                        search={debouncedSearch}
-                        sortedCategories={sortedCategories}
-                        dataFilter={dataFilter}
-                        nodeColors={nodeColors}
-                        onDragStart={onDragStart}
-                        sensitiveSort={sensitiveSort}
-                        openCategories={openCategories}
-                        setOpenCategories={setOpenCategories}
-                        handleKeyDownInput={handleKeyDownInput}
-                        showSearchConfigTrigger={
-                          activeSection === "bundles" ||
-                          (!showComponents && !showMcp)
-                        }
-                        showConfig={showConfig}
-                        setShowConfig={setShowConfig}
-                      />
-                    )}
-                    {showComponents && (
-                      <Button
-                        onClick={() => setActiveSection("bundles")}
-                        variant="ghost"
-                        className="bg-muted hover:bg-muted/70 mx-3 px-2.5 !text-[13px] font-normal line-height-[16px] mb-3 group -mt-3 h-[34px]"
-                      >
-                        <span className="text-muted-foreground flex items-center">
-                          <ForwardedIconComponent
-                            name="blocks"
-                            className="h-4 w-4"
+                    {hasResults ? (
+                      <>
+                        {showComponents && !isMcpTabActive && (
+                          <CategoryGroup
+                            dataFilter={dataFilter}
+                            sortedCategories={sortedCategories}
+                            CATEGORIES={CATEGORIES}
+                            openCategories={openCategories}
+                            setOpenCategories={setOpenCategories}
+                            search={debouncedSearch}
+                            nodeColors={nodeColors}
+                            onDragStart={onDragStart}
+                            sensitiveSort={sensitiveSort}
+                            showConfig={showConfig}
+                            setShowConfig={setShowConfig}
                           />
-                        </span>
-                        Discover more components
-                      </Button>
+                        )}
+                        {showMcp && (
+                          <McpSidebarGroup
+                            mcpComponents={
+                              hasSearchInput
+                                ? Object.values(dataFilter["MCP"] || {})
+                                : mcpSearchData
+                            }
+                            nodeColors={nodeColors}
+                            onDragStart={onDragStart}
+                            openCategories={openCategories}
+                            mcpLoading={mcpLoading}
+                            mcpSuccess={mcpSuccess}
+                            search={debouncedSearch}
+                            hasMcpServers={hasMcpServers}
+                            showSearchConfigTrigger={
+                              activeSection !== "mcp" &&
+                              !showComponents &&
+                              showBundles
+                            }
+                            showConfig={showConfig}
+                            setShowConfig={setShowConfig}
+                          />
+                        )}
+                        {showBundles && (
+                          <MemoizedSidebarGroup
+                            BUNDLES={BUNDLES}
+                            search={debouncedSearch}
+                            sortedCategories={sortedCategories}
+                            dataFilter={dataFilter}
+                            nodeColors={nodeColors}
+                            onDragStart={onDragStart}
+                            sensitiveSort={sensitiveSort}
+                            openCategories={openCategories}
+                            setOpenCategories={setOpenCategories}
+                            handleKeyDownInput={handleKeyDownInput}
+                            showSearchConfigTrigger={
+                              activeSection === "bundles" ||
+                              (!showComponents && !showMcp)
+                            }
+                            showConfig={showConfig}
+                            setShowConfig={setShowConfig}
+                          />
+                        )}
+                        {showComponents && (
+                          <Button
+                            onClick={() => setActiveSection("bundles")}
+                            variant="ghost"
+                            className="bg-muted hover:bg-muted/70 mx-3 px-2.5 !text-[13px] font-normal line-height-[16px] mb-3 group -mt-3 h-[34px]"
+                          >
+                            <span className="text-muted-foreground flex items-center">
+                              <ForwardedIconComponent
+                                name="blocks"
+                                className="h-4 w-4"
+                              />
+                            </span>
+                            Discover more components
+                          </Button>
+                        )}
+                      </>
+                    ) : (
+                      <NoResultsMessage
+                        onClearSearch={handleClearSearch}
+                        showConfig={showConfig}
+                        setShowConfig={setShowConfig}
+                      />
                     )}
                   </>
-                ) : (
-                  <NoResultsMessage
-                    onClearSearch={handleClearSearch}
-                    showConfig={showConfig}
-                    setShowConfig={setShowConfig}
-                  />
                 )}
-              </>
-            )}
-          </SidebarContent>
-          {!isFullSidebarPanelMounted ||
-          (ENABLE_NEW_SIDEBAR &&
-            activeSection === "mcp" &&
-            !hasMcpServers) ? null : (
-            <SidebarFooter className="border-t group-data-[collapsible=icon]:hidden p-1 gap-1">
-              <SidebarMenuButtons
-                customComponent={customComponent}
-                addComponent={addComponent}
-                isLoading={isLoading}
-              />
-            </SidebarFooter>
+              </SidebarContent>
+              {!isFullSidebarPanelMounted ||
+              (ENABLE_NEW_SIDEBAR &&
+                activeSection === "mcp" &&
+                !hasMcpServers) ? null : (
+                <SidebarFooter className="border-t group-data-[collapsible=icon]:hidden p-1 gap-1">
+                  <SidebarMenuButtons
+                    customComponent={customComponent}
+                    addComponent={addComponent}
+                    isLoading={isLoading}
+                  />
+                </SidebarFooter>
+              )}
+            </>
           )}
         </div>
       </div>
