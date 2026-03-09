@@ -1126,9 +1126,7 @@ async def test_list_all_flow_files_only_own_flows(files_client, files_created_ap
     data = response.json()
     assert len(data) >= 1, "Should return at least the authenticated user's file"
     for file_info in data:
-        assert file_info["flow_id"] != other_flow_id, (
-            "Should not return files from other users' flows"
-        )
+        assert file_info["flow_id"] != other_flow_id, "Should not return files from other users' flows"
         assert file_info["flow_id"] == str(files_flow.id), (
             "Should only return files from the authenticated user's flows"
         )

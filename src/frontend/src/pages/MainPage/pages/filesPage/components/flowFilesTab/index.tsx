@@ -16,7 +16,7 @@ import { getFlowFilesColDefs } from "./flow-files-col-defs";
 import { useFlowFileActions } from "./hooks/use-flow-file-actions";
 
 const FlowFilesTab = () => {
-  const { data: flowFiles } = useGetFlowFiles();
+  const { data: flowFiles, isLoading, isError } = useGetFlowFiles();
   const { handleDownload, handleDeleteSingle, handleBulkDelete } =
     useFlowFileActions();
 
@@ -48,14 +48,6 @@ const FlowFilesTab = () => {
   const handleSelectionChanged = (event: SelectionChangedEvent) => {
     const selectedRows = event.api.getSelectedRows();
     setSelectedFiles(selectedRows);
-
-    if (selectedRows.length === 0) {
-      setTimeout(() => {
-        setQuantitySelected(0);
-      }, 300);
-      return;
-    }
-
     setQuantitySelected(selectedRows.length);
   };
 
@@ -105,11 +97,25 @@ const FlowFilesTab = () => {
       )}
 
       <div className="flex h-full flex-col py-4">
-        {!flowFiles || !Array.isArray(flowFiles) ? (
+        {isLoading ? (
           <div className="flex h-full w-full items-center justify-center">
             <Loading />
           </div>
-        ) : flowFiles.length > 0 ? (
+        ) : isError ? (
+          <CardsWrapComponent dragMessage="">
+            <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-8">
+              <div className="flex flex-col items-center gap-2">
+                <h3 className="text-2xl font-semibold">
+                  Error loading flow files
+                </h3>
+                <p className="text-lg text-secondary-foreground">
+                  An error occurred while fetching your flow files. Please try
+                  again later.
+                </p>
+              </div>
+            </div>
+          </CardsWrapComponent>
+        ) : flowFiles && flowFiles.length > 0 ? (
           <div className="relative h-full">
             <TableComponent
               rowHeight={45}
