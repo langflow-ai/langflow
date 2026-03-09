@@ -13,13 +13,14 @@ import {
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import {
-  useDeleteHistoryEntry,
-  useGetFlowHistory,
-} from "@/controllers/API/queries/flow-history";
+  useDeleteFlowVersionEntry,
+  useGetFlowVersions,
+} from "@/controllers/API/queries/flow-version";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useHistoryPreviewStore from "@/stores/historyPreviewStore";
+import type { FlowType } from "@/types/flow";
 import {
   downloadFlow,
   processFlows,
@@ -28,13 +29,27 @@ import {
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 
 interface PreviewVersionMenuProps {
-  historyId: string;
+  versionId: string;
   versionTag: string;
   flowId: string;
 }
 
+function getErrorDetail(error: unknown): string | undefined {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    typeof (error as { response?: unknown }).response === "object"
+  ) {
+    const response = (error as { response?: { data?: { detail?: string } } })
+      .response;
+    return response?.data?.detail;
+  }
+  return undefined;
+}
+
 export default function PreviewVersionMenu({
-  historyId,
+  versionId,
   versionTag,
   flowId,
 }: PreviewVersionMenuProps) {
@@ -45,12 +60,11 @@ export default function PreviewVersionMenu({
   const clearPreview = useHistoryPreviewStore((s) => s.clearPreview);
   const setPreview = useHistoryPreviewStore((s) => s.setPreview);
   const currentFlow = useFlowStore((s) => s.currentFlow);
-  const originalStoreRef_nodes = useFlowStore((s) => s.nodes);
 
   const { mutate: deleteEntry, isPending: isDeleting } =
-    useDeleteHistoryEntry();
+    useDeleteFlowVersionEntry();
 
-  const { data: historyResponse } = useGetFlowHistory({ flowId });
+  const { data: historyResponse } = useGetFlowVersions({ flowId });
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
@@ -62,12 +76,12 @@ export default function PreviewVersionMenu({
     setIsRestoring(true);
     try {
       const response = await api.post(
-        `${getURL("FLOWS")}/${flowId}/history/${historyId}/activate`,
+        `${getURL("FLOWS")}/${flowId}/versions/${versionId}/activate`,
         null,
         { params: { save_draft: true } },
       );
       const updatedFlow = response.data;
-      queryClient.invalidateQueries({ queryKey: ["useGetFlowHistory"] });
+      queryClient.invalidateQueries({ queryKey: ["useGetFlowVersions"] });
       const flow = {
         ...updatedFlow,
         data: {
@@ -79,8 +93,8 @@ export default function PreviewVersionMenu({
       applyFlowToCanvas(flow);
       clearPreview();
       setSuccessData({ title: "Version restored" });
-    } catch (err: any) {
-      const detail = err?.response?.data?.detail;
+    } catch (err: unknown) {
+      const detail = getErrorDetail(err);
       setErrorData({
         title: "Failed to restore version",
         ...(detail ? { list: [detail] } : {}),
@@ -93,7 +107,7 @@ export default function PreviewVersionMenu({
   const handleExport = async () => {
     try {
       const response = await api.get(
-        `${getURL("FLOWS")}/${flowId}/history/${historyId}`,
+        `${getURL("FLOWS")}/${flowId}/versions/${versionId}`,
       );
       const data = response.data?.data;
       const tag = response.data?.version_tag ?? "version";
@@ -104,14 +118,14 @@ export default function PreviewVersionMenu({
       const flowName = `${currentFlow?.name || "flow"}_${tag}`;
       const flowToExport = removeApiKeys({
         id: currentFlow?.id ?? "",
-        data,
+        data: data as FlowType["data"],
         name: flowName,
         description: currentFlow?.description ?? "",
         is_component: false,
-      } as any);
+      } as FlowType);
       downloadFlow(flowToExport, flowName);
-    } catch (err: any) {
-      const detail = err?.response?.data?.detail;
+    } catch (err: unknown) {
+      const detail = getErrorDetail(err);
       setErrorData({
         title: "Failed to export version",
         ...(detail ? { list: [detail] } : {}),
@@ -122,14 +136,14 @@ export default function PreviewVersionMenu({
   const handleDelete = () => {
     setShowDeleteConfirm(false);
     const entries = historyResponse?.entries ?? [];
-    const currentIndex = entries.findIndex((e) => e.id === historyId);
+    const currentIndex = entries.findIndex((e) => e.id === versionId);
     const nextEntry =
       currentIndex > 0 ? entries[currentIndex - 1] : entries[currentIndex + 1];
     deleteEntry(
-      { flowId, historyId },
+      { flowId, versionId },
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["useGetFlowHistory"] });
+          queryClient.invalidateQueries({ queryKey: ["useGetFlowVersions"] });
           setSuccessData({ title: "Version deleted" });
           if (nextEntry) {
             setPreview([], [], nextEntry.version_tag, nextEntry.id);
@@ -137,8 +151,8 @@ export default function PreviewVersionMenu({
             clearPreview();
           }
         },
-        onError: (err: any) => {
-          const detail = err?.response?.data?.detail;
+        onError: (err: unknown) => {
+          const detail = getErrorDetail(err);
           setErrorData({
             title: "Failed to delete version",
             ...(detail ? { list: [detail] } : {}),

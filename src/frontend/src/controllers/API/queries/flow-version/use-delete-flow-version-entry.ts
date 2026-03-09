@@ -4,35 +4,34 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-interface IDeleteHistoryEntry {
+interface IDeleteFlowVersionEntry {
   flowId: string;
-  historyId: string;
+  versionId: string;
 }
 
-export const useDeleteHistoryEntry: useMutationFunctionType<
+export const useDeleteFlowVersionEntry: useMutationFunctionType<
   undefined,
-  IDeleteHistoryEntry
+  IDeleteFlowVersionEntry
 > = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
-  const deleteEntryFn = async (payload: IDeleteHistoryEntry): Promise<void> => {
+  const deleteEntryFn = async (
+    payload: IDeleteFlowVersionEntry,
+  ): Promise<void> => {
     await api.delete(
-      `${getURL("FLOWS")}/${payload.flowId}/history/${payload.historyId}`,
+      `${getURL("FLOWS")}/${payload.flowId}/versions/${payload.versionId}`,
     );
   };
 
-  const mutation: UseMutationResult<void, any, IDeleteHistoryEntry> = mutate(
-    ["useDeleteHistoryEntry"],
-    deleteEntryFn,
-    {
+  const mutation: UseMutationResult<void, unknown, IDeleteFlowVersionEntry> =
+    mutate(["useDeleteFlowVersionEntry"], deleteEntryFn, {
       ...options,
       onSettled: (_, __, variables) => {
         queryClient.refetchQueries({
-          queryKey: ["useGetFlowHistory", { flowId: variables?.flowId }],
+          queryKey: ["useGetFlowVersions", { flowId: variables?.flowId }],
         });
       },
-    },
-  );
+    });
 
   return mutation;
 };

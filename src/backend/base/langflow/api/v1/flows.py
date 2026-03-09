@@ -6,18 +6,20 @@ import re
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path as StdlibPath
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 import orjson
 from aiofile import async_open
 from anyio import Path
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log import logger
+from lfx.services.deps import get_variable_service
+from pydantic import BaseModel, Field, field_validator
 from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -35,11 +37,11 @@ from langflow.services.database.models.flow.model import (
     FlowUpdate,
 )
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
-from langflow.services.database.models.flow_history.crud import get_deployed_flow_ids
+from langflow.services.database.models.flow_version.crud import get_deployed_flow_ids, get_flow_version_entry_or_raise
+from langflow.services.database.models.flow_version.exceptions import FlowVersionNotFoundError
 
-# TODO: Full-history import/export is planned as a follow-up feature. When implemented,
-# re-add imports for create_flow_history_entry, get_flow_history_list, strip_history_data,
-# and FlowHistoryError from the flow_history modules.
+# TODO: Full-version import/export is planned as a follow-up feature. When implemented,
+# add imports for version create/list helpers and strip_version_data from flow_version modules.
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.folder.utils import get_default_folder_id
@@ -781,14 +783,11 @@ async def upload_file(
     contents = await file.read()
     data = orjson.loads(contents)
 
-    if "flows" in data:
-        flow_list = FlowListCreate(**data)
-    else:
-        flow_list = FlowListCreate(flows=[FlowCreate(**data)])
+    flow_list = FlowListCreate(**data) if "flows" in data else FlowListCreate(flows=[FlowCreate(**data)])
 
-    # TODO: Full-history import is planned as a follow-up feature.
-    # When implemented, extract raw flow dicts here to read embedded "history"
-    # arrays and create FlowHistory entries for each imported flow.
+    # TODO: Full-version import is planned as a follow-up feature.
+    # When implemented, extract raw flow dicts here to read embedded "versions"
+    # arrays and create FlowVersion entries for each imported flow.
 
     try:
         flow_reads = []
@@ -856,9 +855,9 @@ async def download_multiple_file(
     db: DbSession,
 ):
     """Download all flows as a zip file."""
-    # TODO: Full-history download (include_history parameter) is planned as a follow-up feature.
-    # When implemented, add an include_history: bool = False parameter and embed history
-    # entries in each flow dict using get_flow_history_list and strip_history_data.
+    # TODO: Full-version download (include_versions parameter) is planned as a follow-up feature.
+    # When implemented, add an include_versions: bool = False parameter and embed version
+    # entries in each flow dict using flow_version list and strip helpers.
     flows = (await db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids))))).all()  # type: ignore[attr-defined]
 
     if not flows:
@@ -980,3 +979,137 @@ async def expand_compact_flow_endpoint(
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+class DetectDeploymentEnvVarsRequest(BaseModel):
+    reference_ids: list[str] = Field(
+        min_length=1,
+        description="Flow-history checkpoint ids to inspect for load_from_db global-variable bindings.",
+    )
+
+    @field_validator("reference_ids")
+    @classmethod
+    def validate_reference_ids(cls, values: list[str]) -> list[str]:
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for raw in values:
+            value = raw.strip()
+            if not value:
+                msg = "reference_ids must not contain empty values."
+                raise ValueError(msg)
+            if value in seen:
+                continue
+            seen.add(value)
+            cleaned.append(value)
+        return cleaned
+
+
+class DetectDeploymentEnvVarsResponse(BaseModel):
+    variables: list["DetectedDeploymentEnvVar"] = Field(
+        default_factory=list,
+        description="Detected load_from_db global-variable bindings from selected checkpoints.",
+    )
+
+
+class DetectedDeploymentEnvVar(BaseModel):
+    key: str = Field(description="Environment variable key in component template (e.g. api_key).")
+    global_variable_name: str | None = Field(
+        default=None,
+        description="Global variable reference name when checkpoint uses load_from_db binding.",
+    )
+
+
+@router.post(
+    "/versions/variables/detections",
+    response_model=DetectDeploymentEnvVarsResponse,
+)
+async def detect_deployment_environment_variables(
+    payload: DetectDeploymentEnvVarsRequest,
+    db: DbSession,
+    user: CurrentActiveUser,
+):
+    """Detect environment variable placeholders from selected history checkpoints."""
+    detected_by_key: dict[str, str | None] = {}
+    try:
+        for reference_id in payload.reference_ids:
+            history_id = _as_uuid(reference_id)
+            if history_id is None:
+                msg = f"Invalid history checkpoint id: {reference_id}"
+                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+            version_entry = await get_flow_version_entry_or_raise(db, history_id, user.id)
+            _collect_secret_template_field_keys(version_entry.data, detected_by_key)
+    except FlowVersionNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    variable_service = get_variable_service()
+    existing_variable_names = set(await variable_service.list_variables(user.id, db))
+    variables = []
+    for key, ref in sorted(detected_by_key.items()):
+        if not (isinstance(ref, str) and _is_valid_variable_reference_name(ref) and ref in existing_variable_names):
+            continue
+        variables.append(DetectedDeploymentEnvVar(key=key, global_variable_name=ref))
+    return DetectDeploymentEnvVarsResponse(variables=variables)
+
+
+def _as_uuid(value: str) -> UUID | None:
+    try:
+        return UUID(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _is_valid_variable_reference_name(value: str) -> bool:
+    return value.isidentifier()
+
+
+def _collect_secret_template_field_keys(payload: Any, output: dict[str, str | None]) -> None:
+    if not isinstance(payload, dict):
+        return
+
+    # Graph-style flow payload: { nodes: [...] }
+    nodes = payload.get("nodes")
+    if isinstance(nodes, list):
+        for node in nodes:
+            if not isinstance(node, dict):
+                continue
+            template = node.get("data", {}).get("node", {}).get("template")
+            if isinstance(template, dict):
+                for field_name, field_data in template.items():
+                    if not (
+                        _is_secret_template_field(field_data) and isinstance(field_name, str) and field_name.strip()
+                    ):
+                        continue
+                    if not (isinstance(field_data, dict) and field_data.get("load_from_db") is True):
+                        continue
+                    key = field_name.strip()
+                    ref = field_data.get("value")
+                    if isinstance(ref, str) and ref.strip():
+                        output[key] = ref.strip()
+
+    # API object-style payload: { group: { component: { template: {...} } } }
+    for group in payload.values():
+        if not isinstance(group, dict):
+            continue
+        for component in group.values():
+            if not isinstance(component, dict):
+                continue
+            template = component.get("template")
+            if not isinstance(template, dict):
+                continue
+            for field_name, field_data in template.items():
+                if not (_is_secret_template_field(field_data) and isinstance(field_name, str) and field_name.strip()):
+                    continue
+                if not (isinstance(field_data, dict) and field_data.get("load_from_db") is True):
+                    continue
+                key = field_name.strip()
+                ref = field_data.get("value")
+                if isinstance(ref, str) and ref.strip():
+                    output[key] = ref.strip()
+
+
+def _is_secret_template_field(field_data: Any) -> bool:
+    if not isinstance(field_data, dict):
+        return False
+    if field_data.get("type") == "SecretStr":
+        return True
+    return field_data.get("password") is True and field_data.get("load_from_db") is True

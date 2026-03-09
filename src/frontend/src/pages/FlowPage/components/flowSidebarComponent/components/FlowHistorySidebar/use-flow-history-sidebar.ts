@@ -12,22 +12,47 @@ import { useSearchParams } from "react-router-dom";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import {
-  useDeleteHistoryEntry,
-  useGetFlowHistory,
-  useGetFlowHistoryEntry,
-  usePostCreateSnapshot,
-} from "@/controllers/API/queries/flow-history";
+  useDeleteFlowVersionEntry,
+  useGetFlowVersionEntry,
+  useGetFlowVersions,
+  usePostCreateVersionSnapshot,
+} from "@/controllers/API/queries/flow-version";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useHistoryPreviewStore from "@/stores/historyPreviewStore";
-import type { FlowHistoryEntry } from "@/types/flow/history";
+import type { FlowType } from "@/types/flow";
+import type { FlowVersionEntry } from "@/types/flow/version";
 import {
   downloadFlow,
   processFlows,
   removeApiKeys,
 } from "@/utils/reactflowUtils";
 import { CURRENT_DRAFT_ID } from "./constants";
+
+type PreviewGraphData = {
+  nodes: NonNullable<FlowType["data"]>["nodes"];
+  edges: NonNullable<FlowType["data"]>["edges"];
+  error?: boolean;
+};
+
+type AutoSaveFlowFn = ((flow?: FlowType) => void) & {
+  flush?: () => void;
+};
+
+function getErrorDetail(error: unknown): string | undefined {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    typeof (error as { response?: unknown }).response === "object"
+  ) {
+    const response = (error as { response?: { data?: { detail?: string } } })
+      .response;
+    return response?.data?.detail;
+  }
+  return undefined;
+}
 
 export function useFlowHistorySidebar(flowId: string) {
   const [searchParams] = useSearchParams();
@@ -40,7 +65,8 @@ export function useFlowHistorySidebar(flowId: string) {
   const storePreviewId = useHistoryPreviewStore((s) => s.previewId);
 
   const [selectedId, setSelectedId] = useState<string>(CURRENT_DRAFT_ID);
-  const requestedHistoryId = searchParams.get("historyId");
+  const requestedVersionId =
+    searchParams.get("versionId") ?? searchParams.get("historyId");
 
   useEffect(() => {
     setSelectedId(storePreviewId ?? CURRENT_DRAFT_ID);
@@ -50,37 +76,37 @@ export function useFlowHistorySidebar(flowId: string) {
   const currentFlow = useFlowStore((s) => s.currentFlow);
 
   const { mutate: deleteEntry, isPending: isDeleting } =
-    useDeleteHistoryEntry();
+    useDeleteFlowVersionEntry();
 
   const [pruneWarning, setPruneWarning] = useState(false);
   const [animatingId, setAnimatingId] = useState<string | null>(null);
   const prevHistoryLengthRef = useRef<number>(0);
 
   const [restoreDialogEntry, setRestoreDialogEntry] =
-    useState<FlowHistoryEntry | null>(null);
+    useState<FlowVersionEntry | null>(null);
   const [deleteDialogEntry, setDeleteDialogEntry] =
-    useState<FlowHistoryEntry | null>(null);
+    useState<FlowVersionEntry | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
 
   const {
     data: historyResponse,
     isLoading,
     isError: isListError,
-  } = useGetFlowHistory({ flowId }, { refetchInterval: 10000 });
+  } = useGetFlowVersions({ flowId }, { refetchInterval: 10000 });
 
   const history = historyResponse?.entries;
   const maxEntries = historyResponse?.max_entries;
   useEffect(() => {
-    if (!requestedHistoryId || !history?.length) {
+    if (!requestedVersionId || !history?.length) {
       return;
     }
     const hasRequestedEntry = history.some(
-      (entry) => entry.id === requestedHistoryId,
+      (entry) => entry.id === requestedVersionId,
     );
     if (hasRequestedEntry) {
-      setSelectedId(requestedHistoryId);
+      setSelectedId(requestedVersionId);
     }
-  }, [history, requestedHistoryId]);
+  }, [history, requestedVersionId]);
 
   const deploymentCountsByHistoryId = historyResponse?.deployment_counts ?? {};
 
@@ -96,15 +122,15 @@ export function useFlowHistorySidebar(flowId: string) {
   }, [history]);
 
   const { mutate: createSnapshot, isPending: isCreating } =
-    usePostCreateSnapshot();
+    usePostCreateVersionSnapshot();
 
   const selectedHistoryId = selectedId !== CURRENT_DRAFT_ID ? selectedId : "";
   const {
     data: selectedEntryFull,
     isLoading: isLoadingEntry,
     isError: isEntryError,
-  } = useGetFlowHistoryEntry(
-    { flowId, historyId: selectedHistoryId },
+  } = useGetFlowVersionEntry(
+    { flowId, versionId: selectedHistoryId },
     { enabled: !!selectedHistoryId, gcTime: 0, staleTime: 0 },
   );
 
@@ -112,24 +138,29 @@ export function useFlowHistorySidebar(flowId: string) {
     setPreviewLoading(isLoadingEntry);
   }, [isLoadingEntry, setPreviewLoading]);
 
-  const processedPreview = useMemo<{
-    nodes: any[];
-    edges: any[];
-    error?: boolean;
-  } | null>(() => {
+  const processedPreview = useMemo<PreviewGraphData | null>(() => {
     if (selectedId === CURRENT_DRAFT_ID || !selectedEntryFull?.data)
       return null;
 
     try {
       const clonedData = cloneDeep(selectedEntryFull.data);
-      const flow = { data: clonedData, is_component: false } as any;
+      const flow: FlowType = {
+        id: currentFlow?.id ?? "",
+        name: currentFlow?.name ?? "flow",
+        description: currentFlow?.description ?? "",
+        data: clonedData as FlowType["data"],
+        is_component: false,
+      };
       processFlows([flow]);
+      if (!flow.data) {
+        return { nodes: [], edges: [], error: true };
+      }
       return { nodes: flow.data.nodes, edges: flow.data.edges };
     } catch (err) {
       console.error("Failed to process historical flow data for preview:", err);
       return { nodes: [], edges: [], error: true };
     }
-  }, [selectedId, selectedEntryFull?.data]);
+  }, [selectedId, selectedEntryFull?.data, currentFlow]);
 
   useLayoutEffect(() => {
     if (processedPreview && !processedPreview.error) {
@@ -181,10 +212,12 @@ export function useFlowHistorySidebar(flowId: string) {
     setPreview,
   ]);
 
-  const autoSaveFnRef = useRef<any>(null);
+  const autoSaveFnRef = useRef<AutoSaveFlowFn | null>(null);
   const inspectionPanelWasVisible = useRef(false);
   useLayoutEffect(() => {
-    const currentAutoSave = useFlowStore.getState().autoSaveFlow as any;
+    const currentAutoSave = useFlowStore.getState().autoSaveFlow as
+      | AutoSaveFlowFn
+      | undefined;
     if (currentAutoSave) {
       if (typeof currentAutoSave.flush === "function") {
         currentAutoSave.flush();
@@ -226,12 +259,12 @@ export function useFlowHistorySidebar(flowId: string) {
       { flowId, description: null },
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["useGetFlowHistory"] });
+          queryClient.invalidateQueries({ queryKey: ["useGetFlowVersions"] });
           setSuccessData({ title: "Version saved" });
           setPruneWarning(false);
         },
-        onError: (err: any) => {
-          const detail = err?.response?.data?.detail;
+        onError: (err: unknown) => {
+          const detail = getErrorDetail(err);
           setErrorData({
             title: "Failed to save version",
             ...(detail ? { list: [detail] } : {}),
@@ -251,17 +284,17 @@ export function useFlowHistorySidebar(flowId: string) {
   }, [history, maxEntries, doCreateSnapshot]);
 
   const handleRestore = useCallback(
-    async (entry: FlowHistoryEntry) => {
+    async (entry: FlowVersionEntry) => {
       setRestoreDialogEntry(null);
       setIsRestoring(true);
       try {
         const response = await api.post(
-          `${getURL("FLOWS")}/${flowId}/history/${entry.id}/activate`,
+          `${getURL("FLOWS")}/${flowId}/versions/${entry.id}/activate`,
           null,
           { params: { save_draft: true } },
         );
         const updatedFlow = response.data;
-        queryClient.invalidateQueries({ queryKey: ["useGetFlowHistory"] });
+        queryClient.invalidateQueries({ queryKey: ["useGetFlowVersions"] });
         const flow = {
           ...updatedFlow,
           data: {
@@ -273,8 +306,8 @@ export function useFlowHistorySidebar(flowId: string) {
         applyFlowToCanvas(flow);
         clearPreview();
         setSuccessData({ title: "Version restored" });
-      } catch (err: any) {
-        const detail = err?.response?.data?.detail;
+      } catch (err: unknown) {
+        const detail = getErrorDetail(err);
         setErrorData({
           title: "Failed to restore version",
           ...(detail ? { list: [detail] } : {}),
@@ -294,10 +327,10 @@ export function useFlowHistorySidebar(flowId: string) {
   );
 
   const handleExport = useCallback(
-    async (entry: FlowHistoryEntry) => {
+    async (entry: FlowVersionEntry) => {
       try {
         const response = await api.get(
-          `${getURL("FLOWS")}/${flowId}/history/${entry.id}`,
+          `${getURL("FLOWS")}/${flowId}/versions/${entry.id}`,
         );
         const data = response.data?.data;
         const tag = response.data?.version_tag ?? "version";
@@ -308,14 +341,14 @@ export function useFlowHistorySidebar(flowId: string) {
         const flowName = `${currentFlow?.name || "flow"}_${tag}`;
         const flowToExport = removeApiKeys({
           id: currentFlow?.id ?? "",
-          data,
+          data: data as FlowType["data"],
           name: flowName,
           description: currentFlow?.description ?? "",
           is_component: false,
-        } as any);
+        } as FlowType);
         downloadFlow(flowToExport, flowName);
-      } catch (err: any) {
-        const detail = err?.response?.data?.detail;
+      } catch (err: unknown) {
+        const detail = getErrorDetail(err);
         setErrorData({
           title: "Failed to export version",
           ...(detail ? { list: [detail] } : {}),
@@ -326,7 +359,7 @@ export function useFlowHistorySidebar(flowId: string) {
   );
 
   const handleDelete = useCallback(
-    (entry: FlowHistoryEntry) => {
+    (entry: FlowVersionEntry) => {
       setDeleteDialogEntry(null);
       const entries = history ?? [];
       const currentIndex = entries.findIndex((e) => e.id === entry.id);
@@ -335,10 +368,10 @@ export function useFlowHistorySidebar(flowId: string) {
           ? entries[currentIndex - 1]
           : entries[currentIndex + 1];
       deleteEntry(
-        { flowId, historyId: entry.id },
+        { flowId, versionId: entry.id },
         {
           onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["useGetFlowHistory"] });
+            queryClient.invalidateQueries({ queryKey: ["useGetFlowVersions"] });
             setSuccessData({ title: "Version deleted" });
             if (nextEntry) {
               setPreview([], [], nextEntry.version_tag, nextEntry.id);
@@ -346,8 +379,8 @@ export function useFlowHistorySidebar(flowId: string) {
               clearPreview();
             }
           },
-          onError: (err: any) => {
-            const detail = err?.response?.data?.detail;
+          onError: (err: unknown) => {
+            const detail = getErrorDetail(err);
             setErrorData({
               title: "Failed to delete version",
               ...(detail ? { list: [detail] } : {}),

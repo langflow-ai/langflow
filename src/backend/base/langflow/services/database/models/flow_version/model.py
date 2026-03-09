@@ -74,3 +74,4 @@ class FlowVersionListResponse(BaseModel):
 
     entries: list[FlowVersionRead]
     max_entries: int = PydanticField(ge=1)
+    deployment_counts: dict[str, int] | None = None

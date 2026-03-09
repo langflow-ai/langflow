@@ -7,7 +7,7 @@ from langflow.api.v1 import (
     deployment_router,
     endpoints_router,
     files_router,
-    flow_history_router,
+    flow_version_router,
     flows_router,
     folders_router,
     knowledge_bases_router,
@@ -45,7 +45,7 @@ router_v1.include_router(endpoints_router)
 router_v1.include_router(validate_router)
 router_v1.include_router(store_router)
 router_v1.include_router(flows_router)
-router_v1.include_router(flow_history_router)
+router_v1.include_router(flow_version_router)
 router_v1.include_router(users_router)
 router_v1.include_router(api_key_router)
 router_v1.include_router(login_router)

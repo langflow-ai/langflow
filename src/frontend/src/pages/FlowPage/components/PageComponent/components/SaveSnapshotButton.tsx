@@ -2,12 +2,26 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useSidebar } from "@/components/ui/sidebar";
-import { usePostCreateSnapshot } from "@/controllers/API/queries/flow-history";
+import { usePostCreateVersionSnapshot } from "@/controllers/API/queries/flow-version";
 import useAlertStore from "@/stores/alertStore";
 import useHistoryPreviewStore from "@/stores/historyPreviewStore";
 
 interface SaveSnapshotButtonProps {
   flowId: string;
+}
+
+function getErrorDetail(error: unknown): string | undefined {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    typeof (error as { response?: unknown }).response === "object"
+  ) {
+    const response = (error as { response?: { data?: { detail?: string } } })
+      .response;
+    return response?.data?.detail;
+  }
+  return undefined;
 }
 
 export default function SaveSnapshotButton({
@@ -19,7 +33,7 @@ export default function SaveSnapshotButton({
   const clearPreview = useHistoryPreviewStore((s) => s.clearPreview);
   const { setActiveSection, open, toggleSidebar } = useSidebar();
   const { mutate: createSnapshot, isPending: isCreating } =
-    usePostCreateSnapshot();
+    usePostCreateVersionSnapshot();
   const [isSavingDisplay, setIsSavingDisplay] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -36,14 +50,14 @@ export default function SaveSnapshotButton({
         { flowId, description: null },
         {
           onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["useGetFlowHistory"] });
+            queryClient.invalidateQueries({ queryKey: ["useGetFlowVersions"] });
             setSuccessData({ title: "Version saved" });
             setIsSavingDisplay(false);
             setSavedSuccess(true);
             setTimeout(() => setSavedSuccess(false), 1500);
           },
-          onError: (err: any) => {
-            const detail = err?.response?.data?.detail;
+          onError: (err: unknown) => {
+            const detail = getErrorDetail(err);
             setErrorData({
               title: "Failed to save version",
               ...(detail ? { list: [detail] } : {}),

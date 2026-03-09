@@ -160,7 +160,8 @@ interface FlowSidebarComponentProps {
 
 export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const [searchParams] = useSearchParams();
-  const requestedHistoryId = searchParams.get("historyId");
+  const requestedHistoryId =
+    searchParams.get("versionId") ?? searchParams.get("historyId");
   const rawData = useTypesStore((state) => state.data);
 
   // Filter out knowledge components from files_and_knowledge category when ENABLE_KNOWLEDGE_BASES is OFF

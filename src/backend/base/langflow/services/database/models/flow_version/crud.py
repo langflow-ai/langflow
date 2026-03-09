@@ -18,9 +18,16 @@ from langflow.services.database.models.flow_version.exceptions import (
 from langflow.services.database.models.flow_version.model import (
     FlowVersion,
 )
+from langflow.services.database.models.flow_version_deployment_attachment.model import (
+    FlowVersionDeploymentAttachment,
+)
 from langflow.services.deps import get_settings_service
 
 MAX_VERSION_RETRIES = 3
+
+
+def _get_max_flow_version_entries_per_flow() -> int:
+    return get_settings_service().settings.max_flow_version_entries_per_flow
 
 
 async def get_next_version_number(session: AsyncSession, flow_id: UUID) -> int:
@@ -88,7 +95,7 @@ async def create_flow_version_entry(
     # snapshot, and serializing with SELECT FOR UPDATE would add contention
     # for a non-critical constraint.
     try:
-        max_entries = get_settings_service().settings.max_flow_version_entries_per_flow
+        max_entries = _get_max_flow_version_entries_per_flow()
         delete_older = delete(FlowVersion).where(
             FlowVersion.flow_id == flow_id,
             col(FlowVersion.id).in_(
@@ -120,15 +127,83 @@ async def get_flow_version_list(
     user_id: UUID,
     limit: int = 50,
     offset: int = 0,
+    deployment_ids: list[UUID] | None = None,
 ) -> list[FlowVersion]:
-    result = await session.exec(
-        select(FlowVersion)
-        .where(FlowVersion.flow_id == flow_id, FlowVersion.user_id == user_id)
-        .order_by(col(FlowVersion.version_number).desc())
-        .offset(offset)
-        .limit(limit)
-    )
+    stmt = select(FlowVersion).where(FlowVersion.flow_id == flow_id, FlowVersion.user_id == user_id)
+    if deployment_ids:
+        stmt = (
+            stmt.join(
+                FlowVersionDeploymentAttachment,
+                FlowVersionDeploymentAttachment.flow_version_id == FlowVersion.id,
+            )
+            .where(
+                FlowVersionDeploymentAttachment.user_id == user_id,
+                FlowVersionDeploymentAttachment.deployment_id.in_(deployment_ids),
+            )
+            .distinct()
+        )
+    result = await session.exec(stmt.order_by(col(FlowVersion.version_number).desc()).offset(offset).limit(limit))
     return list(result.all())
+
+
+async def get_flow_version_counts_by_version_ids(
+    session: AsyncSession,
+    flow_id: UUID,
+    user_id: UUID,
+    version_ids: list[UUID],
+    deployment_ids: list[UUID] | None = None,
+) -> dict[UUID, int]:
+    if not version_ids:
+        return {}
+
+    stmt = (
+        select(
+            FlowVersionDeploymentAttachment.flow_version_id,
+            func.count(func.distinct(FlowVersionDeploymentAttachment.deployment_id)),
+        )
+        .join(
+            FlowVersion,
+            FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id,
+        )
+        .where(
+            FlowVersion.id.in_(version_ids),
+            FlowVersion.flow_id == flow_id,
+            FlowVersion.user_id == user_id,
+            FlowVersionDeploymentAttachment.user_id == user_id,
+        )
+    )
+    if deployment_ids:
+        stmt = stmt.where(FlowVersionDeploymentAttachment.deployment_id.in_(deployment_ids))
+
+    stmt = stmt.group_by(FlowVersionDeploymentAttachment.flow_version_id)
+    rows = (await session.exec(stmt)).all()
+    return {version_id: int(count) for version_id, count in rows}
+
+
+async def get_deployed_flow_ids(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    flow_ids: list[UUID],
+) -> set[UUID]:
+    if not flow_ids:
+        return set()
+
+    stmt = (
+        select(FlowVersion.flow_id)
+        .join(
+            FlowVersionDeploymentAttachment,
+            FlowVersionDeploymentAttachment.flow_version_id == FlowVersion.id,
+        )
+        .where(
+            FlowVersion.user_id == user_id,
+            FlowVersion.flow_id.in_(flow_ids),
+            FlowVersionDeploymentAttachment.user_id == user_id,
+        )
+        .distinct()
+    )
+    rows = (await session.exec(stmt)).all()
+    return set(rows)
 
 
 async def get_flow_version_entry(

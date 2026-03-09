@@ -7,24 +7,24 @@ import {
   usePostDetectDeploymentEnvVars,
 } from "@/controllers/API/queries/deployments/use-deployments";
 import {
-  useGetFlowHistory,
-  usePostCreateSnapshot,
-} from "@/controllers/API/queries/flow-history";
+  useGetFlowVersions,
+  usePostCreateVersionSnapshot,
+} from "@/controllers/API/queries/flow-version";
 import { StepperModal, StepperModalFooter } from "@/modals/stepperModal";
-import useAlertStore from "@/stores/alertStore";
-import useHistoryPreviewStore from "@/stores/historyPreviewStore";
-import type { FlowHistoryEntry } from "@/types/flow/history";
-import { RegisterDeploymentProviderModal } from "@/pages/MainPage/pages/deploymentsPage/RegisterDeploymentProviderModal";
+import { CURRENT_DRAFT_ID } from "@/pages/FlowPage/components/flowSidebarComponent/components/FlowHistorySidebar/constants";
 import {
   type EnvVar,
   TOTAL_STEPS,
 } from "@/pages/MainPage/pages/deploymentsPage/constants";
+import { RegisterDeploymentProviderModal } from "@/pages/MainPage/pages/deploymentsPage/RegisterDeploymentProviderModal";
 import { StepAttach } from "@/pages/MainPage/pages/deploymentsPage/steps/StepAttach";
 import { StepBasics } from "@/pages/MainPage/pages/deploymentsPage/steps/StepBasics";
 import { StepConfiguration } from "@/pages/MainPage/pages/deploymentsPage/steps/StepConfiguration";
 import { StepReview } from "@/pages/MainPage/pages/deploymentsPage/steps/StepReview";
 import { useDeploymentForm } from "@/pages/MainPage/pages/deploymentsPage/useDeploymentForm";
-import { CURRENT_DRAFT_ID } from "@/pages/FlowPage/components/flowSidebarComponent/components/FlowHistorySidebar/constants";
+import useAlertStore from "@/stores/alertStore";
+import useHistoryPreviewStore from "@/stores/historyPreviewStore";
+import type { FlowVersionEntry } from "@/types/flow/version";
 
 type FlowDeployModalProps = {
   open: boolean;
@@ -110,7 +110,7 @@ export default function FlowDeployModal({
     data: historyResponse,
     isLoading: isHistoryLoading,
     isError: isHistoryError,
-  } = useGetFlowHistory({ flowId }, { enabled: newDeploymentOpen });
+  } = useGetFlowVersions({ flowId }, { enabled: newDeploymentOpen });
 
   const history = historyResponse?.entries ?? [];
 
@@ -121,7 +121,7 @@ export default function FlowDeployModal({
         name: "Current Draft",
         updatedDate: "Editor state (snapshot created on deploy)",
       },
-      ...history.map((entry: FlowHistoryEntry) => ({
+      ...history.map((entry: FlowVersionEntry) => ({
         id: entry.id,
         name: entry.version_tag ? `Version ${entry.version_tag}` : "Checkpoint",
         updatedDate: new Date(entry.created_at).toLocaleString(),
@@ -198,7 +198,7 @@ export default function FlowDeployModal({
     };
   }, [detectDeploymentEnvVars, newDeploymentOpen, selectedItems]);
 
-  const { mutateAsync: createSnapshot } = usePostCreateSnapshot();
+  const { mutateAsync: createSnapshot } = usePostCreateVersionSnapshot();
   const createDeploymentMutation = usePostCreateDeployment();
 
   const selectedReviewItems = useMemo(() => {
@@ -253,7 +253,7 @@ export default function FlowDeployModal({
         description: deploymentDescription.trim(),
         type: deploymentType === "MCP" ? "mcp" : "agent",
       },
-      flow_versions: { ids: resolvedCheckpointIds },
+      flow_version_ids: { ids: resolvedCheckpointIds },
     };
 
     const environmentVariables = envVars.reduce<

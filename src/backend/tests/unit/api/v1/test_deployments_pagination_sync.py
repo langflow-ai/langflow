@@ -7,7 +7,7 @@ from langflow.api.v1 import deployments as deployment_api
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.flow_history.model import FlowHistory
+from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
     FlowVersionDeploymentAttachment,
 )
@@ -172,20 +172,20 @@ async def test_deployments_lazy_sync_prunes_stale_rows(client, logged_in_headers
         session.add(flow)
         await session.flush()
 
-        flow_history = FlowHistory(
+        flow_version = FlowVersion(
             flow_id=flow.id,
             user_id=active_user.id,
             data={"nodes": [], "edges": []},
             version_number=1,
             description="checkpoint",
         )
-        session.add(flow_history)
+        session.add(flow_version)
         await session.flush()
 
         session.add(
             FlowVersionDeploymentAttachment(
                 user_id=active_user.id,
-                flow_version_id=flow_history.id,
+                flow_version_id=flow_version.id,
                 deployment_id=keep_deployment.id,
             )
         )
@@ -248,9 +248,9 @@ async def test_list_deployments_filters_by_flow_version_ids_and_exposes_matched_
         session.add(flow)
         await session.flush()
 
-        history_rows: list[FlowHistory] = []
+        history_rows: list[FlowVersion] = []
         for version_number in range(1, 4):
-            row = FlowHistory(
+            row = FlowVersion(
                 flow_id=flow.id,
                 user_id=active_user.id,
                 data={"nodes": [], "edges": []},
@@ -356,14 +356,14 @@ async def test_patch_deployment_history_updates_checkpoint_attachments(
         )
         session.add(flow)
         await session.flush()
-        flow_history = FlowHistory(
+        flow_version = FlowVersion(
             flow_id=flow.id,
             user_id=active_user.id,
             data={"nodes": [], "edges": []},
             version_number=1,
             description="checkpoint",
         )
-        session.add(flow_history)
+        session.add(flow_version)
         await session.flush()
 
         deployment = Deployment(
@@ -376,7 +376,7 @@ async def test_patch_deployment_history_updates_checkpoint_attachments(
         session.add(deployment)
         await session.flush()
         deployment_id = str(deployment.id)
-        history_id = str(flow_history.id)
+        history_id = str(flow_version.id)
 
     adapter = _FakeAdapter()
 
@@ -449,17 +449,17 @@ async def test_create_deployment_resolves_history_ids_to_raw_history_payloads(
         await session.flush()
 
         checkpoint_data = {"nodes": [{"id": "n1"}], "edges": []}
-        flow_history = FlowHistory(
+        flow_version = FlowVersion(
             flow_id=flow.id,
             user_id=active_user.id,
             data=checkpoint_data,
             version_number=1,
             description="checkpoint-for-create",
         )
-        session.add(flow_history)
+        session.add(flow_version)
         await session.flush()
 
-        history_id = str(flow_history.id)
+        history_id = str(flow_version.id)
         flow_id = str(flow.id)
         folder_id = str(folder.id)
         flow_name = flow.name
@@ -533,18 +533,18 @@ async def test_create_deployment_rejects_history_references_from_other_project_w
         session.add(other_flow)
         await session.flush()
 
-        other_flow_history = FlowHistory(
+        other_flow_version = FlowVersion(
             flow_id=other_flow.id,
             user_id=active_user.id,
             data={"nodes": [{"id": "n1"}], "edges": []},
             version_number=1,
             description="checkpoint-from-other-project",
         )
-        session.add(other_flow_history)
+        session.add(other_flow_version)
         await session.flush()
 
         target_project_id = str(target_folder.id)
-        history_id = str(other_flow_history.id)
+        history_id = str(other_flow_version.id)
 
     capture_adapter = _CreateCaptureAdapter()
 
@@ -593,17 +593,17 @@ async def test_create_deployment_rejects_history_references_not_in_default_proje
         session.add(flow)
         await session.flush()
 
-        flow_history = FlowHistory(
+        flow_version = FlowVersion(
             flow_id=flow.id,
             user_id=active_user.id,
             data={"nodes": [{"id": "n1"}], "edges": []},
             version_number=1,
             description="checkpoint-outside-default-project",
         )
-        session.add(flow_history)
+        session.add(flow_version)
         await session.flush()
 
-        history_id = str(flow_history.id)
+        history_id = str(flow_version.id)
 
     capture_adapter = _CreateCaptureAdapter()
 
@@ -774,7 +774,7 @@ async def test_create_deployment_rejects_history_raw_payloads_from_api(client, l
 
 async def test_detect_deployment_environment_variables_endpoint_is_removed(client, logged_in_headers, active_user):
     async with session_scope() as session:
-        flow_history = FlowHistory(
+        flow_version = FlowVersion(
             flow_id=uuid4(),
             user_id=active_user.id,
             data={
@@ -798,9 +798,9 @@ async def test_detect_deployment_environment_variables_endpoint_is_removed(clien
             version_number=1,
             description="checkpoint-with-secret-template-field",
         )
-        session.add(flow_history)
+        session.add(flow_version)
         await session.flush()
-        history_id = str(flow_history.id)
+        history_id = str(flow_version.id)
 
     response = await client.post(
         "api/v1/deployments/variables/detections",
@@ -821,7 +821,7 @@ async def test_detect_deployment_environment_variables_endpoint_returns_404(clie
                 default_fields=[],
             )
         )
-        flow_history = FlowHistory(
+        flow_version = FlowVersion(
             flow_id=uuid4(),
             user_id=active_user.id,
             data={
@@ -846,9 +846,9 @@ async def test_detect_deployment_environment_variables_endpoint_returns_404(clie
             version_number=1,
             description="checkpoint-with-load-from-db-binding",
         )
-        session.add(flow_history)
+        session.add(flow_version)
         await session.flush()
-        history_id = str(flow_history.id)
+        history_id = str(flow_version.id)
 
     response = await client.post(
         "api/v1/deployments/variables/detections",
@@ -866,14 +866,14 @@ async def test_snapshot_and_config_endpoints_are_removed(client, logged_in_heade
         params={"provider_id": provider["id"]},
         headers=logged_in_headers,
     )
-    assert snapshot_response.status_code == status.HTTP_404_NOT_FOUND
+    assert snapshot_response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     config_response = await client.get(
         "api/v1/deployments/configs",
         params={"provider_id": provider["id"]},
         headers=logged_in_headers,
     )
-    assert config_response.status_code == status.HTTP_404_NOT_FOUND
+    assert config_response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
 async def test_list_deployment_types_rejects_provider_account_without_provider_key(client, logged_in_headers):

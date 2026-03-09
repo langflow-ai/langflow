@@ -672,13 +672,10 @@ export const TestAgentModal = ({
       const initialResponse = await createExecutionMutation.mutateAsync({
         provider_id: providerId,
         deployment_id: deploymentId,
-        deployment_type: deploymentType,
-        input: prompt,
-        provider_input: isWatsonxProvider
-          ? {
-              ...(threadId ? { thread_id: threadId } : {}),
-            }
-          : undefined,
+        provider_data: {
+          input: prompt,
+          ...(isWatsonxProvider && threadId ? { thread_id: threadId } : {}),
+        },
       });
 
       const providerResult = initialResponse.provider_result || {};
@@ -712,8 +709,6 @@ export const TestAgentModal = ({
           await sleep(1500);
           const polledResponse = await getExecutionStatusMutation.mutateAsync({
             executionId: executionId.trim(),
-            deploymentId: deploymentId,
-            deploymentType: deploymentType,
           });
           finalResponse = polledResponse;
           if (

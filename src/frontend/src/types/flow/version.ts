@@ -1,4 +1,4 @@
-export type FlowHistoryEntry = {
+export type FlowVersionEntry = {
   id: string;
   flow_id: string;
   user_id: string;
@@ -8,16 +8,16 @@ export type FlowHistoryEntry = {
   created_at: string;
 };
 
-export type FlowHistoryEntryWithData = FlowHistoryEntry & {
-  data: Record<string, any> | null;
+export type FlowVersionEntryWithData = FlowVersionEntry & {
+  data: Record<string, unknown> | null;
 };
 
-export type FlowHistoryCreate = {
+export type FlowVersionCreate = {
   description?: string | null;
 };
 
-export type FlowHistoryListResponse = {
-  entries: FlowHistoryEntry[];
+export type FlowVersionListResponse = {
+  entries: FlowVersionEntry[];
   max_entries: number;
   deployment_counts?: Record<string, number>;
 };

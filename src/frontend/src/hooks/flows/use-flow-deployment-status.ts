@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useGetFlowHistory } from "@/controllers/API/queries/flow-history";
+import { useGetFlowVersions } from "@/controllers/API/queries/flow-version";
 import { CURRENT_DRAFT_ID } from "@/pages/FlowPage/components/flowSidebarComponent/components/FlowHistorySidebar/constants";
 
 export type ToolbarDeploymentState =
@@ -18,7 +18,7 @@ export function useFlowDeploymentStatus({
   selectedEntryId,
 }: UseFlowDeploymentStatusArgs) {
   const { data: historyResponse, isLoading: isLoadingHistory } =
-    useGetFlowHistory({ flowId: flowId ?? "" }, { enabled: Boolean(flowId) });
+    useGetFlowVersions({ flowId: flowId ?? "" }, { enabled: Boolean(flowId) });
 
   const history = historyResponse?.entries ?? [];
   const latestHistoryId = history[0]?.id ?? null;

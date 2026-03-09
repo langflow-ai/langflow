@@ -15,15 +15,14 @@ import ExportModal from "@/modals/exportModal";
 import FlowSettingsModal from "@/modals/flowSettingsModal";
 import useAlertStore from "@/stores/alertStore";
 import type { FlowType } from "@/types/flow";
-import type { FlowHistoryEntry } from "@/types/flow/history";
-import { getNumberFromString } from "@/utils/utils";
+import type { FlowVersionEntry } from "@/types/flow/version";
 import { swatchColors } from "@/utils/styleUtils";
-import { cn } from "@/utils/utils";
-import { timeElapsed } from "../../../utils/time-elapse";
+import { cn, getNumberFromString } from "@/utils/utils";
 import DropdownComponent from "../../../components/dropdown";
+import { timeElapsed } from "../../../utils/time-elapse";
 
 type FlowHistoryApiResponse = {
-  entries: FlowHistoryEntry[];
+  entries: FlowVersionEntry[];
   deployment_counts?: Record<string, number>;
 };
 
@@ -76,7 +75,7 @@ export default function FlowVersionsTable({
       setIsLoadingHistoryByFlowId((prev) => ({ ...prev, [flowId]: true }));
       try {
         const response = await api.get<FlowHistoryApiResponse>(
-          `${getURL("FLOWS")}/${flowId}/history/`,
+          `${getURL("FLOWS")}/${flowId}/versions/`,
           { params: { limit: 20, offset: 0 } },
         );
         setHistoryByFlowId((prev) => ({ ...prev, [flowId]: response.data }));
@@ -320,7 +319,7 @@ export default function FlowVersionsTable({
                         onClick={() => {
                           const targetPath = `/flow/${flow.id}${folderId ? `/folder/${folderId}` : ""}`;
                           navigate(
-                            `${targetPath}?historyId=${encodeURIComponent(entry.id)}`,
+                            `${targetPath}?versionId=${encodeURIComponent(entry.id)}`,
                           );
                         }}
                       >

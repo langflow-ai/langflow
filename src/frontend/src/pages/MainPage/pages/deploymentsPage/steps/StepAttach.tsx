@@ -51,7 +51,7 @@ export const StepAttach = ({
       <div>
         <h3 className="text-base font-semibold">Attach Checkpoints</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Select one or more existing flow-history checkpoints to include
+          Select one or more existing flow-version checkpoints to include
         </p>
       </div>
       <div className="flex flex-col gap-2 overflow-y-auto">

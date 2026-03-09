@@ -20,7 +20,7 @@ import { StepperModal, StepperModalFooter } from "@/modals/stepperModal";
 import useAlertStore from "@/stores/alertStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import type { FlowType } from "@/types/flow";
-import type { FlowHistoryEntry } from "@/types/flow/history";
+import type { FlowVersionEntry } from "@/types/flow/version";
 import { ConfigureDeploymentProviderModal } from "./ConfigureDeploymentProviderModal";
 import { type EnvVar, TOTAL_STEPS } from "./constants";
 import { DeploymentCreationStatusView } from "./DeploymentCreationStatusView";
@@ -76,7 +76,7 @@ type FlowCheckpointGroup = {
 };
 
 type FlowHistoryListApiResponse = {
-  entries: FlowHistoryEntry[];
+  entries: FlowVersionEntry[];
 };
 
 const inflightFlowHistoryRequests = new Map<
@@ -334,11 +334,11 @@ const DeploymentsTab = () => {
         flows.map(async (flow) => {
           try {
             const response = await fetchFlowHistoryWithDedupe(
-              `${getURL("FLOWS")}/${flow.id}/history/?limit=20&offset=0`,
+              `${getURL("FLOWS")}/${flow.id}/versions/?limit=20&offset=0`,
             );
             return { flow, entries: response.entries ?? [] };
           } catch {
-            return { flow, entries: [] as FlowHistoryEntry[] };
+            return { flow, entries: [] as FlowVersionEntry[] };
           }
         }),
       );
@@ -478,7 +478,7 @@ const DeploymentsTab = () => {
     };
 
     if (selectedCheckpointIds.length > 0) {
-      payload.flow_versions = {
+      payload.flow_version_ids = {
         ids: selectedCheckpointIds,
       };
     }

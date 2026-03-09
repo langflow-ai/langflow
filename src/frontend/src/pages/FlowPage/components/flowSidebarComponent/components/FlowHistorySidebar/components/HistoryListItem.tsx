@@ -6,18 +6,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
-import type { FlowHistoryEntry } from "@/types/flow/history";
+import type { FlowVersionEntry } from "@/types/flow/version";
 import { cn } from "@/utils/utils";
 import { formatTimestamp } from "../utils";
 
 interface HistoryListItemProps {
-  entry: FlowHistoryEntry;
+  entry: FlowVersionEntry;
   deploymentCount: number;
   isSelected: boolean;
   isAnimating: boolean;
   onSelect: (id: string) => void;
-  onExport: (entry: FlowHistoryEntry) => void;
-  onDeleteClick: (entry: FlowHistoryEntry) => void;
+  onExport: (entry: FlowVersionEntry) => void;
+  onDeleteClick: (entry: FlowVersionEntry) => void;
 }
 
 export default function HistoryListItem({

@@ -12,13 +12,27 @@ import { processFlows } from "@/utils/reactflowUtils";
 
 interface RestoreVersionButtonProps {
   flowId: string;
-  historyId: string;
+  versionId: string;
   versionTag: string;
+}
+
+function getErrorDetail(error: unknown): string | undefined {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    typeof (error as { response?: unknown }).response === "object"
+  ) {
+    const response = (error as { response?: { data?: { detail?: string } } })
+      .response;
+    return response?.data?.detail;
+  }
+  return undefined;
 }
 
 export default function RestoreVersionButton({
   flowId,
-  historyId,
+  versionId,
   versionTag,
 }: RestoreVersionButtonProps) {
   const queryClient = useQueryClient();
@@ -35,12 +49,12 @@ export default function RestoreVersionButton({
     setIsRestoring(true);
     try {
       const response = await api.post(
-        `${getURL("FLOWS")}/${flowId}/history/${historyId}/activate`,
+        `${getURL("FLOWS")}/${flowId}/versions/${versionId}/activate`,
         null,
         { params: { save_draft: true } },
       );
       const updatedFlow = response.data;
-      queryClient.invalidateQueries({ queryKey: ["useGetFlowHistory"] });
+      queryClient.invalidateQueries({ queryKey: ["useGetFlowVersions"] });
       const flow = {
         ...updatedFlow,
         data: {
@@ -52,8 +66,8 @@ export default function RestoreVersionButton({
       applyFlowToCanvas(flow);
       clearPreview();
       setSuccessData({ title: "Version restored" });
-    } catch (err: any) {
-      const detail = err?.response?.data?.detail;
+    } catch (err: unknown) {
+      const detail = getErrorDetail(err);
       setErrorData({
         title: "Failed to restore version",
         ...(detail ? { list: [detail] } : {}),

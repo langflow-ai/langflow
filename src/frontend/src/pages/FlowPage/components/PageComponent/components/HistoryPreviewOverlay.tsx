@@ -55,7 +55,7 @@ export default function HistoryPreviewOverlay() {
       {previewId && previewLabel && previewLabel !== "Current Draft" && (
         <RestoreVersionButton
           flowId={currentFlowId}
-          historyId={previewId}
+          versionId={previewId}
           versionTag={previewLabel}
         />
       )}

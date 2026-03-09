@@ -770,7 +770,7 @@ async def list_deployment_types(
 @router.get("", response_model=DeploymentListResponse)
 async def list_deployments(
     provider_id: DeploymentProviderAccountIdQuery,
-    session: DbSessionReadOnly,
+    session: DbSession,
     current_user: CurrentActiveUser,
     params: Annotated[Params, Depends(_deployment_pagination_params)],
     deployment_type: Annotated[DeploymentType | None, Query()] = None,

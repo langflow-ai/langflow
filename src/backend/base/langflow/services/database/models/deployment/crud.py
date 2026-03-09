@@ -45,7 +45,7 @@ async def create_deployment(
     row = Deployment(
         user_id=user_id,
         project_id=project_id,
-        deployment_provider_account_id=deployment_provider_account_id,
+        provider_account_id=deployment_provider_account_id,
         resource_key=resource_key_s,
         name=name_s,
     )
@@ -70,7 +70,7 @@ async def get_deployment_by_resource_key(
 ) -> Deployment | None:
     stmt = select(Deployment).where(
         Deployment.user_id == user_id,
-        Deployment.deployment_provider_account_id == deployment_provider_account_id,
+        Deployment.provider_account_id == deployment_provider_account_id,
         Deployment.resource_key == resource_key.strip(),
     )
     return (await db.exec(stmt)).first()
@@ -147,7 +147,7 @@ async def list_deployments_page(
         .outerjoin(attachment_counts_subquery, attachment_counts_subquery.c.deployment_id == Deployment.id)
         .where(
             Deployment.user_id == user_id,
-            Deployment.deployment_provider_account_id == deployment_provider_account_id,
+            Deployment.provider_account_id == deployment_provider_account_id,
         )
     )
     if flow_version_ids:
@@ -209,7 +209,7 @@ async def count_deployments_by_provider(
 ) -> int:
     stmt = select(func.count(Deployment.id)).where(
         Deployment.user_id == user_id,
-        Deployment.deployment_provider_account_id == deployment_provider_account_id,
+        Deployment.provider_account_id == deployment_provider_account_id,
     )
     if flow_version_ids:
         matched_deployments_subquery = (
@@ -237,7 +237,7 @@ async def delete_deployment_by_resource_key(
 ) -> int:
     stmt = delete(Deployment).where(
         Deployment.user_id == user_id,
-        Deployment.deployment_provider_account_id == deployment_provider_account_id,
+        Deployment.provider_account_id == deployment_provider_account_id,
         Deployment.resource_key == resource_key.strip(),
     )
     result = await db.exec(stmt)

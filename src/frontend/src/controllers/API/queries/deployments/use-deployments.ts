@@ -37,6 +37,25 @@ export type DeploymentProvidersResponse = {
   total: number;
 };
 
+type RawDeploymentProvider = {
+  id: string;
+  account_id?: string | null;
+  provider_tenant_id?: string | null;
+  provider_key: string;
+  backend_url?: string;
+  provider_url?: string;
+  registered_at?: string | null;
+  created_at?: string | null;
+};
+
+type RawDeploymentProvidersResponse = {
+  deployment_providers?: RawDeploymentProvider[];
+  providers?: RawDeploymentProvider[];
+  page: number;
+  size: number;
+  total: number;
+};
+
 export type DeploymentListItem = {
   id: string;
   resource_key?: string | null;
@@ -48,7 +67,7 @@ export type DeploymentListItem = {
   updated_at?: string | null;
   provider_data?: {
     snapshot_ids?: string[];
-    matched_history_ids?: string[];
+    matched_flow_version_ids?: string[];
     mode?: string;
     [key: string]: unknown;
   };
@@ -69,7 +88,7 @@ export type DeploymentCreatePayload = {
     description: string;
     type: "agent" | "mcp";
   };
-  flow_versions?: {
+  flow_version_ids?: {
     ids: string[];
   };
   config?: {
@@ -101,18 +120,52 @@ export type DeploymentCreateResponse = {
 export type DeploymentExecutionPayload = {
   provider_id: string;
   deployment_id: string;
-  deployment_type: "agent" | "mcp";
-  input?: string | Record<string, unknown>;
-  provider_input?: Record<string, unknown>;
+  provider_data?: Record<string, unknown>;
 };
 
 export type DeploymentExecutionResponse = {
   execution_id?: string | null;
   deployment_id: string;
-  deployment_type: "agent" | "mcp";
   status?: string | null;
   output?: string | Record<string, unknown> | null;
   provider_result?: Record<string, unknown> | null;
+};
+
+type RawDeploymentExecutionResponse = {
+  execution_id?: string | null;
+  deployment_id: string;
+  provider_data?: Record<string, unknown> | null;
+};
+
+const normalizeDeploymentExecutionResponse = (
+  response: RawDeploymentExecutionResponse,
+): DeploymentExecutionResponse => {
+  const providerResult =
+    response.provider_data && typeof response.provider_data === "object"
+      ? response.provider_data
+      : null;
+  const status =
+    typeof providerResult?.status === "string" ? providerResult.status : null;
+  const output =
+    typeof providerResult?.output === "string" ||
+    (providerResult?.output !== null &&
+      providerResult?.output !== undefined &&
+      typeof providerResult?.output === "object")
+      ? (providerResult.output as string | Record<string, unknown>)
+      : typeof providerResult?.result === "string" ||
+          (providerResult?.result !== null &&
+            providerResult?.result !== undefined &&
+            typeof providerResult?.result === "object")
+        ? (providerResult.result as string | Record<string, unknown>)
+        : null;
+
+  return {
+    execution_id: response.execution_id ?? null,
+    deployment_id: response.deployment_id,
+    status,
+    output,
+    provider_result: providerResult,
+  };
 };
 
 export type DetectDeploymentEnvVarsPayload = {
@@ -133,7 +186,7 @@ type ProviderScopedParams = {
 type PaginationParams = {
   page?: number;
   pageSize?: number;
-  historyIds?: string[];
+  flowVersionIds?: string[];
   matchLimit?: number;
 };
 
@@ -147,13 +200,25 @@ export const useGetDeploymentProviders: useQueryFunctionType<
   const getProvidersFn = async (): Promise<DeploymentProvidersResponse> => {
     const page = options?.page ?? 1;
     const pageSize = options?.pageSize ?? 20;
-    const { data } = await api.get<DeploymentProvidersResponse>(
-      buildQueryStringUrl(`${getURL("DEPLOYMENTS")}/providers/`, {
+    const { data } = await api.get<RawDeploymentProvidersResponse>(
+      buildQueryStringUrl(`${getURL("DEPLOYMENTS")}/providers`, {
         page,
         size: pageSize,
       }),
     );
-    return data;
+    const rawProviders = data.providers ?? data.deployment_providers ?? [];
+    return {
+      deployment_providers: rawProviders.map((provider) => ({
+        id: provider.id,
+        account_id: provider.account_id ?? provider.provider_tenant_id ?? null,
+        provider_key: provider.provider_key,
+        backend_url: provider.backend_url ?? provider.provider_url ?? "",
+        registered_at: provider.registered_at ?? provider.created_at ?? null,
+      })),
+      page: data.page,
+      size: data.size,
+      total: data.total,
+    };
   };
 
   return query(
@@ -178,10 +243,10 @@ export const useGetDeployments: useQueryFunctionType<
     if (typeof params.matchLimit === "number") {
       queryParams.append("match_limit", String(params.matchLimit));
     }
-    for (const historyId of params.historyIds ?? []) {
-      const normalized = historyId.trim();
+    for (const flowVersionId of params.flowVersionIds ?? []) {
+      const normalized = flowVersionId.trim();
       if (normalized.length > 0) {
-        queryParams.append("history_ids", normalized);
+        queryParams.append("flow_version_ids", normalized);
       }
     }
 
@@ -196,7 +261,7 @@ export const useGetDeployments: useQueryFunctionType<
       params.providerId,
       params.page ?? 1,
       params.pageSize ?? 20,
-      (params.historyIds ?? []).join(","),
+      (params.flowVersionIds ?? []).join(","),
       params.matchLimit ?? null,
     ],
     getDeploymentsFn,
@@ -243,7 +308,7 @@ export const usePostDetectDeploymentEnvVars: useMutationFunctionType<
     payload: DetectDeploymentEnvVarsPayload,
   ): Promise<DetectDeploymentEnvVarsResponse> => {
     const { data } = await api.post<DetectDeploymentEnvVarsResponse>(
-      `${getURL("DEPLOYMENTS")}/variables/detections`,
+      `${getURL("FLOWS")}/versions/variables/detections`,
       payload,
     );
     return data;
@@ -301,11 +366,11 @@ export const usePostCreateDeploymentExecution: useMutationFunctionType<
   const createDeploymentExecutionFn = async (
     payload: DeploymentExecutionPayload,
   ): Promise<DeploymentExecutionResponse> => {
-    const { data } = await api.post<DeploymentExecutionResponse>(
+    const { data } = await api.post<RawDeploymentExecutionResponse>(
       `${getURL("DEPLOYMENTS")}/executions`,
       payload,
     );
-    return data;
+    return normalizeDeploymentExecutionResponse(data);
   };
 
   const mutation: UseMutationResult<
@@ -327,8 +392,6 @@ export const useGetDeploymentExecutionById: useMutationFunctionType<
   ProviderScopedParams,
   {
     executionId: string;
-    deploymentId: string;
-    deploymentType: "agent" | "mcp";
   },
   DeploymentExecutionResponse
 > = (params, options) => {
@@ -336,17 +399,13 @@ export const useGetDeploymentExecutionById: useMutationFunctionType<
 
   const getDeploymentExecutionByIdFn = async (payload: {
     executionId: string;
-    deploymentId: string;
-    deploymentType: "agent" | "mcp";
   }): Promise<DeploymentExecutionResponse> => {
     const baseUrl = `${getURL("DEPLOYMENTS")}/executions/${payload.executionId}`;
     const url = buildQueryStringUrl(baseUrl, {
       provider_id: params.providerId,
-      deployment_id: payload.deploymentId,
-      deployment_type: payload.deploymentType,
     });
-    const { data } = await api.get<DeploymentExecutionResponse>(url);
-    return data;
+    const { data } = await api.get<RawDeploymentExecutionResponse>(url);
+    return normalizeDeploymentExecutionResponse(data);
   };
 
   const mutation: UseMutationResult<
@@ -378,15 +437,23 @@ export const usePostCreateDeploymentProvider: useMutationFunctionType<
   const createProviderFn = async (
     payload: DeploymentProviderCreatePayload,
   ): Promise<DeploymentProvider> => {
-    const cleanedPayload: DeploymentProviderCreatePayload = {
-      ...payload,
-      account_id: payload.account_id?.trim() || undefined,
+    const cleanedPayload = {
+      provider_tenant_id: payload.account_id?.trim() || undefined,
+      provider_key: payload.provider_key.trim(),
+      provider_url: payload.backend_url.trim(),
+      api_key: payload.api_key.trim(),
     };
-    const { data } = await api.post<DeploymentProvider>(
-      `${getURL("DEPLOYMENTS")}/providers/`,
+    const { data } = await api.post<RawDeploymentProvider>(
+      `${getURL("DEPLOYMENTS")}/providers`,
       cleanedPayload,
     );
-    return data;
+    return {
+      id: data.id,
+      account_id: data.account_id ?? data.provider_tenant_id ?? null,
+      provider_key: data.provider_key,
+      backend_url: data.backend_url ?? data.provider_url ?? "",
+      registered_at: data.registered_at ?? data.created_at ?? null,
+    };
   };
 
   const mutation: UseMutationResult<
@@ -410,27 +477,33 @@ export const usePatchUpdateDeploymentProvider: useMutationFunctionType<
   const updateProviderFn = async (
     payload: DeploymentProviderUpdatePayload,
   ): Promise<DeploymentProvider> => {
-    const cleanedPayload: DeploymentProviderUpdatePayload = {};
+    const cleanedPayload: Record<string, string | null | undefined> = {};
 
     if (payload.provider_key !== undefined) {
       cleanedPayload.provider_key = payload.provider_key.trim();
     }
     if (payload.backend_url !== undefined) {
-      cleanedPayload.backend_url = payload.backend_url.trim();
+      cleanedPayload.provider_url = payload.backend_url.trim();
     }
     if (payload.api_key !== undefined) {
       cleanedPayload.api_key = payload.api_key.trim();
     }
     if (payload.account_id !== undefined) {
-      cleanedPayload.account_id =
+      cleanedPayload.provider_tenant_id =
         payload.account_id === null ? null : payload.account_id.trim();
     }
 
-    const { data } = await api.patch<DeploymentProvider>(
+    const { data } = await api.patch<RawDeploymentProvider>(
       `${getURL("DEPLOYMENTS")}/providers/${params.providerId}`,
       cleanedPayload,
     );
-    return data;
+    return {
+      id: data.id,
+      account_id: data.account_id ?? data.provider_tenant_id ?? null,
+      provider_key: data.provider_key,
+      backend_url: data.backend_url ?? data.provider_url ?? "",
+      registered_at: data.registered_at ?? data.created_at ?? null,
+    };
   };
 
   const mutation: UseMutationResult<

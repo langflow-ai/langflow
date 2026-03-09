@@ -1,4 +1,4 @@
-"""Domain exceptions for the flow-history module.
+"""Domain exceptions for the flow-version module.
 
 These are raised by the CRUD layer and translated to HTTP responses at the API boundary.
 """
