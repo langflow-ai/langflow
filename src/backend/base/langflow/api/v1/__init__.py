@@ -1,6 +1,6 @@
 from langflow.api.v1.api_key import router as api_key_router
 from langflow.api.v1.chat import router as chat_router
-from langflow.api.v1.deployment import router as deployment_router
+from langflow.api.v1.deployments import router as deployment_router
 from langflow.api.v1.endpoints import router as endpoints_router
 from langflow.api.v1.files import router as files_router
 from langflow.api.v1.flow_history import router as flow_history_router

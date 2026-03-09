@@ -3,7 +3,7 @@ from __future__ import annotations
 from uuid import UUID, uuid4
 
 from fastapi import status
-from langflow.api.v1 import deployment as deployment_api
+from langflow.api.v1 import deployments as deployment_api
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 from langflow.services.database.models.flow.model import Flow
@@ -27,26 +27,26 @@ from sqlmodel import select
 
 def _provider_payload(
     *,
-    account_id: str | None = "tenant-1",
+    provider_tenant_id: str | None = "tenant-1",
     provider_key: str | None = "watsonx-orchestrate",
-    backend_url: str = "https://example.ibm.com",
+    provider_url: str = "https://example.ibm.com",
     api_key: str = "secret-api-key",
 ) -> dict:
     payload = {
-        "backend_url": backend_url,
+        "provider_url": provider_url,
         "api_key": api_key,
     }
-    if account_id is not None:
-        payload["account_id"] = account_id
+    if provider_tenant_id is not None:
+        payload["provider_tenant_id"] = provider_tenant_id
     if provider_key is not None:
         payload["provider_key"] = provider_key
     return payload
 
 
-async def _create_provider(client, headers: dict, account_id: str) -> dict:
+async def _create_provider(client, headers: dict, provider_tenant_id: str) -> dict:
     response = await client.post(
-        "api/v1/deployments/providers/",
-        json=_provider_payload(account_id=account_id),
+        "api/v1/deployments/providers",
+        json=_provider_payload(provider_tenant_id=provider_tenant_id),
         headers=headers,
     )
     assert response.status_code == status.HTTP_201_CREATED
@@ -59,7 +59,7 @@ async def test_list_provider_accounts_is_paginated(client, logged_in_headers):
     await _create_provider(client, logged_in_headers, "tenant-3")
 
     page_one = await client.get(
-        "api/v1/deployments/providers/",
+        "api/v1/deployments/providers",
         params={"page": 1, "size": 2},
         headers=logged_in_headers,
     )
@@ -68,10 +68,10 @@ async def test_list_provider_accounts_is_paginated(client, logged_in_headers):
     assert body_one["page"] == 1
     assert body_one["size"] == 2
     assert body_one["total"] >= 3
-    assert len(body_one["deployment_providers"]) == 2
+    assert len(body_one["providers"]) == 2
 
     page_two = await client.get(
-        "api/v1/deployments/providers/",
+        "api/v1/deployments/providers",
         params={"page": 2, "size": 2},
         headers=logged_in_headers,
     )
@@ -80,7 +80,7 @@ async def test_list_provider_accounts_is_paginated(client, logged_in_headers):
     assert body_two["page"] == 2
     assert body_two["size"] == 2
     assert body_two["total"] == body_one["total"]
-    assert len(body_two["deployment_providers"]) >= 1
+    assert len(body_two["providers"]) >= 1
 
 
 class _FakeAdapter:
@@ -229,7 +229,7 @@ async def test_deployments_lazy_sync_prunes_stale_rows(client, logged_in_headers
         assert stale is None
 
 
-async def test_list_deployments_filters_by_history_ids_and_exposes_matched_ids(
+async def test_list_deployments_filters_by_flow_version_ids_and_exposes_matched_ids(
     client, logged_in_headers, active_user, monkeypatch
 ):
     provider = await _create_provider(client, logged_in_headers, "tenant-history-filter")
@@ -324,19 +324,18 @@ async def test_list_deployments_filters_by_history_ids_and_exposes_matched_ids(
             "provider_id": provider["id"],
             "page": 1,
             "size": 10,
-            "history_ids": [history_id_one, history_id_two],
-            "match_limit": 1,
+            "flow_version_ids": [history_id_one, history_id_two],
         },
         headers=logged_in_headers,
     )
     assert response.status_code == status.HTTP_200_OK
     body = response.json()
 
-    # OR-style matching across history_ids with optional match_limit cap.
+    # OR-style matching across flow_version_ids.
     assert body["total"] == 2
-    assert len(body["deployments"]) == 1
-    matched_history_ids = body["deployments"][0]["provider_data"]["matched_history_ids"]
-    assert set(matched_history_ids).issubset({history_id_one, history_id_two})
+    assert len(body["deployments"]) == 2
+    matched_ids = body["deployments"][0]["provider_data"]["matched_flow_version_ids"]
+    assert set(matched_ids).issubset({history_id_one, history_id_two})
 
 
 async def test_patch_deployment_history_updates_checkpoint_attachments(
@@ -388,7 +387,7 @@ async def test_patch_deployment_history_updates_checkpoint_attachments(
 
     add_response = await client.patch(
         f"api/v1/deployments/{deployment_id}",
-        json={"history": {"add": [history_id]}},
+        json={"flow_version_ids": {"add": [history_id]}},
         headers=logged_in_headers,
     )
     assert add_response.status_code == status.HTTP_200_OK
@@ -410,7 +409,7 @@ async def test_patch_deployment_history_updates_checkpoint_attachments(
 
     remove_response = await client.patch(
         f"api/v1/deployments/{deployment_id}",
-        json={"history": {"remove": [history_id]}},
+        json={"flow_version_ids": {"remove": [history_id]}},
         headers=logged_in_headers,
     )
     assert remove_response.status_code == status.HTTP_200_OK
@@ -481,7 +480,7 @@ async def test_create_deployment_resolves_history_ids_to_raw_history_payloads(
                 "description": "deployment with checkpoint references",
                 "type": "agent",
             },
-            "flow_versions": {
+            "flow_version_ids": {
                 "ids": [history_id],
             },
             "project_id": folder_id,
@@ -564,7 +563,7 @@ async def test_create_deployment_rejects_history_references_from_other_project_w
                 "type": "agent",
             },
             "project_id": target_project_id,
-            "flow_versions": {
+            "flow_version_ids": {
                 "ids": [history_id],
             },
         },
@@ -622,7 +621,7 @@ async def test_create_deployment_rejects_history_references_not_in_default_proje
                 "description": "deployment defaults to starter project",
                 "type": "agent",
             },
-            "flow_versions": {
+            "flow_version_ids": {
                 "ids": [history_id],
             },
         },
@@ -754,7 +753,7 @@ async def test_create_deployment_rejects_history_raw_payloads_from_api(client, l
                 "description": "raw payload should be rejected",
                 "type": "agent",
             },
-            "flow_versions": {
+            "flow_version_ids": {
                 "raw_payloads": [
                     {
                         "id": str(uuid4()),
@@ -773,9 +772,7 @@ async def test_create_deployment_rejects_history_raw_payloads_from_api(client, l
     assert capture_adapter.received_payload is None
 
 
-async def test_detect_deployment_environment_variables_from_secret_template_fields(
-    client, logged_in_headers, active_user
-):
+async def test_detect_deployment_environment_variables_endpoint_is_removed(client, logged_in_headers, active_user):
     async with session_scope() as session:
         flow_history = FlowHistory(
             flow_id=uuid4(),
@@ -810,13 +807,10 @@ async def test_detect_deployment_environment_variables_from_secret_template_fiel
         json={"reference_ids": [history_id]},
         headers=logged_in_headers,
     )
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json()["variables"] == []
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-async def test_detect_deployment_environment_variables_includes_valid_global_variable_binding(
-    client, logged_in_headers, active_user
-):
+async def test_detect_deployment_environment_variables_endpoint_returns_404(client, logged_in_headers, active_user):
     async with session_scope() as session:
         session.add(
             Variable(
@@ -861,8 +855,7 @@ async def test_detect_deployment_environment_variables_includes_valid_global_var
         json={"reference_ids": [history_id]},
         headers=logged_in_headers,
     )
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json()["variables"] == [{"key": "api_key", "global_variable_name": "OPENAI_API_KEY"}]
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 async def test_snapshot_and_config_endpoints_are_removed(client, logged_in_headers):
@@ -883,9 +876,7 @@ async def test_snapshot_and_config_endpoints_are_removed(client, logged_in_heade
     assert config_response.status_code == status.HTTP_404_NOT_FOUND
 
 
-async def test_list_deployment_types_rejects_provider_account_without_provider_key(
-    client, logged_in_headers, monkeypatch
-):
+async def test_list_deployment_types_rejects_provider_account_without_provider_key(client, logged_in_headers):
     provider = await _create_provider(client, logged_in_headers, "tenant-empty-provider-key")
 
     async with session_scope() as session:
@@ -900,9 +891,6 @@ async def test_list_deployment_types_rejects_provider_account_without_provider_k
         provider_row.provider_key = "   "
         session.add(provider_row)
 
-    # Prevent unrelated import side effects for this path.
-    monkeypatch.setattr(deployment_api, "_ensure_builtin_deployment_adapter_loaded", lambda *_: None)
-
     response = await client.get(
         "api/v1/deployments/types",
         params={"provider_id": provider["id"]},
@@ -912,16 +900,14 @@ async def test_list_deployment_types_rejects_provider_account_without_provider_k
     assert "provider_key" in response.json()["detail"]
 
 
-async def test_list_deployment_types_rejects_unregistered_provider_adapter(client, logged_in_headers, monkeypatch):
+async def test_list_deployment_types_rejects_unregistered_provider_adapter(client, logged_in_headers):
     create_response = await client.post(
-        "api/v1/deployments/providers/",
-        json=_provider_payload(account_id="tenant-missing-adapter", provider_key="missing-adapter"),
+        "api/v1/deployments/providers",
+        json=_provider_payload(provider_tenant_id="tenant-missing-adapter", provider_key="missing-adapter"),
         headers=logged_in_headers,
     )
     assert create_response.status_code == status.HTTP_201_CREATED
     provider = create_response.json()
-
-    monkeypatch.setattr(deployment_api, "_ensure_builtin_deployment_adapter_loaded", lambda *_: None)
 
     response = await client.get(
         "api/v1/deployments/types",
@@ -957,8 +943,7 @@ async def test_create_execution_rejects_deployment_provider_mismatch(client, log
         json={
             "provider_id": provider_b["id"],
             "deployment_id": deployment_id,
-            "deployment_type": "agent",
-            "input": "hello",
+            "provider_data": {"input": "hello"},
         },
         headers=logged_in_headers,
     )

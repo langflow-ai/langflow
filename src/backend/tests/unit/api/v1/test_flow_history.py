@@ -140,12 +140,12 @@ async def test_list_history_supports_deployment_ids_filter_single_value(
     from langflow.services.deps import session_scope
 
     provider_resp = await client.post(
-        "api/v1/deployments/providers/",
+        "api/v1/deployments/providers",
         json={
-            "account_id": "tenant-history-filter",
+            "provider_tenant_id": "tenant-history-filter",
             "provider_key": "watsonx-orchestrate",
-            "backend_url": "https://example.ibm.com",
-            "api_key": "secret-api-key",
+            "provider_url": "https://example.ibm.com",
+            "api_key": "secret-api-key",  # pragma: allowlist secret
         },
         headers=logged_in_headers,
     )
@@ -209,12 +209,12 @@ async def test_list_history_supports_deployment_ids_filter_with_counts(
     from langflow.services.deps import session_scope
 
     provider_resp = await client.post(
-        "api/v1/deployments/providers/",
+        "api/v1/deployments/providers",
         json={
-            "account_id": "tenant-history-multi-filter",
+            "provider_tenant_id": "tenant-history-multi-filter",
             "provider_key": "watsonx-orchestrate",
-            "backend_url": "https://example.ibm.com",
-            "api_key": "secret-api-key",
+            "provider_url": "https://example.ibm.com",
+            "api_key": "secret-api-key",  # pragma: allowlist secret
         },
         headers=logged_in_headers,
     )
