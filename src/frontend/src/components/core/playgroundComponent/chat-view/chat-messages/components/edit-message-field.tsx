@@ -17,13 +17,13 @@ export default function EditMessageField({
   const [_isButtonClicked, setIsButtonClicked] = useState(false);
   const adjustTextareaHeight = () => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = "0px";
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight + 3}px`;
     }
   };
   useEffect(() => {
     adjustTextareaHeight();
-  }, []);
+  }, [message]);
 
   return (
     <div className="flex h-fit w-full flex-col rounded-md bg-muted px-4 py-2">

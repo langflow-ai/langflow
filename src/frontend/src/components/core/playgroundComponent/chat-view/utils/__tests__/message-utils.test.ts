@@ -60,6 +60,32 @@ describe("findLastBotMessage", () => {
     const result = findLastBotMessage();
     expect(result!.message.id).toBe("m2");
   });
+
+  it("should_return_last_bot_message_for_given_flow_and_session_only", () => {
+    const s1Key = ["useGetMessagesQuery", { id: "flow-1", session_id: "s1" }];
+    const s2Key = ["useGetMessagesQuery", { id: "flow-1", session_id: "s2" }];
+    const msgS1 = buildMessage({
+      id: "m-s1",
+      sender: "Machine",
+      session_id: "s1",
+    });
+    const msgS2 = buildMessage({
+      id: "m-s2",
+      sender: "Machine",
+      session_id: "s2",
+    });
+
+    queryClient.setQueryData(s1Key, [msgS1]);
+    queryClient.setQueryData(s2Key, [msgS2]);
+
+    const resultS1 = findLastBotMessage("flow-1", "s1");
+    const resultS2 = findLastBotMessage("flow-1", "s2");
+
+    expect(resultS1).not.toBeNull();
+    expect(resultS1!.message.id).toBe("m-s1");
+    expect(resultS2).not.toBeNull();
+    expect(resultS2!.message.id).toBe("m-s2");
+  });
 });
 
 describe("updateMessageProperties", () => {

@@ -87,7 +87,7 @@ export function SessionSelector({
     }
   };
 
-  // Default session (flowId) cannot be renamed or deleted
+  // Default session (flowId) cannot be renamed, but can be deleted if it has messages
   const isDefaultSession = session === currentFlowId;
 
   const hasMessages = useSessionHasMessages({
@@ -96,6 +96,7 @@ export function SessionSelector({
   });
 
   const canModifySession = !isDefaultSession;
+  const canDeleteSession = hasMessages;
   const canRenameSession = canModifySession && hasMessages;
 
   return (
@@ -111,7 +112,7 @@ export function SessionSelector({
         isVisible ? "bg-accent font-semibold" : "font-normal",
       )}
     >
-      <div className="flex h-8 items-center justify-between overflow-hidden w-52">
+      <div className="flex h-8 items-center justify-between overflow-hidden w-full">
         <div className="flex w/full min-w-0 items-center px-2">
           {isEditing ? (
             <div
@@ -144,9 +145,10 @@ export function SessionSelector({
           onMessageLogs={() => inspectSession?.(session)}
           onDelete={() => deleteSession(session)}
           showRename={canRenameSession}
-          showDelete={canModifySession}
+          showDelete={canDeleteSession}
           side="bottom"
           align="end"
+          dataTestid={`session-${session}-more-menu`}
           sideOffset={4}
           contentClassName="z-[100] [&>div.p-1]:!h-auto [&>div.p-1]:!min-h-0"
           isVisible={true}

@@ -3,9 +3,9 @@ import { type ReactNode, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Separator } from "@/components/ui/separator";
 import useFlowStore from "@/stores/flowStore";
+import type { AllNodeType } from "@/types/flow";
 import CanvasControlsDropdown from "./CanvasControlsDropdown";
 import HelpDropdown from "./HelpDropdown";
-import { AllNodeType } from "@/types/flow";
 
 const CanvasControls = ({
   children,
@@ -30,8 +30,8 @@ const CanvasControls = ({
   return (
     <Panel
       data-testid="main_canvas_controls"
-      className="react-flow__controls !left-auto !m-2 flex !flex-row rounded-md border border-border bg-background fill-foreground stroke-foreground text-primary [&>button]:border-0"
-      position="bottom-right"
+      className="react-flow__controls !m-2 flex !flex-row rounded-md border border-border bg-background fill-foreground stroke-foreground text-primary [&>button]:border-0"
+      position="bottom-left"
     >
       {children}
       {children && (

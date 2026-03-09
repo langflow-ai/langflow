@@ -4,8 +4,10 @@ from fastapi import APIRouter
 from langflow.api.v1 import (
     api_key_router,
     chat_router,
+    deployment_router,
     endpoints_router,
     files_router,
+    flow_version_router,
     flows_router,
     folders_router,
     knowledge_bases_router,
@@ -19,6 +21,7 @@ from langflow.api.v1 import (
     projects_router,
     starter_projects_router,
     store_router,
+    traces_router,
     users_router,
     validate_router,
     variables_router,
@@ -42,12 +45,14 @@ router_v1.include_router(endpoints_router)
 router_v1.include_router(validate_router)
 router_v1.include_router(store_router)
 router_v1.include_router(flows_router)
+router_v1.include_router(flow_version_router)
 router_v1.include_router(users_router)
 router_v1.include_router(api_key_router)
 router_v1.include_router(login_router)
 router_v1.include_router(variables_router)
 router_v1.include_router(files_router)
 router_v1.include_router(monitor_router)
+router_v1.include_router(traces_router)
 router_v1.include_router(folders_router)
 router_v1.include_router(projects_router)
 router_v1.include_router(starter_projects_router)
@@ -58,6 +63,7 @@ router_v1.include_router(mcp_projects_router)
 router_v1.include_router(openai_responses_router)
 router_v1.include_router(models_router)
 router_v1.include_router(model_options_router)
+router_v1.include_router(deployment_router)
 
 
 # Agentic flow execution - lazy import to avoid circular dependency

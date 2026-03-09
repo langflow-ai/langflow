@@ -147,6 +147,67 @@ def run_command_wrapper(
     )
 
 
+@app.command(name="requirements", help="Generate requirements.txt for a flow", no_args_is_help=True)
+def requirements_command_wrapper(
+    flow_path: str = typer.Argument(help="Path to the Langflow flow JSON file"),
+    output: str | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output file path (default: stdout)",
+    ),
+    lfx_package: str = typer.Option(
+        "lfx",
+        "--lfx-package",
+        help="Name of the LFX package (default: lfx)",
+    ),
+    *,
+    no_lfx: bool = typer.Option(
+        False,  # noqa: FBT003
+        "--no-lfx",
+        help="Exclude the LFX package from output",
+    ),
+    no_pin: bool = typer.Option(
+        False,  # noqa: FBT003
+        "--no-pin",
+        help="Do not pin package versions (default: pin to currently installed versions)",
+    ),
+) -> None:
+    """Generate requirements.txt from a Langflow flow JSON (lazy-loaded)."""
+    import json
+    from pathlib import Path
+
+    from lfx.utils.flow_requirements import generate_requirements_txt
+
+    path = Path(flow_path)
+    if not path.is_file():
+        typer.echo(f"Error: File not found: {path}", err=True)
+        raise typer.Exit(1)
+
+    try:
+        flow = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as e:
+        typer.echo(f"Error: Could not read flow JSON: {e}", err=True)
+        raise typer.Exit(1) from e
+
+    content = generate_requirements_txt(
+        flow,
+        lfx_package=lfx_package,
+        include_lfx=not no_lfx,
+        pin_versions=not no_pin,
+    )
+
+    if output:
+        try:
+            Path(output).write_text(content, encoding="utf-8")
+        except OSError as e:
+            typer.echo(f"Error: Could not write to {output}: {e}", err=True)
+            raise typer.Exit(1) from e
+        typer.echo(f"Requirements written to {output}")
+    else:
+        typer.echo(content, nl=False)
+
+
 def main():
     """Main entry point for the LFX CLI."""
     app()

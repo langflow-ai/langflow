@@ -171,7 +171,7 @@ export default function FilePreviewDisplay({
   return (
     <div
       className={cn(
-        "relative flex h-16 w-16 items-center justify-center rounded-md border bg-muted",
+        "relative flex w-full lg:w-1/2 items-center justify-center rounded-md border bg-muted",
         error && "border-error",
         className,
       )}
