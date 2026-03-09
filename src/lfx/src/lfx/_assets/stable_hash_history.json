@@ -1231,7 +1231,7 @@
   },
   "EmbeddingModel": {
     "versions": {
-      "0.3.0": "c15ebbaa96c5"
+      "0.3.0": "70ca3e390f84"
     }
   },
   "LanguageModelComponent": {
