@@ -43,7 +43,7 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
     provider_key: str = Field(index=True)
     provider_url: str = Field()
     # MUST be stored encrypted; the CRUD layer encrypts via auth_utils before writing
-    # and the Read schema MUST intentionally excludes this field.
+    # and the Read schema intentionally excludes this field.
     api_key: str = Field()
     created_at: datetime | None = Field(
         default=None,
