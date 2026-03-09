@@ -99,9 +99,11 @@ async def create_flow_version_entry(
         max_entries = get_settings_service().settings.max_flow_version_entries_per_flow
         deployed_version_ids = (
             select(FlowVersionDeploymentAttachment.flow_version_id)
-            .where(FlowVersionDeploymentAttachment.flow_version_id.in_(
-                select(FlowVersion.id).where(FlowVersion.flow_id == flow_id)
-            ))
+            .where(
+                FlowVersionDeploymentAttachment.flow_version_id.in_(
+                    select(FlowVersion.id).where(FlowVersion.flow_id == flow_id)
+                )
+            )
             .distinct()
         )
         delete_older = delete(FlowVersion).where(
