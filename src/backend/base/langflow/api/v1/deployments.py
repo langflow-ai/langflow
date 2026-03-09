@@ -7,6 +7,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
 from fastapi_pagination import Params
 from lfx.services.adapters.deployment.exceptions import (
+    AuthenticationError,
     DeploymentConflictError,
     DeploymentError,
     DeploymentNotFoundError,
@@ -77,6 +78,9 @@ from langflow.services.database.models.deployment.crud import (
 )
 from langflow.services.database.models.deployment.crud import (
     get_deployment as get_deployment_db,
+)
+from langflow.services.database.models.deployment.crud import (
+    update_deployment as update_deployment_db,
 )
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment_provider_account.crud import (
@@ -712,6 +716,8 @@ async def create_deployment(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
     except InvalidContentError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message) from exc
+    except AuthenticationError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=exc.message) from exc
     except DeploymentError as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
     except Exception as exc:
@@ -870,6 +876,8 @@ async def create_deployment_execution(
         _raise_http_for_value_error(exc)
     except DeploymentNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
+    except AuthenticationError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=exc.message) from exc
     except DeploymentError as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
     except Exception as exc:
@@ -907,6 +915,8 @@ async def get_deployment_execution(
         _raise_http_for_value_error(exc)
     except DeploymentNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
+    except AuthenticationError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=exc.message) from exc
     except DeploymentError as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
     except Exception as exc:
@@ -973,6 +983,8 @@ async def get_deployment(
         _raise_http_for_value_error(exc)
     except DeploymentNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
+    except AuthenticationError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=exc.message) from exc
     except DeploymentError as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
     except Exception as exc:
@@ -1110,6 +1122,8 @@ async def update_deployment(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
     except DeploymentNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
+    except AuthenticationError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=exc.message) from exc
     except DeploymentError as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
     except Exception as exc:
@@ -1122,10 +1136,20 @@ async def update_deployment(
         remove_flow_version_ids=remove_flow_version_ids,
         db=session,
     )
+
+    # Persist name changes to local DB so list/get reflect the update.
+    new_name = payload.spec.name if payload.spec and payload.spec.name else None
+    if new_name and new_name != deployment_row.name:
+        deployment_row = await update_deployment_db(
+            session,
+            deployment=deployment_row,
+            name=new_name,
+        )
+
     provider_data = update_result.provider_result if isinstance(update_result.provider_result, dict) else None
     return DeploymentUpdateResponse(
         id=deployment_row.id,
-        name=payload.spec.name if payload.spec and payload.spec.name else deployment_row.name,
+        name=deployment_row.name,
         description=payload.spec.description if payload.spec else None,
         type=DeploymentType.AGENT,
         created_at=deployment_row.created_at,
@@ -1227,6 +1251,8 @@ async def redeploy_deployment(
         _raise_http_for_value_error(exc)
     except DeploymentNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
+    except AuthenticationError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=exc.message) from exc
     except DeploymentError as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
     except Exception as exc:
@@ -1269,6 +1295,8 @@ async def duplicate_deployment(
         _raise_http_for_value_error(exc)
     except DeploymentNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
+    except AuthenticationError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=exc.message) from exc
     except DeploymentError as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
     except Exception as exc:
