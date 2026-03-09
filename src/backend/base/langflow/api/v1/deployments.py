@@ -152,6 +152,7 @@ def _raise_http_for_value_error(exc: ValueError) -> None:
     raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
+# TODO: just use regex
 def _extract_watsonx_account_id_from_url(provider_url: str) -> str | None:
     parsed = urlparse(provider_url)
     path_segments = [segment for segment in parsed.path.split("/") if segment]
