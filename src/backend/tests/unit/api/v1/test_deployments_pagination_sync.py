@@ -8,8 +8,8 @@ from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_history.model import FlowHistory
-from langflow.services.database.models.flow_history_deployment_attachment.model import (
-    FlowHistoryDeploymentAttachment,
+from langflow.services.database.models.flow_version_deployment_attachment.model import (
+    FlowVersionDeploymentAttachment,
 )
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
@@ -183,9 +183,9 @@ async def test_deployments_lazy_sync_prunes_stale_rows(client, logged_in_headers
         await session.flush()
 
         session.add(
-            FlowHistoryDeploymentAttachment(
+            FlowVersionDeploymentAttachment(
                 user_id=active_user.id,
-                history_id=flow_history.id,
+                flow_version_id=flow_history.id,
                 deployment_id=keep_deployment.id,
             )
         )
@@ -288,23 +288,23 @@ async def test_list_deployments_filters_by_flow_version_ids_and_exposes_matched_
         await session.flush()
 
         session.add(
-            FlowHistoryDeploymentAttachment(
+            FlowVersionDeploymentAttachment(
                 user_id=active_user.id,
-                history_id=history_rows[0].id,
+                flow_version_id=history_rows[0].id,
                 deployment_id=deployment_one.id,
             )
         )
         session.add(
-            FlowHistoryDeploymentAttachment(
+            FlowVersionDeploymentAttachment(
                 user_id=active_user.id,
-                history_id=history_rows[1].id,
+                flow_version_id=history_rows[1].id,
                 deployment_id=deployment_two.id,
             )
         )
         session.add(
-            FlowHistoryDeploymentAttachment(
+            FlowVersionDeploymentAttachment(
                 user_id=active_user.id,
-                history_id=history_rows[2].id,
+                flow_version_id=history_rows[2].id,
                 deployment_id=deployment_three.id,
             )
         )
@@ -398,9 +398,9 @@ async def test_patch_deployment_history_updates_checkpoint_attachments(
     async with session_scope() as session:
         attachment = (
             await session.exec(
-                select(FlowHistoryDeploymentAttachment).where(
-                    FlowHistoryDeploymentAttachment.user_id == active_user.id,
-                    FlowHistoryDeploymentAttachment.history_id == UUID(history_id),
+                select(FlowVersionDeploymentAttachment).where(
+                    FlowVersionDeploymentAttachment.user_id == active_user.id,
+                    FlowVersionDeploymentAttachment.flow_version_id == UUID(history_id),
                 )
             )
         ).first()
@@ -420,9 +420,9 @@ async def test_patch_deployment_history_updates_checkpoint_attachments(
     async with session_scope() as session:
         attachment = (
             await session.exec(
-                select(FlowHistoryDeploymentAttachment).where(
-                    FlowHistoryDeploymentAttachment.user_id == active_user.id,
-                    FlowHistoryDeploymentAttachment.history_id == UUID(history_id),
+                select(FlowVersionDeploymentAttachment).where(
+                    FlowVersionDeploymentAttachment.user_id == active_user.id,
+                    FlowVersionDeploymentAttachment.flow_version_id == UUID(history_id),
                 )
             )
         ).first()
@@ -502,9 +502,9 @@ async def test_create_deployment_resolves_history_ids_to_raw_history_payloads(
     async with session_scope() as session:
         attachment = (
             await session.exec(
-                select(FlowHistoryDeploymentAttachment).where(
-                    FlowHistoryDeploymentAttachment.user_id == active_user.id,
-                    FlowHistoryDeploymentAttachment.history_id == UUID(history_id),
+                select(FlowVersionDeploymentAttachment).where(
+                    FlowVersionDeploymentAttachment.user_id == active_user.id,
+                    FlowVersionDeploymentAttachment.flow_version_id == UUID(history_id),
                 )
             )
         ).first()

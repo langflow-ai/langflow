@@ -13,8 +13,8 @@ from langflow.services.database.models.flow_history.exceptions import (
     FlowHistoryVersionConflictError,
 )
 from langflow.services.database.models.flow_history.model import FlowHistory
-from langflow.services.database.models.flow_history_deployment_attachment.model import (
-    FlowHistoryDeploymentAttachment,
+from langflow.services.database.models.flow_version_deployment_attachment.model import (
+    FlowVersionDeploymentAttachment,
 )
 from langflow.services.deps import get_settings_service
 
@@ -138,12 +138,12 @@ async def get_flow_history_list(
     if deployment_ids:
         stmt = (
             stmt.join(
-                FlowHistoryDeploymentAttachment,
-                FlowHistoryDeploymentAttachment.history_id == FlowHistory.id,
+                FlowVersionDeploymentAttachment,
+                FlowVersionDeploymentAttachment.flow_version_id == FlowHistory.id,
             )
             .where(
-                FlowHistoryDeploymentAttachment.user_id == user_id,
-                FlowHistoryDeploymentAttachment.deployment_id.in_(deployment_ids),
+                FlowVersionDeploymentAttachment.user_id == user_id,
+                FlowVersionDeploymentAttachment.deployment_id.in_(deployment_ids),
             )
             .distinct()
         )
@@ -162,20 +162,20 @@ async def get_flow_history_counts_by_deployment_ids(
 
     stmt = (
         select(
-            FlowHistoryDeploymentAttachment.deployment_id,
-            func.count(func.distinct(FlowHistoryDeploymentAttachment.history_id)),
+            FlowVersionDeploymentAttachment.deployment_id,
+            func.count(func.distinct(FlowVersionDeploymentAttachment.flow_version_id)),
         )
         .join(
             FlowHistory,
-            FlowHistory.id == FlowHistoryDeploymentAttachment.history_id,
+            FlowHistory.id == FlowVersionDeploymentAttachment.flow_version_id,
         )
         .where(
             FlowHistory.flow_id == flow_id,
             FlowHistory.user_id == user_id,
-            FlowHistoryDeploymentAttachment.user_id == user_id,
-            FlowHistoryDeploymentAttachment.deployment_id.in_(deployment_ids),
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            FlowVersionDeploymentAttachment.deployment_id.in_(deployment_ids),
         )
-        .group_by(FlowHistoryDeploymentAttachment.deployment_id)
+        .group_by(FlowVersionDeploymentAttachment.deployment_id)
     )
     rows = (await session.exec(stmt)).all()
     return {deployment_id: int(count) for deployment_id, count in rows}
@@ -193,24 +193,24 @@ async def get_flow_history_counts_by_history_ids(
 
     stmt = (
         select(
-            FlowHistoryDeploymentAttachment.history_id,
-            func.count(func.distinct(FlowHistoryDeploymentAttachment.deployment_id)),
+            FlowVersionDeploymentAttachment.flow_version_id,
+            func.count(func.distinct(FlowVersionDeploymentAttachment.deployment_id)),
         )
         .join(
             FlowHistory,
-            FlowHistory.id == FlowHistoryDeploymentAttachment.history_id,
+            FlowHistory.id == FlowVersionDeploymentAttachment.flow_version_id,
         )
         .where(
             FlowHistory.id.in_(history_ids),
             FlowHistory.flow_id == flow_id,
             FlowHistory.user_id == user_id,
-            FlowHistoryDeploymentAttachment.user_id == user_id,
+            FlowVersionDeploymentAttachment.user_id == user_id,
         )
     )
     if deployment_ids:
-        stmt = stmt.where(FlowHistoryDeploymentAttachment.deployment_id.in_(deployment_ids))
+        stmt = stmt.where(FlowVersionDeploymentAttachment.deployment_id.in_(deployment_ids))
 
-    stmt = stmt.group_by(FlowHistoryDeploymentAttachment.history_id)
+    stmt = stmt.group_by(FlowVersionDeploymentAttachment.flow_version_id)
     rows = (await session.exec(stmt)).all()
     return {history_id: int(count) for history_id, count in rows}
 
@@ -227,13 +227,13 @@ async def get_deployed_flow_ids(
     stmt = (
         select(FlowHistory.flow_id)
         .join(
-            FlowHistoryDeploymentAttachment,
-            FlowHistoryDeploymentAttachment.history_id == FlowHistory.id,
+            FlowVersionDeploymentAttachment,
+            FlowVersionDeploymentAttachment.flow_version_id == FlowHistory.id,
         )
         .where(
             FlowHistory.user_id == user_id,
             FlowHistory.flow_id.in_(flow_ids),
-            FlowHistoryDeploymentAttachment.user_id == user_id,
+            FlowVersionDeploymentAttachment.user_id == user_id,
         )
         .distinct()
     )

@@ -1,4 +1,4 @@
-"""add snapshot id to flow history deployment attachment
+"""add snapshot id to flow version deployment attachment
 
 Revision ID: 2b9c4d8e7a11
 Revises: 0f6a9f8b2d31
@@ -19,9 +19,9 @@ down_revision: str | Sequence[str] | None = "0f6a9f8b2d31"  # pragma: allowlist 
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-TABLE_NAME = "flow_history_deployment_attachment"
+TABLE_NAME = "flow_version_deployment_attachment"
 COLUMN_NAME = "snapshot_id"
-INDEX_NAME = "ix_flow_history_deployment_attachment_snapshot_id"
+INDEX_NAME = "ix_flow_version_deployment_attachment_snapshot_id"
 
 
 def upgrade() -> None:

@@ -63,8 +63,8 @@ async def test_read_flows_has_deployments_flag(client: AsyncClient, logged_in_he
     from langflow.services.database.models.deployment.model import Deployment
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
     from langflow.services.database.models.flow_history.model import FlowHistory
-    from langflow.services.database.models.flow_history_deployment_attachment.model import (
-        FlowHistoryDeploymentAttachment,
+    from langflow.services.database.models.flow_version_deployment_attachment.model import (
+        FlowVersionDeploymentAttachment,
     )
     from langflow.services.deps import session_scope
 
@@ -117,9 +117,9 @@ async def test_read_flows_has_deployments_flag(client: AsyncClient, logged_in_he
         await session.flush()
 
         session.add(
-            FlowHistoryDeploymentAttachment(
+            FlowVersionDeploymentAttachment(
                 user_id=active_user.id,
-                history_id=history_entry.id,
+                flow_version_id=history_entry.id,
                 deployment_id=deployment.id,
             )
         )

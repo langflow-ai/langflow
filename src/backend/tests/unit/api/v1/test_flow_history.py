@@ -133,8 +133,8 @@ async def test_list_history_supports_deployment_ids_filter_single_value(
     from uuid import UUID, uuid4
 
     from langflow.services.database.models.deployment.model import Deployment
-    from langflow.services.database.models.flow_history_deployment_attachment.model import (
-        FlowHistoryDeploymentAttachment,
+    from langflow.services.database.models.flow_version_deployment_attachment.model import (
+        FlowVersionDeploymentAttachment,
     )
     from langflow.services.database.models.folder.model import Folder
     from langflow.services.deps import session_scope
@@ -172,9 +172,9 @@ async def test_list_history_supports_deployment_ids_filter_single_value(
         await session.flush()
 
         session.add(
-            FlowHistoryDeploymentAttachment(
+            FlowVersionDeploymentAttachment(
                 user_id=active_user.id,
-                history_id=UUID(snap_1["id"]),
+                flow_version_id=UUID(snap_1["id"]),
                 deployment_id=deployment.id,
             )
         )
@@ -202,8 +202,8 @@ async def test_list_history_supports_deployment_ids_filter_with_counts(
     from uuid import UUID, uuid4
 
     from langflow.services.database.models.deployment.model import Deployment
-    from langflow.services.database.models.flow_history_deployment_attachment.model import (
-        FlowHistoryDeploymentAttachment,
+    from langflow.services.database.models.flow_version_deployment_attachment.model import (
+        FlowVersionDeploymentAttachment,
     )
     from langflow.services.database.models.folder.model import Folder
     from langflow.services.deps import session_scope
@@ -249,16 +249,16 @@ async def test_list_history_supports_deployment_ids_filter_with_counts(
         await session.flush()
 
         session.add(
-            FlowHistoryDeploymentAttachment(
+            FlowVersionDeploymentAttachment(
                 user_id=active_user.id,
-                history_id=UUID(snap_1["id"]),
+                flow_version_id=UUID(snap_1["id"]),
                 deployment_id=deployment_1.id,
             )
         )
         session.add(
-            FlowHistoryDeploymentAttachment(
+            FlowVersionDeploymentAttachment(
                 user_id=active_user.id,
-                history_id=UUID(snap_2["id"]),
+                flow_version_id=UUID(snap_2["id"]),
                 deployment_id=deployment_2.id,
             )
         )
