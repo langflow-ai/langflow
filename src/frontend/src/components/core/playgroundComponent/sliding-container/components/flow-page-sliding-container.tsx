@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { StickToBottom } from "use-stick-to-bottom";
+import { useEffect, useRef, useState } from "react";
+import { StickToBottom, useStickToBottom } from "use-stick-to-bottom";
 import { SafariScrollFix } from "@/components/common/safari-scroll-fix";
 import { ChatHeader } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-header";
 import { ChatSidebar } from "@/components/core/playgroundComponent/chat-view/chat-header/components/chat-sidebar";
@@ -64,6 +64,23 @@ export function FlowPageSlidingContainerContent({
     }
   }, [chatHistory.length, isBuilding, inputs, nodes, setChatValueStore]);
 
+  const stickyInstance = useStickToBottom({
+    resize: "instant",
+    initial: "instant",
+  });
+
+  const prevChatLenRef = useRef(chatHistory.length);
+  useEffect(() => {
+    if (chatHistory.length > prevChatLenRef.current) {
+      const lastMsg = chatHistory[chatHistory.length - 1];
+      if (lastMsg?.isSend) {
+        window.dispatchEvent(new Event("langflow-scroll-to-bottom"));
+        stickyInstance.scrollToBottom("smooth");
+      }
+    }
+    prevChatLenRef.current = chatHistory.length;
+  }, [chatHistory, stickyInstance]);
+
   const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
     setIsDragging,
     true,
@@ -74,6 +91,17 @@ export function FlowPageSlidingContainerContent({
     e.stopPropagation();
     setIsDragging(false);
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [setOpen]);
 
   useEffect(() => {
     setSidebarOpen(isFullscreen);
@@ -108,7 +136,7 @@ export function FlowPageSlidingContainerContent({
     >
       <div className="flex-1 flex overflow-hidden">
         <AnimatedConditional isOpen={sidebarOpen} width="236px">
-          <div className="h-full overflow-y-auto border-r border-border w-218">
+          <div className="h-full overflow-y-auto border-r border-border w-218 bg-primary-foreground">
             <div className="p-4">
               <ChatSidebar
                 sessions={sessions}
@@ -142,9 +170,8 @@ export function FlowPageSlidingContainerContent({
           />
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden playground-messages-wrapper">
             <StickToBottom
+              instance={stickyInstance}
               className="flex-1 min-h-0 overflow-hidden"
-              resize="instant"
-              initial="instant"
             >
               <StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden ">
                 <div

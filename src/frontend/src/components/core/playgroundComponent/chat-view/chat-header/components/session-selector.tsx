@@ -83,7 +83,7 @@ export function SessionSelector({
     }
   };
 
-  // Default session (flowId) cannot be renamed or deleted
+  // Default session (flowId) cannot be renamed, but can be deleted if it has messages
   const isDefaultSession = session === currentFlowId;
 
   const hasMessages = useSessionHasMessages({

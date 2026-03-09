@@ -107,7 +107,7 @@ export function ChatHeader({
   return (
     <div
       className={cn(
-        "flex items-center border-b border-transparent bg-background relative overflow-visible",
+        "flex items-center border-b border-transparent relative overflow-visible",
         "justify-between px-4 py-3",
         className,
       )}

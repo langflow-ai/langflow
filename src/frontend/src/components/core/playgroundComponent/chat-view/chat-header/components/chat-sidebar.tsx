@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -86,12 +86,8 @@ export function ChatSidebar({
               updateVisibleSession={handleSessionClick}
               inspectSession={onOpenLogs}
               handleRename={handleRename}
-              setActiveSession={() => {
-                // TODO: Implement active session
-              }}
               selectedView={undefined}
               setSelectedView={() => {}}
-              playgroundPage={true}
               menuOpen={openMenuSession === session}
               onMenuOpenChange={(open) => {
                 setOpenMenuSession(open ? session : null);
