@@ -139,9 +139,7 @@ class MemoryComponent(Component):
                     Output(
                         display_name="Messages", name="messages_text", method="retrieve_messages_as_text", dynamic=True
                     ),
-                    Output(
-                        display_name="Table", name="dataframe", method="retrieve_messages_dataframe", dynamic=True
-                    ),
+                    Output(display_name="Table", name="dataframe", method="retrieve_messages_dataframe", dynamic=True),
                 ]
         return frontend_node
 

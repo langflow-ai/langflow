@@ -6,7 +6,6 @@ works correctly for edge compatibility checking.
 
 from __future__ import annotations
 
-import pytest
 from lfx.graph.edge.base import TYPE_MIGRATIONS, types_compatible
 
 # --- Named constants to avoid magic values ---
