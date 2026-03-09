@@ -361,7 +361,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
 
     @patch("lfx.components.files_and_knowledge.ingestion.get_embeddings")
     async def test_build_kb_info_no_metadata_file_raises_error(
-        self, mock_get_embeddings, component_class, default_kwargs, tmp_path, active_user
+        self, component_class, default_kwargs, tmp_path, active_user
     ):
         """Test that build_kb_info raises RuntimeError when no embedding metadata file exists."""
         # Remove the metadata file so model_selection cannot be determined

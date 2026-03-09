@@ -41,7 +41,7 @@ def validate_model_selection(model: Any) -> tuple[str, str]:
 
 
 # ---------------------------------------------------------------------------
-# Deprecated – kept for backward compatibility only
+# Deprecated - kept for backward compatibility only
 # These functions were superseded by handle_model_input_update() in
 # lfx.base.models.unified_models, which centralises provider-field show/hide
 # logic across all components.  They will be removed in a future release.
@@ -85,7 +85,7 @@ def update_provider_fields_visibility(
 
 
 def _update_watsonx_fields(build_config: dict, provider: str) -> None:
-    """Deprecated internal helper – absorbed into handle_model_input_update()."""
+    """Deprecated internal helper - absorbed into handle_model_input_update()."""
     is_watsonx = provider == PROVIDER_IBM_WATSONX
 
     if "base_url_ibm_watsonx" in build_config:
@@ -98,7 +98,7 @@ def _update_watsonx_fields(build_config: dict, provider: str) -> None:
 
 
 def _update_ollama_fields(build_config: dict, provider: str) -> None:
-    """Deprecated internal helper – absorbed into handle_model_input_update()."""
+    """Deprecated internal helper - absorbed into handle_model_input_update()."""
     is_ollama = provider == PROVIDER_OLLAMA
 
     if "ollama_base_url" in build_config:
