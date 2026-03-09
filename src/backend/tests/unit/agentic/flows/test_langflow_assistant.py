@@ -259,7 +259,9 @@ class TestAssistantPrompt:
     def test_should_contain_langflow_references(self):
         """Should contain Langflow documentation references."""
         assert "langflow" in ASSISTANT_PROMPT.lower()
-        assert "docs.langflow.org" in ASSISTANT_PROMPT
+        # Use full URL with scheme to avoid CodeQL py/incomplete-url-substring-sanitization
+        # This is not URL validation — it verifies the static prompt contains doc references
+        assert "https://docs.langflow.org/" in ASSISTANT_PROMPT
 
     def test_should_contain_code_requirements(self):
         """Should contain code requirements for components."""
