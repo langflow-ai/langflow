@@ -2,14 +2,15 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+import sqlalchemy as sa
 from pydantic import field_validator
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
+from langflow.schema.serialize import UUIDstr
 from langflow.services.database.utils import (
     normalize_string_or_none,
     validate_non_empty_string,
-    validate_non_empty_string_optional,
 )
 
 if TYPE_CHECKING:
@@ -29,7 +30,9 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
     )
 
     id: UUID | None = Field(default_factory=uuid4, primary_key=True)
-    user_id: UUID = Field(foreign_key="user.id", index=True)
+    user_id: UUIDstr = Field(
+        sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
+    )
     # provider_tenant_id participates in a unique constraint. When NULL,
     # SQL-standard databases (PostgreSQL, SQLite) treat NULL != NULL in unique
     # constraints, so multiple rows with the same (user_id, provider_url) are
@@ -39,7 +42,7 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
     provider_key: str = Field(index=True)
     provider_url: str = Field()
     # MUST be stored encrypted; the CRUD layer encrypts via auth_utils before writing
-    # and the Read schema MUST intentionally excludes this field.
+    # and the Read schema intentionally excludes this field.
     api_key: str = Field()
     created_at: datetime | None = Field(
         default=None,
@@ -67,23 +70,6 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
         return validate_non_empty_string(v, info)
 
 
-class DeploymentProviderAccountCreate(SQLModel):
-    provider_tenant_id: str | None = None
-    provider_key: str
-    provider_url: str
-    api_key: str
-
-    @field_validator("provider_tenant_id", mode="before")
-    @classmethod
-    def normalize_tenant_id(cls, v: str | None) -> str | None:
-        return normalize_string_or_none(v)
-
-    @field_validator("provider_key", "provider_url", "api_key")
-    @classmethod
-    def validate_non_empty(cls, v: str, info: object) -> str:
-        return validate_non_empty_string(v, info)
-
-
 class DeploymentProviderAccountRead(SQLModel):
     id: UUID
     user_id: UUID
@@ -93,25 +79,3 @@ class DeploymentProviderAccountRead(SQLModel):
     created_at: datetime
     updated_at: datetime
     # api_key intentionally omitted -- stored encrypted, never serialize credentials to API responses
-
-
-class DeploymentProviderAccountUpdate(SQLModel):
-    # All fields default to None.  API routes consuming this schema must check
-    # ``model_fields_set`` to distinguish "field omitted" (keep existing value)
-    # from "field explicitly set to null" (clear the value).  The CRUD layer's
-    # ``update_provider_account`` uses an ``_UNSET`` sentinel for the same
-    # purpose on ``provider_tenant_id``.
-    provider_tenant_id: str | None = None
-    provider_key: str | None = None
-    provider_url: str | None = None
-    api_key: str | None = None
-
-    @field_validator("provider_tenant_id", mode="before")
-    @classmethod
-    def normalize_tenant_id(cls, v: str | None) -> str | None:
-        return normalize_string_or_none(v)
-
-    @field_validator("provider_key", "provider_url", "api_key", mode="before")
-    @classmethod
-    def validate_non_empty_if_provided(cls, v: str | None, info: object) -> str | None:
-        return validate_non_empty_string_optional(v, info)

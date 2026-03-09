@@ -17,7 +17,9 @@ class FlowVersion(SQLModel, table=True):  # type: ignore[call-arg]
     flow_id: UUID = Field(
         sa_column=Column(ForeignKey("flow.id", ondelete="CASCADE"), index=True, nullable=False),
     )
-    user_id: UUID = Field(index=True, foreign_key="user.id")
+    user_id: UUID | None = Field(
+        sa_column=Column(ForeignKey("user.id", ondelete="SET NULL"), index=True, nullable=True),
+    )
     data: dict | None = Field(default=None, sa_column=Column(JSON))
     version_number: int = Field(nullable=False, ge=1)
     description: str | None = Field(default=None, nullable=True, max_length=500)
@@ -37,7 +39,7 @@ class FlowVersionRead(BaseModel):
 
     id: UUID
     flow_id: UUID
-    user_id: UUID
+    user_id: UUID | None
     version_number: int = PydanticField(ge=1)
     description: str | None
     created_at: datetime
