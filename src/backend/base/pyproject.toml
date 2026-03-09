@@ -265,7 +265,7 @@ fastavro = [
     'fastavro>=1.9.8,<2.0.0; python_version >= "3.13"',
 ]
 gitpython = ["GitPython==3.1.43"]
-nltk = ["nltk==3.9.1"]
+nltk = ["nltk==3.9.3"]
 lark = ["lark==1.2.2"]
 
 # Additional dependencies from requirements
