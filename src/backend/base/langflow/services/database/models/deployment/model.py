@@ -59,7 +59,6 @@ class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
         return validate_non_empty_string(v, info)
 
 
-
 class DeploymentRead(SQLModel):
     id: UUID
     resource_key: str

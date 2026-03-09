@@ -79,4 +79,3 @@ class DeploymentProviderAccountRead(SQLModel):
     created_at: datetime
     updated_at: datetime
     # api_key intentionally omitted -- stored encrypted, never serialize credentials to API responses
-
