@@ -1079,7 +1079,7 @@ async def test_list_all_flow_files_with_files(files_client, files_created_api_ke
     assert data[0]["file_size"] > 0
 
 
-async def test_list_all_flow_files_only_own_flows(files_client, files_created_api_key, files_flow, files_active_user):
+async def test_list_all_flow_files_only_own_flows(files_client, files_created_api_key, files_flow, files_active_user):  # noqa: ARG001
     """Test that listing all flow files does not return files from other users' flows."""
     headers = {"x-api-key": files_created_api_key.api_key}
 
