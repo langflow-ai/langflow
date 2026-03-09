@@ -771,7 +771,7 @@
   },
   "KnowledgeIngestion": {
     "versions": {
-      "0.3.0": "6e27731b8315"
+      "0.3.0": "cd5a3d50065c"
     }
   },
   "KnowledgeRetrieval": {
@@ -1226,7 +1226,7 @@
   },
   "Agent": {
     "versions": {
-      "0.3.0": "a972ece06001"
+      "0.3.0": "a331c678e752"
     }
   },
   "EmbeddingModel": {
