@@ -1634,18 +1634,14 @@ def get_embeddings(
             try:
                 from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
 
-                watsonx_params[EmbedTextParamsMetaNames.TRUNCATE_INPUT_TOKENS] = int(
-                    watsonx_truncate_input_tokens
-                )
+                watsonx_params[EmbedTextParamsMetaNames.TRUNCATE_INPUT_TOKENS] = int(watsonx_truncate_input_tokens)
             except ImportError:
                 watsonx_params["truncate_input_tokens"] = int(watsonx_truncate_input_tokens)
         if watsonx_input_text is not None:
             try:
                 from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
 
-                watsonx_params[EmbedTextParamsMetaNames.RETURN_OPTIONS] = {
-                    "input_text": bool(watsonx_input_text)
-                }
+                watsonx_params[EmbedTextParamsMetaNames.RETURN_OPTIONS] = {"input_text": bool(watsonx_input_text)}
             except ImportError:
                 watsonx_params["return_options"] = {"input_text": bool(watsonx_input_text)}
         if watsonx_params:
