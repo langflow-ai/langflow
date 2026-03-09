@@ -370,7 +370,6 @@ async def process_raw_flows_with_app_id(
     db: Any,
     tool_name_prefix: str,
     *,
-    provider_name: str,
     client_cache: dict[str, Any],
 ) -> list[str]:
     """Create langflow tools in wxo and connect them to the given app_id."""
@@ -384,7 +383,6 @@ async def process_raw_flows_with_app_id(
     clients = await get_provider_clients(
         user_id=user_id,
         db=db,
-        provider_name=provider_name,
         client_cache=client_cache,
     )
 
@@ -405,7 +403,6 @@ async def create_langflow_flow_tool(
     config_id: str | None = None,
     flow_payload: BaseFlowArtifact,
     db: Any,
-    provider_name: str,
     client_cache: dict[str, Any],
 ) -> str:
     from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_provider_clients
@@ -413,7 +410,6 @@ async def create_langflow_flow_tool(
     clients = await get_provider_clients(
         user_id=user_id,
         db=db,
-        provider_name=provider_name,
         client_cache=client_cache,
     )
     connections = resolve_snapshot_connections(

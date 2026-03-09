@@ -53,7 +53,6 @@ async def resolve_wxo_client_credentials(
     user_id: UUID | str,
     db: Any,
     provider_id: UUID,
-    provider_name: str,
 ) -> WxOCredentials:
     """Resolve Watsonx Orchestrate client credentials from deployment provider account."""
     try:
@@ -64,12 +63,6 @@ async def resolve_wxo_client_credentials(
         )
         if provider_account is None:
             msg = "Failed to find deployment provider account credentials."
-            raise CredentialResolutionError(message=msg)
-
-        # TODO: this block seems redunant, we should remove it
-        provider_key = (provider_account.provider_key or "").strip()
-        if provider_key != provider_name:
-            msg = "Selected deployment provider account is not configured for watsonx-orchestrate."
             raise CredentialResolutionError(message=msg)
 
         instance_url = (provider_account.backend_url or "").strip()
@@ -93,7 +86,6 @@ async def get_provider_clients(
     *,
     user_id: UUID | str,
     db: Any,
-    provider_name: str,
     client_cache: dict[str, WxOClient],
 ) -> WxOClient:
     provider_id = get_current_provider_id()
@@ -105,7 +97,6 @@ async def get_provider_clients(
         user_id=user_id,
         db=db,
         provider_id=provider_id,
-        provider_name=provider_name,
     )
 
     instance_url: str = credentials.instance_url.rstrip("/")

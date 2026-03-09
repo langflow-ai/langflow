@@ -175,7 +175,7 @@ async def test_process_config_uses_raw_payload_but_overrides_name(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     captured = {}
 
-    async def mock_create_config(*, config, user_id, db, provider_name, client_cache):  # noqa: ARG001
+    async def mock_create_config(*, config, user_id, db, client_cache):  # noqa: ARG001
         captured["name"] = config.name
         captured["env_vars"] = config.environment_variables
 
@@ -605,7 +605,7 @@ async def test_create_wires_snapshot_ids_to_agent_and_prefixed_names(monkeypatch
         mock_assert_create_resources_available,
     )
 
-    async def mock_process_config(user_id, db, deployment_name, config, *, provider_name, client_cache):  # noqa: ARG001
+    async def mock_process_config(user_id, db, deployment_name, config, *, client_cache):  # noqa: ARG001
         captured["config_deployment_name"] = deployment_name
         return deployment_name
 
@@ -622,7 +622,6 @@ async def test_create_wires_snapshot_ids_to_agent_and_prefixed_names(monkeypatch
         db,  # noqa: ARG001
         tool_name_prefix,
         *,
-        provider_name,  # noqa: ARG001
         client_cache,  # noqa: ARG001
     ):
         captured["snapshot_app_id"] = app_id
@@ -714,7 +713,7 @@ async def test_create_rolls_back_and_preserves_original_error_when_cleanup_fails
         mock_assert_create_resources_available,
     )
 
-    async def mock_process_config(user_id, db, deployment_name, config, *, provider_name, client_cache):  # noqa: ARG001
+    async def mock_process_config(user_id, db, deployment_name, config, *, client_cache):  # noqa: ARG001
         return deployment_name
 
     monkeypatch.setattr(
@@ -730,7 +729,6 @@ async def test_create_rolls_back_and_preserves_original_error_when_cleanup_fails
         db,  # noqa: ARG001
         tool_name_prefix,  # noqa: ARG001
         *,
-        provider_name,  # noqa: ARG001
         client_cache,  # noqa: ARG001
     ):
         msg = "boom"

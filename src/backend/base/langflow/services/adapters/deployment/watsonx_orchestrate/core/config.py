@@ -32,14 +32,12 @@ async def create_config(
     config: DeploymentConfig,
     user_id: IdLike,
     db: Any,
-    provider_name: str,
     client_cache: dict[str, Any],
 ) -> str:
     """Create/update a WXO draft key-value connection config plus runtime credentials."""
     clients = await get_provider_clients(
         user_id=user_id,
         db=db,
-        provider_name=provider_name,
         client_cache=client_cache,
     )
 
@@ -79,7 +77,6 @@ async def process_config(
     deployment_name: str,
     config: ConfigItem | None,
     *,
-    provider_name: str,
     client_cache: dict[str, Any],
 ) -> str:
     """Create and bind deployment config using deployment name as app_id."""
@@ -101,7 +98,6 @@ async def process_config(
         config=config_payload,
         user_id=user_id,
         db=db,
-        provider_name=provider_name,
         client_cache=client_cache,
     )
 
