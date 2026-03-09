@@ -343,9 +343,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         with patch("lfx.components.files_and_knowledge.ingestion.Chroma") as mock_chroma:
             mock_chroma_instance = MagicMock()
             # Simulate all rows as already-existing duplicates in the store
-            mock_chroma_instance.get.return_value = {
-                "metadatas": [{"_id": "hash_1"}, {"_id": "hash_2"}]
-            }
+            mock_chroma_instance.get.return_value = {"metadatas": [{"_id": "hash_1"}, {"_id": "hash_2"}]}
             mock_chroma.return_value = mock_chroma_instance
 
             with patch("lfx.components.files_and_knowledge.ingestion.hashlib.sha256") as mock_hash:
