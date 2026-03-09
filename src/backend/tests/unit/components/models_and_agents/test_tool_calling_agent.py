@@ -31,7 +31,7 @@ class TestToolCallingAgentUpdateBuildConfig:
         assert updated["base_url_ibm_watsonx"]["show"] is True
         assert updated["base_url_ibm_watsonx"]["required"] is True
         assert updated["project_id"]["show"] is True
-        assert updated["ollama_base_url"]["show"] is False
+        assert "ollama_base_url" not in updated
 
     @patch("lfx.base.models.unified_models.get_language_model_options")
     def test_hides_watsonx_fields_when_openai_selected(self, mock_opts):
@@ -45,7 +45,7 @@ class TestToolCallingAgentUpdateBuildConfig:
 
         assert updated["base_url_ibm_watsonx"]["show"] is False
         assert updated["project_id"]["show"] is False
-        assert updated["ollama_base_url"]["show"] is False
+        assert "ollama_base_url" not in updated
 
     @patch("lfx.base.models.unified_models.get_language_model_options")
     def test_hides_all_provider_fields_with_no_model_selected(self, mock_opts):
@@ -58,7 +58,7 @@ class TestToolCallingAgentUpdateBuildConfig:
 
         assert updated["base_url_ibm_watsonx"]["show"] is False
         assert updated["project_id"]["show"] is False
-        assert updated["ollama_base_url"]["show"] is False
+        assert "ollama_base_url" not in updated
 
 
 @pytest.mark.api_key_required

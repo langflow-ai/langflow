@@ -568,7 +568,7 @@ def test_handle_model_input_update_calls_apply_provider_config_when_model_select
             component, build_config, field_value=selected_model, field_name="model", get_options_func=get_options
         )
 
-        mock_apply.assert_called_once_with(build_config, "OpenAI")
+        mock_apply.assert_called_once_with(build_config, "OpenAI", user_id="test-user")
 
 
 def test_handle_model_input_update_watsonx_embedding_shows_special_fields():

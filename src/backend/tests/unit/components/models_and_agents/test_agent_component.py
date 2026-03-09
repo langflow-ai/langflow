@@ -290,6 +290,58 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             assert call_kwargs.get("watsonx_url") == "https://us-south.ml.cloud.ibm.com"
             assert call_kwargs.get("watsonx_project_id") == "test-project-id"
 
+    @patch("lfx.components.models_and_agents.agent.get_language_model_options")
+    @patch("lfx.components.models_and_agents.agent.get_llm")
+    async def test_get_agent_requirements_supports_legacy_agent_llm_model_name(
+        self, mock_get_llm, mock_get_options, component_class, default_kwargs
+    ):
+        """Legacy agent_llm/model_name inputs should still resolve to a valid model selection."""
+        from unittest.mock import AsyncMock
+
+        default_kwargs["model"] = ""
+        component = await self.component_setup(component_class, default_kwargs)
+        component.agent_llm = "OpenAI"
+        component.model_name = "gpt-4o"
+        component.get_memory_data = AsyncMock(return_value=[])
+        component._get_shared_callbacks = list
+        component.set_tools_callbacks = lambda *_: None
+        mock_get_options.return_value = [
+            {
+                "name": "gpt-4o",
+                "provider": "OpenAI",
+                "metadata": {
+                    "model_class": "ChatOpenAI",
+                    "model_name_param": "model",
+                    "api_key_param": "api_key",
+                },
+            }
+        ]
+        mock_get_llm.return_value = MockLanguageModel()
+
+        await component.get_agent_requirements()
+
+        assert mock_get_llm.call_args.kwargs["model"] == [mock_get_options.return_value[0]]
+
+    @patch("lfx.components.models_and_agents.agent.get_llm")
+    async def test_get_agent_requirements_accepts_connected_model_instance(
+        self, mock_get_llm, component_class, default_kwargs
+    ):
+        """Connected BaseLanguageModel instances should bypass model-selection validation."""
+        from unittest.mock import AsyncMock
+
+        connected_model = MockLanguageModel()
+        default_kwargs["model"] = connected_model
+        component = await self.component_setup(component_class, default_kwargs)
+        component.get_memory_data = AsyncMock(return_value=[])
+        component._get_shared_callbacks = list
+        component.set_tools_callbacks = lambda *_: None
+        mock_get_llm.return_value = connected_model
+
+        llm_model, _, _ = await component.get_agent_requirements()
+
+        assert llm_model is connected_model
+        assert mock_get_llm.call_args.kwargs["model"] is connected_model
+
     @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
     @patch("lfx.components.models_and_agents.agent.get_llm")
     async def test_agent_passes_max_tokens_to_get_llm(

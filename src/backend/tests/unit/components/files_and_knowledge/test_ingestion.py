@@ -245,6 +245,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         field_value = {
             "01_new_kb_name": "new_test_kb",
             "02_embedding_model": model_selection,
+            "03_api_key": "test-key",
         }
 
         # Mock embedding validation
@@ -252,11 +253,13 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         mock_embeddings.embed_query.return_value = [0.1, 0.2, 0.3]
         mock_get_embeddings.return_value = mock_embeddings
 
-        with patch.object(component, "_save_embedding_metadata"):
+        with patch.object(component, "_save_embedding_metadata") as mock_save_metadata:
             result = await component.update_build_config(build_config, field_value, "knowledge_base")
 
         assert result["knowledge_base"]["value"] == "new_test_kb"
         assert "new_test_kb" in result["knowledge_base"]["options"]
+        assert mock_get_embeddings.call_args.kwargs["api_key"] == "test-key"
+        assert mock_save_metadata.call_args.kwargs["api_key"] == "test-key"
 
     @patch("lfx.components.files_and_knowledge.ingestion.get_embeddings")
     async def test_build_kb_info_with_message_input(self, mock_get_embeddings, component_class, default_kwargs):
@@ -357,7 +360,6 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         # All rows should be included — duplicates are allowed
         assert len(data_objects) == 2
 
-    @patch("lfx.components.files_and_knowledge.ingestion.get_embeddings")
     async def test_build_kb_info_no_metadata_file_raises_error(
         self, component_class, default_kwargs, tmp_path, active_user
     ):

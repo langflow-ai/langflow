@@ -185,17 +185,57 @@ class AgentComponent(ToolCallingAgentComponent):
         Output(name="response", display_name="Response", method="message_response"),
     ]
 
+    def _resolve_selected_model(self):
+        """Resolve the selected model, including legacy agent_llm/model_name inputs."""
+        try:
+            from langchain_core.language_models import BaseLanguageModel
+
+            if isinstance(self.model, BaseLanguageModel):
+                return self.model
+        except ImportError:
+            pass
+
+        if isinstance(self.model, list) and self.model:
+            return self.model
+
+        legacy_provider = getattr(self, "agent_llm", None)
+        legacy_model_name = getattr(self, "model_name", None)
+        if not legacy_provider or not legacy_model_name:
+            return self.model
+
+        options = get_language_model_options(user_id=self.user_id)
+        for option in options:
+            if option.get("provider") == legacy_provider and option.get("name") == legacy_model_name:
+                return [option]
+
+        return [
+            {
+                "name": legacy_model_name,
+                "provider": legacy_provider,
+                "metadata": {},
+            }
+        ]
+
     async def get_agent_requirements(self):
         """Get the agent requirements for the agent."""
         from langchain_core.tools import StructuredTool
 
-        validate_model_selection(self.model)
+        selected_model = self._resolve_selected_model()
+        try:
+            from langchain_core.language_models import BaseLanguageModel
+
+            is_connected_model = isinstance(selected_model, BaseLanguageModel)
+        except ImportError:
+            is_connected_model = False
+
+        if not is_connected_model:
+            validate_model_selection(selected_model)
 
         max_tokens_val = getattr(self, "max_tokens", None)
         if max_tokens_val in {"", 0}:
             max_tokens_val = None
         llm_model = get_llm(
-            model=self.model,
+            model=selected_model,
             user_id=self.user_id,
             api_key=self.api_key,
             max_tokens=max_tokens_val,
