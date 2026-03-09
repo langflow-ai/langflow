@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import random
 from collections.abc import Awaitable, Callable
-from contextlib import suppress
 from typing import TYPE_CHECKING, TypeVar
 
 from fastapi import HTTPException, status
@@ -21,6 +22,8 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
     RETRY_INITIAL_DELAY_SECONDS,
     ROLLBACK_MAX_RETRIES,
 )
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
@@ -44,7 +47,11 @@ async def retry_with_backoff(
             retryable = True if should_retry is None else should_retry(exc)
             if not retryable or attempt == max_attempts:
                 raise
-            await asyncio.sleep(delay_seconds)
+            jittered_delay = delay_seconds * (0.5 + random.random())  # noqa: S311
+            logger.info(
+                "Retry attempt %d/%d after %.2fs (%s)", attempt, max_attempts, jittered_delay, type(exc).__name__
+            )
+            await asyncio.sleep(jittered_delay)
             delay_seconds *= 2
     msg = "Retry helper exhausted attempts without result."
     raise RuntimeError(msg)
@@ -96,16 +103,23 @@ async def rollback_created_resources(
     tool_ids: list[str],
     app_id: str | None,
 ) -> None:
+    logger.info("Rolling back resources: agent_id=%s, tool_ids=%s, app_id=%s", agent_id, tool_ids, app_id)
     if agent_id:
-        with suppress(Exception):
+        try:
             await retry_rollback(lambda: delete_agent_if_exists(clients, agent_id=agent_id))
+        except Exception:  # noqa: BLE001
+            logger.warning("Rollback failed for agent_id=%s", agent_id, exc_info=True)
     if tool_ids:
         for tool_id in reversed(tool_ids):
-            with suppress(Exception):
+            try:
                 await retry_rollback(lambda tool_id=tool_id: delete_tool_if_exists(clients, tool_id=tool_id))
+            except Exception:  # noqa: BLE001
+                logger.warning("Rollback failed for tool_id=%s", tool_id, exc_info=True)
     if app_id:
-        with suppress(Exception):
+        try:
             await retry_rollback(lambda: delete_config_if_exists(clients, app_id=app_id))
+        except Exception:  # noqa: BLE001
+            logger.warning("Rollback failed for app_id=%s", app_id, exc_info=True)
 
 
 async def delete_agent_if_exists(clients: WxOClient, *, agent_id: str) -> None:

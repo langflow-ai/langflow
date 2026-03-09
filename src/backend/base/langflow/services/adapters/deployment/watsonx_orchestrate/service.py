@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import secrets
+import logging
 from typing import TYPE_CHECKING, Any
-from uuid import uuid4
 
 from fastapi import HTTPException, status
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
@@ -43,7 +42,7 @@ from lfx.services.adapters.deployment.schema import (
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_provider_clients
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
-    RANDOM_PREFIX_LENGTH_RANGE,
+    PROVIDER_SPEC_RESOURCE_NAME_PREFIX_KEY,
     SUPPORTED_ADAPTER_DEPLOYMENT_TYPES,
     ErrorPrefix,
 )
@@ -74,9 +73,12 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     build_agent_payload,
     extract_agent_tool_ids,
     extract_error_detail,
+    resolve_resource_name_prefix,
     validate_wxo_name,
 )
 from langflow.services.deps import get_settings_service
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -144,14 +146,22 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         #       Check if the names of the
         #       connection, tools, and agent already exist.
         #       If any of the names exist, then we
-        #       fail early with a DeploymentConflictError.
+        #       fail early with a DeploymentConflictError,
+        #       and avoid expensive rollback.
         #       However, this strategy introduces a
         #       read-before-write race condition,
-        #       which we attempt to work around by
-        #       generating a random prefix to attach
-        #       to the name of each created resource.
+        #       which we work around by prefixing
+        #       the name of each created resource
+        #       with a random string.
+        #       The caller may supply a
+        #       prefix via provider_spec["global_resource_name_prefix"]
+        #       (useful for idempotent retries).
+        #       If set, we reccomend using a random prefix
+        #       (and re-use the same one for retries).
+        #       When omitted, a random prefix is generated.
         # --
         # --
+        logger.info("Creating WXO deployment for user_id=%s", user_id)
         agent_create_response: AgentUpsertResponse | None = None
         created_tool_ids: list[str] = []
         created_app_id: str | None = None
@@ -171,9 +181,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
             clients = await self._get_provider_clients(user_id=user_id, db=db)
 
-            random_length = secrets.choice(RANDOM_PREFIX_LENGTH_RANGE)
-            random_prefix = f"lf_{uuid4().hex[:random_length]}_"
-            prefixed_deployment_name = f"{random_prefix}{normalized_deployment_name}"
+            resource_prefix = resolve_resource_name_prefix(
+                caller_prefix=(deployment_spec.provider_spec or {}).get(PROVIDER_SPEC_RESOURCE_NAME_PREFIX_KEY),
+            )
+            prefixed_deployment_name = f"{resource_prefix}{normalized_deployment_name}"
 
             prefixed_app_id = resolve_create_app_id(
                 prefixed_deployment_name=prefixed_deployment_name,
@@ -182,12 +193,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
             planned_tool_names = build_snapshot_tool_names(
                 snapshots=payload.snapshot,
-                tool_name_prefix=random_prefix,
+                tool_name_prefix=resource_prefix,
             )
-
-            # there is a read-before-write race here
-            # but locking locally is not enough
-            # so we use a random prefix to avoid conflicts
             assert_create_resources_available(
                 clients=clients,
                 deployment_name=prefixed_deployment_name,
@@ -213,7 +220,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                             app_id=prefixed_app_id,
                             flows=flow_payloads,
                             db=db,
-                            tool_name_prefix=random_prefix,
+                            tool_name_prefix=resource_prefix,
                             client_cache=self._client_managers,
                         )
                     )
@@ -239,9 +246,15 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     )
                 )
             except Exception:
+                logger.warning(
+                    "WXO create failed; rolling back agent_id=%s, tool_ids=%s, app_id=%s",
+                    agent_create_response.id if agent_create_response else None,
+                    created_tool_ids,
+                    created_app_id,
+                )
                 await rollback_created_resources(
                     clients=clients,
-                    agent_id=agent_create_response.id,
+                    agent_id=agent_create_response.id if agent_create_response else None,
                     tool_ids=created_tool_ids,
                     app_id=created_app_id,
                 )
@@ -351,10 +364,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
             query_params: ProviderPayload = {}
 
-            if params.provider_params:
+            if params and params.provider_params:
                 query_params = params.provider_params
 
-            if params.deployment_ids and "ids" not in query_params:
+            if params and params.deployment_ids and "ids" not in query_params:
                 query_params["ids"] = [str(_id) for _id in params.deployment_ids]
 
             # if different deployment types
@@ -412,7 +425,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         agent = client_manager.agent.get_draft_by_id(deployment_id)
         if not agent:
             msg = f"Deployment '{deployment_id}' not found."
-            raise ValueError(msg)
+            raise DeploymentNotFoundError(msg)
         return get_deployment_detail_metadata(
             data=agent,
             deployment_type=DeploymentType.AGENT,
@@ -434,7 +447,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         if not agent:
             msg = f"Deployment '{agent_id}' not found."
-            raise ValueError(msg)
+            raise DeploymentNotFoundError(msg)
 
         config = payload.config
 
@@ -465,16 +478,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         if payload.snapshot:
             msg = "Updating snapshot bindings is not supported by watsonx Orchestrate."
             raise InvalidDeploymentOperationError(message=msg)
-        #     original_tool_ids = set(extract_agent_tool_ids(agent))
-
-        #     tool_ids = original_tool_ids.difference([str(sid) for sid in payload.snapshot.remove or []])
-        #     tool_ids.update([str(sid) for sid in payload.snapshot.add or []])
-
-        #     if tool_ids != original_tool_ids:
-        #         update_payload["tools"] = list(tool_ids)
-
-        # if update_payload:
-        #     clients.agent.update(deployment_id, update_payload)
 
         return DeploymentUpdateResult(id=deployment_id)
 
@@ -517,6 +520,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         db: Any,
     ) -> DeploymentDeleteResult:
         """Delete only the deployment agent (keep tools/configs reusable)."""
+        logger.info("Deleting WXO deployment deployment_id=%s", deployment_id)
         agent_id = _normalize_and_validate_id(str(deployment_id), field_name="deployment_id")
         clients = await self._get_provider_clients(user_id=user_id, db=db)
         try:
@@ -544,17 +548,17 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         clients = await self._get_provider_clients(user_id=user_id, db=db)
 
-        status: dict[str, Any] = {}
+        status_data: dict[str, Any] = {}
 
         if agent := clients.agent.get_draft_by_id(agent_id):
-            status = {
+            status_data = {
                 "status": "connected",
                 "environment": derive_agent_environment(agent),
             }
 
         return DeploymentStatusResult(
             id=agent_id,
-            provider_data=status
+            provider_data=status_data
             or {
                 "status": "not found",
                 "environment": "unknown",

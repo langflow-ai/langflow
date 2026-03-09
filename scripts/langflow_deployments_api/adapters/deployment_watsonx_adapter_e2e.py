@@ -87,12 +87,16 @@ class WatsonxAdapterDirectE2E:
         self.provider_id = uuid4()
         self.service = WatsonxOrchestrateDeploymentService(DummySettingsService())
 
-        self.service._get_current_provider_id = lambda: self.provider_id  # type: ignore[attr-defined]  # noqa: SLF001
+        import langflow.services.adapters.deployment.watsonx_orchestrate.client as _client_mod
+
+        _client_mod.get_current_provider_id = lambda: self.provider_id  # type: ignore[assignment]
+
+        _original_resolve = _client_mod.resolve_wxo_client_credentials
 
         async def _resolve_credentials(*, user_id, db, provider_id):  # noqa: ARG001
             return WxOCredentials(instance_url=self.provider_backend_url, api_key=self.provider_api_key)
 
-        self.service._resolve_wxo_client_credentials = _resolve_credentials  # type: ignore[attr-defined]  # noqa: SLF001
+        _client_mod.resolve_wxo_client_credentials = _resolve_credentials  # type: ignore[assignment]
 
         self.created_deployment_ids: set[str] = set()
         self.created_snapshot_ids: set[str] = set()
@@ -308,11 +312,16 @@ class WatsonxAdapterDirectE2E:
         snapshots: list[BaseFlowArtifact],
         config: DeploymentConfig | None = None,
         config_reference_id: str | None = None,
+        resource_name_prefix: str | None = None,
     ) -> DeploymentCreate:
+        provider_spec = None
+        if resource_name_prefix is not None:
+            provider_spec = {"global_resource_name_prefix": resource_name_prefix}
         spec = BaseDeploymentData(
             name=self._mk_name("dep_agent"),
             description="direct adapter scenario",
             type=DeploymentType.AGENT,
+            provider_spec=provider_spec,
         )
         config_item = ConfigItem(reference_id=config_reference_id) if config_reference_id else None
         if config is not None:
