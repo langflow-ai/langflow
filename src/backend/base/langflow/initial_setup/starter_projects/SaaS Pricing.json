@@ -900,7 +900,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.83"
+                    "version": "1.2.17"
                   }
                 ],
                 "total_dependencies": 3
