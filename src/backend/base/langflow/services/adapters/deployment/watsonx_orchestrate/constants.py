@@ -5,19 +5,20 @@ from __future__ import annotations
 import re
 from enum import Enum
 
-DEFAULT_LANGFLOW_RUNNER_MODULES = {"lfx", "lfx-nightly"}
-DEFAULT_ADAPTER_SNAPSHOT_TYPE = "langflow"
-DEFAULT_ADAPTER_DEPLOYMENT_TYPE = "agent"
-SUPPORTED_ADAPTER_DEPLOYMENT_TYPES = {DEFAULT_ADAPTER_DEPLOYMENT_TYPE}
+from lfx.services.adapters.deployment.schema import DeploymentType
+
+SUPPORTED_ADAPTER_DEPLOYMENT_TYPES: set[DeploymentType] = {DeploymentType.AGENT}
 CREATE_MAX_RETRIES = 3
 ROLLBACK_MAX_RETRIES = 5
 RETRY_INITIAL_DELAY_SECONDS = 0.5
 RANDOM_PREFIX_LENGTH_RANGE = range(6, 11)
+PROVIDER_SPEC_RESOURCE_NAME_PREFIX_KEY = "global_resource_name_prefix"
+DEFAULT_WXO_AGENT_LLM = "groq/openai/gpt-oss-120b"
 
 _WXO_SANITIZE_RE = re.compile(r"[^a-zA-Z0-9_]")
 _WXO_TRANSLATE = str.maketrans({" ": "_", "-": "_"})
 
-ERROR_PREFIX = "An error occured while"
+ERROR_PREFIX = "An error occurred while"
 ERROR_SUFFIX_IN = "in Watsonx Orchestrate."
 
 

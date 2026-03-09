@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import json
+import secrets
 from typing import Any
+from uuid import uuid4
 
 from lfx.services.adapters.deployment.exceptions import InvalidContentError
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
     _WXO_SANITIZE_RE,
     _WXO_TRANSLATE,
+    DEFAULT_WXO_AGENT_LLM,
+    RANDOM_PREFIX_LENGTH_RANGE,
 )
 
 
@@ -24,21 +28,36 @@ def validate_wxo_name(name: str) -> str:
         msg = "Deployment name must include at least one alphanumeric character."
         raise InvalidContentError(message=msg)
     if not normalized_name[0].isalpha():
-        msg = "Deployment name must start with a letter. "
+        msg = "Deployment name must start with a letter."
         raise InvalidContentError(message=msg)
     return normalized_name
 
 
-def require_non_empty_string(
-    s: Any,
+def resolve_resource_name_prefix(
     *,
-    field_name: str,
-    error_message: str | None = None,
+    caller_prefix: str | None = None,
 ) -> str:
-    if isinstance(s, str) and (_value := s.strip()):
-        return _value
-    msg = error_message or f"Expected non-empty string for '{field_name}'."
-    raise ValueError(msg)
+    """Determine the resource name prefix for WxO resource creation.
+
+    If *caller_prefix* is provided it is validated and used directly.
+    Otherwise a random prefix of the form ``lf_{hex}_`` is generated
+    as a fallback.
+    """
+    if caller_prefix is not None:
+        if not isinstance(caller_prefix, str) or not caller_prefix.strip():
+            msg = "global_resource_name_prefix must be a non-empty string."
+            raise InvalidContentError(message=msg)
+        validated = normalize_wxo_name(caller_prefix)
+        if not validated:
+            msg = "global_resource_name_prefix must contain at least one alphanumeric character."
+            raise InvalidContentError(message=msg)
+        if not validated[0].isalpha():
+            msg = "global_resource_name_prefix must start with a letter."
+            raise InvalidContentError(message=msg)
+        return validated
+
+    random_length = secrets.choice(RANDOM_PREFIX_LENGTH_RANGE)
+    return f"lf_{uuid4().hex[:random_length]}_"
 
 
 def require_tool_id(tool_response: dict[str, Any]) -> str:
@@ -57,19 +76,6 @@ def dedupe_list(items: list[str]) -> list[str]:
             result.append(item)
             seen.add(item)
     return result
-
-
-def require_exclusive_resource(
-    *,
-    resource: str,
-    _id: str | list[str] | None,
-    payload: dict[str, Any] | None,
-    msg_prefix: str = "",
-) -> None:
-    """Require exactly one of the resource id or payload to be present and non-empty and non-null."""
-    if (not _id) == (not payload):
-        msg = f"{msg_prefix}Exactly one of {resource} id or payload should be present and non-empty and non-null."
-        raise ValueError(msg)
 
 
 def extract_error_detail(response_text: str) -> str | dict:
@@ -104,12 +110,9 @@ def build_agent_payload(
         "description": str(data.description or "").strip() or f"Langflow deployment {data.name}",
         "tools": tool_ids,
         "style": "default",
-        # TODO: do not hard code this?
-        # but then we need to make a api request
-        # to retrieve the available llms in wxo,
-        # which isn't great either.
-        # sadly, the llm field is required by the wxo api.
-        "llm": "groq/openai/gpt-oss-120b",
+        # TODO: make configurable; the llm field is required by the wxo api
+        # but retrieving available llms requires an extra api request.
+        "llm": DEFAULT_WXO_AGENT_LLM,
     }
 
 
@@ -117,9 +120,3 @@ def extract_agent_tool_ids(agent: dict[str, Any]) -> list[str]:
     # Shape source:
     # - SDK/API agent payload uses "tools" as list[str] in this adapter flow.
     return [str(tool_id) for tool_id in agent.get("tools", []) if tool_id]
-
-
-def extract_agent_connection_ids(agent: dict[str, Any]) -> list[str]:
-    # Shape source:
-    # - SDK/API agent payload uses "connection_ids" as list[str].
-    return [str(connection_id) for connection_id in agent.get("connection_ids", []) if connection_id]
