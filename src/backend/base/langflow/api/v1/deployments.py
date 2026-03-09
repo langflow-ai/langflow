@@ -177,10 +177,10 @@ def _resolve_provider_tenant_id(*, provider_key: str, provider_url: str, provide
 def _to_provider_account_response(provider_account: DeploymentProviderAccount) -> DeploymentProviderAccountGetResponse:
     return DeploymentProviderAccountGetResponse(
         id=provider_account.id,
-        provider_tenant_id=provider_account.account_id,
+        provider_tenant_id=provider_account.provider_tenant_id,
         provider_key=provider_account.provider_key,
-        provider_url=provider_account.backend_url,
-        created_at=provider_account.registered_at,
+        provider_url=provider_account.provider_url,
+        created_at=provider_account.created_at,
         updated_at=provider_account.updated_at,
     )
 
@@ -257,7 +257,7 @@ async def _resolve_adapter_from_deployment(
 ) -> tuple[Deployment, DeploymentServiceProtocol]:
     deployment_row = await _get_deployment_row_or_404(deployment_id=deployment_id, user_id=user_id, db=db)
     deployment_adapter = await _resolve_deployment_adapter(
-        deployment_row.provider_account_id,
+        deployment_row.deployment_provider_account_id,
         user_id=user_id,
         db=db,
     )
@@ -580,9 +580,9 @@ async def create_provider_account(
     provider_account = await create_provider_account_row(
         session,
         user_id=current_user.id,
-        account_id=resolved_provider_tenant_id,
+        provider_tenant_id=resolved_provider_tenant_id,
         provider_key=payload.provider_key,
-        backend_url=payload.provider_url,
+        provider_url=payload.provider_url,
         api_key=payload.api_key.get_secret_value(),
     )
     return _to_provider_account_response(provider_account)
@@ -656,24 +656,25 @@ async def update_provider_account(
     if provider_account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment provider account not found.")
 
-    # Allow explicit null to clear provider_tenant_id.
-    if "provider_tenant_id" in payload.model_fields_set and payload.provider_tenant_id is None:
-        provider_account.account_id = None
-
-    resolved_provider_tenant_id = _resolve_provider_tenant_id(
-        provider_key=payload.provider_key or provider_account.provider_key,
-        provider_url=payload.provider_url or provider_account.backend_url,
-        provider_tenant_id=payload.provider_tenant_id
-        if payload.provider_tenant_id is not None
-        else provider_account.account_id,
-    )
+    # Build update kwargs. For provider_tenant_id, we only pass it when the
+    # caller explicitly included it in the request body so the CRUD _UNSET
+    # sentinel preserves the existing value when omitted.
+    update_kwargs: dict = {
+        "provider_key": payload.provider_key,
+        "provider_url": payload.provider_url,
+        "api_key": payload.api_key.get_secret_value() if payload.api_key is not None else None,
+    }
+    if "provider_tenant_id" in payload.model_fields_set:
+        resolved_provider_tenant_id = _resolve_provider_tenant_id(
+            provider_key=payload.provider_key or provider_account.provider_key,
+            provider_url=payload.provider_url or provider_account.provider_url,
+            provider_tenant_id=payload.provider_tenant_id,
+        )
+        update_kwargs["provider_tenant_id"] = resolved_provider_tenant_id
     updated = await update_provider_account_row(
         session,
         provider_account=provider_account,
-        account_id=resolved_provider_tenant_id if payload.provider_tenant_id is not None else None,
-        provider_key=payload.provider_key,
-        backend_url=payload.provider_url,
-        api_key=payload.api_key.get_secret_value() if payload.api_key is not None else None,
+        **update_kwargs,
     )
     return _to_provider_account_response(updated)
 
@@ -846,7 +847,7 @@ async def create_deployment_execution(
         user_id=current_user.id,
         db=session,
     )
-    if deployment_row.provider_account_id != payload.provider_id:
+    if deployment_row.deployment_provider_account_id != payload.provider_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found for provider.")
 
     deployment_adapter = await _resolve_deployment_adapter(payload.provider_id, user_id=current_user.id, db=session)
@@ -961,7 +962,7 @@ async def get_deployment(
         db=session,
     )
     try:
-        with deployment_provider_scope(deployment_row.provider_account_id):
+        with deployment_provider_scope(deployment_row.deployment_provider_account_id):
             deployment = await deployment_adapter.get(
                 user_id=current_user.id,
                 deployment_id=deployment_row.resource_key,
@@ -1040,7 +1041,7 @@ async def update_deployment(
             if materialize_snapshots is None:
                 msg = "Deployment adapter does not support flow version snapshot materialization."
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=msg)
-            with deployment_provider_scope(deployment_row.provider_account_id):
+            with deployment_provider_scope(deployment_row.deployment_provider_account_id):
                 created_snapshot_ids = await materialize_snapshots(
                     user_id=current_user.id,
                     raw_payloads=[artifact for _, artifact in add_artifacts],
@@ -1089,7 +1090,7 @@ async def update_deployment(
         snapshot=snapshot_patch_payload,
     )
     try:
-        with deployment_provider_scope(deployment_row.provider_account_id):
+        with deployment_provider_scope(deployment_row.deployment_provider_account_id):
             update_result = await deployment_adapter.update(
                 deployment_id=deployment_row.resource_key,
                 payload=adapter_payload,
@@ -1144,7 +1145,7 @@ async def delete_deployment(
         db=session,
     )
     try:
-        with deployment_provider_scope(deployment_row.provider_account_id):
+        with deployment_provider_scope(deployment_row.deployment_provider_account_id):
             await deployment_adapter.delete(
                 deployment_id=deployment_row.resource_key,
                 user_id=current_user.id,
@@ -1215,7 +1216,7 @@ async def redeploy_deployment(
         db=session,
     )
     try:
-        with deployment_provider_scope(deployment_row.provider_account_id):
+        with deployment_provider_scope(deployment_row.deployment_provider_account_id):
             redeploy_result = await deployment_adapter.redeploy(
                 deployment_id=deployment_row.resource_key,
                 user_id=current_user.id,
@@ -1257,7 +1258,7 @@ async def duplicate_deployment(
         db=session,
     )
     try:
-        with deployment_provider_scope(deployment_row.provider_account_id):
+        with deployment_provider_scope(deployment_row.deployment_provider_account_id):
             clone_result = await deployment_adapter.duplicate(
                 deployment_id=deployment_row.resource_key,
                 user_id=current_user.id,
@@ -1275,7 +1276,7 @@ async def duplicate_deployment(
     duplicate_row = await get_deployment_by_resource_key(
         session,
         user_id=current_user.id,
-        deployment_provider_account_id=deployment_row.provider_account_id,
+        deployment_provider_account_id=deployment_row.deployment_provider_account_id,
         resource_key=str(clone_result.id),
     )
     if duplicate_row is None:
@@ -1283,7 +1284,7 @@ async def duplicate_deployment(
             session,
             user_id=current_user.id,
             project_id=deployment_row.project_id,
-            deployment_provider_account_id=deployment_row.provider_account_id,
+            deployment_provider_account_id=deployment_row.deployment_provider_account_id,
             resource_key=str(clone_result.id),
             name=clone_result.name,
         )
