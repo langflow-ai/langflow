@@ -85,7 +85,7 @@ class TestWatsonxAIComponent:
         assert "top_p" in input_names
         assert "stream" in input_names
 
-    @patch("lfx.components.ibm.watsonx.requests.get")
+    @patch("lfx.base.models.model_utils.requests.get")
     def test_fetch_models_success(self, mock_get, mock_response):
         """Test successful model fetching from API."""
         from lfx.components.ibm.watsonx import WatsonxAIComponent
@@ -104,7 +104,7 @@ class TestWatsonxAIComponent:
         call_args = mock_get.call_args
         assert "https://us-south.ml.cloud.ibm.com/ml/v1/foundation_model_specs" in call_args[0]
 
-    @patch("lfx.components.ibm.watsonx.requests.get")
+    @patch("lfx.base.models.model_utils.requests.get")
     def test_fetch_models_api_error(self, mock_get):
         """Test that default models are returned on API error."""
         from lfx.components.ibm.watsonx import WatsonxAIComponent
@@ -116,7 +116,7 @@ class TestWatsonxAIComponent:
         # Should return default models on error
         assert models == WatsonxAIComponent._default_models
 
-    @patch("lfx.components.ibm.watsonx.requests.get")
+    @patch("lfx.base.models.model_utils.requests.get")
     def test_fetch_models_timeout(self, mock_get):
         """Test that default models are returned on timeout."""
         from lfx.components.ibm.watsonx import WatsonxAIComponent
