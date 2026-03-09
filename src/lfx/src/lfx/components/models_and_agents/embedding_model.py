@@ -109,7 +109,11 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             name="model_kwargs",
             display_name="Model Kwargs",
             advanced=True,
-            info="Additional keyword arguments to pass to the model. Only used by providers that support this parameter (e.g. OpenAI, Google Generative AI). Ignored for providers that do not include it in their parameter mapping.",
+            info=(
+                "Additional keyword arguments to pass to the model. Only used by providers that support this parameter "
+                "(e.g. OpenAI, Google Generative AI). "
+                "Ignored for providers that do not include it in their parameter mapping."
+            ),
         ),
         IntInput(
             name="truncate_input_tokens",
