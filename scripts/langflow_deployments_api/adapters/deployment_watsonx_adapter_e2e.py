@@ -10,6 +10,7 @@ import argparse
 import asyncio
 import os
 import re
+import types
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -17,6 +18,8 @@ from types import MethodType, SimpleNamespace
 from typing import Any
 from uuid import UUID, uuid4
 
+import langflow.services.adapters.deployment.watsonx_orchestrate.core.retry as retry_module
+import langflow.services.adapters.deployment.watsonx_orchestrate.service as service_module
 from dotenv import load_dotenv
 from fastapi import HTTPException
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
@@ -235,7 +238,7 @@ class WatsonxAdapterDirectE2E:
         *,
         inject: dict[str, dict[str, Any]] | None = None,
     ) -> tuple[int, str, dict[str, Any] | None]:
-        originals: dict[str, Any] = {}
+        originals: list[tuple[Any, str, Any]] = []
         try:
             if inject:
                 self._apply_injections(inject, originals)
@@ -261,32 +264,55 @@ class WatsonxAdapterDirectE2E:
             }
             return HTTP_CREATED, "created", created
         finally:
-            for attr_name, original in originals.items():
-                setattr(self.service, attr_name, original)
+            for target, attr_name, original in originals:
+                setattr(target, attr_name, original)
 
-    def _apply_injections(self, inject: dict[str, dict[str, Any]], originals: dict[str, Any]) -> None:
+    def _apply_injections(self, inject: dict[str, dict[str, Any]], originals: list[tuple[Any, str, Any]]) -> None:
         mapping = {
-            "create_config": "_process_config",
-            "create_snapshots": "_process_flow_snapshots",
-            "create_agent": "_create_agent_deployment",
-            "rollback_delete_agent": "_delete_agent_if_exists",
-            "rollback_delete_tool": "_delete_tool_if_exists",
-            "rollback_delete_config": "_delete_config_if_exists",
+            "create_config": (service_module, "process_config"),
+            "create_snapshots": (service_module, "process_raw_flows_with_app_id"),
+            "create_agent": (self.service, "_create_agent_deployment"),
+            "rollback_delete_agent": (retry_module, "delete_agent_if_exists"),
+            "rollback_delete_tool": (retry_module, "delete_tool_if_exists"),
+            "rollback_delete_config": (retry_module, "delete_config_if_exists"),
         }
 
         for stage, config in inject.items():
-            method_name = mapping.get(stage)
-            if method_name is None:
+            target_and_method = mapping.get(stage)
+            if target_and_method is None:
                 continue
-            original = getattr(self.service, method_name)
-            originals[method_name] = original
+            target, method_name = target_and_method
+            original = getattr(target, method_name)
+            originals.append((target, method_name, original))
             counter = {"value": 0}
             fail_first_n = int(config.get("fail_first_n", 0))
             error_type = str(config.get("error_type", "runtime")).strip().lower()
             message = str(config.get("message") or f"injected failure: {stage}")
             status_code = int(config.get("status_code", HTTP_INTERNAL_SERVER_ERROR))
 
-            async def _wrapped(
+            if isinstance(target, types.ModuleType):
+
+                async def _wrapped_module(
+                    *args,
+                    __orig=original,
+                    __ctr=counter,
+                    __n=fail_first_n,
+                    __type=error_type,
+                    __msg=message,
+                    __status=status_code,
+                    **kwargs,
+                ):
+                    __ctr["value"] += 1
+                    if __ctr["value"] <= __n:
+                        if __type == "http":
+                            raise HTTPException(status_code=__status, detail=__msg)
+                        raise RuntimeError(__msg)
+                    return await __orig(*args, **kwargs)
+
+                setattr(target, method_name, _wrapped_module)
+                continue
+
+            async def _wrapped_method(
                 _self,
                 *args,
                 __orig=original,
@@ -304,7 +330,7 @@ class WatsonxAdapterDirectE2E:
                     raise RuntimeError(__msg)
                 return await __orig(*args, **kwargs)
 
-            setattr(self.service, method_name, MethodType(_wrapped, self.service))
+            setattr(target, method_name, MethodType(_wrapped_method, target))
 
     def _build_create_payload(
         self,
