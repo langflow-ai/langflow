@@ -7,9 +7,9 @@ from uuid import uuid4
 
 import pytest
 from langflow.api.v1.schemas.deployments import (
-    DeploymentProviderAccountCreate,
-    DeploymentProviderAccountResponse,
-    DeploymentProviderAccountUpdate,
+    DeploymentProviderAccountCreateRequest,
+    DeploymentProviderAccountGetResponse,
+    DeploymentProviderAccountUpdateRequest,
     FlowVersionsAttach,
     FlowVersionsPatch,
 )
@@ -24,12 +24,12 @@ class TestApiKeyWriteOnly:
     """Ensure api_key is excluded from every response model."""
 
     def test_provider_account_response_excludes_api_key(self):
-        """DeploymentProviderAccountResponse.model_fields must not contain api_key."""
-        assert "api_key" not in DeploymentProviderAccountResponse.model_fields
+        """DeploymentProviderAccountGetResponse.model_fields must not contain api_key."""
+        assert "api_key" not in DeploymentProviderAccountGetResponse.model_fields
 
     def test_provider_account_response_dump_excludes_api_key(self):
         """model_dump() on a response instance must never contain api_key."""
-        response = DeploymentProviderAccountResponse(
+        response = DeploymentProviderAccountGetResponse(
             id=uuid4(),
             provider_key="aws",
             provider_url="https://example.com",
@@ -39,7 +39,7 @@ class TestApiKeyWriteOnly:
 
     def test_create_schema_masks_api_key_in_repr(self):
         """SecretStr should mask the value in string representations."""
-        account = DeploymentProviderAccountCreate(
+        account = DeploymentProviderAccountCreateRequest(
             provider_key="aws",
             provider_url="https://example.com",
             api_key="super-secret-key",
@@ -49,7 +49,7 @@ class TestApiKeyWriteOnly:
 
     def test_update_schema_masks_api_key_in_repr(self):
         """SecretStr should mask the value in string representations on update."""
-        account = DeploymentProviderAccountUpdate(api_key="new-secret")
+        account = DeploymentProviderAccountUpdateRequest(api_key="new-secret")
         assert isinstance(account.api_key, SecretStr)
         assert "new-secret" not in repr(account)
 
@@ -61,7 +61,7 @@ class TestApiKeyWriteOnly:
 
 class TestNonEmptyStr:
     def test_strips_whitespace(self):
-        account = DeploymentProviderAccountCreate(
+        account = DeploymentProviderAccountCreateRequest(
             provider_key="  aws  ",
             provider_url="https://example.com",
             api_key="key",
@@ -70,7 +70,7 @@ class TestNonEmptyStr:
 
     def test_rejects_empty_string(self):
         with pytest.raises(ValidationError):
-            DeploymentProviderAccountCreate(
+            DeploymentProviderAccountCreateRequest(
                 provider_key="",
                 provider_url="https://example.com",
                 api_key="key",
@@ -78,7 +78,7 @@ class TestNonEmptyStr:
 
     def test_rejects_whitespace_only(self):
         with pytest.raises(ValidationError):
-            DeploymentProviderAccountCreate(
+            DeploymentProviderAccountCreateRequest(
                 provider_key="   ",
                 provider_url="https://example.com",
                 api_key="key",

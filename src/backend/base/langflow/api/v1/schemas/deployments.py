@@ -123,7 +123,7 @@ FlowVersionIdsQuery = Annotated[list[str] | None, AfterValidator(_validate_flow_
 # ---------------------------------------------------------------------------
 
 
-class DeploymentProviderAccountCreate(BaseModel):
+class DeploymentProviderAccountCreateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
     provider_tenant_id: NonEmptyStr | None = Field(
@@ -147,7 +147,7 @@ class DeploymentProviderAccountCreate(BaseModel):
         return _normalize_str(value, field_name=info.field_name)
 
 
-class DeploymentProviderAccountUpdate(BaseModel):
+class DeploymentProviderAccountUpdateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
     provider_tenant_id: NonEmptyStr | None = Field(
@@ -176,7 +176,7 @@ class DeploymentProviderAccountUpdate(BaseModel):
         return _normalize_optional_str(value, field_name=info.field_name)
 
     @model_validator(mode="after")
-    def ensure_any_field_provided(self) -> DeploymentProviderAccountUpdate:
+    def ensure_any_field_provided(self) -> DeploymentProviderAccountUpdateRequest:
         if not self.model_fields_set:
             msg = "At least one field must be provided for update."
             raise ValueError(msg)
@@ -189,7 +189,7 @@ class DeploymentProviderAccountUpdate(BaseModel):
         return self
 
 
-class DeploymentProviderAccountResponse(BaseModel):
+class DeploymentProviderAccountGetResponse(BaseModel):
     id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
     provider_tenant_id: str | None = Field(
         default=None,
@@ -264,7 +264,7 @@ class DeploymentListResponse(_PaginatedResponse):
 
 
 class DeploymentProviderAccountListResponse(_PaginatedResponse):
-    providers: list[DeploymentProviderAccountResponse]
+    providers: list[DeploymentProviderAccountGetResponse]
 
 
 class DeploymentCreateResponse(_DeploymentResponseBase):
@@ -279,7 +279,7 @@ class DeploymentStatusResponse(_DeploymentResponseBase):
     """API response for deployment status/health."""
 
 
-class RedeployResponse(_DeploymentResponseBase):
+class DeploymentRedeployResponse(_DeploymentResponseBase):
     """API response for redeployment."""
 
 
