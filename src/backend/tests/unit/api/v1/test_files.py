@@ -1079,9 +1079,7 @@ async def test_list_all_flow_files_with_files(files_client, files_created_api_ke
     assert data[0]["file_size"] > 0
 
 
-async def test_list_all_flow_files_only_own_flows(
-    files_client, files_created_api_key, files_flow, files_active_user
-):
+async def test_list_all_flow_files_only_own_flows(files_client, files_created_api_key, files_flow, files_active_user):
     """Test that listing all flow files does not return files from other users' flows."""
     headers = {"x-api-key": files_created_api_key.api_key}
 
@@ -1095,7 +1093,6 @@ async def test_list_all_flow_files_only_own_flows(
 
     # Create a second user and a flow for them
     from langflow.services.auth.utils import get_password_hash
-    from langflow.services.database.models.flow.model import FlowCreate
     from langflow.services.database.models.user.model import User
     from lfx.services.deps import session_scope
     from sqlmodel import select
