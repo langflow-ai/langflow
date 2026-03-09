@@ -1505,6 +1505,8 @@ def get_embeddings(
     model_kwargs=None,
     watsonx_url=None,
     watsonx_project_id=None,
+    watsonx_truncate_input_tokens=None,
+    watsonx_input_text=None,
     ollama_base_url=None,
 ) -> Any:
     """Instantiate an embeddings model from a model selection dict.
@@ -1527,6 +1529,8 @@ def get_embeddings(
         model_kwargs: Optional extra kwargs passed to the provider.
         watsonx_url: Optional IBM WatsonX API endpoint URL.
         watsonx_project_id: Optional IBM WatsonX project ID.
+        watsonx_truncate_input_tokens: Optional IBM WatsonX truncate input tokens limit.
+        watsonx_input_text: Optional IBM WatsonX flag to include original text in output.
         ollama_base_url: Optional Ollama base URL.
 
     Returns:
@@ -1623,6 +1627,29 @@ def get_embeddings(
             )
             if pid_value:
                 kwargs[param_mapping["project_id"]] = pid_value
+
+        # Build WatsonX embed params (truncate_input_tokens, return_options)
+        watsonx_params = {}
+        if watsonx_truncate_input_tokens is not None:
+            try:
+                from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
+
+                watsonx_params[EmbedTextParamsMetaNames.TRUNCATE_INPUT_TOKENS] = int(
+                    watsonx_truncate_input_tokens
+                )
+            except ImportError:
+                watsonx_params["truncate_input_tokens"] = int(watsonx_truncate_input_tokens)
+        if watsonx_input_text is not None:
+            try:
+                from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
+
+                watsonx_params[EmbedTextParamsMetaNames.RETURN_OPTIONS] = {
+                    "input_text": bool(watsonx_input_text)
+                }
+            except ImportError:
+                watsonx_params["return_options"] = {"input_text": bool(watsonx_input_text)}
+        if watsonx_params:
+            kwargs["params"] = watsonx_params
 
     # Ollama-specific parameters
     if provider == "Ollama" and "base_url" in param_mapping:

@@ -494,6 +494,88 @@ def test_get_embeddings_watsonx_url_and_project_id(mock_get_vars, mock_get_class
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 @patch("lfx.base.models.unified_models.get_embedding_class")
 @patch("lfx.base.models.unified_models.get_all_variables_for_provider")
+def test_get_embeddings_watsonx_truncate_and_input_text(mock_get_vars, mock_get_class, mock_get_api_key):
+    """truncate_input_tokens and input_text should be passed as WatsonX params dict."""
+    mock_get_api_key.return_value = "ibm-key"
+    mock_get_vars.return_value = {}
+    mock_embedding_class = MagicMock()
+    mock_get_class.return_value = mock_embedding_class
+
+    watsonx_model = {
+        "name": "ibm/slate-125m-english-rtrvr",
+        "provider": "IBM WatsonX",
+        "metadata": {
+            "embedding_class": "WatsonxEmbeddings",
+            "param_mapping": {
+                "model_id": "model_id",
+                "api_key": "apikey",
+                "url": "url",
+                "project_id": "project_id",
+            },
+        },
+    }
+
+    get_embeddings(
+        [watsonx_model],
+        user_id=None,
+        api_key="ibm-key",
+        watsonx_url="https://us-south.ml.cloud.ibm.com",
+        watsonx_project_id="proj-123",
+        watsonx_truncate_input_tokens=200,
+        watsonx_input_text=True,
+    )
+
+    kwargs = mock_embedding_class.call_args.kwargs
+    assert "params" in kwargs
+    params = kwargs["params"]
+    # Check truncate_input_tokens is present (key may be enum or string depending on ibm_watsonx_ai availability)
+    truncate_values = [v for v in params.values() if v == 200]
+    assert truncate_values, "Expected truncate_input_tokens=200 in params"
+    # Check return_options contains input_text
+    return_opts = [v for v in params.values() if isinstance(v, dict) and "input_text" in v]
+    assert return_opts, "Expected return_options with input_text in params"
+    assert return_opts[0]["input_text"] is True
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+@patch("lfx.base.models.unified_models.get_all_variables_for_provider")
+def test_get_embeddings_watsonx_no_params_when_not_provided(mock_get_vars, mock_get_class, mock_get_api_key):
+    """When truncate_input_tokens and input_text are not provided, params should not be set."""
+    mock_get_api_key.return_value = "ibm-key"
+    mock_get_vars.return_value = {}
+    mock_embedding_class = MagicMock()
+    mock_get_class.return_value = mock_embedding_class
+
+    watsonx_model = {
+        "name": "ibm/slate-125m-english-rtrvr",
+        "provider": "IBM WatsonX",
+        "metadata": {
+            "embedding_class": "WatsonxEmbeddings",
+            "param_mapping": {
+                "model_id": "model_id",
+                "api_key": "apikey",
+                "url": "url",
+                "project_id": "project_id",
+            },
+        },
+    }
+
+    get_embeddings(
+        [watsonx_model],
+        user_id=None,
+        api_key="ibm-key",
+        watsonx_url="https://us-south.ml.cloud.ibm.com",
+        watsonx_project_id="proj-123",
+    )
+
+    kwargs = mock_embedding_class.call_args.kwargs
+    assert "params" not in kwargs
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+@patch("lfx.base.models.unified_models.get_all_variables_for_provider")
 def test_get_embeddings_watsonx_error_wraps_message(mock_get_vars, mock_get_class, mock_get_api_key):
     """IBM WatsonX instantiation errors mentioning url/project get wrapped in a friendlier ValueError."""
     mock_get_api_key.return_value = "ibm-key"
@@ -559,7 +641,7 @@ def test_handle_model_input_update_calls_apply_provider_config_when_model_select
     build_config = {"model": _make_model_field(value=selected_model)}
 
     with patch("lfx.base.models.unified_models.apply_provider_variable_config_to_build_config") as mock_apply:
-        mock_apply.side_effect = lambda cfg, _: cfg
+        mock_apply.side_effect = lambda cfg, provider, **kw: cfg  # noqa: ARG005
 
         def get_options(user_id=None):  # noqa: ARG001
             return []
@@ -582,7 +664,7 @@ def test_handle_model_input_update_watsonx_embedding_shows_special_fields():
     }
 
     with patch("lfx.base.models.unified_models.apply_provider_variable_config_to_build_config") as mock_apply:
-        mock_apply.side_effect = lambda cfg, _: cfg
+        mock_apply.side_effect = lambda cfg, provider, **kw: cfg  # noqa: ARG005
 
         result = handle_model_input_update(
             component,
@@ -608,7 +690,7 @@ def test_handle_model_input_update_non_watsonx_embedding_hides_special_fields():
     }
 
     with patch("lfx.base.models.unified_models.apply_provider_variable_config_to_build_config") as mock_apply:
-        mock_apply.side_effect = lambda cfg, _: cfg
+        mock_apply.side_effect = lambda cfg, provider, **kw: cfg  # noqa: ARG005
 
         result = handle_model_input_update(
             component,
@@ -635,7 +717,7 @@ def test_handle_model_input_update_language_model_prefix_skips_embedding_fields(
     }
 
     with patch("lfx.base.models.unified_models.apply_provider_variable_config_to_build_config") as mock_apply:
-        mock_apply.side_effect = lambda cfg, _: cfg
+        mock_apply.side_effect = lambda cfg, provider, **kw: cfg  # noqa: ARG005
 
         result = handle_model_input_update(
             component,

@@ -146,4 +146,6 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             model_kwargs=self.model_kwargs,
             watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
             watsonx_project_id=getattr(self, "project_id", None),
+            watsonx_truncate_input_tokens=getattr(self, "truncate_input_tokens", None),
+            watsonx_input_text=getattr(self, "input_text", None),
         )
