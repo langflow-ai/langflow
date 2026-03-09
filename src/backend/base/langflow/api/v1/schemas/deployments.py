@@ -31,7 +31,7 @@ Additionally, ``DeploymentType`` is imported as a shared vocabulary enum.
 ``BaseDeploymentData`` also carries an optional ``provider_spec`` dict
 (inherited from ``ProviderSpecModel``), an opaque provider-owned input
 payload similar to ``provider_data``.  ``DeploymentConfig`` carries an
-analogous ``provider_config`` dict.  The remaining two schemas have no
+analogous ``provider_config`` dict.  ``BaseDeploymentDataUpdate`` has no
 opaque provider fields.
 """
 
