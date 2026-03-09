@@ -66,13 +66,17 @@ from langflow.api.v1.schemas.deployments import (
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.adapters.deployment.context import deployment_provider_scope
 from langflow.services.database.models.deployment.crud import (
-    count_deployment_rows,
-    create_deployment_row,
-    delete_deployment_row_by_id,
-    delete_deployment_row_by_resource_key,
-    get_deployment_row,
-    get_deployment_row_by_resource_key,
-    list_deployment_rows_page,
+    count_deployments_by_provider,
+    delete_deployment_by_id,
+    delete_deployment_by_resource_key,
+    get_deployment_by_resource_key,
+    list_deployments_page,
+)
+from langflow.services.database.models.deployment.crud import (
+    create_deployment as create_deployment_db,
+)
+from langflow.services.database.models.deployment.crud import (
+    get_deployment as get_deployment_db,
 )
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment_provider_account.crud import (
@@ -92,15 +96,17 @@ from langflow.services.database.models.deployment_provider_account.crud import (
 )
 from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.flow_history.model import FlowHistory
-from langflow.services.database.models.flow_history_deployment_attachment.crud import (
+from langflow.services.database.models.flow_version.model import FlowVersion
+from langflow.services.database.models.flow_version_deployment_attachment.crud import (
     create_deployment_attachment,
     delete_deployment_attachment,
     get_deployment_attachment,
-    list_deployment_attachments_for_history_ids,
+    list_deployment_attachments_for_flow_version_ids,
     update_deployment_attachment_snapshot_id,
 )
-from langflow.services.database.models.flow_history_deployment_attachment.model import FlowHistoryDeploymentAttachment
+from langflow.services.database.models.flow_version_deployment_attachment.model import (
+    FlowVersionDeploymentAttachment,
+)
 from langflow.services.database.models.folder.model import Folder
 
 router = APIRouter(prefix="/deployments", tags=["Deployments"], include_in_schema=False)
@@ -237,7 +243,7 @@ async def _get_deployment_row_or_404(
     user_id: UUID,
     db: DbSession,
 ) -> Deployment:
-    deployment_row = await get_deployment_row(db, user_id=user_id, deployment_id=str(deployment_id))
+    deployment_row = await get_deployment_db(db, user_id=user_id, deployment_id=str(deployment_id))
     if deployment_row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found.")
     return deployment_row
@@ -281,65 +287,67 @@ async def _resolve_project_id_for_deployment_create(
     return default_folder.id
 
 
-async def _fetch_project_scoped_history_rows(
+async def _fetch_project_scoped_flow_version_rows(
     *,
     reference_ids: list[str],
     user_id: UUID,
     project_id: UUID,
     db: DbSession,
 ):
-    history_ids: list[UUID] = []
-    for history_ref in reference_ids:
-        history_id = _as_uuid(history_ref)
-        if history_id is None:
-            msg = f"Invalid flow version id: {history_ref}"
+    flow_version_ids: list[UUID] = []
+    for flow_version_ref in reference_ids:
+        flow_version_id = _as_uuid(flow_version_ref)
+        if flow_version_id is None:
+            msg = f"Invalid flow version id: {flow_version_ref}"
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
-        history_ids.append(history_id)
-    if not history_ids:
+        flow_version_ids.append(flow_version_id)
+    if not flow_version_ids:
         return []
 
-    indexed_history_selects = [
+    indexed_flow_version_selects = [
         select(
             literal(index).label("position"),
-            literal(history_id).label("history_id"),
+            literal(flow_version_id).label("flow_version_id"),
         )
-        for index, history_id in enumerate(history_ids)
+        for index, flow_version_id in enumerate(flow_version_ids)
     ]
-    indexed_history_ids_cte = (
-        indexed_history_selects[0] if len(indexed_history_selects) == 1 else union_all(*indexed_history_selects)
-    ).cte("indexed_history_ids")
+    indexed_flow_version_ids_cte = (
+        indexed_flow_version_selects[0]
+        if len(indexed_flow_version_selects) == 1
+        else union_all(*indexed_flow_version_selects)
+    ).cte("indexed_flow_version_ids")
 
     statement = (
         select(
-            indexed_history_ids_cte.c.position,
-            indexed_history_ids_cte.c.history_id,
-            FlowHistory.id.label("flow_history_id"),
-            FlowHistory.data.label("history_data"),
+            indexed_flow_version_ids_cte.c.position,
+            indexed_flow_version_ids_cte.c.flow_version_id,
+            FlowVersion.id.label("flow_version_id"),
+            FlowVersion.data.label("flow_version_data"),
             Flow.id.label("flow_id"),
             Flow.name.label("flow_name"),
             Flow.description.label("flow_description"),
             Flow.tags.label("flow_tags"),
         )
-        .select_from(indexed_history_ids_cte)
+        .select_from(indexed_flow_version_ids_cte)
         .join(
-            FlowHistory,
+            FlowVersion,
             and_(
-                FlowHistory.user_id == user_id,
-                FlowHistory.id == indexed_history_ids_cte.c.history_id,
+                FlowVersion.user_id == user_id,
+                FlowVersion.id == indexed_flow_version_ids_cte.c.flow_version_id,
             ),
         )
         .join(
             Flow,
             and_(
-                Flow.id == FlowHistory.flow_id,
+                Flow.id == FlowVersion.flow_id,
                 Flow.user_id == user_id,
                 Flow.folder_id == project_id,
             ),
         )
-        .order_by(indexed_history_ids_cte.c.position)
+        .order_by(indexed_flow_version_ids_cte.c.position)
     )
     rows = list((await db.exec(statement)).all())
-    if len(rows) < len(history_ids):
+    if len(rows) < len(flow_version_ids):
         msg = "One or more flow version ids are not checkpoints of flows in the selected project."
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
     return rows
@@ -352,7 +360,7 @@ async def _build_flow_artifacts_from_flow_versions(
     project_id: UUID,
     db: DbSession,
 ) -> list[tuple[UUID, BaseFlowArtifact]]:
-    rows = await _fetch_project_scoped_history_rows(
+    rows = await _fetch_project_scoped_flow_version_rows(
         reference_ids=flow_version_ids,
         user_id=user_id,
         project_id=project_id,
@@ -360,12 +368,12 @@ async def _build_flow_artifacts_from_flow_versions(
     )
     return [
         (
-            row.history_id,
+            row.flow_version_id,
             BaseFlowArtifact(
                 id=row.flow_id,
                 name=row.flow_name,
                 description=row.flow_description,
-                data=row.history_data or {},
+                data=row.flow_version_data or {},
                 tags=row.flow_tags,
                 provider_data={"project_id": str(project_id)},
             ),
@@ -428,13 +436,13 @@ async def _sync_page_with_provider(
     guard = 0
     while len(accepted_rows) < size and guard < (size * 4 + 20):
         guard += 1
-        batch = await list_deployment_rows_page(
+        batch = await list_deployments_page(
             db,
             user_id=user_id,
-            provider_account_id=provider_id,
+            deployment_provider_account_id=provider_id,
             offset=cursor,
             limit=size - len(accepted_rows),
-            history_ids=flow_version_ids,
+            flow_version_ids=flow_version_ids,
         )
         if not batch:
             break
@@ -455,17 +463,17 @@ async def _sync_page_with_provider(
                 accepted_rows.append((row, attached_count, matched_flow_versions))
                 cursor += 1
                 continue
-            await delete_deployment_row_by_resource_key(
+            await delete_deployment_by_resource_key(
                 db,
                 user_id=user_id,
-                provider_account_id=provider_id,
+                deployment_provider_account_id=provider_id,
                 resource_key=row.resource_key,
             )
-    total = await count_deployment_rows(
+    total = await count_deployments_by_provider(
         db,
         user_id=user_id,
-        provider_account_id=provider_id,
-        history_ids=flow_version_ids,
+        deployment_provider_account_id=provider_id,
+        flow_version_ids=flow_version_ids,
     )
     return accepted_rows, total
 
@@ -475,22 +483,22 @@ async def _attach_flow_versions(
     payload: DeploymentCreateRequest,
     user_id: UUID,
     deployment_row_id: UUID,
-    snapshot_id_by_history_id: dict[UUID, str] | None = None,
+    snapshot_id_by_flow_version_id: dict[UUID, str] | None = None,
     db: DbSession,
 ) -> None:
     if payload.flow_version_ids is None:
         return
 
     for ref in payload.flow_version_ids.ids:
-        history_id = _as_uuid(ref)
-        if history_id is None:
+        flow_version_id = _as_uuid(ref)
+        if flow_version_id is None:
             continue
         await create_deployment_attachment(
             db,
             user_id=user_id,
-            history_id=history_id,
+            flow_version_id=flow_version_id,
             deployment_id=deployment_row_id,
-            snapshot_id=(snapshot_id_by_history_id or {}).get(history_id),
+            snapshot_id=(snapshot_id_by_flow_version_id or {}).get(flow_version_id),
         )
 
 
@@ -502,18 +510,18 @@ async def _apply_flow_version_patch_attachments(
     remove_flow_version_ids: list[UUID],
     db: DbSession,
 ) -> None:
-    for history_uuid, snapshot_id in added_snapshot_bindings:
+    for flow_version_uuid, snapshot_id in added_snapshot_bindings:
         existing = await get_deployment_attachment(
             db,
             user_id=user_id,
-            history_id=history_uuid,
+            flow_version_id=flow_version_uuid,
             deployment_id=deployment_row_id,
         )
         if existing is None:
             await create_deployment_attachment(
                 db,
                 user_id=user_id,
-                history_id=history_uuid,
+                flow_version_id=flow_version_uuid,
                 deployment_id=deployment_row_id,
                 snapshot_id=snapshot_id,
             )
@@ -525,11 +533,11 @@ async def _apply_flow_version_patch_attachments(
                 snapshot_id=snapshot_id,
             )
 
-    for history_uuid in remove_flow_version_ids:
+    for flow_version_uuid in remove_flow_version_ids:
         await delete_deployment_attachment(
             db,
             user_id=user_id,
-            history_id=history_uuid,
+            flow_version_id=flow_version_uuid,
             deployment_id=deployment_row_id,
         )
 
@@ -707,36 +715,38 @@ async def create_deployment(
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
-    deployment_row = await get_deployment_row_by_resource_key(
+    deployment_row = await get_deployment_by_resource_key(
         session,
         user_id=current_user.id,
-        provider_account_id=provider_id,
+        deployment_provider_account_id=provider_id,
         resource_key=str(result.id),
     )
     if deployment_row is None:
-        deployment_row = await create_deployment_row(
+        deployment_row = await create_deployment_db(
             session,
             user_id=current_user.id,
             project_id=project_id,
-            provider_account_id=provider_id,
+            deployment_provider_account_id=provider_id,
             resource_key=str(result.id),
             name=result.name,
         )
 
-    snapshot_id_by_history_id: dict[UUID, str] = {}
+    snapshot_id_by_flow_version_id: dict[UUID, str] = {}
     flow_version_ids = payload.flow_version_ids.ids if payload.flow_version_ids else None
     if flow_version_ids:
         created_snapshot_ids = [
             str(snapshot_id).strip() for snapshot_id in result.snapshot_ids if str(snapshot_id).strip()
         ]
-        history_uuid_ids = [_as_uuid(flow_version_id) for flow_version_id in flow_version_ids]
-        valid_history_uuid_ids = [history_id for history_id in history_uuid_ids if history_id is not None]
-        snapshot_id_by_history_id = dict(zip(valid_history_uuid_ids, created_snapshot_ids, strict=False))
+        flow_version_uuid_ids = [_as_uuid(flow_version_id) for flow_version_id in flow_version_ids]
+        valid_flow_version_uuid_ids = [
+            flow_version_id for flow_version_id in flow_version_uuid_ids if flow_version_id is not None
+        ]
+        snapshot_id_by_flow_version_id = dict(zip(valid_flow_version_uuid_ids, created_snapshot_ids, strict=False))
     await _attach_flow_versions(
         payload=payload,
         user_id=current_user.id,
         deployment_row_id=deployment_row.id,
-        snapshot_id_by_history_id=snapshot_id_by_history_id,
+        snapshot_id_by_flow_version_id=snapshot_id_by_flow_version_id,
         db=session,
     )
     return _to_deployment_create_response(result, deployment_row.id)
@@ -904,10 +914,10 @@ async def get_deployment_execution(
     provider_deployment_id = str(
         provider_result.get("agent_id") or provider_result.get("deployment_id") or execution_result.deployment_id or ""
     ).strip()
-    deployment_row = await get_deployment_row_by_resource_key(
+    deployment_row = await get_deployment_by_resource_key(
         session,
         user_id=current_user.id,
-        provider_account_id=provider_id,
+        deployment_provider_account_id=provider_id,
         resource_key=provider_deployment_id,
     )
     if deployment_row is None:
@@ -972,9 +982,9 @@ async def get_deployment(
     attached_count = int(
         (
             await session.exec(
-                select(func.count(FlowHistoryDeploymentAttachment.id)).where(
-                    FlowHistoryDeploymentAttachment.user_id == current_user.id,
-                    FlowHistoryDeploymentAttachment.deployment_id == deployment_row.id,
+                select(func.count(FlowVersionDeploymentAttachment.id)).where(
+                    FlowVersionDeploymentAttachment.user_id == current_user.id,
+                    FlowVersionDeploymentAttachment.deployment_id == deployment_row.id,
                 )
             )
         ).one()
@@ -1044,8 +1054,8 @@ async def update_deployment(
                 msg = "Created snapshot ids did not match the number of flow version attachments requested."
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
             added_snapshot_bindings = [
-                (history_id, snapshot_id)
-                for (history_id, _), snapshot_id in zip(add_artifacts, created_snapshot_ids, strict=False)
+                (flow_version_id, snapshot_id)
+                for (flow_version_id, _), snapshot_id in zip(add_artifacts, created_snapshot_ids, strict=False)
             ]
             snapshot_add_ids = [snapshot_id for _, snapshot_id in added_snapshot_bindings]
 
@@ -1054,11 +1064,11 @@ async def update_deployment(
             remove_flow_version_ids = [
                 flow_version_id for flow_version_id in remove_flow_version_ids if flow_version_id
             ]
-            remove_attachments = await list_deployment_attachments_for_history_ids(
+            remove_attachments = await list_deployment_attachments_for_flow_version_ids(
                 session,
                 user_id=current_user.id,
                 deployment_id=deployment_row.id,
-                history_ids=remove_flow_version_ids,
+                flow_version_ids=remove_flow_version_ids,
             )
             snapshot_remove_ids = list(
                 {
@@ -1146,7 +1156,7 @@ async def delete_deployment(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-    await delete_deployment_row_by_id(session, user_id=current_user.id, deployment_id=deployment_row.id)
+    await delete_deployment_by_id(session, user_id=current_user.id, deployment_id=deployment_row.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -1262,18 +1272,18 @@ async def duplicate_deployment(
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
-    duplicate_row = await get_deployment_row_by_resource_key(
+    duplicate_row = await get_deployment_by_resource_key(
         session,
         user_id=current_user.id,
-        provider_account_id=deployment_row.provider_account_id,
+        deployment_provider_account_id=deployment_row.provider_account_id,
         resource_key=str(clone_result.id),
     )
     if duplicate_row is None:
-        duplicate_row = await create_deployment_row(
+        duplicate_row = await create_deployment_db(
             session,
             user_id=current_user.id,
             project_id=deployment_row.project_id,
-            provider_account_id=deployment_row.provider_account_id,
+            deployment_provider_account_id=deployment_row.provider_account_id,
             resource_key=str(clone_result.id),
             name=clone_result.name,
         )

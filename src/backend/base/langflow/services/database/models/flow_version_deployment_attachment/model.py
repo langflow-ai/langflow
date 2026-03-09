@@ -10,13 +10,13 @@ if TYPE_CHECKING:
     from datetime import datetime
 
 
-class FlowHistoryDeploymentAttachment(SQLModel, table=True):  # type: ignore[call-arg]
-    __tablename__ = "flow_history_deployment_attachment"
+class FlowVersionDeploymentAttachment(SQLModel, table=True):  # type: ignore[call-arg]
+    __tablename__ = "flow_version_deployment_attachment"
 
     id: UUID | None = Field(default_factory=uuid4, primary_key=True)
     user_id: UUID = Field(sa_column=Column(ForeignKey("user.id", ondelete="CASCADE"), index=True, nullable=False))
-    history_id: UUID = Field(
-        sa_column=Column(ForeignKey("flow_history.id", ondelete="CASCADE"), index=True, nullable=False),
+    flow_version_id: UUID = Field(
+        sa_column=Column(ForeignKey("flow_version.id", ondelete="CASCADE"), index=True, nullable=False),
     )
     deployment_id: UUID = Field(
         sa_column=Column(ForeignKey("deployment.id", ondelete="CASCADE"), index=True, nullable=False),

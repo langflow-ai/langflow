@@ -8,6 +8,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select
 
 from langflow.services.database.models.deployment.model import Deployment
+from langflow.services.database.models.flow_version_deployment_attachment.model import (
+    FlowVersionDeploymentAttachment,
+)
 from langflow.services.database.utils import parse_uuid
 
 if TYPE_CHECKING:
@@ -118,7 +121,8 @@ async def list_deployments_page(
     deployment_provider_account_id: UUID,
     offset: int,
     limit: int,
-) -> list[Deployment]:
+    flow_version_ids: list[UUID] | None = None,
+) -> list[tuple[Deployment, int, list[str]]]:
     if offset < 0:
         msg = "offset must be greater than or equal to 0"
         raise ValueError(msg)
@@ -126,17 +130,74 @@ async def list_deployments_page(
         msg = "limit must be greater than 0"
         raise ValueError(msg)
 
+    attachment_counts_subquery = (
+        select(
+            FlowVersionDeploymentAttachment.deployment_id.label("deployment_id"),
+            func.count(func.distinct(FlowVersionDeploymentAttachment.flow_version_id)).label("attached_count"),
+        )
+        .where(FlowVersionDeploymentAttachment.user_id == user_id)
+        .group_by(FlowVersionDeploymentAttachment.deployment_id)
+        .subquery()
+    )
     stmt = (
-        select(Deployment)
+        select(
+            Deployment,
+            func.coalesce(attachment_counts_subquery.c.attached_count, 0).label("attached_count"),
+        )
+        .outerjoin(attachment_counts_subquery, attachment_counts_subquery.c.deployment_id == Deployment.id)
         .where(
             Deployment.user_id == user_id,
             Deployment.deployment_provider_account_id == deployment_provider_account_id,
         )
-        .order_by(col(Deployment.created_at).desc(), col(Deployment.id).desc())
-        .offset(offset)
-        .limit(limit)
     )
-    return list((await db.exec(stmt)).all())
+    if flow_version_ids:
+        matched_deployments_subquery = (
+            select(FlowVersionDeploymentAttachment.deployment_id)
+            .where(
+                FlowVersionDeploymentAttachment.user_id == user_id,
+                FlowVersionDeploymentAttachment.flow_version_id.in_(flow_version_ids),
+            )
+            .group_by(FlowVersionDeploymentAttachment.deployment_id)
+            .subquery()
+        )
+        stmt = stmt.join(
+            matched_deployments_subquery,
+            matched_deployments_subquery.c.deployment_id == Deployment.id,
+        )
+    stmt = stmt.order_by(col(Deployment.created_at).desc(), col(Deployment.id).desc()).offset(offset).limit(limit)
+    rows = (await db.exec(stmt)).all()
+    deployment_rows = [(deployment, int(attached_count or 0)) for deployment, attached_count in rows]
+    if not flow_version_ids or not deployment_rows:
+        return [(deployment, attached_count, []) for deployment, attached_count in deployment_rows]
+
+    deployment_ids = [deployment.id for deployment, _ in deployment_rows]
+    matched_rows = (
+        await db.exec(
+            select(
+                FlowVersionDeploymentAttachment.deployment_id,
+                FlowVersionDeploymentAttachment.flow_version_id,
+            ).where(
+                FlowVersionDeploymentAttachment.user_id == user_id,
+                FlowVersionDeploymentAttachment.deployment_id.in_(deployment_ids),
+                FlowVersionDeploymentAttachment.flow_version_id.in_(flow_version_ids),
+            )
+        )
+    ).all()
+    matched_flow_version_ids_by_deployment: dict[UUID, list[str]] = {}
+    for deployment_id, flow_version_id in matched_rows:
+        existing = matched_flow_version_ids_by_deployment.setdefault(deployment_id, [])
+        flow_version_id_str = str(flow_version_id)
+        if flow_version_id_str not in existing:
+            existing.append(flow_version_id_str)
+
+    return [
+        (
+            deployment,
+            attached_count,
+            matched_flow_version_ids_by_deployment.get(deployment.id, []),
+        )
+        for deployment, attached_count in deployment_rows
+    ]
 
 
 async def count_deployments_by_provider(
@@ -144,12 +205,27 @@ async def count_deployments_by_provider(
     *,
     user_id: UUID,
     deployment_provider_account_id: UUID,
+    flow_version_ids: list[UUID] | None = None,
 ) -> int:
     stmt = select(func.count(Deployment.id)).where(
         Deployment.user_id == user_id,
         Deployment.deployment_provider_account_id == deployment_provider_account_id,
     )
-    return int((await db.exec(stmt)).one())
+    if flow_version_ids:
+        matched_deployments_subquery = (
+            select(FlowVersionDeploymentAttachment.deployment_id)
+            .where(
+                FlowVersionDeploymentAttachment.user_id == user_id,
+                FlowVersionDeploymentAttachment.flow_version_id.in_(flow_version_ids),
+            )
+            .group_by(FlowVersionDeploymentAttachment.deployment_id)
+            .subquery()
+        )
+        stmt = stmt.join(
+            matched_deployments_subquery,
+            matched_deployments_subquery.c.deployment_id == Deployment.id,
+        )
+    return int((await db.exec(stmt)).one() or 0)
 
 
 async def delete_deployment_by_resource_key(
