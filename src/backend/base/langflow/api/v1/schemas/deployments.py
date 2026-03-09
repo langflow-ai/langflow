@@ -17,16 +17,24 @@ Two identifier domains coexist in these schemas:
 are defined by the provider adapter. Langflow forwards them without
 interpreting their schema.
 
-Service-layer schema reuse
---------------------------
-Three service-layer data schemas are imported directly because they carry
-no Langflow-managed identifiers:
+Service-layer schema reuse (shared-kernel pattern)
+---------------------------------------------------
+Three service-layer data schemas are imported and subclassed (via
+``_Strict*`` wrappers) rather than redefined in this module.  They act as
+a **shared kernel**: field definitions owned by the service layer that the
+API layer extends with stricter validation (``extra = "forbid"``).
 
 * ``BaseDeploymentData`` -- deployment metadata for creation
 * ``BaseDeploymentDataUpdate`` -- deployment metadata for partial updates
 * ``DeploymentConfig`` -- deployment configuration payload
 
 Additionally, ``DeploymentType`` is imported as a shared vocabulary enum.
+
+This coupling is intentional -- these schemas carry no Langflow-managed
+identifiers and describe provider-facing data whose shape the API should
+track automatically.  If the service layer later introduces fields that
+must *not* be API-visible, replace the ``_Strict*`` subclass with an
+API-owned model and a mapping function.
 
 ``BaseDeploymentData`` also carries an optional ``provider_spec`` dict
 (inherited from ``ProviderSpecModel``), an opaque provider-owned input
@@ -336,12 +344,14 @@ class FlowVersionsPatch(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Strict API-layer wrappers for service-layer schemas
+# Strict API-layer wrappers (shared-kernel boundary)
 # ---------------------------------------------------------------------------
-# The service-layer schemas do not set ``extra = "forbid"`` because they are
-# shared with internal consumers.  These thin subclasses add strict validation
-# so that API callers receive a 422 for misspelled/unexpected fields instead
-# of having their data silently dropped.
+# These thin subclasses inherit field definitions from the service layer and
+# add ``extra = "forbid"`` so API callers receive a 422 for unexpected fields
+# instead of having data silently dropped.  Subclassing (rather than
+# redefining fields) keeps the API in lock-step with the service contract.
+# If a service-layer field should NOT be API-visible, replace the relevant
+# subclass with an API-owned model and a mapping function.
 
 
 class _StrictBaseDeploymentData(BaseDeploymentData):
