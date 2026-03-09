@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any
 
 from fastapi import status
@@ -61,7 +62,7 @@ def build_orchestrate_run_payload(
     return payload
 
 
-def create_agent_run(
+async def create_agent_run(
     base_client: BaseWXOClient,
     *,
     provider_data: dict[str, Any],
@@ -74,7 +75,11 @@ def create_agent_run(
         deployment_id=deployment_id,
     )
     try:
-        response = base_client._post(f"/runs{query_suffix}", data=run_payload)  # noqa: SLF001
+        response = await asyncio.to_thread(
+            base_client._post,  # noqa: SLF001
+            f"/runs{query_suffix}",
+            data=run_payload,
+        )
     except ClientAPIException as exc:
         if exc.response.status_code == status.HTTP_404_NOT_FOUND:
             msg = f"Agent Deployment '{deployment_id}' was not found in Watsonx Orchestrate."
@@ -125,8 +130,8 @@ def create_agent_run_result(payload: dict[str, Any] | None) -> dict[str, Any]:
     return result
 
 
-def get_agent_run(base_client: BaseWXOClient, *, run_id: str) -> dict[str, Any]:
-    payload = base_client._get(f"/runs/{run_id}")  # noqa: SLF001
+async def get_agent_run(base_client: BaseWXOClient, *, run_id: str) -> dict[str, Any]:
+    payload = await asyncio.to_thread(base_client._get, f"/runs/{run_id}")  # noqa: SLF001
 
     if not payload:
         return {"status": "unknown"}

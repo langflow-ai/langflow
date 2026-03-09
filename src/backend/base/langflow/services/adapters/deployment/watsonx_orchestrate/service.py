@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -156,7 +157,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         #       The caller may supply a
         #       prefix via provider_spec["global_resource_name_prefix"]
         #       (useful for idempotent retries).
-        #       If set, we reccomend using a random prefix
+        #       If set, we recommend using a random prefix
         #       (and re-use the same one for retries).
         #       When omitted, a random prefix is generated.
         # --
@@ -195,7 +196,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 snapshots=payload.snapshot,
                 tool_name_prefix=resource_prefix,
             )
-            assert_create_resources_available(
+            await assert_create_resources_available(
                 clients=clients,
                 deployment_name=prefixed_deployment_name,
                 app_id=prefixed_app_id,
@@ -349,9 +350,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         client_manager = await self._get_provider_clients(user_id=user_id, db=db)
         deployments: list = []
         try:
-            # validate deployment types
-            deployment_types: list[DeploymentType] = []
-            invalid_deployment_types: list[DeploymentType] = []
+            deployment_types: set[DeploymentType] = set()
+            invalid_deployment_types: set[DeploymentType] = set()
 
             if params and params.deployment_types:
                 deployment_types = set(params.deployment_types)
@@ -376,6 +376,11 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             # the ids query parameter is not empty or null
             # this is not a problem today, but might be in the future
 
+            raw_agents = await asyncio.to_thread(
+                client_manager.agent._get,  # noqa: SLF001
+                "/agents",
+                params=query_params or None,
+            )
             deployments = [
                 get_deployment_metadata(
                     data=agent,
@@ -385,10 +390,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                         "environment": derive_agent_environment(agent),
                     },
                 )
-                for agent in client_manager.agent._get(  # noqa: SLF001
-                    "/agents",
-                    params=query_params or None,
-                )
+                for agent in raw_agents
             ]
         except (ClientAPIException, HTTPException) as exc:
             if isinstance(exc, ClientAPIException):
@@ -422,7 +424,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     ) -> DeploymentGetResult:
         """Get a deployment (agent) from Watsonx Orchestrate."""
         client_manager = await self._get_provider_clients(user_id=user_id, db=db)
-        agent = client_manager.agent.get_draft_by_id(deployment_id)
+        agent = await asyncio.to_thread(client_manager.agent.get_draft_by_id, deployment_id)
         if not agent:
             msg = f"Deployment '{deployment_id}' not found."
             raise DeploymentNotFoundError(msg)
@@ -443,7 +445,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         clients = await self._get_provider_clients(user_id=user_id, db=db)
 
         agent_id = _normalize_and_validate_id(str(deployment_id), field_name="deployment_id")
-        agent = clients.agent.get_draft_by_id(agent_id)
+        agent = await asyncio.to_thread(clients.agent.get_draft_by_id, agent_id)
 
         if not agent:
             msg = f"Deployment '{agent_id}' not found."
@@ -478,6 +480,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         if payload.snapshot:
             msg = "Updating snapshot bindings is not supported by watsonx Orchestrate."
             raise InvalidDeploymentOperationError(message=msg)
+
+        if update_payload:
+            await asyncio.to_thread(clients.agent.update, agent_id, update_payload)
 
         return DeploymentUpdateResult(id=deployment_id)
 
@@ -524,7 +529,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         agent_id = _normalize_and_validate_id(str(deployment_id), field_name="deployment_id")
         clients = await self._get_provider_clients(user_id=user_id, db=db)
         try:
-            clients.agent.delete(agent_id)
+            await asyncio.to_thread(clients.agent.delete, agent_id)
         except ClientAPIException as e:
             status_code = e.response.status_code
             if status_code == status.HTTP_404_NOT_FOUND:
@@ -550,11 +555,23 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         status_data: dict[str, Any] = {}
 
-        if agent := clients.agent.get_draft_by_id(agent_id):
-            status_data = {
-                "status": "connected",
-                "environment": derive_agent_environment(agent),
-            }
+        try:
+            agent = await asyncio.to_thread(clients.agent.get_draft_by_id, agent_id)
+            if agent:
+                status_data = {
+                    "status": "connected",
+                    "environment": derive_agent_environment(agent),
+                }
+        except (ClientAPIException, HTTPException) as exc:
+            if isinstance(exc, ClientAPIException):
+                error_detail = extract_error_detail(getattr(exc.response, "text", ""))
+            else:
+                error_detail = extract_error_detail(str(exc.detail))
+            msg = f"{ErrorPrefix.HEALTH.value}. error details: {error_detail}"
+            raise DeploymentError(message=msg, error_code="deployment_error") from None
+        except Exception as exc:  # noqa: BLE001
+            msg = f"{ErrorPrefix.HEALTH.value}. error details: {exc}"
+            raise DeploymentError(message=msg, error_code="deployment_error") from None
 
         return DeploymentStatusResult(
             id=agent_id,
@@ -580,7 +597,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         provider_data: dict = payload.provider_data or {}
 
         try:
-            agent_run_result = create_agent_run(
+            agent_run_result = await create_agent_run(
                 clients.base,
                 provider_data=provider_data,
                 deployment_id=agent_id,
@@ -609,7 +626,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         clients = await self._get_provider_clients(user_id=user_id, db=db)
 
-        agent_run_result = get_agent_run(
+        agent_run_result = await get_agent_run(
             clients.base,
             run_id=run_id,
         )
@@ -633,7 +650,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             data=data,
             tool_ids=tool_ids,
         )
-        return clients.agent.create(payload)
+        return await asyncio.to_thread(clients.agent.create, payload)
 
     async def teardown(self) -> None:
         """Teardown provider-specific resources."""

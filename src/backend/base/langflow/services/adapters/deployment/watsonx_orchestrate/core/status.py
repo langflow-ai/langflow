@@ -2,62 +2,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from ibm_watsonx_orchestrate_core.types.connections import ConnectionEnvironment
 from lfx.services.adapters.deployment.schema import DeploymentGetResult, DeploymentType, ItemResult
-
-if TYPE_CHECKING:
-    from ibm_watsonx_orchestrate_clients.agents.agent_client import AgentClient
-
-
-def resolve_health_environment_id(agent_client: AgentClient, *, deployment_id: str) -> str:
-    environments = agent_client.get_environments_for_agent(deployment_id)
-    if not environments:
-        msg = f"No environments found for deployment '{deployment_id}'."
-        raise ValueError(msg)
-
-    draft_env_id: str | None = None
-    for env in environments:
-        env_name = str(env.get("name", "")).strip().lower()
-        env_id = str(env.get("id", "")).strip()
-        if env_name == ConnectionEnvironment.DRAFT.value and env_id:
-            draft_env_id = env_id
-            break
-
-    if draft_env_id:
-        return draft_env_id
-
-    first_env_id = str(environments[0].get("id", "")).strip()
-    if first_env_id:
-        return first_env_id
-    msg = f"Could not resolve environment id for deployment '{deployment_id}'."
-    raise ValueError(msg)
-
-
-def fetch_agent_release_status(
-    agent_client: AgentClient,
-    *,
-    deployment_id: str,
-    environment_id: str,
-) -> dict[str, Any]:
-    return agent_client._get(  # noqa: SLF001
-        f"/orchestrate/agents/{deployment_id}/releases/status",
-        params={"environment_id": environment_id},
-    )
-
-
-def normalize_release_status(provider_status: dict[str, Any]) -> str:
-    status_candidates = [
-        provider_status.get("status"),
-        provider_status.get("deployment_status"),
-        provider_status.get("state"),
-    ]
-    for candidate in status_candidates:
-        normalized = str(candidate or "").strip().lower()
-        if normalized:
-            return normalized
-    return "unknown"
 
 
 def get_deployment_metadata(
