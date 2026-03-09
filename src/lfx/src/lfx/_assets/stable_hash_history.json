@@ -1091,12 +1091,12 @@
   },
   "OpenAIToolsAgent": {
     "versions": {
-      "0.3.0": "ee6e566f86aa"
+      "0.3.0": "cf29845179df"
     }
   },
   "OpenAPIAgent": {
     "versions": {
-      "0.3.0": "43ed743d2103"
+      "0.3.0": "3481769959b0"
     }
   },
   "RecursiveCharacterTextSplitter": {
@@ -1126,7 +1126,7 @@
   },
   "SQLAgent": {
     "versions": {
-      "0.3.0": "2268074a89c4"
+      "0.3.0": "2387cbc92a77"
     }
   },
   "SQLDatabase": {
@@ -1141,7 +1141,7 @@
   },
   "ToolCallingAgent": {
     "versions": {
-      "0.3.0": "c98a52dbb2a3"
+      "0.3.0": "5200d70bacbd"
     }
   },
   "VectorStoreInfo": {
@@ -1156,7 +1156,7 @@
   },
   "XMLAgent": {
     "versions": {
-      "0.3.0": "8b5819863c31"
+      "0.3.0": "ac93ac6871df"
     }
   },
   "LangWatchEvaluator": {
