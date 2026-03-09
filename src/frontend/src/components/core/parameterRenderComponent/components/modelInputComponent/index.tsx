@@ -4,6 +4,7 @@ import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
+import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ModelProviderModal from "@/modals/modelProviderModal";
 import useAlertStore from "@/stores/alertStore";
 import type { APIClassType } from "@/types/api";
@@ -18,7 +19,11 @@ import {
 import type { BaseInputProps } from "../../types";
 import ModelList from "./components/ModelList";
 import ModelTrigger from "./components/ModelTrigger";
-import { ModelInputComponentType, ModelOption } from "./types";
+import type {
+  ModelInputComponentType,
+  ModelOption,
+  SelectedModel,
+} from "./types";
 
 export default function ModelInputComponent({
   id,
@@ -41,6 +46,9 @@ export default function ModelInputComponent({
   const [open, setOpen] = useState(false);
   const [openManageProvidersDialog, setOpenManageProvidersDialog] =
     useState(false);
+  const [isRefreshingAfterClose, setIsRefreshingAfterClose] = useState(false);
+  const [refreshOptions, setRefreshOptions] = useState(false);
+  const { refreshAllModelInputs } = useRefreshModelInputs();
 
   // Ref to track if we've already processed the empty options state
   // prevents infinite loop when no models are available
@@ -57,16 +65,20 @@ export default function ModelInputComponent({
       ? "llm"
       : "embeddings";
 
-  const { data: providersData = [], isLoading: isLoadingProviders } =
-    useGetModelProviders({});
+  const {
+    data: providersData = [],
+    isLoading: isLoadingProviders,
+    isFetching: isFetchingProviders,
+  } = useGetModelProviders({});
   const { data: enabledModelsData, isLoading: isLoadingEnabledModels } =
     useGetEnabledModels();
 
   const isLoading = isLoadingProviders || isLoadingEnabledModels;
 
-  // Determines if we should show the model selector or the "Setup Provider" button
   const hasEnabledProviders = useMemo(() => {
-    return providersData?.some((provider) => provider.is_enabled);
+    return providersData?.some(
+      (provider) => provider.is_enabled || provider.is_configured,
+    );
   }, [providersData]);
 
   // Groups models by their provider name for sectioned display in dropdown.
@@ -172,9 +184,47 @@ export default function ModelInputComponent({
     [flatOptions, handleOnNewValue],
   );
 
+  const handleRefreshButtonPress = useCallback(async () => {
+    setOpen(false);
+    setRefreshOptions(true);
+    try {
+      await refreshAllModelInputs({ silent: true });
+    } catch {
+      // refreshAllModelInputs handles its own error notifications via alertStore
+    } finally {
+      setRefreshOptions(false);
+    }
+  }, [refreshAllModelInputs]);
+
   const handleManageProvidersDialogClose = useCallback(() => {
     setOpenManageProvidersDialog(false);
+    setIsRefreshingAfterClose(true);
   }, []);
+
+  // Clear the refreshing indicator after the providers query completes a full
+  // refetch cycle (isFetchingProviders: false → true → false). We track whether
+  // we've seen the fetch start so we don't clear prematurely before the
+  // invalidation has even been triggered by refreshAllModelInputs.
+  const hasSeenFetchStartRef = useRef(false);
+  useEffect(() => {
+    if (!isRefreshingAfterClose) {
+      hasSeenFetchStartRef.current = false;
+      return;
+    }
+    if (isFetchingProviders) {
+      hasSeenFetchStartRef.current = true;
+    } else if (hasSeenFetchStartRef.current) {
+      setIsRefreshingAfterClose(false);
+    }
+  }, [isRefreshingAfterClose, isFetchingProviders]);
+
+  // Safety timeout: clear loading even if no refetch cycle is detected
+  // (e.g. no model nodes on canvas, or the refresh was a no-op)
+  useEffect(() => {
+    if (!isRefreshingAfterClose) return;
+    const timeout = setTimeout(() => setIsRefreshingAfterClose(false), 5000);
+    return () => clearTimeout(timeout);
+  }, [isRefreshingAfterClose]);
 
   const renderLoadingButton = () => (
     <Button
@@ -238,6 +288,12 @@ export default function ModelInputComponent({
             selectedModel={selectedModel}
             onSelect={handleModelSelect}
           />
+          {renderFooterButton(
+            "Refresh List",
+            "RotateCw",
+            handleRefreshButtonPress,
+            "refresh-model-list",
+          )}
           {renderManageProvidersButton()}
         </Command>
       </PopoverContentInput>
@@ -248,8 +304,12 @@ export default function ModelInputComponent({
     return null;
   }
 
-  // Loading state
-  if (!options || options.length === 0) {
+  // Loading state (skip if showEmptyState is true - we want to show the empty dropdown instead)
+  if (
+    ((!options || options.length === 0) && !showEmptyState) ||
+    isRefreshingAfterClose ||
+    refreshOptions
+  ) {
     return <div className="w-full">{renderLoadingButton()}</div>;
   }
 
@@ -268,6 +328,7 @@ export default function ModelInputComponent({
             onOpenManageProviders={() => setOpenManageProvidersDialog(true)}
             id={id}
             refButton={refButton}
+            showEmptyState={showEmptyState}
           />
         </div>
         {renderPopoverContent()}
