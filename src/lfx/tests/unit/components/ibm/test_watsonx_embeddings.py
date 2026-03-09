@@ -91,7 +91,7 @@ class TestWatsonxEmbeddingsComponent:
         assert "https://ca-tor.ml.cloud.ibm.com" in url_input.options
         assert "https://ap-south-1.aws.wxai.ibm.com" in url_input.options
 
-    @patch("lfx.components.ibm.watsonx_embeddings.requests.get")
+    @patch("lfx.base.models.model_utils.requests.get")
     def test_fetch_models_success(self, mock_get, mock_response):
         """Test successful model fetching from API."""
         from lfx.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent
@@ -114,7 +114,7 @@ class TestWatsonxEmbeddingsComponent:
         assert call_args[1]["params"]["filters"] == "function_embedding,!lifecycle_withdrawn:and"
         assert call_args[1]["timeout"] == 10
 
-    @patch("lfx.components.ibm.watsonx_embeddings.requests.get")
+    @patch("lfx.base.models.model_utils.requests.get")
     def test_fetch_models_sorted(self, mock_get):
         """Test that fetched models are sorted."""
         from lfx.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent
@@ -134,7 +134,7 @@ class TestWatsonxEmbeddingsComponent:
 
         assert models == ["alpha-model", "beta-model", "zebra-model"]
 
-    @patch("lfx.components.ibm.watsonx_embeddings.requests.get")
+    @patch("lfx.base.models.model_utils.requests.get")
     def test_fetch_models_empty_resources(self, mock_get):
         """Test handling of empty resources in API response."""
         from lfx.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent

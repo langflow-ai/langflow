@@ -1,6 +1,5 @@
 from typing import Any
 
-import requests
 from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
 from langchain_ibm import WatsonxEmbeddings
 from pydantic.v1 import SecretStr
