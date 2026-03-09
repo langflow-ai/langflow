@@ -68,7 +68,12 @@ class TraceBase(SQLModel):
     end_time: datetime | None = Field(default=None, description="When the trace ended")
     total_latency_ms: int = Field(default=0, description="Total execution time in milliseconds")
     total_tokens: int = Field(default=0, description="Total tokens used across all LLM calls")
-    flow_id: UUID = Field(foreign_key="flow.id", index=True, description="ID of the flow this trace belongs to")
+    flow_id: UUID = Field(
+        foreign_key="flow.id",
+        ondelete="CASCADE",
+        index=True,
+        description="ID of the flow this trace belongs to",
+    )
     session_id: str | None = Field(
         default=None,
         nullable=True,

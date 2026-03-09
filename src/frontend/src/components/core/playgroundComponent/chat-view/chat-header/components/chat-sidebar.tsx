@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -39,12 +39,9 @@ export function ChatSidebar({
   const visibleSession = currentSessionId;
 
   const handleDeleteSession = (session: string) => {
-    handleDelete(session);
+    // Delegate to parent which handles the full delete flow
+    // (API call, cache clearing, session switching)
     onDeleteSession?.(session);
-    // If deleted session was the current one, switch to default
-    if (session === currentSessionId) {
-      onSessionSelect?.(currentFlowId);
-    }
   };
 
   const handleSessionClick = (session: string) => {
@@ -83,7 +80,7 @@ export function ChatSidebar({
         </div>
       ) : (
         <div className="flex flex-col gap-1">
-          {sessionIds.map((session, index) => (
+          {sessionIds.map((session) => (
             <SessionSelector
               key={session}
               session={session}
