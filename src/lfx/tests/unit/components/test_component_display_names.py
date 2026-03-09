@@ -10,10 +10,7 @@ from __future__ import annotations
 import importlib
 import inspect
 import os
-import pkgutil
 from pathlib import Path
-
-import pytest
 
 import lfx.components
 
@@ -60,8 +57,7 @@ def _discover_all_component_classes() -> list[tuple[str, type]]:
 
             try:
                 module = importlib.import_module(module_name)
-            except Exception:
-                # Skip modules that fail to import (missing optional dependencies)
+            except Exception:  # noqa: S112 - intentionally skip modules with missing optional deps
                 continue
 
             for attr_name, attr_value in inspect.getmembers(module, inspect.isclass):
@@ -139,8 +135,7 @@ class TestOutputDisplayNames:
 
         assert not violations, (
             f"Found {len(violations)} output(s) still using deprecated "
-            f"display_name='{DEPRECATED_OUTPUT_DISPLAY_NAME_DATA}':\n"
-            + "\n".join(f"  - {v}" for v in violations)
+            f"display_name='{DEPRECATED_OUTPUT_DISPLAY_NAME_DATA}':\n" + "\n".join(f"  - {v}" for v in violations)
         )
 
     def test_should_not_have_dataframe_as_output_display_name(self):
@@ -161,8 +156,7 @@ class TestOutputDisplayNames:
 
         assert not violations, (
             f"Found {len(violations)} output(s) still using deprecated "
-            f"display_name='{DEPRECATED_OUTPUT_DISPLAY_NAME_DATAFRAME}':\n"
-            + "\n".join(f"  - {v}" for v in violations)
+            f"display_name='{DEPRECATED_OUTPUT_DISPLAY_NAME_DATAFRAME}':\n" + "\n".join(f"  - {v}" for v in violations)
         )
 
     def test_should_not_have_dataframe_as_input_display_name(self):
@@ -183,8 +177,7 @@ class TestOutputDisplayNames:
 
         assert not violations, (
             f"Found {len(violations)} input(s) still using deprecated "
-            f"display_name='{DEPRECATED_OUTPUT_DISPLAY_NAME_DATAFRAME}':\n"
-            + "\n".join(f"  - {v}" for v in violations)
+            f"display_name='{DEPRECATED_OUTPUT_DISPLAY_NAME_DATAFRAME}':\n" + "\n".join(f"  - {v}" for v in violations)
         )
 
     def test_should_not_have_data_or_dataframe_as_display_name(self):
@@ -208,8 +201,7 @@ class TestOutputDisplayNames:
 
         assert not violations, (
             f"Found {len(violations)} field(s) still using deprecated "
-            f"display_name='{DEPRECATED_DISPLAY_NAME_DATA_OR_DATAFRAME}':\n"
-            + "\n".join(f"  - {v}" for v in violations)
+            f"display_name='{DEPRECATED_DISPLAY_NAME_DATA_OR_DATAFRAME}':\n" + "\n".join(f"  - {v}" for v in violations)
         )
 
 
@@ -229,22 +221,10 @@ class TestComponentDiscoverySanity:
 
     def test_should_find_components_with_outputs(self):
         """At least some discovered components should have outputs defined."""
-        components_with_outputs = [
-            name
-            for name, cls in _ALL_COMPONENTS
-            if getattr(cls, "outputs", None)
-        ]
-        assert len(components_with_outputs) > 0, (
-            "No components with outputs found. Output inspection may be broken."
-        )
+        components_with_outputs = [name for name, cls in _ALL_COMPONENTS if getattr(cls, "outputs", None)]
+        assert len(components_with_outputs) > 0, "No components with outputs found. Output inspection may be broken."
 
     def test_should_find_components_with_inputs(self):
         """At least some discovered components should have inputs defined."""
-        components_with_inputs = [
-            name
-            for name, cls in _ALL_COMPONENTS
-            if getattr(cls, "inputs", None)
-        ]
-        assert len(components_with_inputs) > 0, (
-            "No components with inputs found. Input inspection may be broken."
-        )
+        components_with_inputs = [name for name, cls in _ALL_COMPONENTS if getattr(cls, "inputs", None)]
+        assert len(components_with_inputs) > 0, "No components with inputs found. Input inspection may be broken."
