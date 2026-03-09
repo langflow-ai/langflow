@@ -25,7 +25,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied"})</script>
 <script>!function(){function e(){if(void 0!==window.truste&&window.truste.cma){var e=window.truste.cma.callApi("getConsent",window.location.href)||{},n=1===e[2],t=1===e[3];gtag("consent","update",{ad_storage:n?"granted":"denied",ad_user_data:n?"granted":"denied",ad_personalization:n?"granted":"denied",analytics_storage:t?"granted":"denied"})}}window.addEventListener&&(window.addEventListener("cm_data_subject_consent_changed",e),window.addEventListener("cm_consent_preferences_set",e)),"complete"===document.readyState?e():window.addEventListener("load",e)}()</script><link rel="stylesheet" href="/assets/css/styles.403c62aa.css">
-<script src="/assets/js/runtime~main.2db2753e.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.72569e10.js" defer="defer"></script>
 <script src="/assets/js/main.4a714abe.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -107,6 +107,32 @@ Therefore, installing <code>langflow-base</code> directly only installs the <a h
 </li>
 </ul>
 <p>For more information about available optional dependency groups, see <a class="" href="/install-custom-dependencies#install-optional-dependency-groups-for-langflow-base">Install optional dependency groups for <code>langflow-base</code></a>.</p>
+</li>
+<li class="">
+<p>Docker image no longer includes <code>uv</code> or <code>uvx</code></p>
+<p>In Langflow 1.8.x, the Langflow Docker image no longer includes <code>uv</code> or <code>uvx</code> in the runtime image.
+This means that MCP server configurations, including the default Langflow MCP server, that rely on commands like <code>uvx mcp-proxy</code> will fail inside the container with a <code>command not found</code> error.</p>
+<p>If you use MCP from within a Langflow 1.8.x Docker image, you must install <code>uv</code> in an image derived from the official <code>langflowai/langflow</code> image.</p>
+<p>To install <code>uv</code> and <code>uvx</code> in a derived image based on the official <code>langflowai/langflow</code> image, do the following:</p>
+<ol>
+<li class="">
+<p>Create a <code>Dockerfile</code> in your project.</p>
+</li>
+<li class="">
+<p>Use the official Langflow image as the base and install <code>uv</code> into the existing virtual environment:</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>FROM langflowai/langflow:1.8.0</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span></span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>USER root</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>RUN /app/.venv/bin/pip install uv</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>USER user</span></div></div><br></code></div></div>
+</li>
+<li class="">
+<p>Build the image.</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>docker build -t YOUR_IMAGE_NAME .</span></div></div><br></code></div></div>
+<p>Replace <code>YOUR_IMAGE_NAME</code> with your Docker image name.</p>
+</li>
+<li class="">
+<p>Run the new image:</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>docker run -p 7860:7860 YOUR_IMAGE_NAME</span></div></div><br></code></div></div>
+</li>
+</ol>
+<p>For more information, see <a class="" href="/deployment-docker#upgrade-the-langflow-docker-image">Upgrade the Langflow Docker image</a>.</p>
 </li>
 </ul>
 <h3 class="anchor anchorTargetHideOnScrollNavbar_vjPI" id="new-features-and-enhancements">New features and enhancements<a href="#new-features-and-enhancements" class="hash-link" aria-label="Direct link to New features and enhancements" title="Direct link to New features and enhancements" translate="no">​</a></h3>
