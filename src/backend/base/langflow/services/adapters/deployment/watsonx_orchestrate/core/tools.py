@@ -6,31 +6,24 @@ import asyncio
 import importlib.metadata as md
 import io
 import json
-import re
 import zipfile
 from typing import TYPE_CHECKING, Any
-from uuid import uuid4
 
 from cachetools import func
 from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import LangflowTool, create_langflow_tool
 from lfx.services.adapters.deployment.exceptions import InvalidContentError, InvalidDeploymentOperationError
 from lfx.utils.flow_requirements import generate_requirements_from_flow
 
-from langflow.services.adapters.deployment.watsonx_orchestrate.constants import DEFAULT_LANGFLOW_RUNNER_MODULES
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     dedupe_list,
     normalize_wxo_name,
-    require_non_empty_string,
     require_tool_id,
 )
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
-    from ibm_watsonx_orchestrate_clients.connections.connections_client import ConnectionsClient
     from ibm_watsonx_orchestrate_clients.tools.tool_client import ToolClient
     from lfx.services.adapters.deployment.schema import BaseFlowArtifact, SnapshotItems
-
-    from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 
 
 def extract_langflow_artifact_from_zip(artifact_zip_bytes: bytes, *, snapshot_id: str) -> dict[str, Any]:
@@ -96,86 +89,6 @@ def upload_tool_artifact_bytes(
         f"/tools/{tool_id}/upload",
         files={"file": (f"{tool_id}.zip", file_obj, "application/zip", {"Expires": "0"})},
     )
-
-
-def resolve_lfx_runner_requirement(tool: LangflowTool) -> str:
-    # Prefer whichever runner package is actually installed right now.
-    tool_requirements = list(getattr(tool, "requirements", []) or [])
-    for requirement in tool_requirements:
-        requirement_name = re.split(r"[<>=~!\[\s;]", requirement.strip(), maxsplit=1)[0].lower()
-        if requirement_name in DEFAULT_LANGFLOW_RUNNER_MODULES:
-            return _pin_requirement_name(requirement_name)
-
-    for runner_package in ("lfx-nightly", "lfx"):
-        try:
-            return _pin_requirement_name(runner_package)
-        except md.PackageNotFoundError:
-            continue
-
-    return "lfx"
-
-
-def resolve_snapshot_connections(
-    *,
-    connections_client: ConnectionsClient,
-    config_id: str | None,
-) -> dict[str, str]:
-    connections: dict[str, str] = {}
-    if config_id is not None:
-        app_id = require_non_empty_string(
-            config_id,
-            field_name="config_id",
-            error_message="Snapshot binding requires non-empty 'config_id'.",
-        )
-        connection = connections_client.get_draft_by_app_id(app_id=app_id)
-        if not connection:
-            msg = f"Connection '{app_id}' not found."
-            raise ValueError(msg)
-        connections = {app_id: connection.connection_id}
-    return connections
-
-
-def sync_langflow_tool_connections(
-    *,
-    clients: WxOClient,
-    tool_ids: list[str],
-    config_id: str | None,
-    connection_id: str | None,
-) -> None:
-    if not tool_ids:
-        return
-
-    tools = clients.tool.get_drafts_by_ids(tool_ids)
-    tools_by_id = {str(tool.get("id")): tool for tool in tools if isinstance(tool, dict) and tool.get("id")}
-
-    for tool_id in tool_ids:
-        tool = tools_by_id.get(tool_id)
-        if not tool:
-            msg = f"Snapshot '{tool_id}' not found."
-            raise ValueError(msg)
-
-        langflow_binding = tool.get("binding", {}).get("langflow", {})
-        if not langflow_binding:
-            continue
-
-        current_connections = langflow_binding.get("connections")
-        if not isinstance(current_connections, dict):
-            current_connections = {}
-
-        updated_connections = dict(current_connections)
-        # A null config update means "no new connection to add", not "clear existing".
-        if config_id is None:
-            continue
-        if connection_id is not None:
-            updated_connections[config_id] = connection_id
-
-        if updated_connections == current_connections:
-            continue
-
-        # TODO: just send the request?
-        update_payload: dict[str, Any] = {}
-        update_payload.setdefault("binding", {}).setdefault("langflow", {})["connections"] = updated_connections
-        clients.tool.update(tool_id, update_payload)
 
 
 def create_wxo_flow_tool(
@@ -394,39 +307,6 @@ async def process_raw_flows_with_app_id(
         connections={app_id: connection.connection_id},
         app_id=app_id,
         tool_name_prefix=tool_name_prefix,
-    )
-
-
-async def create_langflow_flow_tool(
-    *,
-    user_id: Any,
-    config_id: str | None = None,
-    flow_payload: BaseFlowArtifact,
-    db: Any,
-    client_cache: dict[str, Any],
-) -> str:
-    from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_provider_clients
-
-    clients = await get_provider_clients(
-        user_id=user_id,
-        db=db,
-        client_cache=client_cache,
-    )
-    connections = resolve_snapshot_connections(
-        connections_client=clients.connections,
-        config_id=config_id,
-    )
-    tool_payload, artifact_bytes = create_wxo_flow_tool(
-        flow_payload=flow_payload,
-        connections=connections,
-        app_id=config_id,
-        tool_name_prefix=f"lf_{uuid4().hex[:6]}_",
-    )
-
-    return await upload_wxo_flow_tool(
-        tool_client=clients.tool,
-        tool_payload=tool_payload,
-        artifact_bytes=artifact_bytes,
     )
 
 
