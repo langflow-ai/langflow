@@ -651,7 +651,7 @@
   },
   "AstraDB": {
     "versions": {
-      "0.3.0": "141bbfe8a16e"
+      "0.3.0": "217e47f9f7d1"
     }
   },
   "AssistantsCreateAssistant": {
@@ -1186,7 +1186,7 @@
   },
   "StructuredOutput": {
     "versions": {
-      "0.3.0": "61f954a564c6"
+      "0.3.0": "25d5ad5c9286"
     }
   },
   "LMStudioEmbeddingsComponent": {
@@ -1226,12 +1226,12 @@
   },
   "Agent": {
     "versions": {
-      "0.3.0": "7c1041af057b"
+      "0.3.0": "a972ece06001"
     }
   },
   "EmbeddingModel": {
     "versions": {
-      "0.3.0": "287c24757be6"
+      "0.3.0": "c15ebbaa96c5"
     }
   },
   "LanguageModelComponent": {
