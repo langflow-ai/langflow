@@ -43,7 +43,6 @@ from lfx.services.adapters.deployment.schema import (
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_provider_clients
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
-    _WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
     RANDOM_PREFIX_LENGTH_RANGE,
     SUPPORTED_ADAPTER_DEPLOYMENT_TYPES,
     ErrorPrefix,
@@ -98,7 +97,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     """
 
     name = "deployment_service"
-    provider_name = _WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY
 
     def __init__(self, settings_service: SettingsService | None = None):
         super().__init__()
@@ -116,7 +114,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         return await get_provider_clients(
             user_id=user_id,
             db=db,
-            provider_name=self.provider_name,
             client_cache=self._client_managers,
         )
 
@@ -205,7 +202,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                         db=db,
                         deployment_name=prefixed_app_id,
                         config=payload.config,
-                        provider_name=self.provider_name,
                         client_cache=self._client_managers,
                     )
                 )
@@ -218,7 +214,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                             flows=flow_payloads,
                             db=db,
                             tool_name_prefix=random_prefix,
-                            provider_name=self.provider_name,
                             client_cache=self._client_managers,
                         )
                     )
