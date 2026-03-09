@@ -67,12 +67,6 @@ test.describe("Session Deletion Data Leakage Fix", () => {
     return messages.length;
   }
 
-  // Helper to check if a message exists
-  async function messageExists(page: Page, text: string): Promise<boolean> {
-    const message = page.getByText(text, { exact: false });
-    return await message.isVisible().catch(() => false);
-  }
-
   test(
     "should prevent data leakage when default session is deleted and recreated",
     { tag: ["@release", "@regression"] },
@@ -100,8 +94,10 @@ test.describe("Session Deletion Data Leakage Fix", () => {
       await sendMessage(page, originalMessage);
       await waitForBuildComplete(page, 1);
 
-      // Verify message appears
-      expect(await messageExists(page, originalMessage)).toBeTruthy();
+      // Verify message appears (auto-retry until visible)
+      await expect(
+        page.getByText(originalMessage, { exact: false }).first(),
+      ).toBeVisible({ timeout: 10000 });
 
       // Delete the default session
       await deleteSession(page, "Default Session");
@@ -115,7 +111,9 @@ test.describe("Session Deletion Data Leakage Fix", () => {
       );
 
       // Verify the old message does NOT appear after deletion
-      expect(await messageExists(page, originalMessage)).toBeFalsy();
+      await expect(
+        page.getByText(originalMessage, { exact: false }).first(),
+      ).not.toBeVisible({ timeout: 10000 });
 
       // Send a different message (this will be in a new/recreated default session)
       const newMessage = `New message ${Date.now()}`;
@@ -123,8 +121,12 @@ test.describe("Session Deletion Data Leakage Fix", () => {
       await waitForBuildComplete(page, 1);
 
       // Verify only the new message appears
-      expect(await messageExists(page, newMessage)).toBeTruthy();
-      expect(await messageExists(page, originalMessage)).toBeFalsy();
+      await expect(
+        page.getByText(newMessage, { exact: false }).first(),
+      ).toBeVisible({ timeout: 10000 });
+      await expect(
+        page.getByText(originalMessage, { exact: false }).first(),
+      ).not.toBeVisible({ timeout: 10000 });
 
       // Verify message count is correct (should only have the new message)
       const messageCount = await getMessageCount(page);
