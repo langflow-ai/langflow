@@ -17,10 +17,11 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentDuplicateResponse,
     DeploymentGetResponse,
     DeploymentListResponse,
-    DeploymentProviderAccountCreate,
+    DeploymentProviderAccountCreateRequest,
+    DeploymentProviderAccountGetResponse,
     DeploymentProviderAccountListResponse,
-    DeploymentProviderAccountResponse,
-    DeploymentProviderAccountUpdate,
+    DeploymentProviderAccountUpdateRequest,
+    DeploymentRedeployResponse,
     DeploymentStatusResponse,
     DeploymentTypeListResponse,
     DeploymentUpdateRequest,
@@ -29,7 +30,6 @@ from langflow.api.v1.schemas.deployments import (
     ExecutionCreateResponse,
     ExecutionStatusResponse,
     FlowVersionIdsQuery,
-    RedeployResponse,
 )
 
 router = APIRouter(prefix="/deployments", tags=["Deployments"])
@@ -63,13 +63,13 @@ DeploymentIdPath = Annotated[
 
 @router.post(
     "/providers",
-    response_model=DeploymentProviderAccountResponse,
+    response_model=DeploymentProviderAccountGetResponse,
     status_code=status.HTTP_201_CREATED,
     tags=["Deployment Providers"],
 )
 async def create_provider_account(
     session: DbSession,
-    payload: DeploymentProviderAccountCreate,
+    payload: DeploymentProviderAccountCreateRequest,
     current_user: CurrentActiveUser,
 ):
     """Register a new deployment provider account."""
@@ -89,7 +89,7 @@ async def list_provider_accounts(
 
 @router.get(
     "/providers/{provider_id}",
-    response_model=DeploymentProviderAccountResponse,
+    response_model=DeploymentProviderAccountGetResponse,
     tags=["Deployment Providers"],
 )
 async def get_provider_account(
@@ -117,13 +117,13 @@ async def delete_provider_account(
 
 @router.patch(
     "/providers/{provider_id}",
-    response_model=DeploymentProviderAccountResponse,
+    response_model=DeploymentProviderAccountGetResponse,
     tags=["Deployment Providers"],
 )
 async def update_provider_account(
     provider_id: DeploymentProviderAccountIdPath,
     session: DbSession,
-    payload: DeploymentProviderAccountUpdate,
+    payload: DeploymentProviderAccountUpdateRequest,
     current_user: CurrentActiveUser,
 ):
     """Partially update a deployment provider account."""
@@ -246,7 +246,7 @@ async def delete_deployment(
 
 @router.post(
     "/{deployment_id}/redeploy",
-    response_model=RedeployResponse,
+    response_model=DeploymentRedeployResponse,
 )
 async def redeploy_deployment(
     deployment_id: DeploymentIdPath,
