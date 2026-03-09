@@ -30,3 +30,6 @@ class WxOClient:
 class WxOCredentials:
     instance_url: str
     api_key: str
+
+    def __repr__(self) -> str:
+        return f"WxOCredentials(instance_url={self.instance_url!r}, api_key='****')"

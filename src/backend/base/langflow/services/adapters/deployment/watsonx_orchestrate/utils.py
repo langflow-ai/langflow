@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import json
+import secrets
 from typing import Any
+from uuid import uuid4
 
 from lfx.services.adapters.deployment.exceptions import InvalidContentError
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
     _WXO_SANITIZE_RE,
     _WXO_TRANSLATE,
+    DEFAULT_WXO_AGENT_LLM,
+    RANDOM_PREFIX_LENGTH_RANGE,
 )
 
 
@@ -24,9 +28,36 @@ def validate_wxo_name(name: str) -> str:
         msg = "Deployment name must include at least one alphanumeric character."
         raise InvalidContentError(message=msg)
     if not normalized_name[0].isalpha():
-        msg = "Deployment name must start with a letter. "
+        msg = "Deployment name must start with a letter."
         raise InvalidContentError(message=msg)
     return normalized_name
+
+
+def resolve_resource_name_prefix(
+    *,
+    caller_prefix: str | None = None,
+) -> str:
+    """Determine the resource name prefix for WxO resource creation.
+
+    If *caller_prefix* is provided it is validated and used directly.
+    Otherwise a random prefix of the form ``lf_{hex}_`` is generated
+    as a fallback.
+    """
+    if caller_prefix is not None:
+        if not isinstance(caller_prefix, str) or not caller_prefix.strip():
+            msg = "global_resource_name_prefix must be a non-empty string."
+            raise InvalidContentError(message=msg)
+        validated = normalize_wxo_name(caller_prefix)
+        if not validated:
+            msg = "global_resource_name_prefix must contain at least one alphanumeric character."
+            raise InvalidContentError(message=msg)
+        if not validated[0].isalpha():
+            msg = "global_resource_name_prefix must start with a letter."
+            raise InvalidContentError(message=msg)
+        return validated
+
+    random_length = secrets.choice(RANDOM_PREFIX_LENGTH_RANGE)
+    return f"lf_{uuid4().hex[:random_length]}_"
 
 
 def require_non_empty_string(
@@ -104,12 +135,9 @@ def build_agent_payload(
         "description": str(data.description or "").strip() or f"Langflow deployment {data.name}",
         "tools": tool_ids,
         "style": "default",
-        # TODO: do not hard code this?
-        # but then we need to make a api request
-        # to retrieve the available llms in wxo,
-        # which isn't great either.
-        # sadly, the llm field is required by the wxo api.
-        "llm": "groq/openai/gpt-oss-120b",
+        # TODO: make configurable; the llm field is required by the wxo api
+        # but retrieving available llms requires an extra api request.
+        "llm": DEFAULT_WXO_AGENT_LLM,
     }
 
 

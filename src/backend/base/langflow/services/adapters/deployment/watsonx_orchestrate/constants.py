@@ -13,11 +13,13 @@ CREATE_MAX_RETRIES = 3
 ROLLBACK_MAX_RETRIES = 5
 RETRY_INITIAL_DELAY_SECONDS = 0.5
 RANDOM_PREFIX_LENGTH_RANGE = range(6, 11)
+PROVIDER_SPEC_RESOURCE_NAME_PREFIX_KEY = "global_resource_name_prefix"
+DEFAULT_WXO_AGENT_LLM = "groq/openai/gpt-oss-120b"
 
 _WXO_SANITIZE_RE = re.compile(r"[^a-zA-Z0-9_]")
 _WXO_TRANSLATE = str.maketrans({" ": "_", "-": "_"})
 
-ERROR_PREFIX = "An error occured while"
+ERROR_PREFIX = "An error occurred while"
 ERROR_SUFFIX_IN = "in Watsonx Orchestrate."
 
 
