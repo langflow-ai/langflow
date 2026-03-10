@@ -60,6 +60,10 @@ EMBEDDING_PROVIDER_CLASS_MAPPING: dict[str, str] = {
     "IBM watsonx.ai": "WatsonxEmbeddings",  # Alias used by MODEL_PROVIDERS_DICT
 }
 
+# NOTE: These module-level caches are never invalidated.  This is intentional
+# for production, but tests that need to swap model/embedding classes should
+# patch `get_model_class` / `get_embedding_class` at the *call site* rather
+# than mutating these dicts, to avoid cross-test pollution.
 _model_class_cache: dict[str, type] = {}
 _embedding_class_cache: dict[str, type] = {}
 
@@ -1350,7 +1354,7 @@ def get_llm(
         kwargs["stream_usage"] = True
 
     # Add provider-specific parameters
-    if provider == "IBM WatsonX":
+    if provider in {"IBM WatsonX", "IBM watsonx.ai"}:
         # For watsonx, url and project_id are required parameters
         # Try database first, then component values, then environment variables
         url_param = metadata.get("url_param", "url")
@@ -1407,7 +1411,7 @@ def get_llm(
         return model_class(**kwargs)
     except Exception as e:
         # If instantiation fails and it's WatsonX, provide additional context
-        if provider == "IBM WatsonX" and ("url" in str(e).lower() or "project" in str(e).lower()):
+        if provider in {"IBM WatsonX", "IBM watsonx.ai"} and ("url" in str(e).lower() or "project" in str(e).lower()):
             msg = (
                 f"Failed to initialize IBM WatsonX model: {e}\n\n"
                 "IBM WatsonX requires additional configuration parameters (API endpoint URL and project ID). "
@@ -1714,8 +1718,10 @@ def update_model_options_in_build_config(
             component.cache[cache_key] = {"options": options}
             component.cache[cache_timestamp_key] = time.time()
         except KeyError as exc:
-            # If we can't get user-specific options, fall back to empty
-            component.log("Failed to fetch user-specific model options: %s", exc)
+            # If we can't get user-specific options, fall back to empty.
+            # Logged as warning (not debug) so silent UI failures are visible
+            # in server logs for easier troubleshooting.
+            logger.warning("Failed to fetch user-specific model options: %s", exc)
             component.cache[cache_key] = {"options": []}
             component.cache[cache_timestamp_key] = time.time()
 

@@ -33,7 +33,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         """Dynamically update build config with user-filtered model options."""
         return handle_model_input_update(
             self,
-            build_config,
+            dict(build_config),
             field_value,
             field_name,
             cache_key_prefix="embedding_model_options",
