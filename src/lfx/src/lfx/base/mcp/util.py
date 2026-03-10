@@ -530,7 +530,7 @@ class MCPSessionManager:
 
     async def _cleanup_idle_sessions(self):
         """Clean up sessions that have been idle for too long."""
-        current_time = asyncio.get_event_loop().time()
+        current_time = asyncio.get_running_loop().time()
         servers_to_remove = []
 
         for server_key, server_data in self.sessions_by_server.items():
@@ -629,7 +629,7 @@ class MCPSessionManager:
 
         # Ensure server entry exists
         if server_key not in self.sessions_by_server:
-            self.sessions_by_server[server_key] = {"sessions": {}, "last_cleanup": asyncio.get_event_loop().time()}
+            self.sessions_by_server[server_key] = {"sessions": {}, "last_cleanup": asyncio.get_running_loop().time()}
 
         server_data = self.sessions_by_server[server_key]
         sessions = server_data["sessions"]
@@ -642,7 +642,7 @@ class MCPSessionManager:
             # Check if session is still alive
             if not task.done():
                 # Update last used time
-                session_info["last_used"] = asyncio.get_event_loop().time()
+                session_info["last_used"] = asyncio.get_running_loop().time()
 
                 # Quick health check
                 if await self._validate_session_connectivity(session):
@@ -693,7 +693,7 @@ class MCPSessionManager:
             "session": session,
             "task": task,
             "type": actual_transport,
-            "last_used": asyncio.get_event_loop().time(),
+            "last_used": asyncio.get_running_loop().time(),
         }
 
         # register mapping & initial ref-count for the new session
