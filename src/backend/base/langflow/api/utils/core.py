@@ -101,11 +101,7 @@ def replace_api_key_with_env_var_name(flow: dict) -> dict:
         if not isinstance(template, dict):
             continue
         for value in template.values():
-            if (
-                isinstance(value, dict)
-                and value.get("name") == "api_key"
-                and value.get("password")
-            ):
+            if isinstance(value, dict) and value.get("name") == "api_key" and value.get("password"):
                 current = value.get("value")
                 if _looks_like_variable_name(current):
                     break  # keep user's custom variable name

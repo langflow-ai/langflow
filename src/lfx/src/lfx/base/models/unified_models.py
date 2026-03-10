@@ -427,12 +427,14 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     Returns:
         The API key if found, None otherwise
     """
+
     # Resolve variable name (canonical or custom e.g. MY_OPENAI_API_KEY) from env or global vars
     def _resolve_var_name(var_name: str) -> str | None:
         env_value = os.environ.get(var_name)
         if env_value and env_value.strip():
             return env_value.strip()
         if user_id and not (isinstance(user_id, str) and user_id == "None"):
+
             async def _get_by_var_name():
                 async with session_scope() as session:
                     variable_service = get_variable_service()
