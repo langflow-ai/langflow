@@ -437,16 +437,36 @@ export function isValidConnection(
   return false;
 }
 
-export function removeApiKeys(flow: FlowType): FlowType {
-  const cleanFLow = cloneDeep(flow);
-  cleanFLow.data!.nodes.forEach((node) => {
-    if (node.type !== "genericNode") return;
-    for (const key in node.data.node!.template) {
-      const field = node.data.node!.template[key];
+function looksLikeVariableName(value: unknown): boolean {
+  if (typeof value !== "string" || !value.trim()) return false;
+  return /^[A-Z][A-Z0-9_]*$/i.test(value.trim());
+}
 
-      // Remove password fields
+export function replaceApiKeyWithEnvVarName(flow: FlowType): FlowType {
+  const out = cloneDeep(flow);
+  out.data!.nodes.forEach((node) => {
+    if (node.type !== "genericNode") return;
+    const template = node.data.node!.template;
+    if (!template.api_key) return;
+    const current = template.api_key.value;
+    if (looksLikeVariableName(current)) return;
+    template.api_key.value = "";
+  });
+  return out;
+}
+
+export function removeApiKeys(flow: FlowType): FlowType {
+  const cleanFlow = replaceApiKeyWithEnvVarName(cloneDeep(flow));
+  cleanFlow.data!.nodes.forEach((node) => {
+    if (node.type !== "genericNode") return;
+    const template = node.data.node!.template;
+    for (const key in template) {
+      const field = template[key];
+
       if (field.password) {
-        field.value = "";
+        if (key !== "api_key") {
+          field.value = "";
+        }
       }
 
       // Handle MCP server configurations
@@ -455,12 +475,11 @@ export function removeApiKeys(flow: FlowType): FlowType {
         field.value &&
         typeof field.value === "object"
       ) {
-        // Type assertion is safe here as we've verified it's an object with runtime checks
         cleanMcpConfig(field.value as MCPServerValue);
       }
     }
   });
-  return cleanFLow;
+  return cleanFlow;
 }
 
 export function updateTemplate(
