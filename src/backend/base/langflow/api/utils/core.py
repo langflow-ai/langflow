@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import uuid
 from ast import literal_eval
 from datetime import timedelta
@@ -69,8 +70,54 @@ def has_api_terms(word: str):
     return "api" in word and ("key" in word or ("token" in word and "tokens" not in word))
 
 
+def _get_provider_from_template(template: dict) -> str | None:
+    """Return provider name from template's model field, if any."""
+    model_field = template.get("model")
+    if not isinstance(model_field, dict):
+        return None
+    raw = model_field.get("value")
+    if isinstance(raw, list) and len(raw) > 0 and isinstance(raw[0], dict):
+        return raw[0].get("provider")
+    return None
+
+
+def _looks_like_variable_name(value: Any) -> bool:
+    """Return True if value looks like a variable name."""
+    if not value or not isinstance(value, str) or not value.strip():
+        return False
+    return bool(re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", value.strip()))
+
+
+def replace_api_key_with_env_var_name(flow: dict) -> dict:
+    """Normalize api_key to a variable name when possible, never export raw keys."""
+    for node in flow.get("data", {}).get("nodes", []):
+        node_data = node.get("data")
+        if not isinstance(node_data, dict):
+            continue
+        node_inner = node_data.get("node")
+        if not isinstance(node_inner, dict):
+            continue
+        template = node_inner.get("template")
+        if not isinstance(template, dict):
+            continue
+        for value in template.values():
+            if (
+                isinstance(value, dict)
+                and value.get("name") == "api_key"
+                and value.get("password")
+            ):
+                current = value.get("value")
+                if _looks_like_variable_name(current):
+                    break  # keep user's custom variable name
+                # raw secret or other string: clear it
+                value["value"] = None
+                break
+    return flow
+
+
 def remove_api_keys(flow: dict):
-    """Remove api keys from flow data."""
+    """Clear secret values from flow data."""
+    flow = replace_api_key_with_env_var_name(flow)
     for node in flow.get("data", {}).get("nodes", []):
         node_data = node.get("data")
         if not isinstance(node_data, dict):
@@ -83,7 +130,8 @@ def remove_api_keys(flow: dict):
             continue
         for value in template.values():
             if isinstance(value, dict) and "name" in value and has_api_terms(value["name"]) and value.get("password"):
-                value["value"] = None
+                if value.get("name") != "api_key":
+                    value["value"] = None
 
     return flow
 

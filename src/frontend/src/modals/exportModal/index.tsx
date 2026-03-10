@@ -13,7 +13,11 @@ import {
 } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
-import { downloadFlow, removeApiKeys } from "../../utils/reactflowUtils";
+import {
+  downloadFlow,
+  removeApiKeys,
+  replaceApiKeyWithEnvVarName,
+} from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
 
 const ExportModal = forwardRef(
@@ -60,7 +64,7 @@ const ExportModal = forwardRef(
           try {
             // TODO: Full-version export (embedding all versions) is planned as a follow-up feature.
             // For now, export only the current working version of the flow.
-            const flowToExport: FlowType = {
+            let flowToExport: FlowType = {
               id: currentFlow!.id,
               data: currentFlow!.data!,
               description,
@@ -71,6 +75,9 @@ const ExportModal = forwardRef(
               tags: currentFlow!.tags,
               locked,
             };
+
+            // Never export raw api_key; always use env var name so import resolves from env
+            flowToExport = replaceApiKeyWithEnvVarName(flowToExport);
 
             if (checked) {
               await downloadFlow(flowToExport, name!, description);

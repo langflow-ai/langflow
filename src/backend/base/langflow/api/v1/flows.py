@@ -21,7 +21,14 @@ from lfx.log import logger
 from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
+from langflow.api.utils import (
+    CurrentActiveUser,
+    DbSession,
+    cascade_delete_flow,
+    remove_api_keys,
+    replace_api_key_with_env_var_name,
+    validate_is_component,
+)
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
@@ -484,6 +491,8 @@ async def update_flow(
         if flow.endpoint_name is None or flow.endpoint_name == "":
             update_data["endpoint_name"] = None
 
+        # Never persist raw api_key; use env var name so import resolves from env
+        update_data = replace_api_key_with_env_var_name(update_data)
         if settings_service.settings.remove_api_keys:
             update_data = remove_api_keys(update_data)
 
@@ -676,6 +685,8 @@ async def _update_existing_flow(
     if "folder_id" not in update_data or update_data.get("folder_id") is None:
         update_data.pop("folder_id", None)
 
+    # Never persist raw api_key; use env var name so import resolves from env
+    update_data = replace_api_key_with_env_var_name(update_data)
     if settings_service.settings.remove_api_keys:
         update_data = remove_api_keys(update_data)
 

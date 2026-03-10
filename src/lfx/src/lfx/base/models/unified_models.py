@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import os
+import re
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -414,17 +415,56 @@ def get_unified_models_detailed(
 def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: str | None = None) -> str | None:
     """Get API key from self.api_key or global variables.
 
+    When api_key is set to an environment variable name (e.g. ANTHROPIC_API_KEY),
+    that name is resolved from os.environ or global variables so imported flows
+    can reference credentials without storing the raw key.
+
     Args:
         user_id: The user ID to look up global variables for
         provider: The provider name (e.g., "OpenAI", "Anthropic")
-        api_key: An optional API key provided directly
+        api_key: An optional API key provided directly, or an env var name to resolve
 
     Returns:
         The API key if found, None otherwise
     """
-    # First check if user provided an API key directly
-    if api_key:
-        return api_key
+    # Resolve variable name (canonical or custom e.g. MY_OPENAI_API_KEY) from env or global vars
+    def _resolve_var_name(var_name: str) -> str | None:
+        env_value = os.environ.get(var_name)
+        if env_value and env_value.strip():
+            return env_value.strip()
+        if user_id and not (isinstance(user_id, str) and user_id == "None"):
+            async def _get_by_var_name():
+                async with session_scope() as session:
+                    variable_service = get_variable_service()
+                    if variable_service is None:
+                        return None
+                    try:
+                        return await variable_service.get_variable(
+                            user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+                            name=var_name,
+                            field="",
+                            session=session,
+                        )
+                    except ValueError:
+                        return None
+
+            value = run_until_complete(_get_by_var_name())
+            if value and str(value).strip():
+                return str(value).strip()
+        return None
+
+    if api_key and api_key.strip():
+        var_name = api_key.strip()
+        # Names that look like env/global variables (e.g. MY_OPENAI_API_KEY): resolve from env/DB
+        if var_name.replace("_", "").isalnum() and var_name[0].isalpha():
+            resolved = _resolve_var_name(var_name)
+            if resolved:
+                return resolved
+            # Unresolved variable name: don't use as literal key
+            if re.match(r"^[A-Z][A-Z0-9_]*$", var_name):
+                return None
+        # Literal API key (e.g. sk-...)
+        return var_name
 
     # If no user_id or user_id is the string "None", we can't look up global variables
     if user_id is None or (isinstance(user_id, str) and user_id == "None"):
