@@ -1284,8 +1284,9 @@ class TestSanitizeJson:
             sender_name="Bot",
             session_id="session",
         )
-        # Set properties externally as a raw dict (simulates corrupt/partial data)
-        message.properties = raw_props  # type: ignore[assignment]
+        # Set properties via __dict__ to bypass Pydantic validation (which would drop _nan_test)
+        # This simulates corrupt/partial data that the sanitizer must handle.
+        message.__dict__["properties"] = raw_props
 
         result = MessageTable.from_message(message, flow_id=uuid4())
 
