@@ -190,12 +190,16 @@ def requirements_command_wrapper(
         typer.echo(f"Error: Could not read flow JSON: {e}", err=True)
         raise typer.Exit(1) from e
 
-    content = generate_requirements_txt(
-        flow,
-        lfx_package=lfx_package,
-        include_lfx=not no_lfx,
-        pin_versions=not no_pin,
-    )
+    try:
+        content = generate_requirements_txt(
+            flow,
+            lfx_package=lfx_package,
+            include_lfx=not no_lfx,
+            pin_versions=not no_pin,
+        )
+    except ValueError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1) from e
 
     if output:
         try:
