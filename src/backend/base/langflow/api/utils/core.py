@@ -29,6 +29,8 @@ if TYPE_CHECKING:
     from langflow.services.chat.service import ChatService
     from langflow.services.store.schema import StoreComponentCreate
 
+_VARIABLE_NAME_PATTERN = re.compile(r"[A-Za-z][A-Za-z0-9_]*")
+
 
 API_WORDS = ["api", "key", "token"]
 
@@ -82,14 +84,18 @@ def _get_provider_from_template(template: dict) -> str | None:
 
 def _looks_like_variable_name(value: Any) -> bool:
     """Return True if value looks like a variable name."""
-    if not value or not isinstance(value, str) or not value.strip():
+    if not isinstance(value, str):
         return False
-    return bool(re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", value.strip()))
+    stripped = value.strip()
+    if not stripped:
+        return False
+    return _VARIABLE_NAME_PATTERN.fullmatch(stripped) is not None
 
 
 def replace_api_key_with_env_var_name(flow: dict) -> dict:
     """Normalize api_key to a variable name when possible, never export raw keys."""
-    for node in flow.get("data", {}).get("nodes", []):
+    nodes = flow.get("data", {}).get("nodes", [])
+    for node in nodes:
         node_data = node.get("data")
         if not isinstance(node_data, dict):
             continue
@@ -100,11 +106,7 @@ def replace_api_key_with_env_var_name(flow: dict) -> dict:
         if not isinstance(template, dict):
             continue
         for value in template.values():
-            if (
-                isinstance(value, dict)
-                and value.get("name") == "api_key"
-                and value.get("password")
-            ):
+            if isinstance(value, dict) and value.get("name") == "api_key" and value.get("password"):
                 current = value.get("value")
                 if _looks_like_variable_name(current):
                     break  # keep user's custom variable name
