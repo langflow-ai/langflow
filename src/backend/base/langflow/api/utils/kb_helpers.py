@@ -249,6 +249,8 @@ class KBAnalysisHelper:
                 client = KBStorageHelper.get_fresh_chroma_client(kb_path)
                 chroma = Chroma(client=client, collection_name=kb_path.name)
 
+            if chroma is None:
+                return
             collection = chroma._collection  # noqa: SLF001
             metadata["chunks"] = collection.count()
 
