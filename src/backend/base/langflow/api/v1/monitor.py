@@ -175,14 +175,35 @@ async def update_session_id(
 async def delete_messages_session(
     session_id: str,
     session: DbSession,
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ):
+    """Delete messages for a single session.
+    
+    Only deletes messages from sessions belonging to flows owned by the current user.
+    """
     try:
+        # First, get message IDs that belong to the user's flows for this session
+        stmt = select(MessageTable.id)
+        stmt = stmt.join(Flow, MessageTable.flow_id == Flow.id)
+        stmt = stmt.where(Flow.user_id == current_user.id)
+        stmt = stmt.where(col(MessageTable.session_id) == session_id)
+        
+        result = await session.exec(stmt)
+        message_ids = list(result)
+        
+        if not message_ids:
+            # No messages found for this user's flows with this session_id
+            return {"message": "Messages deleted successfully"}
+        
+        # Delete only the messages that belong to the user
         await session.exec(
             delete(MessageTable)
-            .where(col(MessageTable.session_id) == session_id)
+            .where(col(MessageTable.id).in_(message_ids))
             .execution_options(synchronize_session="fetch")
         )
+        await session.commit()
     except Exception as e:
+        await session.rollback()
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return {"message": "Messages deleted successfully"}
@@ -192,12 +213,16 @@ async def delete_messages_session(
 async def delete_messages_sessions(
     session_ids: list[str],
     session: DbSession,
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     """Bulk delete messages for multiple sessions at once.
+    
+    Only deletes messages from sessions belonging to flows owned by the current user.
 
     Args:
         session_ids: List of session IDs to delete (max 500)
         session: Database session
+        current_user: Current authenticated user
 
     Returns:
         Confirmation message with count of deleted sessions
@@ -216,9 +241,23 @@ async def delete_messages_sessions(
         return {"message": "No sessions to delete", "deleted_count": 0}
 
     try:
+        # First, get message IDs that belong to the user's flows for these sessions
+        stmt = select(MessageTable.id)
+        stmt = stmt.join(Flow, MessageTable.flow_id == Flow.id)
+        stmt = stmt.where(Flow.user_id == current_user.id)
+        stmt = stmt.where(col(MessageTable.session_id).in_(session_ids))
+        
+        result = await session.exec(stmt)
+        message_ids = list(result)
+        
+        if not message_ids:
+            # No messages found for this user's flows with these session_ids
+            return {"message": "No sessions to delete", "deleted_count": 0}
+        
+        # Delete only the messages that belong to the user
         await session.exec(
             delete(MessageTable)
-            .where(col(MessageTable.session_id).in_(session_ids))
+            .where(col(MessageTable.id).in_(message_ids))
             .execution_options(synchronize_session="fetch")
         )
         await session.commit()
