@@ -67,7 +67,7 @@ const ExportModal = forwardRef(
               endpoint_name: currentFlow!.endpoint_name,
               is_component: false,
               tags: currentFlow!.tags,
-              locked,
+              locked: currentFlow!.locked,
             };
 
             if (checked) {

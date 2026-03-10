@@ -87,6 +87,7 @@ export const useGetFolderQuery: useQueryFunctionType<
     }
 
     const url = addQueryParams(`${getURL("PROJECTS")}/${params.id}`, {
+      id: params.id,
       page: params.page,
       size: params.size,
       is_component: params.is_component,
