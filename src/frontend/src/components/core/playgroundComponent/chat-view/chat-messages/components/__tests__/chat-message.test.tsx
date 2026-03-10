@@ -231,7 +231,7 @@ describe("ThinkingMessage Component", () => {
     render(<ThinkingMessage isThinking={false} duration={3000} />);
 
     const icon = screen.getByTestId("icon-Check");
-    expect(icon.className).toContain("text-emerald-400");
+    expect(icon.className).toContain("text-accent-emerald-foreground");
   });
 
   it("formats time in minutes when duration exceeds 60 seconds", () => {
