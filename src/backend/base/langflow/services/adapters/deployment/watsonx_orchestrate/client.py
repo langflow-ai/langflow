@@ -4,9 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from ibm_watsonx_orchestrate_clients.agents.agent_client import AgentClient
-from ibm_watsonx_orchestrate_clients.connections.connections_client import ConnectionsClient
-from ibm_watsonx_orchestrate_clients.tools.tool_client import ToolClient
 from lfx.services.adapters.deployment.exceptions import AuthSchemeError, CredentialResolutionError
 from lfx.services.adapters.deployment.schema import EnvVarSource, EnvVarValueSpec, IdLike
 
@@ -70,13 +67,11 @@ async def resolve_wxo_client_credentials(
             msg = "Watsonx Orchestrate backend URL and API key must be configured."
             raise CredentialResolutionError(message=msg)
 
-    # please ensure that when raising or re-raising an exception,
-    # that the message does not leak sensitive information
-    except CredentialResolutionError:  # custom exception managed by us, so we re-raise
+    except CredentialResolutionError:
         raise
-    except Exception:  # noqa: BLE001
+    except (OSError, ValueError, TypeError, LookupError) as exc:
         msg = "An unexpected error occurred while resolving Watsonx Orchestrate client credentials."
-        raise CredentialResolutionError(message=msg) from None
+        raise CredentialResolutionError(message=msg) from exc
 
     return WxOCredentials(instance_url=instance_url, api_key=api_key)
 
@@ -97,6 +92,10 @@ async def get_provider_clients(
         db=db,
         provider_id=provider_id,
     )
+
+    from ibm_watsonx_orchestrate_clients.agents.agent_client import AgentClient
+    from ibm_watsonx_orchestrate_clients.connections.connections_client import ConnectionsClient
+    from ibm_watsonx_orchestrate_clients.tools.tool_client import ToolClient
 
     instance_url: str = credentials.instance_url.rstrip("/")
 
@@ -161,7 +160,7 @@ async def resolve_variable_value(
     variable_service = get_variable_service()
     if variable_service is None:
         msg = "Variable service is not available."
-        raise ValueError(msg)
+        raise CredentialResolutionError(message=msg)
     try:
         value = await variable_service.get_variable(
             user_id=user_id,
@@ -171,9 +170,12 @@ async def resolve_variable_value(
         )
         if value is not None:
             return value
-    except Exception:
+    except CredentialResolutionError:
+        raise
+    except (OSError, ValueError, TypeError, LookupError) as exc:
         if not optional:
-            raise
+            msg = "Failed to resolve a credential variable for the watsonX Orchestrate deployment provider."
+            raise CredentialResolutionError(message=msg) from exc
     if optional:
         return default_value or ""
     msg = (

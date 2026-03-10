@@ -14,6 +14,7 @@ from lfx.services.adapters.deployment.exceptions import (
     DeploymentConflictError,
     DeploymentError,
     DeploymentNotFoundError,
+    DeploymentServiceError,
     DeploymentSupportError,
     InvalidContentError,
     InvalidDeploymentOperationError,
@@ -49,7 +50,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
     ErrorPrefix,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import (
-    assert_create_resources_available,
     process_config,
     resolve_create_app_id,
     validate_config_create_input,
@@ -95,9 +95,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     """Deployment adapter for Watsonx Orchestrate.
 
     Mapping used by this adapter:
-    - deployment -> WXO agent bound to exactly one connection app_id and many tools
-    - snapshot -> WXO tool (langflow binding) and "immutable" once created
-    - config -> WXO connection configuration (+ credentials), keyed by app_id
+    - deployment -> wxO agent bound to exactly one connection app_id and many tools
+    - snapshot -> wxO tool (langflow binding) and "immutable" once created
+    - config -> wxO connection configuration (+ credentials), keyed by app_id
     """
 
     name = "deployment_service"
@@ -140,30 +140,14 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         #       then attempt to delete all previously created
         #       resources with retries.
         # --
+        # The caller must supply a resource name prefix via
+        # provider_spec["resource_name_prefix"].
+        # Every created resource (connection, tool, agent) is
+        # prefixed with this value, which prevents name collisions
+        # and supports idempotent retries (re-use the same prefix
+        # across attempts). We recommend using a random prefix.
         # --
-        # A common failure is when the name of a resource already exists.
-        # This is true for connections, tools, and agents.
-        #     - We thus use a best-effort mitigation strategy:
-        #       Check if the names of the
-        #       connection, tools, and agent already exist.
-        #       If any of the names exist, then we
-        #       fail early with a DeploymentConflictError,
-        #       and avoid expensive rollback.
-        #       However, this strategy introduces a
-        #       read-before-write race condition,
-        #       which we work around by prefixing
-        #       the name of each created resource
-        #       with a random string.
-        #       The caller may supply a
-        #       prefix via provider_spec["global_resource_name_prefix"]
-        #       (useful for idempotent retries).
-        #       If set, we recommend using a random prefix
-        #       and re-using the same value for retries.
-        #       When omitted, a random prefix is generated once
-        #       and re-used across retries.
-        # --
-        # --
-        logger.info("Creating WXO deployment for user_id=%s", user_id)
+        logger.info("Creating wxO deployment for user_id=%s", user_id)
         agent_create_response: AgentUpsertResponse | None = None
         created_tool_ids: list[str] = []
         created_app_id: str | None = None
@@ -181,27 +165,35 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 )
                 raise DeploymentSupportError(message=msg)
 
+            caller_prefix = (deployment_spec.provider_spec or {}).get(PROVIDER_SPEC_RESOURCE_NAME_PREFIX_KEY)
+            if not caller_prefix:
+                msg = (
+                    f"{ErrorPrefix.CREATE.value} provider_spec must include '{PROVIDER_SPEC_RESOURCE_NAME_PREFIX_KEY}'."
+                )
+                raise InvalidContentError(message=msg)
+
             clients = await self._get_provider_clients(user_id=user_id, db=db)
 
             resource_prefix = resolve_resource_name_prefix(
-                caller_prefix=(deployment_spec.provider_spec or {}).get(PROVIDER_SPEC_RESOURCE_NAME_PREFIX_KEY),
+                caller_prefix=caller_prefix,
             )
             prefixed_deployment_name = f"{resource_prefix}{normalized_deployment_name}"
+
+            tool_names = build_snapshot_tool_names(
+                snapshots=payload.snapshot,
+                tool_name_prefix=resource_prefix,
+            )
+            if len(tool_names) != len(set(tool_names)):
+                msg = (
+                    f"{ErrorPrefix.CREATE.value} "
+                    "Duplicate snapshot names detected in the request. "
+                    "Each snapshot must have a unique name."
+                )
+                raise DeploymentConflictError(message=msg)
 
             prefixed_app_id = resolve_create_app_id(
                 prefixed_deployment_name=prefixed_deployment_name,
                 config=payload.config,
-            )
-
-            planned_tool_names = build_snapshot_tool_names(
-                snapshots=payload.snapshot,
-                tool_name_prefix=resource_prefix,
-            )
-            await assert_create_resources_available(
-                clients=clients,
-                deployment_name=prefixed_deployment_name,
-                app_id=prefixed_app_id,
-                snapshot_tool_names=planned_tool_names,
             )
 
             try:
@@ -249,7 +241,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 )
             except Exception:
                 logger.warning(
-                    "WXO create failed; rolling back agent_id=%s, tool_ids=%s, app_id=%s",
+                    "wxO create failed; rolling back agent_id=%s, tool_ids=%s, app_id=%s",
                     agent_create_response.id if agent_create_response else None,
                     created_tool_ids,
                     created_app_id,
@@ -269,7 +261,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             else:
                 status_code = exc.status_code
                 error_detail = extract_error_detail(str(exc.detail))
-            if status_code == status.HTTP_409_CONFLICT:
+            is_conflict = status_code == status.HTTP_409_CONFLICT or "already exists" in error_detail.lower()
+            if is_conflict:
                 msg = (
                     f"{ErrorPrefix.CREATE.value} "
                     "One or more resources already exist. "
@@ -291,17 +284,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 raise InvalidContentError(message=msg) from None
             msg = f"{ErrorPrefix.CREATE.value} error details: {error_detail}"
             raise DeploymentError(message=msg, error_code="deployment_error") from None
-        except (
-            DeploymentConflictError,
-            DeploymentError,
-            DeploymentSupportError,
-            InvalidContentError,
-            InvalidDeploymentOperationError,
-            InvalidDeploymentTypeError,
-        ):
+        except DeploymentServiceError:
             raise
         except Exception:
-            logger.exception("Unexpected error during WXO deployment creation")
+            logger.exception("Unexpected error during wxO deployment creation")
             msg = f"{ErrorPrefix.CREATE.value} Please check server logs for details."
             raise DeploymentError(message=msg, error_code="deployment_error") from None
 
@@ -359,7 +345,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 query_params["ids"] = [str(_id) for _id in params.deployment_ids]
 
             # if different deployment types
-            # are distinct resources in wxo
+            # are distinct resources in wxO
             # then we should probably raise an error if
             # the ids query parameter is not empty or null
             # this is not a problem today, but might be in the future
@@ -379,6 +365,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 )
                 for agent in raw_agents
             ]
+        except DeploymentServiceError:
+            raise
         except (ClientAPIException, HTTPException) as exc:
             if isinstance(exc, ClientAPIException):
                 error_detail = extract_error_detail(getattr(exc.response, "text", ""))
@@ -387,7 +375,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             msg = f"{ErrorPrefix.LIST.value} error details: {error_detail}"
             raise DeploymentError(message=msg, error_code="deployment_error") from None
         except Exception:
-            logger.exception("Unexpected error while listing WXO deployments")
+            logger.exception("Unexpected error while listing wxO deployments")
             msg = f"{ErrorPrefix.LIST.value} Please check server logs for details."
             raise DeploymentError(message=msg, error_code="deployment_error") from None
 
@@ -505,7 +493,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         db: Any,
     ) -> DeploymentDeleteResult:
         """Delete only the deployment agent (keep tools/configs reusable)."""
-        logger.info("Deleting WXO deployment deployment_id=%s", deployment_id)
+        logger.info("Deleting wxO deployment deployment_id=%s", deployment_id)
         agent_id = _normalize_and_validate_id(str(deployment_id), field_name="deployment_id")
         clients = await self._get_provider_clients(user_id=user_id, db=db)
         try:
@@ -515,7 +503,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             if status_code == status.HTTP_404_NOT_FOUND:
                 msg = f"{ErrorPrefix.DELETE.value} deployment id '{agent_id}' not found."
                 raise DeploymentNotFoundError(msg) from None
-        except Exception:  # noqa: BLE001
+            msg = f"{ErrorPrefix.DELETE.value} error details: {extract_error_detail(e.response.text)}"
+            raise DeploymentError(msg, error_code="deployment_error") from None
+        except DeploymentServiceError:
+            raise
+        except Exception:
+            logger.exception("Unexpected error while deleting wxO deployment %s", agent_id)
             msg = f"An unexpected error occurred while deleting deployment '{agent_id}'."
             raise DeploymentError(msg, error_code="deployment_error") from None
 
@@ -528,7 +521,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         deployment_id: IdLike,
         db: Any,
     ) -> DeploymentStatusResult:
-        """Get deployment health directly from WXO release status endpoint."""
+        """Get deployment health directly from wxO release status endpoint."""
         agent_id = _normalize_and_validate_id(str(deployment_id), field_name="deployment_id")
 
         clients = await self._get_provider_clients(user_id=user_id, db=db)
@@ -542,6 +535,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     "status": "connected",
                     "environment": derive_agent_environment(agent),
                 }
+        except DeploymentServiceError:
+            raise
         except (ClientAPIException, HTTPException) as exc:
             if isinstance(exc, ClientAPIException):
                 error_detail = extract_error_detail(getattr(exc.response, "text", ""))
@@ -550,7 +545,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             msg = f"{ErrorPrefix.HEALTH.value} error details: {error_detail}"
             raise DeploymentError(message=msg, error_code="deployment_error") from None
         except Exception:
-            logger.exception("Unexpected error fetching WXO deployment status")
+            logger.exception("Unexpected error fetching wxO deployment status")
             msg = f"{ErrorPrefix.HEALTH.value} Please check server logs for details."
             raise DeploymentError(message=msg, error_code="deployment_error") from None
 
@@ -583,9 +578,17 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 provider_data=provider_data,
                 deployment_id=agent_id,
             )
-        except (DeploymentNotFoundError, InvalidContentError):
+        except DeploymentServiceError:
             raise
+        except (ClientAPIException, HTTPException) as exc:
+            if isinstance(exc, ClientAPIException):
+                error_detail = extract_error_detail(getattr(exc.response, "text", ""))
+            else:
+                error_detail = extract_error_detail(str(exc.detail))
+            msg = f"{ErrorPrefix.CREATE_EXECUTION.value} error details: {error_detail}"
+            raise DeploymentError(message=msg, error_code="deployment_error") from None
         except Exception as exc:
+            logger.exception("Unexpected error creating wxO deployment execution")
             msg = "An unexpected error occurred while creating a deployment execution in Watsonx Orchestrate."
             raise DeploymentError(message=msg, error_code="deployment_error") from exc
 

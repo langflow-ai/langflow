@@ -51,7 +51,6 @@ if _missing_optional_modules:
 
 tools_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.core.tools")
 service_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.service")
-utils_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.utils")
 WatsonxOrchestrateDeploymentService = importlib.import_module(
     "langflow.services.adapters.deployment.watsonx_orchestrate"
 ).WatsonxOrchestrateDeploymentService
@@ -268,16 +267,7 @@ async def test_create_rejects_config_reference_before_name_precheck(monkeypatch)
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
         return fake_clients
 
-    def should_not_be_called(**kwargs):  # noqa: ARG001
-        msg = "_assert_create_resources_available should not be called"
-        raise AssertionError(msg)
-
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-    monkeypatch.setattr(
-        service_module,
-        "assert_create_resources_available",
-        should_not_be_called,
-    )
 
     with pytest.raises(InvalidDeploymentOperationError, match="Config reference binding is not supported"):
         await service.create(
@@ -290,6 +280,24 @@ async def test_create_rejects_config_reference_before_name_precheck(monkeypatch)
                     type=DeploymentType.AGENT,
                 ),
                 config=ConfigItem(reference_id="existing-config"),
+            ),
+        )
+
+
+@pytest.mark.anyio
+async def test_create_rejects_missing_resource_name_prefix():
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+
+    with pytest.raises(InvalidContentError, match="resource_name_prefix"):
+        await service.create(
+            user_id="user-1",
+            db=object(),
+            payload=DeploymentCreate(
+                spec=BaseDeploymentData(
+                    name="my deployment",
+                    description="desc",
+                    type=DeploymentType.AGENT,
+                ),
             ),
         )
 
@@ -419,64 +427,6 @@ async def test_update_deployment_denies_config_unbind(monkeypatch):
             deployment_id="dep-1",
             payload=update_data,
             db=object(),
-        )
-
-
-@pytest.mark.anyio
-async def test_assert_create_resources_available_rejects_existing_agent():
-    fake_clients = SimpleNamespace(
-        agent=FakeAgentClient(
-            {"id": "dep-1", "tools": []},
-            listed_agents=[{"id": "dep-1", "name": "my_deployment"}],
-        ),
-        connections=FakeConnectionsClient(),
-        tool=FakeToolClient([]),
-    )
-
-    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import assert_create_resources_available
-
-    with pytest.raises(DeploymentConflictError, match="Deployment 'my_deployment' already exists"):
-        await assert_create_resources_available(
-            clients=fake_clients,
-            deployment_name="my_deployment",
-            app_id="my_deployment_app_id",
-        )
-
-
-@pytest.mark.anyio
-async def test_assert_create_resources_available_rejects_existing_config():
-    fake_clients = SimpleNamespace(
-        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
-        connections=FakeConnectionsClient(existing_app_id="my_deployment"),
-        tool=FakeToolClient([]),
-    )
-
-    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import assert_create_resources_available
-
-    with pytest.raises(DeploymentConflictError, match="Deployment config 'my_deployment' already exists"):
-        await assert_create_resources_available(
-            clients=fake_clients,
-            deployment_name="my_deployment",
-            app_id="my_deployment",
-        )
-
-
-@pytest.mark.anyio
-async def test_assert_create_resources_available_rejects_existing_tool_name():
-    fake_clients = SimpleNamespace(
-        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
-        connections=FakeConnectionsClient(),
-        tool=FakeToolClient([], existing_names={"my_tool"}),
-    )
-
-    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import assert_create_resources_available
-
-    with pytest.raises(DeploymentConflictError, match="Deployment snapshot 'my_tool' already exists"):
-        await assert_create_resources_available(
-            clients=fake_clients,
-            deployment_name="my_deployment",
-            app_id="my_deployment_app_id",
-            snapshot_tool_names=["my_tool"],
         )
 
 
@@ -656,17 +606,6 @@ async def test_create_wires_snapshot_ids_to_agent_and_prefixed_names(monkeypatch
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    async def mock_assert_create_resources_available(*, clients, deployment_name, app_id, snapshot_tool_names=None):  # noqa: ARG001
-        captured["deployment_name"] = deployment_name
-        captured["app_id"] = app_id
-        captured["snapshot_tool_names"] = snapshot_tool_names
-
-    monkeypatch.setattr(
-        service_module,
-        "assert_create_resources_available",
-        mock_assert_create_resources_available,
-    )
-
     async def mock_process_config(user_id, db, deployment_name, config, *, client_cache):  # noqa: ARG001
         captured["config_deployment_name"] = deployment_name
         return deployment_name
@@ -696,19 +635,14 @@ async def test_create_wires_snapshot_ids_to_agent_and_prefixed_names(monkeypatch
         "process_raw_flows_with_app_id",
         mock_process_raw_flows_with_app_id,
     )
-    monkeypatch.setattr(
-        utils_module.secrets,
-        "choice",
-        lambda values: values[0],
-    )
-    monkeypatch.setattr(
-        utils_module,
-        "uuid4",
-        lambda: SimpleNamespace(hex="abcdef123456"),
-    )
 
     deployment_payload = DeploymentCreate(
-        spec=BaseDeploymentData(name="my deployment", description="desc", type=DeploymentType.AGENT),
+        spec=BaseDeploymentData(
+            name="my deployment",
+            description="desc",
+            type=DeploymentType.AGENT,
+            provider_spec={"resource_name_prefix": "lf_abcdef_"},
+        ),
         config=ConfigItem(
             raw_payload=DeploymentConfig(
                 name="ignored",
@@ -740,8 +674,6 @@ async def test_create_wires_snapshot_ids_to_agent_and_prefixed_names(monkeypatch
     assert result.config_id == "lf_abcdef_my_deployment_ignored_app_id"
     assert result.snapshot_ids == ["tool-1", "tool-2"]
     assert result.name == "my deployment"
-    assert captured["deployment_name"] == "lf_abcdef_my_deployment"
-    assert captured["app_id"] == "lf_abcdef_my_deployment_ignored_app_id"
     assert captured["config_deployment_name"] == "lf_abcdef_my_deployment_ignored_app_id"
     assert captured["snapshot_app_id"] == "lf_abcdef_my_deployment_ignored_app_id"
     assert len(captured["snapshot_flows"]) == 1
@@ -767,17 +699,6 @@ async def test_create_uses_caller_provided_resource_name_prefix(monkeypatch):
         return fake_clients
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-
-    async def mock_assert_create_resources_available(*, clients, deployment_name, app_id, snapshot_tool_names=None):  # noqa: ARG001
-        captured["deployment_name"] = deployment_name
-        captured["app_id"] = app_id
-        captured["snapshot_tool_names"] = snapshot_tool_names
-
-    monkeypatch.setattr(
-        service_module,
-        "assert_create_resources_available",
-        mock_assert_create_resources_available,
-    )
 
     async def mock_process_config(user_id, db, deployment_name, config, *, client_cache):  # noqa: ARG001
         captured["config_deployment_name"] = deployment_name
@@ -814,7 +735,7 @@ async def test_create_uses_caller_provided_resource_name_prefix(monkeypatch):
             name="my deployment",
             description="desc",
             type=DeploymentType.AGENT,
-            provider_spec={"global_resource_name_prefix": "idempotent_abc_"},
+            provider_spec={"resource_name_prefix": "idempotent_abc_"},
         ),
         config=ConfigItem(
             raw_payload=DeploymentConfig(
@@ -845,8 +766,6 @@ async def test_create_uses_caller_provided_resource_name_prefix(monkeypatch):
 
     assert result.id == "dep-created"
     assert result.name == "my deployment"
-    assert captured["deployment_name"] == "idempotent_abc_my_deployment"
-    assert captured["app_id"] == "idempotent_abc_my_deployment_ignored_app_id"
     assert captured["config_deployment_name"] == "idempotent_abc_my_deployment_ignored_app_id"
     assert captured["snapshot_app_id"] == "idempotent_abc_my_deployment_ignored_app_id"
     assert captured["tool_name_prefix"] == "idempotent_abc_"
@@ -868,15 +787,7 @@ async def test_create_rolls_back_and_preserves_original_error_when_cleanup_fails
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
         return fake_clients
 
-    async def mock_assert_create_resources_available(*, clients, deployment_name, app_id, snapshot_tool_names=None):  # noqa: ARG001
-        return None
-
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-    monkeypatch.setattr(
-        service_module,
-        "assert_create_resources_available",
-        mock_assert_create_resources_available,
-    )
 
     async def mock_process_config(user_id, db, deployment_name, config, *, client_cache):  # noqa: ARG001
         return deployment_name
@@ -910,19 +821,14 @@ async def test_create_rolls_back_and_preserves_original_error_when_cleanup_fails
         mock_process_raw_flows_with_app_id,
     )
     monkeypatch.setattr(fake_connections, "delete", failing_delete)
-    monkeypatch.setattr(
-        utils_module.secrets,
-        "choice",
-        lambda values: values[0],
-    )
-    monkeypatch.setattr(
-        utils_module,
-        "uuid4",
-        lambda: SimpleNamespace(hex="abcdef123456"),
-    )
 
     deployment_payload = DeploymentCreate(
-        spec=BaseDeploymentData(name="my deployment", description="desc", type=DeploymentType.AGENT),
+        spec=BaseDeploymentData(
+            name="my deployment",
+            description="desc",
+            type=DeploymentType.AGENT,
+            provider_spec={"resource_name_prefix": "lf_abcdef_"},
+        ),
         config=ConfigItem(
             raw_payload=DeploymentConfig(
                 name="ignored",
@@ -1603,21 +1509,6 @@ def test_resolve_resource_name_prefix_uses_caller_provided_prefix():
     from langflow.services.adapters.deployment.watsonx_orchestrate.utils import resolve_resource_name_prefix
 
     assert resolve_resource_name_prefix(caller_prefix="custom_abc_") == "custom_abc_"
-
-
-def test_resolve_resource_name_prefix_falls_back_to_random():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import resolve_resource_name_prefix
-
-    prefix = resolve_resource_name_prefix()
-    assert prefix.startswith("lf_")
-    assert prefix.endswith("_")
-
-
-def test_resolve_resource_name_prefix_falls_back_when_none():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import resolve_resource_name_prefix
-
-    prefix = resolve_resource_name_prefix(caller_prefix=None)
-    assert prefix.startswith("lf_")
 
 
 def test_resolve_resource_name_prefix_rejects_empty_string():

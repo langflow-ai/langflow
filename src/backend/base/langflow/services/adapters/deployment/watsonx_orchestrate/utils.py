@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import json
-import secrets
 from typing import TYPE_CHECKING, Any
-from uuid import uuid4
 
 from lfx.services.adapters.deployment.exceptions import InvalidContentError
 
@@ -13,19 +11,18 @@ if TYPE_CHECKING:
     from lfx.services.adapters.deployment.schema import BaseDeploymentData
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
-    _WXO_SANITIZE_RE,
-    _WXO_TRANSLATE,
     DEFAULT_WXO_AGENT_LLM,
-    RANDOM_PREFIX_LENGTH_RANGE,
+    WXO_SANITIZE_RE,
+    WXO_TRANSLATE,
 )
 
 
 def normalize_wxo_name(s: str) -> str:
-    return _WXO_SANITIZE_RE.sub("", s.translate(_WXO_TRANSLATE))
+    return WXO_SANITIZE_RE.sub("", s.translate(WXO_TRANSLATE))
 
 
 def validate_wxo_name(name: str) -> str:
-    """Normalize and validate a WXO resource name."""
+    """Normalize and validate a wxO resource name."""
     normalized_name = normalize_wxo_name(str(name))
     if not normalized_name:
         msg = "Deployment name must include at least one alphanumeric character."
@@ -38,36 +35,27 @@ def validate_wxo_name(name: str) -> str:
 
 def resolve_resource_name_prefix(
     *,
-    caller_prefix: str | None = None,
+    caller_prefix: str,
 ) -> str:
-    """Determine the resource name prefix for WxO resource creation.
-
-    If *caller_prefix* is provided it is validated and used directly.
-    Otherwise a random prefix of the form ``lf_{hex}_`` is generated
-    as a fallback.
-    """
-    if caller_prefix is not None:
-        if not isinstance(caller_prefix, str) or not caller_prefix.strip():
-            msg = "global_resource_name_prefix must be a non-empty string."
-            raise InvalidContentError(message=msg)
-        validated = normalize_wxo_name(caller_prefix)
-        if not validated:
-            msg = "global_resource_name_prefix must contain at least one alphanumeric character."
-            raise InvalidContentError(message=msg)
-        if not validated[0].isalpha():
-            msg = "global_resource_name_prefix must start with a letter."
-            raise InvalidContentError(message=msg)
-        return validated
-
-    random_length = secrets.choice(RANDOM_PREFIX_LENGTH_RANGE)
-    return f"lf_{uuid4().hex[:random_length]}_"
+    """Validate and return the caller-supplied resource name prefix for WxO resource creation."""
+    if not isinstance(caller_prefix, str) or not caller_prefix.strip():
+        msg = "resource_name_prefix must be a non-empty string."
+        raise InvalidContentError(message=msg)
+    validated = normalize_wxo_name(caller_prefix)
+    if not validated:
+        msg = "resource_name_prefix must contain at least one alphanumeric character."
+        raise InvalidContentError(message=msg)
+    if not validated[0].isalpha():
+        msg = "resource_name_prefix must start with a letter."
+        raise InvalidContentError(message=msg)
+    return validated
 
 
 def require_tool_id(tool_response: dict[str, Any]) -> str:
     tool_id = tool_response.get("id")
     if not tool_id:
-        msg = "WXO did not return a tool id for snapshot creation."
-        raise ValueError(msg)
+        msg = "wxO did not return a tool id for snapshot creation."
+        raise InvalidContentError(message=msg)
     return tool_id
 
 
@@ -113,7 +101,7 @@ def build_agent_payload(
         "description": str(data.description or "").strip() or f"Langflow deployment {data.name}",
         "tools": tool_ids,
         "style": "default",
-        # TODO: make configurable; the llm field is required by the wxo api
+        # TODO: make configurable; the llm field is required by the wxO api
         # but retrieving available llms requires an extra api request.
         "llm": DEFAULT_WXO_AGENT_LLM,
     }
