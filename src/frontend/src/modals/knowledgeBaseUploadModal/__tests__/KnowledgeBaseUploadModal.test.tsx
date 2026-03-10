@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { BrowserRouter } from "react-router-dom";
@@ -91,23 +91,35 @@ jest.mock("@/stores/alertStore", () => {
   return { __esModule: true, default: store };
 });
 
+interface MockModelInputProps {
+  value: { id: string; name: string }[];
+  handleOnNewValue: (val: { value: { id: string; name: string }[] }) => void;
+  options: { id: string; name: string }[];
+  placeholder?: string;
+}
+
 // Renders as a plain <select> so tests can inspect options and fire selections
 jest.mock(
   "@/components/core/parameterRenderComponent/components/modelInputComponent",
   () => ({
     __esModule: true,
-    default: ({ value, handleOnNewValue, options, placeholder }: any) => (
+    default: ({
+      value,
+      handleOnNewValue,
+      options,
+      placeholder,
+    }: MockModelInputProps) => (
       <div data-testid="mock-model-input">
         <select
           data-testid="embedding-model-select"
           value={value?.[0]?.id || ""}
           onChange={(e) => {
-            const selected = options?.find((o: any) => o.id === e.target.value);
+            const selected = options?.find((o) => o.id === e.target.value);
             if (selected) handleOnNewValue({ value: [selected] });
           }}
         >
           <option value="">{placeholder || "Select..."}</option>
-          {options?.map((opt: any) => (
+          {options?.map((opt) => (
             <option key={opt.id} value={opt.id}>
               {opt.name}
             </option>
@@ -497,6 +509,109 @@ describe("KnowledgeBaseUploadModal", () => {
       ]);
       expect(screen.getByText("file-a.txt")).toBeInTheDocument();
       expect(screen.getByText("file-b.txt")).toBeInTheDocument();
+    });
+
+    it("filters out unsupported file types and shows an error message with excluded files", async () => {
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      const fileInput = document.getElementById(
+        "file-input",
+      ) as HTMLInputElement;
+
+      const validFile = new File(["content"], "valid.txt", {
+        type: "text/plain",
+      });
+      const invalidFile = new File(["content"], "invalid.exe", {
+        type: "application/x-msdownload",
+      });
+
+      // Manually trigger the change event to bypass userEvent.upload's attribute-based filtering
+      const event = {
+        target: {
+          files: [validFile, invalidFile],
+        },
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+      fireEvent.change(fileInput, event);
+
+      // Only the valid file should be rendered in the FilesPanel
+      expect(screen.getByText("valid.txt")).toBeInTheDocument();
+      expect(screen.queryByText("invalid.exe")).not.toBeInTheDocument();
+
+      // Verify that the alert store was called with the correct error information
+      expect(mockSetErrorData).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: expect.stringContaining("Some files were skipped"),
+          list: expect.arrayContaining(["invalid.exe"]),
+        }),
+      );
+    });
+
+    it("filters out unsupported file types during folder upload", async () => {
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      const folderInput = document.getElementById(
+        "folder-input",
+      ) as HTMLInputElement;
+
+      const validFile = new File(["content"], "valid.md", {
+        type: "text/markdown",
+      });
+      const invalidFile = new File(["content"], "invalid.exe", {
+        type: "application/x-msdownload",
+      });
+
+      // Manually trigger the change event
+      const event = {
+        target: {
+          files: [validFile, invalidFile],
+        },
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+      fireEvent.change(folderInput, event);
+
+      expect(screen.getByText("valid.md")).toBeInTheDocument();
+      expect(screen.queryByText("invalid.exe")).not.toBeInTheDocument();
+
+      expect(mockSetErrorData).toHaveBeenCalledWith(
+        expect.objectContaining({
+          list: expect.arrayContaining(["invalid.exe"]),
+        }),
+      );
+    });
+
+    it("verifies file panel doesn't open and error is shown when ALL files are unsupported", async () => {
+      render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      const fileInput = document.getElementById(
+        "file-input",
+      ) as HTMLInputElement;
+
+      const invalidFile = new File(["content"], "invalid.exe", {
+        type: "application/x-msdownload",
+      });
+
+      const event = {
+        target: {
+          files: [invalidFile],
+        },
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+      fireEvent.change(fileInput, event);
+
+      // The FilesPanel (implied by file names being visible) should not be open
+      expect(screen.queryByText("invalid.exe")).not.toBeInTheDocument();
+
+      // Verify that the error notification was shown
+      expect(mockSetErrorData).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: expect.stringContaining("Some files were skipped"),
+          list: expect.arrayContaining(["invalid.exe"]),
+        }),
+      );
     });
   });
 

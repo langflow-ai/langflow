@@ -12,6 +12,7 @@ function loadLocalSessions(flowId: string): string[] {
     const stored = window.sessionStorage.getItem(LOCAL_SESSIONS_KEY(flowId));
     return stored ? (JSON.parse(stored) as string[]) : [];
   } catch {
+    // silently ignore storage errors
     return [];
   }
 }

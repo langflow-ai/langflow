@@ -12,6 +12,7 @@ import chromadb.errors
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from lfx.base.data.utils import extract_text_from_bytes
 from lfx.log import logger
 
 from langflow.api.utils import CurrentActiveUser
@@ -170,7 +171,7 @@ async def preview_chunks(
             try:
                 file_content = await uploaded_file.read()
                 file_name = uploaded_file.filename or "unknown"
-                text_content = file_content.decode("utf-8", errors="ignore")
+                text_content = extract_text_from_bytes(file_name, file_content)
 
                 if not text_content.strip():
                     file_previews.append(

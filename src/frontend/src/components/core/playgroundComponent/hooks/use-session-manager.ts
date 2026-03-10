@@ -21,7 +21,7 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
     (s) => s.setActiveSessionId,
   );
   const removeSession = useSessionManagerStore((s) => s.removeSession);
-  const storeRenameSession = useSessionManagerStore((s) => s.renameSession);
+  const renameSessionInStore = useSessionManagerStore((s) => s.renameSession);
   const syncFromServer = useSessionManagerStore((s) => s.syncFromServer);
   const getOrderedSessionIds = useSessionManagerStore(
     (s) => s.getOrderedSessionIds,
@@ -42,6 +42,10 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
 
   const { mutate: deleteSessionApi } = useDeleteSession({});
   const { mutateAsync: updateSessionName } = useUpdateSessionName();
+
+  const notifyDeleteSessionError = useCallback(() => {
+    setErrorData({ title: "Error deleting session." });
+  }, [setErrorData]);
 
   // Initialize store when flowId changes
   useEffect(() => {
@@ -85,12 +89,23 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
       // Always attempt API delete — the sessions query isn't invalidated
       // after sending a message, so isLocal may never get promoted. A 404
       // for a truly local-only session is harmless.
-      deleteSessionApi({ sessionId });
+      deleteSessionApi(
+        { sessionId, flowId },
+        {
+          onError: notifyDeleteSessionError,
+        },
+      );
       clearSessionMessages(sessionId, flowId);
       deleteSessionFromMessagesStore(sessionId);
       removeSession(sessionId);
     },
-    [flowId, deleteSessionApi, deleteSessionFromMessagesStore, removeSession],
+    [
+      flowId,
+      deleteSessionApi,
+      deleteSessionFromMessagesStore,
+      notifyDeleteSessionError,
+      removeSession,
+    ],
   );
 
   const renameSession = useCallback(
@@ -100,12 +115,12 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
           old_session_id: oldId,
           new_session_id: newId,
         });
-        storeRenameSession(oldId, newId);
+        renameSessionInStore(oldId, newId);
       } catch {
         setErrorData({ title: "Error renaming session." });
       }
     },
-    [updateSessionName, storeRenameSession, setErrorData],
+    [updateSessionName, renameSessionInStore, setErrorData],
   );
 
   const selectSession = useCallback(
@@ -118,14 +133,15 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
   const clearDefaultSession = useCallback(() => {
     if (!flowId) return;
     deleteSessionApi(
-      { sessionId: flowId },
+      { sessionId: flowId, flowId },
       {
         onSuccess: () => {
           clearSessionMessages(flowId, flowId);
         },
+        onError: notifyDeleteSessionError,
       },
     );
-  }, [flowId, deleteSessionApi]);
+  }, [flowId, deleteSessionApi, notifyDeleteSessionError]);
 
   return {
     activeSessionId,

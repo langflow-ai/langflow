@@ -71,7 +71,7 @@ const InputWrapper = ({
       {/* Input container */}
       <div
         data-testid="input-wrapper"
-        className="flex w-full flex-col rounded-md border border-input bg-background p-3 cursor-text hover:border-muted-foreground focus-within:border-primary"
+        className="flex w-full flex-col rounded-md border border-input bg-muted p-3 cursor-text hover:border-muted-foreground focus-within:border-primary"
         onClick={onClick}
         onMouseDown={onMouseDown}
       >
@@ -129,6 +129,7 @@ const InputWrapper = ({
               isSupported={isAudioSupported}
             />
             <ButtonSendWrapper
+              isBuilding={isBuilding}
               send={send}
               noInput={noInput}
               chatValue={chatValue}
