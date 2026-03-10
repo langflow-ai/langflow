@@ -771,12 +771,12 @@
   },
   "KnowledgeIngestion": {
     "versions": {
-      "0.3.0": "c37fd1b357d1"
+      "0.3.0": "f74dd1ddff98"
     }
   },
   "KnowledgeRetrieval": {
     "versions": {
-      "0.3.0": "af0a162c3f80"
+      "0.3.0": "1a95fca184de"
     }
   },
   "SaveToFile": {
@@ -936,12 +936,12 @@
   },
   "IBMwatsonxModel": {
     "versions": {
-      "0.3.0": "689a87ecc73a"
+      "0.3.0": "e7d46a4de547"
     }
   },
   "WatsonxEmbeddingsComponent": {
     "versions": {
-      "0.3.0": "011bcac795de"
+      "0.3.0": "6effadae5f84"
     }
   },
   "Combinatorial Reasoner": {
@@ -1226,7 +1226,7 @@
   },
   "Agent": {
     "versions": {
-      "0.3.0": "60401f4e0ff8"
+      "0.3.0": "108da32d83f1"
     }
   },
   "EmbeddingModel": {
@@ -1776,12 +1776,32 @@
   },
   "GuardrailValidator": {
     "versions": {
-      "0.3.0": "675232be19cc"
+      "0.3.0": "70918cbb8522"
     }
   },
   "LiteLLMProxyModel": {
     "versions": {
       "0.3.0": "386ae52865b5"
+    }
+  },
+  "SemanticAggregator": {
+    "versions": {
+      "0.3.0": "4e631c501d33"
+    }
+  },
+  "SemanticMap": {
+    "versions": {
+      "0.3.0": "9fe34c926467"
+    }
+  },
+  "SyntheticDataGenerator": {
+    "versions": {
+      "0.3.0": "efd180878996"
+    }
+  },
+  "KnowledgeBase": {
+    "versions": {
+      "0.3.0": "8b5ca1f38f6e"
     }
   }
 }

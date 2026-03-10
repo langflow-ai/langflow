@@ -19,6 +19,22 @@ DANGEROUS_PATTERNS = [
 ]
 
 
+def _find_mustache_patterns(template: str) -> list[str]:
+    """Find all {{...}} patterns in a template using string search (no regex)."""
+    patterns = []
+    start = 0
+    while True:
+        idx = template.find("{{", start)
+        if idx == -1:
+            break
+        end = template.find("}}", idx + 2)
+        if end == -1:
+            break
+        patterns.append(template[idx : end + 2])
+        start = end + 2
+    return patterns
+
+
 def validate_mustache_template(template: str) -> None:
     """Validate that a mustache template only contains simple variable substitutions.
 
@@ -37,7 +53,7 @@ def validate_mustache_template(template: str) -> None:
             raise ValueError(msg)
 
     # Check that all {{ }} patterns are simple variables
-    all_mustache_patterns = re.findall(r"\{\{[^}]*\}\}", template)
+    all_mustache_patterns = _find_mustache_patterns(template)
     for pattern in all_mustache_patterns:
         if not SIMPLE_VARIABLE_PATTERN.match(pattern):
             msg = f"Invalid mustache variable: {pattern}. Only simple variable names like {{{{variable}}}} are allowed."
