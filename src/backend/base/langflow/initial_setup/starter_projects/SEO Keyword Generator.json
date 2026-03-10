@@ -397,7 +397,7 @@
         "data": {
           "id": "note-z1798",
           "node": {
-            "description": "## SEO Keyword Generator\n\nThis template creates strategic keywords based on your product and audience profile.\n\n### Prerequisites\n\n* [OpenAI API Key](https://platform.openai.com/)\n\n### Quickstart\n\n1. In the **Language Model** component, add your OpenAI API Key.\n\n2. In the **Prompt** component, complete the following fields. Optionally, just run the flow with the included example values.\n\n* Product Information\n*  Pain Points\n* Goals\n* Target Audience\n* Expertise Level\n* Review Output \n\n3. Open the **Playground**, and then click **Run Flow**. The LLM generates keywords based on your inputs.",
+            "description": "# 📖 README\nThis template creates strategic keywords based on your product and audience profile.\n\n### Prerequisites\n\n* [OpenAI API Key](https://platform.openai.com/)\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n\n2. In the **Prompt** component, complete the following fields. Optionally, just run the flow with the included example values.\n\n* Product Information\n*  Pain Points\n* Goals\n* Target Audience\n* Expertise Level\n* Review Output \n\n3. Open the **Playground**, and then click **Run Flow**. The LLM generates keywords based on your inputs.",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -630,7 +630,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.133.1"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",

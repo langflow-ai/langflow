@@ -2,12 +2,15 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
-from lfx.components.knowledge_bases.ingestion import KnowledgeIngestionComponent
+from langflow.schema.message import Message
+from lfx.base.knowledge_bases import get_knowledge_bases
+from lfx.components.deactivated.ingestion import KnowledgeIngestionComponent
 
 from tests.base import ComponentTestBaseWithClient
+
+pytestmark = pytest.mark.skip(reason="KnowledgeIngestionComponent is deactivated")
 
 
 class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
@@ -341,6 +344,32 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
 
         assert result["knowledge_base"]["value"] == "new_test_kb"
         assert "new_test_kb" in result["knowledge_base"]["options"]
+
+    @patch("langflow.components.knowledge_bases.ingestion.json.loads")
+    @patch("langflow.components.knowledge_bases.ingestion.decrypt_api_key")
+    async def test_build_kb_info_with_message_input(
+        self, mock_decrypt, mock_json_loads, component_class, default_kwargs
+    ):
+        """Test that Message input is accepted and converted to DataFrame."""
+        # Replace the DataFrame input with a Message
+        default_kwargs["input_df"] = Message(text="Sample text 1")
+        default_kwargs["column_config"] = [
+            {"column_name": "text", "vectorize": True, "identifier": True},
+        ]
+        component = component_class(**default_kwargs)
+
+        mock_json_loads.return_value = {
+            "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+            "api_key": "encrypted_key",  # pragma:allowlist secret
+        }
+        mock_decrypt.return_value = "decrypted_key"
+
+        with patch.object(component, "_create_vector_store"), patch.object(component, "_save_kb_files"):
+            result = await component.build_kb_info()
+
+        assert isinstance(result, Data)
+        assert result.data["rows"] == 1
+        assert result.data["kb_name"] == "test_kb"
 
     async def test_update_build_config_invalid_kb_name(self, component_class, default_kwargs):
         """Test updating build config with invalid KB name."""

@@ -278,6 +278,12 @@ class Settings(BaseSettings):
     """The maximum number of vertex builds to keep in the database."""
     max_vertex_builds_per_vertex: int = 50
     """The maximum number of builds to keep per vertex. Older builds will be deleted."""
+    max_flow_version_entries_per_flow: int = 50
+    """Max version history entries per flow. Oldest entries pruned on next snapshot.
+
+    If retroactively lowered below the current count for a flow,
+    the oldest entries are deleted only when the next entry is created.
+    """
     webhook_polling_interval: int = 0
     """The polling interval for the webhook in ms. Set to 0 to disable (SSE provides real-time updates)."""
     fs_flows_polling_interval: int = 10000
