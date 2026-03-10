@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import os
+import warnings
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -61,6 +62,10 @@ EMBEDDING_PROVIDER_CLASS_MAPPING: dict[str, str] = {
 
 _model_class_cache: dict[str, type] = {}
 _embedding_class_cache: dict[str, type] = {}
+
+# TTL for the per-user model-options cache inside update_model_options_in_build_config.
+# Short enough to pick up global-variable changes quickly.
+_MODEL_OPTIONS_CACHE_TTL_SECONDS = 30
 
 
 def get_model_class(class_name: str) -> type:
@@ -139,6 +144,11 @@ def get_model_classes() -> dict[str, type]:
     .. deprecated::
         Use :func:`get_model_class` instead to import only the provider you need.
     """
+    warnings.warn(
+        "get_model_classes() is deprecated. Use get_model_class() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return {name: get_model_class(name) for name in _MODEL_CLASS_IMPORTS}
 
 
@@ -148,6 +158,11 @@ def get_embedding_classes() -> dict[str, type]:
     .. deprecated::
         Use :func:`get_embedding_class` instead to import only the provider you need.
     """
+    warnings.warn(
+        "get_embedding_classes() is deprecated. Use get_embedding_class() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return {name: get_embedding_class(name) for name in _EMBEDDING_CLASS_IMPORTS}
 
 
@@ -638,6 +653,36 @@ class _VarWithValue:
         self.value = value
 
 
+async def _get_model_status(user_id: UUID | str) -> tuple[set[str], set[str]]:
+    """Fetch disabled and explicitly enabled model sets for a user.
+
+    Returns:
+        A tuple of (disabled_models, explicitly_enabled_models).
+    """
+    async with session_scope() as session:
+        variable_service = get_variable_service()
+        if variable_service is None:
+            return set(), set()
+        from langflow.services.variable.service import DatabaseVariableService
+
+        if not isinstance(variable_service, DatabaseVariableService):
+            return set(), set()
+        all_vars = await variable_service.get_all(
+            user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+            session=session,
+        )
+        disabled: set[str] = set()
+        enabled: set[str] = set()
+        for var in all_vars:
+            if var.name == "__disabled_models__" and var.value:
+                with contextlib.suppress(json.JSONDecodeError, TypeError):
+                    disabled = set(json.loads(var.value))
+            elif var.name == "__enabled_models__" and var.value:
+                with contextlib.suppress(json.JSONDecodeError, TypeError):
+                    enabled = set(json.loads(var.value))
+        return disabled, enabled
+
+
 async def _fetch_enabled_providers_for_user(user_id: UUID | str) -> set[str]:
     """Shared helper for get_language_model_options and get_embedding_model_options.
 
@@ -868,41 +913,11 @@ def get_language_model_options(
         )
 
     # Get disabled and explicitly enabled models for this user if user_id is provided
-    disabled_models = set()
-    explicitly_enabled_models = set()
+    disabled_models: set[str] = set()
+    explicitly_enabled_models: set[str] = set()
     if user_id:
-        try:
-
-            async def _get_model_status():
-                async with session_scope() as session:
-                    variable_service = get_variable_service()
-                    if variable_service is None:
-                        return set(), set()
-                    from langflow.services.variable.service import DatabaseVariableService
-
-                    if not isinstance(variable_service, DatabaseVariableService):
-                        return set(), set()
-                    all_vars = await variable_service.get_all(
-                        user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
-                        session=session,
-                    )
-                    disabled = set()
-                    enabled = set()
-                    import json
-
-                    for var in all_vars:
-                        if var.name == "__disabled_models__" and var.value:
-                            with contextlib.suppress(json.JSONDecodeError, TypeError):
-                                disabled = set(json.loads(var.value))
-                        elif var.name == "__enabled_models__" and var.value:
-                            with contextlib.suppress(json.JSONDecodeError, TypeError):
-                                enabled = set(json.loads(var.value))
-                    return disabled, enabled
-
-            disabled_models, explicitly_enabled_models = run_until_complete(_get_model_status())
-        except Exception:  # noqa: BLE001, S110
-            # If we can't get model status, continue without filtering
-            pass
+        with contextlib.suppress(Exception):
+            disabled_models, explicitly_enabled_models = run_until_complete(_get_model_status(user_id))
 
     # Get enabled providers (those with credentials configured and validated)
     enabled_providers = set()
@@ -1020,41 +1035,11 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
     )
 
     # Get disabled and explicitly enabled models for this user if user_id is provided
-    disabled_models = set()
-    explicitly_enabled_models = set()
+    disabled_models: set[str] = set()
+    explicitly_enabled_models: set[str] = set()
     if user_id:
-        try:
-
-            async def _get_model_status():
-                async with session_scope() as session:
-                    variable_service = get_variable_service()
-                    if variable_service is None:
-                        return set(), set()
-                    from langflow.services.variable.service import DatabaseVariableService
-
-                    if not isinstance(variable_service, DatabaseVariableService):
-                        return set(), set()
-                    all_vars = await variable_service.get_all(
-                        user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
-                        session=session,
-                    )
-                    disabled = set()
-                    enabled = set()
-                    import json
-
-                    for var in all_vars:
-                        if var.name == "__disabled_models__" and var.value:
-                            with contextlib.suppress(json.JSONDecodeError, TypeError):
-                                disabled = set(json.loads(var.value))
-                        elif var.name == "__enabled_models__" and var.value:
-                            with contextlib.suppress(json.JSONDecodeError, TypeError):
-                                enabled = set(json.loads(var.value))
-                    return disabled, enabled
-
-            disabled_models, explicitly_enabled_models = run_until_complete(_get_model_status())
-        except Exception:  # noqa: BLE001, S110
-            # If we can't get model status, continue without filtering
-            pass
+        with contextlib.suppress(Exception):
+            disabled_models, explicitly_enabled_models = run_until_complete(_get_model_status(user_id))
 
     # Get enabled providers (those with credentials configured and validated)
     enabled_providers = set()
@@ -1704,7 +1689,7 @@ def update_model_options_in_build_config(
     # Cache key based on user_id
     cache_key = f"{cache_key_prefix}_{component.user_id}"
     cache_timestamp_key = f"{cache_key}_timestamp"
-    cache_ttl = 30  # 30 seconds TTL to catch global variable changes faster
+    cache_ttl = _MODEL_OPTIONS_CACHE_TTL_SECONDS
 
     # Check if cache is expired
     cache_expired = False
