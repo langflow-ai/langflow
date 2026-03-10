@@ -31,7 +31,7 @@ export type DeploymentProviderUpdatePayload = {
 };
 
 export type DeploymentProvidersResponse = {
-  deployment_providers: DeploymentProvider[];
+  providers: DeploymentProvider[];
   page: number;
   size: number;
   total: number;

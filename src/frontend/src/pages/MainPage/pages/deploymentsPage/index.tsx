@@ -98,7 +98,7 @@ const DeploymentsTab = () => {
   const providersQuery = useGetDeploymentProviders({
     refetchOnWindowFocus: false,
   });
-  const providers = providersQuery.data?.deployment_providers || [];
+  const providers = providersQuery.data?.providers || [];
   const hasProviders = providers.length > 0;
 
   useEffect(() => {

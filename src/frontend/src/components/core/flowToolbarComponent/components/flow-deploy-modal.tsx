@@ -103,7 +103,7 @@ export default function FlowDeployModal({
   const providersQuery = useGetDeploymentProviders({
     refetchOnWindowFocus: false,
   });
-  const providers = providersQuery.data?.deployment_providers || [];
+  const providers = providersQuery.data?.providers || [];
   const providerId = providers[0]?.id ?? "";
 
   const {
