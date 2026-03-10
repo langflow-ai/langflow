@@ -17,8 +17,6 @@ export interface SessionSelectorProps {
   updateVisibleSession: (session: string) => void;
   selectedView?: { type: string; id: string };
   setSelectedView?: (view: { type: string; id: string } | undefined) => void;
-  playgroundPage?: boolean;
-  setActiveSession?: (session: string) => void;
   handleRename?: (oldSessionId: string, newSessionId: string) => Promise<void>;
   menuOpen?: boolean;
   onMenuOpenChange?: (open: boolean) => void;
@@ -34,8 +32,6 @@ export function SessionSelector({
   updateVisibleSession,
   selectedView,
   setSelectedView,
-  playgroundPage = false,
-  setActiveSession,
   handleRename,
   menuOpen,
   onMenuOpenChange,
@@ -96,7 +92,7 @@ export function SessionSelector({
   });
 
   const canModifySession = !isDefaultSession;
-  const canDeleteSession = hasMessages;
+  const canDeleteSession = hasMessages || !isDefaultSession;
   const canRenameSession = canModifySession && hasMessages;
 
   return (
@@ -156,6 +152,7 @@ export function SessionSelector({
           tooltipSide="left"
           open={menuOpen}
           onOpenChange={onMenuOpenChange}
+          isDefaultSession={isDefaultSession}
         />
       </div>
     </div>

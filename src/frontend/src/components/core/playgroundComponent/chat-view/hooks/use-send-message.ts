@@ -1,8 +1,8 @@
 import { useCallback } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { queryClient } from "@/contexts";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useGetFlowId } from "../../hooks/use-get-flow-id";
 import { addUserMessage } from "../utils/message-utils";
@@ -20,7 +20,6 @@ export const useSendMessage = ({ sessionId }: UseSendMessageProps = {}) => {
   );
   const eventDeliveryConfig = useUtilityStore((state) => state.eventDelivery);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const selectedSession = usePlaygroundStore((state) => state.selectedSession);
   const flowId = useGetFlowId();
 
   const sendMessage = useCallback(
@@ -31,8 +30,8 @@ export const useSendMessage = ({ sessionId }: UseSendMessageProps = {}) => {
       inputValue: string;
       files?: string[];
     }): Promise<void> => {
-      // Resolve session: sessionId prop > selectedSession > flowId (default)
-      const actualSession = sessionId ?? selectedSession ?? flowId;
+      // sessionId is always provided from store's activeSessionId. Fallback to flowId.
+      const actualSession = sessionId ?? flowId;
       // Add placeholder user message immediately
       addUserMessage({
         id: null,
@@ -55,10 +54,16 @@ export const useSendMessage = ({ sessionId }: UseSendMessageProps = {}) => {
         silent: true,
         session: actualSession,
         eventDelivery: eventDeliveryConfig,
-      }).catch((err) => {
-        console.error("[useSendMessage] buildFlow error", err);
-        throw err;
-      });
+      })
+        .then(() => {
+          queryClient.invalidateQueries({
+            queryKey: ["useGetSessionsFromFlowQuery"],
+          });
+        })
+        .catch((err) => {
+          console.error("[useSendMessage] buildFlow error", err);
+          throw err;
+        });
     },
     [
       buildFlow,
@@ -66,7 +71,6 @@ export const useSendMessage = ({ sessionId }: UseSendMessageProps = {}) => {
       sessionId,
       currentFlowId,
       eventDeliveryConfig,
-      selectedSession,
       flowId,
     ],
   );

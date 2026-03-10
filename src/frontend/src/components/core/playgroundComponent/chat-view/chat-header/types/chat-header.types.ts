@@ -11,5 +11,6 @@ export interface ChatHeaderProps {
   className?: string;
   openLogsModal?: boolean;
   setOpenLogsModal?: (open: boolean) => void;
-  renameLocalSession?: (oldSessionId: string, newSessionId: string) => void;
+  onRenameSession?: (oldId: string, newId: string) => Promise<void>;
+  onClearChat?: () => void;
 }
