@@ -37,14 +37,15 @@ OPERATORS = {
 
 
 class DataOperationsComponent(Component):
-    display_name = "Data Operations"
-    description = "Perform various operations on a Data object."
+    display_name = "JSON Operations"
+    description = "Perform various operations on a JSON object."
     icon = "file-json"
     name = "DataOperations"
     default_keys = ["operations", "data"]
     metadata = {
         "keywords": [
             "data",
+            "json",
             "operations",
             "filter values",
             "Append or Update",
@@ -59,6 +60,7 @@ class DataOperationsComponent(Component):
             "remove",
             "rename",
             "data operations",
+            "json operations",
             "data manipulation",
             "data transformation",
             "data filtering",
