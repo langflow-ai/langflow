@@ -12,7 +12,7 @@ from lfx.services.adapters.deployment.exceptions import DeploymentNotFoundError,
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import extract_error_detail
 
 if TYPE_CHECKING:
-    from ibm_watsonx_orchestrate_clients.common.base_client import BaseWXOClient
+    from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 
 
 def build_orchestrate_runs_query(provider_input: dict[str, Any] | None) -> str:
@@ -63,21 +63,24 @@ def build_orchestrate_run_payload(
 
 
 async def create_agent_run(
-    base_client: BaseWXOClient,
+    client: WxOClient,
     *,
     provider_data: dict[str, Any],
     deployment_id: str,
 ) -> dict[str, Any]:
-    """Create an orchestrate run through the low-level client for clarity."""
+    """Create an orchestrate run through the WxOClient wrapper."""
     query_suffix = build_orchestrate_runs_query(provider_data)
-    run_payload = build_orchestrate_run_payload(
-        provider_data=provider_data,
-        deployment_id=deployment_id,
-    )
+    try:
+        run_payload = build_orchestrate_run_payload(
+            provider_data=provider_data,
+            deployment_id=deployment_id,
+        )
+    except ValueError as exc:
+        raise InvalidContentError(message=str(exc)) from exc
     try:
         response = await asyncio.to_thread(
-            base_client._post,  # noqa: SLF001
-            f"/runs{query_suffix}",
+            client.post_run,
+            query_suffix=query_suffix,
             data=run_payload,
         )
     except ClientAPIException as exc:
@@ -130,8 +133,8 @@ def create_agent_run_result(payload: dict[str, Any] | None) -> dict[str, Any]:
     return result
 
 
-async def get_agent_run(base_client: BaseWXOClient, *, run_id: str) -> dict[str, Any]:
-    payload = await asyncio.to_thread(base_client._get, f"/runs/{run_id}")  # noqa: SLF001
+async def get_agent_run(client: WxOClient, *, run_id: str) -> dict[str, Any]:
+    payload = await asyncio.to_thread(client.get_run, run_id)
 
     if not payload:
         return {"status": "unknown"}

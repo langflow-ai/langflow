@@ -237,7 +237,7 @@ class WatsonxAdapterDirectE2E:
             {
                 "name": "fp_create_agent_failure_triggers_rollback",
                 "expected": {HTTP_INTERNAL_SERVER_ERROR},
-                "detail_contains": "fp_create_agent_final",
+                "detail_contains": "Please check server logs for details",
                 "payload": self._build_create_payload(
                     snapshots=[self._build_flow_payload(label="snap_fp_rollback")],
                     config=self._build_config_payload(label="cfg_fp_rollback"),
@@ -745,10 +745,10 @@ class WatsonxAdapterDirectE2E:
         results.append(
             self._build_result(
                 name="live_create_execution_rejects_empty_input",
-                expected={HTTP_INTERNAL_SERVER_ERROR},
+                expected={HTTP_UNPROCESSABLE_CONTENT},
                 actual_status=status_code,
                 detail=detail,
-                ok=status_code == HTTP_INTERNAL_SERVER_ERROR,
+                ok=status_code == HTTP_UNPROCESSABLE_CONTENT,
             )
         )
 
