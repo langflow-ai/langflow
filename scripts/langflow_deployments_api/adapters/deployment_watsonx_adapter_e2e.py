@@ -16,7 +16,7 @@ Scenario catalog
 Live create scenarios:
 - `live_create_success`: creates config + snapshot + agent successfully (expects 201).
 - `live_invalid_config_reference`: rejects config reference binding at create time (expects 400).
-- `live_duplicate_snapshot_names_conflict`: rejects duplicate snapshot names in one request (expects 409).
+- `live_duplicate_snapshot_names_conflict`: duplicate snapshot names collide in wxO (expects 409).
 
 Live lifecycle scenarios:
 - `live_lifecycle_create_seed`: creates a seed deployment for lifecycle checks (expects 201).
@@ -854,9 +854,8 @@ class WatsonxAdapterDirectE2E:
         config_reference_id: str | None = None,
         resource_name_prefix: str | None = None,
     ) -> DeploymentCreate:
-        provider_spec = None
-        if resource_name_prefix is not None:
-            provider_spec = {"global_resource_name_prefix": resource_name_prefix}
+        prefix = resource_name_prefix or f"e2e_{uuid4().hex[:8]}_"
+        provider_spec = {"resource_name_prefix": prefix}
         spec = BaseDeploymentData(
             name=self._mk_name("dep_agent"),
             description="direct adapter scenario",

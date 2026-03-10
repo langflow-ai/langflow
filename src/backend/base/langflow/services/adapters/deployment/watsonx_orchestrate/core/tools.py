@@ -11,7 +11,6 @@ import zipfile
 from typing import TYPE_CHECKING, Any
 
 from cachetools import func
-from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import LangflowTool, create_langflow_tool
 from lfx.services.adapters.deployment.exceptions import InvalidContentError, InvalidDeploymentOperationError
 from lfx.utils.flow_requirements import generate_requirements_from_flow
 
@@ -29,29 +28,30 @@ if TYPE_CHECKING:
 
 
 def extract_langflow_artifact_from_zip(artifact_zip_bytes: bytes, *, snapshot_id: str) -> dict[str, Any]:
-    """Read and parse the Langflow flow JSON from a WXO snapshot artifact zip."""
+    """Read and parse the Langflow flow JSON from a wxO snapshot artifact zip."""
     try:
         with zipfile.ZipFile(io.BytesIO(artifact_zip_bytes), "r") as zip_artifact:
             json_members = [name for name in zip_artifact.namelist() if name.lower().endswith(".json")]
             if not json_members:
                 msg = f"Snapshot '{snapshot_id}' artifact does not include a flow JSON file."
-                raise ValueError(msg)
+                raise InvalidContentError(message=msg)
 
-            # Snapshot upload currently stores exactly one flow JSON payload.
             flow_json_member = json_members[0]
             flow_json_raw = zip_artifact.read(flow_json_member)
+    except InvalidContentError:
+        raise
     except zipfile.BadZipFile as exc:
         msg = f"Snapshot '{snapshot_id}' artifact is not a valid zip archive."
-        raise ValueError(msg) from exc
+        raise InvalidContentError(message=msg) from exc
 
     try:
         return json.loads(flow_json_raw.decode("utf-8"))
     except UnicodeDecodeError as exc:
         msg = f"Snapshot '{snapshot_id}' flow artifact is not valid UTF-8 JSON."
-        raise ValueError(msg) from exc
+        raise InvalidContentError(message=msg) from exc
     except json.JSONDecodeError as exc:
         msg = f"Snapshot '{snapshot_id}' flow artifact contains invalid JSON."
-        raise ValueError(msg) from exc
+        raise InvalidContentError(message=msg) from exc
 
 
 def build_langflow_artifact_bytes(
@@ -119,6 +119,8 @@ def create_wxo_flow_tool(
             - artifacts: The supporting artifacts (the requirements.txt
                 and the flow json file) for the tool.
     """
+    from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import LangflowTool, create_langflow_tool
+
     flow_definition = flow_payload.model_dump()
 
     flow_provider_data = flow_definition.pop("provider_data", None)
@@ -149,7 +151,7 @@ def create_wxo_flow_tool(
         detected_version = (get_version_info() or {}).get("version")
         if not detected_version:
             msg = "Unable to determine running Langflow version for snapshot creation."
-            raise ValueError(msg)
+            raise InvalidContentError(message=msg)
         flow_definition["last_tested_version"] = detected_version
 
     tool: LangflowTool = create_langflow_tool(
@@ -286,7 +288,7 @@ async def process_raw_flows_with_app_id(
     *,
     client_cache: dict[str, Any],
 ) -> list[str]:
-    """Create langflow tools in wxo and connect them to the given app_id."""
+    """Create langflow tools in wxO and connect them to the given app_id."""
     from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_provider_clients
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
 
@@ -311,6 +313,10 @@ async def process_raw_flows_with_app_id(
     )
 
 
+# TODO(WXO): Resolve the lfx version at runtime via importlib.metadata
+# instead of hard-coding it here. The blocker is that dev environments
+# install lfx in editable mode, so importlib.metadata may return an
+# unreleased version (e.g. 0.3.1) that isn't available on PyPI yet.
 _LFX_MINIMUM_REQUIREMENT = "lfx>=0.3.0rc3"
 
 
@@ -323,5 +329,5 @@ def _resolve_lfx_requirement() -> str:
     """Pin lfx to the installed version, falling back to a minimum spec."""
     try:
         return _pin_requirement_name("lfx")
-    except Exception:  # noqa: BLE001
+    except (md.PackageNotFoundError, ValueError):
         return _LFX_MINIMUM_REQUIREMENT

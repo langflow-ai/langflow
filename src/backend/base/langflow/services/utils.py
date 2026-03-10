@@ -278,8 +278,6 @@ def register_builtin_adapters() -> None:
         "ibm_watsonx_orchestrate_clients",
         "ibm_watsonx_orchestrate_core",
         "ibm_cloud_sdk_core",
-        "rich",
-        "yaml",
     )
 
     try:

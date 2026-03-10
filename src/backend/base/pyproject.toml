@@ -31,8 +31,8 @@ dependencies = [
     "structlog>=25.4.0,<26.0.0",
     "rich>=13.7.0,<14.0.0",
     "langchain-experimental>=0.3.0,<1.0.0",
-    "sqlmodel==0.0.22",
-    "pydantic~=2.11.0",
+    "sqlmodel~=0.0.37",
+    "pydantic~=2.12.5",
     "pydantic-settings>=2.2.0,<3.0.0",
     "email-validator>=2.0.0",
     "typer>=0.13.0,<1.0.0",
@@ -482,6 +482,7 @@ complete = [
     "langflow-base[astrapy]",
     # Windows-specific
     "langflow-base[gassist]",
+    # wxO deployment adapter
     "langflow-base[ibm-watsonx]",
 ]
 

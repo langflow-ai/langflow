@@ -3,16 +3,10 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from ibm_watsonx_orchestrate_core.types.connections import (
-    ConnectionConfiguration,
-    ConnectionEnvironment,
-    ConnectionPreference,
-    ConnectionSecurityScheme,
-)
 from lfx.services.adapters.deployment.exceptions import (
-    DeploymentConflictError,
+    InvalidContentError,
     InvalidDeploymentOperationError,
 )
 from lfx.services.adapters.deployment.schema import ConfigItem, DeploymentConfig, IdLike
@@ -21,11 +15,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.client import (
     get_provider_clients,
     resolve_runtime_credentials,
 )
-from langflow.services.adapters.deployment.watsonx_orchestrate.constants import ErrorPrefix
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import validate_wxo_name
-
-if TYPE_CHECKING:
-    from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 
 
 async def create_config(
@@ -35,7 +25,14 @@ async def create_config(
     db: Any,
     client_cache: dict[str, Any],
 ) -> str:
-    """Create/update a WXO draft key-value connection config plus runtime credentials."""
+    """Create/update a wxO draft key-value connection config plus runtime credentials."""
+    from ibm_watsonx_orchestrate_core.types.connections import (
+        ConnectionConfiguration,
+        ConnectionEnvironment,
+        ConnectionPreference,
+        ConnectionSecurityScheme,
+    )
+
     clients = await get_provider_clients(
         user_id=user_id,
         db=db,
@@ -130,49 +127,6 @@ def resolve_create_app_id(
     return f"{prefixed_deployment_name}_{normalized_config_name}_app_id"
 
 
-async def assert_create_resources_available(
-    *,
-    clients: WxOClient,
-    deployment_name: str,
-    app_id: str,
-    snapshot_tool_names: list[str] | None = None,
-) -> None:
-    """Fail fast when deployment resource names conflict with existing resources."""
-    existing_agents = await asyncio.to_thread(clients.agent.get_draft_by_name, deployment_name)
-    if existing_agents:
-        msg = f"{ErrorPrefix.CREATE.value}. Deployment '{deployment_name}' already exists."
-        raise DeploymentConflictError(message=msg)
-
-    existing_connection = await asyncio.to_thread(clients.connections.get_draft_by_app_id, app_id=app_id)
-    if existing_connection:
-        msg = f"{ErrorPrefix.CREATE.value}. Deployment config '{app_id}' already exists."
-        raise DeploymentConflictError(message=msg)
-
-    if not snapshot_tool_names:
-        return
-
-    seen_tool_names: set[str] = set()
-    duplicate_tool_names: set[str] = set()
-    for tool_name in snapshot_tool_names:
-        if tool_name in seen_tool_names:
-            duplicate_tool_names.add(tool_name)
-        seen_tool_names.add(tool_name)
-    if duplicate_tool_names:
-        duplicates = ", ".join(sorted(duplicate_tool_names))
-        msg = f"{ErrorPrefix.CREATE.value}. Deployment snapshot name(s) duplicated: {duplicates}."
-        raise DeploymentConflictError(message=msg)
-
-    async def _check_tool_exists(name: str) -> str | None:
-        existing = await asyncio.to_thread(clients.tool.get_draft_by_name, name)
-        return name if existing else None
-
-    results = await asyncio.gather(*(_check_tool_exists(name) for name in snapshot_tool_names))
-    conflicts = [name for name in results if name is not None]
-    if conflicts:
-        msg = f"{ErrorPrefix.CREATE.value}. Deployment snapshot '{conflicts[0]}' already exists."
-        raise DeploymentConflictError(message=msg)
-
-
 async def validate_connection(connections_client: Any, *, app_id: str) -> Any:
     from ibm_watsonx_orchestrate_core.types.connections import ConnectionEnvironment, ConnectionSecurityScheme
 
@@ -180,10 +134,10 @@ async def validate_connection(connections_client: Any, *, app_id: str) -> Any:
     config = await asyncio.to_thread(connections_client.get_config, app_id=app_id, env=ConnectionEnvironment.DRAFT)
     if not connection:
         msg = f"Connection '{app_id}' is missing draft config. Deployments require draft mode."
-        raise ValueError(msg)
+        raise InvalidContentError(message=msg)
     if config.security_scheme != ConnectionSecurityScheme.KEY_VALUE:
         msg = f"Connection '{app_id}' must use key-value credentials for Langflow flows."
-        raise ValueError(msg)
+        raise InvalidContentError(message=msg)
     runtime_credentials = await asyncio.to_thread(
         connections_client.get_credentials,
         app_id=app_id,
@@ -192,6 +146,6 @@ async def validate_connection(connections_client: Any, *, app_id: str) -> Any:
     )
     if not runtime_credentials:
         msg = f"Connection '{app_id}' is missing draft runtime credentials."
-        raise ValueError(msg)
+        raise InvalidContentError(message=msg)
 
     return connection

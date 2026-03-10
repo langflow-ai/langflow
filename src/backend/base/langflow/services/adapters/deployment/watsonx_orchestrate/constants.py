@@ -11,12 +11,11 @@ SUPPORTED_ADAPTER_DEPLOYMENT_TYPES: set[DeploymentType] = {DeploymentType.AGENT}
 CREATE_MAX_RETRIES = 3
 ROLLBACK_MAX_RETRIES = 5
 RETRY_INITIAL_DELAY_SECONDS = 0.5
-RANDOM_PREFIX_LENGTH_RANGE = range(6, 11)
-PROVIDER_SPEC_RESOURCE_NAME_PREFIX_KEY = "global_resource_name_prefix"
+PROVIDER_SPEC_RESOURCE_NAME_PREFIX_KEY = "resource_name_prefix"
 DEFAULT_WXO_AGENT_LLM = "groq/openai/gpt-oss-120b"
 
-_WXO_SANITIZE_RE = re.compile(r"[^a-zA-Z0-9_]")
-_WXO_TRANSLATE = str.maketrans({" ": "_", "-": "_"})
+WXO_SANITIZE_RE = re.compile(r"[^a-zA-Z0-9_]")
+WXO_TRANSLATE = str.maketrans({" ": "_", "-": "_"})
 
 ERROR_PREFIX = "An error occurred while"
 ERROR_SUFFIX_IN = "in Watsonx Orchestrate."
@@ -47,4 +46,4 @@ class ErrorPrefix(str, Enum):
 
 # NOTE: this key must match the value of the provider_key column
 # in the deployment_provider_account table.
-_WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY = "watsonx-orchestrate"
+WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY = "watsonx-orchestrate"
