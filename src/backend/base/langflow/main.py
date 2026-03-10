@@ -2,9 +2,10 @@ import asyncio
 import json
 import os
 import re
+import sys
 import tempfile
 import warnings
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
@@ -39,6 +40,7 @@ from langflow.initial_setup.setup import (
 )
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.plugin_routes import load_plugin_routes
+from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.deps import (
     get_queue_service,
     get_service,
@@ -316,6 +318,18 @@ def get_lifespan(*, fix_migration=False, version=None):
             yield
         except asyncio.CancelledError:
             await logger.adebug("Lifespan received cancellation signal")
+        except UnsupportedPostgreSQLVersionError:
+            # Normally caught by the pre-flight check in __main__.py
+            # before the server starts.  If we get here anyway (e.g.
+            # direct uvicorn invocation via ``make backend``), exit
+            # immediately and tell the parent (reloader) to stop.
+            import signal
+
+            sys.stdout.flush()
+            sys.stderr.flush()
+            with suppress(ProcessLookupError, PermissionError):
+                os.kill(os.getppid(), signal.SIGTERM)
+            os._exit(3)
         except Exception as exc:
             if "langflow migration --fix" not in str(exc):
                 logger.exception(exc)
