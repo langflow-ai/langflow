@@ -385,7 +385,6 @@ async def test_delete_messages_sessions_partial_match(
     assert data["deleted_count"] == 2
 
 
-
 @pytest.mark.api_key_required
 async def test_delete_messages_sessions_exceeds_limit(client: AsyncClient, logged_in_headers):
     """Bulk-delete with more than 500 session IDs should return 400 error."""
