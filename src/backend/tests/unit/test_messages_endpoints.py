@@ -300,8 +300,10 @@ async def test_delete_messages_sessions_bulk(
         json=session_ids,
         headers=logged_in_headers,
     )
-    assert response.status_code == 204, response.text
-    assert response.reason_phrase == "No Content"
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["deleted_count"] == 2
+    assert "Messages deleted successfully" in data["message"]
 
     # Verify that messages for the deleted sessions are gone
     for sid in session_ids:
@@ -327,7 +329,9 @@ async def test_delete_messages_sessions_all(client: AsyncClient, created_message
         json=session_ids,
         headers=logged_in_headers,
     )
-    assert response.status_code == 204, response.text
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["deleted_count"] == 3
 
     # All messages should be gone
     response = await client.get("api/v1/monitor/messages", headers=logged_in_headers)
@@ -344,7 +348,10 @@ async def test_delete_messages_sessions_empty_list(client: AsyncClient, logged_i
         json=[],
         headers=logged_in_headers,
     )
-    assert response.status_code == 204, response.text
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["deleted_count"] == 0
+    assert "No sessions to delete" in data["message"]
 
 
 @pytest.mark.api_key_required
@@ -356,7 +363,9 @@ async def test_delete_messages_sessions_nonexistent(client: AsyncClient, logged_
         json=["nonexistent_session_1", "nonexistent_session_2"],
         headers=logged_in_headers,
     )
-    assert response.status_code == 204, response.text
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["deleted_count"] == 2
 
 
 @pytest.mark.api_key_required
@@ -371,8 +380,26 @@ async def test_delete_messages_sessions_partial_match(
         json=session_ids,
         headers=logged_in_headers,
     )
-    assert response.status_code == 204, response.text
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["deleted_count"] == 2
 
+
+
+@pytest.mark.api_key_required
+async def test_delete_messages_sessions_exceeds_limit(client: AsyncClient, logged_in_headers):
+    """Bulk-delete with more than 500 session IDs should return 400 error."""
+    # Create a list of 501 session IDs
+    session_ids = [f"session_{i}" for i in range(501)]
+    response = await client.request(
+        "DELETE",
+        "api/v1/monitor/messages/sessions",
+        json=session_ids,
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 400, response.text
+    data = response.json()
+    assert "Cannot delete more than 500 sessions" in data["detail"]
     # bulk_session_a messages should be gone
     response = await client.get(
         "api/v1/monitor/messages", params={"session_id": "bulk_session_a"}, headers=logged_in_headers

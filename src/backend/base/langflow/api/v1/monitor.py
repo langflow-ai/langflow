@@ -188,22 +188,49 @@ async def delete_messages_session(
     return {"message": "Messages deleted successfully"}
 
 
-@router.delete("/messages/sessions", status_code=204, dependencies=[Depends(get_current_active_user)])
+@router.delete("/messages/sessions", status_code=200, dependencies=[Depends(get_current_active_user)])
 async def delete_messages_sessions(
     session_ids: list[str],
     session: DbSession,
 ):
-    """Bulk delete messages for multiple sessions at once."""
+    """Bulk delete messages for multiple sessions at once.
+    
+    Args:
+        session_ids: List of session IDs to delete (max 500)
+        session: Database session
+        
+    Returns:
+        Confirmation message with count of deleted sessions
+        
+    Raises:
+        HTTPException: 400 if session_ids list exceeds 500 items
+        HTTPException: 500 if database operation fails
+    """
+    # Validate input size to prevent massive SQL IN clauses
+    if len(session_ids) > 500:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete more than 500 sessions at once. Please batch your requests."
+        )
+    
+    if not session_ids:
+        return {"message": "No sessions to delete", "deleted_count": 0}
+    
     try:
         await session.exec(
             delete(MessageTable)
             .where(col(MessageTable.session_id).in_(session_ids))
             .execution_options(synchronize_session="fetch")
         )
+        await session.commit()
     except Exception as e:
+        await session.rollback()
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    return {"message": f"Messages deleted successfully for {len(session_ids)} sessions"}
+    return {
+        "message": f"Messages deleted successfully for {len(session_ids)} sessions",
+        "deleted_count": len(session_ids)
+    }
 
 
 @router.get("/transactions", dependencies=[Depends(get_current_active_user)])
