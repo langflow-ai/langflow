@@ -316,7 +316,7 @@ def get_component_instance(custom_component: CustomComponent | Component, user_i
 
     # Only now, try to process expensive exception/log traceback only *if needed*
     try:
-        custom_class = eval_custom_component_code(code)
+        custom_class = eval_custom_component_code(code, sandbox=True)
     except Exception as exc:
         # Only generate traceback if an error occurs (save time on success)
         tb = traceback.format_exc()
@@ -330,7 +330,10 @@ def get_component_instance(custom_component: CustomComponent | Component, user_i
         ) from exc
 
     try:
-        return custom_class(_user_id=user_id, _code=code)
+        # Use __new__ to avoid running user-defined __init__
+        instance = custom_class.__new__(custom_class)
+        Component.__init__(instance, _user_id=user_id, _code=code)
+        return instance
     except Exception as exc:
         tb = traceback.format_exc()
         logger.error("Error while instantiating custom component\n%s", tb)
@@ -376,7 +379,7 @@ def run_build_config(
         error = "Invalid code type"
     else:
         try:
-            custom_class = eval_custom_component_code(custom_component._code)
+            custom_class = eval_custom_component_code(custom_component._code, sandbox=True)
         except Exception as exc:
             logger.exception("Error while evaluating custom component code")
             raise HTTPException(
@@ -388,7 +391,9 @@ def run_build_config(
             ) from exc
 
         try:
-            custom_instance = custom_class(_user_id=user_id)
+            # Use __new__ to avoid running user-defined __init__
+            custom_instance = custom_class.__new__(custom_class)
+            Component.__init__(custom_instance, _user_id=user_id)
             build_config: dict = custom_instance.build_config()
 
             for field_name, field in build_config.copy().items():

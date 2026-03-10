@@ -238,21 +238,30 @@ def create_function(code, function_name):
     return wrapped_function
 
 
-def create_class(code, class_name):
+def create_class(code, class_name, *, sandbox=False):
     """Dynamically create a class from a string of code and a specified class name.
 
     Args:
         code: String containing the Python code defining the class
         class_name: Name of the class to be created
+        sandbox: When True, apply security sandbox restrictions to prevent
+                 arbitrary code execution during validation. Import blocklists,
+                 restricted builtins, and AST sanitization are applied.
 
     Returns:
          A function that, when called, returns an instance of the created class
 
     Raises:
         ValueError: If the code contains syntax errors or the class definition is invalid
+        CodeSafetyError: If sandbox is True and the code contains dangerous patterns
     """
     if not hasattr(ast, "TypeIgnore"):
         ast.TypeIgnore = create_type_ignore_class()
+
+    if sandbox:
+        from lfx.custom.code_sandbox import validate_code_safety
+
+        validate_code_safety(code)
 
     code = code.replace("from langflow import CustomComponent", "from langflow.custom import CustomComponent")
     code = code.replace(
@@ -263,12 +272,18 @@ def create_class(code, class_name):
     code = DEFAULT_IMPORT_STRING + "\n" + code
     try:
         module = ast.parse(code)
-        exec_globals = prepare_global_scope(module)
+        exec_globals = prepare_global_scope(module, sandbox=sandbox)
 
         class_code = extract_class_code(module, class_name)
+
+        if sandbox:
+            from lfx.custom.code_sandbox import sanitize_class_body
+
+            class_code = sanitize_class_body(class_code)
+
         compiled_class = compile_class_code(class_code)
 
-        return build_class_constructor(compiled_class, exec_globals, class_name)
+        return build_class_constructor(compiled_class, exec_globals, class_name, sandbox=sandbox)
 
     except SyntaxError as e:
         msg = f"Syntax error in code: {e!s}"
@@ -320,11 +335,13 @@ def _handle_module_attributes(imported_module, node, module_name, exec_globals):
             exec_globals[alias.name] = importlib.import_module(full_module_path)
 
 
-def prepare_global_scope(module):
+def prepare_global_scope(module, *, sandbox=False):
     """Prepares the global scope with necessary imports from the provided code module.
 
     Args:
         module: AST parsed module
+        sandbox: When True, filter out assignments containing function calls
+                 and use restricted builtins.
 
     Returns:
         Dictionary representing the global scope with imported modules
@@ -333,6 +350,12 @@ def prepare_global_scope(module):
         ModuleNotFoundError: If a module is not found in the code
     """
     exec_globals = globals().copy()
+
+    if sandbox:
+        from lfx.custom.code_sandbox import create_restricted_builtins
+
+        exec_globals["__builtins__"] = create_restricted_builtins()
+
     imports = []
     import_froms = []
     definitions = []
@@ -392,9 +415,15 @@ def prepare_global_scope(module):
             raise ModuleNotFoundError(msg)
 
     if definitions:
-        combined_module = ast.Module(body=definitions, type_ignores=[])
-        compiled_code = compile(combined_module, "<string>", "exec")
-        exec(compiled_code, exec_globals)
+        if sandbox:
+            from lfx.custom.code_sandbox import filter_safe_definitions
+
+            definitions = filter_safe_definitions(definitions)
+
+        if definitions:
+            combined_module = ast.Module(body=definitions, type_ignores=[])
+            compiled_code = compile(combined_module, "<string>", "exec")
+            exec(compiled_code, exec_globals)
 
     return exec_globals
 
@@ -427,28 +456,40 @@ def compile_class_code(class_code):
     return compile(ast.Module(body=[class_code], type_ignores=[]), "<string>", "exec")
 
 
-def build_class_constructor(compiled_class, exec_globals, class_name):
+def build_class_constructor(compiled_class, exec_globals, class_name, *, sandbox=False):
     """Builds a constructor function for the dynamically created class.
 
     Args:
         compiled_class: Compiled code object of the class
         exec_globals: Global scope with necessary imports
         class_name: Name of the class
+        sandbox: When True, use restricted builtins for the exec scope.
 
     Returns:
          Constructor function for the class
     """
     exec_locals = dict(locals())
-    exec(compiled_class, exec_globals, exec_locals)
-    exec_globals[class_name] = exec_locals[class_name]
+
+    if sandbox:
+        from lfx.custom.code_sandbox import create_restricted_builtins
+
+        safe_globals = exec_globals.copy()
+        safe_globals["__builtins__"] = create_restricted_builtins()
+        exec(compiled_class, safe_globals, exec_locals)
+        safe_globals[class_name] = exec_locals[class_name]
+        target_globals = safe_globals
+    else:
+        exec(compiled_class, exec_globals, exec_locals)
+        exec_globals[class_name] = exec_locals[class_name]
+        target_globals = exec_globals
 
     # Return a function that imports necessary modules and creates an instance of the target class
     def build_custom_class():
-        for module_name, module in exec_globals.items():
+        for module_name, module in target_globals.items():
             if isinstance(module, type(importlib)):
                 globals()[module_name] = module
 
-        return exec_globals[class_name]
+        return target_globals[class_name]
 
     return build_custom_class()
 

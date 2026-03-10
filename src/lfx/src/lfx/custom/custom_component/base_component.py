@@ -113,7 +113,7 @@ class BaseComponent:
             return {}
 
         try:
-            cc_class = eval_custom_component_code(self._code)
+            cc_class = eval_custom_component_code(self._code, sandbox=True)
 
         except AttributeError as e:
             pattern = r"module '.*?' has no attribute '.*?'"
@@ -121,7 +121,13 @@ class BaseComponent:
                 raise ImportError(e) from e
             raise
 
-        component_instance = cc_class(_code=self._code)
+        # Use __new__ to create the instance WITHOUT running the user-defined
+        # __init__.  Then call the base Component.__init__ directly so that
+        # required internal state is initialised safely.
+        from lfx.custom.custom_component.component import Component
+
+        component_instance = cc_class.__new__(cc_class)
+        Component.__init__(component_instance, _code=self._code)
         return self.get_template_config(component_instance)
 
     def build(self, *args: Any, **kwargs: Any) -> Any:

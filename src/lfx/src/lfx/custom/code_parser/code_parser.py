@@ -342,8 +342,12 @@ class CodeParser:
         self.data["global_vars"].append(global_var)
 
     def execute_and_inspect_classes(self, code: str):
-        custom_component_class = eval_custom_component_code(code)
-        custom_component = custom_component_class(_code=code)
+        custom_component_class = eval_custom_component_code(code, sandbox=True)
+        # Use __new__ to avoid running user-defined __init__
+        from lfx.custom.custom_component.component import Component
+
+        custom_component = custom_component_class.__new__(custom_component_class)
+        Component.__init__(custom_component, _code=code)
         dunder_class = custom_component.__class__
         # Get the base classes at two levels of inheritance
         bases = []
