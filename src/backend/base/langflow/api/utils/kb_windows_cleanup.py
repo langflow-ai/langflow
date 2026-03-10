@@ -110,7 +110,7 @@ def force_delete_kb(kb_path: Path, kb_name: str) -> bool:
     for attempt in range(_MAX_DELETE_RETRIES):
         try:
             if attempt > 0:
-                wait = _BASE_BACKOFF_SECONDS * (2 ** attempt)
+                wait = _BASE_BACKOFF_SECONDS * (2**attempt)
                 time.sleep(wait)
 
             _remove_sqlite_lock_files(kb_path)
@@ -127,7 +127,9 @@ def force_delete_kb(kb_path: Path, kb_name: str) -> bool:
             if attempt < _MAX_DELETE_RETRIES - 1:
                 logger.debug("Windows KB deletion attempt %d failed for %s: %s", attempt + 1, kb_name, e)
             else:
-                logger.warning("Windows KB deletion failed for %s after %d attempts: %s", kb_name, _MAX_DELETE_RETRIES, e)
+                logger.warning(
+                    "Windows KB deletion failed for %s after %d attempts: %s", kb_name, _MAX_DELETE_RETRIES, e
+                )
 
     # Last resort: rename for deferred cleanup
     if kb_path.exists():

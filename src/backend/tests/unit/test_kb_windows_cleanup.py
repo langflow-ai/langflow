@@ -8,10 +8,9 @@ import json
 import shutil
 import uuid
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -299,8 +298,6 @@ class TestDeleteEndpointPlatformBranching:
     async def test_delete_should_use_standard_path_on_macos(
         self, mock_root, mock_teardown, mock_platform, client, logged_in_headers, tmp_path
     ):
-        from httpx import AsyncClient
-
         mock_root.return_value = tmp_path
         (tmp_path / "activeuser" / "My_KB").mkdir(parents=True)
 
