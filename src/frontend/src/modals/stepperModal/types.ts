@@ -25,7 +25,7 @@ export interface StepperModalProps {
   onOpenChange: (open: boolean) => void;
   currentStep: number;
   totalSteps: number;
-  title: string;
+  title?: string;
   description?: string;
   icon?: string;
   children: ReactNode;
@@ -63,4 +63,6 @@ export interface StepperModalFooterProps {
   submitTestId?: string;
   onCancel?: () => void;
   cancelLabel?: string;
+  backDisabled?: boolean;
+  cancelDisabled?: boolean;
 }

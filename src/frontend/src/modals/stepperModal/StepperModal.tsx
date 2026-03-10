@@ -10,7 +10,6 @@ import { switchCaseModalSize } from "../baseModal/helpers/switch-case-size";
 import { ProgressIndicator } from "./components/ProgressIndicator";
 import { SidePanel } from "./components/SidePanel";
 import {
-  DEFAULT_ICON,
   DEFAULT_SHOW_PROGRESS,
   DEFAULT_SIDE_PANEL_OPEN,
   DEFAULT_SIZE,
@@ -25,7 +24,7 @@ export function StepperModal({
   totalSteps,
   title,
   description,
-  icon = DEFAULT_ICON,
+  icon,
   children,
   footer,
   className,
@@ -66,9 +65,11 @@ export function StepperModal({
           <div className="flex flex-col gap-1 px-4 pt-4 pr-14">
             <div className="flex items-center justify-between">
               <DialogTitle className="flex items-center gap-2 text-base font-semibold">
-                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
-                  <ForwardedIconComponent name={icon} className="h-4 w-4" />
-                </div>
+                {icon && (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+                    <ForwardedIconComponent name={icon} className="h-4 w-4" />
+                  </div>
+                )}
                 {title}
               </DialogTitle>
               <div
@@ -95,7 +96,7 @@ export function StepperModal({
           {/* Content */}
           <div
             className={cn(
-              "flex-1 min-h-0 overflow-y-auto px-4 py-4 border border-border m-4 rounded-lg",
+              "flex-1 min-h-0 overflow-y-auto px-4 py-4 rounded-lg",
               contentClassName,
             )}
           >

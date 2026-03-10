@@ -16,21 +16,20 @@ import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get
 import StepperModal, {
   StepperModalFooter,
 } from "@/modals/stepperModal/StepperModal";
+import { StepBasics } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepBasics";
+import { StepProvider } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepProvider";
 import useAlertStore from "@/stores/alertStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import type { FlowType } from "@/types/flow";
 import type { FlowHistoryEntry } from "@/types/flow/history";
 import { ConfigureDeploymentProviderModal } from "./components/ConfigureDeploymentProviderModal";
+import { DeployFlowStepper } from "./components/DeployFlowStepper";
 import { DeploymentCreationStatusView } from "./components/DeploymentCreationStatusView";
 import type { DeploymentListRow } from "./components/DeploymentProvidersView";
 import { DeploymentsEmptyState } from "./components/DeploymentsEmptyState";
 import { DeploymentsLoadingView } from "./components/DeploymentsLoadingView";
 import { DeploymentsView } from "./components/DeploymentsView";
 import { RegisterDeploymentProviderModal } from "./components/RegisterDeploymentProviderModal";
-import { StepAttach } from "./components/steps/StepAttach";
-import { StepBasics } from "./components/steps/StepBasics";
-import { StepConfiguration } from "./components/steps/StepConfiguration";
-import { StepReview } from "./components/steps/StepReview";
 import { TestAgentModal } from "./components/TestAgentModal";
 import { type EnvVar, TOTAL_STEPS } from "./constants";
 import { useDeploymentForm } from "./hooks/useDeploymentForm";
@@ -47,13 +46,7 @@ import {
   validateEnvVars,
 } from "./utils";
 
-const STEP_LABELS = [
-  "Basics",
-  "Attach Flows/Snapshots",
-  "Config",
-  "Variable Scope",
-  "Review",
-];
+const STEP_LABELS = ["Provider", "Basics", "Agent", "Configure Flow", "Review"];
 
 const DeploymentsTab = () => {
   const { folderId } = useParams();
@@ -531,9 +524,9 @@ const DeploymentsTab = () => {
             </div>
 
             {/* Content area */}
-            {providersQuery.isLoading ? (
+            {providersQuery.isLoading && false ? (
               <DeploymentsLoadingView activeSubTab={activeSubTab} />
-            ) : !hasProviders ? (
+            ) : !hasProviders || true ? (
               <DeploymentsEmptyState
                 activeSubTab={activeSubTab}
                 onCreateDeployment={() => handleOpenChange(true)}
@@ -573,10 +566,23 @@ const DeploymentsTab = () => {
               onOpenChange={handleOpenChange}
               currentStep={currentStep}
               totalSteps={TOTAL_STEPS}
-              title="Create Deployment"
+              showProgress={false}
+              title={
+                currentStep === 1
+                  ? "Configure Deployment Provider"
+                  : currentStep === 2
+                    ? "Select Flows"
+                    : currentStep === 3
+                      ? "Configure Environment"
+                      : currentStep === 4
+                        ? "Set Variable Scope"
+                        : "Review & Deploy"
+              }
               bgClassName="bg-secondary"
-              icon="Rocket"
-              description="Deploy your Langflow workflows to watsonx Orchestrate"
+              // icon="Rocket"
+              // description="Deploy your Langflow workflows to watsonx Orchestrate"
+              width="w-[752px]"
+              height="h-[569px]"
               contentClassName="bg-background"
               stepLabels={STEP_LABELS}
               onBack={() => handleOpenChange(false)}
@@ -585,7 +591,11 @@ const DeploymentsTab = () => {
                 <StepperModalFooter
                   currentStep={currentStep}
                   totalSteps={TOTAL_STEPS}
-                  onBack={handleBack}
+                  helpLabel="Back"
+                  onHelp={handleBack}
+                  onBack={() => handleOpenChange(false)}
+                  backLabel="Cancel"
+                  backDisabled={currentStep === 1}
                   onNext={() => {
                     if (currentStep === 2) {
                       const selKey = Array.from(selectedItems).sort().join(",");
@@ -624,7 +634,21 @@ const DeploymentsTab = () => {
                 />
               }
             >
+              <DeployFlowStepper
+                currentStep={currentStep}
+                labels={STEP_LABELS}
+              />
               {currentStep === 1 && (
+                <StepProvider
+                  deploymentName={deploymentName}
+                  setDeploymentName={setDeploymentName}
+                  deploymentDescription={deploymentDescription}
+                  setDeploymentDescription={setDeploymentDescription}
+                  deploymentType={deploymentType}
+                  setDeploymentType={setDeploymentType}
+                />
+              )}
+              {currentStep === 2 && (
                 <StepBasics
                   deploymentName={deploymentName}
                   setDeploymentName={setDeploymentName}
@@ -635,7 +659,7 @@ const DeploymentsTab = () => {
                 />
               )}
 
-              {currentStep === 2 && (
+              {/*   {currentStep === 2 && (
                 <StepAttach
                   selectedItems={selectedItems}
                   toggleItem={toggleItem}
@@ -658,7 +682,7 @@ const DeploymentsTab = () => {
                   selectedItems={selectedReviewItems}
                   envVars={envVars}
                 />
-              )}
+              )} */}
             </StepperModal>
           </>
         )}

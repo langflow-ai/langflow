@@ -26,6 +26,8 @@ export function StepperModalFooter({
   submitTestId,
   onCancel,
   cancelLabel = "Cancel",
+  backDisabled = false,
+  cancelDisabled = false,
 }: StepperModalFooterProps) {
   const showHelp = helpHref || onHelp;
 
@@ -60,12 +62,16 @@ export function StepperModalFooter({
       </div>
       <div className="flex items-center gap-3">
         {currentStep > 1 && onBack && (
-          <Button variant="outline" onClick={onBack}>
+          <Button variant="outline" onClick={onBack} disabled={backDisabled}>
             {backLabel}
           </Button>
         )}
         {onCancel && (
-          <Button variant="outline" onClick={onCancel}>
+          <Button
+            variant="outline"
+            onClick={onCancel}
+            disabled={cancelDisabled}
+          >
             {cancelLabel}
           </Button>
         )}

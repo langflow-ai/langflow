@@ -92,7 +92,7 @@ export default function KnowledgeBaseUploadModal({
         if (!isOpen) form.resetForm();
       }}
       className="bg-background"
-      contentClassName="bg-muted"
+      contentClassName="bg-muted border-border m-4"
       currentStep={form.currentStep}
       totalSteps={2}
       title={
