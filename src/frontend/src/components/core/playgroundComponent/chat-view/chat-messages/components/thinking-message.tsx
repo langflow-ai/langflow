@@ -43,7 +43,7 @@ export default function ThinkingMessage({
         {!isThinking && (
           <ForwardedIconComponent
             name="Check"
-            className="h-4 w-4 text-emerald-400"
+            className="h-4 w-4 text-accent-emerald-foreground"
           />
         )}
         <p className="m-0 w-full flex justify-between">
