@@ -131,7 +131,7 @@ export function SessionSelector({
                 name={isSelected ? "SquareCheck" : "Square"}
                 className={cn(
                   "h-4 w-4",
-                  isSelected ? "text-status-red" : "text-muted-foreground"
+                  isSelected ? "text-status-red" : "text-muted-foreground",
                 )}
               />
             </div>
