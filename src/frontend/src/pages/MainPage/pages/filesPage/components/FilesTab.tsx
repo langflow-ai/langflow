@@ -301,6 +301,7 @@ const FilesTab = ({
               type="text"
               placeholder={`Search files...`}
               className="mr-2 w-full"
+              inputClassName="bg-secondary"
               value={quickFilterText || ""}
               onChange={(event) => {
                 setQuickFilterText(event.target.value);
@@ -367,7 +368,7 @@ const FilesTab = ({
                   );
                 })}
                 className={cn(
-                  "ag-no-border group w-full",
+                  "ag-no-border group w-full [&_.ag-root-wrapper]:!bg-transparent [&_.ag-header]:!bg-transparent [&_.ag-row]:!bg-transparent",
                   isShiftPressed && quantitySelected > 0 && "no-select-cells",
                 )}
                 pagination

@@ -4,6 +4,7 @@ export const DEFAULT_ICON = "Database";
 export const DEFAULT_SIZE: StepperModalSize = "small-h-full";
 export const DEFAULT_SHOW_PROGRESS = true;
 export const DEFAULT_SIDE_PANEL_OPEN = false;
+export const DEFAULT_FULL_PAGE = false;
 
 export const DEFAULT_SUBMIT_LABEL = "Create";
 export const DEFAULT_NEXT_LABEL = "Next Step";

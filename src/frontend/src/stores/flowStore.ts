@@ -40,7 +40,6 @@ import { buildFlowVerticesWithFallback } from "../utils/buildUtils";
 import {
   buildPositionDictionary,
   checkChatInput,
-  checkWebhookInput,
   cleanEdges,
   getConnectedSubgraph,
   getHandleId,
@@ -450,19 +449,22 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       selection.edges = selection.edges.concat(existingEdgesToCopy);
     }
 
-    filterSingletonComponent(
-      selection,
-      "ChatInput",
-      checkChatInput(get().nodes),
-      "You can only have one Chat Input component in a flow.",
-    );
-
-    filterSingletonComponent(
-      selection,
-      "Webhook",
-      checkWebhookInput(get().nodes),
-      "You can only have one Webhook component in a flow.",
-    );
+    if (
+      selection.nodes.some((node) => node.data.type === "ChatInput") &&
+      checkChatInput(get().nodes)
+    ) {
+      useAlertStore.getState().setNoticeData({
+        title: "You can only have one Chat Input component in a flow.",
+      });
+      selection.nodes = selection.nodes.filter(
+        (node) => node.data.type !== "ChatInput",
+      );
+      selection.edges = selection.edges.filter(
+        (edge) =>
+          selection.nodes.some((node) => edge.source === node.id) &&
+          selection.nodes.some((node) => edge.target === node.id),
+      );
+    }
 
     let minimumX = Infinity;
     let minimumY = Infinity;
@@ -513,9 +515,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           ...cloneDeep(node.data),
           id: newId,
         },
-        // Preserve width and height for noteNodes (sticky notes)
-        ...(node.width !== undefined && { width: node.width }),
-        ...(node.height !== undefined && { height: node.height }),
       } as AllNodeType;
 
       updateGroupRecursion(
