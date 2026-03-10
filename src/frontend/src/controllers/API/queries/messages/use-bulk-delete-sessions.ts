@@ -24,19 +24,16 @@ export const useBulkDeleteSessions: useMutationFunctionType<
     return response.data;
   };
 
-  const mutation: UseMutationResult<
-    any,
-    any,
-    BulkDeleteSessionsParams
-  > = mutate(["useBulkDeleteSessions"], bulkDeleteSessions, {
-    ...options,
-    onSettled: (...args) => {
-      queryClient.invalidateQueries({
-        queryKey: ["useGetSessionsFromFlowQuery"],
-      });
-      options?.onSettled?.(...args);
-    },
-  });
+  const mutation: UseMutationResult<any, any, BulkDeleteSessionsParams> =
+    mutate(["useBulkDeleteSessions"], bulkDeleteSessions, {
+      ...options,
+      onSettled: (...args) => {
+        queryClient.invalidateQueries({
+          queryKey: ["useGetSessionsFromFlowQuery"],
+        });
+        options?.onSettled?.(...args);
+      },
+    });
 
   return mutation;
 };

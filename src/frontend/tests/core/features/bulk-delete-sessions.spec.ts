@@ -49,7 +49,7 @@ test.describe("Bulk Delete Sessions", () => {
   // Helper to intercept API calls
   async function setupApiInterceptor(page: Page) {
     const apiCalls: string[] = [];
-    
+
     await page.route("**/api/v1/monitor/messages/sessions*", (route) => {
       const method = route.request().method();
       const url = route.request().url();
@@ -132,10 +132,10 @@ test.describe("Bulk Delete Sessions", () => {
       const sessionCheckboxes = await page
         .locator('[data-testid^="session-"][data-testid$="-checkbox"]')
         .all();
-      
+
       for (const checkbox of sessionCheckboxes) {
-        const icon = checkbox.locator('svg');
-        await expect(icon).toHaveAttribute('data-testid', 'icon-SquareCheck');
+        const icon = checkbox.locator("svg");
+        await expect(icon).toHaveAttribute("data-testid", "icon-SquareCheck");
       }
 
       // Verify bulk delete button is visible
@@ -182,10 +182,10 @@ test.describe("Bulk Delete Sessions", () => {
       const sessionCheckboxes = await page
         .locator('[data-testid^="session-"][data-testid$="-checkbox"]')
         .all();
-      
+
       for (const checkbox of sessionCheckboxes) {
-        const icon = checkbox.locator('svg');
-        await expect(icon).toHaveAttribute('data-testid', 'icon-Square');
+        const icon = checkbox.locator("svg");
+        await expect(icon).toHaveAttribute("data-testid", "icon-Square");
       }
 
       // Verify bulk delete button is not visible
@@ -228,22 +228,22 @@ test.describe("Bulk Delete Sessions", () => {
       const sessionCheckboxes = await page
         .locator('[data-testid^="session-"][data-testid$="-checkbox"]')
         .all();
-      
+
       // Verify we have 3 checkboxes (for the 3 non-default sessions)
       expect(sessionCheckboxes.length).toBe(3);
-      
+
       await sessionCheckboxes[0].click();
       await page.waitForTimeout(300);
       await sessionCheckboxes[1].click();
       await page.waitForTimeout(300);
 
       // Verify only first two are checked (by checking icon state)
-      const icon0 = sessionCheckboxes[0].locator('svg');
-      const icon1 = sessionCheckboxes[1].locator('svg');
-      const icon2 = sessionCheckboxes[2].locator('svg');
-      await expect(icon0).toHaveAttribute('data-testid', 'icon-SquareCheck');
-      await expect(icon1).toHaveAttribute('data-testid', 'icon-SquareCheck');
-      await expect(icon2).toHaveAttribute('data-testid', 'icon-Square');
+      const icon0 = sessionCheckboxes[0].locator("svg");
+      const icon1 = sessionCheckboxes[1].locator("svg");
+      const icon2 = sessionCheckboxes[2].locator("svg");
+      await expect(icon0).toHaveAttribute("data-testid", "icon-SquareCheck");
+      await expect(icon1).toHaveAttribute("data-testid", "icon-SquareCheck");
+      await expect(icon2).toHaveAttribute("data-testid", "icon-Square");
 
       // Verify bulk delete button is visible
       await expect(page.getByTestId("bulk-delete-button")).toBeVisible();
@@ -355,7 +355,7 @@ test.describe("Bulk Delete Sessions", () => {
       await expect(
         page.getByText("First session", { exact: false }).first(),
       ).toBeVisible({ timeout: 5000 });
-      
+
       // Verify the second session message is not visible (it was deleted)
       await expect(
         page.getByText("Second session", { exact: false }).first(),
@@ -449,16 +449,26 @@ test.describe("Bulk Delete Sessions", () => {
       }
 
       // Verify Select All checkbox is now checked (by checking icon state)
-      const selectAllIcon = page.getByTestId("select-all-checkbox").locator('svg');
-      await expect(selectAllIcon).toHaveAttribute('data-testid', 'icon-SquareCheck');
+      const selectAllIcon = page
+        .getByTestId("select-all-checkbox")
+        .locator("svg");
+      await expect(selectAllIcon).toHaveAttribute(
+        "data-testid",
+        "icon-SquareCheck",
+      );
 
       // Uncheck one session
       await sessionCheckboxes[0].click();
       await page.waitForTimeout(300);
 
       // Verify Select All checkbox is now unchecked (by checking icon state)
-      const selectAllIconAfter = page.getByTestId("select-all-checkbox").locator('svg');
-      await expect(selectAllIconAfter).toHaveAttribute('data-testid', 'icon-Square');
+      const selectAllIconAfter = page
+        .getByTestId("select-all-checkbox")
+        .locator("svg");
+      await expect(selectAllIconAfter).toHaveAttribute(
+        "data-testid",
+        "icon-Square",
+      );
     },
   );
 });
