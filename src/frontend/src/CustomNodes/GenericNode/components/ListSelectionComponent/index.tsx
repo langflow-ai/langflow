@@ -243,7 +243,7 @@ const ListSelectionComponent = ({
               />
             ))
           ) : (
-            <div className="py-3 text-center text-gray-500">
+            <div className="py-3 text-center text-muted-foreground">
               No items match your search
             </div>
           )}
