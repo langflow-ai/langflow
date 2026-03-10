@@ -225,20 +225,18 @@ def apply_provider_variable_config_to_build_config(
         if info:
             field_config["info"] = info
 
-        # Show the field since it's relevant to this provider
         field_config["show"] = True
 
-        # If no value is set, try to get from environment variable
         env_var_key = var_info.get("variable_key")
         if env_var_key:
             current_value = field_config.get("value")
-            # Only set from env if field is empty/None
             if not current_value or (isinstance(current_value, str) and not current_value.strip()):
                 env_value = os.environ.get(env_var_key)
                 if env_value and env_value.strip():
-                    field_config["value"] = env_value
+                    field_config["value"] = env_var_key
+                    field_config["load_from_db"] = True
                     logger.debug(
-                        "Set field %s from environment variable %s",
+                        "Set field %s to env var name %s (value resolved at runtime)",
                         field_name,
                         env_var_key,
                     )

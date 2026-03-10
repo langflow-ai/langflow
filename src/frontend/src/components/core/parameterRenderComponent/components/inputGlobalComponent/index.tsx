@@ -114,9 +114,13 @@ export default function InputGlobalComponent({
     />
   );
 
-  // // Extract options list for better readability
-  const variableOptions = typedGlobalVariables.map((variable) => variable.name);
-  const selectedOption = loadFromDb && valueExists ? currentValue : "";
+  let variableOptions = typedGlobalVariables.map((variable) => variable.name);
+
+  if (loadFromDb && currentValue && !valueExists && !variableOptions.includes(currentValue)) {
+    variableOptions = [...variableOptions, currentValue];
+  }
+
+  const selectedOption = loadFromDb ? currentValue : "";
 
   if (!showParameter) {
     return null;
