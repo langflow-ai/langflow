@@ -8,10 +8,9 @@ import json
 import shutil
 import uuid
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -62,9 +61,9 @@ class TestCloseChromaClient:
         mock_gc.assert_called_once()
         mock_sleep.assert_called_once()
 
-    @patch("langflow.api.utils.kb_windows_cleanup.time.sleep")
+    @patch("langflow.api.utils.kb_windows_cleanup.time.sleep", new=MagicMock())
     @patch("langflow.api.utils.kb_windows_cleanup.gc.collect")
-    def test_should_not_raise_when_path_key_missing(self, mock_gc, mock_sleep, tmp_path):
+    def test_should_not_raise_when_path_key_missing(self, mock_gc, tmp_path):
         from langflow.api.utils.kb_windows_cleanup import _close_chroma_client
 
         fake_registry = {}
@@ -88,8 +87,7 @@ class TestTeardownCollection:
     ):
         from langflow.api.utils.kb_windows_cleanup import _teardown_collection
 
-        mock_client = MagicMock()
-        mock_client_cls.return_value = mock_client
+        mock_client_cls.return_value = MagicMock()
         mock_chroma = MagicMock()
         mock_chroma_cls.return_value = mock_chroma
 
@@ -184,8 +182,8 @@ class TestForceDeleteKb:
     """Tests for force_delete_kb — the main Windows deletion function."""
 
     @patch("langflow.api.utils.kb_windows_cleanup._teardown_collection")
-    @patch("langflow.api.utils.kb_windows_cleanup.time.sleep")
-    def test_should_return_true_when_path_does_not_exist(self, mock_sleep, mock_teardown, tmp_path):
+    @patch("langflow.api.utils.kb_windows_cleanup.time.sleep", new=MagicMock())
+    def test_should_return_true_when_path_does_not_exist(self, mock_teardown, tmp_path):
         from langflow.api.utils.kb_windows_cleanup import force_delete_kb
 
         non_existent = tmp_path / "does_not_exist"
@@ -195,8 +193,8 @@ class TestForceDeleteKb:
         mock_teardown.assert_not_called()
 
     @patch("langflow.api.utils.kb_windows_cleanup._teardown_collection")
-    @patch("langflow.api.utils.kb_windows_cleanup.time.sleep")
-    def test_should_delete_directory_on_first_attempt(self, mock_sleep, mock_teardown, kb_dir):
+    @patch("langflow.api.utils.kb_windows_cleanup.time.sleep", new=MagicMock())
+    def test_should_delete_directory_on_first_attempt(self, mock_teardown, kb_dir):
         from langflow.api.utils.kb_windows_cleanup import force_delete_kb
 
         result = force_delete_kb(kb_dir, "test_kb")
@@ -205,19 +203,20 @@ class TestForceDeleteKb:
         assert not kb_dir.exists()
         mock_teardown.assert_called_once_with(kb_dir, "test_kb")
 
-    @patch("langflow.api.utils.kb_windows_cleanup._teardown_collection")
-    @patch("langflow.api.utils.kb_windows_cleanup.time.sleep")
-    def test_should_retry_and_succeed_on_second_attempt(self, mock_sleep, mock_teardown, kb_dir):
+    @patch("langflow.api.utils.kb_windows_cleanup._teardown_collection", new=MagicMock())
+    @patch("langflow.api.utils.kb_windows_cleanup.time.sleep", new=MagicMock())
+    def test_should_retry_and_succeed_on_second_attempt(self, kb_dir):
         from langflow.api.utils.kb_windows_cleanup import force_delete_kb
 
         original_rmtree = shutil.rmtree
         call_count = 0
 
-        def rmtree_fails_once(path, ignore_errors=False):
+        def rmtree_fails_once(path, *, ignore_errors=False):
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                raise OSError("[WinError 32] File in use")
+                msg = "[WinError 32] File in use"
+                raise OSError(msg)
             original_rmtree(path, ignore_errors=ignore_errors)
 
         with patch("langflow.api.utils.kb_windows_cleanup.shutil.rmtree", side_effect=rmtree_fails_once):
@@ -226,9 +225,9 @@ class TestForceDeleteKb:
         assert result is True
         assert call_count == 2
 
-    @patch("langflow.api.utils.kb_windows_cleanup._teardown_collection")
-    @patch("langflow.api.utils.kb_windows_cleanup.time.sleep")
-    def test_should_rename_as_fallback_when_all_retries_fail(self, mock_sleep, mock_teardown, kb_dir):
+    @patch("langflow.api.utils.kb_windows_cleanup._teardown_collection", new=MagicMock())
+    @patch("langflow.api.utils.kb_windows_cleanup.time.sleep", new=MagicMock())
+    def test_should_rename_as_fallback_when_all_retries_fail(self, kb_dir):
         from langflow.api.utils.kb_windows_cleanup import force_delete_kb
 
         with patch(
@@ -244,9 +243,9 @@ class TestForceDeleteKb:
         renamed_dirs = [p for p in kb_dir.parent.iterdir() if p.name.startswith(".deleted_test_kb_")]
         assert len(renamed_dirs) == 1
 
-    @patch("langflow.api.utils.kb_windows_cleanup._teardown_collection")
-    @patch("langflow.api.utils.kb_windows_cleanup.time.sleep")
-    def test_should_return_false_when_all_strategies_fail(self, mock_sleep, mock_teardown, kb_dir):
+    @patch("langflow.api.utils.kb_windows_cleanup._teardown_collection", new=MagicMock())
+    @patch("langflow.api.utils.kb_windows_cleanup.time.sleep", new=MagicMock())
+    def test_should_return_false_when_all_strategies_fail(self, kb_dir):
         from langflow.api.utils.kb_windows_cleanup import force_delete_kb
 
         with (
@@ -261,19 +260,20 @@ class TestForceDeleteKb:
         assert result is False
         assert kb_dir.exists()
 
-    @patch("langflow.api.utils.kb_windows_cleanup._teardown_collection")
+    @patch("langflow.api.utils.kb_windows_cleanup._teardown_collection", new=MagicMock())
     @patch("langflow.api.utils.kb_windows_cleanup.time.sleep")
-    def test_should_use_exponential_backoff_on_retries(self, mock_sleep, mock_teardown, kb_dir):
+    def test_should_use_exponential_backoff_on_retries(self, mock_sleep, kb_dir):
         from langflow.api.utils.kb_windows_cleanup import force_delete_kb
 
         real_rmtree = shutil.rmtree
         call_count = 0
 
-        def rmtree_fails_three_times(path, ignore_errors=False):
+        def rmtree_fails_three_times(path, *, ignore_errors=False):
             nonlocal call_count
             call_count += 1
             if call_count <= 3:
-                raise OSError("[WinError 32] File in use")
+                msg = "[WinError 32] File in use"
+                raise OSError(msg)
             real_rmtree(path, ignore_errors=ignore_errors)
 
         with patch("langflow.api.utils.kb_windows_cleanup.shutil.rmtree", side_effect=rmtree_fails_three_times):
@@ -293,14 +293,12 @@ class TestForceDeleteKb:
 class TestDeleteEndpointPlatformBranching:
     """Tests that delete endpoints use the correct path based on platform."""
 
-    @patch("langflow.api.v1.knowledge_bases.platform.system", return_value="Darwin")
+    @patch("langflow.api.v1.knowledge_bases.platform.system", new=MagicMock(return_value="Darwin"))
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.teardown_storage")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_delete_should_use_standard_path_on_macos(
-        self, mock_root, mock_teardown, mock_platform, client, logged_in_headers, tmp_path
+        self, mock_root, mock_teardown, client, logged_in_headers, tmp_path
     ):
-        from httpx import AsyncClient
-
         mock_root.return_value = tmp_path
         (tmp_path / "activeuser" / "My_KB").mkdir(parents=True)
 
@@ -309,11 +307,11 @@ class TestDeleteEndpointPlatformBranching:
         assert response.status_code == 200
         mock_teardown.assert_called_once()
 
-    @patch("langflow.api.v1.knowledge_bases.platform.system", return_value="Linux")
+    @patch("langflow.api.v1.knowledge_bases.platform.system", new=MagicMock(return_value="Linux"))
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.teardown_storage")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_delete_should_use_standard_path_on_linux(
-        self, mock_root, mock_teardown, mock_platform, client, logged_in_headers, tmp_path
+        self, mock_root, mock_teardown, client, logged_in_headers, tmp_path
     ):
         mock_root.return_value = tmp_path
         (tmp_path / "activeuser" / "My_KB").mkdir(parents=True)
@@ -323,12 +321,12 @@ class TestDeleteEndpointPlatformBranching:
         assert response.status_code == 200
         mock_teardown.assert_called_once()
 
-    @patch("langflow.api.v1.knowledge_bases.platform.system", return_value="Windows")
+    @patch("langflow.api.v1.knowledge_bases.platform.system", new=MagicMock(return_value="Windows"))
     @patch("langflow.api.utils.kb_windows_cleanup.force_delete_kb", return_value=True)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.teardown_storage")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_delete_should_use_windows_path_on_windows(
-        self, mock_root, mock_teardown, mock_force_delete, mock_platform, client, logged_in_headers, tmp_path
+        self, mock_root, mock_teardown, mock_force_delete, client, logged_in_headers, tmp_path
     ):
         mock_root.return_value = tmp_path
         (tmp_path / "activeuser" / "My_KB").mkdir(parents=True)
@@ -340,11 +338,11 @@ class TestDeleteEndpointPlatformBranching:
         # Standard teardown should NOT be called on Windows
         mock_teardown.assert_not_called()
 
-    @patch("langflow.api.v1.knowledge_bases.platform.system", return_value="Windows")
-    @patch("langflow.api.utils.kb_windows_cleanup.force_delete_kb", return_value=False)
+    @patch("langflow.api.v1.knowledge_bases.platform.system", new=MagicMock(return_value="Windows"))
+    @patch("langflow.api.utils.kb_windows_cleanup.force_delete_kb", new=MagicMock(return_value=False))
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_delete_should_return_500_when_windows_deletion_fails(
-        self, mock_root, mock_force_delete, mock_platform, client, logged_in_headers, tmp_path
+        self, mock_root, client, logged_in_headers, tmp_path
     ):
         mock_root.return_value = tmp_path
         (tmp_path / "activeuser" / "My_KB").mkdir(parents=True)
@@ -358,11 +356,11 @@ class TestDeleteEndpointPlatformBranching:
 class TestBulkDeleteEndpointPlatformBranching:
     """Tests that bulk delete endpoint uses the correct path based on platform."""
 
-    @patch("langflow.api.v1.knowledge_bases.platform.system", return_value="Darwin")
+    @patch("langflow.api.v1.knowledge_bases.platform.system", new=MagicMock(return_value="Darwin"))
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.teardown_storage")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_bulk_delete_should_use_standard_path_on_macos(
-        self, mock_root, mock_teardown, mock_platform, client, logged_in_headers, tmp_path
+        self, mock_root, mock_teardown, client, logged_in_headers, tmp_path
     ):
         mock_root.return_value = tmp_path
         kb_user_path = tmp_path / "activeuser"
@@ -382,12 +380,12 @@ class TestBulkDeleteEndpointPlatformBranching:
         assert data["deleted_count"] == 2
         assert mock_teardown.call_count == 2
 
-    @patch("langflow.api.v1.knowledge_bases.platform.system", return_value="Windows")
+    @patch("langflow.api.v1.knowledge_bases.platform.system", new=MagicMock(return_value="Windows"))
     @patch("langflow.api.utils.kb_windows_cleanup.force_delete_kb", return_value=True)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.teardown_storage")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_bulk_delete_should_use_windows_path_on_windows(
-        self, mock_root, mock_teardown, mock_force_delete, mock_platform, client, logged_in_headers, tmp_path
+        self, mock_root, mock_teardown, mock_force_delete, client, logged_in_headers, tmp_path
     ):
         mock_root.return_value = tmp_path
         kb_user_path = tmp_path / "activeuser"
@@ -408,11 +406,11 @@ class TestBulkDeleteEndpointPlatformBranching:
         assert mock_force_delete.call_count == 2
         mock_teardown.assert_not_called()
 
-    @patch("langflow.api.v1.knowledge_bases.platform.system", return_value="Windows")
+    @patch("langflow.api.v1.knowledge_bases.platform.system", new=MagicMock(return_value="Windows"))
     @patch("langflow.api.utils.kb_windows_cleanup.force_delete_kb")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_bulk_delete_should_handle_partial_windows_failure(
-        self, mock_root, mock_force_delete, mock_platform, client, logged_in_headers, tmp_path
+        self, mock_root, mock_force_delete, client, logged_in_headers, tmp_path
     ):
         mock_root.return_value = tmp_path
         kb_user_path = tmp_path / "activeuser"
@@ -441,12 +439,10 @@ class TestBulkDeleteEndpointPlatformBranching:
         # KB1 deleted, KB2 failed but path still exists so not counted
         assert data["deleted_count"] == 1
 
-    @patch("langflow.api.v1.knowledge_bases.platform.system", return_value="Darwin")
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.teardown_storage")
+    @patch("langflow.api.v1.knowledge_bases.platform.system", new=MagicMock(return_value="Darwin"))
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.teardown_storage", new=MagicMock())
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    async def test_bulk_delete_should_report_not_found_kbs(
-        self, mock_root, mock_teardown, mock_platform, client, logged_in_headers, tmp_path
-    ):
+    async def test_bulk_delete_should_report_not_found_kbs(self, mock_root, client, logged_in_headers, tmp_path):
         mock_root.return_value = tmp_path
         kb_user_path = tmp_path / "activeuser"
         kb_user_path.mkdir(parents=True)

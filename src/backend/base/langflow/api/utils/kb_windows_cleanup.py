@@ -83,7 +83,7 @@ def _truncate_sqlite_files(kb_path: Path) -> None:
     """Truncate SQLite database files to release locks."""
     for sqlite_file in kb_path.glob("*.sqlite3"):
         try:
-            with open(sqlite_file, "r+b") as f:
+            with sqlite_file.open("r+b") as f:
                 f.truncate(0)
         except OSError as e:
             logger.debug("Could not truncate %s: %s", sqlite_file.name, e)
@@ -110,7 +110,7 @@ def force_delete_kb(kb_path: Path, kb_name: str) -> bool:
     for attempt in range(_MAX_DELETE_RETRIES):
         try:
             if attempt > 0:
-                wait = _BASE_BACKOFF_SECONDS * (2 ** attempt)
+                wait = _BASE_BACKOFF_SECONDS * (2**attempt)
                 time.sleep(wait)
 
             _remove_sqlite_lock_files(kb_path)
@@ -127,16 +127,19 @@ def force_delete_kb(kb_path: Path, kb_name: str) -> bool:
             if attempt < _MAX_DELETE_RETRIES - 1:
                 logger.debug("Windows KB deletion attempt %d failed for %s: %s", attempt + 1, kb_name, e)
             else:
-                logger.warning("Windows KB deletion failed for %s after %d attempts: %s", kb_name, _MAX_DELETE_RETRIES, e)
+                logger.warning(
+                    "Windows KB deletion failed for %s after %d attempts: %s", kb_name, _MAX_DELETE_RETRIES, e
+                )
 
     # Last resort: rename for deferred cleanup
     if kb_path.exists():
         try:
             deferred_path = kb_path.with_name(f".deleted_{kb_name}_{int(time.time())}")
             kb_path.rename(deferred_path)
-            logger.info("Renamed %s to %s for deferred cleanup", kb_name, deferred_path.name)
-            return True
         except OSError as e:
             logger.warning("Failed to rename %s for deferred cleanup: %s", kb_name, e)
+        else:
+            logger.info("Renamed %s to %s for deferred cleanup", kb_name, deferred_path.name)
+            return True
 
     return False
