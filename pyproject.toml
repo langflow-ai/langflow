@@ -57,7 +57,6 @@ dev = [
     "pytest-github-actions-annotate-failures>=0.2.0",
     "blockbuster>=1.5.20,<1.6",
     "types-aiofiles>=24.1.0.20240626",
-    "codeflash>=0.8.4",
     "hypothesis>=6.123.17",
     "locust~=2.40.5",
     "pytest-rerunfailures>=15.0",

@@ -261,6 +261,36 @@ To fully remove a Langflow Desktop macOS installation, you must also delete `~/.
 
 The following issues can occur when using Langflow as an MCP server or client.
 
+### Default project MCP server only works when authentication is None
+
+If the default project MCP server works without authentication, but fails after adding an API key to the server configuration, the API key might have been added to the wrong section of the configuration.
+
+The default MCP server uses streamable HTTP transport.
+The API key must be added to the `args` array that is passed to `mcp-proxy`, not the `env` object.
+
+Your `args` array must include `"--headers"`, `"x-api-key"`, and your key value. For example:
+
+```json
+{
+  "mcpServers": {
+    "PROJECT_NAME": {
+      "command": "uvx",
+      "args": [
+        "mcp-proxy",
+        "--transport",
+        "streamablehttp",
+        "--headers",
+        "x-api-key",
+        "YOUR_API_KEY",
+        "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/streamable"
+      ]
+    }
+  }
+}
+```
+
+For more information, see [Connect clients to your Langflow MCP server](/mcp-server#connect-clients-to-use-the-servers-actions).
+
 ### Claude for Desktop doesn't use MCP server tools correctly
 
 If Claude for Desktop doesn't use your server's tools correctly, try explicitly defining the path to your local `uvx` or `npx` executable file in the `claude_desktop_config.json` configuration file:

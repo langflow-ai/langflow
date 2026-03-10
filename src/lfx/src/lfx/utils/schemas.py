@@ -1,4 +1,6 @@
 import enum
+from typing import Any
+from uuid import UUID
 
 from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, field_validator, model_validator
@@ -45,6 +47,8 @@ class ChatOutputResponse(BaseModel):
     sender: str | None = MESSAGE_SENDER_AI
     sender_name: str | None = MESSAGE_SENDER_NAME_AI
     session_id: str | None = None
+    """If set, must be a string. If a UUID type is provided,
+    it will be converted to a string. No other types are accepted."""
     stream_url: str | None = None
     component_id: str | None = None
     files: list[File] = []
@@ -121,6 +125,23 @@ class ChatOutputResponse(BaseModel):
         message = self.message.replace("\n\n", "\n")
         self.message = message.replace("\n", "\n\n")
         return self
+
+    @field_validator("session_id", mode="before")
+    @classmethod
+    def validate_and_coerce_session_id(cls, value: Any) -> str | None:
+        """Validate and coerce session id to a string if it is a UUID.
+
+        Must be a UUID, string, or None.
+        If the session id is a UUID, it will be converted to a string.
+        If the session id is a string or None, it will be returned as is.
+        Otherwise, a ValueError will be raised.
+        """
+        if value is None or isinstance(value, str):
+            return value
+        if isinstance(value, UUID):
+            return str(value)
+        msg = f"The provided Session ID must be a UUID, string, or None. Got {value} of type {type(value)}."
+        raise ValueError(msg)
 
 
 class DataOutputResponse(BaseModel):
