@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import importlib.metadata as md
 import io
 import json
@@ -22,8 +23,9 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
-    from ibm_watsonx_orchestrate_clients.tools.tool_client import ToolClient
     from lfx.services.adapters.deployment.schema import BaseFlowArtifact, SnapshotItems
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 
 
 def extract_langflow_artifact_from_zip(artifact_zip_bytes: bytes, *, snapshot_id: str) -> dict[str, Any]:
@@ -59,7 +61,7 @@ def build_langflow_artifact_bytes(
     flow_filename: str | None = None,
 ) -> bytes:
     filename = flow_filename or f"{tool.__tool_spec__.name}.json"
-    lfx_requirement = "lfx>=0.3.0rc3"  # TODO: handle dev environments consistently.
+    lfx_requirement = _resolve_lfx_requirement()
     requirements = generate_requirements_from_flow(
         flow_definition,
         include_lfx=False,
@@ -79,14 +81,14 @@ def build_langflow_artifact_bytes(
 
 
 def upload_tool_artifact_bytes(
-    tool_client: ToolClient,
+    clients: WxOClient,
     *,
     tool_id: str,
     artifact_bytes: bytes,
 ) -> dict[str, Any]:
     file_obj = io.BytesIO(artifact_bytes)
-    return tool_client._post(  # noqa: SLF001
-        f"/tools/{tool_id}/upload",
+    return clients.upload_tool_artifact(
+        tool_id,
         files={"file": (f"{tool_id}.zip", file_obj, "application/zip", {"Expires": "0"})},
     )
 
@@ -181,7 +183,7 @@ def create_wxo_flow_tool(
 
 async def create_and_upload_wxo_flow_tools(
     *,
-    tool_client: ToolClient,
+    clients: WxOClient,
     flow_payloads: list[BaseFlowArtifact],
     connections: dict[str, str],
     app_id: str | None = None,
@@ -199,7 +201,7 @@ async def create_and_upload_wxo_flow_tools(
     return await asyncio.gather(
         *(
             upload_wxo_flow_tool(
-                tool_client=tool_client,
+                clients=clients,
                 tool_payload=tool_payload,
                 artifact_bytes=artifact_bytes,
             )
@@ -210,16 +212,16 @@ async def create_and_upload_wxo_flow_tools(
 
 async def upload_wxo_flow_tool(
     *,
-    tool_client: ToolClient,
+    clients: WxOClient,
     tool_payload: dict[str, Any],
     artifact_bytes: bytes,
 ) -> str:
-    tool_response = await asyncio.to_thread(tool_client.create, tool_payload)
+    tool_response = await asyncio.to_thread(clients.tool.create, tool_payload)
     tool_id = require_tool_id(tool_response)
 
     await asyncio.to_thread(
         upload_tool_artifact_bytes,
-        tool_client,
+        clients,
         tool_id=tool_id,
         artifact_bytes=artifact_bytes,
     )
@@ -231,11 +233,12 @@ def prefix_flow_global_variable_references(
     *,
     app_id: str,
 ) -> dict[str, Any]:
-    """Prefix load-from-db global variable names with the WXO app id."""
+    """Return a deep copy of *flow_definition* with load-from-db variable names prefixed."""
     normalized_app_id = app_id.strip()
     if not normalized_app_id:
         return flow_definition
 
+    result = copy.deepcopy(flow_definition)
     prefix = f"{normalized_app_id}_"
 
     def _walk(value: Any) -> None:
@@ -243,8 +246,6 @@ def prefix_flow_global_variable_references(
             if value.get("load_from_db") is True and isinstance(value.get("value"), str):
                 variable_name = value["value"].strip()
                 if variable_name and not variable_name.startswith(prefix):
-                    # TODO: sometimes the user wants to keep a raw value
-                    # figure out what the exact conditions for this are
                     value["value"] = f"{prefix}{variable_name}"
             for child in value.values():
                 _walk(child)
@@ -254,8 +255,8 @@ def prefix_flow_global_variable_references(
             for item in value:
                 _walk(item)
 
-    _walk(flow_definition)
-    return flow_definition
+    _walk(result)
+    return result
 
 
 def build_snapshot_tool_names(
@@ -302,7 +303,7 @@ async def process_raw_flows_with_app_id(
     connection = await validate_connection(clients.connections, app_id=app_id)
 
     return await create_and_upload_wxo_flow_tools(
-        tool_client=clients.tool,
+        clients=clients,
         flow_payloads=flows,
         connections={app_id: connection.connection_id},
         app_id=app_id,
@@ -310,7 +311,17 @@ async def process_raw_flows_with_app_id(
     )
 
 
-@func.ttl_cache(maxsize=1, ttl=2)
+_LFX_MINIMUM_REQUIREMENT = "lfx>=0.3.0rc3"
+
+
+@func.ttl_cache(maxsize=1, ttl=60)
 def _pin_requirement_name(package_name: str) -> str:
-    version = md.version(package_name)
-    return f"{package_name}=={version}"
+    return f"{package_name}=={md.version(package_name)}"
+
+
+def _resolve_lfx_requirement() -> str:
+    """Pin lfx to the installed version, falling back to a minimum spec."""
+    try:
+        return _pin_requirement_name("lfx")
+    except Exception:  # noqa: BLE001
+        return _LFX_MINIMUM_REQUIREMENT

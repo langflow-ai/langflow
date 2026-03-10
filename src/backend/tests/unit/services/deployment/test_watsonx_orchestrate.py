@@ -171,9 +171,18 @@ class FakeBaseClient:
         self.post_calls.append((path, data))
         return self.post_response
 
-    def _get(self, path: str):
+    def _get(self, path: str, params: dict | None = None):  # noqa: ARG002
         self.get_calls.append(path)
         return self._get_payloads.get(path, {})
+
+
+def _with_wxo_wrappers(ns):
+    """Attach WxOClient SDK wrapper methods to a SimpleNamespace test double."""
+    if hasattr(ns, "_base") and ns._base is not None:
+        ns.get_agents_raw = lambda params=None: ns._base._get("/agents", params=params)
+        ns.post_run = lambda *, query_suffix="", data: ns._base._post(f"/runs{query_suffix}", data)
+        ns.get_run = lambda run_id: ns._base._get(f"/runs/{run_id}")
+    return ns
 
 
 @pytest.mark.anyio
@@ -325,17 +334,21 @@ async def test_update_deployment_denies_config_replacement(monkeypatch):
 @pytest.mark.anyio
 async def test_list_deployments_filters_with_provider_draft_filters(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_clients = SimpleNamespace(
-        agent=FakeAgentClient(
-            {"id": "dep-1", "tools": []},
-            listed_agents=[
-                {"id": "dep-1", "name": "deployment-1", "tools": []},
-                {"id": "dep-2", "name": "deployment-2", "tools": []},
-                {"id": "dep-3", "name": "deployment-3", "tools": []},
-            ],
-        ),
-        tool=FakeToolClient([]),
-        connections=FakeConnectionsClient(),
+    fake_agent = FakeAgentClient(
+        {"id": "dep-1", "tools": []},
+        listed_agents=[
+            {"id": "dep-1", "name": "deployment-1", "tools": []},
+            {"id": "dep-2", "name": "deployment-2", "tools": []},
+            {"id": "dep-3", "name": "deployment-3", "tools": []},
+        ],
+    )
+    fake_clients = _with_wxo_wrappers(
+        SimpleNamespace(
+            _base=fake_agent,
+            agent=fake_agent,
+            tool=FakeToolClient([]),
+            connections=FakeConnectionsClient(),
+        )
     )
 
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
@@ -463,13 +476,13 @@ async def test_process_raw_flows_with_app_id_awaits_connection_validation(monkey
 
     async def mock_create_and_upload_wxo_flow_tools(
         *,
-        tool_client,
+        clients,
         flow_payloads,
         connections,
         app_id=None,
         tool_name_prefix,
     ):
-        captured["tool_client"] = tool_client
+        captured["clients"] = clients
         captured["flow_payloads"] = flow_payloads
         captured["connections"] = connections
         captured["app_id"] = app_id
@@ -909,7 +922,7 @@ async def test_create_rolls_back_and_preserves_original_error_when_cleanup_fails
         ),
     )
 
-    with pytest.raises(DeploymentError, match="error details: boom"):
+    with pytest.raises(DeploymentError, match="Please check server logs for details"):
         await service.create(
             user_id="user-1",
             payload=deployment_payload,
@@ -922,11 +935,13 @@ async def test_create_execution_posts_runs_payload(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_agent = FakeAgentClient({"id": "dep-1", "tools": []})
     fake_base = FakeBaseClient()
-    fake_clients = SimpleNamespace(
-        base=fake_base,
-        agent=fake_agent,
-        tool=FakeToolClient([]),
-        connections=FakeConnectionsClient(),
+    fake_clients = _with_wxo_wrappers(
+        SimpleNamespace(
+            _base=fake_base,
+            agent=fake_agent,
+            tool=FakeToolClient([]),
+            connections=FakeConnectionsClient(),
+        )
     )
 
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
@@ -969,11 +984,13 @@ async def test_get_execution_returns_completed_output(monkeypatch):
             }
         }
     )
-    fake_clients = SimpleNamespace(
-        base=fake_base,
-        agent=fake_agent,
-        tool=FakeToolClient([]),
-        connections=FakeConnectionsClient(),
+    fake_clients = _with_wxo_wrappers(
+        SimpleNamespace(
+            _base=fake_base,
+            agent=fake_agent,
+            tool=FakeToolClient([]),
+            connections=FakeConnectionsClient(),
+        )
     )
 
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
@@ -1008,11 +1025,13 @@ async def test_get_execution_fetches_result_payload(monkeypatch):
             }
         }
     )
-    fake_clients = SimpleNamespace(
-        base=fake_base,
-        agent=fake_agent,
-        tool=FakeToolClient([]),
-        connections=FakeConnectionsClient(),
+    fake_clients = _with_wxo_wrappers(
+        SimpleNamespace(
+            _base=fake_base,
+            agent=fake_agent,
+            tool=FakeToolClient([]),
+            connections=FakeConnectionsClient(),
+        )
     )
 
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
@@ -1036,11 +1055,13 @@ async def test_get_execution_requires_execution_id(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_agent = FakeAgentClient({"id": "dep-1", "tools": []})
     fake_base = FakeBaseClient()
-    fake_clients = SimpleNamespace(
-        base=fake_base,
-        agent=fake_agent,
-        tool=FakeToolClient([]),
-        connections=FakeConnectionsClient(),
+    fake_clients = _with_wxo_wrappers(
+        SimpleNamespace(
+            _base=fake_base,
+            agent=fake_agent,
+            tool=FakeToolClient([]),
+            connections=FakeConnectionsClient(),
+        )
     )
 
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
@@ -1409,13 +1430,17 @@ async def test_update_deployment_not_found_raises(monkeypatch):
 @pytest.mark.anyio
 async def test_list_deployments_without_params(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_clients = SimpleNamespace(
-        agent=FakeAgentClient(
-            {"id": "dep-1", "tools": []},
-            listed_agents=[
-                {"id": "dep-1", "name": "agent-1", "tools": []},
-            ],
-        ),
+    fake_agent = FakeAgentClient(
+        {"id": "dep-1", "tools": []},
+        listed_agents=[
+            {"id": "dep-1", "name": "agent-1", "tools": []},
+        ],
+    )
+    fake_clients = _with_wxo_wrappers(
+        SimpleNamespace(
+            _base=fake_agent,
+            agent=fake_agent,
+        )
     )
 
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001

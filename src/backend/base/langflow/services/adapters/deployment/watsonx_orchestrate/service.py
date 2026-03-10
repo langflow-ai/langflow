@@ -6,6 +6,7 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
+from cachetools import TTLCache
 from fastapi import HTTPException, status
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 from lfx.services.adapters.deployment.base import BaseDeploymentService
@@ -109,8 +110,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             msg = "Settings service is not available."
             raise RuntimeError(msg)
         self.settings_service = settings_service
-        # TODO: LRU + TTL hybrid cache
-        self._client_managers: dict[str, WxOClient] = {}
+        self._client_managers: TTLCache = TTLCache(maxsize=128, ttl=3600)
         self.set_ready()
 
     async def _get_provider_clients(self, *, user_id: UUID | str, db: Any) -> WxOClient:
@@ -270,7 +270,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 error_detail = extract_error_detail(str(exc.detail))
             if status_code == status.HTTP_409_CONFLICT:
                 msg = (
-                    f"{ErrorPrefix.CREATE.value}. "
+                    f"{ErrorPrefix.CREATE.value} "
                     "One or more resources already exist. "
                     "Please ensure the names and/or ids of the "
                     "following resources to be unique: "
@@ -282,43 +282,30 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 raise DeploymentConflictError(message=msg) from None
             if status_code == status.HTTP_422_UNPROCESSABLE_CONTENT:
                 msg = (
-                    f"{ErrorPrefix.CREATE.value}. "
+                    f"{ErrorPrefix.CREATE.value} "
                     "The deployment request entity is unprocessable. "
                     "Please ensure the request entity is valid and complete. "
                     f"error details: {error_detail}"
                 )
                 raise InvalidContentError(message=msg) from None
-            msg = (
-                f"{ErrorPrefix.CREATE.value}. "
-                "An unexpected error occurred while "
-                "creating a deployment in Watsonx Orchestrate. "
-                f"error details: {error_detail}"
-            )
+            msg = f"{ErrorPrefix.CREATE.value} error details: {error_detail}"
             raise DeploymentError(message=msg, error_code="deployment_error") from None
         except (
             DeploymentConflictError,
             DeploymentError,
+            DeploymentSupportError,
             InvalidContentError,
             InvalidDeploymentOperationError,
             InvalidDeploymentTypeError,
         ):
             raise
-        except Exception as e:
-            msg = (
-                f"{ErrorPrefix.CREATE.value}. "
-                "An unexpected error occurred while "
-                "creating a deployment in Watsonx Orchestrate. "
-                f"error details: {e}"
-            )
-            raise DeploymentError(message=msg, error_code="deployment_error") from e
+        except Exception:
+            logger.exception("Unexpected error during WXO deployment creation")
+            msg = f"{ErrorPrefix.CREATE.value} Please check server logs for details."
+            raise DeploymentError(message=msg, error_code="deployment_error") from None
 
         if agent_create_response is None:
-            msg = (
-                f"{ErrorPrefix.CREATE.value}. "
-                "An unexpected error occurred while "
-                "creating a deployment in Watsonx Orchestrate. "
-                "error details: Deployment response was empty."
-            )
+            msg = f"{ErrorPrefix.CREATE.value} Deployment response was empty."
             raise DeploymentError(message=msg, error_code="deployment_error")
 
         derived_spec.name = deployment_spec.name  # restore the original name
@@ -377,8 +364,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             # this is not a problem today, but might be in the future
 
             raw_agents = await asyncio.to_thread(
-                client_manager.agent._get,  # noqa: SLF001
-                "/agents",
+                client_manager.get_agents_raw,
                 params=query_params or None,
             )
             deployments = [
@@ -397,18 +383,11 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 error_detail = extract_error_detail(getattr(exc.response, "text", ""))
             else:
                 error_detail = extract_error_detail(str(exc.detail))
-            msg = (
-                f"{ErrorPrefix.LIST.value}. "
-                "Failed to list deployments from Watsonx Orchestrate. "
-                f"error details: {error_detail}"
-            )
+            msg = f"{ErrorPrefix.LIST.value} error details: {error_detail}"
             raise DeploymentError(message=msg, error_code="deployment_error") from None
-        except Exception as exc:  # noqa: BLE001
-            msg = (
-                f"{ErrorPrefix.LIST.value}. "
-                "An unexpected error occurred while listing deployments from Watsonx Orchestrate. "
-                f"error details: {exc}"
-            )
+        except Exception:
+            logger.exception("Unexpected error while listing WXO deployments")
+            msg = f"{ErrorPrefix.LIST.value} Please check server logs for details."
             raise DeploymentError(message=msg, error_code="deployment_error") from None
 
         return DeploymentListResult(
@@ -510,8 +489,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     async def undeploy_deployment(
         self,
         *,
-        user_id: UUID | str,
-        deployment_id: str,
+        user_id: IdLike,
+        deployment_id: IdLike,
         db: Any,
     ) -> None:
         """Undeploy a deployment."""
@@ -567,10 +546,11 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 error_detail = extract_error_detail(getattr(exc.response, "text", ""))
             else:
                 error_detail = extract_error_detail(str(exc.detail))
-            msg = f"{ErrorPrefix.HEALTH.value}. error details: {error_detail}"
+            msg = f"{ErrorPrefix.HEALTH.value} error details: {error_detail}"
             raise DeploymentError(message=msg, error_code="deployment_error") from None
-        except Exception as exc:  # noqa: BLE001
-            msg = f"{ErrorPrefix.HEALTH.value}. error details: {exc}"
+        except Exception:
+            logger.exception("Unexpected error fetching WXO deployment status")
+            msg = f"{ErrorPrefix.HEALTH.value} Please check server logs for details."
             raise DeploymentError(message=msg, error_code="deployment_error") from None
 
         return DeploymentStatusResult(
@@ -598,7 +578,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         try:
             agent_run_result = await create_agent_run(
-                clients.base,
+                clients,
                 provider_data=provider_data,
                 deployment_id=agent_id,
             )
@@ -627,7 +607,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         clients = await self._get_provider_clients(user_id=user_id, db=db)
 
         agent_run_result = await get_agent_run(
-            clients.base,
+            clients,
             run_id=run_id,
         )
 
@@ -639,6 +619,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
     async def _create_agent_deployment(
         self,
+        *,
         user_id: UUID | str,
         tool_ids: list[str],
         data: BaseDeploymentData,

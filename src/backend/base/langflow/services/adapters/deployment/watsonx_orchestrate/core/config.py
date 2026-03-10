@@ -162,11 +162,15 @@ async def assert_create_resources_available(
         msg = f"{ErrorPrefix.CREATE.value}. Deployment snapshot name(s) duplicated: {duplicates}."
         raise DeploymentConflictError(message=msg)
 
-    for tool_name in snapshot_tool_names:
-        existing_tools = await asyncio.to_thread(clients.tool.get_draft_by_name, tool_name)
-        if existing_tools:
-            msg = f"{ErrorPrefix.CREATE.value}. Deployment snapshot '{tool_name}' already exists."
-            raise DeploymentConflictError(message=msg)
+    async def _check_tool_exists(name: str) -> str | None:
+        existing = await asyncio.to_thread(clients.tool.get_draft_by_name, name)
+        return name if existing else None
+
+    results = await asyncio.gather(*(_check_tool_exists(name) for name in snapshot_tool_names))
+    conflicts = [name for name in results if name is not None]
+    if conflicts:
+        msg = f"{ErrorPrefix.CREATE.value}. Deployment snapshot '{conflicts[0]}' already exists."
+        raise DeploymentConflictError(message=msg)
 
 
 async def validate_connection(connections_client: Any, *, app_id: str) -> Any:
