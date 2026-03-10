@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, field_serializer, field_validator
+from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
 from sqlalchemy import Text
 from sqlmodel import JSON, Column, Field, SQLModel
 
@@ -19,8 +19,7 @@ class VertexBuildBase(SQLModel):
     job_id: UUID | None = Field(default=None, index=True)
 
     # Needed for Column(JSON)
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @field_validator("flow_id", mode="before")
     @classmethod
