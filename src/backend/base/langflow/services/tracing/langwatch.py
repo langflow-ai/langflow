@@ -11,7 +11,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from typing_extensions import override
 
 from langflow.schema.data import Data
-from langflow.services.tracing.base import BaseTracer
+from langflow.services.tracing.otlp_base import OTLPTracerBase
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -24,11 +24,12 @@ if TYPE_CHECKING:
     from langflow.services.tracing.schema import Log
 
 
-class LangWatchTracer(BaseTracer):
+class LangWatchTracer(OTLPTracerBase):
     flow_id: str
     tracer_provider = None
 
     def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
+        super().__init__()
         self.trace_name = trace_name
         self.trace_type = trace_type
         self.project_name = project_name
@@ -36,7 +37,7 @@ class LangWatchTracer(BaseTracer):
         self.flow_id = trace_name.split(" - ")[-1]
 
         try:
-            self._ready: bool = self.setup_langwatch()
+            self._ready = self.setup_langwatch()
             if not self._ready:
                 return
 
@@ -56,10 +57,6 @@ class LangWatchTracer(BaseTracer):
         except Exception:  # noqa: BLE001
             logger.debug("Error setting up LangWatch tracer")
             self._ready = False
-
-    @property
-    def ready(self):
-        return self._ready
 
     def setup_langwatch(self) -> bool:
         if "LANGWATCH_API_KEY" not in os.environ:

@@ -291,6 +291,7 @@ class TracingService(Service):
             self._initialize_traceloop_tracer(trace_context)
             self._initialize_native_tracer(trace_context)
             self._initialize_openlayer_tracer(trace_context)
+            self._initialize_otlp_tracer(trace_context)
         except Exception as e:  # noqa: BLE001
             await logger.adebug(f"Error initializing tracers: {e}")
 
