@@ -363,7 +363,7 @@ export default function AddMcpServerModal({
                 <ShadTooltip content={error}>
                   <div
                     className={cn(
-                      "absolute right-4 top-4 truncate text-xs font-medium text-red-500",
+                      "absolute right-4 top-4 truncate text-xs font-medium text-destructive",
                       type === "JSON" ? "w-3/5" : "w-4/5",
                     )}
                   >
@@ -389,7 +389,7 @@ export default function AddMcpServerModal({
                 <div className="flex h-full flex-col gap-4">
                   <div className="flex flex-col gap-2">
                     <Label className="flex items-start gap-1 !text-mmd">
-                      Name <span className="text-red-500">*</span>
+                      Name <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       value={stdioName}
@@ -401,7 +401,7 @@ export default function AddMcpServerModal({
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label className="flex items-start gap-1 !text-mmd">
-                      Command<span className="text-red-500">*</span>
+                      Command<span className="text-destructive">*</span>
                     </Label>
                     <Input
                       value={stdioCommand}
@@ -444,7 +444,7 @@ export default function AddMcpServerModal({
                 <div className="flex h-full flex-col gap-4">
                   <div className="flex flex-col gap-2">
                     <Label className="flex items-start gap-1 !text-mmd">
-                      Name<span className="text-red-500">*</span>
+                      Name<span className="text-destructive">*</span>
                     </Label>
                     <Input
                       value={httpName}
@@ -457,7 +457,7 @@ export default function AddMcpServerModal({
                   <div className="flex flex-col gap-2">
                     <Label className="flex items-start gap-1 !text-mmd">
                       Streamable HTTP/SSE URL
-                      <span className="text-red-500">*</span>
+                      <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       value={httpUrl}

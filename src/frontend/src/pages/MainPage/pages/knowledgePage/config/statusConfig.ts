@@ -6,23 +6,23 @@ export interface StatusConfigEntry {
 export const STATUS_CONFIG: Record<string, StatusConfigEntry> = {
   ready: {
     label: "Ready",
-    textClass: "text-emerald-600 dark:text-emerald-400",
+    textClass: "text-accent-emerald-foreground",
   },
   ingesting: {
     label: "Ingesting",
-    textClass: "text-amber-600 dark:text-amber-400",
+    textClass: "text-accent-amber-foreground",
   },
   failed: {
     label: "Failed",
-    textClass: "text-red-600 dark:text-red-400",
+    textClass: "text-destructive",
   },
   cancelling: {
     label: "Cancelling",
-    textClass: "text-orange-600 dark:text-orange-400",
+    textClass: "text-accent-amber-foreground",
   },
   empty: {
     label: "Empty",
-    textClass: "text-zinc-500 dark:text-zinc-400",
+    textClass: "text-muted-foreground",
   },
 };
 

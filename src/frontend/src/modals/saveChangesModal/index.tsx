@@ -60,7 +60,7 @@ export function SaveChangesModal({
           </div>
         ) : (
           <>
-            <div className="mb-4 flex w-full items-center gap-3 rounded-md bg-yellow-100 px-4 py-2 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-100">
+            <div className="mb-4 flex w-full items-center gap-3 rounded-md bg-warning px-4 py-2 text-warning-foreground">
               <ForwardedIconComponent name="Info" className="h-5 w-5" />
               Last saved: {lastSaved ?? "Never"}
             </div>

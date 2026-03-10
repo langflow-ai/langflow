@@ -126,7 +126,7 @@ export default function ApiModal({
         >
           <IconComponent
             name="Code2"
-            className="h-6 w-6 text-gray-800 dark:text-white"
+            className="h-6 w-6 text-foreground"
             aria-hidden="true"
           />
           <span className="pl-2">API access</span>
