@@ -94,24 +94,29 @@ def _looks_like_variable_name(value: Any) -> bool:
 
 def replace_api_key_with_env_var_name(flow: dict) -> dict:
     """Normalize api_key to a variable name when possible, never export raw keys."""
-    for node in flow.get("data", {}).get("nodes", []):
-        node_data = node.get("data")
-        if not isinstance(node_data, dict):
+    try:
+        nodes = flow["data"]["nodes"]
+    except (KeyError, TypeError):
+        return flow
+
+    for node in nodes:
+        try:
+            template = node["data"]["node"]["template"]
+        except (KeyError, TypeError):
             continue
-        node_inner = node_data.get("node")
-        if not isinstance(node_inner, dict):
-            continue
-        template = node_inner.get("template")
         if not isinstance(template, dict):
             continue
         for value in template.values():
-            if isinstance(value, dict) and value.get("name") == "api_key" and value.get("password"):
+            if not isinstance(value, dict):
+                continue
+            if value.get("name") == "api_key" and value.get("password"):
                 current = value.get("value")
                 if _looks_like_variable_name(current):
                     break  # keep user's custom variable name
                 # raw secret or other string: clear it
                 value["value"] = None
                 break
+
     return flow
 
 
