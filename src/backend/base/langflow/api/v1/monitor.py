@@ -194,14 +194,14 @@ async def delete_messages_sessions(
     session: DbSession,
 ):
     """Bulk delete messages for multiple sessions at once.
-    
+
     Args:
         session_ids: List of session IDs to delete (max 500)
         session: Database session
-        
+
     Returns:
         Confirmation message with count of deleted sessions
-        
+
     Raises:
         HTTPException: 400 if session_ids list exceeds 500 items
         HTTPException: 500 if database operation fails
@@ -209,13 +209,12 @@ async def delete_messages_sessions(
     # Validate input size to prevent massive SQL IN clauses
     if len(session_ids) > 500:
         raise HTTPException(
-            status_code=400,
-            detail="Cannot delete more than 500 sessions at once. Please batch your requests."
+            status_code=400, detail="Cannot delete more than 500 sessions at once. Please batch your requests."
         )
-    
+
     if not session_ids:
         return {"message": "No sessions to delete", "deleted_count": 0}
-    
+
     try:
         await session.exec(
             delete(MessageTable)
@@ -229,7 +228,7 @@ async def delete_messages_sessions(
 
     return {
         "message": f"Messages deleted successfully for {len(session_ids)} sessions",
-        "deleted_count": len(session_ids)
+        "deleted_count": len(session_ids),
     }
 
 
