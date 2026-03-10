@@ -16,7 +16,6 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
-import { FlowType } from "@/types/flow";
 import HeaderComponent from "../../components/header";
 import HeaderToolbar from "../../components/header/components/HeaderToolbar";
 import ListComponent from "../../components/list";

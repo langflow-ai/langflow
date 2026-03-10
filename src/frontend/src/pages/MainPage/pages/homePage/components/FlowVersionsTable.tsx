@@ -1,14 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
-import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import ExportModal from "@/modals/exportModal";
@@ -16,11 +8,8 @@ import FlowSettingsModal from "@/modals/flowSettingsModal";
 import useAlertStore from "@/stores/alertStore";
 import type { FlowType } from "@/types/flow";
 import type { FlowHistoryEntry } from "@/types/flow/history";
-import { getNumberFromString } from "@/utils/utils";
-import { swatchColors } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";
-import { timeElapsed } from "../../../utils/time-elapse";
-import DropdownComponent from "../../../components/dropdown";
+import FlowVersionsTableRow from "./FlowVersionsTableRow";
 
 type FlowHistoryApiResponse = {
   entries: FlowHistoryEntry[];
@@ -36,7 +25,6 @@ export default function FlowVersionsTable({
   flows,
   folderId,
 }: FlowVersionsTableProps) {
-  const navigate = useCustomNavigate();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { deleteFlow } = useDeleteFlow();
@@ -44,6 +32,9 @@ export default function FlowVersionsTable({
   const [openDelete, setOpenDelete] = useState(false);
   const [openExportModal, setOpenExportModal] = useState(false);
   const [openSettings, setOpenSettings] = useState(false);
+  const [selectedFlowIds, setSelectedFlowIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [expandedFlowIds, setExpandedFlowIds] = useState<Set<string>>(
     new Set(),
   );
@@ -130,20 +121,25 @@ export default function FlowVersionsTable({
       });
     }
   };
+  const tableGridCols =
+    "grid-cols-[2rem_minmax(0,2.4fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)_2rem]";
 
   return (
     <div className="px-5 pb-5 pt-7">
-      <div className="grid grid-cols-[34px_2.4fr_1fr_1fr_1.2fr_30px] items-center px-4 py-4 text-xs font-medium text-muted-foreground">
+      <div
+        className={cn(
+          "grid items-center px-4 py-4 text-xs font-medium text-muted-foreground",
+          tableGridCols,
+        )}
+      >
         <span className="flex justify-center">
           <span className="h-4 w-4 rounded-sm border border-border/70" />
         </span>
-        <span>Name</span>
+        <span className="pl-3">Name</span>
         <span>Version</span>
         <span>Status</span>
         <span>Last updated</span>
-        <span className="flex justify-center">
-          <ForwardedIconComponent name="EllipsisVertical" className="h-4 w-4" />
-        </span>
+        <span />
       </div>
       <div className="mt-1 border-y border-border/70">
         {rows.map(
@@ -155,268 +151,58 @@ export default function FlowVersionsTable({
             deployedEntryCount,
             deploymentCounts,
             isLoadingHistory,
-          }) => {
-            const isExpanded = expandedFlowIds.has(flow.id);
-            const flowStatus = deployedEntryCount > 0 ? "Deployed" : "Draft";
-            const swatchIndex =
-              (flow.gradient && !isNaN(parseInt(flow.gradient))
-                ? parseInt(flow.gradient)
-                : getNumberFromString(flow.gradient ?? flow.id)) %
-              swatchColors.length;
-
-            return (
-              <div
-                key={flow.id}
-                className="border-b border-border/60 last:border-b-0"
-              >
-                <div
-                  className="grid w-full grid-cols-[34px_2.4fr_1fr_1fr_1.2fr_30px] items-center px-4 py-5 text-left transition-colors hover:bg-muted/20"
-                  onClick={() => {
-                    navigate(
-                      `/flow/${flow.id}${folderId ? `/folder/${folderId}` : ""}`,
-                    );
-                  }}
-                >
-                  <span className="flex justify-center">
-                    <span className="h-4 w-4 rounded-sm border border-border/70 bg-background" />
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        "rounded p-0.5 text-muted-foreground cursor-pointer",
-                        hasLoadedHistory && versionCount === 0 && "opacity-40",
-                      )}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        if (hasLoadedHistory && versionCount === 0) return;
-                        setExpandedFlowIds((prev) => {
-                          const shouldOpen = !prev.has(flow.id);
-                          const next = new Set(prev);
-                          if (next.has(flow.id)) {
-                            next.delete(flow.id);
-                          } else {
-                            next.add(flow.id);
-                          }
-                          if (shouldOpen && !hasLoadedHistory) {
-                            void loadHistoryForFlow(flow.id);
-                          }
-                          return next;
-                        });
-                      }}
-                      role="button"
-                      tabIndex={0}
-                    >
-                      <ForwardedIconComponent
-                        name={isExpanded ? "ChevronDown" : "ChevronRight"}
-                        className="h-4 w-4"
-                      />
-                    </span>
-                    <span
-                      className={cn(
-                        "flex h-7 w-7 shrink-0 items-center justify-center rounded-md p-1.5",
-                        swatchColors[swatchIndex],
-                      )}
-                    >
-                      <ForwardedIconComponent
-                        name={flow.icon ?? "Workflow"}
-                        className="h-4 w-4"
-                      />
-                    </span>
-                    <span className="truncate text-sm font-medium">
-                      {flow.name}
-                    </span>
-                  </div>
-                  <span className="text-sm text-muted-foreground">
-                    {hasLoadedHistory &&
-                    versionCount !== null &&
-                    versionCount > 0
-                      ? `${versionCount} versions`
-                      : "-"}
-                  </span>
-                  <span
-                    className={cn(
-                      "inline-flex w-fit items-center gap-1 text-sm font-medium",
-                      flowStatus === "Deployed"
-                        ? "text-foreground"
-                        : "text-muted-foreground",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "h-2 w-2 rounded-full",
-                        flowStatus === "Deployed"
-                          ? "bg-emerald-500"
-                          : "bg-muted-foreground/60",
-                      )}
-                    />
-                    {flowStatus}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    {timeElapsed(flow.updated_at)} ago
-                  </span>
-                  <span className="flex justify-center">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="iconSm"
-                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                          }}
-                        >
-                          <ForwardedIconComponent
-                            name="EllipsisVertical"
-                            className="h-4 w-4"
-                          />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        className="w-[185px]"
-                        sideOffset={5}
-                        side="bottom"
-                        align="end"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                        }}
-                      >
-                        <DropdownComponent
-                          flowData={flow}
-                          setOpenDelete={(open) => {
-                            setActionFlow(flow);
-                            setOpenDelete(open);
-                          }}
-                          handleExport={() => {
-                            setActionFlow(flow);
-                            setOpenExportModal(true);
-                          }}
-                          handleEdit={() => {
-                            setActionFlow(flow);
-                            setOpenSettings(true);
-                          }}
-                        />
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </span>
-                </div>
-
-                {isExpanded && !hasLoadedHistory && isLoadingHistory && (
-                  <div className="grid grid-cols-[34px_2.4fr_1fr_1fr_1.2fr_30px] items-center border-t border-border/50 px-4 py-5 text-sm text-muted-foreground">
-                    <span />
-                    <span className="pl-11">Loading versions...</span>
-                    <span>-</span>
-                    <span>-</span>
-                    <span>-</span>
-                    <span />
-                  </div>
-                )}
-                {isExpanded &&
-                  entries.map((entry) => {
-                    const isDeployed = (deploymentCounts[entry.id] ?? 0) > 0;
-                    return (
-                      <div
-                        key={entry.id}
-                        className="grid cursor-pointer grid-cols-[34px_2.4fr_1fr_1fr_1.2fr_30px] items-center border-t border-border/50 px-4 py-5 text-sm transition-colors hover:bg-muted/20"
-                        onClick={() => {
-                          const targetPath = `/flow/${flow.id}${folderId ? `/folder/${folderId}` : ""}`;
-                          navigate(
-                            `${targetPath}?historyId=${encodeURIComponent(entry.id)}`,
-                          );
-                        }}
-                      >
-                        <span className="flex justify-center">
-                          <span className="h-4 w-4 rounded-sm border border-border/60 bg-background/20" />
-                        </span>
-                        <div className="flex items-center gap-2 pl-11 text-muted-foreground">
-                          <span
-                            className={cn(
-                              "flex h-6 w-6 shrink-0 items-center justify-center rounded p-1",
-                              swatchColors[swatchIndex],
-                            )}
-                          >
-                            <ForwardedIconComponent
-                              name={flow.icon ?? "Workflow"}
-                              className="h-3.5 w-3.5"
-                            />
-                          </span>
-                          <span className="truncate">
-                            {entry.description?.trim()
-                              ? entry.description
-                              : flow.name}
-                          </span>
-                        </div>
-                        <span>{entry.version_tag}</span>
-                        <span
-                          className={cn(
-                            "inline-flex w-fit items-center gap-1 text-sm font-medium",
-                            isDeployed
-                              ? "text-foreground"
-                              : "text-muted-foreground",
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "h-2 w-2 rounded-full",
-                              isDeployed
-                                ? "bg-emerald-500"
-                                : "bg-muted-foreground/60",
-                            )}
-                          />
-                          {isDeployed ? "Deployed" : "Draft"}
-                        </span>
-                        <span className="text-muted-foreground">
-                          {timeElapsed(entry.created_at)} ago
-                        </span>
-                        <span className="flex justify-center">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="iconSm"
-                                className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                }}
-                              >
-                                <ForwardedIconComponent
-                                  name="EllipsisVertical"
-                                  className="h-4 w-4"
-                                />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                              className="w-[185px]"
-                              sideOffset={5}
-                              side="bottom"
-                              align="end"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                              }}
-                            >
-                              <DropdownComponent
-                                flowData={flow}
-                                setOpenDelete={(open) => {
-                                  setActionFlow(flow);
-                                  setOpenDelete(open);
-                                }}
-                                handleExport={() => {
-                                  setActionFlow(flow);
-                                  setOpenExportModal(true);
-                                }}
-                                handleEdit={() => {
-                                  setActionFlow(flow);
-                                  setOpenSettings(true);
-                                }}
-                              />
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </span>
-                      </div>
-                    );
-                  })}
-              </div>
-            );
-          },
+          }) => (
+            <FlowVersionsTableRow
+              key={flow.id}
+              flow={flow}
+              entries={entries}
+              hasLoadedHistory={hasLoadedHistory}
+              versionCount={versionCount}
+              deployedEntryCount={deployedEntryCount}
+              deploymentCounts={deploymentCounts}
+              isLoadingHistory={isLoadingHistory}
+              folderId={folderId}
+              tableGridCols={tableGridCols}
+              isExpanded={expandedFlowIds.has(flow.id)}
+              isSelected={selectedFlowIds.has(flow.id)}
+              onToggleSelect={() => {
+                setSelectedFlowIds((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(flow.id)) {
+                    next.delete(flow.id);
+                  } else {
+                    next.add(flow.id);
+                  }
+                  return next;
+                });
+              }}
+              onToggleExpand={() => {
+                setExpandedFlowIds((prev) => {
+                  const shouldOpen = !prev.has(flow.id);
+                  const next = new Set(prev);
+                  if (next.has(flow.id)) {
+                    next.delete(flow.id);
+                  } else {
+                    next.add(flow.id);
+                  }
+                  if (shouldOpen && !hasLoadedHistory) {
+                    void loadHistoryForFlow(flow.id);
+                  }
+                  return next;
+                });
+              }}
+              onSetActionFlow={(flow, action) => {
+                setActionFlow(flow);
+                if (action === "delete") {
+                  setOpenDelete(true);
+                } else if (action === "export") {
+                  setOpenExportModal(true);
+                } else if (action === "settings") {
+                  setOpenSettings(true);
+                }
+              }}
+            />
+          ),
         )}
       </div>
       {actionFlow && (

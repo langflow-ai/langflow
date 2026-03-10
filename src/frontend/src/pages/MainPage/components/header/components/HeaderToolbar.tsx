@@ -3,9 +3,8 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useHeaderSearch } from "../hooks/useHeaderSearch";
-import { FlowType, ViewType } from "../types";
+import type { FlowType, ViewType } from "../types";
 import BulkActions from "./BulkActions";
-import ViewToggle from "./ViewToggle";
 
 interface HeaderToolbarProps {
   flowType: FlowType;
@@ -43,11 +42,11 @@ const HeaderToolbar = ({
           type="text"
           placeholder={`Search ${flowType}...`}
           className="mr-2 !text-mmd"
-          inputClassName="!text-mmd bg-secondary"
+          inputClassName="!text-mmd"
           value={inputValue}
           onChange={handleSearch}
         />
-        <ViewToggle view={view} setView={setView} />
+        {/* <ViewToggle view={view} setView={setView} /> */}
       </div>
       <div className="flex items-center">
         <BulkActions
