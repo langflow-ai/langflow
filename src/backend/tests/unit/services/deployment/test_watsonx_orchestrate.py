@@ -1,19 +1,14 @@
 from __future__ import annotations
 
+import importlib
 import io
 import zipfile
+from importlib.util import find_spec
 from types import SimpleNamespace
 from uuid import UUID
 
-import langflow.services.adapters.deployment.watsonx_orchestrate.core.tools as tools_module
-import langflow.services.adapters.deployment.watsonx_orchestrate.service as service_module
-import langflow.services.adapters.deployment.watsonx_orchestrate.utils as utils_module
 import pytest
 from fastapi import HTTPException, status
-from langflow.services.adapters.deployment.watsonx_orchestrate import (
-    WatsonxOrchestrateDeploymentService,
-)
-from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOCredentials
 from lfx.services.adapters.deployment.exceptions import (
     DeploymentConflictError,
     DeploymentError,
@@ -36,6 +31,33 @@ from lfx.services.adapters.deployment.schema import (
     ExecutionCreate,
     SnapshotItems,
 )
+
+# This adapter depends on optional packages that can be missing in
+# certain environments (for example Python 3.10 CI jobs).
+_OPTIONAL_WATSONX_MODULES = (
+    "ibm_cloud_sdk_core",
+    "ibm_watsonx_orchestrate_clients",
+    "ibm_watsonx_orchestrate_core",
+    "rich",
+    "yaml",
+)
+
+_missing_optional_modules = [module_name for module_name in _OPTIONAL_WATSONX_MODULES if find_spec(module_name) is None]
+if _missing_optional_modules:
+    pytest.skip(
+        f"Skipping Watsonx deployment tests; missing optional dependency(ies): {', '.join(_missing_optional_modules)}",
+        allow_module_level=True,
+    )
+
+tools_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.core.tools")
+service_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.service")
+utils_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.utils")
+WatsonxOrchestrateDeploymentService = importlib.import_module(
+    "langflow.services.adapters.deployment.watsonx_orchestrate"
+).WatsonxOrchestrateDeploymentService
+WxOCredentials = importlib.import_module(
+    "langflow.services.adapters.deployment.watsonx_orchestrate.types"
+).WxOCredentials
 
 
 class DummySettingsService:
