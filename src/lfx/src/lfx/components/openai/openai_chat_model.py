@@ -136,6 +136,7 @@ class OpenAIModelComponent(LCModelComponent):
         # Ensure all parameter values are the correct types
         if isinstance(parameters.get("api_key"), SecretStr):
             parameters["api_key"] = parameters["api_key"].get_secret_value()
+        parameters["stream_usage"] = True
         output = ChatOpenAI(**parameters)
         if self.json_mode:
             output = output.bind(response_format={"type": "json_object"})

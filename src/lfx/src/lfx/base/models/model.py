@@ -14,6 +14,7 @@ from lfx.field_typing import LanguageModel
 from lfx.inputs.inputs import BoolInput, InputTypes, MessageInput, MultilineInput
 from lfx.schema.message import Message
 from lfx.schema.properties import Usage
+from lfx.schema.token_usage import extract_usage_from_message
 from lfx.template.field.base import Output
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
@@ -166,41 +167,16 @@ class LCModelComponent(Component):
             status_message = f"Response: {message.content}"  # type: ignore[assignment]
         return status_message
 
-    def extract_usage(self, message: AIMessage) -> dict | None:
+    def extract_usage(self, message: AIMessage) -> Usage | None:
         """Extract token usage from an AIMessage's response metadata.
 
         Args:
             message: The AIMessage with response_metadata containing usage info.
 
         Returns:
-            A dict with input_tokens, output_tokens, total_tokens or None if not available.
+            Usage with input_tokens, output_tokens, total_tokens or None if not available.
         """
-        if not message.response_metadata:
-            return None
-
-        response_metadata = message.response_metadata
-
-        # OpenAI format
-        if "token_usage" in response_metadata:
-            token_usage = response_metadata["token_usage"]
-            return {
-                "input_tokens": token_usage.get("prompt_tokens"),
-                "output_tokens": token_usage.get("completion_tokens"),
-                "total_tokens": token_usage.get("total_tokens"),
-            }
-
-        # Anthropic format
-        if "usage" in response_metadata:
-            usage = response_metadata["usage"]
-            input_tokens = usage.get("input_tokens")
-            output_tokens = usage.get("output_tokens")
-            return {
-                "input_tokens": input_tokens,
-                "output_tokens": output_tokens,
-                "total_tokens": (input_tokens or 0) + (output_tokens or 0) if input_tokens or output_tokens else None,
-            }
-
-        return None
+        return extract_usage_from_message(message)
 
     async def get_chat_result(
         self,
@@ -288,7 +264,7 @@ class LCModelComponent(Component):
                 }
             )
             if stream:
-                lf_message, result = await self._handle_stream(runnable, inputs)
+                lf_message, result, message = await self._handle_stream(runnable, inputs)
             else:
                 message = await runnable.ainvoke(inputs)
                 result = message.content if hasattr(message, "content") else message
@@ -297,6 +273,8 @@ class LCModelComponent(Component):
                 self.status = status_message
                 # Extract usage for the response
                 usage_data = self.extract_usage(message)
+                if usage_data:
+                    self._token_usage = usage_data
             elif isinstance(result, dict):
                 result = json.dumps(message, indent=4)
                 self.status = result
@@ -308,12 +286,14 @@ class LCModelComponent(Component):
             raise
 
         if lf_message:
+            if lf_message.properties and lf_message.properties.usage:
+                self._token_usage = lf_message.properties.usage
             return lf_message
 
         # Create message with usage data if available
         msg = Message(text=result)
         if usage_data:
-            msg.properties.usage = Usage(**usage_data)
+            msg.properties.usage = usage_data
         return msg
 
     async def _handle_stream(self, runnable, inputs):
@@ -324,9 +304,10 @@ class LCModelComponent(Component):
             inputs: The inputs to send to the model
 
         Returns:
-            tuple: (Message object if connected to chat output, model result)
+            tuple: (Message object if connected to chat output, model result, AIMessage or None)
         """
         lf_message = None
+        ai_message = None
         if self.is_connected_to_chat_output():
             # Add a Message
             if hasattr(self, "graph"):
@@ -346,9 +327,9 @@ class LCModelComponent(Component):
             lf_message = await self.send_message(model_message)
             result = lf_message.text or ""
         else:
-            message = await runnable.ainvoke(inputs)
-            result = message.content if hasattr(message, "content") else message
-        return lf_message, result
+            ai_message = await runnable.ainvoke(inputs)
+            result = ai_message.content if hasattr(ai_message, "content") else ai_message
+        return lf_message, result, ai_message
 
     @abstractmethod
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]

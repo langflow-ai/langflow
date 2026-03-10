@@ -10,6 +10,7 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { chatMessagePropsType } from "@/types/components";
+import { formatTokenCount } from "@/utils/format-token-count";
 import { cn } from "@/utils/utils";
 import { useMessageDuration } from "../hooks/use-message-duration";
 import { useStreamingMessage } from "../hooks/use-streaming-message";
@@ -125,6 +126,10 @@ export const BotMessage = memo(
         ? persistedDuration
         : liveDisplayTime;
 
+    const formattedTokenCount = formatTokenCount(
+      chat.properties?.usage?.total_tokens,
+    );
+
     return (
       <>
         <div className="w-full word-break-break-word mt-2">
@@ -151,20 +156,33 @@ export const BotMessage = memo(
               )}
 
               <div className="flex w-full flex-col min-w-0">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-0.5">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   {!thinkingActive && displayTime > 0 && (
                     <ForwardedIconComponent
                       name="Check"
                       className="h-4 w-4 text-emerald-400"
                     />
                   )}
-                  <span>
+                  <span className="w-full flex justify-between">
                     {thinkingActive && displayTime > 0 ? (
                       <span>Running... {formatSeconds(displayTime)}</span>
                     ) : !thinkingActive && displayTime > 0 ? (
-                      <span className="text-muted-foreground">
-                        Finished in {formatSeconds(displayTime)}
-                      </span>
+                      <>
+                        <span className="text-muted-foreground">Finished</span>
+                        <span className="flex items-center gap-1 font-mono text-xs text-accent-emerald-foreground">
+                          {formattedTokenCount && (
+                            <>
+                              <ForwardedIconComponent
+                                name="Coins"
+                                className="h-3 w-3 text-muted-foreground"
+                              />
+                              <span>{formattedTokenCount}</span>
+                              <span className="text-muted-foreground">|</span>
+                            </>
+                          )}
+                          <span>{formatSeconds(displayTime)}</span>
+                        </span>
+                      </>
                     ) : null}
                   </span>
                 </div>
