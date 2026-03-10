@@ -77,12 +77,12 @@ export default function AppHeader(): JSX.Element {
 
       {/* Right Section */}
       <div
-        className={`relative left-3 z-30 flex shrink-0 items-center gap-3`}
+        className={`relative left-3 z-30 flex shrink-0 items-center gap-1`}
         data-testid="header_right_section_wrapper"
       >
         {false && <ModelProviderCount />}
         {LANGFLOW_AGENTIC_EXPERIENCE && <AssistantButton type="header" />}
-        <div className="hidden pr-2 whitespace-nowrap lg:inline-flex lg:items-center">
+        <div className="hidden whitespace-nowrap lg:inline-flex lg:items-center">
           <CustomLangflowCounts />
         </div>
         <AlertDropdown
@@ -105,7 +105,7 @@ export default function AppHeader(): JSX.Element {
                 }
                 data-testid="notification_button"
               >
-                <div className="hit-area-hover group relative items-center rounded-md px-2 py-2 text-muted-foreground">
+                <div className="hit-area-hover group relative items-center rounded-md px-1 py-2 text-muted-foreground">
                   <span className={getNotificationBadge()} />
                   <ForwardedIconComponent
                     name="Bell"
@@ -126,7 +126,7 @@ export default function AppHeader(): JSX.Element {
         </AlertDropdown>
         <Separator
           orientation="vertical"
-          className="my-auto h-7 dark:border-zinc-700"
+          className="mx-2 my-auto h-7 dark:border-zinc-700"
         />
 
         <div className="flex">
