@@ -360,7 +360,7 @@ astrapy = ["astrapy>=2.1.0,<3.0.0"]
 # Windows-specific
 gassist = ["gassist>=0.0.1; sys_platform == 'win32'"]
 
-# SDKs for IBM watsonx integration
+# SDKs for IBM watsonx Orchestrate deployment adapter
 ibm-watsonx = [
     "ibm-cloud-sdk-core~=3.24.4",
     "ibm-watsonx-orchestrate-clients==2.3.2.dev5117; python_version >= '3.11'",
