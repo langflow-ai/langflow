@@ -158,8 +158,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         #       prefix via provider_spec["global_resource_name_prefix"]
         #       (useful for idempotent retries).
         #       If set, we recommend using a random prefix
-        #       (and re-use the same one for retries).
-        #       When omitted, a random prefix is generated.
+        #       and re-using the same value for retries.
+        #       When omitted, a random prefix is generated once
+        #       and re-used across retries.
         # --
         # --
         logger.info("Creating WXO deployment for user_id=%s", user_id)
