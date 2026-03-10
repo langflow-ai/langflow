@@ -29,6 +29,8 @@ if TYPE_CHECKING:
     from langflow.services.chat.service import ChatService
     from langflow.services.store.schema import StoreComponentCreate
 
+_VARIABLE_NAME_PATTERN = re.compile(r"[A-Za-z][A-Za-z0-9_]*$")
+
 
 API_WORDS = ["api", "key", "token"]
 
@@ -82,9 +84,12 @@ def _get_provider_from_template(template: dict) -> str | None:
 
 def _looks_like_variable_name(value: Any) -> bool:
     """Return True if value looks like a variable name."""
-    if not value or not isinstance(value, str) or not value.strip():
+    if not isinstance(value, str):
         return False
-    return bool(re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", value.strip()))
+    value = value.strip()
+    if not value:
+        return False
+    return _VARIABLE_NAME_PATTERN.match(value) is not None
 
 
 def replace_api_key_with_env_var_name(flow: dict) -> dict:
