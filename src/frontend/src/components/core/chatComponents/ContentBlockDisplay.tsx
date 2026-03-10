@@ -157,7 +157,7 @@ export function ContentBlockDisplay({
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-emerald-500">
+                            <span className="text-xs text-accent-emerald-foreground">
                               {formatTime(toolDuration, true)}
                             </span>
                           </div>
