@@ -202,7 +202,7 @@ qdrant = ["qdrant-client==1.9.2"]
 weaviate = ["weaviate-client>=4.10.2,<5.0.0"]
 chroma = [
     "chromadb>=1.0.0,<2.0.0",
-    "langchain-chroma>=0.1.4,<1.0.0"
+    "langchain-chroma~=0.2.6"
 ]
 upstash = ["upstash-vector==0.6.0"]
 pinecone = ["langchain-pinecone~=0.2.13"]

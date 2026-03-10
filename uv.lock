@@ -6731,7 +6731,7 @@ requires-dist = [
     { name = "langchain-astradb", marker = "extra == 'astradb'", specifier = "~=1.0.0" },
     { name = "langchain-aws", marker = "extra == 'aws'", specifier = "~=1.1.0" },
     { name = "langchain-chroma", specifier = "~=0.2.6" },
-    { name = "langchain-chroma", marker = "extra == 'chroma'", specifier = ">=0.1.4,<1.0.0" },
+    { name = "langchain-chroma", marker = "extra == 'chroma'", specifier = "~=0.2.6" },
     { name = "langchain-cohere", marker = "extra == 'cohere'", specifier = "~=0.5.0" },
     { name = "langchain-community", specifier = "~=0.4.1" },
     { name = "langchain-core", specifier = "~=1.2.3" },
