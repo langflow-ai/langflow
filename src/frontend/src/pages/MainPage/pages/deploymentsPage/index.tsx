@@ -1,9 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { getURL } from "@/controllers/API/helpers/constants";
 import {
   type DeploymentCreatePayload,
@@ -17,20 +13,19 @@ import {
   usePostDetectDeploymentEnvVars,
 } from "@/controllers/API/queries/deployments/use-deployments";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
-import { StepperModal, StepperModalFooter } from "@/modals/stepperModal";
-// import StepperModal, {
-//   StepperModalFooter,
-// } from '@/modals/stepperModal/StepperModal';
+import StepperModal, {
+  StepperModalFooter,
+} from "@/modals/stepperModal/StepperModal";
 import useAlertStore from "@/stores/alertStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import type { FlowType } from "@/types/flow";
 import type { FlowHistoryEntry } from "@/types/flow/history";
 import { ConfigureDeploymentProviderModal } from "./components/ConfigureDeploymentProviderModal";
 import { DeploymentCreationStatusView } from "./components/DeploymentCreationStatusView";
-import {
-  type DeploymentListRow,
-  DeploymentProvidersView,
-} from "./components/DeploymentProvidersView";
+import type { DeploymentListRow } from "./components/DeploymentProvidersView";
+import { DeploymentsEmptyState } from "./components/DeploymentsEmptyState";
+import { DeploymentsLoadingView } from "./components/DeploymentsLoadingView";
+import { DeploymentsView } from "./components/DeploymentsView";
 import { RegisterDeploymentProviderModal } from "./components/RegisterDeploymentProviderModal";
 import { StepAttach } from "./components/steps/StepAttach";
 import { StepBasics } from "./components/steps/StepBasics";
@@ -463,19 +458,15 @@ const DeploymentsTab = () => {
     });
   };
 
-  const showEmptyDeployments =
-    !providersQuery.isLoading &&
-    !hasProviders &&
-    activeSubTab === "deployments" &&
-    creationState === "idle";
-  const showEmptyProviders =
-    !providersQuery.isLoading &&
-    !hasProviders &&
-    activeSubTab === "providers" &&
-    creationState === "idle";
-
   return (
     <div className="relative h-full">
+      <div
+        className="pointer-events-none absolute inset-0 z-40"
+        style={{
+          background:
+            "linear-gradient(to bottom, transparent 0%, transparent 25%, hsl(var(--background) / 0.5) 45%, hsl(var(--background)) 65%, hsl(var(--background)) 100%)",
+        }}
+      />
       <div className="flex h-full flex-col pt-5 px-5 3xl:container">
         {creationState !== "idle" ? (
           <DeploymentCreationStatusView
@@ -537,175 +528,45 @@ const DeploymentsTab = () => {
                   Deployment Providers
                 </button>
               </div>
-              {/* <div className="flex items-center gap-2">
-              {activeSubTab === 'providers' && (
-                <Button
-                  variant="secondary"
-                  className="flex items-center gap-2 font-semibold"
-                  onClick={() => setRegisterProviderOpen(true)}
-                >
-                  <ForwardedIconComponent name="Plus" />
-                  Add Provider
-                </Button>
-              )}
-              {activeSubTab === 'deployments' && (
-                <Button
-                  className="flex items-center gap-2 font-semibold"
-                  disabled={!providerId}
-                  onClick={() => handleOpenChange(true)}
-                >
-                  <ForwardedIconComponent name="Plus" />
-                  New Deployment
-                </Button>
-              )}
-            </div> */}
             </div>
 
             {/* Content area */}
-            {!providersQuery.isLoading && !hasProviders ? (
-              activeSubTab === "deployments" ? (
-                <div className="mt-4 h-full">
-                  <div className="pointer-events-none h-full opacity-30 [&_.ag-root-wrapper]:!border-none [&_.ag-root-wrapper]:!bg-transparent [&_.ag-header]:!bg-transparent [&_.ag-row]:!bg-transparent">
-                    <TableComponent
-                      columnDefs={[
-                        {
-                          headerName: "Name",
-                          field: "name",
-                          flex: 2,
-                          cellRenderer: () => <Skeleton className="h-4 w-28" />,
-                        },
-                        {
-                          headerName: "Status",
-                          field: "status",
-                          flex: 1,
-                          cellRenderer: () => <Skeleton className="h-4 w-16" />,
-                        },
-                        {
-                          headerName: "Health",
-                          field: "health",
-                          flex: 1,
-                          cellRenderer: () => <Skeleton className="h-4 w-16" />,
-                        },
-                        {
-                          headerName: "Attached",
-                          field: "attached",
-                          flex: 1,
-                          cellRenderer: () => <Skeleton className="h-4 w-10" />,
-                        },
-                        {
-                          headerName: "Provider",
-                          field: "provider",
-                          flex: 1,
-                          cellRenderer: () => <Skeleton className="h-4 w-20" />,
-                        },
-                        {
-                          headerName: "Last Modified",
-                          field: "lastModified",
-                          flex: 1.5,
-                          cellRenderer: () => <Skeleton className="h-4 w-24" />,
-                        },
-                        {
-                          headerName: "Test",
-                          field: "test",
-                          flex: 0.5,
-                          cellRenderer: () => <Skeleton className="h-4 w-10" />,
-                        },
-                        {
-                          headerName: "",
-                          field: "settings",
-                          width: 48,
-                          sortable: false,
-                          filter: false,
-                          resizable: false,
-                          cellRenderer: () => <Skeleton className="h-4 w-4" />,
-                        },
-                      ]}
-                      rowData={Array.from({ length: 3 }, (_, i) => ({
-                        id: `skeleton-${i}`,
-                      }))}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-4 h-full">
-                  <div className="pointer-events-none h-full opacity-30">
-                    <div className="grid grid-cols-3 gap-4">
-                      {Array.from({ length: 3 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5"
-                        >
-                          {/* Header: icon + name + status */}
-                          <div className="flex items-start gap-3">
-                            <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
-                            <div className="flex w-full flex-col gap-1.5">
-                              <div className="flex items-center justify-between">
-                                <Skeleton className="h-4 w-32" />
-                                <div className="flex items-center gap-1.5">
-                                  <Skeleton className="h-2 w-2 rounded-full" />
-                                  <Skeleton className="h-3 w-16" />
-                                </div>
-                              </div>
-                              <Skeleton className="h-3 w-24" />
-                            </div>
-                          </div>
-                          {/* Endpoint */}
-                          <div className="flex flex-col gap-1">
-                            <Skeleton className="h-3 w-16" />
-                            <Skeleton className="h-4 w-full" />
-                          </div>
-                          {/* Stats row */}
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="flex flex-col gap-1">
-                              <Skeleton className="h-3 w-20" />
-                              <Skeleton className="h-4 w-24" />
-                            </div>
-                            <div className="flex flex-col items-end gap-1">
-                              <Skeleton className="h-3 w-20" />
-                              <Skeleton className="h-4 w-8" />
-                            </div>
-                          </div>
-                          {/* Action buttons */}
-                          <div className="flex gap-2 border-t border-border pt-3">
-                            <Skeleton className="h-8 flex-1 rounded-md" />
-                            <Skeleton className="h-8 flex-1 rounded-md" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )
+            {providersQuery.isLoading ? (
+              <DeploymentsLoadingView activeSubTab={activeSubTab} />
+            ) : !hasProviders ? (
+              <DeploymentsEmptyState
+                activeSubTab={activeSubTab}
+                onCreateDeployment={() => handleOpenChange(true)}
+                onAddProvider={() => setRegisterProviderOpen(true)}
+              />
             ) : (
-              <div className="pt-4">
-                <DeploymentProvidersView
-                  providers={providers}
-                  deploymentRows={deploymentRows}
-                  selectedProviderId={providerId || null}
-                  onSelectProvider={setSelectedProviderId}
-                  onConfigureProvider={handleConfigureProvider}
-                  selectedProviderDeploymentCount={liveDeployments.length}
-                  isLoadingDeployments={deploymentsQuery.isLoading}
-                  isLoadingProviders={providersQuery.isLoading}
-                  page={deploymentsPage}
-                  pageSize={deploymentsPageSize}
-                  total={deploymentsQuery.data?.total ?? 0}
-                  onPageChange={setDeploymentsPage}
-                  onCreateDeployment={() => handleOpenChange(true)}
-                  activeSubTab={activeSubTab}
-                  onTestAgent={(deployment) => {
-                    if (
-                      !deployment.id.trim() ||
-                      !deployment.name.trim() ||
-                      deployment.deploymentType !== "agent"
-                    ) {
-                      return;
-                    }
-                    setTestDeploymentTarget(deployment);
-                    setTestAgentModalOpen(true);
-                  }}
-                />
-              </div>
+              <DeploymentsView
+                providers={providers}
+                deploymentRows={deploymentRows}
+                selectedProviderId={providerId || null}
+                onSelectProvider={setSelectedProviderId}
+                onConfigureProvider={handleConfigureProvider}
+                selectedProviderDeploymentCount={liveDeployments.length}
+                isLoadingDeployments={deploymentsQuery.isLoading}
+                isLoadingProviders={providersQuery.isLoading}
+                page={deploymentsPage}
+                pageSize={deploymentsPageSize}
+                total={deploymentsQuery.data?.total ?? 0}
+                onPageChange={setDeploymentsPage}
+                onCreateDeployment={() => handleOpenChange(true)}
+                activeSubTab={activeSubTab}
+                onTestAgent={(deployment) => {
+                  if (
+                    !deployment.id.trim() ||
+                    !deployment.name.trim() ||
+                    deployment.deploymentType !== "agent"
+                  ) {
+                    return;
+                  }
+                  setTestDeploymentTarget(deployment);
+                  setTestAgentModalOpen(true);
+                }}
+              />
             )}
             <StepperModal
               open={newDeploymentOpen}
@@ -715,8 +576,6 @@ const DeploymentsTab = () => {
               title="Create Deployment"
               bgClassName="bg-secondary"
               icon="Rocket"
-              fullPage
-              width="3xl:container"
               description="Deploy your Langflow workflows to watsonx Orchestrate"
               contentClassName="bg-background"
               stepLabels={STEP_LABELS}
@@ -833,49 +692,6 @@ const DeploymentsTab = () => {
           }}
         />
       </div>
-      {showEmptyDeployments && (
-        <div
-          className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2"
-          style={{
-            background:
-              "linear-gradient(to bottom, transparent 0%, transparent 25%, hsl(var(--background) / 0.5) 45%, hsl(var(--background)) 65%, hsl(var(--background)) 100%)",
-          }}
-        >
-          <h3 className="text-lg font-semibold">No Deployments</h3>
-          <p className="text-center text-sm text-muted-foreground pb-4">
-            Create your first deployment to run your flows in <br /> production.
-          </p>
-          <Button
-            className="pointer-events-auto flex items-center gap-2"
-            onClick={() => handleOpenChange(true)}
-          >
-            <ForwardedIconComponent name="Plus" className="h-4 w-4" />
-            Create Deployment
-          </Button>
-        </div>
-      )}
-      {showEmptyProviders && (
-        <div
-          className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2"
-          style={{
-            background:
-              "linear-gradient(to bottom, transparent 0%, transparent 25%, hsl(var(--background) / 0.5) 45%, hsl(var(--background)) 65%, hsl(var(--background)) 100%)",
-          }}
-        >
-          <h3 className="text-lg font-semibold">No Providers Connected</h3>
-          <p className="text-center text-sm text-muted-foreground pb-4">
-            Connect your first deployment provider to start <br /> deploying
-            your flows to production environments.
-          </p>
-          <Button
-            className="pointer-events-auto flex items-center gap-2"
-            onClick={() => setRegisterProviderOpen(true)}
-          >
-            <ForwardedIconComponent name="Plus" className="h-4 w-4" />
-            Add Provider
-          </Button>
-        </div>
-      )}
     </div>
   );
 };
