@@ -6,11 +6,6 @@ import uuid
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
-import platform
-import time
-from typing import Optional, Dict, Any
-import weakref
-import shutil
 
 import chromadb
 import chromadb.errors
@@ -40,177 +35,9 @@ class IngestionCancelledError(Exception):
     """Custom error for when an ingestion job is cancelled."""
 
 
-class ChromaConnectionManager:
-    """
-    Singleton manager for ChromaDB connections to prevent file locks on Windows.
-    Ensures proper cleanup of connections and handles Windows-specific issues.
-    """
-    _instance = None
-    _connections: Dict[str, weakref.ref] = {}
-    _clients: Dict[str, chromadb.PersistentClient] = {}
-    _lock = asyncio.Lock()
-    
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-    
-    def __init__(self):
-        if not hasattr(self, '_initialized'):
-            self._connections = {}
-            self._clients = {}
-            self._initialized = True
-    
-    @classmethod
-    def get_instance(cls):
-        """Get the singleton instance."""
-        return cls()
-    
-    def close_connection(self, kb_path: str, force: bool = False) -> None:
-        """
-        Close a specific ChromaDB connection.
-        
-        Args:
-            kb_path: Path to the knowledge base
-            force: If True, force close even if references exist
-        """
-        path_key = str(kb_path)
-        
-        # Close Chroma wrapper if it exists
-        if path_key in self._connections:
-            chroma_ref = self._connections.get(path_key)
-            if chroma_ref:
-                chroma = chroma_ref()
-                if chroma:
-                    try:
-                        # Try to delete collection to release resources
-                        with contextlib.suppress(Exception):
-                            chroma._collection = None  # Clear collection reference
-                        chroma = None
-                    except Exception as e:
-                        logger.debug(f"Error closing Chroma wrapper for {path_key}: {e}")
-            del self._connections[path_key]
-        
-        # Close underlying client
-        if path_key in self._clients:
-            try:
-                client = self._clients[path_key]
-                # Clear from ChromaDB's internal registry
-                if path_key in SharedSystemClient._identifier_to_system:
-                    del SharedSystemClient._identifier_to_system[path_key]
-                # SQLite specific cleanup for Windows
-                if platform.system() == "Windows" and hasattr(client, '_db'):
-                    try:
-                        client._db.close()
-                    except:
-                        pass
-                del self._clients[path_key]
-            except Exception as e:
-                logger.debug(f"Error closing ChromaDB client for {path_key}: {e}")
-        
-        # Force garbage collection to release file handles
-        gc.collect()
-        
-        # On Windows, give the OS time to release file handles
-        if platform.system() == "Windows":
-            time.sleep(0.1)
-    
-    def close_all_connections(self) -> None:
-        """Close all open ChromaDB connections."""
-        paths_to_close = list(self._clients.keys()) + list(self._connections.keys())
-        for path_key in set(paths_to_close):
-            self.close_connection(path_key, force=True)
-    
-    def get_client(self, kb_path: Path) -> chromadb.PersistentClient:
-        """
-        Get or create a ChromaDB client with proper connection management.
-        
-        Args:
-            kb_path: Path to the knowledge base
-            
-        Returns:
-            ChromaDB PersistentClient
-        """
-        path_key = str(kb_path)
-        
-        # Close any existing connection first (Windows fix)
-        if platform.system() == "Windows" and path_key in self._clients:
-            self.close_connection(kb_path, force=True)
-        
-        # Clear ChromaDB's internal registry
-        if path_key in SharedSystemClient._identifier_to_system:
-            try:
-                del SharedSystemClient._identifier_to_system[path_key]
-            except KeyError:
-                pass
-        
-        # Create new client with unique session ID
-        client = chromadb.PersistentClient(
-            path=path_key,
-            settings=Settings(
-                is_persistent=True,
-                persist_directory=path_key,
-                chroma_otel_service_name=str(uuid.uuid4()),
-                # Windows-specific settings to reduce lock duration
-                chroma_db_impl="sqlite" if platform.system() == "Windows" else "duckdb+parquet",
-            ),
-        )
-        
-        self._clients[path_key] = client
-        return client
-    
-    def get_chroma(self, kb_path: Path, kb_name: str, create_if_not_exists: bool = False) -> Optional[Chroma]:
-        """
-        Get a Chroma wrapper with managed connection.
-        
-        Args:
-            kb_path: Path to the knowledge base
-            kb_name: Name of the knowledge base
-            create_if_not_exists: Whether to create collection if it doesn't exist
-            
-        Returns:
-            Chroma wrapper or None if not exists and create_if_not_exists is False
-        """
-        path_key = str(kb_path)
-        
-        # Check if we have an existing connection
-        if path_key in self._connections:
-            chroma_ref = self._connections.get(path_key)
-            if chroma_ref:
-                chroma = chroma_ref()
-                if chroma:
-                    return chroma
-        
-        # Get or create client
-        client = self.get_client(kb_path)
-        
-        # Check if collection exists
-        collections = client.list_collections()
-        collection_exists = any(c.name == kb_name for c in collections)
-        
-        if not collection_exists and not create_if_not_exists:
-            return None
-        
-        # Create Chroma wrapper
-        try:
-            chroma = Chroma(
-                client=client,
-                collection_name=kb_name,
-            )
-            # Store weak reference to allow garbage collection
-            self._connections[path_key] = weakref.ref(chroma)
-            return chroma
-        except Exception as e:
-            logger.error(f"Error creating Chroma wrapper for {kb_name}: {e}")
-            return None
-
-
 class KBStorageHelper:
-    """Helper class for Knowledge Base storage and path management with Windows fixes."""
-    
-    # Use the connection manager singleton
-    _connection_manager = ChromaConnectionManager.get_instance()
-    
+    """Helper class for Knowledge Base storage and path management."""
+
     @staticmethod
     @lru_cache
     def get_root_path() -> Path:
@@ -236,99 +63,37 @@ class KBStorageHelper:
 
     @staticmethod
     def get_fresh_chroma_client(kb_path: Path) -> chromadb.PersistentClient:
-        """
-        Get a fresh Chroma client with proper connection management.
-        This method ensures connections are properly managed to prevent Windows file locks.
-        """
-        return KBStorageHelper._connection_manager.get_client(kb_path)
-    
-    @staticmethod
-    def get_managed_chroma(kb_path: Path, kb_name: str, create_if_not_exists: bool = False) -> Optional[Chroma]:
-        """
-        Get a managed Chroma wrapper that will be properly cleaned up.
-        
-        Args:
-            kb_path: Path to the knowledge base
-            kb_name: Name of the knowledge base
-            create_if_not_exists: Whether to create collection if it doesn't exist
-            
-        Returns:
-            Chroma wrapper or None
-        """
-        return KBStorageHelper._connection_manager.get_chroma(kb_path, kb_name, create_if_not_exists)
-    
-    @staticmethod
-    def close_connection(kb_path: Path) -> None:
-        """
-        Close ChromaDB connection for a specific knowledge base.
-        
-        Args:
-            kb_path: Path to the knowledge base
-        """
-        KBStorageHelper._connection_manager.close_connection(str(kb_path))
+        """Get a fresh Chroma client with a unique session ID to avoid 'readonly' errors."""
+        path_key = str(kb_path)
+        try:
+            if path_key in SharedSystemClient._identifier_to_system:  # noqa: SLF001
+                del SharedSystemClient._identifier_to_system[path_key]  # noqa: SLF001
+        except KeyError as e:
+            logger.debug(f"Failed to clear existing Chroma registry entry for {path_key}: {e}")
+
+        return chromadb.PersistentClient(
+            path=path_key,
+            settings=Settings(
+                is_persistent=True,
+                persist_directory=path_key,
+                chroma_otel_service_name=str(uuid.uuid4()),
+            ),
+        )
 
     @staticmethod
     def teardown_storage(kb_path: Path, kb_name: str) -> None:
-        """
-        Explicitly flush and invalidate Chroma clients before directory deletion.
-        Enhanced for Windows with multiple cleanup strategies.
-        """
+        """Explicitly flush and invalidate Chroma clients before directory deletion."""
         try:
-            # First, close any managed connections
-            KBStorageHelper._connection_manager.close_connection(str(kb_path), force=True)
-            
-            # Check if ChromaDB data exists
             has_data = any((kb_path / m).exists() for m in ["chroma", "chroma.sqlite3", "index"])
-            if not has_data:
-                return
-            
-            # Try to delete the collection through ChromaDB
-            try:
+            if has_data:
                 client = KBStorageHelper.get_fresh_chroma_client(kb_path)
-                collections = client.list_collections()
-                for collection in collections:
-                    if collection.name == kb_name:
-                        try:
-                            client.delete_collection(kb_name)
-                        except Exception as e:
-                            logger.debug(f"Error deleting collection {kb_name}: {e}")
-                
-                # Close the client
-                KBStorageHelper._connection_manager.close_connection(str(kb_path), force=True)
-                
-            except Exception as e:
-                logger.debug(f"Error during collection deletion for {kb_name}: {e}")
-            
-            # Windows-specific: Try to remove lock files
-            if platform.system() == "Windows":
-                # Give Windows time to release handles
-                time.sleep(0.5)
-                
-                # Try to remove SQLite lock files
-                for lock_file in kb_path.glob("*.sqlite3-*"):  # WAL, SHM files
-                    try:
-                        lock_file.unlink()
-                    except:
-                        pass
-                
-                # Try to truncate SQLite files
-                for sqlite_file in kb_path.glob("*.sqlite3"):
-                    try:
-                        # Truncating can sometimes release locks
-                        with open(sqlite_file, 'r+b') as f:
-                            f.truncate(0)
-                    except:
-                        pass
-            
-            # Final cleanup
-            gc.collect()
-            
-            # Extra wait on Windows
-            if platform.system() == "Windows":
-                time.sleep(0.5)
-                
-        except Exception as e:
-            logger.debug(f"Storage teardown failed for {kb_path.name}: {e}")
+                chroma = Chroma(client=client, collection_name=kb_name)
+                with contextlib.suppress(Exception):
+                    chroma.delete_collection()
+                chroma = None
+                gc.collect()
+        except (OSError, ValueError, TypeError, chromadb.errors.ChromaError) as e:
+            logger.debug(f"Storage teardown failed for {kb_path.name} (ignoring): {e}")
 
 
 class KBAnalysisHelper:
@@ -699,82 +464,3 @@ class KBIngestionHelper:
         embedding_model = EmbeddingModelComponent(model=[selected_option], _user_id=current_user.id)
         embeddings_with_models = embedding_model.build_embeddings()
         return embeddings_with_models.embeddings
-
-
-# Additional utility function for Windows-specific deletion
-def force_delete_knowledge_base_windows(kb_path: Path, kb_name: str, max_retries: int = 5) -> bool:
-    """
-    Force delete a knowledge base on Windows with aggressive cleanup.
-    
-    Args:
-        kb_path: Path to the knowledge base directory
-        kb_name: Name of the knowledge base
-        max_retries: Maximum number of retry attempts
-        
-    Returns:
-        True if successful, False otherwise
-    """
-    if not kb_path.exists():
-        return True
-    
-    # First, ensure all connections are closed
-    connection_manager = ChromaConnectionManager.get_instance()
-    connection_manager.close_all_connections()
-    
-    for attempt in range(max_retries):
-        try:
-            # Close any remaining connections
-            KBStorageHelper.teardown_storage(kb_path, kb_name)
-            
-            # Force garbage collection
-            gc.collect()
-            
-            # Wait with exponential backoff
-            if attempt > 0:
-                time.sleep(0.5 * (2 ** attempt))
-            
-            # Windows specific: Try to remove lock files first
-            if platform.system() == "Windows":
-                # Remove SQLite auxiliary files
-                for pattern in ["*.sqlite3-wal", "*.sqlite3-shm", "*.sqlite3-journal"]:
-                    for lock_file in kb_path.glob(pattern):
-                        try:
-                            lock_file.unlink()
-                        except:
-                            pass
-                
-                # Try to truncate SQLite files
-                for sqlite_file in kb_path.glob("*.sqlite3"):
-                    try:
-                        with open(sqlite_file, 'r+b') as f:
-                            f.truncate(0)
-                    except:
-                        pass
-            
-            # Try to remove the directory
-            shutil.rmtree(kb_path, ignore_errors=False)
-            
-            # Verify deletion
-            if not kb_path.exists():
-                logger.info(f"Successfully deleted knowledge base {kb_name}")
-                return True
-                
-        except OSError as e:
-            if attempt == max_retries - 1:
-                logger.error(f"Failed to delete {kb_name} after {max_retries} attempts: {e}")
-            else:
-                logger.debug(f"Deletion attempt {attempt + 1} failed for {kb_name}: {e}")
-        except Exception as e:
-            logger.error(f"Unexpected error deleting {kb_name}: {e}")
-    
-    # Last resort on Windows: rename for later cleanup
-    if platform.system() == "Windows" and kb_path.exists():
-        try:
-            temp_path = kb_path.with_name(f"{kb_name}_deleted_{int(time.time())}")
-            kb_path.rename(temp_path)
-            logger.info(f"Renamed {kb_name} to {temp_path.name} for later cleanup")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to rename {kb_name}: {e}")
-    
-    return False
