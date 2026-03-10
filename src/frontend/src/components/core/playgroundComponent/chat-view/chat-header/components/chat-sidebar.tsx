@@ -4,7 +4,6 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import useFlowStore from "@/stores/flowStore";
 import { useGetFlowId } from "../../../hooks/use-get-flow-id";
-import { useEditSessionInfo } from "../hooks/use-edit-session-info";
 import { SessionSelector } from "./session-selector";
 
 interface ChatSidebarProps {
@@ -14,7 +13,7 @@ interface ChatSidebarProps {
   currentSessionId?: string;
   onDeleteSession?: (sessionId: string) => void;
   onOpenLogs?: (sessionId: string) => void;
-  renameLocalSession?: (oldSessionId: string, newSessionId: string) => void;
+  onRenameSession?: (oldId: string, newId: string) => Promise<void>;
 }
 
 export function ChatSidebar({
@@ -24,28 +23,24 @@ export function ChatSidebar({
   currentSessionId,
   onDeleteSession,
   onOpenLogs,
-  renameLocalSession,
+  onRenameSession,
 }: ChatSidebarProps) {
   const [openMenuSession, setOpenMenuSession] = useState<string | null>(null);
   const currentFlowId = useGetFlowId();
   const isShareablePlayground = useFlowStore((state) => state.playgroundPage);
-  const { handleDelete, handleRename } = useEditSessionInfo({
-    flowId: currentFlowId,
-    renameLocalSession,
-  });
-
-  const sessionIds = useMemo(() => sessions, [sessions]);
 
   const visibleSession = currentSessionId;
 
   const handleDeleteSession = (session: string) => {
-    // Delegate to parent which handles the full delete flow
-    // (API call, cache clearing, session switching)
     onDeleteSession?.(session);
   };
 
   const handleSessionClick = (session: string) => {
     onSessionSelect?.(session);
+  };
+
+  const handleRename = async (sessionId: string, newSessionId: string) => {
+    await onRenameSession?.(sessionId, newSessionId);
   };
 
   return (
@@ -74,13 +69,13 @@ export function ChatSidebar({
           </ShadTooltip>
         </div>
       </div>
-      {sessionIds.length === 0 ? (
+      {sessions.length === 0 ? (
         <div className="p-4 text-sm text-muted-foreground">
           No sessions yet.
         </div>
       ) : (
         <div className="flex flex-col gap-1">
-          {sessionIds.map((session) => (
+          {sessions.map((session) => (
             <SessionSelector
               key={session}
               session={session}
@@ -91,12 +86,8 @@ export function ChatSidebar({
               updateVisibleSession={handleSessionClick}
               inspectSession={onOpenLogs}
               handleRename={handleRename}
-              setActiveSession={() => {
-                // TODO: Implement active session
-              }}
               selectedView={undefined}
               setSelectedView={() => {}}
-              playgroundPage={true}
               menuOpen={openMenuSession === session}
               onMenuOpenChange={(open) => {
                 setOpenMenuSession(open ? session : null);
