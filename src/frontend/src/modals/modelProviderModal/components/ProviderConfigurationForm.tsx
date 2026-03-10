@@ -13,7 +13,7 @@ const PROVIDER_KEY_PREVIEW: Record<
   string,
   { prefix: string; totalLength: number }
 > = {
-  OpenAI: { prefix: "sk-proj-", totalLength: 164 },
+  OpenAI: { prefix: "sk-", totalLength: 164 },
   Anthropic: { prefix: "sk-ant-", totalLength: 108 },
   "Google Generative AI": { prefix: "AIza", totalLength: 39 },
   "IBM watsonx": { prefix: "", totalLength: 44 },
