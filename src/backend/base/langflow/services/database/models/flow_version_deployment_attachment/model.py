@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlmodel import Column, DateTime, Field, SQLModel, func
 
 if TYPE_CHECKING:
@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 class FlowVersionDeploymentAttachment(SQLModel, table=True):  # type: ignore[call-arg]
     __tablename__ = "flow_version_deployment_attachment"
+    __table_args__ = (UniqueConstraint("flow_version_id", "deployment_id", name="uq_flow_version_deployment"),)
 
     id: UUID | None = Field(default_factory=uuid4, primary_key=True)
     user_id: UUID = Field(sa_column=Column(ForeignKey("user.id", ondelete="CASCADE"), index=True, nullable=False))

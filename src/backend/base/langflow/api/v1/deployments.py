@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from typing import Annotated
 from urllib.parse import urlparse
 from uuid import UUID
@@ -84,6 +85,9 @@ from langflow.services.database.models.deployment.crud import (
 )
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment_provider_account.crud import (
+    count_provider_accounts as count_provider_account_rows,
+)
+from langflow.services.database.models.deployment_provider_account.crud import (
     create_provider_account as create_provider_account_row,
 )
 from langflow.services.database.models.deployment_provider_account.crud import (
@@ -151,9 +155,47 @@ def _as_uuid(value: str) -> UUID | None:
         return None
 
 
+def _resolve_deployment_type(row: Deployment, fallback: DeploymentType | None = None) -> DeploymentType:
+    if row.deployment_type:
+        try:
+            return DeploymentType(row.deployment_type)
+        except ValueError:
+            pass
+    return fallback or DeploymentType.AGENT
+
+
 def _raise_http_for_value_error(exc: ValueError) -> None:
     status_code = status.HTTP_404_NOT_FOUND if "not found" in str(exc).lower() else status.HTTP_400_BAD_REQUEST
     raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+
+
+@contextmanager
+def _handle_adapter_errors():
+    """Map deployment adapter exceptions to appropriate HTTP responses."""
+    try:
+        yield
+    except DeploymentConflictError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=exc.message) from exc
+    except InvalidDeploymentOperationError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    except DeploymentSupportError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    except InvalidDeploymentTypeError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    except InvalidContentError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message) from exc
+    except DeploymentNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
+    except AuthenticationError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=exc.message) from exc
+    except DeploymentError as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
+    except ValueError as exc:
+        _raise_http_for_value_error(exc)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 
 # TODO: just use regex
@@ -248,7 +290,7 @@ async def _get_deployment_row_or_404(
     user_id: UUID,
     db: DbSession,
 ) -> Deployment:
-    deployment_row = await get_deployment_db(db, user_id=user_id, deployment_id=str(deployment_id))
+    deployment_row = await get_deployment_db(db, user_id=user_id, deployment_id=deployment_id)
     if deployment_row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found.")
     return deployment_row
@@ -325,7 +367,6 @@ async def _fetch_project_scoped_flow_version_rows(
     statement = (
         select(
             indexed_flow_version_ids_cte.c.position,
-            indexed_flow_version_ids_cte.c.flow_version_id,
             FlowVersion.id.label("flow_version_id"),
             FlowVersion.data.label("flow_version_data"),
             Flow.id.label("flow_id"),
@@ -600,13 +641,11 @@ async def list_provider_accounts(
     page: Annotated[int, Query(ge=1)] = 1,
     size: Annotated[int, Query(ge=1, le=50)] = 20,
 ):
-    provider_accounts = await list_provider_account_rows(session, user_id=current_user.id)
-    total = len(provider_accounts)
-    start = _page_offset(page, size)
-    end = start + size
-    page_items = provider_accounts[start:end]
+    offset = _page_offset(page, size)
+    provider_accounts = await list_provider_account_rows(session, user_id=current_user.id, offset=offset, limit=size)
+    total = await count_provider_account_rows(session, user_id=current_user.id)
     return DeploymentProviderAccountListResponse(
-        providers=[_to_provider_account_response(item) for item in page_items],
+        providers=[_to_provider_account_response(item) for item in provider_accounts],
         page=page,
         size=size,
         total=total,
@@ -699,29 +738,12 @@ async def create_deployment(
         user_id=current_user.id,
         db=session,
     )
-    try:
-        with deployment_provider_scope(provider_id):
-            result = await deployment_adapter.create(
-                user_id=current_user.id,
-                payload=adapter_payload,
-                db=session,
-            )
-    except DeploymentConflictError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=exc.message) from exc
-    except InvalidDeploymentOperationError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
-    except DeploymentSupportError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
-    except InvalidDeploymentTypeError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
-    except InvalidContentError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message) from exc
-    except AuthenticationError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=exc.message) from exc
-    except DeploymentError as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    with _handle_adapter_errors(), deployment_provider_scope(provider_id):
+        result = await deployment_adapter.create(
+            user_id=current_user.id,
+            payload=adapter_payload,
+            db=session,
+        )
 
     deployment_row = await get_deployment_by_resource_key(
         session,
@@ -737,6 +759,7 @@ async def create_deployment(
             deployment_provider_account_id=provider_id,
             resource_key=str(result.id),
             name=result.name,
+            deployment_type=result.type.value if result.type else None,
         )
 
     snapshot_id_by_flow_version_id: dict[UUID, str] = {}
@@ -763,7 +786,7 @@ async def create_deployment(
 @router.get("", response_model=DeploymentListResponse)
 async def list_deployments(
     provider_id: DeploymentProviderAccountIdQuery,
-    session: DbSessionReadOnly,
+    session: DbSession,
     current_user: CurrentActiveUser,
     params: Annotated[Params, Depends(_deployment_pagination_params)],
     deployment_type: Annotated[DeploymentType | None, Query()] = None,
@@ -781,39 +804,30 @@ async def list_deployments(
 ):
     normalized_flow_version_ids = _normalize_flow_version_query_ids(flow_version_ids)
     deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=current_user.id, db=session)
-    try:
-        with deployment_provider_scope(provider_id):
-            rows_with_counts, total = await _sync_page_with_provider(
-                deployment_adapter=deployment_adapter,
-                user_id=current_user.id,
-                provider_id=provider_id,
-                db=session,
-                page=params.page,
-                size=params.size,
-                deployment_type=deployment_type,
-                flow_version_ids=normalized_flow_version_ids or None,
-            )
-        deployments = [
-            DeploymentListItem(
-                id=row.id,
-                resource_key=row.resource_key,
-                type=deployment_type or DeploymentType.AGENT,
-                name=row.name,
-                attached_count=attached_count,
-                created_at=row.created_at,
-                updated_at=row.updated_at,
-                provider_data={"matched_flow_version_ids": matched_flow_versions}
-                if normalized_flow_version_ids
-                else None,
-            )
-            for row, attached_count, matched_flow_versions in rows_with_counts
-        ]
-    except InvalidDeploymentTypeError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    except ValueError as exc:
-        _raise_http_for_value_error(exc)
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    with _handle_adapter_errors(), deployment_provider_scope(provider_id):
+        rows_with_counts, total = await _sync_page_with_provider(
+            deployment_adapter=deployment_adapter,
+            user_id=current_user.id,
+            provider_id=provider_id,
+            db=session,
+            page=params.page,
+            size=params.size,
+            deployment_type=deployment_type,
+            flow_version_ids=normalized_flow_version_ids or None,
+        )
+    deployments = [
+        DeploymentListItem(
+            id=row.id,
+            resource_key=row.resource_key,
+            type=_resolve_deployment_type(row, fallback=deployment_type),
+            name=row.name,
+            attached_count=attached_count,
+            created_at=row.created_at,
+            updated_at=row.updated_at,
+            provider_data={"matched_flow_version_ids": matched_flow_versions} if normalized_flow_version_ids else None,
+        )
+        for row, attached_count, matched_flow_versions in rows_with_counts
+    ]
     return DeploymentListResponse(
         deployments=deployments,
         deployment_type=deployment_type,
@@ -858,30 +872,15 @@ async def create_deployment_execution(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found for provider.")
 
     deployment_adapter = await _resolve_deployment_adapter(payload.provider_id, user_id=current_user.id, db=session)
-    try:
-        with deployment_provider_scope(payload.provider_id):
-            execution_result = await deployment_adapter.create_execution(
-                payload=ExecutionCreate(
-                    deployment_id=deployment_row.resource_key,
-                    provider_data=payload.provider_data,
-                ),
-                user_id=current_user.id,
-                db=session,
-            )
-    except DeploymentSupportError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
-    except InvalidContentError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message) from exc
-    except ValueError as exc:
-        _raise_http_for_value_error(exc)
-    except DeploymentNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
-    except AuthenticationError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=exc.message) from exc
-    except DeploymentError as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    with _handle_adapter_errors(), deployment_provider_scope(payload.provider_id):
+        execution_result = await deployment_adapter.create_execution(
+            payload=ExecutionCreate(
+                deployment_id=deployment_row.resource_key,
+                provider_data=payload.provider_data,
+            ),
+            user_id=current_user.id,
+            db=session,
+        )
 
     provider_result = execution_result.provider_result if isinstance(execution_result.provider_result, dict) else None
     return ExecutionCreateResponse(
@@ -900,27 +899,12 @@ async def get_deployment_execution(
 ):
     deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=current_user.id, db=session)
     execution_lookup_id = execution_id.strip()
-    try:
-        with deployment_provider_scope(provider_id):
-            execution_result = await deployment_adapter.get_execution(
-                execution_id=execution_lookup_id,
-                user_id=current_user.id,
-                db=session,
-            )
-    except DeploymentSupportError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
-    except InvalidContentError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message) from exc
-    except ValueError as exc:
-        _raise_http_for_value_error(exc)
-    except DeploymentNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
-    except AuthenticationError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=exc.message) from exc
-    except DeploymentError as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    with _handle_adapter_errors(), deployment_provider_scope(provider_id):
+        execution_result = await deployment_adapter.get_execution(
+            execution_id=execution_lookup_id,
+            user_id=current_user.id,
+            db=session,
+        )
 
     provider_result = execution_result.provider_result if isinstance(execution_result.provider_result, dict) else {}
     provider_deployment_id = str(
@@ -972,23 +956,12 @@ async def get_deployment(
         user_id=current_user.id,
         db=session,
     )
-    try:
-        with deployment_provider_scope(deployment_row.deployment_provider_account_id):
-            deployment = await deployment_adapter.get(
-                user_id=current_user.id,
-                deployment_id=deployment_row.resource_key,
-                db=session,
-            )
-    except ValueError as exc:
-        _raise_http_for_value_error(exc)
-    except DeploymentNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
-    except AuthenticationError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=exc.message) from exc
-    except DeploymentError as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    with _handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
+        deployment = await deployment_adapter.get(
+            user_id=current_user.id,
+            deployment_id=deployment_row.resource_key,
+            db=session,
+        )
 
     payload = deployment.model_dump(exclude_unset=True)
     provider_data = payload.get("provider_data") if isinstance(payload.get("provider_data"), dict) else {}
@@ -1102,32 +1075,13 @@ async def update_deployment(
         config=_to_adapter_update_config(payload),
         snapshot=snapshot_patch_payload,
     )
-    try:
-        with deployment_provider_scope(deployment_row.deployment_provider_account_id):
-            update_result = await deployment_adapter.update(
-                deployment_id=deployment_row.resource_key,
-                payload=adapter_payload,
-                user_id=current_user.id,
-                db=session,
-            )
-    except ValueError as exc:
-        _raise_http_for_value_error(exc)
-    except DeploymentConflictError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=exc.message) from exc
-    except InvalidDeploymentOperationError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
-    except DeploymentSupportError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
-    except InvalidDeploymentTypeError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
-    except DeploymentNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
-    except AuthenticationError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=exc.message) from exc
-    except DeploymentError as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    with _handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
+        update_result = await deployment_adapter.update(
+            deployment_id=deployment_row.resource_key,
+            payload=adapter_payload,
+            user_id=current_user.id,
+            db=session,
+        )
 
     await _apply_flow_version_patch_attachments(
         user_id=current_user.id,
@@ -1151,7 +1105,7 @@ async def update_deployment(
         id=deployment_row.id,
         name=deployment_row.name,
         description=payload.spec.description if payload.spec else None,
-        type=DeploymentType.AGENT,
+        type=_resolve_deployment_type(deployment_row),
         created_at=deployment_row.created_at,
         updated_at=deployment_row.updated_at,
         provider_data=provider_data,
@@ -1169,19 +1123,12 @@ async def delete_deployment(
         user_id=current_user.id,
         db=session,
     )
-    try:
-        with deployment_provider_scope(deployment_row.deployment_provider_account_id):
-            await deployment_adapter.delete(
-                deployment_id=deployment_row.resource_key,
-                user_id=current_user.id,
-                db=session,
-            )
-    except ValueError as exc:
-        _raise_http_for_value_error(exc)
-    except DeploymentNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    with _handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
+        await deployment_adapter.delete(
+            deployment_id=deployment_row.resource_key,
+            user_id=current_user.id,
+            db=session,
+        )
     await delete_deployment_by_id(session, user_id=current_user.id, deployment_id=deployment_row.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -1240,29 +1187,18 @@ async def redeploy_deployment(
         user_id=current_user.id,
         db=session,
     )
-    try:
-        with deployment_provider_scope(deployment_row.deployment_provider_account_id):
-            redeploy_result = await deployment_adapter.redeploy(
-                deployment_id=deployment_row.resource_key,
-                user_id=current_user.id,
-                db=session,
-            )
-    except ValueError as exc:
-        _raise_http_for_value_error(exc)
-    except DeploymentNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
-    except AuthenticationError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=exc.message) from exc
-    except DeploymentError as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    with _handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
+        redeploy_result = await deployment_adapter.redeploy(
+            deployment_id=deployment_row.resource_key,
+            user_id=current_user.id,
+            db=session,
+        )
     provider_data = redeploy_result.provider_result if isinstance(redeploy_result.provider_result, dict) else None
     return DeploymentRedeployResponse(
         id=deployment_row.id,
         name=deployment_row.name,
         description=None,
-        type=DeploymentType.AGENT,
+        type=_resolve_deployment_type(deployment_row),
         created_at=deployment_row.created_at,
         updated_at=deployment_row.updated_at,
         provider_data=provider_data,
@@ -1284,23 +1220,12 @@ async def duplicate_deployment(
         user_id=current_user.id,
         db=session,
     )
-    try:
-        with deployment_provider_scope(deployment_row.deployment_provider_account_id):
-            clone_result = await deployment_adapter.duplicate(
-                deployment_id=deployment_row.resource_key,
-                user_id=current_user.id,
-                db=session,
-            )
-    except ValueError as exc:
-        _raise_http_for_value_error(exc)
-    except DeploymentNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
-    except AuthenticationError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=exc.message) from exc
-    except DeploymentError as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    with _handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
+        clone_result = await deployment_adapter.duplicate(
+            deployment_id=deployment_row.resource_key,
+            user_id=current_user.id,
+            db=session,
+        )
 
     duplicate_row = await get_deployment_by_resource_key(
         session,
@@ -1316,6 +1241,7 @@ async def duplicate_deployment(
             deployment_provider_account_id=deployment_row.deployment_provider_account_id,
             resource_key=str(clone_result.id),
             name=clone_result.name,
+            deployment_type=clone_result.type.value if clone_result.type else None,
         )
     return DeploymentDuplicateResponse(
         id=duplicate_row.id,

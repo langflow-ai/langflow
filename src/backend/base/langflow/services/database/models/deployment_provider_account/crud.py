@@ -62,14 +62,33 @@ async def list_provider_accounts(
     db: AsyncSession,
     *,
     user_id: UUID | str,
+    offset: int = 0,
+    limit: int | None = None,
 ) -> list[DeploymentProviderAccount]:
     user_uuid = parse_uuid(user_id, field_name="user_id")
     stmt = (
         select(DeploymentProviderAccount)
         .where(DeploymentProviderAccount.user_id == user_uuid)
         .order_by(col(DeploymentProviderAccount.created_at).desc())
+        .offset(offset)
     )
+    if limit is not None:
+        stmt = stmt.limit(limit)
     return list((await db.exec(stmt)).all())
+
+
+async def count_provider_accounts(
+    db: AsyncSession,
+    *,
+    user_id: UUID | str,
+) -> int:
+    from sqlmodel import func
+
+    user_uuid = parse_uuid(user_id, field_name="user_id")
+    stmt = select(func.count(DeploymentProviderAccount.id)).where(
+        DeploymentProviderAccount.user_id == user_uuid,
+    )
+    return int((await db.exec(stmt)).one() or 0)
 
 
 async def create_provider_account(

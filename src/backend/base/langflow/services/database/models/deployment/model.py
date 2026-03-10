@@ -40,6 +40,7 @@ class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
         )
     )
     name: str = Field(index=True)
+    deployment_type: str | None = Field(default=None, index=True)
     created_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
@@ -66,5 +67,6 @@ class DeploymentRead(SQLModel):
     project_id: UUID
     deployment_provider_account_id: UUID
     name: str
+    deployment_type: str | None = None
     created_at: datetime
     updated_at: datetime

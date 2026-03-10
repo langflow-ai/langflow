@@ -36,9 +36,8 @@ async def create_deployment(
     deployment_provider_account_id: UUID,
     resource_key: str,
     name: str,
+    deployment_type: str | None = None,
 ) -> Deployment:
-    # The Deployment model has its own field validators, but pre-checking here
-    # gives clearer errors and avoids constructing the object.
     resource_key_s = _strip_or_raise(resource_key, "resource_key")
     name_s = _strip_or_raise(name, "name")
 
@@ -48,6 +47,7 @@ async def create_deployment(
         deployment_provider_account_id=deployment_provider_account_id,
         resource_key=resource_key_s,
         name=name_s,
+        deployment_type=deployment_type,
     )
     db.add(row)
     try:
