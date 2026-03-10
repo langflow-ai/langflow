@@ -50,57 +50,51 @@ export function ChatSessionsDropdown({
           <ForwardedIconComponent name="ListRestart" className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-56 p-0">
+      <DropdownMenuContent align="start" className="w-56">
         {hasSessions ? (
           <>
-            <div className="max-h-[320px] overflow-y-auto p-1">
-              <DropdownMenuGroup>
-                {sessions.map((session) => (
-                  <DropdownMenuItem
-                    key={session}
-                    className={cn(
-                      "gap-2 text-sm",
-                      currentSessionId === session && "font-semibold bg-accent",
-                    )}
-                    onSelect={() => {
-                      onSessionSelect?.(session);
-                      setOpen(false);
-                    }}
-                  >
-                    {session === currentFlowId ? "Default Session" : session}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuGroup>
-            </div>
-            <DropdownMenuSeparator className="!my-0" />
-            <div className="p-1">
-              <DropdownMenuGroup>
+            <DropdownMenuGroup>
+              {sessions.map((session) => (
                 <DropdownMenuItem
-                  className="gap-2 text-sm"
+                  key={session}
+                  className={cn(
+                    "gap-2 text-sm",
+                    currentSessionId === session && "font-semibold bg-accent",
+                  )}
                   onSelect={() => {
-                    onNewChat?.();
+                    onSessionSelect?.(session);
                     setOpen(false);
                   }}
                 >
-                  <ForwardedIconComponent name="Plus" className="h-4 w-4" />
-                  New Session
+                  {session === currentFlowId ? "Default Session" : session}
                 </DropdownMenuItem>
-              </DropdownMenuGroup>
-            </div>
+              ))}
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator className="!my-0" />
+            <DropdownMenuGroup>
+              <DropdownMenuItem
+                className="gap-2 text-sm"
+                onSelect={() => {
+                  onNewChat?.();
+                  setOpen(false);
+                }}
+              >
+                <ForwardedIconComponent name="Plus" className="h-4 w-4" />
+                New Session
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
           </>
         ) : (
-          <div className="p-1">
-            <DropdownMenuItem
-              className="gap-2 text-sm"
-              onSelect={() => {
-                onNewChat?.();
-                setOpen(false);
-              }}
-            >
-              <ForwardedIconComponent name="Plus" className="h-4 w-4" />
-              New Session
-            </DropdownMenuItem>
-          </div>
+          <DropdownMenuItem
+            className="gap-2 text-sm"
+            onSelect={() => {
+              onNewChat?.();
+              setOpen(false);
+            }}
+          >
+            <ForwardedIconComponent name="Plus" className="h-4 w-4" />
+            New Session
+          </DropdownMenuItem>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

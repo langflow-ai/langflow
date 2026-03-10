@@ -240,7 +240,7 @@ export default function RecentFilesComponent({
           <Input
             icon="Search"
             placeholder="Search files..."
-            inputClassName="h-8"
+            inputClassName="h-8 "
             data-testid="search-files-input"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

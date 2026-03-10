@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useSearchParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -41,11 +42,11 @@ import type { APIClassType } from "../../../../types/api";
 import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
 import { CategoryGroup } from "./components/categoryGroup";
 import NoResultsMessage from "./components/emptySearchComponent";
-import FlowVersionSidebarContent from "./components/FlowVersionSidebarContent";
 import McpSidebarGroup from "./components/McpSidebarGroup";
 import MemoizedSidebarGroup from "./components/sidebarBundles";
 import SidebarMenuButtons from "./components/sidebarFooterButtons";
 import { SidebarHeaderComponent } from "./components/sidebarHeader";
+import FlowHistorySidebarContent from "./components/FlowHistorySidebarContent";
 import SidebarSegmentedNav from "./components/sidebarSegmentedNav";
 import { applyBetaFilter } from "./helpers/apply-beta-filter";
 import { applyComponentFilter } from "./helpers/apply-component-filter";
@@ -152,6 +153,8 @@ interface FlowSidebarComponentProps {
 }
 
 export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
+  const [searchParams] = useSearchParams();
+  const requestedHistoryId = searchParams.get("historyId");
   const rawData = useTypesStore((state) => state.data);
 
   // Filter out knowledge components from files_and_knowledge category when ENABLE_KNOWLEDGE_BASES is OFF
@@ -160,7 +163,10 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       return rawData;
     }
 
-    const knowledgeComponentNames = ["KnowledgeBase"];
+    const knowledgeComponentNames = [
+      "KnowledgeIngestion",
+      "KnowledgeRetrieval",
+    ];
 
     // Create a deep copy to avoid mutating the original
     const filteredData = cloneDeep(rawData);
@@ -595,71 +601,17 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       hasMcpComponents,
       hasBundleItems,
     });
-  const showVersions =
-    ENABLE_NEW_SIDEBAR && activeSection === "versions" && sidebarOpen;
-
-  const currentFlowForVersions = useFlowStore((state) => state.currentFlow);
-
-  const showTraces = ENABLE_NEW_SIDEBAR && activeSection === "traces";
-
-  const SIDEBAR_EXPAND_ANIMATION_MS = 300;
-  const [isFullSidebarPanelMounted, setIsFullSidebarPanelMounted] = useState(
-    !showTraces,
-  );
-  const [isFullSidebarPanelShown, setIsFullSidebarPanelShown] = useState(
-    !showTraces,
-  );
-  const prevShowTracesRef = useRef(showTraces);
-  const expandedSidebarWidthRef = useRef<string | null>(null);
+  const showHistory =
+    ENABLE_NEW_SIDEBAR && activeSection === "history" && sidebarOpen;
+  const currentFlowForHistory = useFlowStore((state) => state.currentFlow);
 
   useEffect(() => {
-    const wrapper = document.querySelector(
-      ".group\\/sidebar-wrapper",
-    ) as HTMLElement | null;
-
-    const wasShowingTraces = prevShowTracesRef.current;
-    prevShowTracesRef.current = showTraces;
-
-    if (!wrapper) {
-      setIsFullSidebarPanelMounted(!showTraces);
-      setIsFullSidebarPanelShown(!showTraces);
+    if (!ENABLE_NEW_SIDEBAR || !requestedHistoryId) {
       return;
     }
-
-    if (showTraces) {
-      const computed =
-        getComputedStyle(wrapper).getPropertyValue("--sidebar-width");
-      expandedSidebarWidthRef.current = computed?.trim() || null;
-
-      wrapper.style.setProperty("--sidebar-width", "40px");
-      setIsFullSidebarPanelShown(false);
-      // Unmount immediately so nothing can "pop" during the collapse.
-      setIsFullSidebarPanelMounted(false);
-      return;
-    }
-
-    wrapper.style.setProperty(
-      "--sidebar-width",
-      expandedSidebarWidthRef.current || "17.5rem",
-    );
-
-    if (wasShowingTraces) {
-      const timeoutId = window.setTimeout(() => {
-        // Mount hidden first, then animate in next frame.
-        setIsFullSidebarPanelMounted(true);
-        setIsFullSidebarPanelShown(false);
-        requestAnimationFrame(() => {
-          setIsFullSidebarPanelShown(true);
-        });
-      }, SIDEBAR_EXPAND_ANIMATION_MS);
-
-      return () => window.clearTimeout(timeoutId);
-    }
-
-    // Non-traces transitions: show immediately.
-    setIsFullSidebarPanelMounted(true);
-    setIsFullSidebarPanelShown(true);
-  }, [showTraces]);
+    setActiveSection("history");
+    setOpen(true);
+  }, [requestedHistoryId, setActiveSection, setOpen]);
 
   const [category, component] = getFilterComponent?.split(".") ?? ["", ""];
 
@@ -695,37 +647,31 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
           className={cn(
             "flex flex-col h-full w-full group-data-[collapsible=icon]:hidden",
             ENABLE_NEW_SIDEBAR && "sidebar-segmented",
-            !isFullSidebarPanelMounted && "hidden",
-            isFullSidebarPanelMounted &&
-              "transition-[opacity,transform] duration-200 ease-in-out transform-gpu",
-            isFullSidebarPanelMounted &&
-              !isFullSidebarPanelShown &&
-              "opacity-0 -translate-x-1 pointer-events-none",
           )}
         >
-          {showVersions && currentFlowForVersions?.id ? (
-            <FlowVersionSidebarContent flowId={currentFlowForVersions.id} />
+          {showHistory && currentFlowForHistory?.id ? (
+            <FlowHistorySidebarContent flowId={currentFlowForHistory.id} />
           ) : (
             <>
-              {isFullSidebarPanelMounted && (
-                <SidebarHeaderComponent
-                  showConfig={showConfig}
-                  setShowConfig={setShowConfig}
-                  showBeta={showBeta}
-                  setShowBeta={handleSetShowBeta}
-                  showLegacy={showLegacy}
-                  setShowLegacy={handleSetShowLegacy}
-                  searchInputRef={searchInputRef}
-                  isInputFocused={isSearchFocused}
-                  search={search}
-                  handleInputFocus={handleInputFocus}
-                  handleInputBlur={handleInputBlur}
-                  handleInputChange={handleInputChange}
-                  filterName={filterName}
-                  filterDescription={filterDescription}
-                  resetFilters={resetFilters}
-                />
-              )}
+              <SidebarHeaderComponent
+                showConfig={showConfig}
+                setShowConfig={setShowConfig}
+                showBeta={showBeta}
+                setShowBeta={handleSetShowBeta}
+                showLegacy={showLegacy}
+                setShowLegacy={handleSetShowLegacy}
+                searchInputRef={
+                  searchInputRef as React.RefObject<HTMLInputElement>
+                }
+                isInputFocused={isSearchFocused}
+                search={search}
+                handleInputFocus={handleInputFocus}
+                handleInputBlur={handleInputBlur}
+                handleInputChange={handleInputChange}
+                filterName={filterName}
+                filterDescription={filterDescription}
+                resetFilters={resetFilters}
+              />
 
               <SidebarContent
                 segmentedSidebar={ENABLE_NEW_SIDEBAR}
@@ -829,10 +775,9 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                   </>
                 )}
               </SidebarContent>
-              {!isFullSidebarPanelMounted ||
-              (ENABLE_NEW_SIDEBAR &&
-                activeSection === "mcp" &&
-                !hasMcpServers) ? null : (
+              {ENABLE_NEW_SIDEBAR &&
+              activeSection === "mcp" &&
+              !hasMcpServers ? null : (
                 <SidebarFooter className="border-t group-data-[collapsible=icon]:hidden p-1 gap-1">
                   <SidebarMenuButtons
                     customComponent={customComponent}
