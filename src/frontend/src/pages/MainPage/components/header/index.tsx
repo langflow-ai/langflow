@@ -25,6 +25,7 @@ const HeaderComponent = ({
   const tabTypes = ENABLE_DEPLOYMENTS
     ? rawTabTypes
     : rawTabTypes.filter((t) => t !== "deployments");
+  const showTabs = !isEmptyFolder || ENABLE_DEPLOYMENTS;
 
   useEffect(() => {
     if (
@@ -39,7 +40,7 @@ const HeaderComponent = ({
   return (
     <div className="px-5 pt-5">
       <HeaderTitle folderName={folderName} />
-      {!isEmptyFolder && (
+      {showTabs && (
         <HeaderTabs
           flowType={flowType}
           setFlowType={setFlowType}

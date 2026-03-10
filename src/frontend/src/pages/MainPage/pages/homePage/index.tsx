@@ -162,6 +162,7 @@ const HomePage = ({
 
   const showToolbar =
     !isEmptyFolder && flowType !== "mcp" && flowType !== "deployments";
+  const showEmptyFolder = isEmptyFolder && flowType !== "deployments";
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -306,7 +307,7 @@ const HomePage = ({
                   isDeleting={isDeleting}
                 />
               )}
-              {isEmptyFolder ? (
+              {showEmptyFolder ? (
                 <EmptyFolder setOpenModal={setNewProjectModal} />
               ) : (
                 <div className="flex h-full flex-col">
