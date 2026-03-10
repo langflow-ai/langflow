@@ -1,9 +1,9 @@
-import { RefObject } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { PopoverTrigger } from "@/components/ui/popover";
 import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
 import { cn } from "@/utils/utils";
+import { RefObject } from "react";
 import { ModelOption, SelectedModel } from "../types";
 
 interface ModelTriggerProps {
@@ -16,7 +16,6 @@ interface ModelTriggerProps {
   onOpenManageProviders: () => void;
   id: string;
   refButton: RefObject<HTMLButtonElement | null>;
-  showEmptyState?: boolean;
 }
 
 const ModelTrigger = ({
@@ -29,7 +28,6 @@ const ModelTrigger = ({
   onOpenManageProviders,
   id,
   refButton,
-  showEmptyState = false,
 }: ModelTriggerProps) => {
   const renderSelectedIcon = () => {
     if (disabled || options.length === 0) {
@@ -44,10 +42,7 @@ const ModelTrigger = ({
     ) : null;
   };
 
-  // Check if we're in empty state mode (showEmptyState=true and no options)
-  const isEmptyStateMode = showEmptyState && options.length === 0;
-
-  if (!hasEnabledProviders && !showEmptyState && options.length === 0) {
+  if (!hasEnabledProviders) {
     return (
       <Button
         variant="default"
@@ -65,7 +60,7 @@ const ModelTrigger = ({
     <div className="flex w-full flex-col">
       <PopoverTrigger asChild>
         <Button
-          disabled={disabled || (options.length === 0 && !showEmptyState)}
+          disabled={disabled || options.length === 0}
           variant="primary"
           size="xs"
           role="combobox"
@@ -85,10 +80,6 @@ const ModelTrigger = ({
             <span className="truncate">
               {disabled ? (
                 RECEIVING_INPUT_VALUE
-              ) : isEmptyStateMode ? (
-                <div className="truncate text-muted-foreground">
-                  No models enabled
-                </div>
               ) : (
                 <div
                   className={cn(

@@ -11,7 +11,6 @@ import {
   DEFAULT_CHUNK_OVERLAP,
   DEFAULT_CHUNK_SIZE,
   DEFAULT_SEPARATOR,
-  KB_INGEST_EXTENSIONS,
   KB_NAME_REGEX,
   MAX_TOTAL_FILE_SIZE,
 } from "../constants";
@@ -413,43 +412,21 @@ export function useKnowledgeBaseForm({
     }
   };
 
-  const processSelectedFiles = (selectedFiles: FileList | null) => {
-    if (selectedFiles && selectedFiles.length > 0) {
-      const allFiles = Array.from(selectedFiles);
-      const filteredFiles: File[] = [];
-      const excludedFiles: string[] = [];
-
-      for (const file of allFiles) {
-        const extension = file.name.split(".").pop()?.toLowerCase();
-        if (extension && KB_INGEST_EXTENSIONS.includes(extension)) {
-          filteredFiles.push(file);
-        } else {
-          excludedFiles.push(file.name);
-        }
-      }
-
-      if (filteredFiles.length > 0) {
-        setFiles((prev) => [...prev, ...filteredFiles]);
-        setIsFilePanelOpen(true);
-      }
-
-      if (excludedFiles.length > 0) {
-        setErrorData({
-          title:
-            "Some files were skipped. Only supported file types were uploaded. Excluded files:",
-          list: excludedFiles,
-        });
-      }
-    }
-  };
-
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    processSelectedFiles(e.target.files);
+    const selectedFiles = e.target.files;
+    if (selectedFiles && selectedFiles.length > 0) {
+      setFiles((prev) => [...prev, ...Array.from(selectedFiles)]);
+      setIsFilePanelOpen(true);
+    }
     e.target.value = "";
   };
 
   const handleFolderSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    processSelectedFiles(e.target.files);
+    const selectedFiles = e.target.files;
+    if (selectedFiles && selectedFiles.length > 0) {
+      setFiles((prev) => [...prev, ...Array.from(selectedFiles)]);
+      setIsFilePanelOpen(true);
+    }
     e.target.value = "";
   };
 

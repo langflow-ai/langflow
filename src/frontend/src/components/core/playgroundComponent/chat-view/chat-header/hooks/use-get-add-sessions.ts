@@ -138,7 +138,6 @@ export const useGetAddSessions: UseGetAddSessionsReturnType = ({
   };
 
   const removeLocalSession = (sessionId: string) => {
-    // Update state - the useEffect on line 67-77 will sync to sessionStorage
     setLocalSessions((prev) => {
       const updated = new Set(prev);
       updated.delete(sessionId);

@@ -3,7 +3,6 @@ import { BASE_URL_API_V2 } from "../../../constants/constants";
 
 export const URLs = {
   TRANSACTIONS: `monitor/transactions`,
-  TRACES: `monitor/traces`,
   API_KEY: `api_key`,
   FILES: `files`,
   FILE_MANAGEMENT: `files`,
@@ -38,13 +37,14 @@ export const URLs = {
   RUN: `run`,
   RUN_SESSION: `run/session`,
   REGISTRATION: `registration`,
+  DEPLOYMENTS: `deployments`,
 } as const;
 
 // IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility
 
 export function getURL(
   key: keyof typeof URLs,
-  params: Record<string, unknown> = {},
+  params: any = {},
   v2: boolean = false,
 ) {
   let url = URLs[key];

@@ -24,6 +24,8 @@ export function StepperModalFooter({
   onHelp,
   helpLabel = DEFAULT_HELP_LABEL,
   submitTestId,
+  onCancel,
+  cancelLabel = "Cancel",
 }: StepperModalFooterProps) {
   const showHelp = helpHref || onHelp;
 
@@ -60,6 +62,11 @@ export function StepperModalFooter({
         {currentStep > 1 && onBack && (
           <Button variant="outline" onClick={onBack}>
             {backLabel}
+          </Button>
+        )}
+        {onCancel && (
+          <Button variant="outline" onClick={onCancel}>
+            {cancelLabel}
           </Button>
         )}
         {currentStep < totalSteps ? (

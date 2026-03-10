@@ -26,8 +26,6 @@ export default function SessionSelector({
   setSelectedView,
   playgroundPage,
   setActiveSession,
-  menuOpen,
-  onMenuOpenChange,
 }: {
   deleteSession: (session: string) => void;
   session: string;
@@ -39,8 +37,6 @@ export default function SessionSelector({
   setSelectedView: (view: { type: string; id: string } | undefined) => void;
   playgroundPage: boolean;
   setActiveSession: (session: string) => void;
-  menuOpen?: boolean;
-  onMenuOpenChange?: (open: boolean) => void;
 }) {
   const currentFlowId = useGetFlowId();
   const [isEditing, setIsEditing] = useState(false);
@@ -190,12 +186,7 @@ export default function SessionSelector({
             </ShadTooltip>
           )}
         </div>
-        <Select
-          value={""}
-          onValueChange={handleSelectChange}
-          open={menuOpen}
-          onOpenChange={onMenuOpenChange}
-        >
+        <Select value={""} onValueChange={handleSelectChange}>
           <ShadTooltip styleClasses="z-50" side="right" content="Options">
             <SelectTrigger
               onClick={(e) => {

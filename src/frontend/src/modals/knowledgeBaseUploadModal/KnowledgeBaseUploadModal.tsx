@@ -133,7 +133,7 @@ export default function KnowledgeBaseUploadModal({
           helpLabel={
             !hideAdvanced && form.currentStep === 1
               ? form.showAdvanced
-                ? "Hide Configuration"
+                ? "Hide Sources"
                 : "Configure Sources"
               : undefined
           }

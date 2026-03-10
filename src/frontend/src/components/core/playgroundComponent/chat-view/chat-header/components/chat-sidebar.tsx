@@ -1,8 +1,7 @@
-import { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
-import useFlowStore from "@/stores/flowStore";
 import { useGetFlowId } from "../../../hooks/use-get-flow-id";
 import { useEditSessionInfo } from "../hooks/use-edit-session-info";
 import { SessionSelector } from "./session-selector";
@@ -26,9 +25,7 @@ export function ChatSidebar({
   onOpenLogs,
   renameLocalSession,
 }: ChatSidebarProps) {
-  const [openMenuSession, setOpenMenuSession] = useState<string | null>(null);
   const currentFlowId = useGetFlowId();
-  const isShareablePlayground = useFlowStore((state) => state.playgroundPage);
   const { handleDelete, handleRename } = useEditSessionInfo({
     flowId: currentFlowId,
     renameLocalSession,
@@ -39,9 +36,12 @@ export function ChatSidebar({
   const visibleSession = currentSessionId;
 
   const handleDeleteSession = (session: string) => {
-    // Delegate to parent which handles the full delete flow
-    // (API call, cache clearing, session switching)
+    handleDelete(session);
     onDeleteSession?.(session);
+    // If deleted session was the current one, switch to default
+    if (session === currentSessionId) {
+      onSessionSelect?.(currentFlowId);
+    }
   };
 
   const handleSessionClick = (session: string) => {
@@ -55,11 +55,7 @@ export function ChatSidebar({
           <div className="px-2 text-xs font-semibold leading-4 text-muted-foreground">
             Sessions
           </div>
-          <ShadTooltip
-            styleClasses="z-50"
-            content="New Chat"
-            side={isShareablePlayground ? "bottom" : "top"}
-          >
+          <ShadTooltip styleClasses="z-50" content="New Chat">
             <Button
               data-testid="new-chat"
               variant="ghost"
@@ -80,7 +76,7 @@ export function ChatSidebar({
         </div>
       ) : (
         <div className="flex flex-col gap-1">
-          {sessionIds.map((session) => (
+          {sessionIds.map((session, index) => (
             <SessionSelector
               key={session}
               session={session}
@@ -97,10 +93,6 @@ export function ChatSidebar({
               selectedView={undefined}
               setSelectedView={() => {}}
               playgroundPage={true}
-              menuOpen={openMenuSession === session}
-              onMenuOpenChange={(open) => {
-                setOpenMenuSession(open ? session : null);
-              }}
             />
           ))}
         </div>

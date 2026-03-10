@@ -56,8 +56,8 @@ export const createKnowledgeBaseColumns = (
           iconColor = "text-muted-foreground";
         } else if (sourceTypes.length === 1) {
           const type = sourceTypes[0] as keyof typeof FILE_ICONS;
-          iconName = FILE_ICONS[type]?.icon ?? "File";
-          iconColor = FILE_ICONS[type]?.color ?? "text-accent-blue-foreground";
+          iconName = FILE_ICONS[type]?.icon ?? "BookOpen";
+          iconColor = FILE_ICONS[type]?.color ?? undefined;
         } else {
           iconName = "Layers";
           iconColor = undefined;

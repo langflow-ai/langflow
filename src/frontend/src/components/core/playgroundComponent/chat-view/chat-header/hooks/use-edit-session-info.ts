@@ -37,8 +37,8 @@ export const useEditSessionInfo = ({
   const { mutate: deleteSession } = useDeleteSession();
 
   const handleDelete = (sessionId: string) => {
-    if (sessionId && flowId) {
-      deleteSession({ sessionId: sessionId, flowId: flowId });
+    if (sessionId && dbSessions.includes(sessionId)) {
+      deleteSession({ sessionId: sessionId });
     }
     if (flowId && sessionId === selectedSession) {
       setSelectedSession(flowId);

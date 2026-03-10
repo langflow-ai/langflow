@@ -56,7 +56,9 @@ export default function SessionView({
       const rowsData = queryData.rows as { data?: any[] } | undefined;
       if (rowsData && typeof rowsData === "object" && "data" in rowsData) {
         const fetchedMessages = rowsData.data || [];
-        setMessages(fetchedMessages);
+        if (fetchedMessages.length > 0) {
+          setMessages(fetchedMessages);
+        }
       }
     }
   }, [queryData, setMessages]);

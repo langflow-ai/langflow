@@ -4,7 +4,6 @@ import { useGetFlowId } from "@/components/core/playgroundComponent/hooks/use-ge
 import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
 import type { ChatMessageType } from "@/types/chat";
 import type { Message } from "@/types/messages";
-import { isMessageForSession } from "../../utils/session-filter";
 import sortSenderMessages from "../utils/sort-sender-messages";
 
 export const useChatHistory = (visibleSession: string | null) => {
@@ -46,20 +45,17 @@ export const useChatHistory = (visibleSession: string | null) => {
     if (queryData && typeof queryData === "object" && "rows" in queryData) {
       const rowsData = queryData.rows as { data?: Message[] } | undefined;
       if (rowsData && typeof rowsData === "object" && "data" in rowsData) {
-        const backendMessages = (rowsData.data || []).filter((msg: Message) =>
-          isMessageForSession(msg, currentFlowId, visibleSession),
-        );
-
+        const backendMessages = rowsData.data || [];
         const existingCache =
           queryClient.getQueryData<Message[]>(sessionCacheKey) || [];
 
-        // Only initialize if cache is empty and we have backend messages for this session
+        // Only initialize if cache is empty and we have backend messages
         if (existingCache.length === 0 && backendMessages.length > 0) {
           queryClient.setQueryData(sessionCacheKey, backendMessages);
         }
       }
     }
-  }, [queryData, queryClient, sessionCacheKey, currentFlowId, visibleSession]);
+  }, [queryData, queryClient, sessionCacheKey]);
 
   // Use session cache as the single source of truth
   // updateMessage and addUserMessage handle all updates (placeholders, streaming, etc.)
@@ -69,10 +65,21 @@ export const useChatHistory = (visibleSession: string | null) => {
   const chatHistory = useMemo(() => {
     // Filter messages for current session
     const filteredMessages: ChatMessageType[] = messages
-      .filter((message: Message) =>
-        isMessageForSession(message, currentFlowId, visibleSession),
-      )
-      .map((message: Message): ChatMessageType => {
+      .filter((message: Message) => {
+        const isCurrentFlow = message.flow_id === currentFlowId;
+        // If visibleSession is the flow_id, it means we are in the default session
+        // In the default session, we show messages that have the same session_id as the flow_id
+        // OR messages that have NO session_id (legacy behavior)
+        if (visibleSession === currentFlowId) {
+          const matches =
+            isCurrentFlow &&
+            (message.session_id === visibleSession || !message.session_id);
+          return matches;
+        }
+        const matches = isCurrentFlow && message.session_id === visibleSession;
+        return matches;
+      })
+      .map((message: Message) => {
         let files = message.files;
         // Handle the "[]" case, empty string, or already parsed array
         if (Array.isArray(files)) {
@@ -89,28 +96,6 @@ export const useChatHistory = (visibleSession: string | null) => {
         }
         const messageText = message.text || "";
 
-        // Convert Message.properties to ChatMessageType.properties (PropertiesType)
-        // Properties are now properly typed in Message, no cast needed
-        let properties: ChatMessageType["properties"] = undefined;
-        if (message.properties?.source?.id) {
-          properties = {
-            source: {
-              id: message.properties.source.id,
-              display_name: message.properties.source.display_name || "",
-              source: message.properties.source.source || "",
-            },
-            state: message.properties.state,
-            icon: message.properties.icon,
-            background_color: message.properties.background_color,
-            text_color: message.properties.text_color,
-            targets: message.properties.targets,
-            edited: message.properties.edited,
-            allow_markdown: message.properties.allow_markdown,
-            positive_feedback: message.properties.positive_feedback,
-            build_duration: message.properties.build_duration,
-          };
-        }
-
         return {
           isSend: message.sender === "User",
           message: messageText,
@@ -125,7 +110,7 @@ export const useChatHistory = (visibleSession: string | null) => {
           text_color: message.text_color,
           content_blocks: message.content_blocks,
           category: message.category,
-          properties: properties,
+          properties: message.properties,
         };
       });
 

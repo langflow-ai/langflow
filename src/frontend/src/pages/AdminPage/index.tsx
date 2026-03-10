@@ -357,44 +357,36 @@ export default function AdminPage() {
                             </ShadTooltip>
                           </TableCell>
                           <TableCell className="relative left-1 truncate py-2 text-align-last-left">
-                            {user.id === userData?.id ? (
-                              <ShadTooltip content="You cannot deactivate your own account">
-                                <div className="flex w-fit cursor-not-allowed opacity-50">
+                            <ConfirmationModal
+                              size="x-small"
+                              title="Edit"
+                              titleHeader={`${user.username}`}
+                              modalContentTitle="Attention!"
+                              cancelText="Cancel"
+                              confirmationText="Confirm"
+                              icon={"UserCog2"}
+                              data={user}
+                              index={index}
+                              onConfirm={(index, user) => {
+                                handleDisableUser(
+                                  user.is_active,
+                                  user.id,
+                                  user,
+                                );
+                              }}
+                            >
+                              <ConfirmationModal.Content>
+                                <span>
+                                  Are you completely confident about the changes
+                                  you are making to this user?
+                                </span>
+                              </ConfirmationModal.Content>
+                              <ConfirmationModal.Trigger>
+                                <div className="flex w-fit">
                                   <CheckBoxDiv checked={user.is_active} />
                                 </div>
-                              </ShadTooltip>
-                            ) : (
-                              <ConfirmationModal
-                                size="x-small"
-                                title="Edit"
-                                titleHeader={`${user.username}`}
-                                modalContentTitle="Attention!"
-                                cancelText="Cancel"
-                                confirmationText="Confirm"
-                                icon={"UserCog2"}
-                                data={user}
-                                index={index}
-                                onConfirm={(index, user) => {
-                                  handleDisableUser(
-                                    user.is_active,
-                                    user.id,
-                                    user,
-                                  );
-                                }}
-                              >
-                                <ConfirmationModal.Content>
-                                  <span>
-                                    Are you completely confident about the
-                                    changes you are making to this user?
-                                  </span>
-                                </ConfirmationModal.Content>
-                                <ConfirmationModal.Trigger>
-                                  <div className="flex w-fit">
-                                    <CheckBoxDiv checked={user.is_active} />
-                                  </div>
-                                </ConfirmationModal.Trigger>
-                              </ConfirmationModal>
-                            )}
+                              </ConfirmationModal.Trigger>
+                            </ConfirmationModal>
                           </TableCell>
                           <TableCell className="relative left-1 truncate py-2 text-align-last-left">
                             <ConfirmationModal
