@@ -51,9 +51,7 @@ async def created_messages(session, active_user):  # noqa: ARG001
 async def created_messages_multiple_sessions(session, active_user):  # noqa: ARG001
     """Create messages across multiple distinct sessions for bulk-delete testing."""
     async with session_scope() as _session:
-        flow = Flow(
-            name="test_flow_for_bulk_delete", user_id=active_user.id, data={"nodes": [], "edges": []}
-        )
+        flow = Flow(name="test_flow_for_bulk_delete", user_id=active_user.id, data={"nodes": [], "edges": []})
         _session.add(flow)
         await _session.flush()
 
@@ -307,9 +305,7 @@ async def test_delete_messages_sessions_bulk(
 
     # Verify that messages for the deleted sessions are gone
     for sid in session_ids:
-        response = await client.get(
-            "api/v1/monitor/messages", params={"session_id": sid}, headers=logged_in_headers
-        )
+        response = await client.get("api/v1/monitor/messages", params={"session_id": sid}, headers=logged_in_headers)
         assert response.status_code == 200
         assert response.json() == [], f"Expected no messages for session {sid!r}"
 
@@ -322,9 +318,7 @@ async def test_delete_messages_sessions_bulk(
 
 
 @pytest.mark.api_key_required
-async def test_delete_messages_sessions_all(
-    client: AsyncClient, created_messages_multiple_sessions, logged_in_headers
-):
+async def test_delete_messages_sessions_all(client: AsyncClient, created_messages_multiple_sessions, logged_in_headers):
     """Bulk-delete messages for ALL sessions at once."""
     session_ids = ["bulk_session_a", "bulk_session_b", "bulk_session_c"]
     response = await client.request(
@@ -388,8 +382,6 @@ async def test_delete_messages_sessions_partial_match(
 
     # bulk_session_b and bulk_session_c messages should still be present
     for sid in ("bulk_session_b", "bulk_session_c"):
-        response = await client.get(
-            "api/v1/monitor/messages", params={"session_id": sid}, headers=logged_in_headers
-        )
+        response = await client.get("api/v1/monitor/messages", params={"session_id": sid}, headers=logged_in_headers)
         assert response.status_code == 200
         assert len(response.json()) > 0, f"Expected messages to remain for session {sid!r}"
