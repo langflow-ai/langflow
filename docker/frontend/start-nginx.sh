@@ -20,6 +20,14 @@ if [ -z "$LANGFLOW_MAX_FILE_SIZE_UPLOAD" ]; then
 fi
 if [ -z "$NGINX_PROXY_READ_TIMEOUT" ]; then
   NGINX_PROXY_READ_TIMEOUT="60"
+else
+  NGINX_PROXY_READ_TIMEOUT="${NGINX_PROXY_READ_TIMEOUT%s}"
+  case "$NGINX_PROXY_READ_TIMEOUT" in
+    ''|*[!0-9]*)
+      echo "NGINX_PROXY_READ_TIMEOUT must be an integer number of seconds" >&2
+      exit 1
+      ;;
+  esac
 fi
 if [ -z "$BACKEND_URL" ]; then
   echo "BACKEND_URL must be set as an environment variable or as first parameter. (e.g. http://localhost:7860)"
