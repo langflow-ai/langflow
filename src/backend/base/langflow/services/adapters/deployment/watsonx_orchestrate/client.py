@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from ibm_watsonx_orchestrate_clients.agents.agent_client import AgentClient
-from ibm_watsonx_orchestrate_clients.common.base_client import BaseWXOClient
 from ibm_watsonx_orchestrate_clients.connections.connections_client import ConnectionsClient
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ToolClient
 from lfx.services.adapters.deployment.exceptions import AuthSchemeError, CredentialResolutionError
@@ -109,7 +108,6 @@ async def get_provider_clients(
     client_cache[cache_key] = WxOClient(
         instance_url=instance_url,
         authenticator=authenticator,
-        base=BaseWXOClient(base_url=instance_url, authenticator=authenticator),
         tool=ToolClient(base_url=instance_url, authenticator=authenticator),
         connections=ConnectionsClient(base_url=instance_url, authenticator=authenticator),
         agent=AgentClient(base_url=instance_url, authenticator=authenticator),

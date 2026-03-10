@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import json
 import secrets
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from lfx.services.adapters.deployment.exceptions import InvalidContentError
+
+if TYPE_CHECKING:
+    from lfx.services.adapters.deployment.schema import BaseDeploymentData
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
     _WXO_SANITIZE_RE,
@@ -98,7 +101,7 @@ def extract_error_detail(response_text: str) -> str | dict:
 
 def build_agent_payload(
     *,
-    data: Any,
+    data: BaseDeploymentData,
     tool_ids: list[str],
 ) -> dict[str, Any]:
     if data.provider_spec is None:

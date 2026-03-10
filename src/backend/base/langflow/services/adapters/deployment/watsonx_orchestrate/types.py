@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ibm_cloud_sdk_core.authenticators import Authenticator
@@ -17,13 +17,31 @@ if TYPE_CHECKING:
 class WxOClient:
     instance_url: str
     authenticator: Authenticator
-    # Dedicated low-level HTTP client used for direct _get/_post calls so
-    # endpoint intent (for example, /orchestrate/runs) is explicit and not
-    # conflated with resource-specific clients such as AgentClient.
-    base: BaseWXOClient
     tool: ToolClient
     connections: ConnectionsClient
     agent: AgentClient
+    _base: BaseWXOClient = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        from ibm_watsonx_orchestrate_clients.common.base_client import BaseWXOClient
+
+        self._base = BaseWXOClient(base_url=self.instance_url, authenticator=self.authenticator)
+
+    # -- SDK private-method wrappers ------------------------------------------
+    # Centralise access to SDK-internal _get/_post so breakage from SDK
+    # upgrades is confined to this single file.
+
+    def get_agents_raw(self, params: dict[str, Any] | None = None) -> Any:
+        return self._base._get("/agents", params=params)  # noqa: SLF001
+
+    def post_run(self, *, query_suffix: str = "", data: dict[str, Any]) -> Any:
+        return self._base._post(f"/runs{query_suffix}", data=data)  # noqa: SLF001
+
+    def get_run(self, run_id: str) -> Any:
+        return self._base._get(f"/runs/{run_id}")  # noqa: SLF001
+
+    def upload_tool_artifact(self, tool_id: str, *, files: dict[str, Any]) -> Any:
+        return self._base._post(f"/tools/{tool_id}/upload", files=files)  # noqa: SLF001
 
 
 @dataclass(slots=True)
