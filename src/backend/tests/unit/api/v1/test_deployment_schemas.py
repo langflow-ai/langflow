@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import pytest
 from langflow.api.v1.schemas.deployments import (
+    DeploymentConfigBindingUpdate,
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountGetResponse,
     DeploymentProviderAccountUpdateRequest,
@@ -90,19 +91,59 @@ class TestNonEmptyStr:
 # ---------------------------------------------------------------------------
 
 
-class TestIdListDuplicateRejection:
-    def test_flow_versions_attach_rejects_duplicates(self):
-        with pytest.raises(ValidationError, match="duplicate"):
-            FlowVersionsAttach(ids=["id1", "id1"])
+class TestUuidIdListDedup:
+    """UUID id lists silently deduplicate while preserving order."""
 
-    def test_flow_versions_patch_rejects_duplicates_in_add(self):
-        with pytest.raises(ValidationError, match="duplicate"):
-            FlowVersionsPatch(add=["id1", "id1"])
+    def test_flow_versions_attach_deduplicates(self):
+        u1, u2 = uuid4(), uuid4()
+        result = FlowVersionsAttach(ids=[u1, u2, u1])
+        assert result.ids == [u1, u2]
 
-    def test_flow_versions_patch_rejects_duplicates_in_remove(self):
-        with pytest.raises(ValidationError, match="duplicate"):
-            FlowVersionsPatch(remove=["id1", "id1"])
+    def test_flow_versions_patch_deduplicates_add(self):
+        u1 = uuid4()
+        result = FlowVersionsPatch(add=[u1, u1])
+        assert result.add == [u1]
+
+    def test_flow_versions_patch_deduplicates_remove(self):
+        u1 = uuid4()
+        result = FlowVersionsPatch(remove=[u1, u1])
+        assert result.remove == [u1]
 
     def test_flow_versions_patch_rejects_overlap(self):
+        u1 = uuid4()
         with pytest.raises(ValidationError, match="both"):
-            FlowVersionsPatch(add=["id1"], remove=["id1"])
+            FlowVersionsPatch(add=[u1], remove=[u1])
+
+
+# ---------------------------------------------------------------------------
+# DeploymentConfigBindingUpdate validation
+# ---------------------------------------------------------------------------
+
+
+class TestDeploymentConfigBindingUpdate:
+    def test_accepts_config_id_only(self):
+        update = DeploymentConfigBindingUpdate(config_id="cfg_1")
+        assert update.config_id == "cfg_1"
+        assert update.raw_payload is None
+
+    def test_accepts_raw_payload_only(self):
+        update = DeploymentConfigBindingUpdate(raw_payload={"name": "new cfg"})
+        assert update.raw_payload is not None
+        assert update.config_id is None
+
+    def test_accepts_explicit_null_config_id_for_unbind(self):
+        update = DeploymentConfigBindingUpdate(config_id=None)
+        assert update.config_id is None
+        assert update.raw_payload is None
+
+    def test_rejects_both_config_id_and_raw_payload(self):
+        with pytest.raises(ValidationError, match="Exactly one of"):
+            DeploymentConfigBindingUpdate(config_id="cfg_1", raw_payload={"name": "cfg"})
+
+    def test_rejects_null_config_id_with_raw_payload(self):
+        with pytest.raises(ValidationError, match="Exactly one of"):
+            DeploymentConfigBindingUpdate(config_id=None, raw_payload={"name": "cfg"})
+
+    def test_rejects_noop_empty_payload(self):
+        with pytest.raises(ValidationError, match="Exactly one of"):
+            DeploymentConfigBindingUpdate()

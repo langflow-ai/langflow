@@ -63,33 +63,23 @@ from pydantic import AfterValidator, BaseModel, Field, SecretStr, ValidationInfo
 
 
 def _validate_str_id_list(values: list[str], *, field_name: str) -> list[str]:
-    """Strip, reject empty values, reject empty lists, and reject duplicates in a list of string identifiers."""
+    """Strip, reject empty/whitespace values, reject empty lists, and deduplicate preserving order."""
     if not values:
         msg = f"{field_name} must not be empty."
         raise ValueError(msg)
-    cleaned: list[str] = []
-    seen: set[str] = set()
+    stripped = []
     for raw in values:
         value = raw.strip()
         if not value:
             msg = f"{field_name} must not contain empty values."
             raise ValueError(msg)
-        if value in seen:
-            msg = f"{field_name} must not contain duplicate values: '{value}'."
-            raise ValueError(msg)
-        seen.add(value)
-        cleaned.append(value)
-    return cleaned
+        stripped.append(value)
+    return list(dict.fromkeys(stripped))
 
 
 def _validate_uuid_list(values: list[UUID], *, field_name: str) -> list[UUID]:
     """Deduplicate (preserving order) and reject empty lists."""
-    seen: set[UUID] = set()
-    deduped: list[UUID] = []
-    for value in values:
-        if value not in seen:
-            seen.add(value)
-            deduped.append(value)
+    deduped = list(dict.fromkeys(values))
     if not deduped:
         msg = f"{field_name} must not be empty."
         raise ValueError(msg)
@@ -414,7 +404,14 @@ class DeploymentConfigCreate(BaseModel):
 
 
 class DeploymentConfigBindingUpdate(BaseModel):
-    """Config binding patch for an existing deployment."""
+    """Config binding patch for an existing deployment.
+
+    Exactly one of ``config_id`` or ``raw_payload`` must be provided:
+
+    * ``config_id`` (non-null) — bind an existing config.
+    * ``config_id = null`` — unbind the current config.
+    * ``raw_payload`` — create a new config and bind it.
+    """
 
     model_config = {"extra": "forbid"}
 
@@ -427,6 +424,15 @@ class DeploymentConfigBindingUpdate(BaseModel):
         default=None,
         description="Config payload to create and bind to the deployment.",
     )
+
+    @model_validator(mode="after")
+    def validate_config_update(self) -> DeploymentConfigBindingUpdate:
+        has_config_id = "config_id" in self.model_fields_set
+        has_raw_payload = "raw_payload" in self.model_fields_set
+        if has_config_id == has_raw_payload:
+            msg = "Exactly one of 'config_id' or 'raw_payload' must be provided."
+            raise ValueError(msg)
+        return self
 
 
 # ---------------------------------------------------------------------------

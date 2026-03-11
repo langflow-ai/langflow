@@ -144,6 +144,7 @@ class BaseDeploymentService(Service, ABC):
         self,
         *,
         user_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         payload: ExecutionCreate,
         db: AsyncSession,
     ) -> ExecutionCreateResult:
@@ -155,6 +156,7 @@ class BaseDeploymentService(Service, ABC):
         *,
         user_id: IdLike,
         execution_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: AsyncSession,
     ) -> ExecutionStatusResult:
         """Get provider-agnostic deployment execution state/output."""

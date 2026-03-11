@@ -236,6 +236,9 @@ class DeploymentServiceProtocol(Protocol):
     Keep this protocol intentionally narrow (consumer-facing CRUD + status).
     Adapter-specific or advanced operations are defined on concrete deployment
     service classes.
+
+    ``deployment_type`` is accepted as an optional routing hint by all
+    operations that act on a specific deployment (including executions).
     """
 
     @abstractmethod
@@ -348,6 +351,7 @@ class DeploymentServiceProtocol(Protocol):
         self,
         *,
         user_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         payload: ExecutionCreate,
         db: AsyncSession,
     ) -> ExecutionCreateResult:
@@ -360,6 +364,7 @@ class DeploymentServiceProtocol(Protocol):
         *,
         user_id: IdLike,
         execution_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: AsyncSession,
     ) -> ExecutionStatusResult:
         """Get provider-agnostic deployment execution state/output."""

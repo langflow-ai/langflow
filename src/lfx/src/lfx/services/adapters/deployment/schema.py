@@ -114,6 +114,9 @@ class SnapshotDeploymentBindingUpdate(BaseModel):
     @field_validator("add_ids", "remove_ids")
     @classmethod
     def validate_id_lists(cls, v: list[IdLike] | None) -> list[str] | None:
+        # Post-validation: values are always normalized strings (UUIDs
+        # are stringified by _normalize_and_dedupe_id_list).  The field
+        # annotation remains list[IdLike] so Pydantic accepts UUID input.
         if v is None:
             return None
         return _normalize_and_dedupe_id_list(v, field_name="snapshot_id")
@@ -129,6 +132,9 @@ class SnapshotDeploymentBindingUpdate(BaseModel):
             msg = "At least one of 'add_ids', 'add_raw_payloads', or 'remove_ids' must be provided."
             raise ValueError(msg)
 
+        # Overlap check covers add_ids vs remove_ids only.
+        # add_raw_payloads carry flow-artifact IDs (Langflow domain),
+        # while add_ids/remove_ids carry snapshot IDs (provider domain).
         overlap = set(add_values).intersection(remove_values)
         if overlap:
             ids = ", ".join(sorted(overlap))
@@ -203,11 +209,22 @@ class ConfigItem(BaseModel):
 
 
 class ConfigDeploymentBindingUpdate(BaseModel):
-    """Config deployment binding patch payload."""
+    """Config deployment binding patch payload.
+
+    Exactly one of ``config_id`` or ``raw_payload`` must be provided:
+
+    * ``config_id`` (non-null) — bind an existing config.
+    * ``config_id = None`` — unbind the current config.
+    * ``raw_payload`` — create a new config and bind it.
+    """
 
     config_id: IdLike | None = Field(
         None,
         description="Config reference id to bind to the deployment. Use null to unbind.",
+    )
+    raw_payload: DeploymentConfig | None = Field(
+        None,
+        description="Config payload to create and bind to the deployment.",
     )
 
     @field_validator("config_id")
@@ -216,6 +233,15 @@ class ConfigDeploymentBindingUpdate(BaseModel):
         if isinstance(v, str):
             return _normalize_and_validate_id(v, field_name="config_id")
         return v
+
+    @model_validator(mode="after")
+    def validate_config_source(self) -> "ConfigDeploymentBindingUpdate":
+        has_config_id = "config_id" in self.model_fields_set
+        has_raw_payload = "raw_payload" in self.model_fields_set
+        if has_config_id == has_raw_payload:
+            msg = "Exactly one of 'config_id' or 'raw_payload' must be provided."
+            raise ValueError(msg)
+        return self
 
 
 class ProviderDataModel(BaseModel):

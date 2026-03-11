@@ -166,6 +166,16 @@ def test_snapshot_binding_update_rejects_overlap_after_normalization() -> None:
         )
 
 
+def test_snapshot_binding_update_rejects_blank_ids() -> None:
+    with pytest.raises(ValidationError):
+        SnapshotDeploymentBindingUpdate(add_ids=["   "])
+
+
+def test_snapshot_binding_update_preserves_order_while_deduping() -> None:
+    payload = SnapshotDeploymentBindingUpdate(add_ids=["b", "a", "b", "c", "a"])
+    assert payload.add_ids == ["b", "a", "c"]
+
+
 def test_snapshot_binding_update_rejects_noop_payload() -> None:
     with pytest.raises(ValidationError, match="At least one of"):
         SnapshotDeploymentBindingUpdate()
@@ -206,6 +216,27 @@ def test_config_deployment_binding_update_normalizes_and_accepts_uuid() -> None:
 def test_config_deployment_binding_update_rejects_blank() -> None:
     with pytest.raises(ValidationError):
         ConfigDeploymentBindingUpdate(config_id="   ")
+
+
+def test_config_deployment_binding_update_accepts_raw_payload() -> None:
+    update = ConfigDeploymentBindingUpdate(raw_payload={"name": "new cfg"})
+    assert update.raw_payload is not None
+    assert update.config_id is None
+
+
+def test_config_deployment_binding_update_rejects_both_fields() -> None:
+    with pytest.raises(ValidationError, match="Exactly one of"):
+        ConfigDeploymentBindingUpdate(config_id="cfg_1", raw_payload={"name": "cfg"})
+
+
+def test_config_deployment_binding_update_rejects_null_config_id_with_raw_payload() -> None:
+    with pytest.raises(ValidationError, match="Exactly one of"):
+        ConfigDeploymentBindingUpdate(config_id=None, raw_payload={"name": "cfg"})
+
+
+def test_config_deployment_binding_update_rejects_noop() -> None:
+    with pytest.raises(ValidationError, match="Exactly one of"):
+        ConfigDeploymentBindingUpdate()
 
 
 def test_deployment_create_rejects_invalid_deployment_type() -> None:
@@ -344,6 +375,16 @@ def test_execution_create_and_status_results_have_same_shape() -> None:
     status_result = ExecutionStatusResult(**payload)
 
     assert create_result.model_dump() == status_result.model_dump()
+
+
+def test_deployment_update_result_snapshot_ids_defaults_empty() -> None:
+    result = DeploymentUpdateResult(id="dep_1")
+    assert result.snapshot_ids == []
+
+
+def test_deployment_update_result_carries_snapshot_ids() -> None:
+    result = DeploymentUpdateResult(id="dep_1", snapshot_ids=["snap_1", "snap_2"])
+    assert result.snapshot_ids == ["snap_1", "snap_2"]
 
 
 def test_operation_results_share_provider_result_contract() -> None:
