@@ -464,16 +464,18 @@ class TestGroqModelDiscoveryEdgeCases:
         mock_response.raise_for_status = Mock()
         mock_get.return_value = mock_response
 
-        # Mock tool calling - first succeeds, second fails
+        # Mock tool calling - each model goes through chat test then tool test
+        # Call order: chat(llama), tool(llama), chat(gemma), tool(gemma)
         call_count = [0]
 
         def create_mock_client(*_args, **_kwargs):
             mock_client = MagicMock()
-            if call_count[0] == 0:
-                # First call succeeds
+            if call_count[0] <= 2:
+                # Calls 0-2: chat test for llama (success), tool test for llama (success),
+                # chat test for gemma (success)
                 mock_client.chat.completions.create.return_value = MagicMock()
             else:
-                # Second call fails with tool error
+                # Call 3: tool test for gemma (fails)
                 mock_client.chat.completions.create.side_effect = ValueError("tool calling not supported")
             call_count[0] += 1
             return mock_client

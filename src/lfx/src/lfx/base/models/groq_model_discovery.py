@@ -22,8 +22,8 @@ class GroqModelDiscovery:
     CACHE_FILE = Path(__file__).parent / ".cache" / "groq_models_cache.json"
     CACHE_DURATION = timedelta(hours=24)  # Refresh cache every 24 hours
 
-    # Models to skip from LLM list (audio, TTS, guards)
-    SKIP_PATTERNS = ["whisper", "tts", "guard", "safeguard", "prompt-guard", "saba"]
+    # Models to skip from LLM list (audio, TTS, guards, speech)
+    SKIP_PATTERNS = ["whisper", "tts", "guard", "safeguard", "prompt-guard", "saba", "orpheus", "playai"]
 
     def __init__(self, api_key: str | None = None, base_url: str = "https://api.groq.com"):
         """Initialize discovery with optional API key for testing.
@@ -83,9 +83,15 @@ class GroqModelDiscovery:
                 else:
                     llm_models.append(model_id)
 
-            # Step 3: Test LLM models for tool calling
-            logger.info(f"Testing {len(llm_models)} LLM models for tool calling support...")
+            # Step 3: Test LLM models for chat completion and tool calling
+            logger.info(f"Testing {len(llm_models)} LLM models for capabilities...")
             for model_id in llm_models:
+                supports_chat = self._test_chat_completion(model_id)
+                if not supports_chat:
+                    # Model doesn't support chat completions at all (e.g. speech models)
+                    non_llm_models.append(model_id)
+                    logger.debug(f"{model_id}: does not support chat completions, skipping")
+                    continue
                 supports_tools = self._test_tool_calling(model_id)
                 models_metadata[model_id] = {
                     "name": model_id,
@@ -126,6 +132,45 @@ class GroqModelDiscovery:
         # Use direct access to raise KeyError if 'data' is missing
         return [model["id"] for model in model_list["data"]]
 
+    def _test_chat_completion(self, model_id: str) -> bool:
+        """Test if a model supports basic chat completions.
+
+        This filters out non-chat models (e.g. TTS, speech, embedding models)
+        that appear in the API model list but cannot handle chat requests.
+
+        Args:
+            model_id: The model ID to test
+
+        Returns:
+            True if model supports chat completions, False otherwise
+        """
+        try:
+            import groq
+
+            client = groq.Groq(api_key=self.api_key)
+            messages = [{"role": "user", "content": "test"}]
+            client.chat.completions.create(model=model_id, messages=messages, max_tokens=1)
+
+        except ImportError:
+            logger.warning("groq package not installed, cannot test chat completion")
+            return False
+        except Exception as e:  # noqa: BLE001
+            error_msg = str(e).lower()
+            if any(phrase in error_msg for phrase in [
+                "does not support chat completions",
+                "terms acceptance",
+                "terms_required",
+                "model_terms_required",
+                "not available",
+            ]):
+                logger.debug(f"{model_id}: does not support chat completions")
+                return False
+            # Other errors (rate limits, transient failures) - assume chat is supported
+            logger.warning(f"Error testing chat for {model_id}: {e}")
+            return True
+        else:
+            return True
+
     def _test_tool_calling(self, model_id: str) -> bool:
         """Test if a model supports tool calling.
 
@@ -163,13 +208,15 @@ class GroqModelDiscovery:
                 model=model_id, messages=messages, tools=tools, tool_choice="auto", max_tokens=10
             )
 
-        except (ImportError, AttributeError, TypeError, ValueError, RuntimeError, KeyError) as e:
+        except ImportError:
+            logger.warning("groq package not installed, cannot test tool calling")
+            return False
+        except Exception as e:  # noqa: BLE001
             error_msg = str(e).lower()
-            # If error mentions tool calling, model doesn't support it
             if "tool" in error_msg:
                 return False
-            # Other errors might be rate limits, etc - be conservative
-            logger.warning(f"Error testing {model_id}: {e}")
+            # Any other API error (rate limits, transient failures, etc)
+            logger.warning(f"Error testing tool calling for {model_id}: {e}")
             return False
         else:
             return True
