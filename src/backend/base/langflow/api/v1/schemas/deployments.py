@@ -480,6 +480,9 @@ class DeploymentUpdateRequest(BaseModel):
         if not self.model_fields_set:
             msg = "At least one of 'spec', 'flow_version_ids', 'config', or 'provider_data' must be provided."
             raise ValueError(msg)
+        if self.spec is None and self.flow_version_ids is None and self.config is None and self.provider_data is None:
+            msg = "At least one of 'spec', 'flow_version_ids', 'config', or 'provider_data' must be provided."
+            raise ValueError(msg)
         return self
 
 

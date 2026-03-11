@@ -414,6 +414,11 @@ def test_deployment_update_requires_at_least_one_section() -> None:
         DeploymentUpdate()
 
 
+def test_deployment_update_rejects_explicit_null_only_payload() -> None:
+    with pytest.raises(ValidationError, match="At least one of"):
+        DeploymentUpdate(spec=None)
+
+
 def test_deployment_update_accepts_spec_only() -> None:
     update = DeploymentUpdate(spec={"name": "new name"})
     assert update.spec is not None

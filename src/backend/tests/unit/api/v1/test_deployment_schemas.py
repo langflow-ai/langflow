@@ -101,14 +101,14 @@ class TestUuidIdListDedup:
         assert result.ids == [u1, u2]
 
     def test_flow_versions_patch_deduplicates_add(self):
-        u1 = uuid4()
-        result = FlowVersionsPatch(add=[u1, u1])
-        assert result.add == [u1]
+        u1, u2 = uuid4(), uuid4()
+        result = FlowVersionsPatch(add=[u1, u2, u1, u2])
+        assert result.add == [u1, u2]
 
     def test_flow_versions_patch_deduplicates_remove(self):
-        u1 = uuid4()
-        result = FlowVersionsPatch(remove=[u1, u1])
-        assert result.remove == [u1]
+        u1, u2 = uuid4(), uuid4()
+        result = FlowVersionsPatch(remove=[u2, u1, u2, u1])
+        assert result.remove == [u2, u1]
 
     def test_flow_versions_patch_rejects_overlap(self):
         u1 = uuid4()
@@ -128,8 +128,17 @@ class TestDeploymentConfigBindingUpdate:
         assert update.raw_payload is None
 
     def test_accepts_raw_payload_only(self):
-        update = DeploymentConfigBindingUpdate(raw_payload={"name": "new cfg"})
+        raw_payload = {
+            "name": "new cfg",
+            "description": "cfg desc",
+            "environment_variables": {
+                "OPENAI_API_KEY": {"value": "OPENAI_API_KEY", "source": "variable"},
+            },
+            "provider_config": {"region": "us-east-1", "flags": {"dry_run": True}},
+        }
+        update = DeploymentConfigBindingUpdate(raw_payload=raw_payload)
         assert update.raw_payload is not None
+        assert update.raw_payload.model_dump() == raw_payload
         assert update.config_id is None
 
     def test_accepts_explicit_null_config_id_for_unbind(self):
@@ -158,3 +167,11 @@ class TestDeploymentUpdateRequest:
     def test_accepts_provider_data_only(self):
         payload = DeploymentUpdateRequest(provider_data={"mode": "dry_run"})
         assert payload.provider_data == {"mode": "dry_run"}
+
+    def test_rejects_empty_payload(self):
+        with pytest.raises(ValidationError, match="At least one of"):
+            DeploymentUpdateRequest()
+
+    def test_rejects_explicit_null_only_payload(self):
+        with pytest.raises(ValidationError, match="At least one of"):
+            DeploymentUpdateRequest(spec=None)
