@@ -70,7 +70,7 @@ class SaveToFileComponent(Component):
             display_name="File Content",
             info="The input to save.",
             dynamic=True,
-            input_types=["Data", "DataFrame", "Message"],
+            input_types=["Data", "JSON", "DataFrame", "Table", "Message"],
             required=True,
         ),
         StrInput(

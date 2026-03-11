@@ -64,7 +64,7 @@ class GmailLoaderComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="load_emails"),
+        Output(display_name="JSON", name="data", method="load_emails"),
     ]
 
     def load_emails(self) -> Data:

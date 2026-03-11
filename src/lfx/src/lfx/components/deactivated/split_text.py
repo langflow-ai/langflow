@@ -17,7 +17,7 @@ class SplitTextComponent(Component):
             name="data_inputs",
             display_name="Data Inputs",
             info="The data to split.",
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
             is_list=True,
         ),
         IntInput(
