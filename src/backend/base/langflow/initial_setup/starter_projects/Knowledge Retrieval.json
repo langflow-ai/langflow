@@ -541,7 +541,7 @@
                 "dependencies": [
                   {
                     "name": "chromadb",
-                    "version": "1.5.4"
+                    "version": "1.5.5"
                   },
                   {
                     "name": "cryptography",
@@ -557,7 +557,7 @@
                   },
                   {
                     "name": "pydantic",
-                    "version": "2.12.5"
+                    "version": "2.11.10"
                   },
                   {
                     "name": "lfx",

@@ -1172,7 +1172,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": "2.12.5"
+                    "version": "2.11.10"
                   },
                   {
                     "name": "trustcall",
@@ -1750,7 +1750,7 @@
                 "dependencies": [
                   {
                     "name": "astrapy",
-                    "version": "2.1.0"
+                    "version": "2.2.0"
                   },
                   {
                     "name": "langchain_core",
