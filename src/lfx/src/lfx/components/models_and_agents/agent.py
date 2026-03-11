@@ -524,7 +524,6 @@ class AgentComponent(ToolCallingAgentComponent):
                 "handle_parsing_errors",
                 "verbose",
             ]
-            missing_keys = [key for key in build_config]
             missing_keys = [key for key in default_keys if key not in build_config]
             if missing_keys:
                 msg = f"Missing required keys in build_config: {missing_keys}"
