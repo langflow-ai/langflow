@@ -451,9 +451,8 @@ export function removeApiKeys(flow: FlowType): FlowType {
       const field = template[key];
 
       if (field.password) {
-        if (key !== "api_key") {
-          field.value = "";
-        }
+        field.value = "";
+        field.load_from_db = false;
       }
 
       // Handle MCP server configurations
