@@ -35,6 +35,99 @@ const STATUS_BADGE_CLASS: Record<string, string> = {
   Draft: "border-zinc-500/30 bg-zinc-500/15 text-zinc-400",
 };
 
+type ProviderStatus = "Connected" | "Error" | "Pending";
+
+type MockProviderCard = {
+  id: string;
+  providerName: string;
+  providerKey: string;
+  status: ProviderStatus;
+  endpoint: string;
+  lastVerified: string;
+  deployments: number;
+  actionLabel: string;
+  iconName: string;
+};
+
+const MOCK_PROVIDER_CARDS: MockProviderCard[] = [
+  {
+    id: "langflow-cloud",
+    providerName: "Langflow Cloud",
+    providerKey: "langflow",
+    status: "Connected",
+    endpoint: "https://cloud.langflow.io",
+    lastVerified: "6 days ago",
+    deployments: 12,
+    actionLabel: "Test Connection",
+    iconName: "Cloud",
+  },
+  {
+    id: "watsonx-orchestrate",
+    providerName: "watsonx Orchestrate",
+    providerKey: "watsonx",
+    status: "Connected",
+    endpoint: "https://api.watsonx-orchestrate.ibm.com/instance",
+    lastVerified: "6 days ago",
+    deployments: 8,
+    actionLabel: "Test Connection",
+    iconName: "WatsonxOrchestrate",
+  },
+  {
+    id: "aws-cloud-deploy",
+    providerName: "AWS Cloud Deploy",
+    providerKey: "cloud",
+    status: "Error",
+    endpoint: "https://aws.example.com",
+    lastVerified: "6 days ago",
+    deployments: 3,
+    actionLabel: "Reconnect",
+    iconName: "Cloud",
+  },
+  {
+    id: "azure-functions",
+    providerName: "Azure Functions",
+    providerKey: "cloud",
+    status: "Connected",
+    endpoint: "https://azure-functions.microsoft.com",
+    lastVerified: "6 days ago",
+    deployments: 5,
+    actionLabel: "Test Connection",
+    iconName: "Cloud",
+  },
+];
+
+type MockDeploymentConfigRow = {
+  id: string;
+  name: string;
+  description: string;
+  usedBy: string;
+  created: string;
+};
+
+const MOCK_DEPLOYMENT_CONFIG_ROWS: MockDeploymentConfigRow[] = [
+  {
+    id: "standard-production-config",
+    name: "Standard Production Config",
+    description: "Default configuration for production workloads",
+    usedBy: "15 deployments",
+    created: "Jan 14, 2026",
+  },
+  {
+    id: "test-environment-config",
+    name: "Test Environment Config",
+    description: "Lightweight configuration for testing environments",
+    usedBy: "8 deployments",
+    created: "Jan 19, 2026",
+  },
+  {
+    id: "high-performance-config",
+    name: "High Performance Config",
+    description: "Enhanced configuration for high-load workloads",
+    usedBy: "3 deployments",
+    created: "Jan 31, 2026",
+  },
+];
+
 type DeploymentProvidersViewProps = {
   providers: DeploymentProvider[];
   deploymentRows: DeploymentListRow[];
@@ -179,40 +272,15 @@ const DeploymentsTableSkeleton = () => {
   );
 };
 
-const formatDate = (date: string | null): string => {
-  if (!date) {
-    return "Not verified";
-  }
-
-  const parsed = new Date(date);
-  if (Number.isNaN(parsed.getTime())) {
-    return "Not verified";
-  }
-
-  return parsed.toLocaleDateString();
-};
-
-const normalizeProviderLabel = (providerKey: string): string => {
-  if (providerKey === "watsonx-orchestrate") {
-    return "watsonx Orchestrate";
-  }
-
-  return providerKey
-    .split("-")
-    .filter(Boolean)
-    .map((part) => part[0].toUpperCase() + part.slice(1))
-    .join(" ");
-};
-
 export const DeploymentProvidersView = ({
-  providers,
+  providers: _providers,
   deploymentRows,
-  selectedProviderId,
-  onSelectProvider,
-  onConfigureProvider,
-  selectedProviderDeploymentCount,
+  selectedProviderId: _selectedProviderId,
+  onSelectProvider: _onSelectProvider,
+  onConfigureProvider: _onConfigureProvider,
+  selectedProviderDeploymentCount: _selectedProviderDeploymentCount,
   isLoadingDeployments,
-  isLoadingProviders,
+  isLoadingProviders: _isLoadingProviders,
   page: _page,
   pageSize: _pageSize,
   total: _total,
@@ -230,43 +298,29 @@ export const DeploymentProvidersView = ({
     <div className="flex h-full min-h-0 flex-col gap-6 pb-4">
       {/* Provider Cards Grid */}
       {activeSubTab === "providers" && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {providers.map((provider) => {
-            const isSelected = selectedProviderId === provider.id;
-            const status = "Connected";
-            const providerName = normalizeProviderLabel(provider.provider_key);
-            const iconName =
-              provider.provider_key === "watsonx-orchestrate"
-                ? "WatsonxOrchestrate"
-                : "Cloud";
-
-            return (
-              <button
-                type="button"
+        <div className="flex flex-col gap-8">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {MOCK_PROVIDER_CARDS.map((provider) => (
+              <div
                 key={provider.id}
-                onClick={() => onSelectProvider(provider.id)}
-                className={`flex flex-col gap-4 rounded-xl border bg-card p-5 text-left transition-colors ${
-                  isSelected
-                    ? "border-primary"
-                    : "border-border hover:border-muted-foreground"
-                }`}
+                className="flex flex-col gap-4 rounded-xl border border-border/70 bg-background p-5 text-left"
               >
-                {/* Card Header */}
                 <div className="flex items-start gap-3">
                   <div
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                      provider.provider_key === "watsonx-orchestrate"
+                    className={cn(
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                      provider.providerKey === "watsonx"
                         ? "bg-transparent"
-                        : "bg-zinc-700"
-                    }`}
+                        : "bg-zinc-700",
+                    )}
                   >
-                    {provider.provider_key === "langflow" ? (
+                    {provider.providerKey === "langflow" ? (
                       <LangflowLogo className="h-5 w-5 text-white" />
                     ) : (
                       <ForwardedIconComponent
-                        name={iconName}
+                        name={provider.iconName}
                         className={
-                          provider.provider_key === "watsonx-orchestrate"
+                          provider.providerKey === "watsonx"
                             ? "h-7 w-7 object-contain"
                             : "h-5 w-5 text-white"
                         }
@@ -276,65 +330,51 @@ export const DeploymentProvidersView = ({
                   <div className="min-w-0 w-full">
                     <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
                       <span className="text-sm font-semibold leading-tight">
-                        {providerName}
+                        {provider.providerName}
                       </span>
                       <span className="flex items-center gap-1">
                         <span
-                          className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT_COLOR[status] ?? "bg-muted-foreground"}`}
+                          className={`h-1.5 w-1.5 rounded-full ${
+                            STATUS_DOT_COLOR[provider.status] ??
+                            "bg-muted-foreground"
+                          }`}
                         />
-                        <span
-                          className={`text-xs ${STATUS_COLOR[status] ?? "text-muted-foreground"}`}
-                        >
-                          {status}
-                        </span>
+                        <span className="text-xs pl-1">{provider.status}</span>
                       </span>
                     </div>
                     <span className="text-xs text-muted-foreground">
-                      {provider.account_id || provider.provider_key}
+                      {provider.providerKey}
                     </span>
                   </div>
                 </div>
 
-                {/* Endpoint */}
                 <div className="flex flex-col gap-0.5">
                   <span className="text-xs text-muted-foreground">
                     Endpoint
                   </span>
-                  <span className="truncate text-sm">
-                    {provider.backend_url}
-                  </span>
+                  <span className="truncate text-sm">{provider.endpoint}</span>
                 </div>
 
-                {/* Stats Row */}
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex flex-col gap-0.5">
                     <span className="text-xs text-muted-foreground">
                       Last Verified
                     </span>
-                    <span className="text-sm">
-                      {formatDate(provider.registered_at)}
-                    </span>
+                    <span className="text-sm">{provider.lastVerified}</span>
                   </div>
                   <div className="flex flex-col gap-0.5 text-right">
                     <span className="text-xs text-muted-foreground">
                       Deployments
                     </span>
-                    <span className="text-sm">
-                      {isSelected ? selectedProviderDeploymentCount : "—"}
-                    </span>
+                    <span className="text-sm">{provider.deployments}</span>
                   </div>
                 </div>
 
-                {/* Action Buttons */}
                 <div className="flex gap-2">
                   <Button
                     variant="secondary"
                     size="sm"
                     className="h-8 flex-1 gap-1.5 text-xs"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onConfigureProvider(provider);
-                    }}
                   >
                     <ForwardedIconComponent
                       name="Settings"
@@ -348,21 +388,64 @@ export const DeploymentProvidersView = ({
                     className="h-8 flex-1 gap-1.5 text-xs"
                   >
                     <ForwardedIconComponent
-                      name="CircleCheck"
+                      name={
+                        provider.status === "Error"
+                          ? "RefreshCw"
+                          : "CircleCheck"
+                      }
                       className="h-3.5 w-3.5"
                     />
-                    Test Connection
+                    {provider.actionLabel}
                   </Button>
                 </div>
-              </button>
-            );
-          })}
-          {!isLoadingProviders && providers.length === 0 && (
-            <div className="col-span-full rounded-xl border border-dashed border-border p-6 text-sm text-muted-foreground">
-              No deployment providers found. Add a provider to start using
-              deployments.
+              </div>
+            ))}
+          </div>
+
+          <div>
+            <h3 className="text-xl font-semibold">Deployment Configurations</h3>
+            <div className="mt-4">
+              <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_2rem] items-center gap-4 px-4 py-4 text-xs font-medium text-muted-foreground">
+                <span>Name</span>
+                <span>Description</span>
+                <span>Used By</span>
+                <span>Created</span>
+                <span />
+              </div>
+              <div className="mt-1 border-y border-border/70">
+                {MOCK_DEPLOYMENT_CONFIG_ROWS.map((row) => (
+                  <div
+                    key={row.id}
+                    className="grid w-full grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_2rem] items-center gap-4 border-b border-border/60 px-4 py-5 text-left transition-colors hover:bg-muted/20 last:border-b-0"
+                  >
+                    <span className="truncate text-sm font-medium">
+                      {row.name}
+                    </span>
+                    <span className="truncate text-sm text-muted-foreground">
+                      {row.description}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {row.usedBy}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {row.created}
+                    </span>
+                    <div className="flex items-center justify-end">
+                      <Button
+                        unstyled
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                      >
+                        <ForwardedIconComponent
+                          name="EllipsisVertical"
+                          className="h-4 w-4"
+                        />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          )}
+          </div>
         </div>
       )}
 

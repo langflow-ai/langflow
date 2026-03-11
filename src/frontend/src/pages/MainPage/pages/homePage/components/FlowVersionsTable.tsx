@@ -1,9 +1,14 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
+import useDeleteFlow from "@/hooks/flows/use-delete-flow";
+import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
+import ExportModal from "@/modals/exportModal";
+import FlowSettingsModal from "@/modals/flowSettingsModal";
+import useAlertStore from "@/stores/alertStore";
 import type { FlowType } from "@/types/flow";
 import type { FlowHistoryEntry } from "@/types/flow/history";
 import { cn } from "@/utils/utils";
-import { useCallback, useEffect, useMemo, useState } from "react";
 import FlowVersionsTableRow from "./FlowVersionsTableRow";
 
 type FlowHistoryApiResponse = {
@@ -20,6 +25,13 @@ export default function FlowVersionsTable({
   flows,
   folderId,
 }: FlowVersionsTableProps) {
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { deleteFlow } = useDeleteFlow();
+  const [actionFlow, setActionFlow] = useState<FlowType | null>(null);
+  const [openDelete, setOpenDelete] = useState(false);
+  const [openExportModal, setOpenExportModal] = useState(false);
+  const [openSettings, setOpenSettings] = useState(false);
   const [expandedFlowIds, setExpandedFlowIds] = useState<Set<string>>(
     new Set(),
   );
@@ -93,7 +105,22 @@ export default function FlowVersionsTable({
   }, [flows, historyByFlowId, isLoadingHistoryByFlowId]);
 
   const tableGridCols =
-    "grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)]";
+    "grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)_2rem]";
+
+  const handleDelete = async () => {
+    if (!actionFlow) {
+      return;
+    }
+    try {
+      await deleteFlow({ id: [actionFlow.id] });
+      setSuccessData({ title: "Flow deleted successfully" });
+    } catch {
+      setErrorData({
+        title: "Error deleting flow",
+        list: ["Please try again"],
+      });
+    }
+  };
 
   return (
     <div className="px-5 pb-5 pt-7">
@@ -107,6 +134,7 @@ export default function FlowVersionsTable({
         <span>Version</span>
         <span>Status</span>
         <span>Last updated</span>
+        <span />
       </div>
       <div className="mt-1 border-y border-border/70">
         {rows.map(
@@ -146,10 +174,41 @@ export default function FlowVersionsTable({
                   return next;
                 });
               }}
+              onSetActionFlow={(flow, action) => {
+                setActionFlow(flow);
+                if (action === "delete") {
+                  setOpenDelete(true);
+                } else if (action === "export") {
+                  setOpenExportModal(true);
+                } else if (action === "settings") {
+                  setOpenSettings(true);
+                }
+              }}
             />
           ),
         )}
       </div>
+      {actionFlow && (
+        <>
+          <DeleteConfirmationModal
+            open={openDelete}
+            setOpen={setOpenDelete}
+            onConfirm={() => void handleDelete()}
+            description="flow"
+            note="and its message history"
+          />
+          <ExportModal
+            open={openExportModal}
+            setOpen={setOpenExportModal}
+            flowData={actionFlow}
+          />
+          <FlowSettingsModal
+            open={openSettings}
+            setOpen={setOpenSettings}
+            flowData={actionFlow}
+          />
+        </>
+      )}
     </div>
   );
 }
