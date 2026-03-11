@@ -156,13 +156,16 @@ class GroqModelDiscovery:
             return False
         except Exception as e:  # noqa: BLE001
             error_msg = str(e).lower()
-            if any(phrase in error_msg for phrase in [
-                "does not support chat completions",
-                "terms acceptance",
-                "terms_required",
-                "model_terms_required",
-                "not available",
-            ]):
+            if any(
+                phrase in error_msg
+                for phrase in [
+                    "does not support chat completions",
+                    "terms acceptance",
+                    "terms_required",
+                    "model_terms_required",
+                    "not available",
+                ]
+            ):
                 logger.debug(f"{model_id}: does not support chat completions")
                 return False
             # Other errors (rate limits, transient failures) - assume chat is supported
