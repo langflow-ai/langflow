@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 import pytest
 from httpx import AsyncClient
 from langflow.services.auth.utils import create_super_user, get_password_hash
+from langflow.services.database.models.file.model import File
 from langflow.services.database.models.user import UserUpdate
 from langflow.services.database.models.user.model import User
 from langflow.services.database.utils import session_getter
@@ -257,6 +258,35 @@ async def test_delete_user_wrong_id(client: AsyncClient, super_user_headers):
     error = detail[0]
     assert error["loc"] == ["path", "user_id"]
     assert error["type"] == "uuid_parsing"
+
+
+@pytest.mark.api_key_required
+async def test_delete_user_cascades_to_files(client: AsyncClient, test_user, super_user_headers):
+    """Deleting a user should cascade-delete associated file records (e.g. _mcp_servers)."""
+    user_id = test_user["id"]
+
+    # Create a file record owned by the user
+    import tempfile
+
+    async with session_getter(get_db_service()) as session:
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            file_path = f"{tmpdirname}/{user_id}"
+            file = File(user_id=user_id, name=f"_mcp_servers_{user_id}.json", path=file_path, size=42)
+            session.add(file)
+            await session.commit()
+            file_id = file.id
+
+    # Verify the file exists
+    async with session_getter(get_db_service()) as session:
+        assert await session.get(File, file_id) is not None
+
+    # Delete the user
+    response = await client.delete(f"/api/v1/users/{user_id}", headers=super_user_headers)
+    assert response.status_code == 200, response.json()
+
+    # Verify the file was cascade-deleted
+    async with session_getter(get_db_service()) as session:
+        assert await session.get(File, file_id) is None
 
 
 @pytest.mark.api_key_required
