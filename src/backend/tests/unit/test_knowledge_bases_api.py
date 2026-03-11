@@ -259,22 +259,22 @@ class TestKnowledgeBaseAPI:
         assert data["chunks"] == 5
         assert data["name"] == "Detail KB"
 
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.teardown_storage")
+    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_delete_knowledge_base(
-        self, mock_root, mock_teardown, client: AsyncClient, logged_in_headers, tmp_path
+        self, mock_root, mock_delete, client: AsyncClient, logged_in_headers, tmp_path
     ):
         mock_root.return_value = tmp_path
         (tmp_path / "activeuser" / "To_Delete").mkdir(parents=True, exist_ok=True)
 
         response = await client.delete("api/v1/knowledge_bases/To_Delete", headers=logged_in_headers)
         assert response.status_code == 200
-        mock_teardown.assert_called_once()
+        mock_delete.assert_called_once()
 
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.teardown_storage")
+    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_bulk_delete_knowledge_bases(
-        self, mock_root, mock_teardown, client: AsyncClient, logged_in_headers, tmp_path
+        self, mock_root, mock_delete, client: AsyncClient, logged_in_headers, tmp_path
     ):
         mock_root.return_value = tmp_path
         kb_user_path = tmp_path / "activeuser"
@@ -292,7 +292,7 @@ class TestKnowledgeBaseAPI:
         data = response.json()
         assert data["deleted_count"] == 2
         assert "NonExistent" in data["not_found"]
-        assert mock_teardown.called
+        assert mock_delete.called
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
