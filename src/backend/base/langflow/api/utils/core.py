@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 import uuid
 from ast import literal_eval
 from datetime import timedelta

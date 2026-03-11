@@ -3,7 +3,6 @@ from lfx.base.models.unified_models import (
     apply_provider_variable_config_to_build_config,
     get_language_model_options,
     get_llm,
-    get_model_providers,
     get_provider_for_model_name,
     update_model_options_in_build_config,
 )
