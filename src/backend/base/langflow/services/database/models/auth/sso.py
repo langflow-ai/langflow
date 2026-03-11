@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 import sqlalchemy as sa
-from sqlalchemy import Column, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, ForeignKey, Index
 from sqlmodel import Field, SQLModel
 
 from langflow.schema.serialize import UUIDstr
@@ -22,7 +22,8 @@ class SSOUserProfile(SQLModel, table=True):  # type: ignore[call-arg]
     """SSO profile per user. Used by the SSO plugin for JIT provisioning and login."""
 
     __tablename__ = "sso_user_profile"
-    __table_args__ = (UniqueConstraint("sso_provider", "sso_user_id", name="uq_sso_user_profile_provider_user"),)
+    # Use Index(unique=True) to match migration (create_index); avoids model/DB mismatch.
+    __table_args__ = (Index("uq_sso_user_profile_provider_user", "sso_provider", "sso_user_id", unique=True),)
 
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
     user_id: UUIDstr = Field(
