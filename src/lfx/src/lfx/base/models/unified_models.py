@@ -229,17 +229,15 @@ def apply_provider_variable_config_to_build_config(
 
         env_var_key = var_info.get("variable_key")
         if env_var_key:
-            current_value = field_config.get("value")
-            if not current_value or (isinstance(current_value, str) and not current_value.strip()):
-                env_value = os.environ.get(env_var_key)
-                if env_value and env_value.strip():
-                    field_config["value"] = env_var_key
-                    field_config["load_from_db"] = True
-                    logger.debug(
-                        "Set field %s to env var name %s (value resolved at runtime)",
-                        field_name,
-                        env_var_key,
-                    )
+            env_value = os.environ.get(env_var_key)
+            if env_value and env_value.strip():
+                field_config["value"] = env_var_key
+                field_config["load_from_db"] = True
+                logger.debug(
+                    "Set field %s to env var name %s (value resolved at runtime)",
+                    field_name,
+                    env_var_key,
+                )
 
     return build_config
 
@@ -266,6 +264,17 @@ def get_provider_config(provider: str) -> dict:
 def get_model_providers() -> list[str]:
     """Return a sorted list of unique provider names."""
     return sorted({md.get("provider", "Unknown") for group in MODELS_DETAILED for md in group})
+
+
+def get_provider_for_model_name(model_name: str) -> str:
+    """Return the provider for a model name by searching MODELS_DETAILED."""
+    if not model_name or not isinstance(model_name, str):
+        return ""
+    for group in MODELS_DETAILED:
+        for md in group:
+            if md.get("name") == model_name:
+                return md.get("provider", "") or ""
+    return ""
 
 
 def get_unified_models_detailed(
