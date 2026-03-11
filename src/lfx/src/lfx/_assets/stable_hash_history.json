@@ -651,7 +651,7 @@
   },
   "AstraDB": {
     "versions": {
-      "0.3.0": "217e47f9f7d1"
+      "0.3.0": "ba015b4caad3"
     }
   },
   "AssistantsCreateAssistant": {
@@ -771,7 +771,7 @@
   },
   "KnowledgeIngestion": {
     "versions": {
-      "0.3.0": "f87af1eb8143"
+      "0.3.0": "3797f372c661"
     }
   },
   "KnowledgeRetrieval": {
