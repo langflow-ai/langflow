@@ -71,6 +71,13 @@ def _get_openlayer_tracer():
     return OpenlayerTracer
 
 
+def _get_otlp_tracer():
+    """Lazily import and return the OTLPTracer class."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    return OTLPTracer
+
+
 trace_context_var: ContextVar[TraceContext | None] = ContextVar("trace_context", default=None)
 component_context_var: ContextVar[ComponentTraceContext | None] = ContextVar("component_trace_context", default=None)
 
@@ -265,6 +272,20 @@ class TracingService(Service):
             return
         openlayer_tracer = _get_openlayer_tracer()
         trace_context.tracers["openlayer"] = openlayer_tracer(
+            trace_name=trace_context.run_name,
+            trace_type="chain",
+            project_name=trace_context.project_name,
+            trace_id=trace_context.run_id,
+            user_id=trace_context.user_id,
+            session_id=trace_context.session_id,
+        )
+
+    def _initialize_otlp_tracer(self, trace_context: TraceContext) -> None:
+        """Create and register an OTLPTracer in the given trace context."""
+        if self.deactivated:
+            return
+        otlp_tracer = _get_otlp_tracer()
+        trace_context.tracers["otlp"] = otlp_tracer(
             trace_name=trace_context.run_name,
             trace_type="chain",
             project_name=trace_context.project_name,
