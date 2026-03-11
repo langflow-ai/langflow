@@ -80,39 +80,8 @@ def _get_provider_from_template(template: dict) -> str | None:
     return None
 
 
-def _looks_like_variable_name(value: Any) -> bool:
-    """Return True if value looks like a variable name."""
-    if not value or not isinstance(value, str) or not value.strip():
-        return False
-    return bool(re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", value.strip()))
-
-
-def replace_api_key_with_env_var_name(flow: dict) -> dict:
-    """Normalize api_key to a variable name when possible, never export raw keys."""
-    for node in flow.get("data", {}).get("nodes", []):
-        node_data = node.get("data")
-        if not isinstance(node_data, dict):
-            continue
-        node_inner = node_data.get("node")
-        if not isinstance(node_inner, dict):
-            continue
-        template = node_inner.get("template")
-        if not isinstance(template, dict):
-            continue
-        for value in template.values():
-            if isinstance(value, dict) and value.get("name") == "api_key" and value.get("password"):
-                current = value.get("value")
-                if _looks_like_variable_name(current):
-                    break  # keep user's custom variable name
-                # raw secret or other string: clear it
-                value["value"] = None
-                break
-    return flow
-
-
 def remove_api_keys(flow: dict):
     """Clear secret values from flow data."""
-    flow = replace_api_key_with_env_var_name(flow)
     for node in flow.get("data", {}).get("nodes", []):
         node_data = node.get("data").get("node")
         template = node_data.get("template")

@@ -28,7 +28,6 @@ __all__ = [
     "apply_provider_variable_config_to_build_config",
     "fetch_live_ollama_models",
     "fetch_live_watsonx_models",
-    "get_api_key_variable_key_for_provider",
     "get_live_models_for_provider",
     "get_model_provider_metadata",
     "get_model_provider_variable_mapping",

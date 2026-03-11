@@ -36,7 +36,6 @@ from langflow.api.utils.core import (
     parse_value,
     raise_error_if_astra_cloud_env,
     remove_api_keys,
-    replace_api_key_with_env_var_name,
     validate_is_component,
     verify_public_flow_and_get_user,
 )
@@ -76,7 +75,6 @@ __all__ = [
     "parse_value",
     "raise_error_if_astra_cloud_env",
     "remove_api_keys",
-    "replace_api_key_with_env_var_name",
     "validate_is_component",
     "verify_public_flow_and_get_user",
 ]

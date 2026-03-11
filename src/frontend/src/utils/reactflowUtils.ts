@@ -442,21 +442,8 @@ export function looksLikeVariableName(value: unknown): boolean {
   return /^[A-Z][A-Z0-9_]*$/i.test(value.trim());
 }
 
-export function replaceApiKeyWithEnvVarName(flow: FlowType): FlowType {
-  const out = cloneDeep(flow);
-  out.data!.nodes.forEach((node) => {
-    if (node.type !== "genericNode") return;
-    const template = node.data.node!.template;
-    if (!template.api_key) return;
-    const current = template.api_key.value;
-    if (looksLikeVariableName(current)) return;
-    template.api_key.value = "";
-  });
-  return out;
-}
-
 export function removeApiKeys(flow: FlowType): FlowType {
-  const cleanFlow = replaceApiKeyWithEnvVarName(cloneDeep(flow));
+  const cleanFlow = cloneDeep(flow);
   cleanFlow.data!.nodes.forEach((node) => {
     if (node.type !== "genericNode") return;
     const template = node.data.node!.template;
