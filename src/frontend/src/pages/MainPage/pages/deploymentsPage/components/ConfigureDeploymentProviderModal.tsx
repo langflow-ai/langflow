@@ -163,15 +163,24 @@ export const ConfigureDeploymentProviderModal = ({
 
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">Provider</label>
-            <Input value={providerKey} disabled />
+            <label
+              htmlFor="configure-provider-key"
+              className="text-sm font-medium"
+            >
+              Provider
+            </label>
+            <Input id="configure-provider-key" value={providerKey} disabled />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">
+            <label
+              htmlFor="configure-provider-backend-url"
+              className="text-sm font-medium"
+            >
               Backend URL <span className="text-destructive">*</span>
             </label>
             <Input
+              id="configure-provider-backend-url"
               value={backendUrl}
               onChange={(event) => setBackendUrl(event.target.value)}
               placeholder="https://api.<region>.watson-orchestrate.ibm.com/instances/<id>"
@@ -179,8 +188,14 @@ export const ConfigureDeploymentProviderModal = ({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">API Key</label>
+            <label
+              htmlFor="configure-provider-api-key"
+              className="text-sm font-medium"
+            >
+              API Key
+            </label>
             <Input
+              id="configure-provider-api-key"
               value={apiKey}
               onChange={(event) => setApiKey(event.target.value)}
               placeholder="Leave empty to keep existing API key"
@@ -190,10 +205,14 @@ export const ConfigureDeploymentProviderModal = ({
 
           {!isWatsonxProvider && (
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium">
+              <label
+                htmlFor="configure-provider-account-id"
+                className="text-sm font-medium"
+              >
                 Account ID (optional)
               </label>
               <Input
+                id="configure-provider-account-id"
                 value={accountId}
                 onChange={(event) => setAccountId(event.target.value)}
                 placeholder="Provider account/tenant id"
