@@ -229,15 +229,14 @@ def apply_provider_variable_config_to_build_config(
 
         env_var_key = var_info.get("variable_key")
         if env_var_key:
+            field_config["value"] = env_var_key
             env_value = os.environ.get(env_var_key)
-            if env_value and env_value.strip():
-                field_config["value"] = env_var_key
-                field_config["load_from_db"] = True
-                logger.debug(
-                    "Set field %s to env var name %s (value resolved at runtime)",
-                    field_name,
-                    env_var_key,
-                )
+            field_config["load_from_db"] = bool(env_value and str(env_value).strip())
+            logger.debug(
+                "Set field %s to env var name %s (value resolved at runtime)",
+                field_name,
+                env_var_key,
+            )
 
     return build_config
 
