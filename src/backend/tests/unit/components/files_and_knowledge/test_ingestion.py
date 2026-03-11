@@ -385,12 +385,12 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
     @patch("lfx.components.files_and_knowledge.ingestion.get_embeddings")
     async def test_build_kb_info_old_format_unrecognized_model(
         self,
-        mock_get_embeddings,
+        mock_get_embeddings, # noqa: ARG002
         mock_get_options,
         component_class,
         default_kwargs,
         tmp_path,
-        active_user,  # noqa: ARG002
+        active_user,
     ):
         """Test that old-format metadata with an unrecognized model name raises a clear error."""
         # Overwrite metadata to use old format (no model_selection key) with a model name
