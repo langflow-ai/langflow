@@ -63,23 +63,27 @@ from pydantic import AfterValidator, BaseModel, Field, SecretStr, ValidationInfo
 
 
 def _validate_str_id_list(values: list[str], *, field_name: str) -> list[str]:
-    """Strip, reject empty values, reject empty lists, and reject duplicates in a list of string identifiers."""
+    """Strip, reject empty/whitespace values, reject empty lists, and deduplicate preserving order."""
     if not values:
         msg = f"{field_name} must not be empty."
         raise ValueError(msg)
-    cleaned: list[str] = []
-    seen: set[str] = set()
+    stripped = []
     for raw in values:
         value = raw.strip()
         if not value:
             msg = f"{field_name} must not contain empty values."
             raise ValueError(msg)
-        if value in seen:
-            msg = f"{field_name} must not contain duplicate values: '{value}'."
-            raise ValueError(msg)
-        seen.add(value)
-        cleaned.append(value)
-    return cleaned
+        stripped.append(value)
+    return list(dict.fromkeys(stripped))
+
+
+def _validate_uuid_list(values: list[UUID], *, field_name: str) -> list[UUID]:
+    """Deduplicate (preserving order) and reject empty lists."""
+    deduped = list(dict.fromkeys(values))
+    if not deduped:
+        msg = f"{field_name} must not be empty."
+        raise ValueError(msg)
+    return deduped
 
 
 def _normalize_str(value: str, *, field_name: str = "Field") -> str:
@@ -297,18 +301,15 @@ class FlowVersionsAttach(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    # Typed as str (not UUID) because the service layer uses a flexible IdLike
-    # type (UUID | NormalizedId). The same str typing is used for the
-    # query-parameter variant in list_deployments for consistency.
-    ids: list[str] = Field(
+    ids: list[UUID] = Field(
         min_length=1,
         description="Langflow flow version ids to attach to the deployment.",
     )
 
     @field_validator("ids")
     @classmethod
-    def validate_ids(cls, values: list[str]) -> list[str]:
-        return _validate_str_id_list(values, field_name="ids")
+    def validate_ids(cls, values: list[UUID]) -> list[UUID]:
+        return _validate_uuid_list(values, field_name="ids")
 
 
 class FlowVersionsPatch(BaseModel):
@@ -316,21 +317,21 @@ class FlowVersionsPatch(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    add: list[str] | None = Field(
+    add: list[UUID] | None = Field(
         None,
         description="Langflow flow version ids to attach to the deployment. Omit to leave unchanged.",
     )
-    remove: list[str] | None = Field(
+    remove: list[UUID] | None = Field(
         None,
         description="Langflow flow version ids to detach from the deployment. Omit to leave unchanged.",
     )
 
     @field_validator("add", "remove")
     @classmethod
-    def validate_id_lists(cls, values: list[str] | None, info: ValidationInfo) -> list[str] | None:
+    def validate_id_lists(cls, values: list[UUID] | None, info: ValidationInfo) -> list[UUID] | None:
         if values is None:
             return None
-        return _validate_str_id_list(values, field_name=info.field_name)
+        return _validate_uuid_list(values, field_name=info.field_name)
 
     @model_validator(mode="after")
     def validate_operations(self):
@@ -343,7 +344,7 @@ class FlowVersionsPatch(BaseModel):
 
         overlap = set(add_values).intersection(remove_values)
         if overlap:
-            ids = ", ".join(sorted(overlap))
+            ids = ", ".join(sorted(str(v) for v in overlap))
             msg = f"Flow version ids cannot be present in both 'add' and 'remove': {ids}."
             raise ValueError(msg)
         return self
@@ -403,14 +404,46 @@ class DeploymentConfigCreate(BaseModel):
 
 
 class DeploymentConfigBindingUpdate(BaseModel):
-    """Config binding patch for an existing deployment."""
+    """Config binding patch for an existing deployment.
+
+    Exactly one of ``config_id``, ``raw_payload``, or ``unbind`` must be
+    provided:
+
+    * ``config_id`` — bind an existing config by reference.
+    * ``raw_payload`` — create a new config and bind it.
+    * ``unbind = true`` — detach the current config.
+    """
 
     model_config = {"extra": "forbid"}
 
     config_id: NonEmptyStr | None = Field(
         default=None,
-        description="Provider-owned config id to bind to the deployment. Use null to unbind.",
+        description="Provider-owned config id to bind to the deployment.",
     )
+
+    raw_payload: _StrictDeploymentConfig | None = Field(
+        default=None,
+        description="Config payload to create and bind to the deployment.",
+    )
+
+    unbind: bool = Field(
+        default=False,
+        description="Set to true to detach the current config from the deployment.",
+    )
+
+    @model_validator(mode="after")
+    def validate_config_update(self) -> DeploymentConfigBindingUpdate:
+        provided = sum(
+            [
+                self.config_id is not None,
+                self.raw_payload is not None,
+                self.unbind,
+            ]
+        )
+        if provided != 1:
+            msg = "Exactly one of 'config_id', 'raw_payload', or 'unbind=true' must be provided."
+            raise ValueError(msg)
+        return self
 
 
 # ---------------------------------------------------------------------------
@@ -445,11 +478,18 @@ class DeploymentUpdateRequest(BaseModel):
         description="Flow version attach/detach operations.",
     )
     config: DeploymentConfigBindingUpdate | None = Field(default=None, description="Deployment configuration update.")
+    provider_data: dict[str, Any] | None = Field(
+        default=None,
+        description="Provider-owned opaque update payload.",
+    )
 
     @model_validator(mode="after")
     def ensure_any_field_provided(self) -> DeploymentUpdateRequest:
         if not self.model_fields_set:
-            msg = "At least one of 'spec', 'flow_version_ids', or 'config' must be provided."
+            msg = "At least one of 'spec', 'flow_version_ids', 'config', or 'provider_data' must be provided."
+            raise ValueError(msg)
+        if self.spec is None and self.flow_version_ids is None and self.config is None and self.provider_data is None:
+            msg = "At least one of 'spec', 'flow_version_ids', 'config', or 'provider_data' must be provided."
             raise ValueError(msg)
         return self
 

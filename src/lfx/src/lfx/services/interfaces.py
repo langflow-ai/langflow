@@ -21,6 +21,7 @@ if TYPE_CHECKING:
         DeploymentListResult,
         DeploymentListTypesResult,
         DeploymentStatusResult,
+        DeploymentType,
         DeploymentUpdate,
         DeploymentUpdateResult,
         ExecutionCreate,
@@ -235,6 +236,9 @@ class DeploymentServiceProtocol(Protocol):
     Keep this protocol intentionally narrow (consumer-facing CRUD + status).
     Adapter-specific or advanced operations are defined on concrete deployment
     service classes.
+
+    ``deployment_type`` is accepted as an optional routing hint by all
+    operations that act on a specific deployment (including executions).
     """
 
     @abstractmethod
@@ -275,6 +279,7 @@ class DeploymentServiceProtocol(Protocol):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: AsyncSession,
     ) -> DeploymentGetResult:
         """Return deployment metadata by provider ID."""
@@ -286,6 +291,7 @@ class DeploymentServiceProtocol(Protocol):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         payload: DeploymentUpdate,
         db: AsyncSession,
     ) -> DeploymentUpdateResult:
@@ -298,6 +304,7 @@ class DeploymentServiceProtocol(Protocol):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: AsyncSession,
     ) -> RedeployResult:
         """Re-apply current deployment inputs without changing them."""
@@ -309,6 +316,7 @@ class DeploymentServiceProtocol(Protocol):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: AsyncSession,
     ) -> DeploymentDuplicateResult:
         """Create a new deployment using the same inputs as the source."""
@@ -320,6 +328,7 @@ class DeploymentServiceProtocol(Protocol):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: AsyncSession,
     ) -> DeploymentDeleteResult:
         """Delete the deployment from the provider."""
@@ -331,6 +340,7 @@ class DeploymentServiceProtocol(Protocol):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: AsyncSession,
     ) -> DeploymentStatusResult:
         """Return provider-reported health/status for the deployment."""
@@ -341,6 +351,7 @@ class DeploymentServiceProtocol(Protocol):
         self,
         *,
         user_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         payload: ExecutionCreate,
         db: AsyncSession,
     ) -> ExecutionCreateResult:
@@ -353,6 +364,7 @@ class DeploymentServiceProtocol(Protocol):
         *,
         user_id: IdLike,
         execution_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: AsyncSession,
     ) -> ExecutionStatusResult:
         """Get provider-agnostic deployment execution state/output."""
