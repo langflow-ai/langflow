@@ -503,13 +503,6 @@ class AgentComponent(ToolCallingAgentComponent):
         if provider:
             build_config = apply_provider_variable_config_to_build_config(build_config, provider)
 
-        if not build_config.get("api_key", {}).get("value"):
-            # No provider-selected api_key yet (e.g. new node): pre-fill from first provider that has env configured
-            for p in get_model_providers():
-                build_config = apply_provider_variable_config_to_build_config(build_config, p)
-                if build_config.get("api_key", {}).get("value"):
-                    break
-
         if field_name == "model":
             default_keys = [
                 "code",

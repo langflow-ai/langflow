@@ -140,11 +140,5 @@ class LanguageModelComponent(LCModelComponent):
 
         if provider:
             build_config = apply_provider_variable_config_to_build_config(build_config, provider)
-        else:
-            # No provider selected yet (e.g. new node): pre-fill api_key from first provider that has env configured
-            for p in get_model_providers():
-                build_config = apply_provider_variable_config_to_build_config(build_config, p)
-                if build_config.get("api_key", {}).get("value"):
-                    break
 
         return build_config
