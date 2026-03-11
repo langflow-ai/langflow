@@ -437,7 +437,7 @@ export function isValidConnection(
   return false;
 }
 
-function looksLikeVariableName(value: unknown): boolean {
+export function looksLikeVariableName(value: unknown): boolean {
   if (typeof value !== "string" || !value.trim()) return false;
   return /^[A-Z][A-Z0-9_]*$/i.test(value.trim());
 }

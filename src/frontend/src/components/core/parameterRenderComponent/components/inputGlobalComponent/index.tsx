@@ -7,6 +7,7 @@ import { CommandItem } from "../../../../ui/command";
 import GlobalVariableModal from "../../../GlobalVariableModal/GlobalVariableModal";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import type { InputGlobalComponentType, InputProps } from "../../types";
+import { looksLikeVariableName } from "../../../../../utils/reactflowUtils";
 import InputComponent from "../inputComponent";
 import {
   useGlobalVariableValue,
@@ -116,16 +117,15 @@ export default function InputGlobalComponent({
 
   let variableOptions = typedGlobalVariables.map((variable) => variable.name);
 
+  const isEnvVarName = password && currentValue && looksLikeVariableName(currentValue);
   if (
-    loadFromDb &&
-    currentValue &&
-    !valueExists &&
-    !variableOptions.includes(currentValue)
+    (loadFromDb && currentValue && !valueExists && !variableOptions.includes(currentValue)) ||
+    (isEnvVarName && !variableOptions.includes(currentValue))
   ) {
     variableOptions = [...variableOptions, currentValue];
   }
 
-  const selectedOption = loadFromDb ? currentValue : "";
+  const selectedOption = loadFromDb || isEnvVarName ? currentValue : "";
 
   if (!showParameter) {
     return null;
