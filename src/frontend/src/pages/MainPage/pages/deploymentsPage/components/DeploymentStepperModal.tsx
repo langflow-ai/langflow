@@ -1,3 +1,4 @@
+import type { Dispatch, SetStateAction } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import StepperModal, {
   StepperModalFooter,
@@ -7,7 +8,6 @@ import { StepBasics } from "@/pages/MainPage/pages/deploymentsPage/components/st
 import { StepConfiguration } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepConfiguration";
 import { StepProvider } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepProvider";
 import { StepReview } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepReview";
-import type { Dispatch, SetStateAction } from "react";
 import type { DeploymentType, EnvVar } from "../constants";
 import { TOTAL_STEPS } from "../constants";
 import type { FlowCheckpointGroup } from "../types";
@@ -123,12 +123,14 @@ export const DeploymentStepperModal = ({
       <DeployFlowStepper currentStep={currentStep} labels={STEP_LABELS} />
       {currentStep === 1 && (
         <StepProvider
-          deploymentName={deploymentName}
-          setDeploymentName={setDeploymentName}
-          deploymentDescription={deploymentDescription}
-          setDeploymentDescription={setDeploymentDescription}
-          deploymentType={deploymentType}
-          setDeploymentType={setDeploymentType}
+          value={{
+            apiKey: deploymentName,
+            serviceUrl: deploymentDescription,
+          }}
+          onChange={{
+            setApiKey: setDeploymentName,
+            setServiceUrl: setDeploymentDescription,
+          }}
         />
       )}
       {currentStep === 2 && (

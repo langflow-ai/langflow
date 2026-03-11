@@ -1,16 +1,18 @@
+import type { ReactNode } from "react";
+import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
-import type { DeploymentType } from "../../constants";
 
-type ProviderOption = {
+export type StepProviderOption = {
   key: string;
   label: string;
-  tool: string;
-  icon: string;
+  tool?: string;
+  icon?: string;
+  iconNode?: ReactNode;
+  requiresAccountId?: boolean;
 };
 
-const PROVIDERS: ProviderOption[] = [
+const DEFAULT_PROVIDERS: StepProviderOption[] = [
   {
     key: "watsonx",
     label: "Watsonx",
@@ -22,36 +24,109 @@ const PROVIDERS: ProviderOption[] = [
   { key: "gcp", label: "Google", tool: "Cloud Run", icon: "Google" },
 ];
 
+export type StepProviderValue = {
+  selectedProvider?: string;
+  apiKey: string;
+  serviceUrl: string;
+  accountId?: string;
+};
+
+export type StepProviderChangeHandlers = {
+  setSelectedProvider?: (value: string) => void;
+  setApiKey: (value: string) => void;
+  setServiceUrl: (value: string) => void;
+  setAccountId?: (value: string) => void;
+};
+
+export type StepProviderConfig = {
+  providerOptions?: StepProviderOption[];
+  providerLabel?: string;
+  apiKeyLabel?: string;
+  apiKeyPlaceholder?: string;
+  serviceUrlLabel?: string;
+  serviceUrlPlaceholder?: string;
+  showProviderStatus?: boolean;
+  providerGridClassName?: string;
+  hideFieldsUntilProviderSelected?: boolean;
+  accountIdLabel?: string;
+  accountIdPlaceholder?: string;
+};
+
+const DEFAULT_CONFIG: Required<StepProviderConfig> = {
+  providerOptions: DEFAULT_PROVIDERS,
+  providerLabel: "Choose Provider",
+  apiKeyLabel: "API Key",
+  apiKeyPlaceholder: "Enter your API key",
+  serviceUrlLabel: "Service Instance URL",
+  serviceUrlPlaceholder: "https://api.example.com",
+  showProviderStatus: true,
+  providerGridClassName: "grid-cols-4 gap-3",
+  hideFieldsUntilProviderSelected: false,
+  accountIdLabel: "Account ID (optional)",
+  accountIdPlaceholder: "Provider account/tenant id",
+};
+
 type StepProviderProps = {
-  deploymentName: string;
-  setDeploymentName: (v: string) => void;
-  deploymentDescription: string;
-  setDeploymentDescription: (v: string) => void;
-  deploymentType: DeploymentType;
-  setDeploymentType: (v: DeploymentType) => void;
+  value: StepProviderValue;
+  onChange: StepProviderChangeHandlers;
+  config?: StepProviderConfig;
 };
 
 export const StepProvider = ({
-  deploymentName,
-  setDeploymentName,
-  deploymentDescription,
-  setDeploymentDescription,
+  value,
+  onChange,
+  config,
 }: StepProviderProps) => {
-  const [selectedProvider, setSelectedProvider] = useState<string>(
-    PROVIDERS[0].key,
-  );
+  const resolvedConfig = {
+    ...DEFAULT_CONFIG,
+    ...config,
+    providerOptions: config?.providerOptions ?? DEFAULT_CONFIG.providerOptions,
+  };
+  const {
+    providerOptions,
+    providerLabel,
+    apiKeyLabel,
+    apiKeyPlaceholder,
+    serviceUrlLabel,
+    serviceUrlPlaceholder,
+    showProviderStatus,
+    providerGridClassName,
+    hideFieldsUntilProviderSelected,
+    accountIdLabel,
+    accountIdPlaceholder,
+  } = resolvedConfig;
 
-  const activeProvider = PROVIDERS.find((p) => p.key === selectedProvider);
+  const [internalSelectedProvider, setInternalSelectedProvider] =
+    useState<string>(providerOptions[0]?.key ?? "");
+
+  const selectedProvider =
+    value.selectedProvider ||
+    internalSelectedProvider ||
+    providerOptions[0]?.key ||
+    "";
+  const setSelectedProvider = (nextSelectedProvider: string) => {
+    if (onChange.setSelectedProvider) {
+      onChange.setSelectedProvider(nextSelectedProvider);
+      return;
+    }
+    setInternalSelectedProvider(nextSelectedProvider);
+  };
+
+  const activeProvider =
+    providerOptions.find((p) => p.key === selectedProvider) ??
+    providerOptions[0];
+
+  const showCredentialsSection =
+    !hideFieldsUntilProviderSelected || Boolean(selectedProvider);
 
   return (
     <div className="flex h-full w-full flex-col gap-6 overflow-y-auto py-3">
-      {/* Provider selection */}
       <div className="flex flex-col">
         <span className="text-sm font-medium pb-2">
-          Choose Provider <span className="text-destructive">*</span>
+          {providerLabel} <span className="text-destructive">*</span>
         </span>
-        <div className="grid grid-cols-4 gap-3">
-          {PROVIDERS.map((provider) => {
+        <div className={`grid ${providerGridClassName}`}>
+          {providerOptions.map((provider) => {
             const isSelected = selectedProvider === provider.key;
             return (
               <button
@@ -66,26 +141,36 @@ export const StepProvider = ({
               >
                 <div className="h-full flex flex-col justify-between">
                   <div className="flex flex-row gap-3 justify-start items-center">
-                    <ForwardedIconComponent
-                      name={provider.icon}
-                      className={`h-8 w-8 ${
-                        isSelected ? "text-foreground" : "text-muted-foreground"
-                      }`}
-                    />
+                    {provider.iconNode ? (
+                      provider.iconNode
+                    ) : (
+                      <ForwardedIconComponent
+                        name={provider.icon ?? "Cloud"}
+                        className={`h-8 w-8 ${
+                          isSelected
+                            ? "text-foreground"
+                            : "text-muted-foreground"
+                        }`}
+                      />
+                    )}
                     <div className="flex flex-col my-1 text-left">
                       <span className="text-sm font-medium">
                         {provider.label}
                       </span>
-                      <span className="text-xs text-muted-foreground">
-                        {provider.tool}
-                      </span>
+                      {provider.tool && (
+                        <span className="text-xs text-muted-foreground">
+                          {provider.tool}
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-                    Not connected
-                  </span>
+                  {showProviderStatus && (
+                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+                      Not connected
+                    </span>
+                  )}
                 </div>
               </button>
             );
@@ -93,41 +178,46 @@ export const StepProvider = ({
         </div>
       </div>
 
-      {/* Credentials description */}
-      {/* <p className="text-sm text-muted-foreground">
-        Configure your provider credentials below. Sign in or sign up to{" "}
-        <span className="font-semibold text-foreground">
-          find your credentials
-        </span>
-        .
-      </p> */}
+      {showCredentialsSection && (
+        <>
+          <div className="flex flex-col ">
+            <span className="text-sm font-medium pb-2">
+              {apiKeyLabel} <span className="text-destructive">*</span>
+            </span>
+            <Input
+              type="password"
+              placeholder={apiKeyPlaceholder}
+              className="bg-muted"
+              value={value.apiKey}
+              onChange={(e) => onChange.setApiKey(e.target.value)}
+            />
+          </div>
 
-      {/* API Key */}
-      <div className="flex flex-col ">
-        <span className="text-sm font-medium pb-2">
-          API Key <span className="text-destructive">*</span>
-        </span>
-        <Input
-          type="password"
-          placeholder="Enter your API key"
-          className="bg-muted"
-          value={deploymentName}
-          onChange={(e) => setDeploymentName(e.target.value)}
-        />
-      </div>
+          <div className="flex flex-col ">
+            <span className="text-sm font-medium pb-2">
+              {serviceUrlLabel} <span className="text-destructive">*</span>
+            </span>
+            <Input
+              placeholder={serviceUrlPlaceholder}
+              value={value.serviceUrl}
+              className="bg-muted"
+              onChange={(e) => onChange.setServiceUrl(e.target.value)}
+            />
+          </div>
 
-      {/* Service Instance URL */}
-      <div className="flex flex-col ">
-        <span className="text-sm font-medium pb-2">
-          Service Instance URL <span className="text-destructive">*</span>
-        </span>
-        <Input
-          placeholder="https://api.example.com"
-          value={deploymentDescription}
-          className="bg-muted"
-          onChange={(e) => setDeploymentDescription(e.target.value)}
-        />
-      </div>
+          {activeProvider?.requiresAccountId && onChange.setAccountId && (
+            <div className="flex flex-col ">
+              <span className="text-sm font-medium pb-2">{accountIdLabel}</span>
+              <Input
+                placeholder={accountIdPlaceholder}
+                value={value.accountId ?? ""}
+                className="bg-muted"
+                onChange={(e) => onChange.setAccountId?.(e.target.value)}
+              />
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };

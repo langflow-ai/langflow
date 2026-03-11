@@ -1,10 +1,10 @@
+import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import { useGetDeployments } from "@/controllers/API/queries/deployments/use-deployments";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import useAlertStore from "@/stores/alertStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import type { FlowType } from "@/types/flow";
-import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
 import { ConfigureDeploymentProviderModal } from "./components/ConfigureDeploymentProviderModal";
 import { DeploymentCreationStatusView } from "./components/DeploymentCreationStatusView";
 import { DeploymentStepperModal } from "./components/DeploymentStepperModal";
@@ -195,7 +195,7 @@ const DeploymentsTab = () => {
         className="pointer-events-none absolute inset-0 z-40"
         style={{
           background:
-            (providersQuery.isLoading || !hasProviders) && false
+            providersQuery.isLoading || !hasProviders
               ? "linear-gradient(to bottom, transparent 0%, transparent 25%, hsl(var(--background) / 0.5) 45%, hsl(var(--background)) 65%, hsl(var(--background)) 100%)"
               : "transparent",
         }}
@@ -214,11 +214,12 @@ const DeploymentsTab = () => {
             <SubTabToggle
               activeSubTab={activeSubTab}
               onChangeSubTab={setActiveSubTab}
+              showCreateButtons={hasProviders && !providersQuery.isLoading}
             />
 
-            {providersQuery.isLoading && false ? (
+            {providersQuery.isLoading ? (
               <DeploymentsLoadingView activeSubTab={activeSubTab} />
-            ) : !hasProviders && false ? (
+            ) : !hasProviders ? (
               <DeploymentsEmptyState
                 activeSubTab={activeSubTab}
                 onCreateDeployment={() => handleOpenChange(true)}

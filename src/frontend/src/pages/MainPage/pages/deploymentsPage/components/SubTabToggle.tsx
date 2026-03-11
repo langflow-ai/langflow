@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 type SubTabToggleProps = {
   activeSubTab: "deployments" | "providers";
   onChangeSubTab: (tab: "deployments" | "providers") => void;
+  showCreateButtons?: boolean;
 };
 
 export const SubTabToggle = ({
   activeSubTab,
   onChangeSubTab,
+  showCreateButtons = true,
 }: SubTabToggleProps) => {
   return (
     <div className="flex items-center justify-between gap-4 pb-3">
@@ -36,10 +38,12 @@ export const SubTabToggle = ({
           Deployment Providers
         </button>
       </div>
-      <Button size="sm">
-        <ForwardedIconComponent name="plus" />
-        New {activeSubTab === "deployments" ? "Deployment" : "Provider"}
-      </Button>
+      {showCreateButtons && (
+        <Button size="sm">
+          <ForwardedIconComponent name="plus" />
+          New {activeSubTab === "deployments" ? "Deployment" : "Provider"}
+        </Button>
+      )}
     </div>
   );
 };

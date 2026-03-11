@@ -133,9 +133,9 @@ export const RegisterDeploymentProviderModal = ({
 
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">
+            <span className="text-sm font-medium">
               Provider <span className="text-destructive">*</span>
-            </label>
+            </span>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {PROVIDER_OPTIONS.map((provider) => (
                 <button
@@ -177,10 +177,14 @@ export const RegisterDeploymentProviderModal = ({
           {providerKey && (
             <>
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium">
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="provider-backend-url"
+                >
                   Backend URL <span className="text-destructive">*</span>
                 </label>
                 <Input
+                  id="provider-backend-url"
                   value={backendUrl}
                   onChange={(event) => setBackendUrl(event.target.value)}
                   placeholder="https://api.<region>.watson-orchestrate.ibm.com/instances/<id>"
@@ -188,10 +192,14 @@ export const RegisterDeploymentProviderModal = ({
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium">
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="provider-api-key"
+                >
                   API Key <span className="text-destructive">*</span>
                 </label>
                 <Input
+                  id="provider-api-key"
                   value={apiKey}
                   onChange={(event) => setApiKey(event.target.value)}
                   placeholder="Paste provider API key"
@@ -201,10 +209,14 @@ export const RegisterDeploymentProviderModal = ({
 
               {providerKey !== "watsonx-orchestrate" && (
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium">
+                  <label
+                    className="text-sm font-medium"
+                    htmlFor="provider-account-id"
+                  >
                     Account ID (optional)
                   </label>
                   <Input
+                    id="provider-account-id"
                     value={accountId}
                     onChange={(event) => setAccountId(event.target.value)}
                     placeholder="Provider account/tenant id"
