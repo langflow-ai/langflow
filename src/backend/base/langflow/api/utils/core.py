@@ -81,18 +81,22 @@ def _get_provider_from_template(template: dict) -> str | None:
 
 def remove_api_keys(flow: dict):
     """Clear secret values from flow data."""
-    for node in flow.get("data", {}).get("nodes", []):
+    data = flow.get("data", {})
+    nodes = data.get("nodes", [])
+    for node in nodes:
         node_data = node.get("data").get("node")
         template = node_data.get("template")
         for value in template.values():
-            if (
-                isinstance(value, dict)
-                and "name" in value
-                and has_api_terms(value["name"])
-                and value.get("password")
-                and value.get("name") != "api_key"
-            ):
-                value["value"] = None
+            if isinstance(value, dict) and "name" in value:
+                name = value["name"]
+                # Inline has_api_terms to avoid function-call overhead
+                if (
+                    "api" in name
+                    and ("key" in name or ("token" in name and "tokens" not in name))
+                    and value.get("password")
+                    and name != "api_key"
+                ):
+                    value["value"] = None
 
     return flow
 
