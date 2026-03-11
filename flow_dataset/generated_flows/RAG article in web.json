@@ -1,0 +1,1475 @@
+{
+  "data": {
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "URLComponent",
+            "id": "URLComponent-Rl4w9",
+            "name": "page_results",
+            "output_types": [
+              "DataFrame"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "df",
+            "id": "DataFrameOperations-VdVmh",
+            "inputTypes": [
+              "DataFrame"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-URLComponent-Rl4w9{\u0153dataType\u0153: \u0153URLComponent\u0153, \u0153id\u0153: \u0153URLComponent-Rl4w9\u0153, \u0153name\u0153: \u0153page_results\u0153, \u0153output_types\u0153: [\u0153DataFrame\u0153]}-DataFrameOperations-VdVmh{\u0153fieldName\u0153: \u0153df\u0153, \u0153id\u0153: \u0153DataFrameOperations-VdVmh\u0153, \u0153inputTypes\u0153: [\u0153DataFrame\u0153], \u0153type\u0153: \u0153other\u0153}",
+        "source": "URLComponent-Rl4w9",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153URLComponent\u0153, \u0153id\u0153: \u0153URLComponent-Rl4w9\u0153, \u0153name\u0153: \u0153page_results\u0153, \u0153output_types\u0153: [\u0153DataFrame\u0153]}",
+        "target": "DataFrameOperations-VdVmh",
+        "targetHandle": "{\u0153fieldName\u0153: \u0153df\u0153, \u0153id\u0153: \u0153DataFrameOperations-VdVmh\u0153, \u0153inputTypes\u0153: [\u0153DataFrame\u0153], \u0153type\u0153: \u0153other\u0153}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "DataFrameOperations",
+            "id": "DataFrameOperations-VdVmh",
+            "name": "output",
+            "output_types": [
+              "DataFrame"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data_inputs",
+            "id": "SplitText-uFGwI",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-DataFrameOperations-VdVmh{\u0153dataType\u0153: \u0153DataFrameOperations\u0153, \u0153id\u0153: \u0153DataFrameOperations-VdVmh\u0153, \u0153name\u0153: \u0153output\u0153, \u0153output_types\u0153: [\u0153DataFrame\u0153]}-SplitText-uFGwI{\u0153fieldName\u0153: \u0153data_inputs\u0153, \u0153id\u0153: \u0153SplitText-uFGwI\u0153, \u0153inputTypes\u0153: [\u0153Data\u0153, \u0153DataFrame\u0153, \u0153Message\u0153], \u0153type\u0153: \u0153other\u0153}",
+        "source": "DataFrameOperations-VdVmh",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153DataFrameOperations\u0153, \u0153id\u0153: \u0153DataFrameOperations-VdVmh\u0153, \u0153name\u0153: \u0153output\u0153, \u0153output_types\u0153: [\u0153DataFrame\u0153]}",
+        "target": "SplitText-uFGwI",
+        "targetHandle": "{\u0153fieldName\u0153: \u0153data_inputs\u0153, \u0153id\u0153: \u0153SplitText-uFGwI\u0153, \u0153inputTypes\u0153: [\u0153Data\u0153, \u0153DataFrame\u0153, \u0153Message\u0153], \u0153type\u0153: \u0153other\u0153}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "SplitText",
+            "id": "SplitText-uFGwI",
+            "name": "dataframe",
+            "output_types": [
+              "DataFrame"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "ingest_data",
+            "id": "AstraDB-UBpqH",
+            "inputTypes": [
+              "Data",
+              "DataFrame"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-SplitText-uFGwI{\u0153dataType\u0153: \u0153SplitText\u0153, \u0153id\u0153: \u0153SplitText-uFGwI\u0153, \u0153name\u0153: \u0153dataframe\u0153, \u0153output_types\u0153: [\u0153DataFrame\u0153]}-AstraDB-UBpqH{\u0153fieldName\u0153: \u0153ingest_data\u0153, \u0153id\u0153: \u0153AstraDB-UBpqH\u0153, \u0153inputTypes\u0153: [\u0153Data\u0153, \u0153DataFrame\u0153], \u0153type\u0153: \u0153other\u0153}",
+        "source": "SplitText-uFGwI",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153SplitText\u0153, \u0153id\u0153: \u0153SplitText-uFGwI\u0153, \u0153name\u0153: \u0153dataframe\u0153, \u0153output_types\u0153: [\u0153DataFrame\u0153]}",
+        "target": "AstraDB-UBpqH",
+        "targetHandle": "{\u0153fieldName\u0153: \u0153ingest_data\u0153, \u0153id\u0153: \u0153AstraDB-UBpqH\u0153, \u0153inputTypes\u0153: [\u0153Data\u0153, \u0153DataFrame\u0153], \u0153type\u0153: \u0153other\u0153}"
+      }
+    ],
+    "nodes": [
+      {
+        "data": {
+          "description": "Fetch content from one or more web pages, following links recursively.",
+          "display_name": "URL",
+          "id": "URLComponent-Rl4w9",
+          "node": {
+            "base_classes": [
+              "DataFrame",
+              "Message"
+            ],
+            "display_name": "URL",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "urls",
+              "max_depth",
+              "prevent_outside",
+              "use_async",
+              "format",
+              "timeout",
+              "headers",
+              "filter_text_html",
+              "continue_on_failure",
+              "check_response_status",
+              "autoset_encoding"
+            ],
+            "frozen": false,
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Extracted Pages",
+                "group_outputs": false,
+                "method": "fetch_content",
+                "name": "page_results",
+                "selected": "DataFrame",
+                "tool_mode": true,
+                "types": [
+                  "DataFrame"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Raw Content",
+                "group_outputs": false,
+                "method": "fetch_content_as_message",
+                "name": "raw_results",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "template": {
+              "_type": "Component",
+              "autoset_encoding": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Autoset Encoding",
+                "dynamic": false,
+                "info": "If enabled, automatically sets the encoding of the request.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "autoset_encoding",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "check_response_status": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Check Response Status",
+                "dynamic": false,
+                "info": "If enabled, checks the response status of the request.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "check_response_status",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "continue_on_failure": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Continue on Failure",
+                "dynamic": false,
+                "info": "If enabled, continues crawling even if some requests fail.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "continue_on_failure",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "filter_text_html": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Filter Text/HTML",
+                "dynamic": false,
+                "info": "If enabled, filters out text/css content type from the results.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "filter_text_html",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "format": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "display_name": "Output Format",
+                "dynamic": false,
+                "info": "Output Format. Use 'Text' to extract the text from the HTML, 'Markdown' to parse the HTML into Markdown format, or 'HTML' for the raw HTML content.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "format",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Text",
+                "options": [
+                  "Text",
+                  "HTML",
+                  "Markdown"
+                ]
+              },
+              "headers": {
+                "_input_type": "TableInput",
+                "advanced": true,
+                "display_name": "Headers",
+                "dynamic": false,
+                "info": "The headers to send with the request",
+                "input_types": [
+                  "DataFrame"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "headers",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "table",
+                "value": [
+                  {
+                    "key": "User-Agent",
+                    "value": "langflow"
+                  }
+                ]
+              },
+              "max_depth": {
+                "_input_type": "SliderInput",
+                "advanced": false,
+                "display_name": "Depth",
+                "dynamic": false,
+                "info": "Controls how many 'clicks' away from the initial page the crawler will go:\n- depth 1: only the initial page\n- depth 2: initial page + all pages linked directly from it\n- depth 3: initial page + direct",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "max_depth",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "slider",
+                "value": 1
+              },
+              "prevent_outside": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Prevent Outside",
+                "dynamic": false,
+                "info": "If enabled, only crawls URLs within the same domain as the root URL. This helps prevent the crawler from going to external websites.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "prevent_outside",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "timeout": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Timeout",
+                "dynamic": false,
+                "info": "Timeout for the request in seconds.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "timeout",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 30
+              },
+              "urls": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "URLs",
+                "dynamic": false,
+                "info": "Enter one or more URLs to crawl recursively, by clicking the '+' button.",
+                "input_types": [],
+                "list": true,
+                "load_from_db": false,
+                "name": "urls",
+                "placeholder": "Enter a URL...",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": [
+                  "https://docs.langflow.org/"
+                ]
+              },
+              "use_async": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Async",
+                "dynamic": false,
+                "info": "If enabled, uses asynchronous loading which can be significantly faster but might use more system resources.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "use_async",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              }
+            },
+            "icon": "layout-template"
+          },
+          "type": "URLComponent"
+        },
+        "id": "URLComponent-Rl4w9",
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "description": "Split text into chunks based on specified criteria.",
+          "display_name": "Split Text",
+          "id": "SplitText-uFGwI",
+          "node": {
+            "base_classes": [
+              "DataFrame"
+            ],
+            "display_name": "Split Text",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "data_inputs",
+              "chunk_overlap",
+              "chunk_size",
+              "separator",
+              "text_key",
+              "keep_separator"
+            ],
+            "frozen": false,
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Chunks",
+                "group_outputs": false,
+                "method": "split_text",
+                "name": "dataframe",
+                "selected": "DataFrame",
+                "tool_mode": true,
+                "types": [
+                  "DataFrame"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "template": {
+              "_type": "Component",
+              "chunk_overlap": {
+                "_input_type": "IntInput",
+                "advanced": false,
+                "display_name": "Chunk Overlap",
+                "dynamic": false,
+                "info": "Number of characters to overlap between chunks.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "chunk_overlap",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 0
+              },
+              "chunk_size": {
+                "_input_type": "IntInput",
+                "advanced": false,
+                "display_name": "Chunk Size",
+                "dynamic": false,
+                "info": "The maximum length of each chunk. Text is first split by separator, then chunks are merged up to this size. Individual splits larger than this won't be further divided.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "chunk_size",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 100
+              },
+              "data_inputs": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "info": "The data with texts to split in chunks.",
+                "input_types": [
+                  "Data",
+                  "DataFrame",
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "data_inputs",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "keep_separator": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "display_name": "Keep Separator",
+                "dynamic": false,
+                "info": "Whether to keep the separator in the output chunks and where to place it.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "keep_separator",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "False",
+                "options": [
+                  "False",
+                  "True",
+                  "Start",
+                  "End"
+                ]
+              },
+              "separator": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Separator",
+                "dynamic": false,
+                "info": "The character to split on. Use \\n for newline. Examples: \\n\\n for paragraphs, \\n for lines, . for sentences",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "separator",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "\n"
+              },
+              "text_key": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Text Key",
+                "dynamic": false,
+                "info": "The key to use for the text column.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "text_key",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "text"
+              }
+            },
+            "icon": "scissors-line-dashed"
+          },
+          "type": "SplitText"
+        },
+        "id": "SplitText-uFGwI",
+        "position": {
+          "x": 800,
+          "y": 0
+        },
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "description": "Ingest and search documents in Astra DB",
+          "display_name": "Astra DB",
+          "id": "AstraDB-UBpqH",
+          "node": {
+            "base_classes": [
+              "Data",
+              "DataFrame",
+              "VectorStore"
+            ],
+            "display_name": "Astra DB",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "token",
+              "environment",
+              "database_name",
+              "api_endpoint",
+              "keyspace",
+              "collection_name",
+              "embedding_model",
+              "ingest_data",
+              "search_query",
+              "should_cache_vector_store",
+              "search_method",
+              "reranker",
+              "lexical_terms",
+              "number_of_results",
+              "search_type",
+              "search_score_threshold",
+              "advanced_search_filter",
+              "autodetect_collection",
+              "content_field",
+              "deletion_field",
+              "ignore_invalid_documents",
+              "astradb_vectorstore_kwargs"
+            ],
+            "frozen": false,
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Search Results",
+                "group_outputs": false,
+                "method": "search_documents",
+                "name": "search_results",
+                "selected": null,
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "DataFrame",
+                "group_outputs": false,
+                "method": "as_dataframe",
+                "name": "dataframe",
+                "selected": "DataFrame",
+                "tool_mode": true,
+                "types": [
+                  "DataFrame"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Vector Store Connection",
+                "group_outputs": false,
+                "method": "as_vector_store",
+                "name": "vectorstoreconnection",
+                "selected": null,
+                "tool_mode": true,
+                "types": [
+                  "VectorStore"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "template": {
+              "_type": "Component",
+              "advanced_search_filter": {
+                "_input_type": "NestedDictInput",
+                "advanced": true,
+                "display_name": "Search Metadata Filter",
+                "dynamic": false,
+                "info": "Optional dictionary of filters to apply to the search query.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "advanced_search_filter",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "NestedDict",
+                "value": {}
+              },
+              "api_endpoint": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "display_name": "Astra DB API Endpoint",
+                "dynamic": false,
+                "info": "The API Endpoint for the Astra DB instance. Supercedes database selection.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "api_endpoint",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "https://f3166ac4-3e2f-4b32-880c-231d1f9e3f3e-us-east-2.apps.astra.datastax.com",
+                "options": []
+              },
+              "astradb_vectorstore_kwargs": {
+                "_input_type": "NestedDictInput",
+                "advanced": true,
+                "display_name": "AstraDBVectorStore Parameters",
+                "dynamic": false,
+                "info": "Optional dictionary of additional parameters for the AstraDBVectorStore.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "astradb_vectorstore_kwargs",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "NestedDict",
+                "value": {}
+              },
+              "autodetect_collection": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Autodetect Collection",
+                "dynamic": false,
+                "info": "Boolean flag to determine whether to autodetect the collection.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "autodetect_collection",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "collection_name": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "display_name": "Collection",
+                "dynamic": false,
+                "info": "The name of the collection within Astra DB where the vectors will be stored.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "collection_name",
+                "placeholder": "",
+                "required": true,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "",
+                "options": []
+              },
+              "content_field": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Content Field",
+                "dynamic": false,
+                "info": "Field to use as the text content field for the vector store.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "content_field",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "database_name": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "display_name": "Database",
+                "dynamic": false,
+                "info": "The Database name for the Astra DB instance.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "database_name",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "",
+                "options": []
+              },
+              "deletion_field": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Deletion Based On Field",
+                "dynamic": false,
+                "info": "When this parameter is provided, documents in the target collection with metadata field values matching the input metadata field value will be deleted before new data is loaded.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "deletion_field",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "embedding_model": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Embedding Model",
+                "dynamic": false,
+                "info": "Specify the Embedding Model. Not required for Astra Vectorize collections.",
+                "input_types": [
+                  "Embeddings"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "embedding_model",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "environment": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "display_name": "Environment",
+                "dynamic": false,
+                "info": "The environment for the Astra DB API Endpoint.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "environment",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "prod",
+                "options": [
+                  "prod",
+                  "test",
+                  "dev"
+                ]
+              },
+              "ignore_invalid_documents": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Ignore Invalid Documents",
+                "dynamic": false,
+                "info": "Boolean flag to determine whether to ignore invalid documents at runtime.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "ignore_invalid_documents",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "ingest_data": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Ingest Data",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Data",
+                  "DataFrame"
+                ],
+                "list": true,
+                "load_from_db": false,
+                "name": "ingest_data",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "keyspace": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "display_name": "Keyspace",
+                "dynamic": false,
+                "info": "Optional keyspace within Astra DB to use for the collection.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "keyspace",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "default_keyspace",
+                "options": []
+              },
+              "lexical_terms": {
+                "_input_type": "QueryInput",
+                "advanced": false,
+                "display_name": "Lexical Terms",
+                "dynamic": false,
+                "info": "Add additional terms/keywords to augment search precision.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "lexical_terms",
+                "placeholder": "Enter terms to search...",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "query",
+                "value": ""
+              },
+              "number_of_results": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Number of Search Results",
+                "dynamic": false,
+                "info": "Number of search results to return.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "number_of_results",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 4
+              },
+              "reranker": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "display_name": "Reranker",
+                "dynamic": false,
+                "info": "Post-retrieval model that re-scores results for optimal relevance ranking.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "reranker",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "nvidia/llama-3.2-nv-rerankqa-1b-v2",
+                "options": []
+              },
+              "search_method": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "display_name": "Search Method",
+                "dynamic": false,
+                "info": "Determine how your content is matched: Vector finds semantic similarity, and Hybrid Search (suggested) combines both approaches with a reranker.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "search_method",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Hybrid Search",
+                "options": [
+                  "Hybrid Search",
+                  "Vector Search"
+                ]
+              },
+              "search_query": {
+                "_input_type": "QueryInput",
+                "advanced": false,
+                "display_name": "Search Query",
+                "dynamic": false,
+                "info": "Enter a query to run a similarity search.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "search_query",
+                "placeholder": "Enter a query...",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_metadata": true,
+                "type": "query",
+                "value": ""
+              },
+              "search_score_threshold": {
+                "_input_type": "FloatInput",
+                "advanced": true,
+                "display_name": "Search Score Threshold",
+                "dynamic": false,
+                "info": "Minimum similarity score threshold for search results. (when using 'Similarity with score threshold')",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "search_score_threshold",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "float",
+                "value": 0
+              },
+              "search_type": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "display_name": "Search Type",
+                "dynamic": false,
+                "info": "Search type to use",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "search_type",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Similarity",
+                "options": [
+                  "Similarity",
+                  "Similarity with score threshold",
+                  "MMR (Max Marginal Relevance)"
+                ]
+              },
+              "should_cache_vector_store": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Cache Vector Store",
+                "dynamic": false,
+                "info": "If True, the vector store will be cached for the current build of the component. This is useful for components that have multiple output methods and want to share the same vector store.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "should_cache_vector_store",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "token": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "display_name": "Astra DB Application Token",
+                "dynamic": false,
+                "info": "Authentication token for accessing Astra DB.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": true,
+                "name": "token",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "ASTRA_DB_APPLICATION_TOKEN"
+              }
+            },
+            "icon": "AstraDB"
+          },
+          "type": "AstraDB"
+        },
+        "id": "AstraDB-UBpqH",
+        "position": {
+          "x": 1200,
+          "y": 0
+        },
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "description": "Perform various operations on a DataFrame.",
+          "display_name": "DataFrame Operations",
+          "id": "DataFrameOperations-VdVmh",
+          "node": {
+            "base_classes": [
+              "DataFrame"
+            ],
+            "display_name": "DataFrame Operations",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "df",
+              "operation",
+              "column_name",
+              "filter_value",
+              "filter_operator",
+              "ascending",
+              "new_column_name",
+              "new_column_value",
+              "columns_to_select",
+              "num_rows",
+              "replace_value",
+              "replacement_value"
+            ],
+            "frozen": false,
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "DataFrame",
+                "group_outputs": false,
+                "method": "perform_operation",
+                "name": "output",
+                "selected": "DataFrame",
+                "tool_mode": true,
+                "types": [
+                  "DataFrame"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "template": {
+              "_type": "Component",
+              "df": {
+                "_input_type": "DataFrameInput",
+                "advanced": false,
+                "display_name": "DataFrame",
+                "dynamic": false,
+                "info": "The input DataFrame to operate on.",
+                "input_types": [
+                  "DataFrame"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "df",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "ascending": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Sort Ascending",
+                "dynamic": true,
+                "info": "Whether to sort in ascending order.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "ascending",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "column_name": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "Column Name",
+                "dynamic": true,
+                "info": "The column name to use for the operation.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "column_name",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "columns_to_select": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "Columns to Select",
+                "dynamic": true,
+                "info": "",
+                "input_types": [],
+                "list": true,
+                "load_from_db": false,
+                "name": "columns_to_select",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": [
+                  "text"
+                ]
+              },
+              "filter_operator": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "display_name": "Filter Operator",
+                "dynamic": true,
+                "info": "The operator to apply for filtering rows.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "filter_operator",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "equals",
+                "options": [
+                  "equals",
+                  "not equals",
+                  "contains",
+                  "starts with",
+                  "ends with",
+                  "greater than",
+                  "less than"
+                ]
+              },
+              "filter_value": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Filter Value",
+                "dynamic": true,
+                "info": "The value to filter rows by.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "filter_value",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "new_column_name": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "New Column Name",
+                "dynamic": true,
+                "info": "The new column name when renaming or adding a column.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "new_column_name",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "new_column_value": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "New Column Value",
+                "dynamic": true,
+                "info": "The value to populate the new column with.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "new_column_value",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "num_rows": {
+                "_input_type": "IntInput",
+                "advanced": false,
+                "display_name": "Number of Rows",
+                "dynamic": true,
+                "info": "Number of rows to return (for head/tail).",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "num_rows",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 5
+              },
+              "operation": {
+                "_input_type": "SortableListInput",
+                "advanced": false,
+                "display_name": "Operation",
+                "dynamic": false,
+                "info": "Select the DataFrame operation to perform.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "name": "operation",
+                "placeholder": "Select Operation",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "sortableList",
+                "value": [
+                  {
+                    "name": "Select Columns",
+                    "icon": "columns",
+                    "chosen": false,
+                    "selected": false
+                  }
+                ],
+                "options": [
+                  {
+                    "name": "Add Column",
+                    "icon": "plus"
+                  },
+                  {
+                    "name": "Drop Column",
+                    "icon": "minus"
+                  },
+                  {
+                    "name": "Filter",
+                    "icon": "filter"
+                  },
+                  {
+                    "name": "Head",
+                    "icon": "arrow-up"
+                  },
+                  {
+                    "name": "Rename Column",
+                    "icon": "pencil"
+                  },
+                  {
+                    "name": "Replace Value",
+                    "icon": "replace"
+                  },
+                  {
+                    "name": "Select Columns",
+                    "icon": "columns"
+                  },
+                  {
+                    "name": "Sort",
+                    "icon": "arrow-up-down"
+                  },
+                  {
+                    "name": "Tail",
+                    "icon": "arrow-down"
+                  },
+                  {
+                    "name": "Drop Duplicates",
+                    "icon": "copy-x"
+                  }
+                ]
+              },
+              "replace_value": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Value to Replace",
+                "dynamic": true,
+                "info": "The value to replace in the column.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "replace_value",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "replacement_value": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Replacement Value",
+                "dynamic": true,
+                "info": "The value to replace with.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "replacement_value",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "icon": "table"
+          },
+          "type": "DataFrameOperations"
+        },
+        "id": "DataFrameOperations-VdVmh",
+        "position": {
+          "x": 400,
+          "y": 0
+        },
+        "type": "genericNode"
+      }
+    ],
+    "viewport": {
+      "x": 0,
+      "y": 0,
+      "zoom": 1
+    }
+  },
+  "description": "- Extract article content, split in chunks, vectorize with embedding model and load to vector database. Ready to RAG",
+  "endpoint_name": null,
+  "id": "9bff4c82-4097-45bf-b89d-50a744bcee69",
+  "is_component": false,
+  "last_tested_version": "1.4.2",
+  "name": "RAG article in web",
+  "tags": []
+}

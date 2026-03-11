@@ -1,0 +1,46 @@
+[
+  {
+    "name": "Basic Prompt Chaining",
+    "predicted_canonical_text": "# Basic Prompt Chaining\n# Connect multiple prompts in sequence where each output becomes the next stage's input, enabling step-by-step text processing.\n\nnodes:\n  A: Prompt\n  B: ChatInput\n  C: ChatOutput\n  D: Prompt\n  E: Prompt\n  F: LanguageModelComponent\n  G: LanguageModelComponent\n  H: LanguageModelComponent\n\nedges:\n  B -> F [message]\n  A -> F [system]\n  F -> G [message]\n  D -> G [system]\n  G -> H [message]\n  E -> H [system]\n  H -> C [message]"
+  },
+  {
+    "name": "Blog Writer",
+    "predicted_canonical_text": "# Blog Writer\n# Auto-generate a customized blog post from instructions and referenced articles.\n\nnodes:\n  A: Prompt\n  B: TextInput\n  C: ChatOutput\n  D: ParserComponent\n  E: URLComponent\n  F: LanguageModelComponent\n\nedges:\n  E -> A [template_var]\n  B -> A [template_var]\n  A -> F [message]\n  F -> D [data]\n  D -> C [message]"
+  },
+  {
+    "name": "Custom Component Generator",
+    "predicted_canonical_text": "# Custom Component Generator\n# Generates well-structured code for custom components following Langflow's specifications.\n\nnodes:\n  A: Memory\n  B: Prompt\n  C: URLComponent\n  D: URLComponent\n  E: URLComponent\n  F: ChatInput\n  G: ChatOutput\n  H: LanguageModelComponent\n\nedges:\n  C -> B [template_var]\n  D -> B [template_var]\n  E -> B [template_var]\n  A -> B [template_var]\n  F -> B [template_var]\n  B -> H [message]\n  H -> G [message]"
+  },
+  {
+    "name": "Document Q&A",
+    "predicted_canonical_text": "# Document Q&A\n# Integrates PDF reading with a language model to answer document-specific questions. Ideal for small-scale texts, it facilitates direct queries with immediate insights.\n\nnodes:\n  A: ChatInput\n  B: ChatOutput\n  C: Prompt\n  D: LanguageModelComponent\n  E: File\n\nedges:\n  E -> C [template_var]\n  A -> C [template_var]\n  C -> D [message]\n  D -> B [message]"
+  },
+  {
+    "name": "Financial Report Parser",
+    "predicted_canonical_text": "# Financial Report Parser\n# Extracts key financial metrics like Gross Profit, EBITDA, and Net Income from financial reports and structures them for easy analysis, using Structured Output Component\n\nnodes:\n  A: ChatOutput\n  B: ChatInput\n  C: StructuredOutput\n  D: ParserComponent\n\nedges:\n  B -> C [message]\n  C -> D [data]\n  D -> A [message]"
+  },
+  {
+    "name": "Image Sentiment Analysis",
+    "predicted_canonical_text": "# Image Sentiment Analysis\n# Analyzes images and categorizes them as positive, negative, or neutral using zero-shot learning.\n\nnodes:\n  A: ChatInput\n  B: ChatOutput\n  C: Prompt\n  D: ParserComponent\n  E: StructuredOutput\n  F: LanguageModelComponent\n\nedges:\n  A -> E [message]\n  C -> E [system]\n  F -> E [model]\n  E -> D [data]\n  D -> B [message]"
+  },
+  {
+    "name": "Invoice Summarizer",
+    "predicted_canonical_text": "# Invoice Summarizer\n# Your AI Agent Accountant - Leverage Needle with Langflows Agent.\n\nnodes:\n  A: Prompt\n  B: ChatOutput\n  C: NeedleComponent\n  D: ChatInput\n  E: Agent\n\nedges:\n  D -> E [message]\n  A -> E [system]\n  C -> E [tool]\n  E -> B [message]"
+  },
+  {
+    "name": "Knowledge Ingestion",
+    "predicted_canonical_text": "# Knowledge Ingestion\n# An example of creating a Knowledge Base and ingesting data into it from a web URL.\n\nnodes:\n  A: SplitText\n  B: URLComponent\n  C: KnowledgeIngestion\n\nedges:\n  B -> A [data]\n  A -> C [data]"
+  },
+  {
+    "name": "Knowledge Retrieval",
+    "predicted_canonical_text": "# Knowledge Retrieval\n# An example of performing a vector search against data in a Knowledge Base to retrieve relevant documents.\n\nnodes:\n  A: TextInput\n  B: ChatOutput\n  C: KnowledgeRetrieval\n\nedges:\n  A -> C [message]\n  C -> B [message]"
+  },
+  {
+    "name": "Market Research",
+    "predicted_canonical_text": "# Market Research\n# Researches companies, extracts key business data, and presents structured information for efficient analysis.\n\nnodes:\n  A: ChatInput\n  B: ChatOutput\n  C: TavilySearchComponent\n  D: Agent\n  E: ParserComponent\n  F: StructuredOutput\n\nedges:\n  A -> D [message]\n  C -> D [tool]\n  D -> F [message]\n  F -> E [data]\n  E -> B [message]"
+  },
+  {
+    "name": "Meeting Summary",
+    "predicted_canonical_text": "# Meeting Summary\n# An AI-powered meeting summary generator that transcribes and summarizes meetings using AssemblyAI and OpenAI for quick insights.\n\nnodes:\n  A: AssemblyAITranscriptionJobPoller\n  B: Prompt\n  C: ChatOutput\n  D: ChatOutput\n  E: ChatOutput\n  F: Prompt\n  G: Memory\n  H: ChatInput\n  I: AssemblyAITranscriptionJobCreator\n  J: ParserComponent\n  K: LanguageModelComponent\n  L: LanguageModelComponent\n\nedges:\n  H -> I [message]\n  I -> A [data]\n  A -> E [message]\n  A -> B [template_var]\n  G -> B [template_var]\n  B -> K [message]\n  K -> C [message]\n  K -> F [template_var]\n  F -> L [message]\n  L -> D [message]"
+  }
+]

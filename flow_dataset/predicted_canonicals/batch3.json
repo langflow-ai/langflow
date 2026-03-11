@@ -1,0 +1,46 @@
+[
+  {
+    "name": "Sequential Tasks Agents",
+    "predicted_canonical_text": "# Sequential Tasks Agents\n# This Agent is designed to systematically execute a series of tasks following a meticulously predefined sequence.\n\nnodes:\n  A: Agent\n  B: Agent\n  C: Prompt\n  D: Prompt\n  E: Prompt\n  F: ChatInput\n  G: Agent\n  H: YfinanceComponent\n  I: CalculatorComponent\n  J: TavilySearchComponent\n  K: ChatOutput\n\nedges:\n  E -> B [system]\n  D -> A [system]\n  A -> E [template_var]\n  F -> G [message]\n  C -> G [system]\n  G -> A [message]\n  G -> E [template_var]\n  I -> B [tool]\n  H -> A [tool]\n  J -> G [tool]\n  B -> K [message]"
+  },
+  {
+    "name": "Simple Agent",
+    "predicted_canonical_text": "# Simple Agent\n# A simple but powerful starter agent.\n\nnodes:\n  A: CalculatorComponent\n  B: ChatInput\n  C: ChatOutput\n  D: Agent\n  E: URLComponent\n\nedges:\n  D -> C [message]\n  A -> D [tool]\n  B -> D [message]\n  E -> D [tool]"
+  },
+  {
+    "name": "Social Media Agent",
+    "predicted_canonical_text": "# Social Media Agent\n# Utilize Apify Actors as agent tools to search and analyze social media profiles.\n\nnodes:\n  A: ApifyActorsComponent\n  B: ApifyActorsComponent\n  C: ChatInput\n  D: ChatOutput\n  E: Agent\n\nedges:\n  C -> E [message]\n  A -> E [tool]\n  B -> E [tool]\n  E -> D [message]"
+  },
+  {
+    "name": "Text Sentiment Analysis",
+    "predicted_canonical_text": "# Text Sentiment Analysis\n# Load text data from various file formats, process it into structured messages, and analyze sentiment using AI-powered classification.\n\nnodes:\n  A: Prompt\n  B: Prompt\n  C: Prompt\n  D: ChatOutput\n  E: ChatOutput\n  F: LanguageModelComponent\n  G: LanguageModelComponent\n  H: LanguageModelComponent\n  I: File\n\nedges:\n  I -> A [template_var]\n  A -> F [message]\n  F -> B [template_var]\n  B -> G [message]\n  G -> D [message]\n  F -> C [template_var]\n  C -> H [message]\n  H -> E [message]"
+  },
+  {
+    "name": "Travel Planning Agents",
+    "predicted_canonical_text": "# Travel Planning Agents\n# Create a travel planning chatbot that uses specialized agents to craft personalized trip itineraries.\n\nnodes:\n  A: ChatInput\n  B: ChatOutput\n  C: URLComponent\n  D: CalculatorComponent\n  E: TavilySearchComponent\n  F: Agent\n  G: Agent\n  H: Agent\n\nedges:\n  A -> F [message]\n  E -> F [tool]\n  C -> G [tool]\n  D -> H [tool]\n  F -> G [message]\n  G -> H [message]\n  H -> B [message]"
+  },
+  {
+    "name": "Twitter Thread Generator",
+    "predicted_canonical_text": "# Twitter Thread Generator\n# Transform structured inputs into engaging Twitter threads with this prompt-based flow, maintaining brand voice and technical accuracy.\n\nnodes:\n  A: ChatInput\n  B: TextInput\n  C: ChatOutput\n  D: TextInput\n  E: TextInput\n  F: TextInput\n  G: TextInput\n  H: TextInput\n  I: Prompt\n  J: LanguageModelComponent\n\nedges:\n  A -> I [template_var]\n  B -> I [template_var]\n  D -> I [template_var]\n  E -> I [template_var]\n  F -> I [template_var]\n  G -> I [template_var]\n  H -> I [template_var]\n  I -> J [message]\n  J -> C [message]"
+  },
+  {
+    "name": "Vector Store RAG",
+    "predicted_canonical_text": "# Vector Store RAG\n# Load your data for chat context with Retrieval Augmented Generation.\n\nnodes:\n  A: ChatInput\n  B: Prompt\n  C: SplitText\n  D: ChatOutput\n  E: EmbeddingModel\n  F: EmbeddingModel\n  G: ParserComponent\n  H: File\n  I: LanguageModelComponent\n  J: AstraDB\n  K: AstraDB\n\nedges:\n  H -> C [data]\n  C -> K [data]\n  E -> K [embedding]\n  F -> J [embedding]\n  A -> J [message]\n  J -> G [data]\n  G -> B [template_var]\n  A -> B [template_var]\n  B -> I [message]\n  I -> D [message]"
+  },
+  {
+    "name": "YouTube Analysis",
+    "predicted_canonical_text": "# YouTube Analysis\n# The YouTube Analysis flow extracts video comments and transcripts, analyzing sentiment patterns and content themes.\n\nnodes:\n  A: YouTubeCommentsComponent\n  B: Agent\n  C: Prompt\n  D: ChatOutput\n  E: YouTubeTranscriptsComponent\n  F: ParserComponent\n  G: ChatInput\n  H: BatchRunComponent\n\nedges:\n  G -> B [message]\n  C -> B [system]\n  A -> H [data]\n  E -> H [data]\n  H -> F [data]\n  F -> C [template_var]\n  B -> D [message]"
+  },
+  {
+    "name": "Hybrid Search RAG",
+    "predicted_canonical_text": "# Hybrid Search RAG\n# Explore Hybrid Search with a vector database.\n\nnodes:\n  A: ChatInput\n  B: ParserComponent\n  C: ChatOutput\n  D: ParserComponent\n  E: AstraDB\n  F: StructuredOutput\n\nedges:\n  D -> C [message]\n  A -> E [message]\n  A -> F [message]\n  F -> B [data]\n  B -> E [message]\n  E -> D [data]"
+  },
+  {
+    "name": "Instagram Copywriter",
+    "predicted_canonical_text": "# Instagram Copywriter\n# Create engaging Instagram posts with AI-generated content and image prompts, streamlining social media content creation.\n\nnodes:\n  A: ChatInput\n  B: Prompt\n  C: TextInput\n  D: Prompt\n  E: ChatOutput\n  F: Prompt\n  G: TavilySearchComponent\n  H: Agent\n  I: LanguageModelComponent\n  J: LanguageModelComponent\n\nedges:\n  C -> B [template_var]\n  F -> E [message]\n  A -> H [message]\n  G -> H [tool]\n  B -> I [message]\n  I -> F [template_var]\n  I -> D [template_var]\n  D -> J [message]\n  J -> F [template_var]\n  H -> B [template_var]"
+  },
+  {
+    "name": "Basic Prompting",
+    "predicted_canonical_text": "# Basic Prompting\n# Perform basic prompting with an OpenAI model.\n\nnodes:\n  A: ChatInput\n  B: Prompt\n  C: ChatOutput\n  D: LanguageModelComponent\n\nedges:\n  A -> D [message]\n  B -> D [system]\n  D -> C [message]"
+  }
+]

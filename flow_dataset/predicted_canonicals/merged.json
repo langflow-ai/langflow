@@ -1,0 +1,134 @@
+[
+  {
+    "name": "Basic Prompt Chaining",
+    "predicted_canonical_text": "# Basic Prompt Chaining\n# Connect multiple prompts in sequence where each output becomes the next stage's input, enabling step-by-step text processing.\n\nnodes:\n  A: Prompt\n  B: ChatInput\n  C: ChatOutput\n  D: Prompt\n  E: Prompt\n  F: LanguageModelComponent\n  G: LanguageModelComponent\n  H: LanguageModelComponent\n\nedges:\n  B -> F [message]\n  A -> F [system]\n  F -> G [message]\n  D -> G [system]\n  G -> H [message]\n  E -> H [system]\n  H -> C [message]"
+  },
+  {
+    "name": "Blog Writer",
+    "predicted_canonical_text": "nodes:\n  A: Prompt\n  B: TextInput\n  C: ChatOutput\n  D: ParserComponent\n  E: URLComponent\n  F: LanguageModelComponent\n\nedges:\n  E -> D [data]\n  D -> A [template_var]\n  B -> A [template_var]\n  A -> F [message]\n  F -> C [message]"
+  },
+  {
+    "name": "Custom Component Generator",
+    "predicted_canonical_text": "# Custom Component Generator\n# Generates well-structured code for custom components following Langflow's specifications.\n\nnodes:\n  A: Memory\n  B: Prompt\n  C: URLComponent\n  D: URLComponent\n  E: URLComponent\n  F: ChatInput\n  G: ChatOutput\n  H: LanguageModelComponent\n\nedges:\n  C -> B [template_var]\n  D -> B [template_var]\n  E -> B [template_var]\n  A -> B [template_var]\n  F -> B [template_var]\n  B -> H [message]\n  H -> G [message]"
+  },
+  {
+    "name": "Document Q&A",
+    "predicted_canonical_text": "# Document Q&A\n# Integrates PDF reading with a language model to answer document-specific questions. Ideal for small-scale texts, it facilitates direct queries with immediate insights.\n\nnodes:\n  A: ChatInput\n  B: ChatOutput\n  C: Prompt\n  D: LanguageModelComponent\n  E: File\n\nedges:\n  E -> C [template_var]\n  A -> C [template_var]\n  C -> D [message]\n  D -> B [message]"
+  },
+  {
+    "name": "Financial Report Parser",
+    "predicted_canonical_text": "# Financial Report Parser\n# Extracts key financial metrics like Gross Profit, EBITDA, and Net Income from financial reports and structures them for easy analysis, using Structured Output Component\n\nnodes:\n  A: ChatOutput\n  B: ChatInput\n  C: StructuredOutput\n  D: ParserComponent\n\nedges:\n  B -> C [message]\n  C -> D [data]\n  D -> A [message]"
+  },
+  {
+    "name": "Image Sentiment Analysis",
+    "predicted_canonical_text": "nodes:\n  A: ChatInput\n  B: ChatOutput\n  C: Prompt\n  D: ParserComponent\n  E: StructuredOutput\n  F: LanguageModelComponent\n\nedges:\n  A -> F [message]\n  C -> F [system]\n  F -> E [message]\n  E -> D [data]\n  D -> B [message]"
+  },
+  {
+    "name": "Invoice Summarizer",
+    "predicted_canonical_text": "# Invoice Summarizer\n# Your AI Agent Accountant - Leverage Needle with Langflows Agent.\n\nnodes:\n  A: Prompt\n  B: ChatOutput\n  C: NeedleComponent\n  D: ChatInput\n  E: Agent\n\nedges:\n  D -> E [message]\n  A -> E [system]\n  C -> E [tool]\n  E -> B [message]"
+  },
+  {
+    "name": "Knowledge Ingestion",
+    "predicted_canonical_text": "# Knowledge Ingestion\n# An example of creating a Knowledge Base and ingesting data into it from a web URL.\n\nnodes:\n  A: SplitText\n  B: URLComponent\n  C: KnowledgeIngestion\n\nedges:\n  B -> A [data]\n  A -> C [data]"
+  },
+  {
+    "name": "Knowledge Retrieval",
+    "predicted_canonical_text": "# Knowledge Retrieval\n# An example of performing a vector search against data in a Knowledge Base to retrieve relevant documents.\n\nnodes:\n  A: TextInput\n  B: ChatOutput\n  C: KnowledgeRetrieval\n\nedges:\n  A -> C [message]\n  C -> B [message]"
+  },
+  {
+    "name": "Market Research",
+    "predicted_canonical_text": "# Market Research\n# Researches companies, extracts key business data, and presents structured information for efficient analysis.\n\nnodes:\n  A: ChatInput\n  B: ChatOutput\n  C: TavilySearchComponent\n  D: Agent\n  E: ParserComponent\n  F: StructuredOutput\n\nedges:\n  A -> D [message]\n  C -> D [tool]\n  D -> F [message]\n  F -> E [data]\n  E -> B [message]"
+  },
+  {
+    "name": "Meeting Summary",
+    "predicted_canonical_text": "nodes:\n  A: AssemblyAITranscriptionJobPoller\n  B: Prompt\n  C: ChatOutput\n  D: ChatOutput\n  E: ChatOutput\n  F: Prompt\n  G: Memory\n  H: ChatInput\n  I: AssemblyAITranscriptionJobCreator\n  J: ParserComponent\n  K: LanguageModelComponent\n  L: LanguageModelComponent\n\nedges:\n  I -> A [data]\n  A -> J [data]\n  J -> B [template_var]\n  J -> D [message]\n  B -> K [message]\n  K -> C [message]\n  H -> F [template_var]\n  G -> F [template_var]\n  F -> L [message]\n  L -> E [message]"
+  },
+  {
+    "name": "Memory Chatbot",
+    "predicted_canonical_text": "# Memory Chatbot\n# Create a chatbot that saves and references previous messages, enabling the model to maintain context throughout the conversation.\n\nnodes:\n  A: ChatInput\n  B: ChatOutput\n  C: Prompt\n  D: Memory\n  E: LanguageModelComponent\n\nedges:\n  A -> C [template_var]\n  D -> C [template_var]\n  C -> E [message]\n  E -> B [message]"
+  },
+  {
+    "name": "News Aggregator",
+    "predicted_canonical_text": "# News Aggregator\n# Extracts data and information from webpages.\n\nnodes:\n  A: AgentQL\n  B: ChatInput\n  C: ChatOutput\n  D: Agent\n  E: SaveToFile\n\nedges:\n  A -> D [tool]\n  B -> D [message]\n  D -> C [message]\n  C -> E [message]"
+  },
+  {
+    "name": "NVIDIA RTX Remix",
+    "predicted_canonical_text": "# NVIDIA RTX Remix\n# Agent to integrate the NVIDIA RTX Remix Toolkit REST API and RTX Remix Documentation\n\nnodes:\n  A: ChatInput\n  B: ChatOutput\n  C: Agent\n  D: Prompt\n  E: RemixDocumentation\n  F: EmbeddingModel\n  G: FAISS\n  H: MCPTools\n\nedges:\n  A -> C [message]\n  D -> C [system]\n  H -> C [tool]\n  E -> G [data]\n  F -> G [embedding]\n  G -> C [tool]\n  C -> B [message]"
+  },
+  {
+    "name": "Pok\u00e9dex Agent",
+    "predicted_canonical_text": "# Pok\u00e9dex Agent\n# Research Pok\u00e9mon with a specialized Agent and the Pok\u00e9dex API.\n\nnodes:\n  A: ChatInput\n  B: ChatOutput\n  C: APIRequest\n  D: Agent\n\nedges:\n  A -> D [message]\n  C -> D [tool]\n  D -> B [message]"
+  },
+  {
+    "name": "Portfolio Website Code Generator",
+    "predicted_canonical_text": "nodes:\n  A: TextInput\n  B: ChatOutput\n  C: ParserComponent\n  D: File\n  E: LanguageModelComponent\n  F: StructuredOutput\n\nedges:\n  D -> F [message]\n  F -> C [data]\n  C -> E [message]\n  A -> E [system]\n  E -> B [message]"
+  },
+  {
+    "name": "Price Deal Finder",
+    "predicted_canonical_text": "# Price Deal Finder\n# Searches and compares product prices across multiple e-commerce platforms.\n\nnodes:\n  A: ChatInput\n  B: ChatOutput\n  C: TavilySearchComponent\n  D: AgentQLComponent\n  E: Agent\n\nedges:\n  A -> E [message]\n  C -> E [tool]\n  D -> E [tool]\n  E -> B [message]"
+  },
+  {
+    "name": "Research Agent",
+    "predicted_canonical_text": "nodes:\n  A: Prompt\n  B: ChatInput\n  C: Prompt\n  D: Prompt\n  E: Prompt\n  F: TavilySearchComponent\n  G: ChatOutput\n  H: LanguageModelComponent\n  I: LanguageModelComponent\n  J: Agent\n\nedges:\n  B -> H [message]\n  D -> H [system]\n  H -> A [template_var]\n  B -> C [template_var]\n  C -> I [message]\n  E -> I [system]\n  I -> G [message]\n  A -> J [message]\n  F -> J [tool]\n  J -> C [template_var]"
+  },
+  {
+    "name": "Research Translation Loop",
+    "predicted_canonical_text": "# Research Translation Loop\n# This template iterates over search results using LoopComponent and translates each result into Portuguese automatically.\n\nnodes:\n  A: ArXivComponent\n  B: ChatOutput\n  C: ChatInput\n  D: LanguageModelComponent\n  E: LoopComponent\n  F: ParserComponent\n\nedges:\n  C -> A [message]\n  A -> E [data]\n  E -> F [data]\n  F -> D [message]\n  D -> E [loop_back]\n  E -> B [data]"
+  },
+  {
+    "name": "SEO Keyword Generator",
+    "predicted_canonical_text": "# SEO Keyword Generator\n# Generates targeted SEO keywords based on product information, pain points, and customer profiles for strategic marketing.\n\nnodes:\n  A: Prompt\n  B: Prompt\n  C: ChatOutput\n  D: LanguageModelComponent\n\nedges:\n  A -> D [system]\n  B -> D [system]\n  D -> C [message]"
+  },
+  {
+    "name": "SaaS Pricing",
+    "predicted_canonical_text": "# SaaS Pricing\n# Calculate SaaS subscription price based on costs, profit margin, and subscribers using step-by-step method and Chain-of-Thought prompting.\n\nnodes:\n  A: Prompt\n  B: ChatOutput\n  C: CalculatorComponent\n  D: Agent\n\nedges:\n  A -> D [system]\n  C -> D [tool]\n  D -> B [message]"
+  },
+  {
+    "name": "Search agent",
+    "predicted_canonical_text": "# Search agent\n# Search the web for information.\n\nnodes:\n  A: ScrapeGraphSearchApi\n  B: ChatInput\n  C: ChatOutput\n  D: Agent\n\nedges:\n  B -> D [message]\n  A -> D [tool]\n  D -> C [message]"
+  },
+  {
+    "name": "Sequential Tasks Agents",
+    "predicted_canonical_text": "# Sequential Tasks Agents\n# This Agent is designed to systematically execute a series of tasks following a meticulously predefined sequence.\n\nnodes:\n  A: Agent\n  B: Agent\n  C: Prompt\n  D: Prompt\n  E: Prompt\n  F: ChatInput\n  G: Agent\n  H: YfinanceComponent\n  I: CalculatorComponent\n  J: TavilySearchComponent\n  K: ChatOutput\n\nedges:\n  E -> B [system]\n  D -> A [system]\n  A -> E [template_var]\n  F -> G [message]\n  C -> G [system]\n  G -> A [message]\n  G -> E [template_var]\n  I -> B [tool]\n  H -> A [tool]\n  J -> G [tool]\n  B -> K [message]"
+  },
+  {
+    "name": "Simple Agent",
+    "predicted_canonical_text": "# Simple Agent\n# A simple but powerful starter agent.\n\nnodes:\n  A: CalculatorComponent\n  B: ChatInput\n  C: ChatOutput\n  D: Agent\n  E: URLComponent\n\nedges:\n  D -> C [message]\n  A -> D [tool]\n  B -> D [message]\n  E -> D [tool]"
+  },
+  {
+    "name": "Social Media Agent",
+    "predicted_canonical_text": "# Social Media Agent\n# Utilize Apify Actors as agent tools to search and analyze social media profiles.\n\nnodes:\n  A: ApifyActorsComponent\n  B: ApifyActorsComponent\n  C: ChatInput\n  D: ChatOutput\n  E: Agent\n\nedges:\n  C -> E [message]\n  A -> E [tool]\n  B -> E [tool]\n  E -> D [message]"
+  },
+  {
+    "name": "Text Sentiment Analysis",
+    "predicted_canonical_text": "nodes:\n  A: Prompt\n  B: Prompt\n  C: Prompt\n  D: ChatOutput\n  E: ChatOutput\n  F: LanguageModelComponent\n  G: LanguageModelComponent\n  H: LanguageModelComponent\n  I: File\n\nedges:\n  I -> B [template_var]\n  B -> F [message]\n  F -> A [template_var]\n  A -> G [message]\n  G -> E [message]\n  I -> H [message]\n  C -> H [system]\n  H -> D [message]"
+  },
+  {
+    "name": "Travel Planning Agents",
+    "predicted_canonical_text": "# Travel Planning Agents\n# Create a travel planning chatbot that uses specialized agents to craft personalized trip itineraries.\n\nnodes:\n  A: ChatInput\n  B: ChatOutput\n  C: URLComponent\n  D: CalculatorComponent\n  E: TavilySearchComponent\n  F: Agent\n  G: Agent\n  H: Agent\n\nedges:\n  A -> F [message]\n  E -> F [tool]\n  C -> G [tool]\n  D -> H [tool]\n  F -> G [message]\n  G -> H [message]\n  H -> B [message]"
+  },
+  {
+    "name": "Twitter Thread Generator",
+    "predicted_canonical_text": "# Twitter Thread Generator\n# Transform structured inputs into engaging Twitter threads with this prompt-based flow, maintaining brand voice and technical accuracy.\n\nnodes:\n  A: ChatInput\n  B: TextInput\n  C: ChatOutput\n  D: TextInput\n  E: TextInput\n  F: TextInput\n  G: TextInput\n  H: TextInput\n  I: Prompt\n  J: LanguageModelComponent\n\nedges:\n  A -> I [template_var]\n  B -> I [template_var]\n  D -> I [template_var]\n  E -> I [template_var]\n  F -> I [template_var]\n  G -> I [template_var]\n  H -> I [template_var]\n  I -> J [message]\n  J -> C [message]"
+  },
+  {
+    "name": "Vector Store RAG",
+    "predicted_canonical_text": "# Vector Store RAG\n# Load your data for chat context with Retrieval Augmented Generation.\n\nnodes:\n  A: ChatInput\n  B: Prompt\n  C: SplitText\n  D: ChatOutput\n  E: EmbeddingModel\n  F: EmbeddingModel\n  G: ParserComponent\n  H: File\n  I: LanguageModelComponent\n  J: AstraDB\n  K: AstraDB\n\nedges:\n  H -> C [data]\n  C -> K [data]\n  E -> K [embedding]\n  F -> J [embedding]\n  A -> J [message]\n  J -> G [data]\n  G -> B [template_var]\n  A -> B [template_var]\n  B -> I [message]\n  I -> D [message]"
+  },
+  {
+    "name": "YouTube Analysis",
+    "predicted_canonical_text": "# YouTube Analysis\n# The YouTube Analysis flow extracts video comments and transcripts, analyzing sentiment patterns and content themes.\n\nnodes:\n  A: YouTubeCommentsComponent\n  B: Agent\n  C: Prompt\n  D: ChatOutput\n  E: YouTubeTranscripts\n  F: ParserComponent\n  G: ChatInput\n  H: BatchRunComponent\n\nedges:\n  C -> B [message]\n  B -> D [message]\n  E -> B [tool]\n  F -> C [template_var]\n  G -> A [message]\n  G -> C [template_var]\n  A -> H [data]"
+  },
+  {
+    "name": "Hybrid Search RAG",
+    "predicted_canonical_text": "# Hybrid Search RAG\n# Explore Hybrid Search with a vector database.\n\nnodes:\n  A: ChatInput\n  B: ParserComponent\n  C: ChatOutput\n  D: ParserComponent\n  E: AstraDB\n  F: StructuredOutput\n\nedges:\n  D -> C [message]\n  A -> E [message]\n  A -> F [message]\n  F -> B [data]\n  B -> E [message]\n  E -> D [data]"
+  },
+  {
+    "name": "Instagram Copywriter",
+    "predicted_canonical_text": "# Instagram Copywriter\n# Create engaging Instagram posts with AI-generated content and image prompts, streamlining social media content creation.\n\nnodes:\n  A: ChatInput\n  B: Prompt\n  C: TextInput\n  D: Prompt\n  E: ChatOutput\n  F: Prompt\n  G: TavilySearchComponent\n  H: Agent\n  I: LanguageModelComponent\n  J: LanguageModelComponent\n\nedges:\n  C -> B [template_var]\n  F -> E [message]\n  A -> H [message]\n  G -> H [tool]\n  B -> I [message]\n  I -> F [template_var]\n  I -> D [template_var]\n  D -> J [message]\n  J -> F [template_var]\n  H -> B [template_var]"
+  },
+  {
+    "name": "Basic Prompting",
+    "predicted_canonical_text": "# Basic Prompting\n# Perform basic prompting with an OpenAI model.\n\nnodes:\n  A: ChatInput\n  B: Prompt\n  C: ChatOutput\n  D: LanguageModelComponent\n\nedges:\n  A -> D [message]\n  B -> D [system]\n  D -> C [message]"
+  }
+]

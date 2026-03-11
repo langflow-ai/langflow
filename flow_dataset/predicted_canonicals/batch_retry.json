@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Blog Writer",
+    "predicted_canonical_text": "nodes:\n  A: Prompt\n  B: TextInput\n  C: ChatOutput\n  D: ParserComponent\n  E: URLComponent\n  F: LanguageModelComponent\n\nedges:\n  E -> D [data]\n  D -> A [template_var]\n  B -> A [template_var]\n  A -> F [message]\n  F -> C [message]"
+  },
+  {
+    "name": "Image Sentiment Analysis",
+    "predicted_canonical_text": "nodes:\n  A: ChatInput\n  B: ChatOutput\n  C: Prompt\n  D: ParserComponent\n  E: StructuredOutput\n  F: LanguageModelComponent\n\nedges:\n  A -> F [message]\n  C -> F [system]\n  F -> E [message]\n  E -> D [data]\n  D -> B [message]"
+  },
+  {
+    "name": "Portfolio Website Code Generator",
+    "predicted_canonical_text": "nodes:\n  A: TextInput\n  B: ChatOutput\n  C: ParserComponent\n  D: File\n  E: LanguageModelComponent\n  F: StructuredOutput\n\nedges:\n  D -> F [message]\n  F -> C [data]\n  C -> E [message]\n  A -> E [system]\n  E -> B [message]"
+  },
+  {
+    "name": "Research Agent",
+    "predicted_canonical_text": "nodes:\n  A: Prompt\n  B: ChatInput\n  C: Prompt\n  D: Prompt\n  E: Prompt\n  F: TavilySearchComponent\n  G: ChatOutput\n  H: LanguageModelComponent\n  I: LanguageModelComponent\n  J: Agent\n\nedges:\n  B -> H [message]\n  D -> H [system]\n  H -> A [template_var]\n  B -> C [template_var]\n  C -> I [message]\n  E -> I [system]\n  I -> G [message]\n  A -> J [message]\n  F -> J [tool]\n  J -> C [template_var]"
+  },
+  {
+    "name": "Meeting Summary",
+    "predicted_canonical_text": "nodes:\n  A: AssemblyAITranscriptionJobPoller\n  B: Prompt\n  C: ChatOutput\n  D: ChatOutput\n  E: ChatOutput\n  F: Prompt\n  G: Memory\n  H: ChatInput\n  I: AssemblyAITranscriptionJobCreator\n  J: ParserComponent\n  K: LanguageModelComponent\n  L: LanguageModelComponent\n\nedges:\n  I -> A [data]\n  A -> J [data]\n  J -> B [template_var]\n  J -> D [message]\n  B -> K [message]\n  K -> C [message]\n  H -> F [template_var]\n  G -> F [template_var]\n  F -> L [message]\n  L -> E [message]"
+  },
+  {
+    "name": "Text Sentiment Analysis",
+    "predicted_canonical_text": "nodes:\n  A: Prompt\n  B: Prompt\n  C: Prompt\n  D: ChatOutput\n  E: ChatOutput\n  F: LanguageModelComponent\n  G: LanguageModelComponent\n  H: LanguageModelComponent\n  I: File\n\nedges:\n  I -> B [template_var]\n  B -> F [message]\n  F -> A [template_var]\n  A -> G [message]\n  G -> E [message]\n  I -> H [message]\n  C -> H [system]\n  H -> D [message]"
+  },
+  {
+    "name": "SEO Keyword Generator",
+    "predicted_canonical_text": "nodes:\n  A: Prompt\n  B: Prompt\n  C: ChatOutput\n  D: LanguageModelComponent\n\nedges:\n  A -> D [message]\n  B -> D [system]\n  D -> C [message]"
+  },
+  {
+    "name": "News Aggregator",
+    "predicted_canonical_text": "nodes:\n  A: AgentQL\n  B: ChatInput\n  C: ChatOutput\n  D: Agent\n  E: SaveToFile\n\nedges:\n  B -> D [message]\n  A -> D [tool]\n  E -> D [tool]\n  D -> C [message]"
+  },
+  {
+    "name": "YouTube Analysis",
+    "predicted_canonical_text": "nodes:\n  A: YouTubeCommentsComponent\n  B: Agent\n  C: Prompt\n  D: ChatOutput\n  E: YouTubeTranscripts\n  F: ParserComponent\n  G: ChatInput\n  H: BatchRunComponent\n\nedges:\n  G -> B [message]\n  C -> B [system]\n  A -> H [data]\n  E -> H [data]\n  H -> F [data]\n  F -> B [message]\n  B -> D [message]"
+  }
+]

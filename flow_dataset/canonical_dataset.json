@@ -1,0 +1,5810 @@
+[
+  {
+    "name": "Basic Prompt Chaining",
+    "instruction": "Create a Langflow flow called 'Basic Prompt Chaining'.\nDescription: Connect multiple prompts in sequence where each output becomes the next stage's input, enabling step-by-step text processing.\nTags: chatbots\n\nThe flow should use approximately 8 components and 7 connections.\nComponents to use: Prompt, ChatInput, Chat Output, Prompt, Prompt, LanguageModelComponent, LanguageModelComponent, LanguageModelComponent\n",
+    "canonical_text": "# Basic Prompt Chaining\n# Connect multiple prompts in sequence where each output becomes the next stage's input, enabling step-by-step text processing.\n\nnodes:\n  A: Prompt\n  B: ChatInput\n  C: ChatOutput\n  D: Prompt\n  E: Prompt\n  F: LanguageModelComponent\n  G: LanguageModelComponent\n  H: LanguageModelComponent\n\nedges:\n  B -> F [message]\n  E -> F [system]\n  F -> G [message]\n  A -> G [system]\n  G -> H [message]\n  D -> H [system]\n  H -> C [message]",
+    "canonical": {
+      "name": "Basic Prompt Chaining",
+      "description": "Connect multiple prompts in sequence where each output becomes the next stage's input, enabling step-by-step text processing.",
+      "nodes": [
+        {
+          "type": "Prompt",
+          "id": "A"
+        },
+        {
+          "type": "ChatInput",
+          "id": "B"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "C"
+        },
+        {
+          "type": "Prompt",
+          "id": "D"
+        },
+        {
+          "type": "Prompt",
+          "id": "E"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "F"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "G"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "H"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "F",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "F",
+          "conn": "system"
+        },
+        {
+          "from": "F",
+          "to": "G",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "G",
+          "conn": "system"
+        },
+        {
+          "from": "G",
+          "to": "H",
+          "conn": "message"
+        },
+        {
+          "from": "D",
+          "to": "H",
+          "conn": "system"
+        },
+        {
+          "from": "H",
+          "to": "C",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Basic Prompting",
+    "instruction": "Create a Langflow flow called 'Basic Prompting'.\nDescription: Perform basic prompting with an OpenAI model.\nTags: chatbots\n\nThe flow should use approximately 4 components and 3 connections.\nComponents to use: Chat Input, Prompt Template, ChatOutput, LanguageModelComponent\n",
+    "canonical_text": "# Basic Prompting\n# Perform basic prompting with an OpenAI model.\n\nnodes:\n  A: ChatInput\n  B: Prompt\n  C: ChatOutput\n  D: LanguageModelComponent\n\nedges:\n  A -> D [message]\n  B -> D [system]\n  D -> C [message]",
+    "canonical": {
+      "name": "Basic Prompting",
+      "description": "Perform basic prompting with an OpenAI model.",
+      "nodes": [
+        {
+          "type": "ChatInput",
+          "id": "A"
+        },
+        {
+          "type": "Prompt",
+          "id": "B"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "C"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "D"
+        }
+      ],
+      "edges": [
+        {
+          "from": "A",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "B",
+          "to": "D",
+          "conn": "system"
+        },
+        {
+          "from": "D",
+          "to": "C",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Blog Writer",
+    "instruction": "Create a Langflow flow called 'Blog Writer'.\nDescription: Auto-generate a customized blog post from instructions and referenced articles.\nTags: chatbots, content-generation\n\nThe flow should use approximately 6 components and 5 connections.\nComponents to use: Prompt Template, Instructions, Chat Output, ParserComponent, URLComponent, LanguageModelComponent\n",
+    "canonical_text": "# Blog Writer\n# Auto-generate a customized blog post from instructions and referenced articles.\n\nnodes:\n  A: Prompt\n  B: TextInput\n  C: ChatOutput\n  D: ParserComponent\n  E: URLComponent\n  F: LanguageModelComponent\n\nedges:\n  B -> A [template_var]\n  D -> A [template_var]\n  E -> D [data]\n  A -> F [system]\n  F -> C [message]",
+    "canonical": {
+      "name": "Blog Writer",
+      "description": "Auto-generate a customized blog post from instructions and referenced articles.",
+      "nodes": [
+        {
+          "type": "Prompt",
+          "id": "A"
+        },
+        {
+          "type": "TextInput",
+          "id": "B"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "C"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "D"
+        },
+        {
+          "type": "URLComponent",
+          "id": "E"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "F"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "A",
+          "conn": "template_var"
+        },
+        {
+          "from": "D",
+          "to": "A",
+          "conn": "template_var"
+        },
+        {
+          "from": "E",
+          "to": "D",
+          "conn": "data"
+        },
+        {
+          "from": "A",
+          "to": "F",
+          "conn": "system"
+        },
+        {
+          "from": "F",
+          "to": "C",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Custom Component Generator",
+    "instruction": "Create a Langflow flow called 'Custom Component Generator'.\nDescription: Generates well-structured code for custom components following Langflow's specifications.\nTags: coding, web-scraping\n\nThe flow should use approximately 8 components and 7 connections.\nComponents to use: Chat Memory, Prompt Template, URL, URL, URL, ChatInput, ChatOutput, LanguageModelComponent\n",
+    "canonical_text": "# Custom Component Generator\n# Generates well-structured code for custom components following Langflow's specifications.\n\nnodes:\n  A: Memory\n  B: Prompt\n  C: URLComponent\n  D: URLComponent\n  E: URLComponent\n  F: ChatInput\n  G: ChatOutput\n  H: LanguageModelComponent\n\nedges:\n  F -> B [template_var]\n  A -> B [template_var]\n  D -> B [template_var]\n  E -> B [template_var]\n  B -> H [message]\n  H -> G [message]\n  C -> B [template_var]",
+    "canonical": {
+      "name": "Custom Component Generator",
+      "description": "Generates well-structured code for custom components following Langflow's specifications.",
+      "nodes": [
+        {
+          "type": "Memory",
+          "id": "A"
+        },
+        {
+          "type": "Prompt",
+          "id": "B"
+        },
+        {
+          "type": "URLComponent",
+          "id": "C"
+        },
+        {
+          "type": "URLComponent",
+          "id": "D"
+        },
+        {
+          "type": "URLComponent",
+          "id": "E"
+        },
+        {
+          "type": "ChatInput",
+          "id": "F"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "G"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "H"
+        }
+      ],
+      "edges": [
+        {
+          "from": "F",
+          "to": "B",
+          "conn": "template_var"
+        },
+        {
+          "from": "A",
+          "to": "B",
+          "conn": "template_var"
+        },
+        {
+          "from": "D",
+          "to": "B",
+          "conn": "template_var"
+        },
+        {
+          "from": "E",
+          "to": "B",
+          "conn": "template_var"
+        },
+        {
+          "from": "B",
+          "to": "H",
+          "conn": "message"
+        },
+        {
+          "from": "H",
+          "to": "G",
+          "conn": "message"
+        },
+        {
+          "from": "C",
+          "to": "B",
+          "conn": "template_var"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Document Q&A",
+    "instruction": "Create a Langflow flow called 'Document Q&A'.\nDescription: Integrates PDF reading with a language model to answer document-specific questions. Ideal for small-scale texts, it facilitates direct queries with immediate insights.\nTags: rag, q-a, openai\n\nThe flow should use approximately 5 components and 4 connections.\nComponents to use: Chat Input, Chat Output, Prompt Template, LanguageModelComponent, File\n",
+    "canonical_text": "# Document Q&A\n# Integrates PDF reading with a language model to answer document-specific questions. Ideal for small-scale texts, it facilitates direct queries with immediate insights.\n\nnodes:\n  A: ChatInput\n  B: ChatOutput\n  C: Prompt\n  D: LanguageModelComponent\n  E: File\n\nedges:\n  A -> D [message]\n  C -> D [system]\n  D -> B [message]\n  E -> C [template_var]",
+    "canonical": {
+      "name": "Document Q&A",
+      "description": "Integrates PDF reading with a language model to answer document-specific questions. Ideal for small-scale texts, it facilitates direct queries with immediate insights.",
+      "nodes": [
+        {
+          "type": "ChatInput",
+          "id": "A"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "B"
+        },
+        {
+          "type": "Prompt",
+          "id": "C"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "D"
+        },
+        {
+          "type": "File",
+          "id": "E"
+        }
+      ],
+      "edges": [
+        {
+          "from": "A",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "C",
+          "to": "D",
+          "conn": "system"
+        },
+        {
+          "from": "D",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "C",
+          "conn": "template_var"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Financial Report Parser",
+    "instruction": "Create a Langflow flow called 'Financial Report Parser'.\nDescription: Extracts key financial metrics like Gross Profit, EBITDA, and Net Income from financial reports and structures them for easy analysis, using Structured Output Component\nTags: chatbots, content-generation\n\nThe flow should use approximately 4 components and 3 connections.\nComponents to use: ChatOutput, ChatInput, StructuredOutput, ParserComponent\n",
+    "canonical_text": "# Financial Report Parser\n# Extracts key financial metrics like Gross Profit, EBITDA, and Net Income from financial reports and structures them for easy analysis, using Structured Output Component\n\nnodes:\n  A: ChatOutput\n  B: ChatInput\n  C: StructuredOutput\n  D: ParserComponent\n\nedges:\n  B -> C [message]\n  C -> D [data]\n  D -> A [message]",
+    "canonical": {
+      "name": "Financial Report Parser",
+      "description": "Extracts key financial metrics like Gross Profit, EBITDA, and Net Income from financial reports and structures them for easy analysis, using Structured Output Component",
+      "nodes": [
+        {
+          "type": "ChatOutput",
+          "id": "A"
+        },
+        {
+          "type": "ChatInput",
+          "id": "B"
+        },
+        {
+          "type": "StructuredOutput",
+          "id": "C"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "D"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "C",
+          "conn": "message"
+        },
+        {
+          "from": "C",
+          "to": "D",
+          "conn": "data"
+        },
+        {
+          "from": "D",
+          "to": "A",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Hybrid Search RAG",
+    "instruction": "Create a Langflow flow called 'Hybrid Search RAG'.\nDescription: Explore Hybrid Search with a vector database.\nTags: openai, astradb, rag, q-a, hybrid\n\nThe flow should use approximately 6 components and 6 connections.\nComponents to use: ChatInput, ParserComponent, ChatOutput, ParserComponent, AstraDB, StructuredOutput\n",
+    "canonical_text": "# Hybrid Search RAG\n# Explore Hybrid Search with a vector database.\n\nnodes:\n  A: ChatInput\n  B: ParserComponent\n  C: ChatOutput\n  D: ParserComponent\n  E: AstraDB\n  F: StructuredOutput\n\nedges:\n  D -> C [message]\n  A -> E [message]\n  A -> F [message]\n  F -> B [data]\n  B -> E [message]\n  E -> D [data]",
+    "canonical": {
+      "name": "Hybrid Search RAG",
+      "description": "Explore Hybrid Search with a vector database.",
+      "nodes": [
+        {
+          "type": "ChatInput",
+          "id": "A"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "B"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "C"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "D"
+        },
+        {
+          "type": "AstraDB",
+          "id": "E"
+        },
+        {
+          "type": "StructuredOutput",
+          "id": "F"
+        }
+      ],
+      "edges": [
+        {
+          "from": "D",
+          "to": "C",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "E",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "F",
+          "conn": "message"
+        },
+        {
+          "from": "F",
+          "to": "B",
+          "conn": "data"
+        },
+        {
+          "from": "B",
+          "to": "E",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "D",
+          "conn": "data"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Image Sentiment Analysis",
+    "instruction": "Create a Langflow flow called 'Image Sentiment Analysis'.\nDescription: Analyzes images and categorizes them as positive, negative, or neutral using zero-shot learning.\nTags: classification\n\nThe flow should use approximately 6 components and 5 connections.\nComponents to use: Chat Input, Chat Output, Prompt Template, parser, StructuredOutput, LanguageModelComponent\n",
+    "canonical_text": "# Image Sentiment Analysis\n# Analyzes images and categorizes them as positive, negative, or neutral using zero-shot learning.\n\nnodes:\n  A: ChatInput\n  B: ChatOutput\n  C: Prompt\n  D: ParserComponent\n  E: StructuredOutput\n  F: LanguageModelComponent\n\nedges:\n  D -> B [message]\n  E -> D [data]\n  C -> F [system]\n  A -> F [message]\n  F -> E [message]",
+    "canonical": {
+      "name": "Image Sentiment Analysis",
+      "description": "Analyzes images and categorizes them as positive, negative, or neutral using zero-shot learning.",
+      "nodes": [
+        {
+          "type": "ChatInput",
+          "id": "A"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "B"
+        },
+        {
+          "type": "Prompt",
+          "id": "C"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "D"
+        },
+        {
+          "type": "StructuredOutput",
+          "id": "E"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "F"
+        }
+      ],
+      "edges": [
+        {
+          "from": "D",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "D",
+          "conn": "data"
+        },
+        {
+          "from": "C",
+          "to": "F",
+          "conn": "system"
+        },
+        {
+          "from": "A",
+          "to": "F",
+          "conn": "message"
+        },
+        {
+          "from": "F",
+          "to": "E",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Instagram Copywriter",
+    "instruction": "Create a Langflow flow called 'Instagram Copywriter'.\nDescription: Create engaging Instagram posts with AI-generated content and image prompts, streamlining social media content creation.\nTags: content-generation, chatbots, agents\n\nThe flow should use approximately 10 components and 10 connections.\nComponents to use: ChatInput, Prompt Template, TextInput, Prompt Template, Chat Output, Prompt Template, TavilySearchComponent, Agent, LanguageModelComponent, LanguageModelComponent\n",
+    "canonical_text": "# Instagram Copywriter\n# Create engaging Instagram posts with AI-generated content and image prompts, streamlining social media content creation.\n\nnodes:\n  A: ChatInput\n  B: Prompt\n  C: TextInput\n  D: Prompt\n  E: ChatOutput\n  F: Prompt\n  G: TavilySearchComponent\n  H: Agent\n  I: LanguageModelComponent\n  J: LanguageModelComponent\n\nedges:\n  C -> B [template_var]\n  F -> E [message]\n  A -> H [message]\n  G -> H [tool]\n  B -> I [system]\n  I -> F [template_var]\n  I -> D [template_var]\n  D -> J [system]\n  J -> F [template_var]\n  H -> B [template_var]",
+    "canonical": {
+      "name": "Instagram Copywriter",
+      "description": "Create engaging Instagram posts with AI-generated content and image prompts, streamlining social media content creation.",
+      "nodes": [
+        {
+          "type": "ChatInput",
+          "id": "A"
+        },
+        {
+          "type": "Prompt",
+          "id": "B"
+        },
+        {
+          "type": "TextInput",
+          "id": "C"
+        },
+        {
+          "type": "Prompt",
+          "id": "D"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "E"
+        },
+        {
+          "type": "Prompt",
+          "id": "F"
+        },
+        {
+          "type": "TavilySearchComponent",
+          "id": "G"
+        },
+        {
+          "type": "Agent",
+          "id": "H"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "I"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "J"
+        }
+      ],
+      "edges": [
+        {
+          "from": "C",
+          "to": "B",
+          "conn": "template_var"
+        },
+        {
+          "from": "F",
+          "to": "E",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "H",
+          "conn": "message"
+        },
+        {
+          "from": "G",
+          "to": "H",
+          "conn": "tool"
+        },
+        {
+          "from": "B",
+          "to": "I",
+          "conn": "system"
+        },
+        {
+          "from": "I",
+          "to": "F",
+          "conn": "template_var"
+        },
+        {
+          "from": "I",
+          "to": "D",
+          "conn": "template_var"
+        },
+        {
+          "from": "D",
+          "to": "J",
+          "conn": "system"
+        },
+        {
+          "from": "J",
+          "to": "F",
+          "conn": "template_var"
+        },
+        {
+          "from": "H",
+          "to": "B",
+          "conn": "template_var"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Invoice Summarizer",
+    "instruction": "Create a Langflow flow called 'Invoice Summarizer'.\nDescription: Your AI Agent Accountant - Leverage Needle with Langflows Agent.\nTags: chatbots, content-generation, agent, assistants, agents\n\nThe flow should use approximately 5 components and 4 connections.\nComponents to use: Prompt, ChatOutput, needle, ChatInput, Agent\n",
+    "canonical_text": "# Invoice Summarizer\n# Your AI Agent Accountant - Leverage Needle with Langflows Agent.\n\nnodes:\n  A: Prompt\n  B: ChatOutput\n  C: needle\n  D: ChatInput\n  E: Agent\n\nedges:\n  A -> E [system]\n  C -> E [tool]\n  D -> E [message]\n  E -> B [message]",
+    "canonical": {
+      "name": "Invoice Summarizer",
+      "description": "Your AI Agent Accountant - Leverage Needle with Langflows Agent.",
+      "nodes": [
+        {
+          "type": "Prompt",
+          "id": "A"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "B"
+        },
+        {
+          "type": "needle",
+          "id": "C"
+        },
+        {
+          "type": "ChatInput",
+          "id": "D"
+        },
+        {
+          "type": "Agent",
+          "id": "E"
+        }
+      ],
+      "edges": [
+        {
+          "from": "A",
+          "to": "E",
+          "conn": "system"
+        },
+        {
+          "from": "C",
+          "to": "E",
+          "conn": "tool"
+        },
+        {
+          "from": "D",
+          "to": "E",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "B",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Knowledge Ingestion",
+    "instruction": "Create a Langflow flow called 'Knowledge Ingestion'.\nDescription: An example of creating a Knowledge Base and ingesting data into it from a web URL.\n\nThe flow should use approximately 3 components and 2 connections.\nComponents to use: SplitText, URLComponent, KnowledgeIngestion\n",
+    "canonical_text": "# Knowledge Ingestion\n# An example of creating a Knowledge Base and ingesting data into it from a web URL.\n\nnodes:\n  A: SplitText\n  B: URLComponent\n  C: KnowledgeIngestion\n\nedges:\n  B -> A [data]\n  A -> C [data]",
+    "canonical": {
+      "name": "Knowledge Ingestion",
+      "description": "An example of creating a Knowledge Base and ingesting data into it from a web URL.",
+      "nodes": [
+        {
+          "type": "SplitText",
+          "id": "A"
+        },
+        {
+          "type": "URLComponent",
+          "id": "B"
+        },
+        {
+          "type": "KnowledgeIngestion",
+          "id": "C"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "A",
+          "conn": "data"
+        },
+        {
+          "from": "A",
+          "to": "C",
+          "conn": "data"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Knowledge Retrieval",
+    "instruction": "Create a Langflow flow called 'Knowledge Retrieval'.\nDescription: An example of performing a vector search against data in a Knowledge Base to retrieve relevant documents.\n\nThe flow should use approximately 3 components and 2 connections.\nComponents to use: TextInput, ChatOutput, KnowledgeRetrieval\n",
+    "canonical_text": "# Knowledge Retrieval\n# An example of performing a vector search against data in a Knowledge Base to retrieve relevant documents.\n\nnodes:\n  A: TextInput\n  B: ChatOutput\n  C: KnowledgeRetrieval\n\nedges:\n  C -> B [message]\n  A -> C [message]",
+    "canonical": {
+      "name": "Knowledge Retrieval",
+      "description": "An example of performing a vector search against data in a Knowledge Base to retrieve relevant documents.",
+      "nodes": [
+        {
+          "type": "TextInput",
+          "id": "A"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "B"
+        },
+        {
+          "type": "KnowledgeRetrieval",
+          "id": "C"
+        }
+      ],
+      "edges": [
+        {
+          "from": "C",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "C",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Market Research",
+    "instruction": "Create a Langflow flow called 'Market Research'.\nDescription: Researches companies, extracts key business data, and presents structured information for efficient analysis. \nTags: assistants, agents\n\nThe flow should use approximately 6 components and 5 connections.\nComponents to use: Chat Input, Chat Output, Tavily AI Search, Agent, ParserComponent, StructuredOutput\n",
+    "canonical_text": "# Market Research\n# Researches companies, extracts key business data, and presents structured information for efficient analysis. \n\nnodes:\n  A: ChatInput\n  B: ChatOutput\n  C: TavilySearchComponent\n  D: Agent\n  E: ParserComponent\n  F: StructuredOutput\n\nedges:\n  C -> D [tool]\n  A -> D [message]\n  E -> B [message]\n  D -> F [message]\n  F -> E [data]",
+    "canonical": {
+      "name": "Market Research",
+      "description": "Researches companies, extracts key business data, and presents structured information for efficient analysis. ",
+      "nodes": [
+        {
+          "type": "ChatInput",
+          "id": "A"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "B"
+        },
+        {
+          "type": "TavilySearchComponent",
+          "id": "C"
+        },
+        {
+          "type": "Agent",
+          "id": "D"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "E"
+        },
+        {
+          "type": "StructuredOutput",
+          "id": "F"
+        }
+      ],
+      "edges": [
+        {
+          "from": "C",
+          "to": "D",
+          "conn": "tool"
+        },
+        {
+          "from": "A",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "D",
+          "to": "F",
+          "conn": "message"
+        },
+        {
+          "from": "F",
+          "to": "E",
+          "conn": "data"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Meeting Summary",
+    "instruction": "Create a Langflow flow called 'Meeting Summary'.\nDescription: An AI-powered meeting summary generator that transcribes and summarizes meetings using  AssemblyAI and OpenAI for quick insights.\nTags: chatbots, content-generation\n\nThe flow should use approximately 12 components and 10 connections.\nComponents to use: AssemblyAITranscriptionJobPoller, Prompt, ChatOutput, ChatOutput, ChatOutput, Prompt, Memory, ChatInput, AssemblyAITranscriptionJobCreator, parser, LanguageModelComponent, LanguageModelComponent\n",
+    "canonical_text": "# Meeting Summary\n# An AI-powered meeting summary generator that transcribes and summarizes meetings using  AssemblyAI and OpenAI for quick insights.\n\nnodes:\n  A: AssemblyAITranscriptionJobPoller\n  B: Prompt\n  C: ChatOutput\n  D: ChatOutput\n  E: ChatOutput\n  F: Prompt\n  G: Memory\n  H: ChatInput\n  I: AssemblyAITranscriptionJobCreator\n  J: ParserComponent\n  K: LanguageModelComponent\n  L: LanguageModelComponent\n\nedges:\n  H -> F [template_var]\n  I -> A [data]\n  A -> J [data]\n  J -> B [template_var]\n  J -> D [message]\n  B -> K [system]\n  K -> C [message]\n  F -> L [message]\n  L -> E [message]\n  G -> F [template_var]",
+    "canonical": {
+      "name": "Meeting Summary",
+      "description": "An AI-powered meeting summary generator that transcribes and summarizes meetings using  AssemblyAI and OpenAI for quick insights.",
+      "nodes": [
+        {
+          "type": "AssemblyAITranscriptionJobPoller",
+          "id": "A"
+        },
+        {
+          "type": "Prompt",
+          "id": "B"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "C"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "D"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "E"
+        },
+        {
+          "type": "Prompt",
+          "id": "F"
+        },
+        {
+          "type": "Memory",
+          "id": "G"
+        },
+        {
+          "type": "ChatInput",
+          "id": "H"
+        },
+        {
+          "type": "AssemblyAITranscriptionJobCreator",
+          "id": "I"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "J"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "K"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "L"
+        }
+      ],
+      "edges": [
+        {
+          "from": "H",
+          "to": "F",
+          "conn": "template_var"
+        },
+        {
+          "from": "I",
+          "to": "A",
+          "conn": "data"
+        },
+        {
+          "from": "A",
+          "to": "J",
+          "conn": "data"
+        },
+        {
+          "from": "J",
+          "to": "B",
+          "conn": "template_var"
+        },
+        {
+          "from": "J",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "B",
+          "to": "K",
+          "conn": "system"
+        },
+        {
+          "from": "K",
+          "to": "C",
+          "conn": "message"
+        },
+        {
+          "from": "F",
+          "to": "L",
+          "conn": "message"
+        },
+        {
+          "from": "L",
+          "to": "E",
+          "conn": "message"
+        },
+        {
+          "from": "G",
+          "to": "F",
+          "conn": "template_var"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Memory Chatbot",
+    "instruction": "Create a Langflow flow called 'Memory Chatbot'.\nDescription: Create a chatbot that saves and references previous messages, enabling the model to maintain context throughout the conversation.\nTags: chatbots, openai, assistants\n\nThe flow should use approximately 5 components and 4 connections.\nComponents to use: ChatInput, Chat Output, Prompt, Memory, LanguageModelComponent\n",
+    "canonical_text": "# Memory Chatbot\n# Create a chatbot that saves and references previous messages, enabling the model to maintain context throughout the conversation.\n\nnodes:\n  A: ChatInput\n  B: ChatOutput\n  C: Prompt\n  D: Memory\n  E: LanguageModelComponent\n\nedges:\n  D -> C [template_var]\n  C -> E [system]\n  A -> E [message]\n  E -> B [message]",
+    "canonical": {
+      "name": "Memory Chatbot",
+      "description": "Create a chatbot that saves and references previous messages, enabling the model to maintain context throughout the conversation.",
+      "nodes": [
+        {
+          "type": "ChatInput",
+          "id": "A"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "B"
+        },
+        {
+          "type": "Prompt",
+          "id": "C"
+        },
+        {
+          "type": "Memory",
+          "id": "D"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "E"
+        }
+      ],
+      "edges": [
+        {
+          "from": "D",
+          "to": "C",
+          "conn": "template_var"
+        },
+        {
+          "from": "C",
+          "to": "E",
+          "conn": "system"
+        },
+        {
+          "from": "A",
+          "to": "E",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "B",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "News Aggregator",
+    "instruction": "Create a Langflow flow called 'News Aggregator'.\nDescription: Extracts data and information from webpages.\nTags: web-scraping, agents\n\nThe flow should use approximately 5 components and 4 connections.\nComponents to use: AgentQL Query Data, ChatInput, ChatOutput, Agent, SaveToFile\n",
+    "canonical_text": "# News Aggregator\n# Extracts data and information from webpages.\n\nnodes:\n  A: AgentQL\n  B: ChatInput\n  C: ChatOutput\n  D: Agent\n  E: SaveToFile\n\nedges:\n  A -> D [tool]\n  B -> D [message]\n  D -> C [message]\n  C -> E [message]",
+    "canonical": {
+      "name": "News Aggregator",
+      "description": "Extracts data and information from webpages.",
+      "nodes": [
+        {
+          "type": "AgentQL",
+          "id": "A"
+        },
+        {
+          "type": "ChatInput",
+          "id": "B"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "C"
+        },
+        {
+          "type": "Agent",
+          "id": "D"
+        },
+        {
+          "type": "SaveToFile",
+          "id": "E"
+        }
+      ],
+      "edges": [
+        {
+          "from": "A",
+          "to": "D",
+          "conn": "tool"
+        },
+        {
+          "from": "B",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "D",
+          "to": "C",
+          "conn": "message"
+        },
+        {
+          "from": "C",
+          "to": "E",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "NVIDIA RTX Remix",
+    "instruction": "Create a Langflow flow called 'NVIDIA RTX Remix'.\nDescription: Agent to integrate the NVIDIA RTX Remix Toolkit REST API and RTX Remix Documentation\nTags: agents\n\nThe flow should use approximately 8 components and 7 connections.\nComponents to use: ChatInput, ChatOutput, Agent, Prompt, RemixDocumentation, Embedding Model, FAISS, MCPTools\n",
+    "canonical_text": "# NVIDIA RTX Remix\n# Agent to integrate the NVIDIA RTX Remix Toolkit REST API and RTX Remix Documentation\n\nnodes:\n  A: ChatInput\n  B: ChatOutput\n  C: Agent\n  D: Prompt\n  E: RemixDocumentation\n  F: EmbeddingModel\n  G: FAISS\n  H: MCPTools\n\nedges:\n  A -> C [message]\n  C -> B [message]\n  D -> C [system]\n  E -> G [data]\n  F -> G [embedding]\n  G -> C [tool]\n  H -> C [tool]",
+    "canonical": {
+      "name": "NVIDIA RTX Remix",
+      "description": "Agent to integrate the NVIDIA RTX Remix Toolkit REST API and RTX Remix Documentation",
+      "nodes": [
+        {
+          "type": "ChatInput",
+          "id": "A"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "B"
+        },
+        {
+          "type": "Agent",
+          "id": "C"
+        },
+        {
+          "type": "Prompt",
+          "id": "D"
+        },
+        {
+          "type": "RemixDocumentation",
+          "id": "E"
+        },
+        {
+          "type": "EmbeddingModel",
+          "id": "F"
+        },
+        {
+          "type": "FAISS",
+          "id": "G"
+        },
+        {
+          "type": "MCPTools",
+          "id": "H"
+        }
+      ],
+      "edges": [
+        {
+          "from": "A",
+          "to": "C",
+          "conn": "message"
+        },
+        {
+          "from": "C",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "D",
+          "to": "C",
+          "conn": "system"
+        },
+        {
+          "from": "E",
+          "to": "G",
+          "conn": "data"
+        },
+        {
+          "from": "F",
+          "to": "G",
+          "conn": "embedding"
+        },
+        {
+          "from": "G",
+          "to": "C",
+          "conn": "tool"
+        },
+        {
+          "from": "H",
+          "to": "C",
+          "conn": "tool"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Pokédex Agent",
+    "instruction": "Create a Langflow flow called 'Pokédex Agent'.\nDescription: Research Pokémon with a specialized Agent and the Pokédex API.\nTags: agents\n\nThe flow should use approximately 4 components and 3 connections.\nComponents to use: ChatInput, ChatOutput, APIRequest, Agent\n",
+    "canonical_text": "# Pokédex Agent\n# Research Pokémon with a specialized Agent and the Pokédex API.\n\nnodes:\n  A: ChatInput\n  B: ChatOutput\n  C: APIRequest\n  D: Agent\n\nedges:\n  C -> D [tool]\n  A -> D [message]\n  D -> B [message]",
+    "canonical": {
+      "name": "Pokédex Agent",
+      "description": "Research Pokémon with a specialized Agent and the Pokédex API.",
+      "nodes": [
+        {
+          "type": "ChatInput",
+          "id": "A"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "B"
+        },
+        {
+          "type": "APIRequest",
+          "id": "C"
+        },
+        {
+          "type": "Agent",
+          "id": "D"
+        }
+      ],
+      "edges": [
+        {
+          "from": "C",
+          "to": "D",
+          "conn": "tool"
+        },
+        {
+          "from": "A",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "D",
+          "to": "B",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Portfolio Website Code Generator",
+    "instruction": "Create a Langflow flow called 'Portfolio Website Code Generator'.\nDescription: This template transforms PDF or TXT resume documents into structured JSON, generating a portfolio website HTML code from the structured data.\nTags: chatbots, coding\n\nThe flow should use approximately 6 components and 5 connections.\nComponents to use: TextInput, ChatOutput, parser, File, LanguageModelComponent, StructuredOutput\n",
+    "canonical_text": "# Portfolio Website Code Generator\n# This template transforms PDF or TXT resume documents into structured JSON, generating a portfolio website HTML code from the structured data.\n\nnodes:\n  A: TextInput\n  B: ChatOutput\n  C: ParserComponent\n  D: File\n  E: LanguageModelComponent\n  F: StructuredOutput\n\nedges:\n  C -> E [message]\n  A -> E [system]\n  E -> B [message]\n  D -> F [message]\n  F -> C [data]",
+    "canonical": {
+      "name": "Portfolio Website Code Generator",
+      "description": "This template transforms PDF or TXT resume documents into structured JSON, generating a portfolio website HTML code from the structured data.",
+      "nodes": [
+        {
+          "type": "TextInput",
+          "id": "A"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "B"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "C"
+        },
+        {
+          "type": "File",
+          "id": "D"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "E"
+        },
+        {
+          "type": "StructuredOutput",
+          "id": "F"
+        }
+      ],
+      "edges": [
+        {
+          "from": "C",
+          "to": "E",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "E",
+          "conn": "system"
+        },
+        {
+          "from": "E",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "D",
+          "to": "F",
+          "conn": "message"
+        },
+        {
+          "from": "F",
+          "to": "C",
+          "conn": "data"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Price Deal Finder",
+    "instruction": "Create a Langflow flow called 'Price Deal Finder'.\nDescription: Searches and compares product prices across multiple e-commerce platforms. \nTags: web-scraping, agents\n\nThe flow should use approximately 5 components and 4 connections.\nComponents to use: ChatInput, ChatOutput, TavilySearchComponent, AgentQL Query Data, Agent\n",
+    "canonical_text": "# Price Deal Finder\n# Searches and compares product prices across multiple e-commerce platforms. \n\nnodes:\n  A: ChatInput\n  B: ChatOutput\n  C: TavilySearchComponent\n  D: AgentQL\n  E: Agent\n\nedges:\n  D -> E [tool]\n  C -> E [tool]\n  A -> E [message]\n  E -> B [message]",
+    "canonical": {
+      "name": "Price Deal Finder",
+      "description": "Searches and compares product prices across multiple e-commerce platforms. ",
+      "nodes": [
+        {
+          "type": "ChatInput",
+          "id": "A"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "B"
+        },
+        {
+          "type": "TavilySearchComponent",
+          "id": "C"
+        },
+        {
+          "type": "AgentQL",
+          "id": "D"
+        },
+        {
+          "type": "Agent",
+          "id": "E"
+        }
+      ],
+      "edges": [
+        {
+          "from": "D",
+          "to": "E",
+          "conn": "tool"
+        },
+        {
+          "from": "C",
+          "to": "E",
+          "conn": "tool"
+        },
+        {
+          "from": "A",
+          "to": "E",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "B",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Research Agent",
+    "instruction": "Create a Langflow flow called 'Research Agent'.\nDescription: Agent that generates focused plans, conducts web searches, and synthesizes findings into comprehensive reports.\nTags: assistants, agents\n\nThe flow should use approximately 10 components and 10 connections.\nComponents to use: Prompt Template, ChatInput, Prompt Template, Prompt Template, Prompt Template, TavilySearchComponent, ChatOutput, LanguageModelComponent, LanguageModelComponent, Agent\n",
+    "canonical_text": "# Research Agent\n# Agent that generates focused plans, conducts web searches, and synthesizes findings into comprehensive reports.\n\nnodes:\n  A: Prompt\n  B: ChatInput\n  C: Prompt\n  D: Prompt\n  E: Prompt\n  F: TavilySearchComponent\n  G: ChatOutput\n  H: LanguageModelComponent\n  I: LanguageModelComponent\n  J: Agent\n\nedges:\n  B -> C [message]\n  H -> A [template_var]\n  D -> H [system]\n  B -> H [message]\n  E -> I [system]\n  C -> I [system]\n  I -> G [message]\n  A -> J [system]\n  F -> J [tool]\n  J -> C [template_var]",
+    "canonical": {
+      "name": "Research Agent",
+      "description": "Agent that generates focused plans, conducts web searches, and synthesizes findings into comprehensive reports.",
+      "nodes": [
+        {
+          "type": "Prompt",
+          "id": "A"
+        },
+        {
+          "type": "ChatInput",
+          "id": "B"
+        },
+        {
+          "type": "Prompt",
+          "id": "C"
+        },
+        {
+          "type": "Prompt",
+          "id": "D"
+        },
+        {
+          "type": "Prompt",
+          "id": "E"
+        },
+        {
+          "type": "TavilySearchComponent",
+          "id": "F"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "G"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "H"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "I"
+        },
+        {
+          "type": "Agent",
+          "id": "J"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "C",
+          "conn": "message"
+        },
+        {
+          "from": "H",
+          "to": "A",
+          "conn": "template_var"
+        },
+        {
+          "from": "D",
+          "to": "H",
+          "conn": "system"
+        },
+        {
+          "from": "B",
+          "to": "H",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "I",
+          "conn": "system"
+        },
+        {
+          "from": "C",
+          "to": "I",
+          "conn": "system"
+        },
+        {
+          "from": "I",
+          "to": "G",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "J",
+          "conn": "system"
+        },
+        {
+          "from": "F",
+          "to": "J",
+          "conn": "tool"
+        },
+        {
+          "from": "J",
+          "to": "C",
+          "conn": "template_var"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Research Translation Loop",
+    "instruction": "Create a Langflow flow called 'Research Translation Loop'.\nDescription: This template iterates over search results using LoopComponent and translates each result into Portuguese automatically. 🚀\nTags: chatbots, content-generation\n\nThe flow should use approximately 6 components and 6 connections.\nComponents to use: ArXivComponent, ChatOutput, ChatInput, LanguageModelComponent, LoopComponent, ParserComponent\n",
+    "canonical_text": "# Research Translation Loop\n# This template iterates over search results using LoopComponent and translates each result into Portuguese automatically. 🚀\n\nnodes:\n  A: ArXivComponent\n  B: ChatOutput\n  C: ChatInput\n  D: LanguageModelComponent\n  E: LoopComponent\n  F: ParserComponent\n\nedges:\n  C -> A [message]\n  E -> F [data]\n  F -> D [message]\n  D -> E [loop_back]\n  A -> E [data]\n  E -> B [message]",
+    "canonical": {
+      "name": "Research Translation Loop",
+      "description": "This template iterates over search results using LoopComponent and translates each result into Portuguese automatically. 🚀",
+      "nodes": [
+        {
+          "type": "ArXivComponent",
+          "id": "A"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "B"
+        },
+        {
+          "type": "ChatInput",
+          "id": "C"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "D"
+        },
+        {
+          "type": "LoopComponent",
+          "id": "E"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "F"
+        }
+      ],
+      "edges": [
+        {
+          "from": "C",
+          "to": "A",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "F",
+          "conn": "data"
+        },
+        {
+          "from": "F",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "D",
+          "to": "E",
+          "conn": "loop_back"
+        },
+        {
+          "from": "A",
+          "to": "E",
+          "conn": "data"
+        },
+        {
+          "from": "E",
+          "to": "B",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "SEO Keyword Generator",
+    "instruction": "Create a Langflow flow called 'SEO Keyword Generator'.\nDescription: Generates targeted SEO keywords based on product information, pain points, and customer profiles for strategic marketing.\nTags: chatbots, assistants\n\nThe flow should use approximately 4 components and 3 connections.\nComponents to use: Prompt Template, Prompt Template, Chat Output, LanguageModelComponent\n",
+    "canonical_text": "# SEO Keyword Generator\n# Generates targeted SEO keywords based on product information, pain points, and customer profiles for strategic marketing.\n\nnodes:\n  A: Prompt\n  B: Prompt\n  C: ChatOutput\n  D: LanguageModelComponent\n\nedges:\n  A -> D [system]\n  D -> C [message]\n  B -> D [system]",
+    "canonical": {
+      "name": "SEO Keyword Generator",
+      "description": "Generates targeted SEO keywords based on product information, pain points, and customer profiles for strategic marketing.",
+      "nodes": [
+        {
+          "type": "Prompt",
+          "id": "A"
+        },
+        {
+          "type": "Prompt",
+          "id": "B"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "C"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "D"
+        }
+      ],
+      "edges": [
+        {
+          "from": "A",
+          "to": "D",
+          "conn": "system"
+        },
+        {
+          "from": "D",
+          "to": "C",
+          "conn": "message"
+        },
+        {
+          "from": "B",
+          "to": "D",
+          "conn": "system"
+        }
+      ]
+    }
+  },
+  {
+    "name": "SaaS Pricing",
+    "instruction": "Create a Langflow flow called 'SaaS Pricing'.\nDescription: Calculate SaaS subscription price based on costs, profit margin, and subscribers using step-by-step method and Chain-of-Thought prompting. \nTags: agents, assistants\n\nThe flow should use approximately 4 components and 3 connections.\nComponents to use: Prompt Template, Chat Output, CalculatorComponent, Agent\n",
+    "canonical_text": "# SaaS Pricing\n# Calculate SaaS subscription price based on costs, profit margin, and subscribers using step-by-step method and Chain-of-Thought prompting. \n\nnodes:\n  A: Prompt\n  B: ChatOutput\n  C: CalculatorComponent\n  D: Agent\n\nedges:\n  A -> D [system]\n  C -> D [tool]\n  D -> B [message]",
+    "canonical": {
+      "name": "SaaS Pricing",
+      "description": "Calculate SaaS subscription price based on costs, profit margin, and subscribers using step-by-step method and Chain-of-Thought prompting. ",
+      "nodes": [
+        {
+          "type": "Prompt",
+          "id": "A"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "B"
+        },
+        {
+          "type": "CalculatorComponent",
+          "id": "C"
+        },
+        {
+          "type": "Agent",
+          "id": "D"
+        }
+      ],
+      "edges": [
+        {
+          "from": "A",
+          "to": "D",
+          "conn": "system"
+        },
+        {
+          "from": "C",
+          "to": "D",
+          "conn": "tool"
+        },
+        {
+          "from": "D",
+          "to": "B",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Search agent",
+    "instruction": "Create a Langflow flow called 'Search agent'.\nDescription: Search the web for information.\nTags: web-scraping, agents, assistants\n\nThe flow should use approximately 4 components and 3 connections.\nComponents to use: ScrapeGraphSearchApi, ChatInput, ChatOutput, Agent\n",
+    "canonical_text": "# Search agent\n# Search the web for information.\n\nnodes:\n  A: ScrapeGraphSearchApi\n  B: ChatInput\n  C: ChatOutput\n  D: Agent\n\nedges:\n  D -> C [message]\n  A -> D [tool]\n  B -> D [message]",
+    "canonical": {
+      "name": "Search agent",
+      "description": "Search the web for information.",
+      "nodes": [
+        {
+          "type": "ScrapeGraphSearchApi",
+          "id": "A"
+        },
+        {
+          "type": "ChatInput",
+          "id": "B"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "C"
+        },
+        {
+          "type": "Agent",
+          "id": "D"
+        }
+      ],
+      "edges": [
+        {
+          "from": "D",
+          "to": "C",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "D",
+          "conn": "tool"
+        },
+        {
+          "from": "B",
+          "to": "D",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Sequential Tasks Agents",
+    "instruction": "Create a Langflow flow called 'Sequential Tasks Agents'.\nDescription: This Agent is designed to systematically execute a series of tasks following a meticulously predefined sequence. By adhering to this structured order, the Agent ensures that each task is completed efficiently and effectively, optimizing overall performance and maintaining a high level of accuracy.\nTags: assistants, agents, web-scraping\n\nThe flow should use approximately 11 components and 11 connections.\nComponents to use: Finance Agent, Analysis & Editor Agent, Prompt Template, Prompt Template, Prompt Template, ChatInput, Researcher Agent, Yahoo! Finance, CalculatorComponent, TavilySearchComponent, ChatOutput\n",
+    "canonical_text": "# Sequential Tasks Agents\n# This Agent is designed to systematically execute a series of tasks following a meticulously predefined sequence. By adhering to this structured order, the Agent ensures that each task is completed efficiently and effectively, optimizing overall performance and maintaining a high level of accuracy.\n\nnodes:\n  A: Agent\n  B: Agent\n  C: Prompt\n  D: Prompt\n  E: Prompt\n  F: ChatInput\n  G: Agent\n  H: YfinanceComponent\n  I: CalculatorComponent\n  J: TavilySearchComponent\n  K: ChatOutput\n\nedges:\n  E -> B [system]\n  D -> A [system]\n  A -> E [template_var]\n  F -> G [message]\n  C -> G [system]\n  G -> A [message]\n  G -> E [template_var]\n  I -> B [tool]\n  H -> A [tool]\n  J -> G [tool]\n  B -> K [message]",
+    "canonical": {
+      "name": "Sequential Tasks Agents",
+      "description": "This Agent is designed to systematically execute a series of tasks following a meticulously predefined sequence. By adhering to this structured order, the Agent ensures that each task is completed efficiently and effectively, optimizing overall performance and maintaining a high level of accuracy.",
+      "nodes": [
+        {
+          "type": "Agent",
+          "id": "A"
+        },
+        {
+          "type": "Agent",
+          "id": "B"
+        },
+        {
+          "type": "Prompt",
+          "id": "C"
+        },
+        {
+          "type": "Prompt",
+          "id": "D"
+        },
+        {
+          "type": "Prompt",
+          "id": "E"
+        },
+        {
+          "type": "ChatInput",
+          "id": "F"
+        },
+        {
+          "type": "Agent",
+          "id": "G"
+        },
+        {
+          "type": "YfinanceComponent",
+          "id": "H"
+        },
+        {
+          "type": "CalculatorComponent",
+          "id": "I"
+        },
+        {
+          "type": "TavilySearchComponent",
+          "id": "J"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "K"
+        }
+      ],
+      "edges": [
+        {
+          "from": "E",
+          "to": "B",
+          "conn": "system"
+        },
+        {
+          "from": "D",
+          "to": "A",
+          "conn": "system"
+        },
+        {
+          "from": "A",
+          "to": "E",
+          "conn": "template_var"
+        },
+        {
+          "from": "F",
+          "to": "G",
+          "conn": "message"
+        },
+        {
+          "from": "C",
+          "to": "G",
+          "conn": "system"
+        },
+        {
+          "from": "G",
+          "to": "A",
+          "conn": "message"
+        },
+        {
+          "from": "G",
+          "to": "E",
+          "conn": "template_var"
+        },
+        {
+          "from": "I",
+          "to": "B",
+          "conn": "tool"
+        },
+        {
+          "from": "H",
+          "to": "A",
+          "conn": "tool"
+        },
+        {
+          "from": "J",
+          "to": "G",
+          "conn": "tool"
+        },
+        {
+          "from": "B",
+          "to": "K",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Simple Agent",
+    "instruction": "Create a Langflow flow called 'Simple Agent'.\nDescription: A simple but powerful starter agent.\nTags: assistants, agents\n\nThe flow should use approximately 5 components and 4 connections.\nComponents to use: CalculatorComponent, ChatInput, ChatOutput, Agent, URLComponent\n",
+    "canonical_text": "# Simple Agent\n# A simple but powerful starter agent.\n\nnodes:\n  A: CalculatorComponent\n  B: ChatInput\n  C: ChatOutput\n  D: Agent\n  E: URLComponent\n\nedges:\n  D -> C [message]\n  A -> D [tool]\n  B -> D [message]\n  E -> D [tool]",
+    "canonical": {
+      "name": "Simple Agent",
+      "description": "A simple but powerful starter agent.",
+      "nodes": [
+        {
+          "type": "CalculatorComponent",
+          "id": "A"
+        },
+        {
+          "type": "ChatInput",
+          "id": "B"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "C"
+        },
+        {
+          "type": "Agent",
+          "id": "D"
+        },
+        {
+          "type": "URLComponent",
+          "id": "E"
+        }
+      ],
+      "edges": [
+        {
+          "from": "D",
+          "to": "C",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "D",
+          "conn": "tool"
+        },
+        {
+          "from": "B",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "D",
+          "conn": "tool"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Social Media Agent",
+    "instruction": "Create a Langflow flow called 'Social Media Agent'.\nDescription: Utilize Apify Actors as agent tools to search and analyze social media profiles.\nTags: agent, assistants\n\nThe flow should use approximately 5 components and 4 connections.\nComponents to use: ApifyActors, ApifyActors, ChatInput, ChatOutput, Agent\n",
+    "canonical_text": "# Social Media Agent\n# Utilize Apify Actors as agent tools to search and analyze social media profiles.\n\nnodes:\n  A: ApifyActors\n  B: ApifyActors\n  C: ChatInput\n  D: ChatOutput\n  E: Agent\n\nedges:\n  B -> E [tool]\n  A -> E [tool]\n  C -> E [message]\n  E -> D [message]",
+    "canonical": {
+      "name": "Social Media Agent",
+      "description": "Utilize Apify Actors as agent tools to search and analyze social media profiles.",
+      "nodes": [
+        {
+          "type": "ApifyActors",
+          "id": "A"
+        },
+        {
+          "type": "ApifyActors",
+          "id": "B"
+        },
+        {
+          "type": "ChatInput",
+          "id": "C"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "D"
+        },
+        {
+          "type": "Agent",
+          "id": "E"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "E",
+          "conn": "tool"
+        },
+        {
+          "from": "A",
+          "to": "E",
+          "conn": "tool"
+        },
+        {
+          "from": "C",
+          "to": "E",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "D",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Text Sentiment Analysis",
+    "instruction": "Create a Langflow flow called 'Text Sentiment Analysis'.\nDescription: Load text data from various file formats, process it into structured messages, and analyze sentiment using AI-powered classification.\nTags: classification\n\nThe flow should use approximately 9 components and 8 connections.\nComponents to use: Prompt, Prompt, Prompt, ChatOutput, ChatOutput, LanguageModelComponent, LanguageModelComponent, LanguageModelComponent, File\n",
+    "canonical_text": "# Text Sentiment Analysis\n# Load text data from various file formats, process it into structured messages, and analyze sentiment using AI-powered classification.\n\nnodes:\n  A: Prompt\n  B: Prompt\n  C: Prompt\n  D: ChatOutput\n  E: ChatOutput\n  F: LanguageModelComponent\n  G: LanguageModelComponent\n  H: LanguageModelComponent\n  I: File\n\nedges:\n  B -> F [system]\n  F -> A [template_var]\n  A -> G [system]\n  G -> E [message]\n  C -> H [system]\n  H -> D [message]\n  I -> H [message]\n  I -> B [template_var]",
+    "canonical": {
+      "name": "Text Sentiment Analysis",
+      "description": "Load text data from various file formats, process it into structured messages, and analyze sentiment using AI-powered classification.",
+      "nodes": [
+        {
+          "type": "Prompt",
+          "id": "A"
+        },
+        {
+          "type": "Prompt",
+          "id": "B"
+        },
+        {
+          "type": "Prompt",
+          "id": "C"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "D"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "E"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "F"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "G"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "H"
+        },
+        {
+          "type": "File",
+          "id": "I"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "F",
+          "conn": "system"
+        },
+        {
+          "from": "F",
+          "to": "A",
+          "conn": "template_var"
+        },
+        {
+          "from": "A",
+          "to": "G",
+          "conn": "system"
+        },
+        {
+          "from": "G",
+          "to": "E",
+          "conn": "message"
+        },
+        {
+          "from": "C",
+          "to": "H",
+          "conn": "system"
+        },
+        {
+          "from": "H",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "I",
+          "to": "H",
+          "conn": "message"
+        },
+        {
+          "from": "I",
+          "to": "B",
+          "conn": "template_var"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Travel Planning Agents",
+    "instruction": "Create a Langflow flow called 'Travel Planning Agents'.\nDescription: Create a travel planning chatbot that uses specialized agents to craft personalized trip itineraries.\nTags: agents, openai\n\nThe flow should use approximately 8 components and 7 connections.\nComponents to use: ChatInput, Chat Output, URL, CalculatorComponent, Search API, Agent, Agent, Agent\n",
+    "canonical_text": "# Travel Planning Agents\n# Create a travel planning chatbot that uses specialized agents to craft personalized trip itineraries.\n\nnodes:\n  A: ChatInput\n  B: ChatOutput\n  C: URLComponent\n  D: CalculatorComponent\n  E: SearchComponent\n  F: Agent\n  G: Agent\n  H: Agent\n\nedges:\n  E -> F [tool]\n  A -> F [message]\n  F -> G [message]\n  G -> H [message]\n  H -> B [message]\n  C -> G [tool]\n  D -> H [tool]",
+    "canonical": {
+      "name": "Travel Planning Agents",
+      "description": "Create a travel planning chatbot that uses specialized agents to craft personalized trip itineraries.",
+      "nodes": [
+        {
+          "type": "ChatInput",
+          "id": "A"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "B"
+        },
+        {
+          "type": "URLComponent",
+          "id": "C"
+        },
+        {
+          "type": "CalculatorComponent",
+          "id": "D"
+        },
+        {
+          "type": "SearchComponent",
+          "id": "E"
+        },
+        {
+          "type": "Agent",
+          "id": "F"
+        },
+        {
+          "type": "Agent",
+          "id": "G"
+        },
+        {
+          "type": "Agent",
+          "id": "H"
+        }
+      ],
+      "edges": [
+        {
+          "from": "E",
+          "to": "F",
+          "conn": "tool"
+        },
+        {
+          "from": "A",
+          "to": "F",
+          "conn": "message"
+        },
+        {
+          "from": "F",
+          "to": "G",
+          "conn": "message"
+        },
+        {
+          "from": "G",
+          "to": "H",
+          "conn": "message"
+        },
+        {
+          "from": "H",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "C",
+          "to": "G",
+          "conn": "tool"
+        },
+        {
+          "from": "D",
+          "to": "H",
+          "conn": "tool"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Twitter Thread Generator",
+    "instruction": "Create a Langflow flow called 'Twitter Thread Generator'.\nDescription: Transform structured inputs into engaging Twitter threads with this prompt-based flow, maintaining brand voice and technical accuracy.\nTags: chatbots, content-generation\n\nThe flow should use approximately 10 components and 9 connections.\nComponents to use: ChatInput, TextInput, Chat Output, TextInput, TextInput, TextInput, TextInput, TextInput, Prompt Template, LanguageModelComponent\n",
+    "canonical_text": "# Twitter Thread Generator\n# Transform structured inputs into engaging Twitter threads with this prompt-based flow, maintaining brand voice and technical accuracy.\n\nnodes:\n  A: ChatInput\n  B: TextInput\n  C: ChatOutput\n  D: TextInput\n  E: TextInput\n  F: TextInput\n  G: TextInput\n  H: TextInput\n  I: Prompt\n  J: LanguageModelComponent\n\nedges:\n  B -> I [template_var]\n  D -> I [template_var]\n  E -> I [template_var]\n  F -> I [template_var]\n  H -> I [template_var]\n  G -> I [template_var]\n  I -> J [system]\n  A -> J [message]\n  J -> C [message]",
+    "canonical": {
+      "name": "Twitter Thread Generator",
+      "description": "Transform structured inputs into engaging Twitter threads with this prompt-based flow, maintaining brand voice and technical accuracy.",
+      "nodes": [
+        {
+          "type": "ChatInput",
+          "id": "A"
+        },
+        {
+          "type": "TextInput",
+          "id": "B"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "C"
+        },
+        {
+          "type": "TextInput",
+          "id": "D"
+        },
+        {
+          "type": "TextInput",
+          "id": "E"
+        },
+        {
+          "type": "TextInput",
+          "id": "F"
+        },
+        {
+          "type": "TextInput",
+          "id": "G"
+        },
+        {
+          "type": "TextInput",
+          "id": "H"
+        },
+        {
+          "type": "Prompt",
+          "id": "I"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "J"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "I",
+          "conn": "template_var"
+        },
+        {
+          "from": "D",
+          "to": "I",
+          "conn": "template_var"
+        },
+        {
+          "from": "E",
+          "to": "I",
+          "conn": "template_var"
+        },
+        {
+          "from": "F",
+          "to": "I",
+          "conn": "template_var"
+        },
+        {
+          "from": "H",
+          "to": "I",
+          "conn": "template_var"
+        },
+        {
+          "from": "G",
+          "to": "I",
+          "conn": "template_var"
+        },
+        {
+          "from": "I",
+          "to": "J",
+          "conn": "system"
+        },
+        {
+          "from": "A",
+          "to": "J",
+          "conn": "message"
+        },
+        {
+          "from": "J",
+          "to": "C",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Vector Store RAG",
+    "instruction": "Create a Langflow flow called 'Vector Store RAG'.\nDescription: Load your data for chat context with Retrieval Augmented Generation.\nTags: openai, astradb, rag, q-a\n\nThe flow should use approximately 11 components and 10 connections.\nComponents to use: Chat Input, Prompt Template, Split Text, Chat Output, OpenAIEmbeddings, OpenAIEmbeddings, parser, File, LanguageModelComponent, AstraDB, AstraDB\n",
+    "canonical_text": "# Vector Store RAG\n# Load your data for chat context with Retrieval Augmented Generation.\n\nnodes:\n  A: ChatInput\n  B: Prompt\n  C: SplitText\n  D: ChatOutput\n  E: EmbeddingModel\n  F: EmbeddingModel\n  G: ParserComponent\n  H: File\n  I: LanguageModelComponent\n  J: AstraDB\n  K: AstraDB\n\nedges:\n  A -> B [template_var]\n  G -> B [template_var]\n  H -> C [data]\n  B -> I [message]\n  I -> D [message]\n  C -> J [data]\n  A -> K [message]\n  K -> G [data]\n  F -> J [embedding]\n  E -> K [embedding]",
+    "canonical": {
+      "name": "Vector Store RAG",
+      "description": "Load your data for chat context with Retrieval Augmented Generation.",
+      "nodes": [
+        {
+          "type": "ChatInput",
+          "id": "A"
+        },
+        {
+          "type": "Prompt",
+          "id": "B"
+        },
+        {
+          "type": "SplitText",
+          "id": "C"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "D"
+        },
+        {
+          "type": "EmbeddingModel",
+          "id": "E"
+        },
+        {
+          "type": "EmbeddingModel",
+          "id": "F"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "G"
+        },
+        {
+          "type": "File",
+          "id": "H"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "I"
+        },
+        {
+          "type": "AstraDB",
+          "id": "J"
+        },
+        {
+          "type": "AstraDB",
+          "id": "K"
+        }
+      ],
+      "edges": [
+        {
+          "from": "A",
+          "to": "B",
+          "conn": "template_var"
+        },
+        {
+          "from": "G",
+          "to": "B",
+          "conn": "template_var"
+        },
+        {
+          "from": "H",
+          "to": "C",
+          "conn": "data"
+        },
+        {
+          "from": "B",
+          "to": "I",
+          "conn": "message"
+        },
+        {
+          "from": "I",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "C",
+          "to": "J",
+          "conn": "data"
+        },
+        {
+          "from": "A",
+          "to": "K",
+          "conn": "message"
+        },
+        {
+          "from": "K",
+          "to": "G",
+          "conn": "data"
+        },
+        {
+          "from": "F",
+          "to": "J",
+          "conn": "embedding"
+        },
+        {
+          "from": "E",
+          "to": "K",
+          "conn": "embedding"
+        }
+      ]
+    }
+  },
+  {
+    "name": "YouTube Analysis",
+    "instruction": "Create a Langflow flow called 'YouTube Analysis'.\nDescription: The YouTube Analysis flow extracts video comments and transcripts, analyzing sentiment patterns and content themes.\nTags: agents, assistants\n\nThe flow should use approximately 8 components and 7 connections.\nComponents to use: YouTubeCommentsComponent, Agent, Prompt, ChatOutput, YouTubeTranscripts, parser, ChatInput, BatchRunComponent\n",
+    "canonical_text": "# YouTube Analysis\n# The YouTube Analysis flow extracts video comments and transcripts, analyzing sentiment patterns and content themes.\n\nnodes:\n  A: YouTubeCommentsComponent\n  B: Agent\n  C: Prompt\n  D: ChatOutput\n  E: YouTubeTranscripts\n  F: ParserComponent\n  G: ChatInput\n  H: BatchRunComponent\n\nedges:\n  C -> B [message]\n  B -> D [message]\n  E -> B [tool]\n  F -> C [template_var]\n  G -> A [message]\n  G -> C [template_var]\n  A -> H [data]",
+    "canonical": {
+      "name": "YouTube Analysis",
+      "description": "The YouTube Analysis flow extracts video comments and transcripts, analyzing sentiment patterns and content themes.",
+      "nodes": [
+        {
+          "type": "YouTubeCommentsComponent",
+          "id": "A"
+        },
+        {
+          "type": "Agent",
+          "id": "B"
+        },
+        {
+          "type": "Prompt",
+          "id": "C"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "D"
+        },
+        {
+          "type": "YouTubeTranscripts",
+          "id": "E"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "F"
+        },
+        {
+          "type": "ChatInput",
+          "id": "G"
+        },
+        {
+          "type": "BatchRunComponent",
+          "id": "H"
+        }
+      ],
+      "edges": [
+        {
+          "from": "C",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "B",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "B",
+          "conn": "tool"
+        },
+        {
+          "from": "F",
+          "to": "C",
+          "conn": "template_var"
+        },
+        {
+          "from": "G",
+          "to": "A",
+          "conn": "message"
+        },
+        {
+          "from": "G",
+          "to": "C",
+          "conn": "template_var"
+        },
+        {
+          "from": "A",
+          "to": "H",
+          "conn": "data"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Agent Translation template",
+    "instruction": "Create a Langflow flow called 'Agent Translation template'.\nDescription: Craft Language Connections Here.\n\nThe flow should use approximately 7 components and 6 connections.\nComponents to use: Agent, ChatInput, DataOperations, TypeConverterComponent, ParserComponent, Prompt Template, ChatOutput\n",
+    "canonical_text": "# Agent Translation template\n# Craft Language Connections Here.\n\nnodes:\n  A: Agent\n  B: ChatInput\n  C: DataOperations\n  D: TypeConverterComponent\n  E: ParserComponent\n  F: Prompt\n  G: ChatOutput\n\nedges:\n  B -> D [data]\n  D -> C [data]\n  C -> E [data]\n  E -> F [template_var]\n  F -> A [system]\n  A -> G [message]",
+    "canonical": {
+      "name": "Agent Translation template",
+      "description": "Craft Language Connections Here.",
+      "nodes": [
+        {
+          "type": "Agent",
+          "id": "A"
+        },
+        {
+          "type": "ChatInput",
+          "id": "B"
+        },
+        {
+          "type": "DataOperations",
+          "id": "C"
+        },
+        {
+          "type": "TypeConverterComponent",
+          "id": "D"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "E"
+        },
+        {
+          "type": "Prompt",
+          "id": "F"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "G"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "D",
+          "conn": "data"
+        },
+        {
+          "from": "D",
+          "to": "C",
+          "conn": "data"
+        },
+        {
+          "from": "C",
+          "to": "E",
+          "conn": "data"
+        },
+        {
+          "from": "E",
+          "to": "F",
+          "conn": "template_var"
+        },
+        {
+          "from": "F",
+          "to": "A",
+          "conn": "system"
+        },
+        {
+          "from": "A",
+          "to": "G",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Agentic Process Automation (APA)",
+    "instruction": "Create a Langflow flow called 'Agentic Process Automation (APA)'.\nDescription: Summarizes message threads from Discord and formats them into an email.\n\nThe flow should use approximately 8 components and 6 connections.\nComponents to use: Agent, BigQueryExecutor, Prompt, LanguageModelComponent, Prompt, ChatOutput, ChatInput, GmailAPI\n",
+    "canonical_text": "# Agentic Process Automation (APA)\n# Summarizes message threads from Discord and formats them into an email.\n\nnodes:\n  A: Agent\n  B: BigQueryExecutor\n  C: Prompt\n  D: LanguageModelComponent\n  E: Prompt\n  F: ChatOutput\n  G: ChatInput\n  H: GmailAPI\n\nedges:\n  B -> A [tool]\n  C -> A [system]\n  E -> D [system]\n  D -> C [template_var]\n  A -> F [message]\n  G -> D [message]",
+    "canonical": {
+      "name": "Agentic Process Automation (APA)",
+      "description": "Summarizes message threads from Discord and formats them into an email.",
+      "nodes": [
+        {
+          "type": "Agent",
+          "id": "A"
+        },
+        {
+          "type": "BigQueryExecutor",
+          "id": "B"
+        },
+        {
+          "type": "Prompt",
+          "id": "C"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "D"
+        },
+        {
+          "type": "Prompt",
+          "id": "E"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "F"
+        },
+        {
+          "type": "ChatInput",
+          "id": "G"
+        },
+        {
+          "type": "GmailAPI",
+          "id": "H"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "A",
+          "conn": "tool"
+        },
+        {
+          "from": "C",
+          "to": "A",
+          "conn": "system"
+        },
+        {
+          "from": "E",
+          "to": "D",
+          "conn": "system"
+        },
+        {
+          "from": "D",
+          "to": "C",
+          "conn": "template_var"
+        },
+        {
+          "from": "A",
+          "to": "F",
+          "conn": "message"
+        },
+        {
+          "from": "G",
+          "to": "D",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "AI Contract Risk Scanner (1)",
+    "instruction": "Create a Langflow flow called 'AI Contract Risk Scanner (1)'.\nDescription: Generate, Innovate, Communicate.\n\nThe flow should use approximately 16 components and 16 connections.\nComponents to use: File, File, SplitText, AstraDB, EmbeddingModel, SplitText, LoopComponent, ParserComponent, AstraDB, Agent, Prompt Template, ParserComponent, ParserComponent, Agent, ChatOutput, EmbeddingModel\n",
+    "canonical_text": "# AI Contract Risk Scanner (1)\n# Generate, Innovate, Communicate.\n\nnodes:\n  A: File\n  B: File\n  C: SplitText\n  D: AstraDB\n  E: EmbeddingModel\n  F: SplitText\n  G: LoopComponent\n  H: ParserComponent\n  I: AstraDB\n  J: Agent\n  K: Prompt\n  L: ParserComponent\n  M: ParserComponent\n  N: Agent\n  O: ChatOutput\n  P: EmbeddingModel\n\nedges:\n  B -> C [data]\n  C -> D [data]\n  E -> D [embedding]\n  A -> F [data]\n  F -> G [data]\n  G -> H [data]\n  H -> I [message]\n  K -> J [system]\n  L -> K [template_var]\n  H -> J [message]\n  J -> G [loop_back]\n  G -> M [data]\n  M -> N [message]\n  N -> O [message]\n  P -> I [embedding]\n  I -> L [data]",
+    "canonical": {
+      "name": "AI Contract Risk Scanner (1)",
+      "description": "Generate, Innovate, Communicate.",
+      "nodes": [
+        {
+          "type": "File",
+          "id": "A"
+        },
+        {
+          "type": "File",
+          "id": "B"
+        },
+        {
+          "type": "SplitText",
+          "id": "C"
+        },
+        {
+          "type": "AstraDB",
+          "id": "D"
+        },
+        {
+          "type": "EmbeddingModel",
+          "id": "E"
+        },
+        {
+          "type": "SplitText",
+          "id": "F"
+        },
+        {
+          "type": "LoopComponent",
+          "id": "G"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "H"
+        },
+        {
+          "type": "AstraDB",
+          "id": "I"
+        },
+        {
+          "type": "Agent",
+          "id": "J"
+        },
+        {
+          "type": "Prompt",
+          "id": "K"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "L"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "M"
+        },
+        {
+          "type": "Agent",
+          "id": "N"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "O"
+        },
+        {
+          "type": "EmbeddingModel",
+          "id": "P"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "C",
+          "conn": "data"
+        },
+        {
+          "from": "C",
+          "to": "D",
+          "conn": "data"
+        },
+        {
+          "from": "E",
+          "to": "D",
+          "conn": "embedding"
+        },
+        {
+          "from": "A",
+          "to": "F",
+          "conn": "data"
+        },
+        {
+          "from": "F",
+          "to": "G",
+          "conn": "data"
+        },
+        {
+          "from": "G",
+          "to": "H",
+          "conn": "data"
+        },
+        {
+          "from": "H",
+          "to": "I",
+          "conn": "message"
+        },
+        {
+          "from": "K",
+          "to": "J",
+          "conn": "system"
+        },
+        {
+          "from": "L",
+          "to": "K",
+          "conn": "template_var"
+        },
+        {
+          "from": "H",
+          "to": "J",
+          "conn": "message"
+        },
+        {
+          "from": "J",
+          "to": "G",
+          "conn": "loop_back"
+        },
+        {
+          "from": "G",
+          "to": "M",
+          "conn": "data"
+        },
+        {
+          "from": "M",
+          "to": "N",
+          "conn": "message"
+        },
+        {
+          "from": "N",
+          "to": "O",
+          "conn": "message"
+        },
+        {
+          "from": "P",
+          "to": "I",
+          "conn": "embedding"
+        },
+        {
+          "from": "I",
+          "to": "L",
+          "conn": "data"
+        }
+      ]
+    }
+  },
+  {
+    "name": "response_evaluation",
+    "instruction": "Create a Langflow flow called 'response_evaluation'.\nDescription: Create, Chain, Communicate.\n\nThe flow should use approximately 8 components and 7 connections.\nComponents to use: ChatOutput, Prompt, StructuredOutput, ParserComponent, LanguageModelComponent, Agent, File, TextInput\n",
+    "canonical_text": "# response_evaluation\n# Create, Chain, Communicate.\n\nnodes:\n  A: ChatOutput\n  B: Prompt\n  C: StructuredOutput\n  D: ParserComponent\n  E: LanguageModelComponent\n  F: Agent\n  G: File\n  H: TextInput\n\nedges:\n  D -> A [message]\n  C -> D [data]\n  E -> C [model]\n  F -> C [message]\n  B -> F [system]\n  G -> F [tool]\n  H -> F [message]",
+    "canonical": {
+      "name": "response_evaluation",
+      "description": "Create, Chain, Communicate.",
+      "nodes": [
+        {
+          "type": "ChatOutput",
+          "id": "A"
+        },
+        {
+          "type": "Prompt",
+          "id": "B"
+        },
+        {
+          "type": "StructuredOutput",
+          "id": "C"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "D"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "E"
+        },
+        {
+          "type": "Agent",
+          "id": "F"
+        },
+        {
+          "type": "File",
+          "id": "G"
+        },
+        {
+          "type": "TextInput",
+          "id": "H"
+        }
+      ],
+      "edges": [
+        {
+          "from": "D",
+          "to": "A",
+          "conn": "message"
+        },
+        {
+          "from": "C",
+          "to": "D",
+          "conn": "data"
+        },
+        {
+          "from": "E",
+          "to": "C",
+          "conn": "model"
+        },
+        {
+          "from": "F",
+          "to": "C",
+          "conn": "message"
+        },
+        {
+          "from": "B",
+          "to": "F",
+          "conn": "system"
+        },
+        {
+          "from": "G",
+          "to": "F",
+          "conn": "tool"
+        },
+        {
+          "from": "H",
+          "to": "F",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "ai_support_response_generator",
+    "instruction": "Create a Langflow flow called 'ai_support_response_generator'.\nDescription: Engineered for Excellence, Built for Business.\n\nThe flow should use approximately 5 components and 4 connections.\nComponents to use: ChatInput, Agent, Prompt Template, URLComponent, ChatOutput\n",
+    "canonical_text": "# ai_support_response_generator\n# Engineered for Excellence, Built for Business.\n\nnodes:\n  A: ChatInput\n  B: Agent\n  C: Prompt\n  D: URLComponent\n  E: ChatOutput\n\nedges:\n  A -> B [message]\n  C -> B [system]\n  D -> B [tool]\n  B -> E [message]",
+    "canonical": {
+      "name": "ai_support_response_generator",
+      "description": "Engineered for Excellence, Built for Business.",
+      "nodes": [
+        {
+          "type": "ChatInput",
+          "id": "A"
+        },
+        {
+          "type": "Agent",
+          "id": "B"
+        },
+        {
+          "type": "Prompt",
+          "id": "C"
+        },
+        {
+          "type": "URLComponent",
+          "id": "D"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "E"
+        }
+      ],
+      "edges": [
+        {
+          "from": "A",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "C",
+          "to": "B",
+          "conn": "system"
+        },
+        {
+          "from": "D",
+          "to": "B",
+          "conn": "tool"
+        },
+        {
+          "from": "B",
+          "to": "E",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "CRM Data Enrichment",
+    "instruction": "Create a Langflow flow called 'CRM Data Enrichment'.\nDescription: Empowering Enterprises with Intelligent Interactions.\n\nThe flow should use approximately 6 components and 5 connections.\nComponents to use: Agent, Prompt, ChatOutput, Webhook, TypeConverterComponent, UnifiedWebSearch\n",
+    "canonical_text": "# CRM Data Enrichment\n# Empowering Enterprises with Intelligent Interactions.\n\nnodes:\n  A: Agent\n  B: Prompt\n  C: ChatOutput\n  D: Webhook\n  E: TypeConverterComponent\n  F: UnifiedWebSearch\n\nedges:\n  B -> A [system]\n  A -> C [message]\n  D -> E [data]\n  E -> A [message]\n  F -> A [tool]",
+    "canonical": {
+      "name": "CRM Data Enrichment",
+      "description": "Empowering Enterprises with Intelligent Interactions.",
+      "nodes": [
+        {
+          "type": "Agent",
+          "id": "A"
+        },
+        {
+          "type": "Prompt",
+          "id": "B"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "C"
+        },
+        {
+          "type": "Webhook",
+          "id": "D"
+        },
+        {
+          "type": "TypeConverterComponent",
+          "id": "E"
+        },
+        {
+          "type": "UnifiedWebSearch",
+          "id": "F"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "A",
+          "conn": "system"
+        },
+        {
+          "from": "A",
+          "to": "C",
+          "conn": "message"
+        },
+        {
+          "from": "D",
+          "to": "E",
+          "conn": "data"
+        },
+        {
+          "from": "E",
+          "to": "A",
+          "conn": "message"
+        },
+        {
+          "from": "F",
+          "to": "A",
+          "conn": "tool"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Batch Resume Screener",
+    "instruction": "Create a Langflow flow called 'Batch Resume Screener'.\nDescription: Empowering Enterprises with Intelligent Interactions.\n\nThe flow should use approximately 13 components and 12 connections.\nComponents to use: Directory, BatchRunComponent, Prompt Template, LanguageModelComponent, TextInput, TextInput, TextInput, TextInput, TextInput, TextInput, TextInput, TextInput, ChatOutput\n",
+    "canonical_text": "# Batch Resume Screener\n# Empowering Enterprises with Intelligent Interactions.\n\nnodes:\n  A: Directory\n  B: BatchRunComponent\n  C: Prompt\n  D: LanguageModelComponent\n  E: TextInput\n  F: TextInput\n  G: TextInput\n  H: TextInput\n  I: TextInput\n  J: TextInput\n  K: TextInput\n  L: TextInput\n  M: ChatOutput\n\nedges:\n  A -> B [data]\n  C -> B [system]\n  D -> B [model]\n  E -> C [template_var]\n  F -> C [template_var]\n  G -> C [template_var]\n  H -> C [template_var]\n  I -> C [template_var]\n  J -> C [template_var]\n  K -> C [template_var]\n  L -> C [template_var]\n  B -> M [message]",
+    "canonical": {
+      "name": "Batch Resume Screener",
+      "description": "Empowering Enterprises with Intelligent Interactions.",
+      "nodes": [
+        {
+          "type": "Directory",
+          "id": "A"
+        },
+        {
+          "type": "BatchRunComponent",
+          "id": "B"
+        },
+        {
+          "type": "Prompt",
+          "id": "C"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "D"
+        },
+        {
+          "type": "TextInput",
+          "id": "E"
+        },
+        {
+          "type": "TextInput",
+          "id": "F"
+        },
+        {
+          "type": "TextInput",
+          "id": "G"
+        },
+        {
+          "type": "TextInput",
+          "id": "H"
+        },
+        {
+          "type": "TextInput",
+          "id": "I"
+        },
+        {
+          "type": "TextInput",
+          "id": "J"
+        },
+        {
+          "type": "TextInput",
+          "id": "K"
+        },
+        {
+          "type": "TextInput",
+          "id": "L"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "M"
+        }
+      ],
+      "edges": [
+        {
+          "from": "A",
+          "to": "B",
+          "conn": "data"
+        },
+        {
+          "from": "C",
+          "to": "B",
+          "conn": "system"
+        },
+        {
+          "from": "D",
+          "to": "B",
+          "conn": "model"
+        },
+        {
+          "from": "E",
+          "to": "C",
+          "conn": "template_var"
+        },
+        {
+          "from": "F",
+          "to": "C",
+          "conn": "template_var"
+        },
+        {
+          "from": "G",
+          "to": "C",
+          "conn": "template_var"
+        },
+        {
+          "from": "H",
+          "to": "C",
+          "conn": "template_var"
+        },
+        {
+          "from": "I",
+          "to": "C",
+          "conn": "template_var"
+        },
+        {
+          "from": "J",
+          "to": "C",
+          "conn": "template_var"
+        },
+        {
+          "from": "K",
+          "to": "C",
+          "conn": "template_var"
+        },
+        {
+          "from": "L",
+          "to": "C",
+          "conn": "template_var"
+        },
+        {
+          "from": "B",
+          "to": "M",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Blog Outline Generator",
+    "instruction": "Create a Langflow flow called 'Blog Outline Generator'.\nDescription: Generate, Innovate, Communicate.\n\nThe flow should use approximately 4 components and 3 connections.\nComponents to use: ChatInput, Agent, Prompt Template, ChatOutput\n",
+    "canonical_text": "# Blog Outline Generator\n# Generate, Innovate, Communicate.\n\nnodes:\n  A: ChatInput\n  B: Agent\n  C: Prompt\n  D: ChatOutput\n\nedges:\n  A -> B [message]\n  C -> B [system]\n  B -> D [message]",
+    "canonical": {
+      "name": "Blog Outline Generator",
+      "description": "Generate, Innovate, Communicate.",
+      "nodes": [
+        {
+          "type": "ChatInput",
+          "id": "A"
+        },
+        {
+          "type": "Agent",
+          "id": "B"
+        },
+        {
+          "type": "Prompt",
+          "id": "C"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "D"
+        }
+      ],
+      "edges": [
+        {
+          "from": "A",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "C",
+          "to": "B",
+          "conn": "system"
+        },
+        {
+          "from": "B",
+          "to": "D",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Call Classification Analytics",
+    "instruction": "Create a Langflow flow called 'Call Classification Analytics'.\nDescription: Building Linguistic Labyrinths.\n\nThe flow should use approximately 8 components and 7 connections.\nComponents to use: Prompt, ChatOutput, AssemblyAITranscriptionJobCreator, AssemblyAITranscriptionJobPoller, ParserComponent, Agent, LanguageModelComponent, StructuredOutput\n",
+    "canonical_text": "# Call Classification Analytics\n# Building Linguistic Labyrinths.\n\nnodes:\n  A: Prompt\n  B: ChatOutput\n  C: AssemblyAITranscriptionJobCreator\n  D: AssemblyAITranscriptionJobPoller\n  E: ParserComponent\n  F: Agent\n  G: LanguageModelComponent\n  H: StructuredOutput\n\nedges:\n  C -> D [data]\n  D -> E [data]\n  A -> F [system]\n  E -> F [message]\n  G -> H [model]\n  F -> H [message]\n  H -> B [message]",
+    "canonical": {
+      "name": "Call Classification Analytics",
+      "description": "Building Linguistic Labyrinths.",
+      "nodes": [
+        {
+          "type": "Prompt",
+          "id": "A"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "B"
+        },
+        {
+          "type": "AssemblyAITranscriptionJobCreator",
+          "id": "C"
+        },
+        {
+          "type": "AssemblyAITranscriptionJobPoller",
+          "id": "D"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "E"
+        },
+        {
+          "type": "Agent",
+          "id": "F"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "G"
+        },
+        {
+          "type": "StructuredOutput",
+          "id": "H"
+        }
+      ],
+      "edges": [
+        {
+          "from": "C",
+          "to": "D",
+          "conn": "data"
+        },
+        {
+          "from": "D",
+          "to": "E",
+          "conn": "data"
+        },
+        {
+          "from": "A",
+          "to": "F",
+          "conn": "system"
+        },
+        {
+          "from": "E",
+          "to": "F",
+          "conn": "message"
+        },
+        {
+          "from": "G",
+          "to": "H",
+          "conn": "model"
+        },
+        {
+          "from": "F",
+          "to": "H",
+          "conn": "message"
+        },
+        {
+          "from": "H",
+          "to": "B",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Chunk Classification",
+    "instruction": "Create a Langflow flow called 'Chunk Classification'.\nDescription: Crafting Conversations, One Node at a Time.\n\nThe flow should use approximately 9 components and 9 connections.\nComponents to use: SplitText, LoopComponent, Prompt, Agent, ChatOutput, TypeConverterComponent, File, StructuredOutput, LanguageModelComponent\n",
+    "canonical_text": "# Chunk Classification\n# Crafting Conversations, One Node at a Time.\n\nnodes:\n  A: SplitText\n  B: LoopComponent\n  C: Prompt\n  D: Agent\n  E: ChatOutput\n  F: TypeConverterComponent\n  G: File\n  H: StructuredOutput\n  I: LanguageModelComponent\n\nedges:\n  C -> D [system]\n  B -> F [data]\n  A -> B [data]\n  G -> A [data]\n  F -> C [template_var]\n  D -> H [message]\n  I -> H [model]\n  H -> B [loop_back]\n  B -> E [message]",
+    "canonical": {
+      "name": "Chunk Classification",
+      "description": "Crafting Conversations, One Node at a Time.",
+      "nodes": [
+        {
+          "type": "SplitText",
+          "id": "A"
+        },
+        {
+          "type": "LoopComponent",
+          "id": "B"
+        },
+        {
+          "type": "Prompt",
+          "id": "C"
+        },
+        {
+          "type": "Agent",
+          "id": "D"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "E"
+        },
+        {
+          "type": "TypeConverterComponent",
+          "id": "F"
+        },
+        {
+          "type": "File",
+          "id": "G"
+        },
+        {
+          "type": "StructuredOutput",
+          "id": "H"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "I"
+        }
+      ],
+      "edges": [
+        {
+          "from": "C",
+          "to": "D",
+          "conn": "system"
+        },
+        {
+          "from": "B",
+          "to": "F",
+          "conn": "data"
+        },
+        {
+          "from": "A",
+          "to": "B",
+          "conn": "data"
+        },
+        {
+          "from": "G",
+          "to": "A",
+          "conn": "data"
+        },
+        {
+          "from": "F",
+          "to": "C",
+          "conn": "template_var"
+        },
+        {
+          "from": "D",
+          "to": "H",
+          "conn": "message"
+        },
+        {
+          "from": "I",
+          "to": "H",
+          "conn": "model"
+        },
+        {
+          "from": "H",
+          "to": "B",
+          "conn": "loop_back"
+        },
+        {
+          "from": "B",
+          "to": "E",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Code Explanation & Review",
+    "instruction": "Create a Langflow flow called 'Code Explanation & Review'.\nDescription: Create markdown document describing repository organization and easy way to find scripts.\n\nThe flow should use approximately 4 components and 3 connections.\nComponents to use: GitExtractorComponent, Agent, ChatInput, ChatOutput\n",
+    "canonical_text": "# Code Explanation & Review\n# Create markdown document describing repository organization and easy way to find scripts.\n\nnodes:\n  A: GitExtractorComponent\n  B: Agent\n  C: ChatInput\n  D: ChatOutput\n\nedges:\n  C -> B [message]\n  B -> D [message]\n  A -> B [tool]",
+    "canonical": {
+      "name": "Code Explanation & Review",
+      "description": "Create markdown document describing repository organization and easy way to find scripts.",
+      "nodes": [
+        {
+          "type": "GitExtractorComponent",
+          "id": "A"
+        },
+        {
+          "type": "Agent",
+          "id": "B"
+        },
+        {
+          "type": "ChatInput",
+          "id": "C"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "D"
+        }
+      ],
+      "edges": [
+        {
+          "from": "C",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "B",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "B",
+          "conn": "tool"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Ask Your Documents for Insights",
+    "instruction": "Create a Langflow flow called 'Ask Your Documents for Insights'.\nDescription: Transform Your Business with Smart Dialogues.\n\nThe flow should use approximately 6 components and 5 connections.\nComponents to use: Prompt, Agent, CalculatorComponent, File, ChatOutput, ChatInput\n",
+    "canonical_text": "# Ask Your Documents for Insights\n# Transform Your Business with Smart Dialogues.\n\nnodes:\n  A: Prompt\n  B: Agent\n  C: CalculatorComponent\n  D: File\n  E: ChatOutput\n  F: ChatInput\n\nedges:\n  A -> B [system]\n  C -> B [tool]\n  D -> B [tool]\n  B -> E [message]\n  F -> B [message]",
+    "canonical": {
+      "name": "Ask Your Documents for Insights",
+      "description": "Transform Your Business with Smart Dialogues.",
+      "nodes": [
+        {
+          "type": "Prompt",
+          "id": "A"
+        },
+        {
+          "type": "Agent",
+          "id": "B"
+        },
+        {
+          "type": "CalculatorComponent",
+          "id": "C"
+        },
+        {
+          "type": "File",
+          "id": "D"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "E"
+        },
+        {
+          "type": "ChatInput",
+          "id": "F"
+        }
+      ],
+      "edges": [
+        {
+          "from": "A",
+          "to": "B",
+          "conn": "system"
+        },
+        {
+          "from": "C",
+          "to": "B",
+          "conn": "tool"
+        },
+        {
+          "from": "D",
+          "to": "B",
+          "conn": "tool"
+        },
+        {
+          "from": "B",
+          "to": "E",
+          "conn": "message"
+        },
+        {
+          "from": "F",
+          "to": "B",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Customer Feedback Insight Generator",
+    "instruction": "Create a Langflow flow called 'Customer Feedback Insight Generator'.\nDescription: An AI agent that instantly transforms raw customer feedback into structured product insights via a live Webhook. \n\nThe flow should use approximately 5 components and 4 connections.\nComponents to use: Prompt Template, ChatOutput, ParserComponent, Agent, Webhook\n",
+    "canonical_text": "# Customer Feedback Insight Generator\n# An AI agent that instantly transforms raw customer feedback into structured product insights via a live Webhook. \n\nnodes:\n  A: Prompt\n  B: ChatOutput\n  C: ParserComponent\n  D: Agent\n  E: Webhook\n\nedges:\n  D -> B [message]\n  A -> D [system]\n  C -> D [message]\n  E -> C [data]",
+    "canonical": {
+      "name": "Customer Feedback Insight Generator",
+      "description": "An AI agent that instantly transforms raw customer feedback into structured product insights via a live Webhook. ",
+      "nodes": [
+        {
+          "type": "Prompt",
+          "id": "A"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "B"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "C"
+        },
+        {
+          "type": "Agent",
+          "id": "D"
+        },
+        {
+          "type": "Webhook",
+          "id": "E"
+        }
+      ],
+      "edges": [
+        {
+          "from": "D",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "D",
+          "conn": "system"
+        },
+        {
+          "from": "C",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "C",
+          "conn": "data"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Customer Segmentation",
+    "instruction": "Create a Langflow flow called 'Customer Segmentation'.\nDescription: Catalyzing Business Growth through Conversational AI.\n\nThe flow should use approximately 5 components and 4 connections.\nComponents to use: ChatInput, SQLComponent, Agent, Prompt, ChatOutput\n",
+    "canonical_text": "# Customer Segmentation\n# Catalyzing Business Growth through Conversational AI.\n\nnodes:\n  A: ChatInput\n  B: SQLComponent\n  C: Agent\n  D: Prompt\n  E: ChatOutput\n\nedges:\n  B -> C [tool]\n  D -> C [system]\n  C -> E [message]\n  A -> C [message]",
+    "canonical": {
+      "name": "Customer Segmentation",
+      "description": "Catalyzing Business Growth through Conversational AI.",
+      "nodes": [
+        {
+          "type": "ChatInput",
+          "id": "A"
+        },
+        {
+          "type": "SQLComponent",
+          "id": "B"
+        },
+        {
+          "type": "Agent",
+          "id": "C"
+        },
+        {
+          "type": "Prompt",
+          "id": "D"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "E"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "C",
+          "conn": "tool"
+        },
+        {
+          "from": "D",
+          "to": "C",
+          "conn": "system"
+        },
+        {
+          "from": "C",
+          "to": "E",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "C",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Data Extraction",
+    "instruction": "Create a Langflow flow called 'Data Extraction'.\nDescription: Conversation Catalyst Engine.\n\nThe flow should use approximately 6 components and 5 connections.\nComponents to use: Agent, ChatOutput, StructuredOutput, Prompt, LanguageModelComponent, File\n",
+    "canonical_text": "# Data Extraction\n# Conversation Catalyst Engine.\n\nnodes:\n  A: Agent\n  B: ChatOutput\n  C: StructuredOutput\n  D: Prompt\n  E: LanguageModelComponent\n  F: File\n\nedges:\n  A -> C [message]\n  D -> A [system]\n  C -> B [message]\n  E -> C [model]\n  F -> A [message]",
+    "canonical": {
+      "name": "Data Extraction",
+      "description": "Conversation Catalyst Engine.",
+      "nodes": [
+        {
+          "type": "Agent",
+          "id": "A"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "B"
+        },
+        {
+          "type": "StructuredOutput",
+          "id": "C"
+        },
+        {
+          "type": "Prompt",
+          "id": "D"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "E"
+        },
+        {
+          "type": "File",
+          "id": "F"
+        }
+      ],
+      "edges": [
+        {
+          "from": "A",
+          "to": "C",
+          "conn": "message"
+        },
+        {
+          "from": "D",
+          "to": "A",
+          "conn": "system"
+        },
+        {
+          "from": "C",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "C",
+          "conn": "model"
+        },
+        {
+          "from": "F",
+          "to": "A",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "dataframe_insights",
+    "instruction": "Create a Langflow flow called 'dataframe_insights'.\nDescription: Connect the Dots, Craft Language.\n\nThe flow should use approximately 8 components and 7 connections.\nComponents to use: Agent, PythonREPLComponent, ChatInput, ChatOutput, File, DataFrameOperationsComponent, ParserComponent, Prompt\n",
+    "canonical_text": "# dataframe_insights\n# Connect the Dots, Craft Language.\n\nnodes:\n  A: Agent\n  B: PythonREPLComponent\n  C: ChatInput\n  D: ChatOutput\n  E: File\n  F: DataFrameOperationsComponent\n  G: ParserComponent\n  H: Prompt\n\nedges:\n  B -> A [tool]\n  A -> D [message]\n  E -> F [data]\n  F -> G [data]\n  G -> H [data]\n  H -> A [system]\n  C -> A [message]",
+    "canonical": {
+      "name": "dataframe_insights",
+      "description": "Connect the Dots, Craft Language.",
+      "nodes": [
+        {
+          "type": "Agent",
+          "id": "A"
+        },
+        {
+          "type": "PythonREPLComponent",
+          "id": "B"
+        },
+        {
+          "type": "ChatInput",
+          "id": "C"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "D"
+        },
+        {
+          "type": "File",
+          "id": "E"
+        },
+        {
+          "type": "DataFrameOperationsComponent",
+          "id": "F"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "G"
+        },
+        {
+          "type": "Prompt",
+          "id": "H"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "A",
+          "conn": "tool"
+        },
+        {
+          "from": "A",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "F",
+          "conn": "data"
+        },
+        {
+          "from": "F",
+          "to": "G",
+          "conn": "data"
+        },
+        {
+          "from": "G",
+          "to": "H",
+          "conn": "data"
+        },
+        {
+          "from": "H",
+          "to": "A",
+          "conn": "system"
+        },
+        {
+          "from": "C",
+          "to": "A",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "document_classification",
+    "instruction": "Create a Langflow flow called 'document_classification'.\nDescription: Smart Chains, Smarter Conversations.\n\nThe flow should use approximately 7 components and 6 connections.\nComponents to use: Prompt, Agent, StructuredOutput, LanguageModelComponent, ChatOutput, ParserComponent, File\n",
+    "canonical_text": "# document_classification\n# Smart Chains, Smarter Conversations.\n\nnodes:\n  A: Prompt\n  B: Agent\n  C: StructuredOutput\n  D: LanguageModelComponent\n  E: ChatOutput\n  F: ParserComponent\n  G: File\n\nedges:\n  B -> C [message]\n  A -> B [system]\n  F -> B [message]\n  G -> F [data]\n  D -> C [model]\n  C -> E [message]",
+    "canonical": {
+      "name": "document_classification",
+      "description": "Smart Chains, Smarter Conversations.",
+      "nodes": [
+        {
+          "type": "Prompt",
+          "id": "A"
+        },
+        {
+          "type": "Agent",
+          "id": "B"
+        },
+        {
+          "type": "StructuredOutput",
+          "id": "C"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "D"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "E"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "F"
+        },
+        {
+          "type": "File",
+          "id": "G"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "C",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "B",
+          "conn": "system"
+        },
+        {
+          "from": "F",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "G",
+          "to": "F",
+          "conn": "data"
+        },
+        {
+          "from": "D",
+          "to": "C",
+          "conn": "model"
+        },
+        {
+          "from": "C",
+          "to": "E",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Fraud Detection",
+    "instruction": "Create a Langflow flow called 'Fraud Detection'.\nDescription: Transform Your Business with Smart Dialogues.\n\nThe flow should use approximately 8 components and 7 connections.\nComponents to use: Agent, ChatOutput, Prompt, StructuredOutput, LanguageModelComponent, SQLComponent, ParserComponent, TextInput\n",
+    "canonical_text": "# Fraud Detection\n# Transform Your Business with Smart Dialogues.\n\nnodes:\n  A: Agent\n  B: ChatOutput\n  C: Prompt\n  D: StructuredOutput\n  E: LanguageModelComponent\n  F: SQLComponent\n  G: ParserComponent\n  H: TextInput\n\nedges:\n  A -> D [message]\n  C -> A [system]\n  E -> D [model]\n  D -> B [message]\n  G -> A [message]\n  F -> G [data]\n  H -> C [template_var]",
+    "canonical": {
+      "name": "Fraud Detection",
+      "description": "Transform Your Business with Smart Dialogues.",
+      "nodes": [
+        {
+          "type": "Agent",
+          "id": "A"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "B"
+        },
+        {
+          "type": "Prompt",
+          "id": "C"
+        },
+        {
+          "type": "StructuredOutput",
+          "id": "D"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "E"
+        },
+        {
+          "type": "SQLComponent",
+          "id": "F"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "G"
+        },
+        {
+          "type": "TextInput",
+          "id": "H"
+        }
+      ],
+      "edges": [
+        {
+          "from": "A",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "C",
+          "to": "A",
+          "conn": "system"
+        },
+        {
+          "from": "E",
+          "to": "D",
+          "conn": "model"
+        },
+        {
+          "from": "D",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "G",
+          "to": "A",
+          "conn": "message"
+        },
+        {
+          "from": "F",
+          "to": "G",
+          "conn": "data"
+        },
+        {
+          "from": "H",
+          "to": "C",
+          "conn": "template_var"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Fraud Flagging & Analysis",
+    "instruction": "Create a Langflow flow called 'Fraud Flagging & Analysis'.\nDescription: Transform Your Business with Smart Dialogues.\n\nThe flow should use approximately 9 components and 7 connections.\nComponents to use: Agent, SQLComponent, ChatOutput, Prompt, LanguageModelComponent, ParserComponent, SQLiteConnectionString, StructuredOutput, ChatOutput\n",
+    "canonical_text": "# Fraud Flagging & Analysis\n# Transform Your Business with Smart Dialogues.\n\nnodes:\n  A: Agent\n  B: SQLComponent\n  C: ChatOutput\n  D: Prompt\n  E: LanguageModelComponent\n  F: ParserComponent\n  G: SQLiteConnectionString\n  H: StructuredOutput\n  I: ChatOutput\n\nedges:\n  D -> A [system]\n  F -> A [message]\n  G -> B [message]\n  B -> F [data]\n  A -> H [message]\n  E -> H [model]\n  H -> C [message]",
+    "canonical": {
+      "name": "Fraud Flagging & Analysis",
+      "description": "Transform Your Business with Smart Dialogues.",
+      "nodes": [
+        {
+          "type": "Agent",
+          "id": "A"
+        },
+        {
+          "type": "SQLComponent",
+          "id": "B"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "C"
+        },
+        {
+          "type": "Prompt",
+          "id": "D"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "E"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "F"
+        },
+        {
+          "type": "SQLiteConnectionString",
+          "id": "G"
+        },
+        {
+          "type": "StructuredOutput",
+          "id": "H"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "I"
+        }
+      ],
+      "edges": [
+        {
+          "from": "D",
+          "to": "A",
+          "conn": "system"
+        },
+        {
+          "from": "F",
+          "to": "A",
+          "conn": "message"
+        },
+        {
+          "from": "G",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "B",
+          "to": "F",
+          "conn": "data"
+        },
+        {
+          "from": "A",
+          "to": "H",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "H",
+          "conn": "model"
+        },
+        {
+          "from": "H",
+          "to": "C",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "generate_concise_overviews ",
+    "instruction": "Create a Langflow flow called 'generate_concise_overviews '.\nDescription: Powerful Prompts, Perfectly Positioned.\n\nThe flow should use approximately 5 components and 4 connections.\nComponents to use: Agent, Prompt, ParserComponent, ChatOutput, BigQueryExecutor\n",
+    "canonical_text": "# generate_concise_overviews \n# Powerful Prompts, Perfectly Positioned.\n\nnodes:\n  A: Agent\n  B: Prompt\n  C: ParserComponent\n  D: ChatOutput\n  E: BigQueryExecutor\n\nedges:\n  B -> A [system]\n  C -> A [message]\n  A -> D [message]\n  E -> C [data]",
+    "canonical": {
+      "name": "generate_concise_overviews ",
+      "description": "Powerful Prompts, Perfectly Positioned.",
+      "nodes": [
+        {
+          "type": "Agent",
+          "id": "A"
+        },
+        {
+          "type": "Prompt",
+          "id": "B"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "C"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "D"
+        },
+        {
+          "type": "BigQueryExecutor",
+          "id": "E"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "A",
+          "conn": "system"
+        },
+        {
+          "from": "C",
+          "to": "A",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "C",
+          "conn": "data"
+        }
+      ]
+    }
+  },
+  {
+    "name": " information_retrieval",
+    "instruction": "Create a Langflow flow called ' information_retrieval'.\nDescription: Smart Chains, Smarter Conversations.\n\nThe flow should use approximately 10 components and 9 connections.\nComponents to use: File, SplitText, AstraDB, ChatInput, AstraDB, ParserComponent, Agent, Prompt, Memory, ChatOutput\n",
+    "canonical_text": "#  information_retrieval\n# Smart Chains, Smarter Conversations.\n\nnodes:\n  A: File\n  B: SplitText\n  C: AstraDB\n  D: ChatInput\n  E: AstraDB\n  F: ParserComponent\n  G: Agent\n  H: Prompt\n  I: Memory\n  J: ChatOutput\n\nedges:\n  D -> E [message]\n  E -> F [data]\n  D -> G [message]\n  H -> G [system]\n  G -> J [message]\n  F -> H [template_var]\n  I -> H [template_var]\n  A -> B [data]\n  B -> C [data]",
+    "canonical": {
+      "name": " information_retrieval",
+      "description": "Smart Chains, Smarter Conversations.",
+      "nodes": [
+        {
+          "type": "File",
+          "id": "A"
+        },
+        {
+          "type": "SplitText",
+          "id": "B"
+        },
+        {
+          "type": "AstraDB",
+          "id": "C"
+        },
+        {
+          "type": "ChatInput",
+          "id": "D"
+        },
+        {
+          "type": "AstraDB",
+          "id": "E"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "F"
+        },
+        {
+          "type": "Agent",
+          "id": "G"
+        },
+        {
+          "type": "Prompt",
+          "id": "H"
+        },
+        {
+          "type": "Memory",
+          "id": "I"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "J"
+        }
+      ],
+      "edges": [
+        {
+          "from": "D",
+          "to": "E",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "F",
+          "conn": "data"
+        },
+        {
+          "from": "D",
+          "to": "G",
+          "conn": "message"
+        },
+        {
+          "from": "H",
+          "to": "G",
+          "conn": "system"
+        },
+        {
+          "from": "G",
+          "to": "J",
+          "conn": "message"
+        },
+        {
+          "from": "F",
+          "to": "H",
+          "conn": "template_var"
+        },
+        {
+          "from": "I",
+          "to": "H",
+          "conn": "template_var"
+        },
+        {
+          "from": "A",
+          "to": "B",
+          "conn": "data"
+        },
+        {
+          "from": "B",
+          "to": "C",
+          "conn": "data"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Ingestion Router",
+    "instruction": "Create a Langflow flow called 'Ingestion Router'.\nDescription: \n\nThe flow should use approximately 7 components and 6 connections.\nComponents to use: SmartRouter, File, KnowledgeIngestion, SplitText, SplitText, KnowledgeIngestion, LanguageModelComponent\n",
+    "canonical_text": "# Ingestion Router\n\nnodes:\n  A: SmartRouter\n  B: File\n  C: KnowledgeIngestion\n  D: SplitText\n  E: SplitText\n  F: KnowledgeIngestion\n  G: LanguageModelComponent\n\nedges:\n  B -> A [message]\n  D -> C [data]\n  E -> F [data]\n  G -> A [model]\n  A -> D [data]\n  A -> E [data]",
+    "canonical": {
+      "name": "Ingestion Router",
+      "description": "",
+      "nodes": [
+        {
+          "type": "SmartRouter",
+          "id": "A"
+        },
+        {
+          "type": "File",
+          "id": "B"
+        },
+        {
+          "type": "KnowledgeIngestion",
+          "id": "C"
+        },
+        {
+          "type": "SplitText",
+          "id": "D"
+        },
+        {
+          "type": "SplitText",
+          "id": "E"
+        },
+        {
+          "type": "KnowledgeIngestion",
+          "id": "F"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "G"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "A",
+          "conn": "message"
+        },
+        {
+          "from": "D",
+          "to": "C",
+          "conn": "data"
+        },
+        {
+          "from": "E",
+          "to": "F",
+          "conn": "data"
+        },
+        {
+          "from": "G",
+          "to": "A",
+          "conn": "model"
+        },
+        {
+          "from": "A",
+          "to": "D",
+          "conn": "data"
+        },
+        {
+          "from": "A",
+          "to": "E",
+          "conn": "data"
+        }
+      ]
+    }
+  },
+  {
+    "name": "lead_scoring",
+    "instruction": "Create a Langflow flow called 'lead_scoring'.\nDescription: A simple but powerful starter agent.\nTags: assistants, agents\n\nThe flow should use approximately 8 components and 7 connections.\nComponents to use: Prompt, APIRequest, URLComponent, TypeConverterComponent, Agent, StructuredOutput, LanguageModelComponent, JSONtoData\n",
+    "canonical_text": "# lead_scoring\n# A simple but powerful starter agent.\n\nnodes:\n  A: Prompt\n  B: APIRequest\n  C: URLComponent\n  D: TypeConverterComponent\n  E: Agent\n  F: StructuredOutput\n  G: LanguageModelComponent\n  H: JSONtoData\n\nedges:\n  C -> E [tool]\n  A -> E [system]\n  D -> E [message]\n  G -> F [model]\n  E -> F [message]\n  F -> B [data]\n  H -> D [data]",
+    "canonical": {
+      "name": "lead_scoring",
+      "description": "A simple but powerful starter agent.",
+      "nodes": [
+        {
+          "type": "Prompt",
+          "id": "A"
+        },
+        {
+          "type": "APIRequest",
+          "id": "B"
+        },
+        {
+          "type": "URLComponent",
+          "id": "C"
+        },
+        {
+          "type": "TypeConverterComponent",
+          "id": "D"
+        },
+        {
+          "type": "Agent",
+          "id": "E"
+        },
+        {
+          "type": "StructuredOutput",
+          "id": "F"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "G"
+        },
+        {
+          "type": "JSONtoData",
+          "id": "H"
+        }
+      ],
+      "edges": [
+        {
+          "from": "C",
+          "to": "E",
+          "conn": "tool"
+        },
+        {
+          "from": "A",
+          "to": "E",
+          "conn": "system"
+        },
+        {
+          "from": "D",
+          "to": "E",
+          "conn": "message"
+        },
+        {
+          "from": "G",
+          "to": "F",
+          "conn": "model"
+        },
+        {
+          "from": "E",
+          "to": "F",
+          "conn": "message"
+        },
+        {
+          "from": "F",
+          "to": "B",
+          "conn": "data"
+        },
+        {
+          "from": "H",
+          "to": "D",
+          "conn": "data"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Marketing Content Creation",
+    "instruction": "Create a Langflow flow called 'Marketing Content Creation'.\nDescription: Nurture NLP Nodes Here.\n\nThe flow should use approximately 5 components and 4 connections.\nComponents to use: ChatInput, Agent, Prompt, ChatOutput, Serp\n",
+    "canonical_text": "# Marketing Content Creation\n# Nurture NLP Nodes Here.\n\nnodes:\n  A: ChatInput\n  B: Agent\n  C: Prompt\n  D: ChatOutput\n  E: Serp\n\nedges:\n  C -> B [system]\n  B -> D [message]\n  A -> B [message]\n  E -> B [tool]",
+    "canonical": {
+      "name": "Marketing Content Creation",
+      "description": "Nurture NLP Nodes Here.",
+      "nodes": [
+        {
+          "type": "ChatInput",
+          "id": "A"
+        },
+        {
+          "type": "Agent",
+          "id": "B"
+        },
+        {
+          "type": "Prompt",
+          "id": "C"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "D"
+        },
+        {
+          "type": "Serp",
+          "id": "E"
+        }
+      ],
+      "edges": [
+        {
+          "from": "C",
+          "to": "B",
+          "conn": "system"
+        },
+        {
+          "from": "B",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "B",
+          "conn": "tool"
+        }
+      ]
+    }
+  },
+  {
+    "name": "personal_assistant",
+    "instruction": "Create a Langflow flow called 'personal_assistant'.\nDescription: Create, Chain, Communicate.\n\nThe flow should use approximately 10 components and 9 connections.\nComponents to use: ComposioGoogleCalendarAPIComponent, ComposioGoogleTasksAPIComponent, ComposioGoogleSheetsAPIComponent, Agent, CurrentDate, UnifiedWebSearch, ComposioSlackAPIComponent, ChatInput, ChatOutput, ComposioGmailAPIComponent\n",
+    "canonical_text": "# personal_assistant\n# Create, Chain, Communicate.\n\nnodes:\n  A: ComposioGoogleCalendarAPIComponent\n  B: ComposioGoogleTasksAPIComponent\n  C: ComposioGoogleSheetsAPIComponent\n  D: Agent\n  E: CurrentDate\n  F: UnifiedWebSearch\n  G: ComposioSlackAPIComponent\n  H: ChatInput\n  I: ChatOutput\n  J: ComposioGmailAPIComponent\n\nedges:\n  C -> D [tool]\n  B -> D [tool]\n  A -> D [tool]\n  F -> D [tool]\n  E -> D [tool]\n  G -> D [tool]\n  D -> I [message]\n  H -> D [message]\n  J -> D [tool]",
+    "canonical": {
+      "name": "personal_assistant",
+      "description": "Create, Chain, Communicate.",
+      "nodes": [
+        {
+          "type": "ComposioGoogleCalendarAPIComponent",
+          "id": "A"
+        },
+        {
+          "type": "ComposioGoogleTasksAPIComponent",
+          "id": "B"
+        },
+        {
+          "type": "ComposioGoogleSheetsAPIComponent",
+          "id": "C"
+        },
+        {
+          "type": "Agent",
+          "id": "D"
+        },
+        {
+          "type": "CurrentDate",
+          "id": "E"
+        },
+        {
+          "type": "UnifiedWebSearch",
+          "id": "F"
+        },
+        {
+          "type": "ComposioSlackAPIComponent",
+          "id": "G"
+        },
+        {
+          "type": "ChatInput",
+          "id": "H"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "I"
+        },
+        {
+          "type": "ComposioGmailAPIComponent",
+          "id": "J"
+        }
+      ],
+      "edges": [
+        {
+          "from": "C",
+          "to": "D",
+          "conn": "tool"
+        },
+        {
+          "from": "B",
+          "to": "D",
+          "conn": "tool"
+        },
+        {
+          "from": "A",
+          "to": "D",
+          "conn": "tool"
+        },
+        {
+          "from": "F",
+          "to": "D",
+          "conn": "tool"
+        },
+        {
+          "from": "E",
+          "to": "D",
+          "conn": "tool"
+        },
+        {
+          "from": "G",
+          "to": "D",
+          "conn": "tool"
+        },
+        {
+          "from": "D",
+          "to": "I",
+          "conn": "message"
+        },
+        {
+          "from": "H",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "J",
+          "to": "D",
+          "conn": "tool"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Personalized Outreach",
+    "instruction": "Create a Langflow flow called 'Personalized Outreach'.\nDescription: Harness the Power of Conversational AI.\n\nThe flow should use approximately 10 components and 9 connections.\nComponents to use: Agent, ChatOutput, Prompt Template, TypeConverterComponent, TextInput, TextInput, TextInput, TextInput, DynamicSelectionComponent, Webhook\n",
+    "canonical_text": "# Personalized Outreach\n# Harness the Power of Conversational AI.\n\nnodes:\n  A: Agent\n  B: ChatOutput\n  C: Prompt\n  D: TypeConverterComponent\n  E: TextInput\n  F: TextInput\n  G: TextInput\n  H: TextInput\n  I: DynamicSelectionComponent\n  J: Webhook\n\nedges:\n  A -> B [message]\n  C -> A [system]\n  D -> A [message]\n  E -> C [template_var]\n  F -> C [template_var]\n  G -> C [template_var]\n  H -> C [template_var]\n  I -> C [template_var]\n  J -> D [data]",
+    "canonical": {
+      "name": "Personalized Outreach",
+      "description": "Harness the Power of Conversational AI.",
+      "nodes": [
+        {
+          "type": "Agent",
+          "id": "A"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "B"
+        },
+        {
+          "type": "Prompt",
+          "id": "C"
+        },
+        {
+          "type": "TypeConverterComponent",
+          "id": "D"
+        },
+        {
+          "type": "TextInput",
+          "id": "E"
+        },
+        {
+          "type": "TextInput",
+          "id": "F"
+        },
+        {
+          "type": "TextInput",
+          "id": "G"
+        },
+        {
+          "type": "TextInput",
+          "id": "H"
+        },
+        {
+          "type": "DynamicSelectionComponent",
+          "id": "I"
+        },
+        {
+          "type": "Webhook",
+          "id": "J"
+        }
+      ],
+      "edges": [
+        {
+          "from": "A",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "C",
+          "to": "A",
+          "conn": "system"
+        },
+        {
+          "from": "D",
+          "to": "A",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "C",
+          "conn": "template_var"
+        },
+        {
+          "from": "F",
+          "to": "C",
+          "conn": "template_var"
+        },
+        {
+          "from": "G",
+          "to": "C",
+          "conn": "template_var"
+        },
+        {
+          "from": "H",
+          "to": "C",
+          "conn": "template_var"
+        },
+        {
+          "from": "I",
+          "to": "C",
+          "conn": "template_var"
+        },
+        {
+          "from": "J",
+          "to": "D",
+          "conn": "data"
+        }
+      ]
+    }
+  },
+  {
+    "name": "PRD Draftsman",
+    "instruction": "Create a Langflow flow called 'PRD Draftsman'.\nDescription: Interactive Language Weaving.\n\nThe flow should use approximately 4 components and 3 connections.\nComponents to use: ChatInput, Agent, Agent, ChatOutput\n",
+    "canonical_text": "# PRD Draftsman\n# Interactive Language Weaving.\n\nnodes:\n  A: ChatInput\n  B: Agent\n  C: Agent\n  D: ChatOutput\n\nedges:\n  A -> B [message]\n  B -> C [message]\n  C -> D [message]",
+    "canonical": {
+      "name": "PRD Draftsman",
+      "description": "Interactive Language Weaving.",
+      "nodes": [
+        {
+          "type": "ChatInput",
+          "id": "A"
+        },
+        {
+          "type": "Agent",
+          "id": "B"
+        },
+        {
+          "type": "Agent",
+          "id": "C"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "D"
+        }
+      ],
+      "edges": [
+        {
+          "from": "A",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "B",
+          "to": "C",
+          "conn": "message"
+        },
+        {
+          "from": "C",
+          "to": "D",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "RAG article in web",
+    "instruction": "Create a Langflow flow called 'RAG article in web'.\nDescription: - Extract article content, split in chunks, vectorize with embedding model and load to vector database. Ready to RAG\n\nThe flow should use approximately 4 components and 3 connections.\nComponents to use: URLComponent, SplitText, AstraDB, DataFrameOperations\n",
+    "canonical_text": "# RAG article in web\n# - Extract article content, split in chunks, vectorize with embedding model and load to vector database. Ready to RAG\n\nnodes:\n  A: URLComponent\n  B: SplitText\n  C: AstraDB\n  D: DataFrameOperations\n\nedges:\n  A -> D [data]\n  D -> B [data]\n  B -> C [data]",
+    "canonical": {
+      "name": "RAG article in web",
+      "description": "- Extract article content, split in chunks, vectorize with embedding model and load to vector database. Ready to RAG",
+      "nodes": [
+        {
+          "type": "URLComponent",
+          "id": "A"
+        },
+        {
+          "type": "SplitText",
+          "id": "B"
+        },
+        {
+          "type": "AstraDB",
+          "id": "C"
+        },
+        {
+          "type": "DataFrameOperations",
+          "id": "D"
+        }
+      ],
+      "edges": [
+        {
+          "from": "A",
+          "to": "D",
+          "conn": "data"
+        },
+        {
+          "from": "D",
+          "to": "B",
+          "conn": "data"
+        },
+        {
+          "from": "B",
+          "to": "C",
+          "conn": "data"
+        }
+      ]
+    }
+  },
+  {
+    "name": "RAG article in web with Agent",
+    "instruction": "Create a Langflow flow called 'RAG article in web with Agent'.\nDescription: It needs Split Text Tool to agent be able to create chunks from the URL content\n\nThe flow should use approximately 7 components and 5 connections.\nComponents to use: URLComponent, AstraDB, Agent, Prompt, ChatOutput, SplitText, ChatInput\n",
+    "canonical_text": "# RAG article in web with Agent\n# It needs Split Text Tool to agent be able to create chunks from the URL content\n\nnodes:\n  A: URLComponent\n  B: AstraDB\n  C: Agent\n  D: Prompt\n  E: ChatOutput\n  F: SplitText\n  G: ChatInput\n\nedges:\n  C -> E [message]\n  B -> C [tool]\n  A -> C [tool]\n  D -> C [system]\n  G -> C [message]",
+    "canonical": {
+      "name": "RAG article in web with Agent",
+      "description": "It needs Split Text Tool to agent be able to create chunks from the URL content",
+      "nodes": [
+        {
+          "type": "URLComponent",
+          "id": "A"
+        },
+        {
+          "type": "AstraDB",
+          "id": "B"
+        },
+        {
+          "type": "Agent",
+          "id": "C"
+        },
+        {
+          "type": "Prompt",
+          "id": "D"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "E"
+        },
+        {
+          "type": "SplitText",
+          "id": "F"
+        },
+        {
+          "type": "ChatInput",
+          "id": "G"
+        }
+      ],
+      "edges": [
+        {
+          "from": "C",
+          "to": "E",
+          "conn": "message"
+        },
+        {
+          "from": "B",
+          "to": "C",
+          "conn": "tool"
+        },
+        {
+          "from": "A",
+          "to": "C",
+          "conn": "tool"
+        },
+        {
+          "from": "D",
+          "to": "C",
+          "conn": "system"
+        },
+        {
+          "from": "G",
+          "to": "C",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Routing & Sync",
+    "instruction": "Create a Langflow flow called 'Routing & Sync'.\nDescription: Craft Language Connections Here.\n\nThe flow should use approximately 14 components and 13 connections.\nComponents to use: StructuredOutput, Agent, LanguageModelComponent, JSONtoData, ParserComponent, Prompt, ConditionalRouter, ParserComponent, ParserComponent, ConditionalRouter, MessagetoData, MessagetoData, ChatOutput, ChatOutput\n",
+    "canonical_text": "# Routing & Sync\n# Craft Language Connections Here.\n\nnodes:\n  A: StructuredOutput\n  B: Agent\n  C: LanguageModelComponent\n  D: JSONtoData\n  E: ParserComponent\n  F: Prompt\n  G: ConditionalRouter\n  H: ParserComponent\n  I: ParserComponent\n  J: ConditionalRouter\n  K: MessagetoData\n  L: MessagetoData\n  M: ChatOutput\n  N: ChatOutput\n\nedges:\n  B -> A [message]\n  D -> E [data]\n  E -> B [message]\n  F -> B [system]\n  H -> G [message]\n  G -> K [message]\n  J -> L [message]\n  L -> M [message]\n  K -> N [message]\n  C -> A [model]\n  A -> H [data]\n  A -> I [data]\n  H -> J [message]",
+    "canonical": {
+      "name": "Routing & Sync",
+      "description": "Craft Language Connections Here.",
+      "nodes": [
+        {
+          "type": "StructuredOutput",
+          "id": "A"
+        },
+        {
+          "type": "Agent",
+          "id": "B"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "C"
+        },
+        {
+          "type": "JSONtoData",
+          "id": "D"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "E"
+        },
+        {
+          "type": "Prompt",
+          "id": "F"
+        },
+        {
+          "type": "ConditionalRouter",
+          "id": "G"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "H"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "I"
+        },
+        {
+          "type": "ConditionalRouter",
+          "id": "J"
+        },
+        {
+          "type": "MessagetoData",
+          "id": "K"
+        },
+        {
+          "type": "MessagetoData",
+          "id": "L"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "M"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "N"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "A",
+          "conn": "message"
+        },
+        {
+          "from": "D",
+          "to": "E",
+          "conn": "data"
+        },
+        {
+          "from": "E",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "F",
+          "to": "B",
+          "conn": "system"
+        },
+        {
+          "from": "H",
+          "to": "G",
+          "conn": "message"
+        },
+        {
+          "from": "G",
+          "to": "K",
+          "conn": "message"
+        },
+        {
+          "from": "J",
+          "to": "L",
+          "conn": "message"
+        },
+        {
+          "from": "L",
+          "to": "M",
+          "conn": "message"
+        },
+        {
+          "from": "K",
+          "to": "N",
+          "conn": "message"
+        },
+        {
+          "from": "C",
+          "to": "A",
+          "conn": "model"
+        },
+        {
+          "from": "A",
+          "to": "H",
+          "conn": "data"
+        },
+        {
+          "from": "A",
+          "to": "I",
+          "conn": "data"
+        },
+        {
+          "from": "H",
+          "to": "J",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "semantic_memory",
+    "instruction": "Create a Langflow flow called 'semantic_memory'.\nDescription: The Power of Language at Your Fingertips.\n\nThe flow should use approximately 16 components and 19 connections.\nComponents to use: LanguageModelComponent, ChatInput, AstraDBGraph, EmbeddingModel, Prompt Template, AstraDB, TypeConverterComponent, TypeConverterComponent, SmartRouter, LanguageModelComponent, AstraDB, ChatOutput, TypeConverterComponent, EmbeddingModel, ChatOutput, AstraDBGraph\n",
+    "canonical_text": "# semantic_memory\n# The Power of Language at Your Fingertips.\n\nnodes:\n  A: LanguageModelComponent\n  B: ChatInput\n  C: AstraDBGraph\n  D: EmbeddingModel\n  E: Prompt\n  F: AstraDB\n  G: TypeConverterComponent\n  H: TypeConverterComponent\n  I: SmartRouter\n  J: LanguageModelComponent\n  K: AstraDB\n  L: ChatOutput\n  M: TypeConverterComponent\n  N: EmbeddingModel\n  O: ChatOutput\n  P: AstraDBGraph\n\nedges:\n  D -> C [embedding]\n  B -> C [message]\n  F -> G [data]\n  D -> F [embedding]\n  B -> F [message]\n  C -> H [data]\n  H -> E [template_var]\n  G -> E [template_var]\n  E -> A [system]\n  B -> A [message]\n  A -> I [message]\n  J -> I [model]\n  I -> M [data]\n  M -> K [data]\n  N -> K [embedding]\n  I -> O [message]\n  I -> L [message]\n  M -> P [data]\n  N -> P [embedding]",
+    "canonical": {
+      "name": "semantic_memory",
+      "description": "The Power of Language at Your Fingertips.",
+      "nodes": [
+        {
+          "type": "LanguageModelComponent",
+          "id": "A"
+        },
+        {
+          "type": "ChatInput",
+          "id": "B"
+        },
+        {
+          "type": "AstraDBGraph",
+          "id": "C"
+        },
+        {
+          "type": "EmbeddingModel",
+          "id": "D"
+        },
+        {
+          "type": "Prompt",
+          "id": "E"
+        },
+        {
+          "type": "AstraDB",
+          "id": "F"
+        },
+        {
+          "type": "TypeConverterComponent",
+          "id": "G"
+        },
+        {
+          "type": "TypeConverterComponent",
+          "id": "H"
+        },
+        {
+          "type": "SmartRouter",
+          "id": "I"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "J"
+        },
+        {
+          "type": "AstraDB",
+          "id": "K"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "L"
+        },
+        {
+          "type": "TypeConverterComponent",
+          "id": "M"
+        },
+        {
+          "type": "EmbeddingModel",
+          "id": "N"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "O"
+        },
+        {
+          "type": "AstraDBGraph",
+          "id": "P"
+        }
+      ],
+      "edges": [
+        {
+          "from": "D",
+          "to": "C",
+          "conn": "embedding"
+        },
+        {
+          "from": "B",
+          "to": "C",
+          "conn": "message"
+        },
+        {
+          "from": "F",
+          "to": "G",
+          "conn": "data"
+        },
+        {
+          "from": "D",
+          "to": "F",
+          "conn": "embedding"
+        },
+        {
+          "from": "B",
+          "to": "F",
+          "conn": "message"
+        },
+        {
+          "from": "C",
+          "to": "H",
+          "conn": "data"
+        },
+        {
+          "from": "H",
+          "to": "E",
+          "conn": "template_var"
+        },
+        {
+          "from": "G",
+          "to": "E",
+          "conn": "template_var"
+        },
+        {
+          "from": "E",
+          "to": "A",
+          "conn": "system"
+        },
+        {
+          "from": "B",
+          "to": "A",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "I",
+          "conn": "message"
+        },
+        {
+          "from": "J",
+          "to": "I",
+          "conn": "model"
+        },
+        {
+          "from": "I",
+          "to": "M",
+          "conn": "data"
+        },
+        {
+          "from": "M",
+          "to": "K",
+          "conn": "data"
+        },
+        {
+          "from": "N",
+          "to": "K",
+          "conn": "embedding"
+        },
+        {
+          "from": "I",
+          "to": "O",
+          "conn": "message"
+        },
+        {
+          "from": "I",
+          "to": "L",
+          "conn": "message"
+        },
+        {
+          "from": "M",
+          "to": "P",
+          "conn": "data"
+        },
+        {
+          "from": "N",
+          "to": "P",
+          "conn": "embedding"
+        }
+      ]
+    }
+  },
+  {
+    "name": "sentiment_analysis",
+    "instruction": "Create a Langflow flow called 'sentiment_analysis'.\nDescription: Innovation in Interaction with Langflow.\n\nThe flow should use approximately 7 components and 6 connections.\nComponents to use: SentimentAnalysisFromFile, ChatInput, ParserComponent, ConditionalRouter, Agent, ChatOutput, ChatOutput\n",
+    "canonical_text": "# sentiment_analysis\n# Innovation in Interaction with Langflow.\n\nnodes:\n  A: SentimentAnalysisFromFile\n  B: ChatInput\n  C: ParserComponent\n  D: ConditionalRouter\n  E: Agent\n  F: ChatOutput\n  G: ChatOutput\n\nedges:\n  B -> A [message]\n  A -> C [data]\n  C -> D [message]\n  D -> E [message]\n  D -> F [message]\n  E -> G [message]",
+    "canonical": {
+      "name": "sentiment_analysis",
+      "description": "Innovation in Interaction with Langflow.",
+      "nodes": [
+        {
+          "type": "SentimentAnalysisFromFile",
+          "id": "A"
+        },
+        {
+          "type": "ChatInput",
+          "id": "B"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "C"
+        },
+        {
+          "type": "ConditionalRouter",
+          "id": "D"
+        },
+        {
+          "type": "Agent",
+          "id": "E"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "F"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "G"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "A",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "C",
+          "conn": "data"
+        },
+        {
+          "from": "C",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "D",
+          "to": "E",
+          "conn": "message"
+        },
+        {
+          "from": "D",
+          "to": "F",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "G",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Sentiment & Urgency Detection",
+    "instruction": "Create a Langflow flow called 'Sentiment & Urgency Detection'.\nDescription: Design, Develop, Dialogize.\n\nThe flow should use approximately 8 components and 7 connections.\nComponents to use: ChatOutput, TextInput, Webhook, ParserComponent, Agent, Prompt Template, LanguageModelComponent, StructuredOutput\n",
+    "canonical_text": "# Sentiment & Urgency Detection\n# Design, Develop, Dialogize.\n\nnodes:\n  A: ChatOutput\n  B: TextInput\n  C: Webhook\n  D: ParserComponent\n  E: Agent\n  F: Prompt\n  G: LanguageModelComponent\n  H: StructuredOutput\n\nedges:\n  B -> C [data]\n  C -> D [data]\n  D -> E [message]\n  F -> E [system]\n  G -> H [model]\n  E -> H [message]\n  H -> A [message]",
+    "canonical": {
+      "name": "Sentiment & Urgency Detection",
+      "description": "Design, Develop, Dialogize.",
+      "nodes": [
+        {
+          "type": "ChatOutput",
+          "id": "A"
+        },
+        {
+          "type": "TextInput",
+          "id": "B"
+        },
+        {
+          "type": "Webhook",
+          "id": "C"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "D"
+        },
+        {
+          "type": "Agent",
+          "id": "E"
+        },
+        {
+          "type": "Prompt",
+          "id": "F"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "G"
+        },
+        {
+          "type": "StructuredOutput",
+          "id": "H"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "C",
+          "conn": "data"
+        },
+        {
+          "from": "C",
+          "to": "D",
+          "conn": "data"
+        },
+        {
+          "from": "D",
+          "to": "E",
+          "conn": "message"
+        },
+        {
+          "from": "F",
+          "to": "E",
+          "conn": "system"
+        },
+        {
+          "from": "G",
+          "to": "H",
+          "conn": "model"
+        },
+        {
+          "from": "E",
+          "to": "H",
+          "conn": "message"
+        },
+        {
+          "from": "H",
+          "to": "A",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "SEO Automation",
+    "instruction": "Create a Langflow flow called 'SEO Automation'.\nDescription: Engineered for Excellence, Built for Business.\n\nThe flow should use approximately 6 components and 4 connections.\nComponents to use: Prompt, URLComponent, Agent, ChatInput, ChatOutput, TextInput\n",
+    "canonical_text": "# SEO Automation\n# Engineered for Excellence, Built for Business.\n\nnodes:\n  A: Prompt\n  B: URLComponent\n  C: Agent\n  D: ChatInput\n  E: ChatOutput\n  F: TextInput\n\nedges:\n  B -> C [tool]\n  D -> C [message]\n  A -> C [system]\n  C -> E [message]",
+    "canonical": {
+      "name": "SEO Automation",
+      "description": "Engineered for Excellence, Built for Business.",
+      "nodes": [
+        {
+          "type": "Prompt",
+          "id": "A"
+        },
+        {
+          "type": "URLComponent",
+          "id": "B"
+        },
+        {
+          "type": "Agent",
+          "id": "C"
+        },
+        {
+          "type": "ChatInput",
+          "id": "D"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "E"
+        },
+        {
+          "type": "TextInput",
+          "id": "F"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "C",
+          "conn": "tool"
+        },
+        {
+          "from": "D",
+          "to": "C",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "C",
+          "conn": "system"
+        },
+        {
+          "from": "C",
+          "to": "E",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Smart Ticket Routing",
+    "instruction": "Create a Langflow flow called 'Smart Ticket Routing'.\nDescription: Automatically routes support tickets to the most appropriate agents based on content and expertise.\n\nThe flow should use approximately 7 components and 6 connections.\nComponents to use: Webhook, Text Input, Text Output, APIRequest, Prompt Template, TypeConverterComponent, Agent\n",
+    "canonical_text": "# Smart Ticket Routing\n# Automatically routes support tickets to the most appropriate agents based on content and expertise.\n\nnodes:\n  A: Webhook\n  B: TextInput\n  C: TextOutput\n  D: APIRequest\n  E: Prompt\n  F: TypeConverterComponent\n  G: Agent\n\nedges:\n  B -> A [data]\n  A -> F [data]\n  D -> G [tool]\n  E -> G [system]\n  F -> G [system]\n  G -> C [message]",
+    "canonical": {
+      "name": "Smart Ticket Routing",
+      "description": "Automatically routes support tickets to the most appropriate agents based on content and expertise.",
+      "nodes": [
+        {
+          "type": "Webhook",
+          "id": "A"
+        },
+        {
+          "type": "TextInput",
+          "id": "B"
+        },
+        {
+          "type": "TextOutput",
+          "id": "C"
+        },
+        {
+          "type": "APIRequest",
+          "id": "D"
+        },
+        {
+          "type": "Prompt",
+          "id": "E"
+        },
+        {
+          "type": "TypeConverterComponent",
+          "id": "F"
+        },
+        {
+          "type": "Agent",
+          "id": "G"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "A",
+          "conn": "data"
+        },
+        {
+          "from": "A",
+          "to": "F",
+          "conn": "data"
+        },
+        {
+          "from": "D",
+          "to": "G",
+          "conn": "tool"
+        },
+        {
+          "from": "E",
+          "to": "G",
+          "conn": "system"
+        },
+        {
+          "from": "F",
+          "to": "G",
+          "conn": "system"
+        },
+        {
+          "from": "G",
+          "to": "C",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Strategic EBR Generator",
+    "instruction": "Create a Langflow flow called 'Strategic EBR Generator'.\nDescription: Connect the Dots, Craft Language.\n\nThe flow should use approximately 6 components and 7 connections.\nComponents to use: ConditionalRouter, Agent, ChatInput, Agent, ChatOutput, ChatOutput\n",
+    "canonical_text": "# Strategic EBR Generator\n# Connect the Dots, Craft Language.\n\nnodes:\n  A: ConditionalRouter\n  B: Agent\n  C: ChatInput\n  D: Agent\n  E: ChatOutput\n  F: ChatOutput\n\nedges:\n  C -> B [message]\n  B -> A [message]\n  A -> D [message]\n  A -> E [message]\n  D -> F [message]\n  B -> A [message]\n  B -> A [message]",
+    "canonical": {
+      "name": "Strategic EBR Generator",
+      "description": "Connect the Dots, Craft Language.",
+      "nodes": [
+        {
+          "type": "ConditionalRouter",
+          "id": "A"
+        },
+        {
+          "type": "Agent",
+          "id": "B"
+        },
+        {
+          "type": "ChatInput",
+          "id": "C"
+        },
+        {
+          "type": "Agent",
+          "id": "D"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "E"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "F"
+        }
+      ],
+      "edges": [
+        {
+          "from": "C",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "B",
+          "to": "A",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "E",
+          "conn": "message"
+        },
+        {
+          "from": "D",
+          "to": "F",
+          "conn": "message"
+        },
+        {
+          "from": "B",
+          "to": "A",
+          "conn": "message"
+        },
+        {
+          "from": "B",
+          "to": "A",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Summarization",
+    "instruction": "Create a Langflow flow called 'Summarization'.\nDescription: Automated summarization agent that fetches scientific papers via arXiv based on keywords and merges key insights into a unified article.\n\nThe flow should use approximately 7 components and 6 connections.\nComponents to use: Agent, arXiv, Text Input, Parser, URL, Prompt, Chat Output\n",
+    "canonical_text": "# Summarization\n# Automated summarization agent that fetches scientific papers via arXiv based on keywords and merges key insights into a unified article.\n\nnodes:\n  A: Agent\n  B: ArXivComponent\n  C: TextInput\n  D: ParserComponent\n  E: URLComponent\n  F: Prompt\n  G: ChatOutput\n\nedges:\n  C -> B [message]\n  D -> A [message]\n  E -> A [tool]\n  F -> A [system]\n  A -> G [message]\n  B -> D [data]",
+    "canonical": {
+      "name": "Summarization",
+      "description": "Automated summarization agent that fetches scientific papers via arXiv based on keywords and merges key insights into a unified article.",
+      "nodes": [
+        {
+          "type": "Agent",
+          "id": "A"
+        },
+        {
+          "type": "ArXivComponent",
+          "id": "B"
+        },
+        {
+          "type": "TextInput",
+          "id": "C"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "D"
+        },
+        {
+          "type": "URLComponent",
+          "id": "E"
+        },
+        {
+          "type": "Prompt",
+          "id": "F"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "G"
+        }
+      ],
+      "edges": [
+        {
+          "from": "C",
+          "to": "B",
+          "conn": "message"
+        },
+        {
+          "from": "D",
+          "to": "A",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "A",
+          "conn": "tool"
+        },
+        {
+          "from": "F",
+          "to": "A",
+          "conn": "system"
+        },
+        {
+          "from": "A",
+          "to": "G",
+          "conn": "message"
+        },
+        {
+          "from": "B",
+          "to": "D",
+          "conn": "data"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Natural API Chat",
+    "instruction": "Create a Langflow flow called 'Natural API Chat'.\nDescription: Maximize Impact with Intelligent Conversations.\n\nThe flow should use approximately 10 components and 10 connections.\nComponents to use: ChatInput, Prompt Template, Agent, URLComponent, Agent, Prompt Template, TextInput, PythonREPLComponent, ChatOutput, TextInput\n",
+    "canonical_text": "# Natural API Chat\n# Maximize Impact with Intelligent Conversations.\n\nnodes:\n  A: ChatInput\n  B: Prompt\n  C: Agent\n  D: URLComponent\n  E: Agent\n  F: Prompt\n  G: TextInput\n  H: PythonREPLComponent\n  I: ChatOutput\n  J: TextInput\n\nedges:\n  B -> C [system]\n  D -> E [tool]\n  F -> E [system]\n  A -> E [message]\n  A -> C [message]\n  H -> C [tool]\n  C -> I [message]\n  E -> B [template_var]\n  G -> F [template_var]\n  G -> B [template_var]",
+    "canonical": {
+      "name": "Natural API Chat",
+      "description": "Maximize Impact with Intelligent Conversations.",
+      "nodes": [
+        {
+          "type": "ChatInput",
+          "id": "A"
+        },
+        {
+          "type": "Prompt",
+          "id": "B"
+        },
+        {
+          "type": "Agent",
+          "id": "C"
+        },
+        {
+          "type": "URLComponent",
+          "id": "D"
+        },
+        {
+          "type": "Agent",
+          "id": "E"
+        },
+        {
+          "type": "Prompt",
+          "id": "F"
+        },
+        {
+          "type": "TextInput",
+          "id": "G"
+        },
+        {
+          "type": "PythonREPLComponent",
+          "id": "H"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "I"
+        },
+        {
+          "type": "TextInput",
+          "id": "J"
+        }
+      ],
+      "edges": [
+        {
+          "from": "B",
+          "to": "C",
+          "conn": "system"
+        },
+        {
+          "from": "D",
+          "to": "E",
+          "conn": "tool"
+        },
+        {
+          "from": "F",
+          "to": "E",
+          "conn": "system"
+        },
+        {
+          "from": "A",
+          "to": "E",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "C",
+          "conn": "message"
+        },
+        {
+          "from": "H",
+          "to": "C",
+          "conn": "tool"
+        },
+        {
+          "from": "C",
+          "to": "I",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "B",
+          "conn": "template_var"
+        },
+        {
+          "from": "G",
+          "to": "F",
+          "conn": "template_var"
+        },
+        {
+          "from": "G",
+          "to": "B",
+          "conn": "template_var"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Talk to CSV",
+    "instruction": "Create a Langflow flow called 'Talk to CSV'.\nDescription: Engineered for Excellence, Built for Business.\n\nThe flow should use approximately 9 components and 8 connections.\nComponents to use: Agent, Prompt, PythonREPLComponent, ChatOutput, File, TextInput, File, DataFrameOperations, TypeConverterComponent\n",
+    "canonical_text": "# Talk to CSV\n# Engineered for Excellence, Built for Business.\n\nnodes:\n  A: Agent\n  B: Prompt\n  C: PythonREPLComponent\n  D: ChatOutput\n  E: File\n  F: TextInput\n  G: File\n  H: DataFrameOperations\n  I: TypeConverterComponent\n\nedges:\n  C -> A [tool]\n  A -> D [message]\n  B -> A [system]\n  F -> A [message]\n  E -> B [template_var]\n  G -> H [data]\n  H -> I [data]\n  I -> B [template_var]",
+    "canonical": {
+      "name": "Talk to CSV",
+      "description": "Engineered for Excellence, Built for Business.",
+      "nodes": [
+        {
+          "type": "Agent",
+          "id": "A"
+        },
+        {
+          "type": "Prompt",
+          "id": "B"
+        },
+        {
+          "type": "PythonREPLComponent",
+          "id": "C"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "D"
+        },
+        {
+          "type": "File",
+          "id": "E"
+        },
+        {
+          "type": "TextInput",
+          "id": "F"
+        },
+        {
+          "type": "File",
+          "id": "G"
+        },
+        {
+          "type": "DataFrameOperations",
+          "id": "H"
+        },
+        {
+          "type": "TypeConverterComponent",
+          "id": "I"
+        }
+      ],
+      "edges": [
+        {
+          "from": "C",
+          "to": "A",
+          "conn": "tool"
+        },
+        {
+          "from": "A",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "B",
+          "to": "A",
+          "conn": "system"
+        },
+        {
+          "from": "F",
+          "to": "A",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "B",
+          "conn": "template_var"
+        },
+        {
+          "from": "G",
+          "to": "H",
+          "conn": "data"
+        },
+        {
+          "from": "H",
+          "to": "I",
+          "conn": "data"
+        },
+        {
+          "from": "I",
+          "to": "B",
+          "conn": "template_var"
+        }
+      ]
+    }
+  },
+  {
+    "name": "talk_2_data",
+    "instruction": "Create a Langflow flow called 'talk_2_data'.\nDescription: Design Dialogues with Langflow.\n\nThe flow should use approximately 6 components and 5 connections.\nComponents to use: Agent, Prompt, PythonREPLComponent, ChatOutput, ChatInput, File\n",
+    "canonical_text": "# talk_2_data\n# Design Dialogues with Langflow.\n\nnodes:\n  A: Agent\n  B: Prompt\n  C: PythonREPLComponent\n  D: ChatOutput\n  E: ChatInput\n  F: File\n\nedges:\n  C -> A [tool]\n  A -> D [message]\n  E -> A [message]\n  B -> A [system]\n  F -> B [template_var]",
+    "canonical": {
+      "name": "talk_2_data",
+      "description": "Design Dialogues with Langflow.",
+      "nodes": [
+        {
+          "type": "Agent",
+          "id": "A"
+        },
+        {
+          "type": "Prompt",
+          "id": "B"
+        },
+        {
+          "type": "PythonREPLComponent",
+          "id": "C"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "D"
+        },
+        {
+          "type": "ChatInput",
+          "id": "E"
+        },
+        {
+          "type": "File",
+          "id": "F"
+        }
+      ],
+      "edges": [
+        {
+          "from": "C",
+          "to": "A",
+          "conn": "tool"
+        },
+        {
+          "from": "A",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "A",
+          "conn": "message"
+        },
+        {
+          "from": "B",
+          "to": "A",
+          "conn": "system"
+        },
+        {
+          "from": "F",
+          "to": "B",
+          "conn": "template_var"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Terms of Service Summarizer",
+    "instruction": "Create a Langflow flow called 'Terms of Service Summarizer'.\nDescription: Design Dialogues with Langflow.\n\nThe flow should use approximately 8 components and 8 connections.\nComponents to use: SplitText, LoopComponent, ParserComponent, File, Agent, ParserComponent, Agent, ChatOutput\n",
+    "canonical_text": "# Terms of Service Summarizer\n# Design Dialogues with Langflow.\n\nnodes:\n  A: SplitText\n  B: LoopComponent\n  C: ParserComponent\n  D: File\n  E: Agent\n  F: ParserComponent\n  G: Agent\n  H: ChatOutput\n\nedges:\n  A -> B [data]\n  B -> C [data]\n  D -> A [data]\n  C -> E [message]\n  B -> F [data]\n  F -> G [message]\n  E -> B [loop_back]\n  G -> H [message]",
+    "canonical": {
+      "name": "Terms of Service Summarizer",
+      "description": "Design Dialogues with Langflow.",
+      "nodes": [
+        {
+          "type": "SplitText",
+          "id": "A"
+        },
+        {
+          "type": "LoopComponent",
+          "id": "B"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "C"
+        },
+        {
+          "type": "File",
+          "id": "D"
+        },
+        {
+          "type": "Agent",
+          "id": "E"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "F"
+        },
+        {
+          "type": "Agent",
+          "id": "G"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "H"
+        }
+      ],
+      "edges": [
+        {
+          "from": "A",
+          "to": "B",
+          "conn": "data"
+        },
+        {
+          "from": "B",
+          "to": "C",
+          "conn": "data"
+        },
+        {
+          "from": "D",
+          "to": "A",
+          "conn": "data"
+        },
+        {
+          "from": "C",
+          "to": "E",
+          "conn": "message"
+        },
+        {
+          "from": "B",
+          "to": "F",
+          "conn": "data"
+        },
+        {
+          "from": "F",
+          "to": "G",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "B",
+          "conn": "loop_back"
+        },
+        {
+          "from": "G",
+          "to": "H",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "text_quantification",
+    "instruction": "Create a Langflow flow called 'text_quantification'.\nDescription: Create, Connect, Converse.\n\nThe flow should use approximately 7 components and 6 connections.\nComponents to use: JSONtoData, Prompt, Agent, StructuredOutput, OpenAIModel, ChatOutput, ParserComponent\n",
+    "canonical_text": "# text_quantification\n# Create, Connect, Converse.\n\nnodes:\n  A: JSONtoData\n  B: Prompt\n  C: Agent\n  D: StructuredOutput\n  E: LanguageModelComponent\n  F: ChatOutput\n  G: ParserComponent\n\nedges:\n  C -> D [message]\n  A -> G [data]\n  G -> C [message]\n  B -> C [system]\n  D -> F [message]\n  E -> D [model]",
+    "canonical": {
+      "name": "text_quantification",
+      "description": "Create, Connect, Converse.",
+      "nodes": [
+        {
+          "type": "JSONtoData",
+          "id": "A"
+        },
+        {
+          "type": "Prompt",
+          "id": "B"
+        },
+        {
+          "type": "Agent",
+          "id": "C"
+        },
+        {
+          "type": "StructuredOutput",
+          "id": "D"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "E"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "F"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "G"
+        }
+      ],
+      "edges": [
+        {
+          "from": "C",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "A",
+          "to": "G",
+          "conn": "data"
+        },
+        {
+          "from": "G",
+          "to": "C",
+          "conn": "message"
+        },
+        {
+          "from": "B",
+          "to": "C",
+          "conn": "system"
+        },
+        {
+          "from": "D",
+          "to": "F",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "D",
+          "conn": "model"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Tool-Based RAG",
+    "instruction": "Create a Langflow flow called 'Tool-Based RAG'.\nDescription: Language Engineering Excellence.\n\nThe flow should use approximately 7 components and 6 connections.\nComponents to use: URLComponent, BatchRunComponent, LanguageModelComponent, Agent, DataFrame to Toolset, ChatInput, ChatOutput\n",
+    "canonical_text": "# Tool-Based RAG\n# Language Engineering Excellence.\n\nnodes:\n  A: URLComponent\n  B: BatchRunComponent\n  C: LanguageModelComponent\n  D: Agent\n  E: DataFrameToToolset\n  F: ChatInput\n  G: ChatOutput\n\nedges:\n  C -> B [model]\n  A -> B [data]\n  B -> E [data]\n  E -> D [tool]\n  F -> D [message]\n  D -> G [message]",
+    "canonical": {
+      "name": "Tool-Based RAG",
+      "description": "Language Engineering Excellence.",
+      "nodes": [
+        {
+          "type": "URLComponent",
+          "id": "A"
+        },
+        {
+          "type": "BatchRunComponent",
+          "id": "B"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "C"
+        },
+        {
+          "type": "Agent",
+          "id": "D"
+        },
+        {
+          "type": "DataFrameToToolset",
+          "id": "E"
+        },
+        {
+          "type": "ChatInput",
+          "id": "F"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "G"
+        }
+      ],
+      "edges": [
+        {
+          "from": "C",
+          "to": "B",
+          "conn": "model"
+        },
+        {
+          "from": "A",
+          "to": "B",
+          "conn": "data"
+        },
+        {
+          "from": "B",
+          "to": "E",
+          "conn": "data"
+        },
+        {
+          "from": "E",
+          "to": "D",
+          "conn": "tool"
+        },
+        {
+          "from": "F",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "D",
+          "to": "G",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "translation",
+    "instruction": "Create a Langflow flow called 'translation'.\nDescription: Beyond Text Generation - Unleashing Business Opportunities.\n\nThe flow should use approximately 12 components and 12 connections.\nComponents to use: File, SplitText, LoopComponent, OpenAIModel, Prompt, TypeConverterComponent, TypeConverterComponent, TypeConverterComponent, ChatOutput, StructuredOutput, LanguageModelComponent, TypeConverterComponent\n",
+    "canonical_text": "# translation\n# Beyond Text Generation - Unleashing Business Opportunities.\n\nnodes:\n  A: File\n  B: SplitText\n  C: LoopComponent\n  D: LanguageModelComponent\n  E: Prompt\n  F: TypeConverterComponent\n  G: TypeConverterComponent\n  H: TypeConverterComponent\n  I: ChatOutput\n  J: StructuredOutput\n  K: LanguageModelComponent\n  L: TypeConverterComponent\n\nedges:\n  E -> D [system]\n  C -> F [data]\n  F -> D [message]\n  D -> G [data]\n  G -> C [loop_back]\n  A -> B [data]\n  B -> C [data]\n  C -> H [data]\n  K -> J [model]\n  J -> L [data]\n  H -> J [message]\n  L -> I [message]",
+    "canonical": {
+      "name": "translation",
+      "description": "Beyond Text Generation - Unleashing Business Opportunities.",
+      "nodes": [
+        {
+          "type": "File",
+          "id": "A"
+        },
+        {
+          "type": "SplitText",
+          "id": "B"
+        },
+        {
+          "type": "LoopComponent",
+          "id": "C"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "D"
+        },
+        {
+          "type": "Prompt",
+          "id": "E"
+        },
+        {
+          "type": "TypeConverterComponent",
+          "id": "F"
+        },
+        {
+          "type": "TypeConverterComponent",
+          "id": "G"
+        },
+        {
+          "type": "TypeConverterComponent",
+          "id": "H"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "I"
+        },
+        {
+          "type": "StructuredOutput",
+          "id": "J"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "K"
+        },
+        {
+          "type": "TypeConverterComponent",
+          "id": "L"
+        }
+      ],
+      "edges": [
+        {
+          "from": "E",
+          "to": "D",
+          "conn": "system"
+        },
+        {
+          "from": "C",
+          "to": "F",
+          "conn": "data"
+        },
+        {
+          "from": "F",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "D",
+          "to": "G",
+          "conn": "data"
+        },
+        {
+          "from": "G",
+          "to": "C",
+          "conn": "loop_back"
+        },
+        {
+          "from": "A",
+          "to": "B",
+          "conn": "data"
+        },
+        {
+          "from": "B",
+          "to": "C",
+          "conn": "data"
+        },
+        {
+          "from": "C",
+          "to": "H",
+          "conn": "data"
+        },
+        {
+          "from": "K",
+          "to": "J",
+          "conn": "model"
+        },
+        {
+          "from": "J",
+          "to": "L",
+          "conn": "data"
+        },
+        {
+          "from": "H",
+          "to": "J",
+          "conn": "message"
+        },
+        {
+          "from": "L",
+          "to": "I",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Vectorless RAG",
+    "instruction": "Create a Langflow flow called 'Vectorless RAG'.\nDescription: \n\nThe flow should use approximately 7 components and 6 connections.\nComponents to use: DataFrameToToolset, URLComponent, BatchRunComponent, LanguageModelComponent, Agent, ChatInput, ChatOutput\n",
+    "canonical_text": "# Vectorless RAG\n\nnodes:\n  A: DataFrameToToolset\n  B: URLComponent\n  C: BatchRunComponent\n  D: LanguageModelComponent\n  E: Agent\n  F: ChatInput\n  G: ChatOutput\n\nedges:\n  D -> C [model]\n  B -> C [data]\n  C -> A [data]\n  A -> E [tool]\n  F -> E [message]\n  E -> G [message]",
+    "canonical": {
+      "name": "Vectorless RAG",
+      "description": "",
+      "nodes": [
+        {
+          "type": "DataFrameToToolset",
+          "id": "A"
+        },
+        {
+          "type": "URLComponent",
+          "id": "B"
+        },
+        {
+          "type": "BatchRunComponent",
+          "id": "C"
+        },
+        {
+          "type": "LanguageModelComponent",
+          "id": "D"
+        },
+        {
+          "type": "Agent",
+          "id": "E"
+        },
+        {
+          "type": "ChatInput",
+          "id": "F"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "G"
+        }
+      ],
+      "edges": [
+        {
+          "from": "D",
+          "to": "C",
+          "conn": "model"
+        },
+        {
+          "from": "B",
+          "to": "C",
+          "conn": "data"
+        },
+        {
+          "from": "C",
+          "to": "A",
+          "conn": "data"
+        },
+        {
+          "from": "A",
+          "to": "E",
+          "conn": "tool"
+        },
+        {
+          "from": "F",
+          "to": "E",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "G",
+          "conn": "message"
+        }
+      ]
+    }
+  },
+  {
+    "name": "voice_notes_to_structured_text",
+    "instruction": "Create a Langflow flow called 'voice_notes_to_structured_text'.\nDescription: Graph Your Way to Great Conversations.\n\nThe flow should use approximately 6 components and 5 connections.\nComponents to use: AssemblyAITranscriptionJobCreator, AssemblyAITranscriptionJobPoller, ParserComponent, Agent, Prompt Template, ChatOutput\n",
+    "canonical_text": "# voice_notes_to_structured_text\n# Graph Your Way to Great Conversations.\n\nnodes:\n  A: AssemblyAITranscriptionJobCreator\n  B: AssemblyAITranscriptionJobPoller\n  C: ParserComponent\n  D: Agent\n  E: Prompt\n  F: ChatOutput\n\nedges:\n  A -> B [data]\n  C -> D [message]\n  E -> D [system]\n  D -> F [message]\n  B -> C [data]",
+    "canonical": {
+      "name": "voice_notes_to_structured_text",
+      "description": "Graph Your Way to Great Conversations.",
+      "nodes": [
+        {
+          "type": "AssemblyAITranscriptionJobCreator",
+          "id": "A"
+        },
+        {
+          "type": "AssemblyAITranscriptionJobPoller",
+          "id": "B"
+        },
+        {
+          "type": "ParserComponent",
+          "id": "C"
+        },
+        {
+          "type": "Agent",
+          "id": "D"
+        },
+        {
+          "type": "Prompt",
+          "id": "E"
+        },
+        {
+          "type": "ChatOutput",
+          "id": "F"
+        }
+      ],
+      "edges": [
+        {
+          "from": "A",
+          "to": "B",
+          "conn": "data"
+        },
+        {
+          "from": "C",
+          "to": "D",
+          "conn": "message"
+        },
+        {
+          "from": "E",
+          "to": "D",
+          "conn": "system"
+        },
+        {
+          "from": "D",
+          "to": "F",
+          "conn": "message"
+        },
+        {
+          "from": "B",
+          "to": "C",
+          "conn": "data"
+        }
+      ]
+    }
+  }
+]

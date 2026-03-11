@@ -1,0 +1,124 @@
+{
+  "Component": {
+    "template": {
+      "_type": "Component",
+      "api_base_path": {
+        "tool_mode": false,
+        "trace_as_metadata": true,
+        "options": [
+          "api/v1",
+          "api/v2"
+        ],
+        "options_metadata": [],
+        "combobox": false,
+        "dialog_inputs": {},
+        "toggle": false,
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "api_base_path",
+        "value": "api/v1",
+        "display_name": "API Base Path",
+        "advanced": true,
+        "dynamic": false,
+        "info": "",
+        "title_case": false,
+        "track_in_telemetry": true,
+        "external_options": {},
+        "type": "str",
+        "_input_type": "DropdownInput"
+      },
+      "api_key": {
+        "load_from_db": true,
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "api_key",
+        "value": "",
+        "display_name": "Zep API Key",
+        "advanced": false,
+        "input_types": [],
+        "dynamic": false,
+        "info": "API Key for the Zep instance.",
+        "title_case": false,
+        "track_in_telemetry": false,
+        "password": true,
+        "type": "str",
+        "_input_type": "SecretStrInput"
+      },
+      "session_id": {
+        "tool_mode": false,
+        "trace_as_input": true,
+        "trace_as_metadata": true,
+        "load_from_db": false,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "session_id",
+        "value": "",
+        "display_name": "Session ID",
+        "advanced": true,
+        "input_types": [
+          "Message"
+        ],
+        "dynamic": false,
+        "info": "Session ID for the message.",
+        "title_case": false,
+        "track_in_telemetry": false,
+        "type": "str",
+        "_input_type": "MessageTextInput"
+      },
+      "url": {
+        "tool_mode": false,
+        "trace_as_input": true,
+        "trace_as_metadata": true,
+        "load_from_db": false,
+        "list": false,
+        "list_add_label": "Add More",
+        "override_skip": false,
+        "required": false,
+        "placeholder": "",
+        "show": true,
+        "name": "url",
+        "value": "",
+        "display_name": "Zep URL",
+        "advanced": false,
+        "input_types": [
+          "Message"
+        ],
+        "dynamic": false,
+        "info": "URL of the Zep instance.",
+        "title_case": false,
+        "track_in_telemetry": false,
+        "type": "str",
+        "_input_type": "MessageTextInput"
+      }
+    },
+    "outputs": [
+      {
+        "name": "memory",
+        "display_name": "Memory",
+        "method": "build_message_history",
+        "types": [
+          "Memory"
+        ],
+        "selected": "Memory"
+      }
+    ],
+    "display_name": "Zep Chat Memory",
+    "description": "Retrieves and store chat messages from Zep.",
+    "icon": "ZepMemory",
+    "field_order": [
+      "url",
+      "api_key",
+      "api_base_path",
+      "session_id"
+    ],
+    "category": "zep"
+  }
+}
