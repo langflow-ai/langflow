@@ -674,7 +674,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.135.1"
+                    "version": "0.133.1"
                   },
                   {
                     "name": "lfx",
@@ -1179,7 +1179,7 @@
                 "dependencies": [
                   {
                     "name": "astrapy",
-                    "version": "2.2.0"
+                    "version": "2.1.0"
                   },
                   {
                     "name": "langchain_core",
