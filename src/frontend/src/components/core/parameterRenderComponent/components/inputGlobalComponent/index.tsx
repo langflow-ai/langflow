@@ -116,7 +116,12 @@ export default function InputGlobalComponent({
 
   let variableOptions = typedGlobalVariables.map((variable) => variable.name);
 
-  if (loadFromDb && currentValue && !valueExists && !variableOptions.includes(currentValue)) {
+  if (
+    loadFromDb &&
+    currentValue &&
+    !valueExists &&
+    !variableOptions.includes(currentValue)
+  ) {
     variableOptions = [...variableOptions, currentValue];
   }
 
