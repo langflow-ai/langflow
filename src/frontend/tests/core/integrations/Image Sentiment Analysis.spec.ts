@@ -37,7 +37,7 @@ withEventDeliveryModes(
       .click();
 
     await page
-      .getByTestId("handle-parser-shownode-data or dataframe-left")
+      .getByTestId("handle-parser-shownode-json or table-left")
       .click();
     await page.getByTestId("tab_1_stringify").click();
 
