@@ -55,10 +55,8 @@ RUN apt-get update \
         xz-utils \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-# Install uv + uvx globally
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
-    && mv /root/.local/bin/uv /usr/local/bin/uv \
-    && mv /root/.local/bin/uvx /usr/local/bin/uvx
+COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
+COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
 # Install Node.js (required for npx-based MCP stdio servers)
 RUN ARCH=$(dpkg --print-architecture) \
     && if [ "$ARCH" = "amd64" ]; then NODE_ARCH="x64"; \
