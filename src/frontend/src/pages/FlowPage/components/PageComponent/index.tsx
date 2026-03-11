@@ -741,6 +741,8 @@ export default function Page({
   const fitViewOptions = {
     minZoom: MIN_ZOOM,
     maxZoom: MAX_ZOOM,
+    duration: 200,
+    padding: 0.1,
   };
 
   // Get inspection panel visibility from store

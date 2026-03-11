@@ -1,4 +1,4 @@
-import type { Node } from "reactflow";
+import type { Node } from "@xyflow/react";
 export type SelectedViewFieldProps = {
   selectedViewField: { type: string; id: string } | undefined;
   setSelectedViewField: (

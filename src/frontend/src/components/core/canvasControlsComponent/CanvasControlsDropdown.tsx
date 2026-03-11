@@ -1,5 +1,5 @@
 import { useReactFlow, useStore } from "@xyflow/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { shallow } from "zustand/shallow";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ const CanvasControlsDropdown = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { fitView, zoomIn, zoomOut, zoomTo } = useReactFlow();
+  const isFitting = useRef(false);
 
   const { minZoomReached, maxZoomReached, zoom } = useStore(
     reactFlowSelector,
@@ -37,6 +38,52 @@ const CanvasControlsDropdown = ({
   const inspectionPanelVisible = useFlowStore(
     (state) => state.inspectionPanelVisible,
   );
+
+  const handleZoomIn = useCallback(() => {
+    zoomIn();
+  }, [zoomIn]);
+
+  const handleZoomOut = useCallback(() => {
+    zoomOut();
+  }, [zoomOut]);
+
+  const handleFitView = useCallback(() => {
+    // Prevent multiple simultaneous calls
+    if (isFitting.current) {
+      return;
+    }
+    
+    isFitting.current = true;
+    
+    try {
+      // Use requestAnimationFrame for better performance
+      requestAnimationFrame(() => {
+        fitView({
+          padding: {
+            left: 20,
+            right: inspectionPanelVisible && selectedNode ? 340 : 20,
+            top: 80,
+            bottom: 20,
+          },
+          duration: 200, // Add duration for smooth animation
+          minZoom: 0.25,
+          maxZoom: 2,
+        });
+        
+        // Reset flag after a delay
+        setTimeout(() => {
+          isFitting.current = false;
+        }, 250);
+      });
+    } catch (error) {
+      console.error("Error executing fitView:", error);
+      isFitting.current = false;
+    }
+  }, [fitView, selectedNode, inspectionPanelVisible]);
+
+  const handleResetZoom = useCallback(() => {
+    zoomTo(1);
+  }, [zoomTo]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -59,7 +106,7 @@ const CanvasControlsDropdown = ({
           break;
         case KEYBOARD_SHORTCUTS.FIT_VIEW.code:
           event.preventDefault();
-          fitView();
+          handleFitView();
           break;
         case KEYBOARD_SHORTCUTS.RESET_ZOOM.code:
           event.preventDefault();
@@ -70,29 +117,7 @@ const CanvasControlsDropdown = ({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [zoomIn, zoomOut, fitView, zoomTo, maxZoomReached, minZoomReached]);
-
-  const handleZoomIn = useCallback(() => {
-    zoomIn();
-  }, [zoomIn]);
-
-  const handleZoomOut = useCallback(() => {
-    zoomOut();
-  }, [zoomOut]);
-
-  const handleFitView = useCallback(() => {
-    fitView({
-      padding: {
-        left: "20px",
-        right: inspectionPanelVisible && selectedNode ? "340px" : "20px",
-        top: "80px",
-      },
-    });
-  }, [fitView, selectedNode]);
-
-  const handleResetZoom = useCallback(() => {
-    zoomTo(1);
-  }, [zoomTo]);
+  }, [zoomIn, zoomOut, handleFitView, zoomTo, maxZoomReached, minZoomReached]);
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
