@@ -759,7 +759,7 @@
               "input_data": {
                 "_input_type": "HandleInput",
                 "advanced": false,
-                "display_name": "Data or DataFrame",
+                "display_name": "JSON or Table",
                 "dynamic": false,
                 "info": "Accepts either a DataFrame or a Data object.",
                 "input_types": [
