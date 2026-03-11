@@ -100,11 +100,10 @@ class AvianModelComponent(LCModelComponent):
             model_list = response.json()
             data = model_list.get("data", []) if isinstance(model_list, dict) else []
             models = [m.get("id") for m in data if isinstance(m, dict) and m.get("id")]
+            return models or AVIAN_DEFAULT_MODELS
         except (requests.RequestException, ValueError, TypeError) as e:
             self.status = f"Error fetching models: {e}"
             return AVIAN_DEFAULT_MODELS
-        else:
-            return models or AVIAN_DEFAULT_MODELS
 
     @override
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
