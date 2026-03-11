@@ -962,17 +962,23 @@ def get_language_model_options(
             param_mapping = get_provider_param_mapping(provider)
 
             # Build the option dict
+            # Get provider-level metadata for max_tokens field name
+            provider_meta = model_provider_metadata.get(provider, {})
+            option_metadata = {
+                "context_length": 128000,  # Default, can be overridden
+                "model_class": param_mapping.get("model_class", "ChatOpenAI"),
+                "model_name_param": param_mapping.get("model_param", "model"),
+                "api_key_param": param_mapping.get("api_key_param", "api_key"),
+            }
+            if "max_tokens_field_name" in provider_meta:
+                option_metadata["max_tokens_field_name"] = provider_meta["max_tokens_field_name"]
+
             option = {
                 "name": model_name,
                 "icon": icon,
                 "category": provider,
                 "provider": provider,
-                "metadata": {
-                    "context_length": 128000,  # Default, can be overridden
-                    "model_class": param_mapping.get("model_class", "ChatOpenAI"),
-                    "model_name_param": param_mapping.get("model_param", "model"),
-                    "api_key_param": param_mapping.get("api_key_param", "api_key"),
-                },
+                "metadata": option_metadata,
             }
 
             # Add reasoning models list for OpenAI
@@ -1433,7 +1439,12 @@ def get_llm(
         try:
             max_tokens_int = int(max_tokens)
             if max_tokens_int >= 1:
-                max_tokens_param = metadata.get("max_tokens_field_name", "max_tokens")
+                # Look up provider-specific field name from model metadata first,
+                # then fall back to provider metadata, then default to "max_tokens"
+                max_tokens_param = metadata.get("max_tokens_field_name")
+                if not max_tokens_param:
+                    provider_meta = model_provider_metadata.get(provider, {})
+                    max_tokens_param = provider_meta.get("max_tokens_field_name", "max_tokens")
                 kwargs[max_tokens_param] = max_tokens_int
         except (TypeError, ValueError):
             pass  # Skip invalid max_tokens (e.g. empty string from form input)

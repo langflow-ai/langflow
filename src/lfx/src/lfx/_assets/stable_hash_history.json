@@ -1171,12 +1171,12 @@
   },
   "Smart Transform": {
     "versions": {
-      "0.3.0": "0d3667d6d687"
+      "0.3.0": "9912fe8c7f1b"
     }
   },
   "SmartRouter": {
     "versions": {
-      "0.3.0": "86404d4beb95"
+      "0.3.0": "7bdefeec6280"
     }
   },
   "LLMSelectorComponent": {
@@ -1226,17 +1226,17 @@
   },
   "Agent": {
     "versions": {
-      "0.3.0": "635aff67dfcf"
+      "0.3.0": "c3226dc4106f"
     }
   },
   "EmbeddingModel": {
     "versions": {
-      "0.3.0": "b5cf1a06bba8"
+      "0.3.0": "c5ce0982da48"
     }
   },
   "LanguageModelComponent": {
     "versions": {
-      "0.3.0": "e9233312b063"
+      "0.3.0": "4af3c0cc0dcf"
     }
   },
   "MCPTools": {
