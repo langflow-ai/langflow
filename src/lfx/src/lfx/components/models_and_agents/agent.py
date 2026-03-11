@@ -486,12 +486,6 @@ class AgentComponent(ToolCallingAgentComponent):
         if field_name == "model":
             build_config = self.update_input_types(build_config)
 
-        # Hide provider-specific fields by default before applying provider config
-        for field in ["base_url_ibm_watsonx", "project_id"]:
-            if field in build_config:
-                build_config[field]["show"] = False
-                build_config[field]["required"] = False
-
         current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
         provider = ""
         if isinstance(current_model_value, list) and current_model_value:

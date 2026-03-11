@@ -124,12 +124,6 @@ class LanguageModelComponent(LCModelComponent):
             field_value=field_value,
         )
 
-        # Hide all provider-specific fields by default
-        for field in ["api_key", "base_url_ibm_watsonx", "project_id", "ollama_base_url"]:
-            if field in build_config:
-                build_config[field]["show"] = False
-                build_config[field]["required"] = False
-
         current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
         provider = ""
         if isinstance(current_model_value, list) and current_model_value:

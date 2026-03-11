@@ -173,31 +173,36 @@ def get_provider_required_variable_keys(provider: str) -> list[str]:
     return [v["variable_key"] for v in variables if v.get("required")]
 
 
+def _get_all_provider_specific_field_names() -> set[str]:
+    """Return set of all field names used as mapping_field by any provider."""
+    names: set[str] = set()
+    for meta in model_provider_metadata.values():
+        for v in meta.get("variables", []):
+            mapping = v.get("component_metadata", {}).get("mapping_field")
+            if mapping:
+                names.add(mapping)
+    return names
+
+
 def apply_provider_variable_config_to_build_config(
     build_config: dict,
     provider: str,
 ) -> dict:
     """Apply provider variable metadata to component build config fields.
 
-    This function updates the build config fields based on the provider's variable metadata
-    stored in the `component_metadata` nested dict:
-    - Sets `required` based on `component_metadata.required`
-    - Sets `advanced` based on `component_metadata.advanced`
-    - Sets `info` based on `component_metadata.info`
-    - Sets `show` to True for fields that have a mapping_field for this provider
-
-    Args:
-        build_config: The component's build configuration dict
-        provider: The selected provider name (e.g., "OpenAI", "IBM WatsonX")
-
-    Returns:
-        Updated build_config dict
+    First hides all provider-specific fields (so switching e.g. IBM -> OpenAI
+    does not leave IBM fields visible), then shows and configures only the
+    current provider's fields.
     """
     import os
 
-    provider_vars = get_provider_all_variables(provider)
+    all_provider_fields = _get_all_provider_specific_field_names()
+    for field_name in all_provider_fields:
+        if field_name in build_config:
+            build_config[field_name]["show"] = False
+            build_config[field_name]["required"] = False
 
-    # Build a lookup by component_metadata.mapping_field
+    provider_vars = get_provider_all_variables(provider)
     vars_by_field = {}
     for v in provider_vars:
         component_meta = v.get("component_metadata", {})
