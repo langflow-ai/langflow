@@ -222,16 +222,34 @@ def test_config_deployment_binding_update_accepts_raw_payload() -> None:
     update = ConfigDeploymentBindingUpdate(raw_payload={"name": "new cfg"})
     assert update.raw_payload is not None
     assert update.config_id is None
+    assert update.unbind is False
 
 
-def test_config_deployment_binding_update_rejects_both_fields() -> None:
+def test_config_deployment_binding_update_accepts_unbind() -> None:
+    update = ConfigDeploymentBindingUpdate(unbind=True)
+    assert update.unbind is True
+    assert update.config_id is None
+    assert update.raw_payload is None
+
+
+def test_config_deployment_binding_update_rejects_both_config_id_and_raw_payload() -> None:
     with pytest.raises(ValidationError, match="Exactly one of"):
         ConfigDeploymentBindingUpdate(config_id="cfg_1", raw_payload={"name": "cfg"})
 
 
-def test_config_deployment_binding_update_rejects_null_config_id_with_raw_payload() -> None:
+def test_config_deployment_binding_update_rejects_config_id_with_unbind() -> None:
     with pytest.raises(ValidationError, match="Exactly one of"):
-        ConfigDeploymentBindingUpdate(config_id=None, raw_payload={"name": "cfg"})
+        ConfigDeploymentBindingUpdate(config_id="cfg_1", unbind=True)
+
+
+def test_config_deployment_binding_update_rejects_raw_payload_with_unbind() -> None:
+    with pytest.raises(ValidationError, match="Exactly one of"):
+        ConfigDeploymentBindingUpdate(raw_payload={"name": "cfg"}, unbind=True)
+
+
+def test_config_deployment_binding_update_rejects_all_three() -> None:
+    with pytest.raises(ValidationError, match="Exactly one of"):
+        ConfigDeploymentBindingUpdate(config_id="cfg_1", raw_payload={"name": "cfg"}, unbind=True)
 
 
 def test_config_deployment_binding_update_rejects_noop() -> None:
@@ -239,9 +257,9 @@ def test_config_deployment_binding_update_rejects_noop() -> None:
         ConfigDeploymentBindingUpdate()
 
 
-def test_config_deployment_binding_update_rejects_null_raw_payload() -> None:
-    with pytest.raises(ValidationError, match="must not be null"):
-        ConfigDeploymentBindingUpdate(raw_payload=None)
+def test_config_deployment_binding_update_rejects_unbind_false_alone() -> None:
+    with pytest.raises(ValidationError, match="Exactly one of"):
+        ConfigDeploymentBindingUpdate(unbind=False)
 
 
 def test_deployment_create_rejects_invalid_deployment_type() -> None:

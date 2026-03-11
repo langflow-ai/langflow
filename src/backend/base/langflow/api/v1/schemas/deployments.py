@@ -406,18 +406,19 @@ class DeploymentConfigCreate(BaseModel):
 class DeploymentConfigBindingUpdate(BaseModel):
     """Config binding patch for an existing deployment.
 
-    Exactly one of ``config_id`` or ``raw_payload`` must be provided:
+    Exactly one of ``config_id``, ``raw_payload``, or ``unbind`` must be
+    provided:
 
-    * ``config_id`` (non-null) — bind an existing config.
-    * ``config_id = null`` — unbind the current config.
+    * ``config_id`` — bind an existing config by reference.
     * ``raw_payload`` — create a new config and bind it.
+    * ``unbind = true`` — detach the current config.
     """
 
     model_config = {"extra": "forbid"}
 
     config_id: NonEmptyStr | None = Field(
         default=None,
-        description="Provider-owned config id to bind to the deployment. Use null to unbind.",
+        description="Provider-owned config id to bind to the deployment.",
     )
 
     raw_payload: _StrictDeploymentConfig | None = Field(
@@ -425,15 +426,22 @@ class DeploymentConfigBindingUpdate(BaseModel):
         description="Config payload to create and bind to the deployment.",
     )
 
+    unbind: bool = Field(
+        default=False,
+        description="Set to true to detach the current config from the deployment.",
+    )
+
     @model_validator(mode="after")
     def validate_config_update(self) -> DeploymentConfigBindingUpdate:
-        has_config_id = "config_id" in self.model_fields_set
-        has_raw_payload = "raw_payload" in self.model_fields_set
-        if has_config_id == has_raw_payload:
-            msg = "Exactly one of 'config_id' or 'raw_payload' must be provided."
-            raise ValueError(msg)
-        if has_raw_payload and self.raw_payload is None:
-            msg = "'raw_payload' must not be null."
+        provided = sum(
+            [
+                self.config_id is not None,
+                self.raw_payload is not None,
+                self.unbind,
+            ]
+        )
+        if provided != 1:
+            msg = "Exactly one of 'config_id', 'raw_payload', or 'unbind=true' must be provided."
             raise ValueError(msg)
         return self
 
