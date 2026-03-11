@@ -110,7 +110,7 @@ from langflow.services.database.models.flow_version_deployment_attachment.crud i
     delete_deployment_attachment,
     get_deployment_attachment,
     list_deployment_attachments_for_flow_version_ids,
-    update_deployment_attachment_snapshot_id,
+    update_deployment_attachment_provider_snapshot_id,
 )
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
     FlowVersionDeploymentAttachment,
@@ -544,7 +544,7 @@ async def _attach_flow_versions(
             user_id=user_id,
             flow_version_id=flow_version_id,
             deployment_id=deployment_row_id,
-            snapshot_id=(snapshot_id_by_flow_version_id or {}).get(flow_version_id),
+            provider_snapshot_id=(snapshot_id_by_flow_version_id or {}).get(flow_version_id),
         )
 
 
@@ -569,14 +569,14 @@ async def _apply_flow_version_patch_attachments(
                 user_id=user_id,
                 flow_version_id=flow_version_uuid,
                 deployment_id=deployment_row_id,
-                snapshot_id=snapshot_id,
+                provider_snapshot_id=snapshot_id,
             )
             continue
-        if existing.snapshot_id != snapshot_id:
-            await update_deployment_attachment_snapshot_id(
+        if existing.provider_snapshot_id != snapshot_id:
+            await update_deployment_attachment_provider_snapshot_id(
                 db,
                 attachment=existing,
-                snapshot_id=snapshot_id,
+                provider_snapshot_id=snapshot_id,
             )
 
     for flow_version_uuid in remove_flow_version_ids:
@@ -1000,6 +1000,8 @@ async def update_deployment(
     payload: DeploymentUpdateRequest,
     current_user: CurrentActiveUser,
 ):
+    # TODO: This entire function is hacky and
+    # will be refactored when a new schema revision PR gets merged.
     deployment_row, deployment_adapter = await _resolve_adapter_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
@@ -1059,9 +1061,9 @@ async def update_deployment(
             )
             snapshot_remove_ids = list(
                 {
-                    attachment.snapshot_id.strip()
+                    attachment.provider_snapshot_id.strip()
                     for attachment in remove_attachments
-                    if isinstance(attachment.snapshot_id, str) and attachment.snapshot_id.strip()
+                    if isinstance(attachment.provider_snapshot_id, str) and attachment.provider_snapshot_id.strip()
                 }
             )
 

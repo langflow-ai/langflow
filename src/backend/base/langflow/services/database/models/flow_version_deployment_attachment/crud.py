@@ -20,13 +20,13 @@ async def create_deployment_attachment(
     user_id: UUID,
     flow_version_id: UUID,
     deployment_id: UUID,
-    snapshot_id: str | None = None,
+    provider_snapshot_id: str | None = None,
 ) -> FlowVersionDeploymentAttachment:
     row = FlowVersionDeploymentAttachment(
         user_id=user_id,
         flow_version_id=flow_version_id,
         deployment_id=deployment_id,
-        snapshot_id=snapshot_id,
+        provider_snapshot_id=provider_snapshot_id,
     )
     db.add(row)
     await db.flush()
@@ -95,13 +95,13 @@ async def delete_deployment_attachment(
     return int(result.rowcount or 0)
 
 
-async def update_deployment_attachment_snapshot_id(
+async def update_deployment_attachment_provider_snapshot_id(
     db: AsyncSession,
     *,
     attachment: FlowVersionDeploymentAttachment,
-    snapshot_id: str | None,
+    provider_snapshot_id: str | None,
 ) -> FlowVersionDeploymentAttachment:
-    attachment.snapshot_id = snapshot_id
+    attachment.provider_snapshot_id = provider_snapshot_id
     db.add(attachment)
     await db.flush()
     await db.refresh(attachment)
