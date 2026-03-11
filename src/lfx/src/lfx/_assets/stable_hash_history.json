@@ -1226,7 +1226,7 @@
   },
   "Agent": {
     "versions": {
-      "0.3.0": "108da32d83f1"
+      "0.3.0": "c3226dc4106f"
     }
   },
   "EmbeddingModel": {
