@@ -6,7 +6,7 @@ import orjson
 from fastapi.encoders import jsonable_encoder
 from langchain_core.documents import Document
 
-from lfx.schema.data import Data
+from lfx.schema.data import Data, _sanitize_nan
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 
@@ -34,6 +34,8 @@ def _serialize_data(data: Data) -> str:
     """Serialize Data object to JSON string."""
     # Convert data.data to JSON-serializable format
     serializable_data = jsonable_encoder(data.data)
+    # Sanitize NaN/Infinity before orjson (orjson rejects NaN by default)
+    serializable_data = _sanitize_nan(serializable_data)
     # Serialize with orjson, enabling pretty printing with indentation
     json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)
     # Convert bytes to string and wrap in Markdown code blocks

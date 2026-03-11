@@ -1,8 +1,10 @@
 import base64
+import json
+from decimal import Decimal
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
-from lfx.schema.data import Data
+from lfx.schema.data import Data, custom_serializer, serialize_data
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
 
@@ -101,3 +103,149 @@ class TestDataSchema:
 
         with pytest.raises(FileNotFoundError):
             data.to_lc_message()
+
+
+class TestDataNanSerialization:
+    """Tests for NaN/Infinity sanitization during Data serialization."""
+
+    def test_nan_and_infinity_serialized_as_null(self):
+        """Test that top-level NaN and Infinity values become null in JSON."""
+        data = Data(
+            data={
+                "text": "search result",
+                "score": float("nan"),
+                "positive_inf": float("inf"),
+                "negative_inf": float("-inf"),
+                "normal_float": 0.95,
+            }
+        )
+        result = serialize_data(data.data)
+        parsed = json.loads(result)
+
+        assert parsed["score"] is None
+        assert parsed["positive_inf"] is None
+        assert parsed["negative_inf"] is None
+        assert parsed["normal_float"] == 0.95
+
+    def test_nan_in_nested_list(self):
+        """Test that NaN inside a list is sanitized."""
+        data = Data(data={"scores": [0.5, float("nan"), 0.8]})
+        result = serialize_data(data.data)
+        parsed = json.loads(result)
+
+        assert parsed["scores"] == [0.5, None, 0.8]
+
+    def test_nan_in_nested_dict(self):
+        """Test that NaN inside a nested dict is sanitized."""
+        data = Data(data={"meta": {"score": float("nan"), "name": "test"}})
+        result = serialize_data(data.data)
+        parsed = json.loads(result)
+
+        assert parsed["meta"]["score"] is None
+        assert parsed["meta"]["name"] == "test"
+
+    def test_nan_in_list_of_dicts(self):
+        """Test that NaN in a list of dicts (common search result shape) is sanitized."""
+        data = Data(
+            data={
+                "results": [
+                    {"title": "result1", "score": float("inf")},
+                    {"title": "result2", "score": 0.7},
+                ]
+            }
+        )
+        result = serialize_data(data.data)
+        parsed = json.loads(result)
+
+        assert parsed["results"][0]["score"] is None
+        assert parsed["results"][1]["score"] == 0.7
+
+    def test_decimal_nan_serialized_as_null(self):
+        """Test that Decimal('NaN') is sanitized via custom_serializer."""
+        data = Data(data={"value": Decimal("NaN"), "normal": Decimal("1.5")})
+        result = serialize_data(data.data)
+        parsed = json.loads(result)
+
+        assert parsed["value"] is None
+        assert parsed["normal"] == 1.5
+
+    def test_str_path_sanitizes_nan(self):
+        """Test that str(data) produces valid JSON when data contains NaN."""
+        data = Data(data={"score": float("nan"), "text": "hello"})
+        result = str(data)
+        parsed = json.loads(result)
+
+        assert parsed["score"] is None
+        assert parsed["text"] == "hello"
+
+    def test_model_dump_json_sanitizes_nan(self):
+        """Test that model_dump_json() produces valid JSON when data contains NaN."""
+        data = Data(data={"score": float("nan"), "text": "hello"})
+        result = data.model_dump_json()
+        parsed = json.loads(result)
+
+        assert parsed["score"] is None
+        assert parsed["text"] == "hello"
+
+    def test_nan_in_tuple(self):
+        """Test that NaN/Infinity inside a tuple is sanitized."""
+        data = {"values": (float("nan"), 1.0, float("inf"))}
+        result = serialize_data(data)
+        parsed = json.loads(result)
+
+        assert parsed["values"] == [None, 1.0, None]
+
+    def test_decimal_infinity_serialized_as_null(self):
+        """Test that Decimal('Infinity') is sanitized via custom_serializer."""
+        data = Data(data={"pos_inf": Decimal("Infinity"), "neg_inf": Decimal("-Infinity"), "normal": Decimal("2.5")})
+        result = serialize_data(data.data)
+        parsed = json.loads(result)
+
+        assert parsed["pos_inf"] is None
+        assert parsed["neg_inf"] is None
+        assert parsed["normal"] == 2.5
+
+    def test_decimal_infinity_via_model_dump_json(self):
+        """Test that Decimal('Infinity') is sanitized through model_dump_json()."""
+        data = Data(data={"value": Decimal("Infinity")})
+        result = data.model_dump_json()
+        parsed = json.loads(result)
+
+        assert parsed["value"] is None
+
+    def test_custom_serializer_decimal_nan_returns_none(self):
+        """Test that custom_serializer handles Decimal NaN/Infinity directly."""
+        assert custom_serializer(Decimal("NaN")) is None
+        assert custom_serializer(Decimal("Infinity")) is None
+        assert custom_serializer(Decimal("-Infinity")) is None
+
+    def test_custom_serializer_signaling_nan_returns_none(self):
+        """Test that custom_serializer handles signaling NaN (sNaN) without crashing."""
+        assert custom_serializer(Decimal("sNaN")) is None
+
+    def test_custom_serializer_normal_decimal(self):
+        """Test that custom_serializer converts normal Decimals to float."""
+        assert custom_serializer(Decimal("1.5")) == 1.5
+        assert custom_serializer(Decimal(0)) == 0.0
+
+    def test_normal_values_preserved(self):
+        """Test that normal values pass through sanitization unchanged."""
+        data = Data(
+            data={
+                "string": "hello",
+                "int": 42,
+                "float": 3.14,
+                "bool": True,
+                "none": None,
+                "list": [1, "two", 3.0],
+            }
+        )
+        result = serialize_data(data.data)
+        parsed = json.loads(result)
+
+        assert parsed["string"] == "hello"
+        assert parsed["int"] == 42
+        assert parsed["float"] == 3.14
+        assert parsed["bool"] is True
+        assert parsed["none"] is None
+        assert parsed["list"] == [1, "two", 3.0]
