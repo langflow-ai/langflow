@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from lfx.components.processing.data_operations import DataOperationsComponent
     from lfx.components.processing.dataframe_operations import DataFrameOperationsComponent
     from lfx.components.processing.json_cleaner import JSONCleaner
+    from lfx.components.processing.operations import Operations
     from lfx.components.processing.output_parser import OutputParserComponent
     from lfx.components.processing.parse_data import ParseDataComponent
     from lfx.components.processing.parser import ParserComponent
@@ -27,6 +28,7 @@ _dynamic_imports = {
     "DataOperationsComponent": "data_operations",
     "DataFrameOperationsComponent": "dataframe_operations",
     "JSONCleaner": "json_cleaner",
+    "Operations": "operations",
     "OutputParserComponent": "output_parser",
     "ParseDataComponent": "parse_data",
     "ParserComponent": "parser",
@@ -42,6 +44,7 @@ __all__ = [
     "DataOperationsComponent",
     "JSONCleaner",
     "MessageStoreComponent",
+    "Operations",
     "OutputParserComponent",
     "ParseDataComponent",
     "ParserComponent",
