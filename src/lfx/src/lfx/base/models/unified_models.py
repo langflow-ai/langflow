@@ -1891,9 +1891,7 @@ def handle_model_input_update(
     # Step 3: Show/configure the right fields for the selected provider
     # Note: use the value that was set (possibly by step 1's default-model logic) when field_name != model_field_name.
     current_model_value = (
-        field_value
-        if field_name == model_field_name
-        else build_config.get(model_field_name, {}).get("value")
+        field_value if field_name == model_field_name else build_config.get(model_field_name, {}).get("value")
     )
     if isinstance(current_model_value, list) and len(current_model_value) > 0:
         provider = current_model_value[0].get("provider", "")
