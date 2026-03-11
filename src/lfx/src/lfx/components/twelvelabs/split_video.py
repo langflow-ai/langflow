@@ -33,7 +33,7 @@ class SplitVideoComponent(Component):
             display_name="Video Data",
             info="Input video data from VideoFile component",
             required=True,
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
         ),
         IntInput(
             name="clip_duration",
@@ -69,7 +69,7 @@ class SplitVideoComponent(Component):
             name="clips",
             display_name="Video Clips",
             method="process",
-            output_types=["Data"],
+            output_types=["JSON"],
         ),
     ]
 

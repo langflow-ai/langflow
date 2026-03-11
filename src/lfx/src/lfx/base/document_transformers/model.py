@@ -12,7 +12,7 @@ from lfx.utils.util import build_loader_repr_from_data
 class LCDocumentTransformerComponent(Component):
     trace_type = "document_transformer"
     outputs = [
-        Output(display_name="Data", name="data", method="transform_data"),
+        Output(display_name="JSON", name="data", method="transform_data"),
     ]
 
     def transform_data(self) -> list[Data]:

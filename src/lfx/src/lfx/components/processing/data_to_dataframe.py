@@ -27,7 +27,7 @@ class DataToDataFrameComponent(Component):
 
     outputs = [
         Output(
-            display_name="DataFrame",
+            display_name="Table",
             name="dataframe",
             method="build_dataframe",
             info="A DataFrame built from each Data object's fields plus a 'text' column.",

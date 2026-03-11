@@ -146,7 +146,7 @@ class URLComponent(Component):
             ],
             value=[{"key": "User-Agent", "value": USER_AGENT}],
             advanced=True,
-            input_types=["DataFrame"],
+            input_types=["DataFrame", "Table"],
         ),
         BoolInput(
             name="filter_text_html",

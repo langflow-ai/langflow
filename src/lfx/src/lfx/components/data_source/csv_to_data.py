@@ -43,7 +43,7 @@ class CSVToDataComponent(Component):
     ]
 
     outputs = [
-        Output(name="data_list", display_name="Data List", method="load_csv_to_data"),
+        Output(name="data_list", display_name="JSON List", method="load_csv_to_data"),
     ]
 
     def load_csv_to_data(self) -> list[Data]:

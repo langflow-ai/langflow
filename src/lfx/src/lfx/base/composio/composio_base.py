@@ -358,7 +358,7 @@ class ComposioBaseComponent(Component):
         return cls._all_auth_field_names
 
     outputs = [
-        Output(name="dataFrame", display_name="DataFrame", method="as_dataframe"),
+        Output(name="dataFrame", display_name="Table", method="as_dataframe"),
     ]
 
     inputs = list(_base_inputs)

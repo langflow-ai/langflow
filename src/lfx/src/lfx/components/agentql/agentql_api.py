@@ -90,7 +90,7 @@ class AgentQL(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="build_output"),
+        Output(display_name="JSON", name="data", method="build_output"),
     ]
 
     def build_output(self) -> Data:

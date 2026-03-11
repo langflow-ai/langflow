@@ -26,7 +26,7 @@ class ParseJSONDataComponent(Component):
             display_name="Input",
             info="Data object to filter.",
             required=True,
-            input_types=["Message", "Data"],
+            input_types=["Message", "Data", "JSON"],
         ),
         MessageTextInput(
             name="query",

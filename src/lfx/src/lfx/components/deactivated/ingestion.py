@@ -147,7 +147,7 @@ class KnowledgeIngestionComponent(Component):
                 "Accepts Message, Data, or DataFrame. If Message or Data is provided, "
                 "it is converted to a DataFrame automatically."
             ),
-            input_types=["Message", "Data", "DataFrame"],
+            input_types=["Message", "Data", "JSON", "DataFrame", "Table"],
             required=True,
         ),
         TableInput(

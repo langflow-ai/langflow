@@ -247,19 +247,19 @@ test(
     await page.getByText("Check & Save").last().click();
     //---------------------------------- MAKE CONNECTIONS
     await page
-      .getByTestId("handle-createlist-shownode-data list-right")
+      .getByTestId("handle-createlist-shownode-json list-right")
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-parsedata-shownode-data-left")
+      .getByTestId("handle-parsedata-shownode-json-left")
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-createlist-shownode-data list-right")
+      .getByTestId("handle-createlist-shownode-json list-right")
       .nth(1)
       .click();
     await page
-      .getByTestId("handle-parsedata-shownode-data-left")
+      .getByTestId("handle-parsedata-shownode-json-left")
       .nth(1)
       .click();
     await page

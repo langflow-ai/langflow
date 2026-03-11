@@ -48,7 +48,7 @@ class FirecrawlMapApi(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="map"),
+        Output(display_name="JSON", name="data", method="map"),
     ]
 
     def map(self) -> Data:

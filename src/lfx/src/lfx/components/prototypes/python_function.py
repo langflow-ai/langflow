@@ -32,7 +32,7 @@ class PythonFunctionComponent(Component):
         ),
         Output(
             name="function_output_data",
-            display_name="Function Output (Data)",
+            display_name="Function Output (JSON)",
             method="execute_function_data",
         ),
         Output(

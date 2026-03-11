@@ -65,7 +65,7 @@ class FirecrawlExtractApi(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="extract"),
+        Output(display_name="JSON", name="data", method="extract"),
     ]
 
     def extract(self) -> Data:

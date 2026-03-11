@@ -64,7 +64,7 @@ test(
     });
 
     await page
-      .getByTestId("output-inspection-dataframe-composiogmailapicomponent")
+      .getByTestId("output-inspection-table-composiogmailapicomponent")
       .click();
 
     const colNumber: number = await page.getByRole("gridcell").count();

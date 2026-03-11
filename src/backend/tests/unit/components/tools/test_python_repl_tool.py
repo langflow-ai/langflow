@@ -50,5 +50,5 @@ class TestPythonREPLComponent(ComponentTestBaseWithoutClient):
         assert python_code["value"] == "print('Hello, World!')"
         assert python_code["required"] is True
 
-        # Test base configuration
-        assert "Data" in node_data["base_classes"]
+        # Test base configuration - JSON is the new name (Data is alias for backward compatibility)
+        assert "JSON" in node_data["base_classes"]

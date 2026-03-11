@@ -54,7 +54,7 @@ class TestListenComponent(ComponentTestBaseWithoutClient):
 
         output = component.outputs[0]
         assert output.name == "data"
-        assert output.display_name == "Data"
+        assert output.display_name == "JSON"
         assert output.method == "listen_for_data"
         assert output.cache is False
 

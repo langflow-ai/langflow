@@ -146,7 +146,7 @@ class BaseFileComponent(Component, ABC):
                 " or a Message object with a path to the file. Supercedes 'Path' but supports same file types."
             ),
             required=False,
-            input_types=["Data", "Message"],
+            input_types=["Data", "JSON", "Message"],
             is_list=True,
             advanced=True,
         ),

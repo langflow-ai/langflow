@@ -77,7 +77,7 @@ to access financial data and market information from Yahoo! Finance."""
     ]
 
     outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
+        Output(display_name="Table", name="dataframe", method="fetch_content_dataframe"),
     ]
 
     def run_model(self) -> DataFrame:

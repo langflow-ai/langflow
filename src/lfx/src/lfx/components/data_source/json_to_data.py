@@ -40,7 +40,7 @@ class JSONToDataComponent(Component):
     ]
 
     outputs = [
-        Output(name="data", display_name="Data", method="convert_json_to_data"),
+        Output(name="data", display_name="JSON", method="convert_json_to_data"),
     ]
 
     def convert_json_to_data(self) -> Data | list[Data]:

@@ -36,7 +36,7 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
                         },
                         "version": "v1.1"
                     }""",
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
         ),
         MessageTextInput(
             name="ingest_message",

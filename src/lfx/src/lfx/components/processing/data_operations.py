@@ -37,14 +37,15 @@ OPERATORS = {
 
 
 class DataOperationsComponent(Component):
-    display_name = "Data Operations"
-    description = "Perform various operations on a Data object."
+    display_name = "JSON Operations"
+    description = "Perform various operations on a JSON object."
     icon = "file-json"
     name = "DataOperations"
     default_keys = ["operations", "data"]
     metadata = {
         "keywords": [
             "data",
+            "json",
             "operations",
             "filter values",
             "Append or Update",
@@ -59,6 +60,7 @@ class DataOperationsComponent(Component):
             "remove",
             "rename",
             "data operations",
+            "json operations",
             "data manipulation",
             "data transformation",
             "data filtering",
@@ -133,7 +135,7 @@ class DataOperationsComponent(Component):
         return obj
 
     inputs = [
-        DataInput(name="data", display_name="Data", info="Data object to filter.", required=True, is_list=True),
+        DataInput(name="data", display_name="JSON", info="Data object to filter.", required=True, is_list=True),
         SortableListInput(
             name="operations",
             display_name="Operations",
@@ -261,7 +263,7 @@ class DataOperationsComponent(Component):
     }
 
     outputs = [
-        Output(display_name="Data", name="data_output", method="as_data"),
+        Output(display_name="JSON", name="data_output", method="as_data"),
     ]
 
     # Helper methods for data operations
