@@ -117,9 +117,13 @@ export default function InputGlobalComponent({
 
   let variableOptions = typedGlobalVariables.map((variable) => variable.name);
 
-  const isEnvVarName = password && currentValue && looksLikeVariableName(currentValue);
+  const isEnvVarName =
+    password && currentValue && looksLikeVariableName(currentValue);
   if (
-    (loadFromDb && currentValue && !valueExists && !variableOptions.includes(currentValue)) ||
+    (loadFromDb &&
+      currentValue &&
+      !valueExists &&
+      !variableOptions.includes(currentValue)) ||
     (isEnvVarName && !variableOptions.includes(currentValue))
   ) {
     variableOptions = [...variableOptions, currentValue];
