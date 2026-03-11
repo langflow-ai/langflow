@@ -16,6 +16,7 @@ import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get
 import StepperModal, {
   StepperModalFooter,
 } from "@/modals/stepperModal/StepperModal";
+import { StepAttach } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepAttach";
 import { StepBasics } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepBasics";
 import { StepProvider } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepProvider";
 import useAlertStore from "@/stores/alertStore";
@@ -625,14 +626,14 @@ const DeploymentsTab = () => {
                 />
               )}
 
-              {/*   {currentStep === 2 && (
+              {currentStep === 3 && (
                 <StepAttach
                   selectedItems={selectedItems}
                   toggleItem={toggleItem}
                   flows={checkpointGroups}
                 />
               )}
-
+              {/*
               {currentStep === 3 && (
                 <StepConfiguration
                   envVars={envVars}
