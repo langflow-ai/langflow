@@ -54,7 +54,7 @@ export interface StepperModalFooterProps {
   nextDisabled?: boolean;
   submitDisabled?: boolean;
   isSubmitting?: boolean;
-  submitLabel?: string;
+  submitLabel?: string | ReactNode;
   nextLabel?: string;
   backLabel?: string;
   helpHref?: string;

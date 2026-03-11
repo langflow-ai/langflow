@@ -1,159 +1,116 @@
-import { type Dispatch, type SetStateAction } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import GlobalVariableModal from "@/components/core/GlobalVariableModal/GlobalVariableModal";
-import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
-import { CommandItem } from "@/components/ui/command";
-import { Input } from "@/components/ui/input";
-import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
-import { cn } from "@/utils/utils";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { type Dispatch, type SetStateAction, useState } from "react";
 import type { EnvVar } from "../../constants";
 
 type StepConfigurationProps = {
   envVars: EnvVar[];
   setEnvVars: Dispatch<SetStateAction<EnvVar[]>>;
   detectedVarCount: number;
+  selectedAgentName?: string;
 };
 
 export const StepConfiguration = ({
   envVars,
   setEnvVars,
   detectedVarCount,
+  selectedAgentName,
 }: StepConfigurationProps) => {
-  const { data: globalVariables } = useGetGlobalVariables();
-  const variableOptions = (globalVariables ?? []).map((v) => v.name);
+  void setEnvVars;
+  void detectedVarCount;
+  const [useCurrentFlow, setUseCurrentFlow] = useState(true);
+  const [selectedConfig, setSelectedConfig] = useState<string>("");
 
-  const handleSelectOption = (index: number, selected: string) => {
-    setEnvVars((prev) =>
-      prev.map((x, j) =>
-        j === index
-          ? {
-              ...x,
-              key:
-                selected !== "" &&
-                (x.key.trim() === "" || (x.globalVar && x.key === x.value))
-                  ? selected
-                  : x.key,
-              value: selected,
-              globalVar: selected !== "",
-            }
-          : x,
-      ),
-    );
-  };
-
-  const handleValueChange = (index: number, text: string) => {
-    setEnvVars((prev) =>
-      prev.map((x, j) =>
-        j === index ? { ...x, value: text, globalVar: false } : x,
-      ),
-    );
-  };
-
-  const addVariableButton = (
-    <GlobalVariableModal>
-      <CommandItem value="doNotFilter-addNewVariable">
-        <ForwardedIconComponent
-          name="Plus"
-          className={cn("mr-2 h-4 w-4 text-primary")}
-          aria-hidden="true"
-        />
-        <span>Add New Variable</span>
-      </CommandItem>
-    </GlobalVariableModal>
-  );
+  const configOptions = envVars
+    .filter((v) => v.key.trim() !== "")
+    .map((v) => v.key);
 
   return (
-    <div className="flex h-full flex-col gap-4 overflow-hidden">
-      <div>
-        <h3 className="text-base font-semibold">Deployment Configuration</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Configure the environment variables for this deployment.
+    <div className="flex h-full w-full flex-col gap-6 overflow-y-auto py-3">
+      {/* Current Flow card */}
+      <button
+        type="button"
+        onClick={() => setUseCurrentFlow(!useCurrentFlow)}
+        className={`flex items-center gap-4 rounded-lg border bg-muted p-4 text-left transition-colors ${useCurrentFlow
+            ? "border-primary"
+            : "border-border hover:border-muted-foreground"
+          }`}
+      >
+        <Checkbox checked={useCurrentFlow} className="pointer-events-none" />
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm font-semibold">
+            {selectedAgentName || "Current Flow"}
+          </span>
+          <span className="text-sm text-muted-foreground">v1</span>
+        </div>
+      </button>
+
+      {/* Select Configuration */}
+      <div className="flex flex-col">
+        <span className="text-sm font-medium pb-2">
+          Select Configuration <span className="text-destructive">*</span>
+        </span>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-muted px-4 py-2 text-sm text-primary ring-offset-background hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <span className={selectedConfig ? "" : "text-muted-foreground"}>
+                {selectedConfig || "Select a configuration"}
+              </span>
+              <ForwardedIconComponent name="ChevronDown" className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="start"
+            className="w-[var(--radix-dropdown-menu-trigger-width)]"
+          >
+            {configOptions.length > 0 ? (
+              configOptions.map((opt) => (
+                <DropdownMenuItem
+                  key={opt}
+                  onSelect={() => setSelectedConfig(opt)}
+                >
+                  {opt}
+                </DropdownMenuItem>
+              ))
+            ) : (
+              <DropdownMenuItem disabled>
+                No configurations available
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <p className="text-sm text-muted-foreground pt-2">
+          Choose a configuration with environment variables for this flow
         </p>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-1.5">
-        <label className="text-sm font-medium">
-          Environment Variables <span className="text-destructive">*</span>
-        </label>
-        {detectedVarCount > 0 && (
-          <p className="text-xs text-muted-foreground">
-            {detectedVarCount} variable{detectedVarCount > 1 ? "s" : ""}{" "}
-            auto-detected from your selected checkpoints.
-          </p>
-        )}
-        <div className="flex h-full min-h-0 flex-col rounded-lg bg-muted/40">
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            {envVars.length === 0 ? (
-              <p className="flex h-full min-h-[80px] items-center justify-center text-sm text-muted-foreground">
-                No variables yet. Click &quot;Add Variable&quot; to get started.
-              </p>
-            ) : (
-              <div className="flex flex-col">
-                {envVars.map((v, i) => (
-                  <div
-                    key={i}
-                    className="grid grid-cols-[2fr_3fr_auto] items-center gap-2 p-2"
-                  >
-                    <Input
-                      placeholder="KEY"
-                      value={v.key}
-                      onChange={(e) =>
-                        setEnvVars((prev) =>
-                          prev.map((x, j) =>
-                            j === i ? { ...x, key: e.target.value } : x,
-                          ),
-                        )
-                      }
-                      className="min-w-0"
-                    />
-                    <div className="min-w-0">
-                      <InputComponent
-                        nodeStyle
-                        password
-                        popoverWidth="17.5rem"
-                        placeholder="Type something..."
-                        id={`env-val-${i}`}
-                        value={v.value}
-                        options={variableOptions}
-                        optionsPlaceholder="Global Variables"
-                        optionsIcon="Globe"
-                        optionsButton={addVariableButton}
-                        selectedOption={v.globalVar ? v.value : ""}
-                        setSelectedOption={(sel) => handleSelectOption(i, sel)}
-                        onChange={(text) => handleValueChange(i, text)}
-                      />
-                    </div>
-                    <button
-                      onClick={() =>
-                        setEnvVars((prev) => prev.filter((_, j) => j !== i))
-                      }
-                      className="text-muted-foreground hover:text-destructive"
-                    >
-                      <ForwardedIconComponent
-                        name="Trash2"
-                        className="h-4 w-4"
-                      />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="sticky bottom-0 border-t border-border bg-background/95 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-            <button
-              onClick={() =>
-                setEnvVars((prev) => [...prev, { key: "", value: "" }])
-              }
-              className="group flex w-full items-center justify-start gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:border-primary/50 hover:bg-primary/10"
-            >
-              <span className="flex h-5 w-5 items-center justify-center rounded-sm bg-muted text-muted-foreground transition-colors group-hover:bg-primary/20 group-hover:text-primary">
-                <ForwardedIconComponent name="Plus" className="h-3.5 w-3.5" />
-              </span>
-              Add Variable
-            </button>
+      {/* Warning banner */}
+      {/* {!selectedConfig && (
+        <div className="flex items-start gap-3 rounded-lg border border-yellow-600/50 bg-yellow-950/30 p-4">
+          <ForwardedIconComponent
+            name="AlertTriangle"
+            className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500"
+          />
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm font-semibold">
+              Configuration Required
+            </span>
+            <span className="text-sm text-muted-foreground">
+              Please select a configuration to continue with the deployment.
+            </span>
           </div>
         </div>
-      </div>
+      )} */}
     </div>
   );
 };

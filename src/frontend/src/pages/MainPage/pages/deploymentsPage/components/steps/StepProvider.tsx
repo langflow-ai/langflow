@@ -1,6 +1,6 @@
-import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
+import { useState } from "react";
 import type { DeploymentType } from "../../constants";
 
 type ProviderOption = {
@@ -58,19 +58,17 @@ export const StepProvider = ({
                 key={provider.key}
                 type="button"
                 onClick={() => setSelectedProvider(provider.key)}
-                className={`rounded-lg border p-3 bg-muted transition-colors h-[100px] ${
-                  isSelected
+                className={`rounded-lg border p-3 bg-muted transition-colors h-[100px] ${isSelected
                     ? "border-2 border-foreground"
                     : "border-border hover:border-muted-foreground"
-                }`}
+                  }`}
               >
                 <div className="h-full flex flex-col justify-between">
                   <div className="flex flex-row gap-3 justify-start items-center">
                     <ForwardedIconComponent
                       name={provider.icon}
-                      className={`h-8 w-8 ${
-                        isSelected ? "text-foreground" : "text-muted-foreground"
-                      }`}
+                      className={`h-8 w-8 ${isSelected ? "text-foreground" : "text-muted-foreground"
+                        }`}
                     />
                     <div className="flex flex-col my-1 text-left">
                       <span className="text-sm font-medium">
@@ -94,13 +92,13 @@ export const StepProvider = ({
       </div>
 
       {/* Credentials description */}
-      <p className="text-sm text-muted-foreground">
+      {/* <p className="text-sm text-muted-foreground">
         Configure your provider credentials below. Sign in or sign up to{" "}
         <span className="font-semibold text-foreground">
           find your credentials
         </span>
         .
-      </p>
+      </p> */}
 
       {/* API Key */}
       <div className="flex flex-col ">

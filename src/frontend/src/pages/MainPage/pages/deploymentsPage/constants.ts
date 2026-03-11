@@ -17,4 +17,4 @@ export type EnvVar = {
 
 export type VariableScope = "coarse" | "granular";
 
-export const TOTAL_STEPS = 4;
+export const TOTAL_STEPS = 5;

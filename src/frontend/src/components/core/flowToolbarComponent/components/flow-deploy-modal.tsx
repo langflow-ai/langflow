@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   type DeploymentCreatePayload,
@@ -13,7 +12,7 @@ import {
 import { StepperModal, StepperModalFooter } from "@/modals/stepperModal";
 import { CURRENT_DRAFT_ID } from "@/pages/FlowPage/components/flowSidebarComponent/components/FlowHistorySidebar/constants";
 import { RegisterDeploymentProviderModal } from "@/pages/MainPage/pages/deploymentsPage/components/RegisterDeploymentProviderModal";
-import { StepAttach } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepAttach";
+import { StepAgent } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepAgent";
 import { StepBasics } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepBasics";
 import { StepConfiguration } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepConfiguration";
 import { StepReview } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepReview";
@@ -25,6 +24,7 @@ import { useDeploymentForm } from "@/pages/MainPage/pages/deploymentsPage/hooks/
 import useAlertStore from "@/stores/alertStore";
 import useHistoryPreviewStore from "@/stores/historyPreviewStore";
 import type { FlowHistoryEntry } from "@/types/flow/history";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type FlowDeployModalProps = {
   open: boolean;
@@ -373,7 +373,7 @@ export default function FlowDeployModal({
               />
             )}
             {currentStep === 2 && (
-              <StepAttach
+              <StepAgent
                 selectedItems={selectedItems}
                 toggleItem={toggleItem}
                 flows={checkpointGroups}
@@ -384,6 +384,10 @@ export default function FlowDeployModal({
                 envVars={envVars}
                 setEnvVars={setEnvVars}
                 detectedVarCount={detectedEnvVars.length}
+                selectedAgentName={
+                  checkpointGroups.find((g) => selectedItems.has(g.flowId))
+                    ?.flowName
+                }
               />
             )}
             {currentStep === 4 && (
@@ -393,6 +397,11 @@ export default function FlowDeployModal({
                 deploymentDescription={deploymentDescription}
                 selectedItems={selectedReviewItems}
                 envVars={envVars}
+                providerName={providers[0]?.provider_key}
+                selectedAgentName={
+                  checkpointGroups.find((g) => selectedItems.has(g.flowId))
+                    ?.flowName
+                }
               />
             )}
           </>

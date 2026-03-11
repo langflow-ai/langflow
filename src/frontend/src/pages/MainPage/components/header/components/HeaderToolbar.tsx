@@ -35,7 +35,7 @@ const HeaderToolbar = ({
 
   return (
     <div className="flex justify-between pt-5 px-5 bg-secondary ">
-      <div className="flex w-full xl:w-5/12 ">
+      <div className="flex w-full xl:w-1/3 pr-3 ">
         <Input
           icon="Search"
           data-testid="search-store-input"

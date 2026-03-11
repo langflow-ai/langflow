@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { getURL } from "@/controllers/API/helpers/constants";
 import {
   type DeploymentCreatePayload,
@@ -16,13 +15,17 @@ import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get
 import StepperModal, {
   StepperModalFooter,
 } from "@/modals/stepperModal/StepperModal";
-import { StepAttach } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepAttach";
+import { StepAgent } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepAgent";
 import { StepBasics } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepBasics";
+import { StepConfiguration } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepConfiguration";
 import { StepProvider } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepProvider";
+import { StepReview } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepReview";
 import useAlertStore from "@/stores/alertStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import type { FlowType } from "@/types/flow";
 import type { FlowHistoryEntry } from "@/types/flow/history";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import { ConfigureDeploymentProviderModal } from "./components/ConfigureDeploymentProviderModal";
 import { DeployFlowStepper } from "./components/DeployFlowStepper";
 import { DeploymentCreationStatusView } from "./components/DeploymentCreationStatusView";
@@ -181,7 +184,7 @@ const DeploymentsTab = () => {
     return liveDeployments.map((deployment) => {
       const providerDeploymentId =
         typeof deployment.resource_key === "string" &&
-        deployment.resource_key.trim().length > 0
+          deployment.resource_key.trim().length > 0
           ? deployment.resource_key
           : deployment.id;
       const deploymentRowId = deployment.id;
@@ -191,7 +194,7 @@ const DeploymentsTab = () => {
           : null;
       const snapshotIds =
         deployment.provider_data?.snapshot_ids &&
-        Array.isArray(deployment.provider_data.snapshot_ids)
+          Array.isArray(deployment.provider_data.snapshot_ids)
           ? deployment.provider_data.snapshot_ids
           : [];
       const mode =
@@ -214,15 +217,15 @@ const DeploymentsTab = () => {
           0,
         modifiedDate: formatDateLabel(
           deployment.updated_at ??
-            deployment.created_at ??
-            createdMeta?.createdAt ??
-            null,
+          deployment.created_at ??
+          createdMeta?.createdAt ??
+          null,
         ),
         createdDate: formatDateLabel(
           deployment.created_at ??
-            deployment.updated_at ??
-            createdMeta?.createdAt ??
-            null,
+          deployment.updated_at ??
+          createdMeta?.createdAt ??
+          null,
         ),
       };
     });
@@ -427,9 +430,9 @@ const DeploymentsTab = () => {
         setCreatedDeploymentId(response.id);
         const resultSnapshotIds = Array.isArray(response.snapshot_ids)
           ? response.snapshot_ids.filter(
-              (id): id is string =>
-                typeof id === "string" && id.trim().length > 0,
-            )
+            (id): id is string =>
+              typeof id === "string" && id.trim().length > 0,
+          )
           : [];
         setCreatedDeploymentUiMeta({
           deploymentId: response.id,
@@ -502,22 +505,20 @@ const DeploymentsTab = () => {
                 <button
                   type="button"
                   onClick={() => setActiveSubTab("deployments")}
-                  className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
-                    activeSubTab === "deployments"
+                  className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeSubTab === "deployments"
                       ? "bg-muted text-primary shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
-                  }`}
+                    }`}
                 >
                   Deployments
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveSubTab("providers")}
-                  className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
-                    activeSubTab === "providers"
+                  className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeSubTab === "providers"
                       ? "bg-muted text-primary shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
-                  }`}
+                    }`}
                 >
                   Deployment Providers
                 </button>
@@ -563,21 +564,32 @@ const DeploymentsTab = () => {
               />
             )}
             <StepperModal
-              className="p-3"
+              className=""
               open={newDeploymentOpen}
               onOpenChange={handleOpenChange}
               currentStep={currentStep}
               totalSteps={TOTAL_STEPS}
               showProgress={false}
+              description={
+                currentStep === 1
+                  ? "Configure your provider credentials below. Sign in or sign up to find your credentials"
+                  : currentStep === 2
+                    ? "Set your deployment details"
+                    : currentStep === 3
+                      ? "Choose an existing agent or create a new one"
+                      : currentStep === 4
+                        ? "Assign a configuration to your flow"
+                        : "Review the details of your deployment before finalizing"
+              }
               title={
                 currentStep === 1
                   ? "Configure Deployment Provider"
                   : currentStep === 2
                     ? "Deployment Basics"
                     : currentStep === 3
-                      ? "Configure Environment"
+                      ? "Agent Selection"
                       : currentStep === 4
-                        ? "Set Variable Scope"
+                        ? "Configure Flow"
                         : "Review & Deploy"
               }
               bgClassName="bg-secondary"
@@ -596,7 +608,15 @@ const DeploymentsTab = () => {
                     handleNext();
                   }}
                   onSubmit={handleCreateDeployment}
-                  submitLabel="Deploy"
+                  submitLabel={
+                    <>
+                      <ForwardedIconComponent
+                        name="Rocket"
+                        className="h-4 w-4"
+                      />{" "}
+                      Deploy
+                    </>
+                  }
                   nextLabel="Next"
                 />
               }
@@ -627,29 +647,39 @@ const DeploymentsTab = () => {
               )}
 
               {currentStep === 3 && (
-                <StepAttach
+                <StepAgent
                   selectedItems={selectedItems}
                   toggleItem={toggleItem}
                   flows={checkpointGroups}
                 />
               )}
-              {/*
-              {currentStep === 3 && (
+
+              {currentStep === 4 && (
                 <StepConfiguration
                   envVars={envVars}
                   setEnvVars={setEnvVars}
                   detectedVarCount={detectedEnvVars.length}
+                  selectedAgentName={
+                    checkpointGroups.find((g) => selectedItems.has(g.flowId))
+                      ?.flowName
+                  }
                 />
               )}
-              {currentStep === 4 && (
+
+              {currentStep === 5 && (
                 <StepReview
                   deploymentType={deploymentType}
                   deploymentName={deploymentName}
                   deploymentDescription={deploymentDescription}
                   selectedItems={selectedReviewItems}
                   envVars={envVars}
+                  providerName={selectedProvider?.provider_key}
+                  selectedAgentName={
+                    checkpointGroups.find((g) => selectedItems.has(g.flowId))
+                      ?.flowName
+                  }
                 />
-              )} */}
+              )}
             </StepperModal>
           </>
         )}
