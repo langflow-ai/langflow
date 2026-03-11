@@ -3,7 +3,7 @@ import tempfile
 from pathlib import Path
 
 import yaml
-from langchain.agents import AgentExecutor
+from langchain_classic.agents import AgentExecutor
 
 from lfx.base.agents.agent import LCAgentComponent
 from lfx.base.data.storage_utils import read_file_bytes

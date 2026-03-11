@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from uuid import UUID
 
-    from langchain.callbacks.base import BaseCallbackHandler
+    from langchain_core.callbacks.base import BaseCallbackHandler
     from langwatch.tracer import ContextSpan
     from lfx.graph.vertex.base import Vertex
 

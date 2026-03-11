@@ -7,7 +7,6 @@ from contextlib import asynccontextmanager, suppress
 from typing import TYPE_CHECKING, cast
 
 from fastapi import HTTPException
-from sqlalchemy.exc import InvalidRequestError
 
 from lfx.log.logger import logger
 from lfx.services.config_discovery import resolve_config_dir
@@ -228,6 +227,8 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
             # not actual errors. Don't log them - FastAPI's exception handlers will
             # take care of the HTTP response. Just rollback any uncommitted changes.
             if session.is_active:
+                from sqlalchemy.exc import InvalidRequestError
+
                 with suppress(InvalidRequestError):
                     await session.rollback()
             raise
@@ -237,6 +238,8 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
 
             # Only rollback if session is still in a valid state
             if session.is_active:
+                from sqlalchemy.exc import InvalidRequestError
+
                 with suppress(InvalidRequestError):
                     # Session was already rolled back by SQLAlchemy
                     await session.rollback()

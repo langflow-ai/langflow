@@ -12,12 +12,12 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
-from langchain.callbacks.base import BaseCallbackHandler
+from langchain_classic.callbacks.base import BaseCallbackHandler
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from langchain.schema import AgentAction, AgentFinish, LLMResult
+    from langchain_classic.schema import AgentAction, AgentFinish, LLMResult
     from langchain_core.documents import Document
     from langchain_core.messages import BaseMessage
 
