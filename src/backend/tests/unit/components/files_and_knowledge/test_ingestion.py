@@ -385,7 +385,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
     @patch("lfx.components.files_and_knowledge.ingestion.get_embeddings")
     async def test_build_kb_info_old_format_unrecognized_model(
         self,
-        mock_get_embeddings, # noqa: ARG002
+        mock_get_embeddings,  # noqa: ARG002
         mock_get_options,
         component_class,
         default_kwargs,
