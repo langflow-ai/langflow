@@ -331,7 +331,7 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         updated = component.update_build_config(build_config, watsonx_model, field_name="model")
 
         assert updated["base_url_ibm_watsonx"]["show"] is True
-        assert updated["base_url_ibm_watsonx"]["required"] is True
+        assert updated["base_url_ibm_watsonx"]["required"] is False
         assert updated["project_id"]["show"] is True
 
     @patch("lfx.base.models.unified_models.get_language_model_options")
