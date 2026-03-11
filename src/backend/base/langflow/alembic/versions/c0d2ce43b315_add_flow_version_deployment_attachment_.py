@@ -40,7 +40,7 @@ def upgrade() -> None:
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("flow_version_id", sa.Uuid(), nullable=False),
         sa.Column("deployment_id", sa.Uuid(), nullable=False),
-        sa.Column("snapshot_id", sa.String(), nullable=True),
+        sa.Column("provider_snapshot_id", sa.String(), nullable=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -62,13 +62,15 @@ def upgrade() -> None:
     op.create_index(op.f("ix_flow_version_deployment_attachment_user_id"), TABLE_NAME, ["user_id"])
     op.create_index(op.f("ix_flow_version_deployment_attachment_flow_version_id"), TABLE_NAME, ["flow_version_id"])
     op.create_index(op.f("ix_flow_version_deployment_attachment_deployment_id"), TABLE_NAME, ["deployment_id"])
-    op.create_index(op.f("ix_flow_version_deployment_attachment_snapshot_id"), TABLE_NAME, ["snapshot_id"])
+    op.create_index(
+        op.f("ix_flow_version_deployment_attachment_provider_snapshot_id"), TABLE_NAME, ["provider_snapshot_id"]
+    )
 
 
 def downgrade() -> None:
     conn = op.get_bind()
     if migration.table_exists(TABLE_NAME, conn):
-        op.drop_index(op.f("ix_flow_version_deployment_attachment_snapshot_id"), table_name=TABLE_NAME)
+        op.drop_index(op.f("ix_flow_version_deployment_attachment_provider_snapshot_id"), table_name=TABLE_NAME)
         op.drop_index(op.f("ix_flow_version_deployment_attachment_deployment_id"), table_name=TABLE_NAME)
         op.drop_index(op.f("ix_flow_version_deployment_attachment_flow_version_id"), table_name=TABLE_NAME)
         op.drop_index(op.f("ix_flow_version_deployment_attachment_user_id"), table_name=TABLE_NAME)
