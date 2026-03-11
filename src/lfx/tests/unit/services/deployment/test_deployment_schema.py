@@ -239,6 +239,11 @@ def test_config_deployment_binding_update_rejects_noop() -> None:
         ConfigDeploymentBindingUpdate()
 
 
+def test_config_deployment_binding_update_rejects_null_raw_payload() -> None:
+    with pytest.raises(ValidationError, match="must not be null"):
+        ConfigDeploymentBindingUpdate(raw_payload=None)
+
+
 def test_deployment_create_rejects_invalid_deployment_type() -> None:
     with pytest.raises(ValidationError, match="type"):
         DeploymentCreate(spec={"name": "my deployment", "type": "invalid-type"})
@@ -405,7 +410,7 @@ def test_base_deployment_data_update_requires_at_least_one_field() -> None:
 
 
 def test_deployment_update_requires_at_least_one_section() -> None:
-    with pytest.raises(ValidationError, match="At least one of 'spec', 'snapshot', or 'config'"):
+    with pytest.raises(ValidationError, match="At least one of"):
         DeploymentUpdate()
 
 
@@ -427,6 +432,14 @@ def test_deployment_update_accepts_snapshot_only() -> None:
     update = DeploymentUpdate(snapshot={"add_ids": ["snap_1"]})
     assert update.snapshot is not None
     assert update.spec is None
+    assert update.config is None
+
+
+def test_deployment_update_accepts_provider_data_only() -> None:
+    update = DeploymentUpdate(provider_data={"mode": "dry_run"})
+    assert update.provider_data == {"mode": "dry_run"}
+    assert update.spec is None
+    assert update.snapshot is None
     assert update.config is None
 
 

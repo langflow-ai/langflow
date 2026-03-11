@@ -241,6 +241,9 @@ class ConfigDeploymentBindingUpdate(BaseModel):
         if has_config_id == has_raw_payload:
             msg = "Exactly one of 'config_id' or 'raw_payload' must be provided."
             raise ValueError(msg)
+        if has_raw_payload and self.raw_payload is None:
+            msg = "'raw_payload' must not be null."
+            raise ValueError(msg)
         return self
 
 
@@ -399,11 +402,15 @@ class DeploymentUpdate(BaseModel):
     spec: BaseDeploymentDataUpdate | None = Field(None, description="The metadata of the deployment")
     snapshot: SnapshotDeploymentBindingUpdate | None = Field(None, description="The snapshot of the deployment")
     config: ConfigDeploymentBindingUpdate | None = Field(None, description="The config of the deployment")
+    provider_data: ProviderPayload | None = Field(
+        None,
+        description="Provider-specific opaque payload for deployment update operations.",
+    )
 
     @model_validator(mode="after")
     def validate_has_changes(self) -> "DeploymentUpdate":
-        if self.spec is None and self.snapshot is None and self.config is None:
-            msg = "At least one of 'spec', 'snapshot', or 'config' must be provided."
+        if not self.model_fields_set:
+            msg = "At least one of 'spec', 'snapshot', 'config', or 'provider_data' must be provided."
             raise ValueError(msg)
         return self
 

@@ -11,6 +11,7 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountGetResponse,
     DeploymentProviderAccountUpdateRequest,
+    DeploymentUpdateRequest,
     FlowVersionsAttach,
     FlowVersionsPatch,
 )
@@ -147,3 +148,13 @@ class TestDeploymentConfigBindingUpdate:
     def test_rejects_noop_empty_payload(self):
         with pytest.raises(ValidationError, match="Exactly one of"):
             DeploymentConfigBindingUpdate()
+
+    def test_rejects_null_raw_payload(self):
+        with pytest.raises(ValidationError, match="must not be null"):
+            DeploymentConfigBindingUpdate(raw_payload=None)
+
+
+class TestDeploymentUpdateRequest:
+    def test_accepts_provider_data_only(self):
+        payload = DeploymentUpdateRequest(provider_data={"mode": "dry_run"})
+        assert payload.provider_data == {"mode": "dry_run"}

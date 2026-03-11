@@ -432,6 +432,9 @@ class DeploymentConfigBindingUpdate(BaseModel):
         if has_config_id == has_raw_payload:
             msg = "Exactly one of 'config_id' or 'raw_payload' must be provided."
             raise ValueError(msg)
+        if has_raw_payload and self.raw_payload is None:
+            msg = "'raw_payload' must not be null."
+            raise ValueError(msg)
         return self
 
 
@@ -467,11 +470,15 @@ class DeploymentUpdateRequest(BaseModel):
         description="Flow version attach/detach operations.",
     )
     config: DeploymentConfigBindingUpdate | None = Field(default=None, description="Deployment configuration update.")
+    provider_data: dict[str, Any] | None = Field(
+        default=None,
+        description="Provider-owned opaque update payload.",
+    )
 
     @model_validator(mode="after")
     def ensure_any_field_provided(self) -> DeploymentUpdateRequest:
         if not self.model_fields_set:
-            msg = "At least one of 'spec', 'flow_version_ids', or 'config' must be provided."
+            msg = "At least one of 'spec', 'flow_version_ids', 'config', or 'provider_data' must be provided."
             raise ValueError(msg)
         return self
 
