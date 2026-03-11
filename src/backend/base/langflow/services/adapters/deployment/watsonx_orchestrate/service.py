@@ -479,17 +479,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         _ = user_id, deployment_id, deployment_type, db
         raise NotImplementedError
 
-    async def undeploy_deployment(
-        self,
-        *,
-        user_id: IdLike,
-        deployment_id: IdLike,
-        deployment_type: DeploymentType | None = None,
-        db: Any,
-    ) -> None:
-        """Undeploy a deployment."""
-        raise NotImplementedError
-
     async def delete(
         self,
         *,
