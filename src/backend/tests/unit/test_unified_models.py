@@ -744,3 +744,65 @@ def test_handle_model_input_update_returns_dict():
         get_options_func=lambda user_id=None: [],  # noqa: ARG005
     )
     assert isinstance(result, dict)
+
+
+def test_handle_model_input_update_custom_model_field_name():
+    """handle_model_input_update should support a custom model_field_name."""
+    component = _make_mock_component()
+    selected_model = [{"name": "text-embedding-3-small", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "embedding_model": {
+            "value": selected_model,
+            "options": [],
+            "input_types": ["Embeddings"],
+            "show": True,
+        },
+    }
+
+    with patch("lfx.base.models.unified_models.apply_provider_variable_config_to_build_config") as mock_apply:
+        mock_apply.side_effect = lambda cfg, provider, **kw: cfg  # noqa: ARG005
+
+        result = handle_model_input_update(
+            component,
+            build_config,
+            field_value=selected_model,
+            field_name="embedding_model",
+            cache_key_prefix="embedding_model_options",
+            get_options_func=lambda user_id=None: [],  # noqa: ARG005
+            model_field_name="embedding_model",
+        )
+
+        # Should call apply_provider_variable_config with the correct provider
+        mock_apply.assert_called_once_with(result, "OpenAI", user_id="test-user")
+
+    # Should have updated the embedding_model field
+    assert "embedding_model" in result
+
+
+def test_handle_model_input_update_custom_field_name_reads_default_from_correct_field():
+    """When field_name != model_field_name, step 3 should read current value from the custom field."""
+    component = _make_mock_component()
+    selected_model = [{"name": "gpt-4", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "my_model": {
+            "value": selected_model,
+            "options": [],
+            "input_types": ["LanguageModel"],
+            "show": True,
+        },
+    }
+
+    with patch("lfx.base.models.unified_models.apply_provider_variable_config_to_build_config") as mock_apply:
+        mock_apply.side_effect = lambda cfg, provider, **kw: cfg  # noqa: ARG005
+
+        # field_name is "api_key" (not the model field) — should read from build_config["my_model"]
+        result = handle_model_input_update(
+            component,
+            build_config,
+            field_value="sk-test",
+            field_name="api_key",
+            get_options_func=lambda user_id=None: [],  # noqa: ARG005
+            model_field_name="my_model",
+        )
+
+        mock_apply.assert_called_once_with(result, "OpenAI", user_id="test-user")

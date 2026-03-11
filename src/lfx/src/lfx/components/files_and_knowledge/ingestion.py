@@ -538,25 +538,34 @@ class KnowledgeIngestionComponent(Component):
                                 (o for o in all_options if o.get("name") == embedding_model_name),
                                 None,
                             )
-                            model_selection = (
-                                [match]
-                                if match
-                                else [
-                                    {
-                                        "name": embedding_model_name,
-                                        "provider": embedding_provider,
-                                        "metadata": {},
-                                    }
-                                ]
-                            )
+                            if match:
+                                model_selection = [match]
+                            else:
+                                self.log(
+                                    f"Embedding model '{embedding_model_name}' (provider: {embedding_provider}) "
+                                    "from stored metadata is no longer available in the model registry. "
+                                    "Please re-create this knowledge base with a supported embedding model."
+                                )
+                                msg = (
+                                    f"Embedding model '{embedding_model_name}' is no longer recognized. "
+                                    "The knowledge base was created with an older format and the model "
+                                    "is not available in the current registry. "
+                                    "Please re-create the knowledge base with a supported embedding model."
+                                )
+                                raise ValueError(msg)
+                        except ValueError:
+                            raise
                         except Exception:  # noqa: BLE001
-                            model_selection = [
-                                {
-                                    "name": embedding_model_name,
-                                    "provider": embedding_provider,
-                                    "metadata": {},
-                                }
-                            ]
+                            self.log(
+                                f"Failed to look up embedding model '{embedding_model_name}' in registry. "
+                                "Please re-create this knowledge base with a supported embedding model."
+                            )
+                            msg = (
+                                f"Could not look up embedding model '{embedding_model_name}' "
+                                f"(provider: {embedding_provider}). "
+                                "Please re-create the knowledge base with a supported embedding model."
+                            )
+                            raise ValueError(msg)  # noqa: B904
 
                 # Decrypt stored API key
                 encrypted_key = stored_metadata.get("api_key")

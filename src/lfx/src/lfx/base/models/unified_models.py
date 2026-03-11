@@ -1517,7 +1517,11 @@ def get_embeddings(
     # --- build kwargs from param_mapping -------------------------------------
     param_mapping: dict[str, str] = metadata.get("param_mapping", {})
     if not param_mapping:
-        msg = "Parameter mapping not found in metadata"
+        msg = (
+            f"Parameter mapping not found in metadata for model '{model_name}' (provider: {provider}). "
+            "This usually means the model was saved with an older format that is no longer recognized. "
+            "Please re-select the embedding model in the component configuration."
+        )
         raise ValueError(msg)
 
     kwargs: dict[str, Any] = {}
@@ -1836,6 +1840,7 @@ def handle_model_input_update(
     *,
     cache_key_prefix: str = "language_model_options",
     get_options_func: Callable | None = None,
+    model_field_name: str = "model",
 ) -> dict:
     """Full update_build_config lifecycle for any component with a ModelInput.
 
@@ -1857,6 +1862,8 @@ def handle_model_input_update(
             (e.g. "language_model_options" or "embedding_model_options").
         get_options_func: Function to fetch model options. Defaults to
             get_language_model_options if not provided.
+        model_field_name: The name of the model field in build_config (default: "model").
+            Must match the corresponding parameter in update_model_options_in_build_config.
 
     Returns:
         Updated build_config dict.
@@ -1872,6 +1879,7 @@ def handle_model_input_update(
         get_options_func=get_options_func,
         field_name=field_name,
         field_value=field_value,
+        model_field_name=model_field_name,
     )
 
     # Step 2: Hide all provider-specific fields by default
@@ -1881,8 +1889,12 @@ def handle_model_input_update(
             build_config[field]["required"] = False
 
     # Step 3: Show/configure the right fields for the selected provider
-    # Note: use the value that was set (possibly by step 1's default-model logic) when field_name != "model".
-    current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
+    # Note: use the value that was set (possibly by step 1's default-model logic) when field_name != model_field_name.
+    current_model_value = (
+        field_value
+        if field_name == model_field_name
+        else build_config.get(model_field_name, {}).get("value")
+    )
     if isinstance(current_model_value, list) and len(current_model_value) > 0:
         provider = current_model_value[0].get("provider", "")
         if provider:

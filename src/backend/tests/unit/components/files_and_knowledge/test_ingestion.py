@@ -43,10 +43,18 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         kb_path = tmp_path / active_user.username / kb_name
         kb_path.mkdir(parents=True, exist_ok=True)
 
-        # Create embedding metadata file
+        # Create embedding metadata file (new format with model_selection)
         metadata = {
             "embedding_provider": "HuggingFace",
             "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+            "model_selection": {
+                "name": "sentence-transformers/all-MiniLM-L6-v2",
+                "provider": "HuggingFace",
+                "metadata": {
+                    "embedding_class": "HuggingFaceEmbeddings",
+                    "param_mapping": {"model": "model_name"},
+                },
+            },
             "api_key": None,
             "api_key_used": False,
             "chunk_size": 1000,
@@ -371,6 +379,36 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         component = component_class(**default_kwargs)
 
         with pytest.raises(RuntimeError, match="No embedding model configuration found"):
+            await component.build_kb_info()
+
+    @patch("lfx.components.files_and_knowledge.ingestion.get_embedding_model_options")
+    @patch("lfx.components.files_and_knowledge.ingestion.get_embeddings")
+    async def test_build_kb_info_old_format_unrecognized_model(
+        self, mock_get_options, component_class, default_kwargs, tmp_path, active_user
+    ):
+        """Test that old-format metadata with an unrecognized model name raises a clear error."""
+        # Overwrite metadata to use old format (no model_selection key) with a model name
+        # that is not in the current registry.
+        kb_path = tmp_path / active_user.username / "test_kb"
+        old_format_metadata = {
+            "embedding_provider": "SomeOldProvider",
+            "embedding_model": "old-model-that-no-longer-exists",
+            "api_key": None,
+            "api_key_used": False,
+            "chunk_size": 1000,
+            "created_at": "2024-01-01T00:00:00Z",
+        }
+        (kb_path / "embedding_metadata.json").write_text(json.dumps(old_format_metadata))
+
+        # Registry returns models that do NOT include the old model name
+        mock_get_options.return_value = [
+            {"name": "text-embedding-3-small", "provider": "OpenAI", "metadata": {}},
+        ]
+
+        component = component_class(**default_kwargs)
+
+        # Should raise a RuntimeError wrapping a ValueError with a clear message
+        with pytest.raises(RuntimeError, match="no longer recognized"):
             await component.build_kb_info()
 
     def test_build_embedding_metadata_without_api_key(self, component_class, default_kwargs):

@@ -312,6 +312,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
             embedding = get_embeddings(
                 model=self.embedding_model,
                 user_id=self.user_id,
+                api_key=getattr(self, "api_key", None),
             )
         embedding_params = {"embedding": embedding} if embedding else {}
 

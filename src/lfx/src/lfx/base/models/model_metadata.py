@@ -202,7 +202,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
                 "langchain_param": "project_id",
                 "component_metadata": {
                     "mapping_field": "project_id",
-                    "required": True,
+                    "required": False,
                     "advanced": True,
                     "info": "Falls back to WATSONX_PROJECT_ID environment variable",
                 },
@@ -225,7 +225,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
                 "langchain_param": "url",
                 "component_metadata": {
                     "mapping_field": "base_url_ibm_watsonx",
-                    "required": True,
+                    "required": False,
                     "advanced": True,
                     "info": "Falls back to WATSONX_URL environment variable",
                 },
