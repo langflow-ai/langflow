@@ -19,6 +19,7 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
     from langflow.services.deps import get_db_service
 
     database_service: DatabaseService = get_db_service()
+    await database_service.ensure_postgresql_version()
     try:
         if database_service.settings_service.settings.database_connection_retry:
             await database_service.create_db_and_tables_with_retry()
@@ -40,23 +41,25 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
     try:
         await database_service.run_migrations(fix=fix_migration)
     except CommandError as exc:
-        # if "overlaps with other requested revisions" or "Can't locate revision identified by"
-        # are not in the exception, we can't handle it
-        if "overlaps with other requested revisions" not in str(
-            exc
-        ) and "Can't locate revision identified by" not in str(exc):
+        error_message = str(exc)
+        if (
+            "overlaps with other requested revisions" in error_message
+            or "Can't locate revision identified by" in error_message
+        ):
+            # Wrong revision in the DB: delete alembic_version and re-run migrations
+            logger.warning("Wrong revision in DB, deleting alembic_version table and running migrations again")
+            from langflow.services.deps import session_scope
+
+            async with session_scope() as session:
+                await session.exec(text("DROP TABLE alembic_version"))
+            await database_service.run_migrations(fix=fix_migration)
+        else:
             raise
-        # This means there's wrong revision in the DB
-        # We need to delete the alembic_version table
-        # and run the migrations again
-        logger.warning("Wrong revision in DB, deleting alembic_version table and running migrations again")
-        async with session_getter(database_service) as session:
-            await session.exec(text("DROP TABLE alembic_version"))
-        await database_service.run_migrations(fix=fix_migration)
     except Exception as exc:
+        error_message = str(exc)
         # if the exception involves tables already existing
         # we can ignore it
-        if "already exists" not in str(exc):
+        if "already exists" not in error_message:
             logger.exception(exc)
             raise
         await logger.adebug("Migration attempted to create existing table, skipping.")
