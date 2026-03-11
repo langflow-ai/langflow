@@ -388,6 +388,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,  # noqa: ARG002
         db: Any,
     ) -> DeploymentGetResult:
         """Get a deployment (agent) from Watsonx Orchestrate."""
@@ -406,6 +407,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,  # noqa: ARG002
         payload: DeploymentUpdate,
         db: Any,
     ) -> DeploymentUpdateResult:
@@ -459,6 +461,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: Any,
     ) -> RedeployResult:
         """Trigger a deployment redeployment for the agent in draft environment."""
@@ -469,10 +472,11 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: Any,
     ) -> DeploymentDuplicateResult:
         """Duplicate an existing deployment."""
-        _ = user_id, deployment_id, db
+        _ = user_id, deployment_id, deployment_type, db
         raise NotImplementedError
 
     async def undeploy_deployment(
@@ -480,6 +484,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: Any,
     ) -> None:
         """Undeploy a deployment."""
@@ -490,6 +495,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,  # noqa: ARG002
         db: Any,
     ) -> DeploymentDeleteResult:
         """Delete only the deployment agent (keep tools/configs reusable)."""
@@ -519,6 +525,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,  # noqa: ARG002
         db: Any,
     ) -> DeploymentStatusResult:
         """Get deployment health directly from wxO release status endpoint."""

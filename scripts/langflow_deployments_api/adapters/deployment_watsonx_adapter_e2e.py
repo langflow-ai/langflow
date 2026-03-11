@@ -710,7 +710,7 @@ class WatsonxAdapterDirectE2E:
         print("[neg/2] live_update_rejects_snapshot_patch")
         status_code, detail, _ = await self._run_update(
             deployment_id,
-            DeploymentUpdate(snapshot=SnapshotDeploymentBindingUpdate(add=[str(uuid4())])),
+            DeploymentUpdate(snapshot=SnapshotDeploymentBindingUpdate(add_ids=[str(uuid4())])),
         )
         results.append(
             self._build_result(
