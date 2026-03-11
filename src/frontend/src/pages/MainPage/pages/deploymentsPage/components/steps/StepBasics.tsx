@@ -20,37 +20,32 @@ export const StepBasics = ({
   deploymentType,
   setDeploymentType,
 }: StepBasicsProps) => (
-  <div className="flex h-full w-full flex-col gap-5 overflow-y-auto">
-    <div>
-      <h3 className="text-base font-semibold">Deployment Basics</h3>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Give your deployment a name, description, and choose a deployment type.
-      </p>
-    </div>
-    <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium">
-        Deployment Name <span className="text-destructive">*</span>
-      </label>
+  <div className="flex h-full w-full flex-col gap-6 overflow-y-auto py-3">
+    <div className="flex flex-col">
+      <span className="text-sm font-medium pb-2">
+        Name Deployment <span className="text-destructive">*</span>
+      </span>
       <Input
         placeholder="e.g., Production Sales Agent"
+        className="bg-muted"
         value={deploymentName}
         onChange={(e) => setDeploymentName(e.target.value)}
       />
     </div>
-    <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium">Description</label>
+    <div className="flex flex-col">
+      <span className="text-sm font-medium pb-2">Description</span>
       <Textarea
         placeholder="Describe what this deployment does..."
         value={deploymentDescription}
         onChange={(e) => setDeploymentDescription(e.target.value)}
         rows={3}
-        className="resize-none placeholder:text-placeholder-foreground"
+        className="resize-none placeholder:text-placeholder-foreground bg-muted"
       />
     </div>
-    <div className="flex min-h-0 flex-1 flex-col gap-2">
-      <label className="text-sm font-medium">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <span className="text-sm font-medium pb-2">
         Deployment Type <span className="text-destructive">*</span>
-      </label>
+      </span>
       <div className="grid h-full grid-cols-2 gap-3">
         {(
           [
@@ -71,29 +66,34 @@ export const StepBasics = ({
         ).map(({ type, label, icon, description }) => (
           <button
             key={type}
+            type="button"
             onClick={() => setDeploymentType(type)}
-            className={`flex h-full flex-col gap-3 rounded-xl border p-4 text-left transition-colors ${
+            className={`rounded-lg border p-4 bg-muted transition-colors ${
               deploymentType === type
-                ? "border-2 border-primary"
+                ? "border-2 border-foreground"
                 : "border-border hover:border-muted-foreground"
             }`}
           >
-            <div
-              className={`flex h-9 w-9 items-center justify-center rounded-md ${
-                deploymentType === type ? "bg-primary/10" : "bg-muted"
-              }`}
-            >
-              <ForwardedIconComponent
-                name={icon}
-                className={`h-5 w-5 ${
-                  deploymentType === type
-                    ? "text-primary"
-                    : "text-muted-foreground"
-                }`}
-              />
+            <div className="flex flex-col h-full">
+              <div className="flex flex-row justify-start items-center mb-3">
+                <div className="flex-shrink-0 border bg-muted-foreground/10 rounded-lg p-2 mr-3">
+                  <ForwardedIconComponent
+                    name={icon}
+                    className={`h-6 w-6 ${
+                      deploymentType === type
+                        ? "text-foreground"
+                        : "text-muted-foreground"
+                    }`}
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">{label}</span>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground text-left">
+                {description}
+              </p>
             </div>
-            <p className="text-sm font-semibold">{label}</p>
-            <p className="text-xs text-muted-foreground">{description}</p>
           </button>
         ))}
       </div>

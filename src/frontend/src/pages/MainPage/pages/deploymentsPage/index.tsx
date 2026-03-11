@@ -526,7 +526,7 @@ const DeploymentsTab = () => {
             {/* Content area */}
             {providersQuery.isLoading && false ? (
               <DeploymentsLoadingView activeSubTab={activeSubTab} />
-            ) : !hasProviders || true ? (
+            ) : !hasProviders ? (
               <DeploymentsEmptyState
                 activeSubTab={activeSubTab}
                 onCreateDeployment={() => handleOpenChange(true)}
@@ -562,6 +562,7 @@ const DeploymentsTab = () => {
               />
             )}
             <StepperModal
+              className="p-3"
               open={newDeploymentOpen}
               onOpenChange={handleOpenChange}
               currentStep={currentStep}
@@ -571,7 +572,7 @@ const DeploymentsTab = () => {
                 currentStep === 1
                   ? "Configure Deployment Provider"
                   : currentStep === 2
-                    ? "Select Flows"
+                    ? "Deployment Basics"
                     : currentStep === 3
                       ? "Configure Environment"
                       : currentStep === 4
@@ -579,8 +580,6 @@ const DeploymentsTab = () => {
                         : "Review & Deploy"
               }
               bgClassName="bg-secondary"
-              // icon="Rocket"
-              // description="Deploy your Langflow workflows to watsonx Orchestrate"
               width="w-[752px]"
               height="h-[569px]"
               contentClassName="bg-background"
@@ -591,46 +590,13 @@ const DeploymentsTab = () => {
                 <StepperModalFooter
                   currentStep={currentStep}
                   totalSteps={TOTAL_STEPS}
-                  helpLabel="Back"
-                  onHelp={handleBack}
-                  onBack={() => handleOpenChange(false)}
-                  backLabel="Cancel"
-                  backDisabled={currentStep === 1}
+                  onBack={handleBack}
                   onNext={() => {
-                    if (currentStep === 2) {
-                      const selKey = Array.from(selectedItems).sort().join(",");
-                      const selectionChanged =
-                        selKey !== prevSelectedKeyRef.current;
-                      const shouldSeedDetectedVars =
-                        selectionChanged ||
-                        (envVars.length === 0 && detectedEnvVars.length > 0);
-
-                      if (shouldSeedDetectedVars) {
-                        prevSelectedKeyRef.current = selKey;
-                        setEnvVars(detectedEnvVars);
-                      }
-                    }
-                    if (currentStep === 3) {
-                      const envVarValidationErrors = validateEnvVars(envVars);
-                      if (envVarValidationErrors.length > 0) {
-                        setErrorData({
-                          title: "Invalid environment variables",
-                          list: envVarValidationErrors,
-                        });
-                        return;
-                      }
-                    }
                     handleNext();
                   }}
                   onSubmit={handleCreateDeployment}
-                  nextDisabled={
-                    (currentStep === 1 && !deploymentName.trim()) ||
-                    (currentStep === 2 && selectedItems.size === 0) ||
-                    (currentStep === 3 && validateEnvVars(envVars).length > 0)
-                  }
                   submitLabel="Deploy"
-                  onCancel={() => handleOpenChange(false)}
-                  nextLabel="Continue"
+                  nextLabel="Next"
                 />
               }
             >
