@@ -35,14 +35,14 @@ const HeaderToolbar = ({
 
   return (
     <div className="flex justify-between pt-5 px-5 bg-secondary ">
-      <div className="flex w-full xl:w-1/3 pr-3 ">
+      <div className="flex w-[330px] pr-3 ">
         <Input
           icon="Search"
           data-testid="search-store-input"
           type="text"
           placeholder={`Search ${flowType}...`}
           className="mr-2 !text-mmd"
-          inputClassName="!text-mmd"
+          inputClassName="!text-mmd h-[42px]"
           value={inputValue}
           onChange={handleSearch}
         />
@@ -60,6 +60,7 @@ const HeaderToolbar = ({
           <Button
             className="flex items-center gap-2 font-semibold"
             onClick={() => setNewProjectModal(true)}
+            size="sm"
             id="new-project-btn"
             data-testid="new-project-btn"
           >

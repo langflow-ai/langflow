@@ -1,15 +1,8 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import type { FlowType } from "@/types/flow";
 import type { FlowHistoryEntry } from "@/types/flow/history";
 import { cn } from "@/utils/utils";
-import DropdownComponent from "../../../components/dropdown";
 import { timeElapsed } from "../../../utils/time-elapse";
 
 type FlowVersionsTableRowProps = {
@@ -23,13 +16,7 @@ type FlowVersionsTableRowProps = {
   folderId?: string;
   tableGridCols: string;
   isExpanded: boolean;
-  isSelected: boolean;
-  onToggleSelect: () => void;
   onToggleExpand: () => void;
-  onSetActionFlow: (
-    flow: FlowType,
-    action: "delete" | "export" | "settings",
-  ) => void;
 };
 
 export default function FlowVersionsTableRow({
@@ -43,10 +30,7 @@ export default function FlowVersionsTableRow({
   folderId,
   tableGridCols,
   isExpanded,
-  isSelected,
-  onToggleSelect,
   onToggleExpand,
-  onSetActionFlow,
 }: FlowVersionsTableRowProps) {
   const navigate = useCustomNavigate();
 
@@ -73,20 +57,6 @@ export default function FlowVersionsTableRow({
           tableGridCols,
         )}
       >
-        <span className="flex justify-center">
-          <button
-            type="button"
-            className="flex h-4 w-4 items-center justify-center rounded-sm border border-border/70 bg-background"
-            onClick={(event) => {
-              event.stopPropagation();
-              onToggleSelect();
-            }}
-          >
-            {isSelected && (
-              <ForwardedIconComponent name="Check" className="h-3 w-3" />
-            )}
-          </button>
-        </span>
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -158,47 +128,6 @@ export default function FlowVersionsTableRow({
         >
           {timeElapsed(flow.updated_at)} ago
         </button>
-        <span className="flex justify-center">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="iconSm"
-                className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                onClick={(event) => {
-                  event.stopPropagation();
-                }}
-              >
-                <ForwardedIconComponent
-                  name="EllipsisVertical"
-                  className="h-4 w-4"
-                />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              className="w-[185px]"
-              sideOffset={5}
-              side="bottom"
-              align="end"
-              onClick={(event) => {
-                event.stopPropagation();
-              }}
-            >
-              <DropdownComponent
-                flowData={flow}
-                setOpenDelete={(open) => {
-                  if (open) onSetActionFlow(flow, "delete");
-                }}
-                handleExport={() => {
-                  onSetActionFlow(flow, "export");
-                }}
-                handleEdit={() => {
-                  onSetActionFlow(flow, "settings");
-                }}
-              />
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </span>
       </div>
 
       {isExpanded && !hasLoadedHistory && isLoadingHistory && (
@@ -208,12 +137,10 @@ export default function FlowVersionsTableRow({
             tableGridCols,
           )}
         >
-          <span />
           <span className="pl-11">Loading versions...</span>
           <span>-</span>
           <span>-</span>
           <span>-</span>
-          <span />
         </div>
       )}
       {isExpanded &&
@@ -228,9 +155,6 @@ export default function FlowVersionsTableRow({
                 tableGridCols,
               )}
             >
-              <span className="flex justify-center">
-                <span className="h-4 w-4 rounded-sm border border-border/60 bg-background/20" />
-              </span>
               <button
                 type="button"
                 className="col-span-4 grid grid-cols-[2.4fr_1fr_1fr_1.2fr] items-center text-left text-muted-foreground"
@@ -265,47 +189,6 @@ export default function FlowVersionsTableRow({
                   {timeElapsed(entry.created_at)} ago
                 </span>
               </button>
-              <span className="flex justify-center">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="iconSm"
-                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                      }}
-                    >
-                      <ForwardedIconComponent
-                        name="EllipsisVertical"
-                        className="h-4 w-4"
-                      />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    className="w-[185px]"
-                    sideOffset={5}
-                    side="bottom"
-                    align="end"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                    }}
-                  >
-                    <DropdownComponent
-                      flowData={flow}
-                      setOpenDelete={(open) => {
-                        if (open) onSetActionFlow(flow, "delete");
-                      }}
-                      handleExport={() => {
-                        onSetActionFlow(flow, "export");
-                      }}
-                      handleEdit={() => {
-                        onSetActionFlow(flow, "settings");
-                      }}
-                    />
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </span>
             </div>
           );
         })}

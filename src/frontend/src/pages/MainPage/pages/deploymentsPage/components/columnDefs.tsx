@@ -11,9 +11,16 @@ import {
 type DeploymentRow = {
   id: string;
   name: string;
+  url: string;
   type: string;
   deploymentType: "agent" | "mcp";
   mode?: string;
+  status: "Production" | "Draft";
+  health: "Healthy" | "Pending" | "Unhealthy";
+  endpoint: string;
+  attached: number;
+  modifiedDate: string;
+  modifiedBy: string;
 };
 
 type BuildDeploymentColumnDefsParams = {
@@ -25,14 +32,25 @@ type BuildDeploymentColumnDefsParams = {
   }) => void;
 };
 
+const HEALTH_DOT_COLOR: Record<string, string> = {
+  Healthy: "bg-green-500",
+  Pending: "bg-yellow-400",
+  Unhealthy: "bg-red-500",
+};
+
+const STATUS_BADGE_CLASS: Record<string, string> = {
+  Production: "border-blue-500/30 bg-blue-500/15 text-blue-400",
+  Draft: "border-zinc-500/30 bg-zinc-500/15 text-zinc-400",
+};
+
 export const buildDeploymentColumnDefs = ({
   onTestAgent,
 }: BuildDeploymentColumnDefsParams) => [
   {
     headerName: "Name",
     field: "name",
-    flex: 3,
-    cellRenderer: (params: { value: string }) => (
+    flex: 2,
+    cellRenderer: (params: { value: string; data: DeploymentRow }) => (
       <div className="flex min-w-0 flex-col justify-center gap-0.5 py-2">
         <span
           className="truncate text-sm font-medium leading-tight"
@@ -40,29 +58,28 @@ export const buildDeploymentColumnDefs = ({
         >
           {params.value}
         </span>
+        <span
+          className="truncate text-xs text-muted-foreground"
+          title={params.data.url}
+        >
+          {params.data.url}
+        </span>
       </div>
     ),
   },
   {
-    headerName: "Type",
-    field: "type",
+    headerName: "Status",
+    field: "status",
     flex: 1,
     cellRenderer: (params: { value: string }) => {
-      const isMcp = params.value === "MCP";
-      const badgeClass = isMcp
-        ? "border-border bg-muted text-muted-foreground"
-        : "border-border bg-muted text-fuchsia-700 dark:text-fuchsia-400";
+      const badgeClass =
+        STATUS_BADGE_CLASS[params.value] ?? STATUS_BADGE_CLASS.Draft;
 
       return (
         <div className="flex items-center">
           <span
-            className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${badgeClass}`}
+            className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium ${badgeClass}`}
           >
-            {isMcp ? (
-              <ForwardedIconComponent name="Mcp" className="h-3 w-3" />
-            ) : (
-              <ForwardedIconComponent name="Bot" className="h-3 w-3" />
-            )}
             {params.value}
           </span>
         </div>
@@ -70,22 +87,16 @@ export const buildDeploymentColumnDefs = ({
     },
   },
   {
-    headerName: "Environment",
-    field: "mode",
+    headerName: "Health",
+    field: "health",
     flex: 1,
     cellRenderer: (params: { value: string }) => {
-      const isLive = params.value?.toLowerCase() === "live";
-      const badgeClass = isLive
-        ? "border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400"
-        : "border-yellow-500/30 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400";
+      const dotColor = HEALTH_DOT_COLOR[params.value] ?? "bg-muted-foreground";
 
       return (
-        <div className="flex items-center">
-          <span
-            className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${badgeClass}`}
-          >
-            {params.value}
-          </span>
+        <div className="flex items-center gap-2">
+          <span className={`h-2 w-2 rounded-full ${dotColor}`} />
+          <span className="text-sm">{params.value}</span>
         </div>
       );
     },
@@ -93,7 +104,7 @@ export const buildDeploymentColumnDefs = ({
   {
     headerName: "Attached",
     field: "attached",
-    flex: 1,
+    flex: 0.8,
     cellRenderer: (params: { value: number }) => (
       <span className="text-sm text-muted-foreground">
         {params.value} {params.value === 1 ? "item" : "items"}
@@ -101,19 +112,57 @@ export const buildDeploymentColumnDefs = ({
     ),
   },
   {
+    headerName: "Endpoint",
+    field: "endpoint",
+    flex: 2,
+    cellRenderer: (params: { value: string }) => (
+      <span
+        className="truncate text-sm text-muted-foreground"
+        title={params.value}
+      >
+        {params.value}
+      </span>
+    ),
+  },
+  {
     headerName: "Last Modified",
     field: "modifiedDate",
-    flex: 1.5,
-    headerClass: "[&_.ag-header-cell-resize]:hidden",
-    cellRenderer: (params: {
-      value: string;
-      data: { createdDate: string };
-    }) => (
+    flex: 1.2,
+    cellRenderer: (params: { value: string; data: { modifiedBy: string } }) => (
       <div className="flex flex-col justify-center gap-0.5 py-2">
-        <span className="text-sm leading-tight">{params.value}</span>
-        <span className="text-xs text-muted-foreground">
-          Created: {params.data.createdDate}
+        <span className="text-sm font-medium leading-tight">
+          {params.value}
         </span>
+        <span className="text-xs text-muted-foreground">
+          by {params.data.modifiedBy}
+        </span>
+      </div>
+    ),
+  },
+  {
+    headerName: "Test",
+    field: "test",
+    width: 60,
+    sortable: false,
+    filter: false,
+    resizable: false,
+    cellRenderer: (params: { data?: DeploymentRow }) => (
+      <div className="flex h-full items-center justify-center">
+        <Button
+          unstyled
+          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
+          onClick={() => {
+            if (!params.data) return;
+            onTestAgent({
+              id: params.data.id,
+              name: params.data.name,
+              deploymentType: params.data.deploymentType,
+              mode: params.data.mode,
+            });
+          }}
+        >
+          <ForwardedIconComponent name="Play" className="h-4 w-4" />
+        </Button>
       </div>
     ),
   },

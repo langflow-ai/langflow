@@ -1,122 +1,91 @@
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { getURL } from "@/controllers/API/helpers/constants";
-import {
-  type DeploymentCreatePayload,
-  type DeploymentCreateResponse,
-  type DeploymentListItem,
-  type DeploymentProvider,
-  useGetDeploymentById,
-  useGetDeploymentProviders,
-  useGetDeployments,
-  usePostCreateDeployment,
-  usePostDetectDeploymentEnvVars,
-} from "@/controllers/API/queries/deployments/use-deployments";
+import { useGetDeployments } from "@/controllers/API/queries/deployments/use-deployments";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
-import StepperModal, {
-  StepperModalFooter,
-} from "@/modals/stepperModal/StepperModal";
-import { StepAgent } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepAgent";
-import { StepBasics } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepBasics";
-import { StepConfiguration } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepConfiguration";
-import { StepProvider } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepProvider";
-import { StepReview } from "@/pages/MainPage/pages/deploymentsPage/components/steps/StepReview";
 import useAlertStore from "@/stores/alertStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import type { FlowType } from "@/types/flow";
-import type { FlowHistoryEntry } from "@/types/flow/history";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { ConfigureDeploymentProviderModal } from "./components/ConfigureDeploymentProviderModal";
-import { DeployFlowStepper } from "./components/DeployFlowStepper";
 import { DeploymentCreationStatusView } from "./components/DeploymentCreationStatusView";
-import type { DeploymentListRow } from "./components/DeploymentProvidersView";
+import { DeploymentStepperModal } from "./components/DeploymentStepperModal";
 import { DeploymentsEmptyState } from "./components/DeploymentsEmptyState";
 import { DeploymentsLoadingView } from "./components/DeploymentsLoadingView";
 import { DeploymentsView } from "./components/DeploymentsView";
 import { RegisterDeploymentProviderModal } from "./components/RegisterDeploymentProviderModal";
+import { SubTabToggle } from "./components/SubTabToggle";
 import { TestAgentModal } from "./components/TestAgentModal";
-import { type EnvVar, TOTAL_STEPS } from "./constants";
+import { useCheckpoints } from "./hooks/useCheckpoints";
+import { useDeploymentCreation } from "./hooks/useDeploymentCreation";
 import { useDeploymentForm } from "./hooks/useDeploymentForm";
-import type {
-  CreatedDeploymentUiMeta,
-  DeploymentCreationState,
-  FlowCheckpointGroup,
-  TestDeploymentTarget,
-} from "./types";
-import {
-  fetchFlowHistoryWithDedupe,
-  formatDateLabel,
-  mapProviderModeToLabel,
-  validateEnvVars,
-} from "./utils";
-
-const STEP_LABELS = ["Provider", "Basics", "Agent", "Configure Flow", "Review"];
+import { useDeploymentRows } from "./hooks/useDeploymentRows";
+import { useProviders } from "./hooks/useProviders";
+import type { TestDeploymentTarget } from "./types";
 
 const DeploymentsTab = () => {
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
-  const [selectedProviderId, setSelectedProviderId] = useState<string | null>(
-    null,
-  );
-  const [registerProviderOpen, setRegisterProviderOpen] = useState(false);
-  const [configureProviderOpen, setConfigureProviderOpen] = useState(false);
+
   const [deploymentsPage, setDeploymentsPage] = useState(1);
   const [deploymentsPageSize] = useState(20);
-  const [creationState, setCreationState] =
-    useState<DeploymentCreationState>("idle");
-  const [createdDeploymentName, setCreatedDeploymentName] = useState("");
-  const [createdDeploymentType, setCreatedDeploymentType] = useState<
-    "agent" | "mcp" | null
-  >(null);
-  const [createdDeploymentId, setCreatedDeploymentId] = useState("");
-  const [createdDeploymentItem, setCreatedDeploymentItem] =
-    useState<DeploymentListItem | null>(null);
-  const [createdDeploymentUiMeta, setCreatedDeploymentUiMeta] =
-    useState<CreatedDeploymentUiMeta | null>(null);
   const [testAgentModalOpen, setTestAgentModalOpen] = useState(false);
   const [testDeploymentTarget, setTestDeploymentTarget] =
     useState<TestDeploymentTarget | null>(null);
-  const [providerToConfigure, setProviderToConfigure] =
-    useState<DeploymentProvider | null>(null);
-  const [checkpointGroups, setCheckpointGroups] = useState<
-    FlowCheckpointGroup[]
-  >([]);
   const [activeSubTab, setActiveSubTab] = useState<"deployments" | "providers">(
     "deployments",
   );
 
-  const providersQuery = useGetDeploymentProviders({
-    refetchOnWindowFocus: false,
-  });
-  const providers = providersQuery.data?.providers || [];
-  const hasProviders = providers.length > 0;
+  // --- Providers ---
+  const {
+    providers,
+    providerId,
+    selectedProvider,
+    setSelectedProviderId,
+    hasProviders,
+    providersQuery,
+    registerProviderOpen,
+    setRegisterProviderOpen,
+    configureProviderOpen,
+    setConfigureProviderOpen,
+    providerToConfigure,
+    setProviderToConfigure,
+    handleConfigureProvider,
+  } = useProviders();
 
-  useEffect(() => {
-    const selectedStillExists = selectedProviderId
-      ? providers.some((provider) => provider.id === selectedProviderId)
-      : false;
+  // --- Deployment form ---
+  const {
+    newDeploymentOpen,
+    currentStep,
+    deploymentType,
+    setDeploymentType,
+    deploymentName,
+    setDeploymentName,
+    deploymentDescription,
+    setDeploymentDescription,
+    selectedItems,
+    envVars,
+    setEnvVars,
+    handleBack,
+    handleNext,
+    handleSubmit,
+    handleOpenChange,
+    toggleItem,
+  } = useDeploymentForm();
 
-    if ((!selectedProviderId || !selectedStillExists) && providers.length > 0) {
-      setSelectedProviderId(providers[0].id);
-    }
-    if (providers.length === 0) {
-      setSelectedProviderId(null);
-    }
-  }, [providers, selectedProviderId]);
+  // --- Deployment creation ---
+  const {
+    creationState,
+    setCreationState,
+    createdDeploymentName,
+    createdDeploymentType,
+    createdDeploymentId,
+    createdDeploymentItem,
+    createdDeploymentUiMeta,
+    resetCreatedState,
+    handleCreateDeployment,
+  } = useDeploymentCreation();
 
-  const providerId = selectedProviderId || providers[0]?.id || "";
-  const selectedProvider = useMemo(
-    () => providers.find((provider) => provider.id === providerId) || null,
-    [providers, providerId],
-  );
-
-  const handleConfigureProvider = (provider: DeploymentProvider) => {
-    setProviderToConfigure(provider);
-    setConfigureProviderOpen(true);
-  };
-
+  // --- Queries ---
   const deploymentsQuery = useGetDeployments(
     { providerId, page: deploymentsPage, pageSize: deploymentsPageSize },
     {
@@ -138,40 +107,6 @@ const DeploymentsTab = () => {
       enabled: Boolean(currentProjectId),
     },
   );
-  const createDeploymentMutation = usePostCreateDeployment();
-  const getDeploymentByIdMutation = useGetDeploymentById();
-  const { mutateAsync: detectDeploymentEnvVars } =
-    usePostDetectDeploymentEnvVars();
-  const {
-    newDeploymentOpen,
-    currentStep,
-    deploymentType,
-    setDeploymentType,
-    deploymentName,
-    setDeploymentName,
-    deploymentDescription,
-    setDeploymentDescription,
-    selectedItems,
-    envVars,
-    setEnvVars,
-    handleBack,
-    handleNext,
-    handleSubmit,
-    handleOpenChange,
-    toggleItem,
-  } = useDeploymentForm();
-
-  const liveDeployments = useMemo(() => {
-    const deployments = deploymentsQuery.data?.deployments || [];
-    if (!createdDeploymentItem) {
-      return deployments;
-    }
-
-    const deploymentsWithoutCreated = deployments.filter(
-      (deployment) => deployment.id !== createdDeploymentItem.id,
-    );
-    return [createdDeploymentItem, ...deploymentsWithoutCreated];
-  }, [deploymentsQuery.data?.deployments, createdDeploymentItem]);
   const flows = useMemo<FlowType[]>(() => {
     const data = flowsQuery.data;
     if (!data) {
@@ -180,165 +115,30 @@ const DeploymentsTab = () => {
     return Array.isArray(data) ? data : data.items;
   }, [flowsQuery.data]);
 
-  const deploymentRows = useMemo<DeploymentListRow[]>(() => {
-    return liveDeployments.map((deployment) => {
-      const providerDeploymentId =
-        typeof deployment.resource_key === "string" &&
-          deployment.resource_key.trim().length > 0
-          ? deployment.resource_key
-          : deployment.id;
-      const deploymentRowId = deployment.id;
-      const createdMeta =
-        createdDeploymentUiMeta?.deploymentId === deploymentRowId
-          ? createdDeploymentUiMeta
-          : null;
-      const snapshotIds =
-        deployment.provider_data?.snapshot_ids &&
-          Array.isArray(deployment.provider_data.snapshot_ids)
-          ? deployment.provider_data.snapshot_ids
-          : [];
-      const mode =
-        typeof deployment.provider_data?.mode === "string"
-          ? deployment.provider_data.mode
-          : undefined;
-
-      return {
-        id: deploymentRowId,
-        name: deployment.name,
-        url: `Deployment ID: ${providerDeploymentId}`,
-        type: deployment.type.toUpperCase() === "MCP" ? "MCP" : "Agent",
-        deploymentType:
-          deployment.type.toUpperCase() === "MCP" ? "mcp" : "agent",
-        mode: mapProviderModeToLabel(mode),
-        attached:
-          deployment.attached_count ??
-          createdMeta?.attachedCount ??
-          snapshotIds.length ??
-          0,
-        modifiedDate: formatDateLabel(
-          deployment.updated_at ??
-          deployment.created_at ??
-          createdMeta?.createdAt ??
-          null,
-        ),
-        createdDate: formatDateLabel(
-          deployment.created_at ??
-          deployment.updated_at ??
-          createdMeta?.createdAt ??
-          null,
-        ),
-      };
-    });
-  }, [createdDeploymentUiMeta, liveDeployments]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadCheckpoints = async () => {
-      if (!newDeploymentOpen || flows.length === 0) {
-        setCheckpointGroups([]);
-        return;
-      }
-      const responses = await Promise.all(
-        flows.map(async (flow) => {
-          try {
-            const response = await fetchFlowHistoryWithDedupe(
-              `${getURL("FLOWS")}/${flow.id}/history/?limit=20&offset=0`,
-            );
-            return { flow, entries: response.entries ?? [] };
-          } catch {
-            return { flow, entries: [] as FlowHistoryEntry[] };
-          }
-        }),
-      );
-      const groups = responses.map(({ flow, entries }) => ({
-        flowId: flow.id,
-        flowName: flow.name,
-        checkpoints: entries.map((entry) => ({
-          id: entry.id,
-          name: entry.version_tag
-            ? `Version ${entry.version_tag}`
-            : "Checkpoint",
-          updatedDate: formatDateLabel(entry.created_at),
-        })),
-      }));
-      if (!cancelled) {
-        setCheckpointGroups(groups);
-      }
-    };
-    loadCheckpoints();
-    return () => {
-      cancelled = true;
-    };
-  }, [flows, newDeploymentOpen]);
-
-  const [detectedEnvVars, setDetectedEnvVars] = useState<EnvVar[]>([]);
-
-  const prevSelectedKeyRef = useRef("");
-
-  useEffect(() => {
-    if (!newDeploymentOpen) {
-      prevSelectedKeyRef.current = "";
-      setDetectedEnvVars([]);
-    }
-  }, [newDeploymentOpen]);
-
-  useEffect(() => {
-    setCreatedDeploymentItem(null);
-    setCreatedDeploymentUiMeta(null);
-    setDeploymentsPage(1);
-  }, [providerId]);
-
-  useEffect(() => {
-    if (!newDeploymentOpen || selectedItems.size === 0) {
-      setDetectedEnvVars([]);
-      return;
-    }
-
-    let cancelled = false;
-    const checkpointIds = Array.from(selectedItems);
-    const detect = async () => {
-      try {
-        const response = await detectDeploymentEnvVars({
-          reference_ids: checkpointIds,
-        });
-        if (!cancelled) {
-          setDetectedEnvVars(
-            (response.variables || []).map((item) => ({
-              key: item.global_variable_name ?? item.key,
-              value: item.global_variable_name ?? "",
-              globalVar: Boolean(item.global_variable_name),
-              deploymentKey: item.key,
-            })),
-          );
-        }
-      } catch {
-        if (!cancelled) {
-          setDetectedEnvVars([]);
-        }
-      }
-    };
-    void detect();
-    return () => {
-      cancelled = true;
-    };
-  }, [newDeploymentOpen, selectedItems, detectDeploymentEnvVars]);
-
-  useEffect(() => {
-    if (!newDeploymentOpen || currentStep < 3) {
-      return;
-    }
-    if (envVars.length > 0 || detectedEnvVars.length === 0) {
-      return;
-    }
-    setEnvVars(detectedEnvVars);
-  }, [
-    currentStep,
-    detectedEnvVars,
-    envVars.length,
+  // --- Checkpoints & env var detection ---
+  const { checkpointGroups, detectedEnvVars } = useCheckpoints({
+    flows,
     newDeploymentOpen,
+    selectedItems,
+    currentStep,
+    envVars,
     setEnvVars,
-  ]);
+  });
 
+  // --- Deployment rows ---
+  const { liveDeployments, deploymentRows } = useDeploymentRows({
+    deployments: deploymentsQuery.data?.deployments || [],
+    createdDeploymentItem,
+    createdDeploymentUiMeta,
+  });
+
+  // Reset created state on provider change
+  useEffect(() => {
+    resetCreatedState();
+    setDeploymentsPage(1);
+  }, [providerId, resetCreatedState]);
+
+  // --- Review items ---
   const selectedReviewItems = useMemo(() => {
     return checkpointGroups
       .flatMap((group) =>
@@ -351,107 +151,41 @@ const DeploymentsTab = () => {
       .map((item) => ({ name: item.name }));
   }, [checkpointGroups, selectedItems]);
 
-  const handleCreateDeployment = () => {
-    if (!providerId) {
-      setErrorData({
-        title: "No provider selected",
-        list: ["Select or create a deployment provider first."],
-      });
-      return;
-    }
+  // --- Create handler ---
+  const onCreateDeployment = () => {
+    handleCreateDeployment({
+      providerId,
+      deploymentName,
+      deploymentDescription,
+      deploymentType,
+      selectedItems,
+      envVars,
+      onSubmit: handleSubmit,
+    });
+  };
 
-    const envVarValidationErrors = validateEnvVars(envVars);
-    if (envVarValidationErrors.length > 0) {
-      setErrorData({
-        title: "Invalid environment variables",
-        list: envVarValidationErrors,
-      });
-      return;
-    }
-
-    const selectedCheckpointIds = Array.from(selectedItems);
-    const selectedFlowCount = selectedCheckpointIds.length;
-    const requestedAt = new Date().toISOString();
-
-    const trimmedDeploymentName = deploymentName.trim();
-    const trimmedDescription = deploymentDescription.trim();
-
-    const payload: DeploymentCreatePayload = {
-      provider_id: providerId,
-      spec: {
-        name: trimmedDeploymentName,
-        description: trimmedDescription,
-        type: deploymentType === "MCP" ? "mcp" : "agent",
-      },
-    };
-
-    if (selectedCheckpointIds.length > 0) {
-      payload.flow_versions = {
-        ids: selectedCheckpointIds,
-      };
-    }
-
-    const environmentVariables = envVars.reduce<
-      Record<string, { source: "raw" | "variable"; value: string }>
-    >((acc, item) => {
-      const key = item.key.trim();
-      const value = item.value.trim();
-      if (!key || !value) {
-        return acc;
+  // --- Primary action from creation status ---
+  const onCreationPrimaryAction = () => {
+    if (createdDeploymentType === "agent") {
+      if (!createdDeploymentId) {
+        setNoticeData({
+          title: "Deployment ID not available yet. Please try again.",
+        });
+        return;
       }
-      return {
-        ...acc,
-        [key]: {
-          source: item.globalVar ? "variable" : "raw",
-          value,
-        },
-      };
-    }, {});
-
-    if (Object.keys(environmentVariables).length > 0) {
-      payload.config = {
-        raw_payload: {
-          name: trimmedDeploymentName,
-          description: trimmedDescription,
-          environment_variables: environmentVariables,
-        },
-      };
+      setTestDeploymentTarget({
+        id: createdDeploymentId,
+        name: createdDeploymentName,
+        deploymentType: "agent",
+        mode:
+          deploymentRows.find((row) => row.id === createdDeploymentId)?.mode ||
+          undefined,
+      });
+      setTestAgentModalOpen(true);
+      return;
     }
-
-    setCreationState("creating");
-    setCreatedDeploymentId("");
-    setCreatedDeploymentName(trimmedDeploymentName);
-    setCreatedDeploymentType(payload.spec.type);
-    setCreatedDeploymentUiMeta(null);
-    handleSubmit();
-
-    createDeploymentMutation.mutate(payload, {
-      onSuccess: async (response: DeploymentCreateResponse) => {
-        setCreatedDeploymentId(response.id);
-        const resultSnapshotIds = Array.isArray(response.snapshot_ids)
-          ? response.snapshot_ids.filter(
-            (id): id is string =>
-              typeof id === "string" && id.trim().length > 0,
-          )
-          : [];
-        setCreatedDeploymentUiMeta({
-          deploymentId: response.id,
-          attachedCount: resultSnapshotIds.length || selectedFlowCount,
-          createdAt: requestedAt,
-        });
-        const deployment = await getDeploymentByIdMutation.mutateAsync({
-          deploymentId: response.id,
-        });
-        setCreatedDeploymentItem(deployment);
-        setCreationState("success");
-      },
-      onError: () => {
-        setCreationState("error");
-        setErrorData({
-          title: "Could not create deployment",
-          list: ["Please review provider credentials and deployment payload."],
-        });
-      },
+    setNoticeData({
+      title: "MCP deployment testing UI will be added soon.",
     });
   };
 
@@ -461,7 +195,9 @@ const DeploymentsTab = () => {
         className="pointer-events-none absolute inset-0 z-40"
         style={{
           background:
-            "linear-gradient(to bottom, transparent 0%, transparent 25%, hsl(var(--background) / 0.5) 45%, hsl(var(--background)) 65%, hsl(var(--background)) 100%)",
+            (providersQuery.isLoading || !hasProviders) && false
+              ? "linear-gradient(to bottom, transparent 0%, transparent 25%, hsl(var(--background) / 0.5) 45%, hsl(var(--background)) 65%, hsl(var(--background)) 100%)"
+              : "transparent",
         }}
       />
       <div className="flex h-full flex-col pt-5 px-5 3xl:container">
@@ -470,217 +206,77 @@ const DeploymentsTab = () => {
             state={creationState}
             deploymentName={createdDeploymentName}
             deploymentType={createdDeploymentType}
-            onBack={() => {
-              setCreationState("idle");
-            }}
-            onPrimaryAction={() => {
-              if (createdDeploymentType === "agent") {
-                if (!createdDeploymentId) {
-                  setNoticeData({
-                    title: "Deployment ID not available yet. Please try again.",
-                  });
-                  return;
-                }
-                setTestDeploymentTarget({
-                  id: createdDeploymentId,
-                  name: createdDeploymentName,
-                  deploymentType: "agent",
-                  mode:
-                    deploymentRows.find((row) => row.id === createdDeploymentId)
-                      ?.mode || undefined,
-                });
-                setTestAgentModalOpen(true);
-                return;
-              }
-              setNoticeData({
-                title: "MCP deployment testing UI will be added soon.",
-              });
-            }}
+            onBack={() => setCreationState("idle")}
+            onPrimaryAction={onCreationPrimaryAction}
           />
         ) : (
           <>
-            {/* Sub-tab toggle — always visible */}
-            <div className="flex items-center justify-between gap-4">
-              <div className="inline-flex items-center rounded-md border border-border bg-background p-1">
-                <button
-                  type="button"
-                  onClick={() => setActiveSubTab("deployments")}
-                  className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeSubTab === "deployments"
-                      ? "bg-muted text-primary shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                    }`}
-                >
-                  Deployments
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveSubTab("providers")}
-                  className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeSubTab === "providers"
-                      ? "bg-muted text-primary shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                    }`}
-                >
-                  Deployment Providers
-                </button>
-              </div>
-            </div>
+            <SubTabToggle
+              activeSubTab={activeSubTab}
+              onChangeSubTab={setActiveSubTab}
+            />
 
-            {/* Content area */}
             {providersQuery.isLoading && false ? (
               <DeploymentsLoadingView activeSubTab={activeSubTab} />
-            ) : !hasProviders ? (
+            ) : !hasProviders && false ? (
               <DeploymentsEmptyState
                 activeSubTab={activeSubTab}
                 onCreateDeployment={() => handleOpenChange(true)}
                 onAddProvider={() => setRegisterProviderOpen(true)}
               />
             ) : (
-              <DeploymentsView
-                providers={providers}
-                deploymentRows={deploymentRows}
-                selectedProviderId={providerId || null}
-                onSelectProvider={setSelectedProviderId}
-                onConfigureProvider={handleConfigureProvider}
-                selectedProviderDeploymentCount={liveDeployments.length}
-                isLoadingDeployments={deploymentsQuery.isLoading}
-                isLoadingProviders={providersQuery.isLoading}
-                page={deploymentsPage}
-                pageSize={deploymentsPageSize}
-                total={deploymentsQuery.data?.total ?? 0}
-                onPageChange={setDeploymentsPage}
-                onCreateDeployment={() => handleOpenChange(true)}
-                activeSubTab={activeSubTab}
-                onTestAgent={(deployment) => {
-                  if (
-                    !deployment.id.trim() ||
-                    !deployment.name.trim() ||
-                    deployment.deploymentType !== "agent"
-                  ) {
-                    return;
-                  }
-                  setTestDeploymentTarget(deployment);
-                  setTestAgentModalOpen(true);
-                }}
-              />
+              <div className="flex-1 min-h-0">
+                <DeploymentsView
+                  providers={providers}
+                  deploymentRows={deploymentRows}
+                  selectedProviderId={providerId || null}
+                  onSelectProvider={setSelectedProviderId}
+                  onConfigureProvider={handleConfigureProvider}
+                  selectedProviderDeploymentCount={liveDeployments.length}
+                  isLoadingDeployments={deploymentsQuery.isLoading}
+                  isLoadingProviders={providersQuery.isLoading}
+                  page={deploymentsPage}
+                  pageSize={deploymentsPageSize}
+                  total={deploymentsQuery.data?.total ?? 0}
+                  onPageChange={setDeploymentsPage}
+                  onCreateDeployment={() => handleOpenChange(true)}
+                  activeSubTab={activeSubTab}
+                  onTestAgent={(deployment) => {
+                    if (
+                      !deployment.id.trim() ||
+                      !deployment.name.trim() ||
+                      deployment.deploymentType !== "agent"
+                    ) {
+                      return;
+                    }
+                    setTestDeploymentTarget(deployment);
+                    setTestAgentModalOpen(true);
+                  }}
+                />
+              </div>
             )}
-            <StepperModal
-              className=""
+            <DeploymentStepperModal
               open={newDeploymentOpen}
               onOpenChange={handleOpenChange}
               currentStep={currentStep}
-              totalSteps={TOTAL_STEPS}
-              showProgress={false}
-              description={
-                currentStep === 1
-                  ? "Configure your provider credentials below. Sign in or sign up to find your credentials"
-                  : currentStep === 2
-                    ? "Set your deployment details"
-                    : currentStep === 3
-                      ? "Choose an existing agent or create a new one"
-                      : currentStep === 4
-                        ? "Assign a configuration to your flow"
-                        : "Review the details of your deployment before finalizing"
-              }
-              title={
-                currentStep === 1
-                  ? "Configure Deployment Provider"
-                  : currentStep === 2
-                    ? "Deployment Basics"
-                    : currentStep === 3
-                      ? "Agent Selection"
-                      : currentStep === 4
-                        ? "Configure Flow"
-                        : "Review & Deploy"
-              }
-              bgClassName="bg-secondary"
-              width="w-[752px]"
-              height="h-[569px]"
-              contentClassName="bg-background"
-              stepLabels={STEP_LABELS}
-              onBack={() => handleOpenChange(false)}
-              backLabel="Back to Deployments"
-              footer={
-                <StepperModalFooter
-                  currentStep={currentStep}
-                  totalSteps={TOTAL_STEPS}
-                  onBack={handleBack}
-                  onNext={() => {
-                    handleNext();
-                  }}
-                  onSubmit={handleCreateDeployment}
-                  submitLabel={
-                    <>
-                      <ForwardedIconComponent
-                        name="Rocket"
-                        className="h-4 w-4"
-                      />{" "}
-                      Deploy
-                    </>
-                  }
-                  nextLabel="Next"
-                />
-              }
-            >
-              <DeployFlowStepper
-                currentStep={currentStep}
-                labels={STEP_LABELS}
-              />
-              {currentStep === 1 && (
-                <StepProvider
-                  deploymentName={deploymentName}
-                  setDeploymentName={setDeploymentName}
-                  deploymentDescription={deploymentDescription}
-                  setDeploymentDescription={setDeploymentDescription}
-                  deploymentType={deploymentType}
-                  setDeploymentType={setDeploymentType}
-                />
-              )}
-              {currentStep === 2 && (
-                <StepBasics
-                  deploymentName={deploymentName}
-                  setDeploymentName={setDeploymentName}
-                  deploymentDescription={deploymentDescription}
-                  setDeploymentDescription={setDeploymentDescription}
-                  deploymentType={deploymentType}
-                  setDeploymentType={setDeploymentType}
-                />
-              )}
-
-              {currentStep === 3 && (
-                <StepAgent
-                  selectedItems={selectedItems}
-                  toggleItem={toggleItem}
-                  flows={checkpointGroups}
-                />
-              )}
-
-              {currentStep === 4 && (
-                <StepConfiguration
-                  envVars={envVars}
-                  setEnvVars={setEnvVars}
-                  detectedVarCount={detectedEnvVars.length}
-                  selectedAgentName={
-                    checkpointGroups.find((g) => selectedItems.has(g.flowId))
-                      ?.flowName
-                  }
-                />
-              )}
-
-              {currentStep === 5 && (
-                <StepReview
-                  deploymentType={deploymentType}
-                  deploymentName={deploymentName}
-                  deploymentDescription={deploymentDescription}
-                  selectedItems={selectedReviewItems}
-                  envVars={envVars}
-                  providerName={selectedProvider?.provider_key}
-                  selectedAgentName={
-                    checkpointGroups.find((g) => selectedItems.has(g.flowId))
-                      ?.flowName
-                  }
-                />
-              )}
-            </StepperModal>
+              deploymentType={deploymentType}
+              setDeploymentType={setDeploymentType}
+              deploymentName={deploymentName}
+              setDeploymentName={setDeploymentName}
+              deploymentDescription={deploymentDescription}
+              setDeploymentDescription={setDeploymentDescription}
+              selectedItems={selectedItems}
+              toggleItem={toggleItem}
+              checkpointGroups={checkpointGroups}
+              envVars={envVars}
+              setEnvVars={setEnvVars}
+              detectedVarCount={detectedEnvVars.length}
+              selectedReviewItems={selectedReviewItems}
+              providerName={selectedProvider?.provider_key}
+              onBack={handleBack}
+              onNext={handleNext}
+              onSubmit={onCreateDeployment}
+            />
           </>
         )}
         <RegisterDeploymentProviderModal

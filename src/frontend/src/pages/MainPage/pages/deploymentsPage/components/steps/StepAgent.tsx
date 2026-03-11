@@ -59,10 +59,11 @@ export const StepAgent = ({
         >
           <label
             htmlFor="mode-existing"
-            className={`flex cursor-pointer items-center gap-4 rounded-lg border p-4 transition-colors bg-muted ${agentMode === "existing"
+            className={`flex cursor-pointer items-center gap-4 rounded-lg border p-4 transition-colors bg-muted ${
+              agentMode === "existing"
                 ? "border-primary"
                 : "border-border hover:border-muted-foreground"
-              }`}
+            }`}
           >
             <RadioGroupItem value="existing" id="mode-existing" />
             <div className="flex flex-col gap-0.5">
@@ -75,10 +76,11 @@ export const StepAgent = ({
 
           <label
             htmlFor="mode-new"
-            className={`flex cursor-pointer items-center gap-4 rounded-lg border p-4 transition-colors bg-muted ${agentMode === "new"
+            className={`flex cursor-pointer items-center gap-4 rounded-lg border p-4 transition-colors bg-muted ${
+              agentMode === "new"
                 ? "border-primary"
                 : "border-border hover:border-muted-foreground"
-              }`}
+            }`}
           >
             <RadioGroupItem value="new" id="mode-new" />
             <div className="flex flex-col gap-0.5">

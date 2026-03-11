@@ -37,10 +37,11 @@ export const StepConfiguration = ({
       <button
         type="button"
         onClick={() => setUseCurrentFlow(!useCurrentFlow)}
-        className={`flex items-center gap-4 rounded-lg border bg-muted p-4 text-left transition-colors ${useCurrentFlow
+        className={`flex items-center gap-4 rounded-lg border bg-muted p-4 text-left transition-colors ${
+          useCurrentFlow
             ? "border-primary"
             : "border-border hover:border-muted-foreground"
-          }`}
+        }`}
       >
         <Checkbox checked={useCurrentFlow} className="pointer-events-none" />
         <div className="flex flex-col gap-0.5">

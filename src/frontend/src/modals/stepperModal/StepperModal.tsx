@@ -123,7 +123,7 @@ export type {
   StepperContextValue,
   StepperModalFooterProps,
   StepperModalProps,
-  StepperModalSize
+  StepperModalSize,
 } from "./types";
 
 export default StepperModal;
