@@ -82,6 +82,20 @@ def _validate_str_id_list(values: list[str], *, field_name: str) -> list[str]:
     return cleaned
 
 
+def _validate_uuid_list(values: list[UUID], *, field_name: str) -> list[UUID]:
+    """Deduplicate (preserving order) and reject empty lists."""
+    seen: set[UUID] = set()
+    deduped: list[UUID] = []
+    for value in values:
+        if value not in seen:
+            seen.add(value)
+            deduped.append(value)
+    if not deduped:
+        msg = f"{field_name} must not be empty."
+        raise ValueError(msg)
+    return deduped
+
+
 def _normalize_str(value: str, *, field_name: str = "Field") -> str:
     """Strip whitespace from a string, rejecting empty or whitespace-only values."""
     normalized = value.strip()
@@ -297,18 +311,15 @@ class FlowVersionsAttach(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    # Typed as str (not UUID) because the service layer uses a flexible IdLike
-    # type (UUID | NormalizedId). The same str typing is used for the
-    # query-parameter variant in list_deployments for consistency.
-    ids: list[str] = Field(
+    ids: list[UUID] = Field(
         min_length=1,
         description="Langflow flow version ids to attach to the deployment.",
     )
 
     @field_validator("ids")
     @classmethod
-    def validate_ids(cls, values: list[str]) -> list[str]:
-        return _validate_str_id_list(values, field_name="ids")
+    def validate_ids(cls, values: list[UUID]) -> list[UUID]:
+        return _validate_uuid_list(values, field_name="ids")
 
 
 class FlowVersionsPatch(BaseModel):
@@ -316,21 +327,21 @@ class FlowVersionsPatch(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    add: list[str] | None = Field(
+    add: list[UUID] | None = Field(
         None,
         description="Langflow flow version ids to attach to the deployment. Omit to leave unchanged.",
     )
-    remove: list[str] | None = Field(
+    remove: list[UUID] | None = Field(
         None,
         description="Langflow flow version ids to detach from the deployment. Omit to leave unchanged.",
     )
 
     @field_validator("add", "remove")
     @classmethod
-    def validate_id_lists(cls, values: list[str] | None, info: ValidationInfo) -> list[str] | None:
+    def validate_id_lists(cls, values: list[UUID] | None, info: ValidationInfo) -> list[UUID] | None:
         if values is None:
             return None
-        return _validate_str_id_list(values, field_name=info.field_name)
+        return _validate_uuid_list(values, field_name=info.field_name)
 
     @model_validator(mode="after")
     def validate_operations(self):
@@ -343,7 +354,7 @@ class FlowVersionsPatch(BaseModel):
 
         overlap = set(add_values).intersection(remove_values)
         if overlap:
-            ids = ", ".join(sorted(overlap))
+            ids = ", ".join(sorted(str(v) for v in overlap))
             msg = f"Flow version ids cannot be present in both 'add' and 'remove': {ids}."
             raise ValueError(msg)
         return self
@@ -410,6 +421,11 @@ class DeploymentConfigBindingUpdate(BaseModel):
     config_id: NonEmptyStr | None = Field(
         default=None,
         description="Provider-owned config id to bind to the deployment. Use null to unbind.",
+    )
+
+    raw_payload: _StrictDeploymentConfig | None = Field(
+        default=None,
+        description="Config payload to create and bind to the deployment.",
     )
 
 

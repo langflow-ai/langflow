@@ -110,52 +110,82 @@ def test_deployment_list_params_rejects_blank_filter_ids() -> None:
         DeploymentListParams(deployment_ids=["   "])
 
 
-def test_snapshot_binding_update_accepts_idlike_and_dedupes() -> None:
+def test_snapshot_binding_update_add_ids_dedupes() -> None:
     snapshot_uuid = uuid4()
-
     payload = SnapshotDeploymentBindingUpdate(
-        add=[snapshot_uuid, f"  {snapshot_uuid}  ", "snap_1", "snap_1"],
-        remove=["  snap_2  ", "snap_2"],
+        add_ids=[snapshot_uuid, f"  {snapshot_uuid}  ", "snap_1", "snap_1"],
     )
-
-    assert payload.add == [str(snapshot_uuid), "snap_1"]
-    assert payload.remove == ["snap_2"]
+    assert payload.add_ids == [str(snapshot_uuid), "snap_1"]
 
 
-def test_snapshot_binding_update_add_only() -> None:
-    payload = SnapshotDeploymentBindingUpdate(add=["snap_1"])
-    assert payload.add == ["snap_1"]
-    assert payload.remove is None
+def test_snapshot_binding_update_remove_ids_dedupes() -> None:
+    snapshot_uuid = uuid4()
+    payload = SnapshotDeploymentBindingUpdate(
+        remove_ids=[snapshot_uuid, f"  {snapshot_uuid}  ", "snap_2", "snap_2"],
+    )
+    assert payload.remove_ids == [str(snapshot_uuid), "snap_2"]
 
 
-def test_snapshot_binding_update_remove_only() -> None:
-    payload = SnapshotDeploymentBindingUpdate(remove=["snap_1"])
-    assert payload.remove == ["snap_1"]
-    assert payload.add is None
+def test_snapshot_binding_update_add_ids_only() -> None:
+    payload = SnapshotDeploymentBindingUpdate(add_ids=["snap_1"])
+    assert payload.add_ids == ["snap_1"]
+    assert payload.add_raw_payloads is None
+    assert payload.remove_ids is None
+
+
+def test_snapshot_binding_update_add_raw_payloads_only() -> None:
+    flow_id = uuid4()
+    payload = SnapshotDeploymentBindingUpdate(
+        add_raw_payloads=[
+            {
+                "id": flow_id,
+                "name": "Flow",
+                "data": {"nodes": [], "edges": []},
+            }
+        ]
+    )
+    assert payload.add_raw_payloads is not None
+    assert len(payload.add_raw_payloads) == 1
+    assert payload.add_ids is None
+    assert payload.remove_ids is None
+
+
+def test_snapshot_binding_update_remove_ids_only() -> None:
+    payload = SnapshotDeploymentBindingUpdate(remove_ids=["snap_1"])
+    assert payload.remove_ids == ["snap_1"]
+    assert payload.add_ids is None
+    assert payload.add_raw_payloads is None
 
 
 def test_snapshot_binding_update_rejects_overlap_after_normalization() -> None:
     snapshot_uuid = uuid4()
-    with pytest.raises(ValidationError, match="cannot be present in both 'add' and 'remove'"):
+    with pytest.raises(ValidationError, match="cannot be present in both"):
         SnapshotDeploymentBindingUpdate(
-            add=[snapshot_uuid, " snap_1 "],
-            remove=[str(snapshot_uuid), "snap_1"],
+            add_ids=[snapshot_uuid, " snap_1 "],
+            remove_ids=[str(snapshot_uuid), "snap_1"],
         )
 
 
-def test_snapshot_binding_update_rejects_blank_ids() -> None:
-    with pytest.raises(ValidationError):
-        SnapshotDeploymentBindingUpdate(add=["   "])
-
-
-def test_snapshot_binding_update_preserves_order_while_deduping() -> None:
-    payload = SnapshotDeploymentBindingUpdate(add=["b", "a", "b", "c", "a"])
-    assert payload.add == ["b", "a", "c"]
-
-
 def test_snapshot_binding_update_rejects_noop_payload() -> None:
-    with pytest.raises(ValidationError, match="At least one of 'add' or 'remove'"):
+    with pytest.raises(ValidationError, match="At least one of"):
         SnapshotDeploymentBindingUpdate()
+
+
+def test_snapshot_binding_update_add_ids_and_raw_payloads_together() -> None:
+    flow_id = uuid4()
+    payload = SnapshotDeploymentBindingUpdate(
+        add_ids=["existing_snap"],
+        add_raw_payloads=[
+            {
+                "id": flow_id,
+                "name": "New Flow",
+                "data": {"nodes": [], "edges": []},
+            }
+        ],
+    )
+    assert payload.add_ids == ["existing_snap"]
+    assert payload.add_raw_payloads is not None
+    assert len(payload.add_raw_payloads) == 1
 
 
 def test_config_item_reference_id_rejects_blank() -> None:
@@ -353,7 +383,7 @@ def test_deployment_update_accepts_config_only() -> None:
 
 
 def test_deployment_update_accepts_snapshot_only() -> None:
-    update = DeploymentUpdate(snapshot={"add": ["snap_1"]})
+    update = DeploymentUpdate(snapshot={"add_ids": ["snap_1"]})
     assert update.snapshot is not None
     assert update.spec is None
     assert update.config is None

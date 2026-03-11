@@ -93,19 +93,25 @@ class SnapshotItems(BaseModel):
 class SnapshotDeploymentBindingUpdate(BaseModel):
     """Snapshot deployment binding patch payload.
 
-    Add or remove snapshot bindings for the deployment by reference ids.
+    Supports three operations: bind existing snapshots by ID, create new
+    snapshots from raw payloads, or unbind snapshots by ID.  At least one
+    of the three fields must be provided.
     """
 
-    add: list[IdLike] | None = Field(
+    add_ids: list[IdLike] | None = Field(
         None,
-        description="Snapshot reference ids to attach to the deployment. Omit to leave unchanged.",
+        description="Existing snapshot ids to attach to the deployment. Omit to leave unchanged.",
     )
-    remove: list[IdLike] | None = Field(
+    add_raw_payloads: SnapshotList | None = Field(
         None,
-        description="Snapshot reference ids to detach from the deployment. Omit to leave unchanged.",
+        description="Raw snapshot payloads to create and attach to the deployment. Omit to leave unchanged.",
+    )
+    remove_ids: list[IdLike] | None = Field(
+        None,
+        description="Snapshot ids to detach from the deployment. Omit to leave unchanged.",
     )
 
-    @field_validator("add", "remove")
+    @field_validator("add_ids", "remove_ids")
     @classmethod
     def validate_id_lists(cls, v: list[IdLike] | None) -> list[str] | None:
         if v is None:
@@ -115,17 +121,18 @@ class SnapshotDeploymentBindingUpdate(BaseModel):
     @model_validator(mode="after")
     def validate_operations(self):
         """Ensure patch contains explicit and non-conflicting operations."""
-        add_values = self.add or []
-        remove_values = self.remove or []
+        add_values = self.add_ids or []
+        raw_values = self.add_raw_payloads or []
+        remove_values = self.remove_ids or []
 
-        if not add_values and not remove_values:
-            msg = "At least one of 'add' or 'remove' must be provided."
+        if not add_values and not raw_values and not remove_values:
+            msg = "At least one of 'add_ids', 'add_raw_payloads', or 'remove_ids' must be provided."
             raise ValueError(msg)
 
         overlap = set(add_values).intersection(remove_values)
         if overlap:
             ids = ", ".join(sorted(overlap))
-            msg = f"Snapshot ids cannot be present in both 'add' and 'remove': {ids}."
+            msg = f"Snapshot ids cannot be present in both 'add_ids' and 'remove_ids': {ids}."
             raise ValueError(msg)
 
         return self
@@ -377,6 +384,11 @@ class DeploymentUpdate(BaseModel):
 
 class DeploymentUpdateResult(DeploymentOperationResult):
     """Model representing a result for a deployment update operation."""
+
+    snapshot_ids: list[IdLike] = Field(
+        default_factory=list,
+        description="Snapshot ids produced or bound during the update.",
+    )
 
 
 class RedeployResult(DeploymentOperationResult):

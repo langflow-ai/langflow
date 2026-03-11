@@ -22,6 +22,7 @@ if TYPE_CHECKING:
         DeploymentListResult,
         DeploymentListTypesResult,
         DeploymentStatusResult,
+        DeploymentType,
         DeploymentUpdate,
         DeploymentUpdateResult,
         ExecutionCreate,
@@ -79,6 +80,7 @@ class DeploymentService(BaseDeploymentService):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: AsyncSession,
     ) -> DeploymentGetResult:
         """Return deployment metadata by provider ID."""
@@ -89,6 +91,7 @@ class DeploymentService(BaseDeploymentService):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         payload: DeploymentUpdate,
         db: AsyncSession,
     ) -> DeploymentUpdateResult:
@@ -100,6 +103,7 @@ class DeploymentService(BaseDeploymentService):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: AsyncSession,
     ) -> RedeployResult:
         """Re-apply current deployment inputs without changing them."""
@@ -110,6 +114,7 @@ class DeploymentService(BaseDeploymentService):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: AsyncSession,
     ) -> DeploymentDuplicateResult:
         """Create a new deployment using the same inputs as the source."""
@@ -120,6 +125,7 @@ class DeploymentService(BaseDeploymentService):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: AsyncSession,
     ) -> DeploymentDeleteResult:
         """Delete the deployment from the provider."""
@@ -130,6 +136,7 @@ class DeploymentService(BaseDeploymentService):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: AsyncSession,
     ) -> DeploymentStatusResult:
         """Return provider-reported health/status for the deployment."""
