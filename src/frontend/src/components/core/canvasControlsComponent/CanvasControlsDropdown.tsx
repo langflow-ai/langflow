@@ -9,10 +9,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
-import DropdownControlButton from "./DropdownControlButton";
-import { formatZoomPercentage, reactFlowSelector } from "./utils/canvasUtils";
 import useFlowStore from "@/stores/flowStore";
 import { AllNodeType } from "@/types/flow";
+import DropdownControlButton from "./DropdownControlButton";
+import { formatZoomPercentage, reactFlowSelector } from "./utils/canvasUtils";
 
 export const KEYBOARD_SHORTCUTS = {
   ZOOM_IN: { key: "+", code: "Equal" },

@@ -8,6 +8,8 @@ from uuid import uuid4
 import pytest
 from langflow.api.v1.schemas.deployments import (
     DeploymentConfigBindingUpdate,
+    DeploymentConfigListItem,
+    DeploymentConfigListResponse,
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountGetResponse,
     DeploymentProviderAccountUpdateRequest,
@@ -190,3 +192,57 @@ class TestDeploymentUpdateRequest:
     def test_rejects_explicit_null_only_payload(self):
         with pytest.raises(ValidationError, match="At least one of"):
             DeploymentUpdateRequest(spec=None)
+
+
+# ---------------------------------------------------------------------------
+# DeploymentConfigListItem / DeploymentConfigListResponse
+# ---------------------------------------------------------------------------
+
+
+class TestDeploymentConfigListItem:
+    def test_accepts_minimal_fields(self):
+        item = DeploymentConfigListItem(id="cfg_1", name="Config")
+        assert item.id == "cfg_1"
+        assert item.name == "Config"
+        assert item.created_at is None
+        assert item.updated_at is None
+        assert item.provider_data is None
+
+    def test_does_not_have_description(self):
+        assert "description" not in DeploymentConfigListItem.model_fields
+
+    def test_accepts_all_fields(self):
+        from datetime import datetime, timezone
+
+        now = datetime.now(tz=timezone.utc)
+        item = DeploymentConfigListItem(
+            id="cfg_1",
+            name="Config",
+            created_at=now,
+            updated_at=now,
+            provider_data={"region": "us-east-1"},
+        )
+        assert item.created_at == now
+        assert item.provider_data == {"region": "us-east-1"}
+
+
+class TestDeploymentConfigListResponse:
+    def test_wraps_items_with_pagination(self):
+        response = DeploymentConfigListResponse(
+            configs=[
+                DeploymentConfigListItem(id="cfg_1", name="Config 1"),
+                DeploymentConfigListItem(id="cfg_2", name="Config 2"),
+            ],
+            page=1,
+            size=20,
+            total=2,
+        )
+        assert len(response.configs) == 2
+        assert response.page == 1
+        assert response.total == 2
+
+    def test_pagination_defaults(self):
+        response = DeploymentConfigListResponse(configs=[])
+        assert response.page == 1
+        assert response.size == 20
+        assert response.total == 0

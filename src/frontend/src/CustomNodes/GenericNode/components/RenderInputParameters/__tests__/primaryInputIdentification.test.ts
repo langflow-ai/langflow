@@ -1,5 +1,5 @@
-import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 import type { Edge } from "@xyflow/react";
+import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 import { findPrimaryInput } from "../utils";
 
 // Helper to create a mock edge for testing

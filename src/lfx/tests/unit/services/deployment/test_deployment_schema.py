@@ -9,6 +9,9 @@ from lfx.services.adapters.deployment.schema import (
     BaseFlowArtifact,
     ConfigDeploymentBindingUpdate,
     ConfigItem,
+    ConfigListItem,
+    ConfigListParams,
+    ConfigListResult,
     DeploymentConfig,
     DeploymentCreate,
     DeploymentCreateResult,
@@ -24,7 +27,10 @@ from lfx.services.adapters.deployment.schema import (
     ExecutionStatusResult,
     RedeployResult,
     SnapshotDeploymentBindingUpdate,
+    SnapshotItem,
     SnapshotItems,
+    SnapshotListParams,
+    SnapshotListResult,
     get_deployment_create_schema,
     get_str_id,
     get_uuid,
@@ -526,3 +532,182 @@ def test_get_deployment_create_schema_is_cached() -> None:
     first = get_deployment_create_schema()
     second = get_deployment_create_schema()
     assert first is second
+
+
+# ---------------------------------------------------------------------------
+# SnapshotItem
+# ---------------------------------------------------------------------------
+
+
+def test_snapshot_item_accepts_minimal_fields() -> None:
+    item = SnapshotItem(id="snap_1", name="Snapshot")
+    assert item.id == "snap_1"
+    assert item.name == "Snapshot"
+    assert item.provider_data is None
+
+
+def test_snapshot_item_accepts_uuid_id() -> None:
+    snap_uuid = uuid4()
+    item = SnapshotItem(id=snap_uuid, name="Snapshot")
+    assert item.id == snap_uuid
+
+
+def test_snapshot_item_does_not_have_description() -> None:
+    assert "description" not in SnapshotItem.model_fields
+
+
+# ---------------------------------------------------------------------------
+# ConfigListItem
+# ---------------------------------------------------------------------------
+
+
+def test_config_list_item_accepts_minimal_fields() -> None:
+    item = ConfigListItem(id="cfg_1", name="Config")
+    assert item.id == "cfg_1"
+    assert item.name == "Config"
+    assert item.created_at is None
+    assert item.updated_at is None
+    assert item.provider_data is None
+
+
+def test_config_list_item_accepts_uuid_id() -> None:
+    cfg_uuid = uuid4()
+    item = ConfigListItem(id=cfg_uuid, name="Config")
+    assert item.id == cfg_uuid
+
+
+def test_config_list_item_does_not_have_description() -> None:
+    assert "description" not in ConfigListItem.model_fields
+
+
+def test_config_list_item_accepts_all_fields() -> None:
+    import datetime
+
+    now = datetime.datetime.now(tz=datetime.timezone.utc)
+    item = ConfigListItem(
+        id="cfg_1",
+        name="Config",
+        created_at=now,
+        updated_at=now,
+        provider_data={"region": "us-east-1"},
+    )
+    assert item.created_at == now
+    assert item.updated_at == now
+    assert item.provider_data == {"region": "us-east-1"}
+
+
+# ---------------------------------------------------------------------------
+# ConfigListResult / SnapshotListResult
+# ---------------------------------------------------------------------------
+
+
+def test_config_list_result_wraps_items() -> None:
+    result = ConfigListResult(
+        configs=[
+            ConfigListItem(id="cfg_1", name="Config 1"),
+            ConfigListItem(id="cfg_2", name="Config 2"),
+        ],
+    )
+    assert len(result.configs) == 2
+    assert result.provider_result is None
+
+
+def test_config_list_result_accepts_provider_result() -> None:
+    result = ConfigListResult(
+        configs=[],
+        provider_result={"total": 0},
+    )
+    assert result.provider_result == {"total": 0}
+
+
+def test_snapshot_list_result_wraps_items() -> None:
+    result = SnapshotListResult(
+        snapshots=[
+            SnapshotItem(id="snap_1", name="Snapshot 1"),
+        ],
+    )
+    assert len(result.snapshots) == 1
+    assert result.provider_result is None
+
+
+def test_snapshot_list_result_accepts_provider_result() -> None:
+    result = SnapshotListResult(
+        snapshots=[],
+        provider_result={"total": 0},
+    )
+    assert result.provider_result == {"total": 0}
+
+
+# ---------------------------------------------------------------------------
+# ConfigListParams / SnapshotListParams / DeploymentListParams
+# ---------------------------------------------------------------------------
+
+
+def test_config_list_params_defaults_to_none() -> None:
+    params = ConfigListParams()
+    assert params.provider_params is None
+    assert params.deployment_ids is None
+    assert params.config_ids is None
+
+
+def test_config_list_params_inherits_filter_validation() -> None:
+    cfg_uuid = uuid4()
+    params = ConfigListParams(
+        config_ids=[cfg_uuid, str(cfg_uuid)],
+        deployment_ids=["  dep-id  ", "dep-id"],
+    )
+    assert params.config_ids == [str(cfg_uuid)]
+    assert params.deployment_ids == ["dep-id"]
+
+
+def test_config_list_params_rejects_blank_ids() -> None:
+    with pytest.raises(ValidationError):
+        ConfigListParams(config_ids=["   "])
+
+
+def test_snapshot_list_params_defaults_to_none() -> None:
+    params = SnapshotListParams()
+    assert params.provider_params is None
+    assert params.deployment_ids is None
+    assert params.snapshot_ids is None
+
+
+def test_snapshot_list_params_inherits_filter_validation() -> None:
+    params = SnapshotListParams(
+        snapshot_ids=["  snap-id  ", "snap-id"],
+    )
+    assert params.snapshot_ids == ["snap-id"]
+
+
+def test_snapshot_list_params_rejects_blank_ids() -> None:
+    with pytest.raises(ValidationError):
+        SnapshotListParams(snapshot_ids=["   "])
+
+
+def test_base_list_params_fields_shared_across_all_subclasses() -> None:
+    """All params classes share only provider/deployment-scoped base fields."""
+    for params_cls in (DeploymentListParams, ConfigListParams, SnapshotListParams):
+        params = params_cls(
+            provider_params={"key": "value"},
+            deployment_ids=["dep_1"],
+        )
+        assert params.provider_params == {"key": "value"}
+        assert params.deployment_ids == ["dep_1"]
+
+
+def test_entity_specific_fields_are_scoped_to_own_params_classes() -> None:
+    deployment_fields = set(DeploymentListParams.model_fields)
+    config_fields = set(ConfigListParams.model_fields)
+    snapshot_fields = set(SnapshotListParams.model_fields)
+
+    assert "deployment_types" in deployment_fields
+    assert "snapshot_ids" in deployment_fields
+    assert "config_ids" in deployment_fields
+
+    assert "config_ids" in config_fields
+    assert "snapshot_ids" not in config_fields
+    assert "deployment_types" not in config_fields
+
+    assert "snapshot_ids" in snapshot_fields
+    assert "config_ids" not in snapshot_fields
+    assert "deployment_types" not in snapshot_fields

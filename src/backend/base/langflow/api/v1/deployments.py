@@ -12,6 +12,7 @@ from lfx.services.adapters.deployment.schema import (
 
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
 from langflow.api.v1.schemas.deployments import (
+    DeploymentConfigListResponse,
     DeploymentCreateRequest,
     DeploymentCreateResponse,
     DeploymentDuplicateResponse,
@@ -46,6 +47,10 @@ DeploymentProviderAccountIdPath = Annotated[
 DeploymentIdPath = Annotated[
     UUID,
     Path(description="Langflow DB deployment UUID (`deployment.id`)."),
+]
+DeploymentIdQuery = Annotated[
+    UUID,
+    Query(description="Langflow DB deployment UUID (`deployment.id`)."),
 ]
 
 
@@ -145,16 +150,6 @@ async def create_deployment(
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
-@router.get("/types", response_model=DeploymentTypeListResponse)
-async def list_deployment_types(
-    provider_id: DeploymentProviderAccountIdQuery,
-    session: DbSessionReadOnly,
-    current_user: CurrentActiveUser,
-):
-    """List deployment types for the selected Langflow provider-account UUID."""
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
-
-
 @router.get("", response_model=DeploymentListResponse)
 async def list_deployments(
     provider_id: DeploymentProviderAccountIdQuery,
@@ -176,6 +171,16 @@ async def list_deployments(
     ] = None,
 ):
     """List deployments for the selected Langflow provider-account UUID."""
+    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
+
+
+@router.get("/types", response_model=DeploymentTypeListResponse)
+async def list_deployment_types(
+    provider_id: DeploymentProviderAccountIdQuery,
+    session: DbSessionReadOnly,
+    current_user: CurrentActiveUser,
+):
+    """List deployment types for the selected Langflow provider-account UUID."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
@@ -206,7 +211,25 @@ async def get_deployment_execution(
 
 
 # ---------------------------------------------------------------------------
-# Routes: Single deployment operations
+# Routes: Configs
+# ---------------------------------------------------------------------------
+
+
+@router.get("/configs", response_model=DeploymentConfigListResponse)
+async def list_deployment_configs(
+    session: DbSessionReadOnly,
+    current_user: CurrentActiveUser,
+    deployment_id: DeploymentIdQuery,  # required today, not going to provide global listing for now
+    provider_id: DeploymentProviderAccountIdQuery | None = None,
+    page: Annotated[int, Query(ge=1)] = 1,
+    size: Annotated[int, Query(ge=1, le=50)] = 20,
+):
+    """List deployment configs."""
+    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
+
+
+# ---------------------------------------------------------------------------
+# Routes: Deployment details and actions
 # ---------------------------------------------------------------------------
 
 
@@ -244,6 +267,19 @@ async def delete_deployment(
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
+@router.get(
+    "/{deployment_id}/status",
+    response_model=DeploymentStatusResponse,
+)
+async def get_deployment_status(
+    deployment_id: DeploymentIdPath,
+    session: DbSessionReadOnly,
+    current_user: CurrentActiveUser,
+):
+    """Get deployment status."""
+    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
+
+
 @router.post(
     "/{deployment_id}/redeploy",
     response_model=DeploymentRedeployResponse,
@@ -268,17 +304,4 @@ async def duplicate_deployment(
     current_user: CurrentActiveUser,
 ):
     """Duplicate a deployment."""
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
-
-
-@router.get(
-    "/{deployment_id}/status",
-    response_model=DeploymentStatusResponse,
-)
-async def get_deployment_status(
-    deployment_id: DeploymentIdPath,
-    session: DbSessionReadOnly,
-    current_user: CurrentActiveUser,
-):
-    """Get deployment status."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
