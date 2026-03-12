@@ -3,18 +3,29 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any
+import logging
+from typing import TYPE_CHECKING, Any, NoReturn
 
-from lfx.services.adapters.deployment.exceptions import InvalidContentError
-
-if TYPE_CHECKING:
-    from lfx.services.adapters.deployment.schema import BaseDeploymentData
+from fastapi import HTTPException
+from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+from lfx.services.adapters.deployment.exceptions import (
+    DeploymentError,
+    DeploymentServiceError,
+    InvalidContentError,
+)
+from lfx.services.adapters.deployment.schema import _normalize_and_validate_id
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
     DEFAULT_WXO_AGENT_LLM,
     WXO_SANITIZE_RE,
     WXO_TRANSLATE,
+    ErrorPrefix,
 )
+
+if TYPE_CHECKING:
+    from lfx.services.adapters.deployment.schema import BaseDeploymentData, ConfigListParams, SnapshotListParams
+
+logger = logging.getLogger(__name__)
 
 
 def normalize_wxo_name(s: str) -> str:
@@ -69,6 +80,23 @@ def dedupe_list(items: list[str]) -> list[str]:
     return result
 
 
+def _require_single_deployment_id(
+    params: ConfigListParams | SnapshotListParams | None,
+    *,
+    resource_label: str,
+) -> str:
+    deployment_ids = params.deployment_ids if params else None
+    if not deployment_ids:
+        raise NotImplementedError
+    if len(deployment_ids) != 1:
+        msg = (
+            f"watsonx Orchestrate {resource_label} listing currently supports "
+            "exactly one deployment_id and only deployment-scoped listing."
+        )
+        raise InvalidContentError(message=msg)
+    return _normalize_and_validate_id(str(deployment_ids[0]), field_name="deployment_id")
+
+
 def extract_error_detail(response_text: str) -> str | dict:
     """Extract a human-readable error detail from a ClientAPIException response.
 
@@ -85,6 +113,38 @@ def extract_error_detail(response_text: str) -> str | dict:
     if isinstance(detail, dict):
         detail = detail.get("msg") or detail
     return detail
+
+
+def _resolve_exc_detail(exc: ClientAPIException | HTTPException) -> str:
+    if isinstance(exc, ClientAPIException):
+        raw_text = getattr(exc.response, "text", "")
+        detail = extract_error_detail(raw_text)
+        if detail is None:
+            return raw_text or "<empty response body>"
+        return str(detail)
+    return str(extract_error_detail(str(exc.detail)))
+
+
+def raise_as_deployment_error(
+    exc: Exception,
+    *,
+    error_prefix: ErrorPrefix,
+    log_msg: str,
+    pass_through: tuple[type[DeploymentServiceError], ...] = (),
+) -> NoReturn:
+    if isinstance(exc, pass_through):
+        raise exc
+    if isinstance(exc, DeploymentServiceError):
+        logger.exception(log_msg)
+        msg = f"{error_prefix.value} Please check server logs for details."
+        raise DeploymentError(message=msg, error_code="deployment_error") from None
+    if isinstance(exc, (ClientAPIException, HTTPException)):
+        detail = _resolve_exc_detail(exc)
+        msg = f"{error_prefix.value} error details: {detail}"
+        raise DeploymentError(message=msg, error_code="deployment_error") from None
+    logger.exception(log_msg)
+    msg = f"{error_prefix.value} Please check server logs for details."
+    raise DeploymentError(message=msg, error_code="deployment_error") from None
 
 
 def build_agent_payload(

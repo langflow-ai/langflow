@@ -22,6 +22,7 @@ from lfx.services.adapters.deployment.schema import (
     BaseFlowArtifact,
     ConfigDeploymentBindingUpdate,
     ConfigItem,
+    ConfigListParams,
     DeploymentConfig,
     DeploymentCreate,
     DeploymentListParams,
@@ -30,6 +31,7 @@ from lfx.services.adapters.deployment.schema import (
     EnvVarValueSpec,
     ExecutionCreate,
     SnapshotItems,
+    SnapshotListParams,
 )
 
 # This adapter depends on optional packages that can be missing in
@@ -152,6 +154,7 @@ class FakeConnectionsClient:
         self._existing_app_id = existing_app_id
         self.delete_calls: list[str] = []
         self.delete_credentials_calls: list[tuple[str, object, bool]] = []
+        self._list_entries: list[dict] = []
 
     def get_draft_by_app_id(self, app_id: str):
         if self._existing_app_id and app_id == self._existing_app_id:
@@ -169,6 +172,9 @@ class FakeConnectionsClient:
 
     def delete(self, app_id: str):
         self.delete_calls.append(app_id)
+
+    def list(self):
+        return self._list_entries
 
 
 class FakeBaseClient:
@@ -1005,6 +1011,71 @@ async def test_get_execution_requires_execution_id(monkeypatch):
         )
 
 
+@pytest.mark.anyio
+async def test_list_configs_single_deployment_scope(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
+    fake_tool = FakeToolClient(
+        [
+            {
+                "id": "tool-1",
+                "name": "tool-one",
+                "binding": {
+                    "langflow": {
+                        "connections": {
+                            "cfg-1": "conn-1",
+                        }
+                    }
+                },
+                "created_at": "2026-03-08T18:23:25.277362Z",
+            }
+        ]
+    )
+    fake_clients = SimpleNamespace(
+        agent=fake_agent,
+        tool=fake_tool,
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_configs(
+        user_id="user-1",
+        db=object(),
+        params=ConfigListParams(deployment_ids=["dep-1"]),
+    )
+
+    assert len(result.configs) == 1
+    assert result.configs[0].id == "cfg-1"
+    assert result.configs[0].name == "cfg-1"
+
+
+@pytest.mark.anyio
+async def test_list_snapshots_single_deployment_scope(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1", "tool-2"]}),
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_snapshots(
+        user_id="user-1",
+        db=object(),
+        params=SnapshotListParams(deployment_ids=["dep-1"]),
+    )
+
+    assert [snapshot.id for snapshot in result.snapshots] == ["tool-1", "tool-2"]
+
+
 # ---------------------------------------------------------------------------
 # Retry / backoff tests
 # ---------------------------------------------------------------------------
@@ -1568,6 +1639,65 @@ def test_dedupe_list():
 
     assert dedupe_list(["a", "b", "a", "c", "b"]) == ["a", "b", "c"]
     assert dedupe_list([]) == []
+
+
+def test_raise_as_deployment_error_wraps_service_error_by_default():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.constants import ErrorPrefix
+    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import raise_as_deployment_error
+
+    original = InvalidContentError(message="invalid payload")
+
+    with pytest.raises(DeploymentError, match="Please check server logs for details"):
+        raise_as_deployment_error(
+            original,
+            error_prefix=ErrorPrefix.LIST,
+            log_msg="unexpected list failure",
+        )
+
+
+def test_raise_as_deployment_error_reraises_allowed_service_error():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.constants import ErrorPrefix
+    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import raise_as_deployment_error
+
+    original = InvalidContentError(message="invalid payload")
+
+    with pytest.raises(InvalidContentError, match="invalid payload"):
+        raise_as_deployment_error(
+            original,
+            error_prefix=ErrorPrefix.LIST,
+            log_msg="unexpected list failure",
+            pass_through=(InvalidContentError,),
+        )
+
+
+def test_raise_as_deployment_error_client_api_falls_back_to_raw_body():
+    from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+    from langflow.services.adapters.deployment.watsonx_orchestrate.constants import ErrorPrefix
+    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import raise_as_deployment_error
+
+    resp = SimpleNamespace(status_code=500, text='{"error":"boom"}')
+    exc = ClientAPIException(response=resp)
+
+    with pytest.raises(DeploymentError, match='error details: \\{"error":"boom"\\}'):
+        raise_as_deployment_error(
+            exc,
+            error_prefix=ErrorPrefix.LIST_CONFIGS,
+            log_msg="unexpected config list failure",
+        )
+
+
+def test_raise_as_deployment_error_http_exception_uses_detail():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.constants import ErrorPrefix
+    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import raise_as_deployment_error
+
+    exc = HTTPException(status_code=400, detail="bad request")
+
+    with pytest.raises(DeploymentError, match="error details: bad request"):
+        raise_as_deployment_error(
+            exc,
+            error_prefix=ErrorPrefix.HEALTH,
+            log_msg="unexpected health check failure",
+        )
 
 
 def test_build_agent_payload_requires_provider_spec():
