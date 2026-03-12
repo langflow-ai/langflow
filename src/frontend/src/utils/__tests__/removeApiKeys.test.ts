@@ -77,4 +77,3 @@ describe("removeApiKeys", () => {
     expect(template.regular_field.value).toBe("keep-me");
   });
 });
-

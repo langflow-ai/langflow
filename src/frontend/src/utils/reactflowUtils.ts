@@ -455,7 +455,8 @@ export function removeApiKeys(flow: FlowType): FlowType {
         // can still resolve credentials, but strip any raw secrets.
         if (
           key === "api_key" &&
-          ((typeof field.value === "string" && looksLikeVariableName(field.value)) ||
+          ((typeof field.value === "string" &&
+            looksLikeVariableName(field.value)) ||
             field.load_from_db === true)
         ) {
           continue;
