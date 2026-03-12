@@ -34,13 +34,18 @@ async def create_deployment_attachment(
     try:
         await db.flush()
     except IntegrityError as exc:
+        # Note: rollback handled by asyncsession
         logger.warning(
             "Duplicate or invalid attachment: flow_version=%s deployment=%s — %s",
             flow_version_id,
             deployment_id,
             exc,
         )
-        raise
+        msg = (
+            f"Attachment conflicts with an existing record "
+            f"(flow_version={flow_version_id}, deployment={deployment_id})"
+        )
+        raise ValueError(msg) from exc
     await db.refresh(row)
     return row
 
