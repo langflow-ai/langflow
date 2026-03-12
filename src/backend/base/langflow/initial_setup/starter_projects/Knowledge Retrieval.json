@@ -261,7 +261,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.133.1"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
@@ -536,7 +536,7 @@
                 "dependencies": [
                   {
                     "name": "chromadb",
-                    "version": "1.5.1"
+                    "version": "1.5.5"
                   },
                   {
                     "name": "cryptography",
