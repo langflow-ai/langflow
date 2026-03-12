@@ -279,14 +279,14 @@ class TestChatCompletionDetection:
         assert result is None
 
     @patch("groq.Groq")
-    def test_chat_completion_transient_error_returns_true(self, mock_groq, mock_api_key, mock_groq_client_rate_limit):
-        """Test that transient errors (e.g. rate limits) don't exclude models."""
+    def test_chat_completion_transient_error_returns_none(self, mock_groq, mock_api_key, mock_groq_client_rate_limit):
+        """Test that transient errors (e.g. rate limits) return None (indeterminate)."""
         mock_groq.return_value = mock_groq_client_rate_limit()
 
         discovery = GroqModelDiscovery(api_key=mock_api_key)
         result = discovery._test_chat_completion("llama-3.1-8b-instant")
 
-        assert result is True
+        assert result is None
 
     def test_chat_completion_import_error_raises(self, mock_api_key):
         """Test that ImportError propagates when the groq package is not installed."""
