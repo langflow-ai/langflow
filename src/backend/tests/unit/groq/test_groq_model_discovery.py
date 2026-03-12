@@ -527,14 +527,14 @@ class TestGroqModelDiscoveryErrors:
         assert result is False
 
     @patch("groq.Groq")
-    def test_tool_calling_rate_limit_returns_false(self, mock_groq, mock_api_key, mock_groq_client_rate_limit):
-        """Test that rate limit errors return False conservatively."""
+    def test_tool_calling_rate_limit_returns_none(self, mock_groq, mock_api_key, mock_groq_client_rate_limit):
+        """Test that rate limit errors return None (indeterminate)."""
         mock_groq.return_value = mock_groq_client_rate_limit()
 
         discovery = GroqModelDiscovery(api_key=mock_api_key)
         result = discovery._test_tool_calling("test-model")
 
-        assert result is False
+        assert result is None
 
 
 class TestGroqModelDiscoveryEdgeCases:
