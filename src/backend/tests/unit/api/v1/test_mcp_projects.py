@@ -1041,12 +1041,9 @@ async def test_should_report_available_true_when_app_directory_exists_but_config
 
     for entry in results:
         assert entry["available"] is True, (
-            f"{entry['name']} should be available (directory exists) "
-            f"even when config file is missing"
+            f"{entry['name']} should be available (directory exists) even when config file is missing"
         )
-        assert entry["installed"] is False, (
-            f"{entry['name']} should not be installed (config file doesn't exist)"
-        )
+        assert entry["installed"] is False, f"{entry['name']} should not be installed (config file doesn't exist)"
 
 
 async def test_should_report_installed_true_when_config_file_contains_matching_url(
@@ -1086,9 +1083,7 @@ async def test_should_report_installed_true_when_config_file_contains_matching_u
 
     for entry in results:
         assert entry["available"] is True, f"{entry['name']} should be available"
-        assert entry["installed"] is True, (
-            f"{entry['name']} should be installed (config has matching URL)"
-        )
+        assert entry["installed"] is True, f"{entry['name']} should be installed (config has matching URL)"
 
 
 async def test_should_report_installed_false_when_config_file_has_no_matching_url(
@@ -1107,13 +1102,7 @@ async def test_should_report_installed_false_when_config_file_has_no_matching_ur
     client_paths = _prepare_installed_check_env(monkeypatch, tmp_path)
 
     for path in client_paths.values():
-        config = {
-            "mcpServers": {
-                "other-server": {
-                    "args": ["https://other-server.example.com/sse"]
-                }
-            }
-        }
+        config = {"mcpServers": {"other-server": {"args": ["https://other-server.example.com/sse"]}}}
         path.write_text(json.dumps(config))
 
     response = await client.get(
@@ -1126,9 +1115,7 @@ async def test_should_report_installed_false_when_config_file_has_no_matching_ur
 
     for entry in results:
         assert entry["available"] is True, f"{entry['name']} should be available"
-        assert entry["installed"] is False, (
-            f"{entry['name']} should not be installed (URL doesn't match)"
-        )
+        assert entry["installed"] is False, f"{entry['name']} should not be installed (URL doesn't match)"
 
 
 async def test_should_report_available_false_when_app_directory_does_not_exist(
@@ -1175,9 +1162,7 @@ async def test_should_report_available_false_when_app_directory_does_not_exist(
     results = response.json()
 
     for entry in results:
-        assert entry["available"] is False, (
-            f"{entry['name']} should not be available (directory doesn't exist)"
-        )
+        assert entry["available"] is False, f"{entry['name']} should not be available (directory doesn't exist)"
         assert entry["installed"] is False
 
 
@@ -1208,9 +1193,5 @@ async def test_should_report_available_true_when_config_file_has_corrupt_json(
     results = response.json()
 
     for entry in results:
-        assert entry["available"] is True, (
-            f"{entry['name']} should be available (directory exists)"
-        )
-        assert entry["installed"] is False, (
-            f"{entry['name']} should not be installed (JSON is corrupt)"
-        )
+        assert entry["available"] is True, f"{entry['name']} should be available (directory exists)"
+        assert entry["installed"] is False, f"{entry['name']} should not be installed (JSON is corrupt)"
