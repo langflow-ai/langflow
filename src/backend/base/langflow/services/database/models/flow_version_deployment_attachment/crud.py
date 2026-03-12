@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from lfx.log.logger import logger
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import delete, func, select
 
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
@@ -29,7 +31,16 @@ async def create_deployment_attachment(
         provider_snapshot_id=provider_snapshot_id,
     )
     db.add(row)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError as exc:
+        logger.warning(
+            "Duplicate or invalid attachment: flow_version=%s deployment=%s — %s",
+            flow_version_id,
+            deployment_id,
+            exc,
+        )
+        raise
     await db.refresh(row)
     return row
 
