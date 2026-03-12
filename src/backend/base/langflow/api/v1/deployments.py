@@ -71,7 +71,6 @@ from langflow.services.adapters.deployment.context import deployment_provider_sc
 from langflow.services.database.models.deployment.crud import (
     count_deployments_by_provider,
     delete_deployment_by_id,
-    delete_deployment_by_resource_key,
     get_deployment_by_resource_key,
     list_deployments_page,
 )
@@ -164,6 +163,11 @@ def _resolve_deployment_type(row: Deployment, fallback: DeploymentType | None = 
             msg = f"Unknown deployment_type '{row.deployment_type}' for deployment {row.id}"
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
     if fallback is not None:
+        logger.debug(
+            "Deployment %s has no deployment_type; using fallback '%s'",
+            row.id,
+            fallback.value,
+        )
         return fallback
     msg = f"Deployment {row.id} has no deployment_type set"
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
@@ -195,6 +199,11 @@ def _handle_adapter_errors():
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=exc.message) from exc
     except DeploymentError as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message) from exc
+    except NotImplementedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="This operation is not supported by the deployment provider.",
+        ) from exc
     except ValueError as exc:
         _raise_http_for_value_error(exc)
     except HTTPException:
@@ -481,7 +490,41 @@ async def _build_adapter_deployment_create_payload(
     )
 
 
-async def _sync_page_with_provider(
+async def _fetch_provider_resource_keys(
+    *,
+    deployment_adapter: DeploymentServiceProtocol,
+    user_id: UUID,
+    provider_id: UUID,
+    db: DbSession,
+    resource_keys: list[str],
+    deployment_type: DeploymentType | None = None,
+) -> set[str]:
+    """Ask the provider which *resource_keys* it recognises.
+
+    Returns the set of provider-side IDs that matched.
+    """
+    try:
+        provider_view = await deployment_adapter.list(
+            user_id=user_id,
+            db=db,
+            params=DeploymentListParams(
+                deployment_types=[deployment_type] if deployment_type is not None else None,
+                provider_params={"ids": resource_keys},
+            ),
+        )
+    except Exception as exc:
+        logger.exception(
+            "Provider list call failed for provider %s",
+            provider_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Failed to list deployments from provider: {exc}",
+        ) from exc
+    return {str(item.id) for item in provider_view.deployments if item.id}
+
+
+async def _list_deployments_synced(
     *,
     deployment_adapter: DeploymentServiceProtocol,
     user_id: UUID,
@@ -492,67 +535,62 @@ async def _sync_page_with_provider(
     deployment_type: DeploymentType | None,
     flow_version_ids: list[UUID] | None = None,
 ) -> tuple[list[tuple[Deployment, int, list[str]]], int]:
-    accepted_rows: list[tuple[Deployment, int, list[str]]] = []
+    """Return a page of deployments, deleting any DB rows the provider doesn't recognise.
+
+    Fetches DB rows in batches, sends each batch's resource keys to the
+    provider for validation, and deletes stale rows inline. The cursor does
+    not advance for deleted rows (deletion shifts subsequent offsets down).
+    """
+    accepted: list[tuple[Deployment, int, list[str]]] = []
     cursor = _page_offset(page, size)
     guard = 0
-    while len(accepted_rows) < size and guard < (size * 4 + 20):
+    while len(accepted) < size and guard < (size * 4 + 20):
         guard += 1
         batch = await list_deployments_page(
             db,
             user_id=user_id,
             deployment_provider_account_id=provider_id,
             offset=cursor,
-            limit=size - len(accepted_rows),
+            limit=size - len(accepted),
             flow_version_ids=flow_version_ids,
         )
         if not batch:
             break
 
-        resource_keys = [row.resource_key for row, _, _ in batch]
-        try:
-            provider_view = await deployment_adapter.list(
-                user_id=user_id,
-                db=db,
-                params=DeploymentListParams(
-                    deployment_types=[deployment_type] if deployment_type is not None else None,
-                    provider_params={"ids": resource_keys},
-                ),
-            )
-        except Exception as exc:
-            logger.exception(
-                "Provider sync failed for provider %s while reconciling deployments",
-                provider_id,
-            )
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Failed to reconcile deployments with provider: {exc}",
-            ) from exc
-        provider_ids = {str(item.id) for item in provider_view.deployments if item.id}
-        provider_names = {item.name for item in provider_view.deployments if item.name}
+        known = await _fetch_provider_resource_keys(
+            deployment_adapter=deployment_adapter,
+            user_id=user_id,
+            provider_id=provider_id,
+            db=db,
+            resource_keys=[row.resource_key for row, _, _ in batch],
+            deployment_type=deployment_type,
+        )
+
         for row, attached_count, matched_flow_versions in batch:
-            if row.resource_key in provider_ids or row.resource_key in provider_names:
-                accepted_rows.append((row, attached_count, matched_flow_versions))
-                cursor += 1
+            if row.resource_key not in known:
+                if deployment_type is not None and row.deployment_type != deployment_type.value:
+                    # Provider was filtered by type — this row's type didn't match,
+                    # so its absence doesn't mean it was deleted. Skip, don't delete.
+                    cursor += 1
+                    continue
+                logger.warning(
+                    "Deployment %s (resource_key=%s) not found on provider %s — deleting stale row",
+                    row.id,
+                    row.resource_key,
+                    provider_id,
+                )
+                await delete_deployment_by_id(db, user_id=user_id, deployment_id=row.id)
                 continue
-            logger.info(
-                "Removing orphaned local deployment row %s (resource_key=%s) — not found on provider %s",
-                row.id,
-                row.resource_key,
-                provider_id,
-            )
-            await delete_deployment_by_resource_key(
-                db,
-                user_id=user_id,
-                deployment_provider_account_id=provider_id,
-                resource_key=row.resource_key,
-            )
+            accepted.append((row, attached_count, matched_flow_versions))
+            cursor += 1
+
     total = await count_deployments_by_provider(
         db,
         user_id=user_id,
         deployment_provider_account_id=provider_id,
         flow_version_ids=flow_version_ids,
     )
-    return accepted_rows, total
+    return accepted, total
 
 
 async def _attach_flow_versions(
@@ -623,7 +661,13 @@ async def _apply_flow_version_patch_attachments(
 def _extract_execution_id(provider_result: dict | None) -> str | None:
     if not isinstance(provider_result, dict):
         return None
-    return str(provider_result.get("run_id") or provider_result.get("execution_id") or "").strip() or None
+    extracted = str(provider_result.get("run_id") or provider_result.get("execution_id") or "").strip() or None
+    if extracted is None:
+        logger.debug(
+            "No execution_id in provider result (keys: %s)",
+            list(provider_result.keys()),
+        )
+    return extracted
 
 
 def _to_deployment_create_response(
@@ -777,47 +821,58 @@ async def create_deployment(
             db=session,
         )
 
-    deployment_row = await get_deployment_by_resource_key(
-        session,
-        user_id=current_user.id,
-        deployment_provider_account_id=provider_id,
-        resource_key=str(result.id),
-    )
-    if deployment_row is None:
-        deployment_row = await create_deployment_db(
+    try:
+        deployment_row = await get_deployment_by_resource_key(
             session,
             user_id=current_user.id,
-            project_id=project_id,
             deployment_provider_account_id=provider_id,
             resource_key=str(result.id),
-            name=result.name,
-            deployment_type=result.type.value if result.type else None,
         )
-
-    snapshot_id_by_flow_version_id: dict[UUID, str] = {}
-    flow_version_ids = payload.flow_version_ids.ids if payload.flow_version_ids else None
-    if flow_version_ids:
-        created_snapshot_ids = [
-            str(snapshot_id).strip() for snapshot_id in result.snapshot_ids if str(snapshot_id).strip()
-        ]
-        flow_version_uuid_ids = [_as_uuid(flow_version_id) for flow_version_id in flow_version_ids]
-        valid_flow_version_uuid_ids = [
-            flow_version_id for flow_version_id in flow_version_uuid_ids if flow_version_id is not None
-        ]
-        if len(valid_flow_version_uuid_ids) != len(created_snapshot_ids):
-            msg = (
-                f"Snapshot count mismatch on create: {len(valid_flow_version_uuid_ids)} "
-                f"flow versions vs {len(created_snapshot_ids)} snapshot ids"
+        if deployment_row is None:
+            deployment_row = await create_deployment_db(
+                session,
+                user_id=current_user.id,
+                project_id=project_id,
+                deployment_provider_account_id=provider_id,
+                resource_key=str(result.id),
+                name=result.name,
+                deployment_type=result.type.value if result.type else None,
             )
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        snapshot_id_by_flow_version_id = dict(zip(valid_flow_version_uuid_ids, created_snapshot_ids, strict=True))
-    await _attach_flow_versions(
-        payload=payload,
-        user_id=current_user.id,
-        deployment_row_id=deployment_row.id,
-        snapshot_id_by_flow_version_id=snapshot_id_by_flow_version_id,
-        db=session,
-    )
+
+        snapshot_id_by_flow_version_id: dict[UUID, str] = {}
+        flow_version_ids = payload.flow_version_ids.ids if payload.flow_version_ids else None
+        if flow_version_ids:
+            created_snapshot_ids = [
+                str(snapshot_id).strip() for snapshot_id in result.snapshot_ids if str(snapshot_id).strip()
+            ]
+            flow_version_uuid_ids = [_as_uuid(flow_version_id) for flow_version_id in flow_version_ids]
+            valid_flow_version_uuid_ids = [
+                flow_version_id for flow_version_id in flow_version_uuid_ids if flow_version_id is not None
+            ]
+            if len(valid_flow_version_uuid_ids) != len(created_snapshot_ids):
+                msg = (
+                    f"Snapshot count mismatch on create: {len(valid_flow_version_uuid_ids)} "
+                    f"flow versions vs {len(created_snapshot_ids)} snapshot ids"
+                )
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+            snapshot_id_by_flow_version_id = dict(zip(valid_flow_version_uuid_ids, created_snapshot_ids, strict=True))
+        await _attach_flow_versions(
+            payload=payload,
+            user_id=current_user.id,
+            deployment_row_id=deployment_row.id,
+            snapshot_id_by_flow_version_id=snapshot_id_by_flow_version_id,
+            db=session,
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        logger.critical(
+            "Post-create DB write failed; provider resource %s may be orphaned on provider account %s. "
+            "Manual cleanup may be required.",
+            result.id,
+            provider_id,
+        )
+        raise
     return _to_deployment_create_response(result, deployment_row.id)
 
 
@@ -843,7 +898,7 @@ async def list_deployments(
     normalized_flow_version_ids = _normalize_flow_version_query_ids(flow_version_ids)
     deployment_adapter = await _resolve_deployment_adapter(provider_id, user_id=current_user.id, db=session)
     with _handle_adapter_errors(), deployment_provider_scope(provider_id):
-        rows_with_counts, total = await _sync_page_with_provider(
+        rows_with_counts, total = await _list_deployments_synced(
             deployment_adapter=deployment_adapter,
             user_id=current_user.id,
             provider_id=provider_id,
@@ -1084,10 +1139,12 @@ async def update_deployment(
             snapshot_add_ids = [snapshot_id for _, snapshot_id in added_snapshot_bindings]
 
         if remove_ids:
-            remove_flow_version_ids = [_as_uuid(flow_version_id) for flow_version_id in remove_ids]
-            remove_flow_version_ids = [
-                flow_version_id for flow_version_id in remove_flow_version_ids if flow_version_id
-            ]
+            for raw_id in remove_ids:
+                parsed = _as_uuid(raw_id)
+                if parsed is None:
+                    msg = f"Invalid flow version id in remove list: {raw_id}"
+                    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+                remove_flow_version_ids.append(parsed)
             remove_attachments = await list_deployment_attachments_for_flow_version_ids(
                 session,
                 user_id=current_user.id,
@@ -1120,22 +1177,31 @@ async def update_deployment(
             db=session,
         )
 
-    await _apply_flow_version_patch_attachments(
-        user_id=current_user.id,
-        deployment_row_id=deployment_row.id,
-        added_snapshot_bindings=added_snapshot_bindings,
-        remove_flow_version_ids=remove_flow_version_ids,
-        db=session,
-    )
-
-    # Persist name changes to local DB so list/get reflect the update.
-    new_name = payload.spec.name if payload.spec and payload.spec.name else None
-    if new_name and new_name != deployment_row.name:
-        deployment_row = await update_deployment_db(
-            session,
-            deployment=deployment_row,
-            name=new_name,
+    try:
+        await _apply_flow_version_patch_attachments(
+            user_id=current_user.id,
+            deployment_row_id=deployment_row.id,
+            added_snapshot_bindings=added_snapshot_bindings,
+            remove_flow_version_ids=remove_flow_version_ids,
+            db=session,
         )
+
+        # Persist name changes to local DB so list/get reflect the update.
+        new_name = payload.spec.name if payload.spec and payload.spec.name else None
+        if new_name and new_name != deployment_row.name:
+            deployment_row = await update_deployment_db(
+                session,
+                deployment=deployment_row,
+                name=new_name,
+            )
+    except Exception:
+        logger.error(
+            "Post-update DB write failed for deployment %s (resource_key=%s); "
+            "provider state may be inconsistent with local DB.",
+            deployment_row.id,
+            deployment_row.resource_key,
+        )
+        raise
 
     provider_data = update_result.provider_result if isinstance(update_result.provider_result, dict) else None
     return DeploymentUpdateResponse(
@@ -1264,22 +1330,31 @@ async def duplicate_deployment(
             db=session,
         )
 
-    duplicate_row = await get_deployment_by_resource_key(
-        session,
-        user_id=current_user.id,
-        deployment_provider_account_id=deployment_row.deployment_provider_account_id,
-        resource_key=str(clone_result.id),
-    )
-    if duplicate_row is None:
-        duplicate_row = await create_deployment_db(
+    try:
+        duplicate_row = await get_deployment_by_resource_key(
             session,
             user_id=current_user.id,
-            project_id=deployment_row.project_id,
             deployment_provider_account_id=deployment_row.deployment_provider_account_id,
             resource_key=str(clone_result.id),
-            name=clone_result.name,
-            deployment_type=clone_result.type.value if clone_result.type else None,
         )
+        if duplicate_row is None:
+            duplicate_row = await create_deployment_db(
+                session,
+                user_id=current_user.id,
+                project_id=deployment_row.project_id,
+                deployment_provider_account_id=deployment_row.deployment_provider_account_id,
+                resource_key=str(clone_result.id),
+                name=clone_result.name,
+                deployment_type=clone_result.type.value if clone_result.type else None,
+            )
+    except Exception:
+        logger.critical(
+            "Post-duplicate DB write failed; provider resource %s may be orphaned on provider account %s. "
+            "Manual cleanup may be required.",
+            clone_result.id,
+            deployment_row.deployment_provider_account_id,
+        )
+        raise
     return DeploymentDuplicateResponse(
         id=duplicate_row.id,
         name=clone_result.name,
