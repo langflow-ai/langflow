@@ -31,6 +31,21 @@ def convert_image_to_base64(image_path: str | Path) -> str:
     storage_service = get_storage_service()
     if storage_service:
         flow_id, file_name = storage_service.parse_file_path(str(image_path))
+
+        # For local storage, read the file directly with synchronous I/O to avoid
+        # creating a new event loop via run_until_complete. The async path uses
+        # aiofile/caio which allocates a Linux AIO context (io_setup syscall) per
+        # call. These contexts are not released when the temporary event loop is
+        # destroyed, causing a kernel AIO context leak that eventually exhausts
+        # fs.aio-max-nr and breaks all subsequent file reads with EAGAIN.
+        try:
+            full_path = Path(storage_service.build_full_path(flow_id, file_name))
+            if full_path.is_file():
+                with full_path.open("rb") as f:
+                    return base64.b64encode(f.read()).decode("utf-8")
+        except (AttributeError, OSError):
+            pass  # Not local storage (e.g. S3), fall through to async path
+
         try:
             file_content = run_until_complete(
                 storage_service.get_file(flow_id=flow_id, file_name=file_name)  # type: ignore[call-arg]
