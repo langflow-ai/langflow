@@ -44,9 +44,9 @@ import ExportModal from "../../../../modals/exportModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import useVersionPreviewStore from "../../../../stores/versionPreviewStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
+import useVersionPreviewStore from "../../../../stores/versionPreviewStore";
 import type { APIClassType } from "../../../../types/api";
 import type {
   AllNodeType,
@@ -67,8 +67,8 @@ import ConnectionLineComponent from "../ConnectionLineComponent";
 import FlowBuildingComponent from "../flowBuildingComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import UpdateAllComponents from "../UpdateAllComponents";
-import VersionPreviewOverlay from "./components/VersionPreviewOverlay";
 import HelperLines from "./components/helper-lines";
+import VersionPreviewOverlay from "./components/VersionPreviewOverlay";
 import {
   getHelperLines,
   getSnapPosition,

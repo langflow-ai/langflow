@@ -1,9 +1,9 @@
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
+import type { MCPTransport } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import { toSpaceCase } from "@/utils/stringManipulation";
 import { cn } from "@/utils/utils";
-import type { MCPTransport } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import { autoInstallers } from "../utils/mcpServerUtils";
 
 interface McpAutoInstallContentProps {
