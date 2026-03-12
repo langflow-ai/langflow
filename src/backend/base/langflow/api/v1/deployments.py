@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from typing import Annotated
-
-from lfx.log.logger import logger
 from urllib.parse import urlparse
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
 from fastapi_pagination import Params
+from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import (
     AuthenticationError,
     DeploymentConflictError,
@@ -428,17 +427,19 @@ async def _build_flow_artifacts_from_flow_versions(
         if row.flow_version_data is None:
             msg = f"Flow version {row.flow_version_id} has no data (snapshot may be corrupted)."
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
-        artifacts.append((
-            row.flow_version_id,
-            BaseFlowArtifact(
-                id=row.flow_id,
-                name=row.flow_name,
-                description=row.flow_description,
-                data=row.flow_version_data,
-                tags=row.flow_tags,
-                provider_data={"project_id": str(project_id)},
-            ),
-        ))
+        artifacts.append(
+            (
+                row.flow_version_id,
+                BaseFlowArtifact(
+                    id=row.flow_id,
+                    name=row.flow_name,
+                    description=row.flow_description,
+                    data=row.flow_version_data,
+                    tags=row.flow_tags,
+                    provider_data={"project_id": str(project_id)},
+                ),
+            )
+        )
     return artifacts
 
 
