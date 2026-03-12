@@ -639,16 +639,14 @@ def test_snapshot_list_result_accepts_provider_result() -> None:
 
 
 # ---------------------------------------------------------------------------
-# ConfigListParams / SnapshotListParams (inherit _BaseListParams)
+# ConfigListParams / SnapshotListParams / DeploymentListParams
 # ---------------------------------------------------------------------------
 
 
 def test_config_list_params_defaults_to_none() -> None:
     params = ConfigListParams()
     assert params.provider_params is None
-    assert params.deployment_types is None
     assert params.deployment_ids is None
-    assert params.snapshot_ids is None
     assert params.config_ids is None
 
 
@@ -662,13 +660,6 @@ def test_config_list_params_inherits_filter_validation() -> None:
     assert params.deployment_ids == ["dep-id"]
 
 
-def test_config_list_params_inherits_type_dedup() -> None:
-    params = ConfigListParams(
-        deployment_types=[DeploymentType.AGENT, DeploymentType.AGENT],
-    )
-    assert params.deployment_types == [DeploymentType.AGENT]
-
-
 def test_config_list_params_rejects_blank_ids() -> None:
     with pytest.raises(ValidationError):
         ConfigListParams(config_ids=["   "])
@@ -677,10 +668,8 @@ def test_config_list_params_rejects_blank_ids() -> None:
 def test_snapshot_list_params_defaults_to_none() -> None:
     params = SnapshotListParams()
     assert params.provider_params is None
-    assert params.deployment_types is None
     assert params.deployment_ids is None
     assert params.snapshot_ids is None
-    assert params.config_ids is None
 
 
 def test_snapshot_list_params_inherits_filter_validation() -> None:
@@ -695,18 +684,30 @@ def test_snapshot_list_params_rejects_blank_ids() -> None:
         SnapshotListParams(snapshot_ids=["   "])
 
 
-def test_base_list_params_shared_across_all_subclasses() -> None:
-    """All three params classes share the same base fields and validation."""
+def test_base_list_params_fields_shared_across_all_subclasses() -> None:
+    """All params classes share only provider/deployment-scoped base fields."""
     for params_cls in (DeploymentListParams, ConfigListParams, SnapshotListParams):
         params = params_cls(
             provider_params={"key": "value"},
             deployment_ids=["dep_1"],
-            snapshot_ids=["snap_1"],
-            config_ids=["cfg_1"],
-            deployment_types=[DeploymentType.AGENT],
         )
         assert params.provider_params == {"key": "value"}
         assert params.deployment_ids == ["dep_1"]
-        assert params.snapshot_ids == ["snap_1"]
-        assert params.config_ids == ["cfg_1"]
-        assert params.deployment_types == [DeploymentType.AGENT]
+
+
+def test_entity_specific_fields_are_scoped_to_own_params_classes() -> None:
+    deployment_fields = set(DeploymentListParams.model_fields)
+    config_fields = set(ConfigListParams.model_fields)
+    snapshot_fields = set(SnapshotListParams.model_fields)
+
+    assert "deployment_types" in deployment_fields
+    assert "snapshot_ids" in deployment_fields
+    assert "config_ids" in deployment_fields
+
+    assert "config_ids" in config_fields
+    assert "snapshot_ids" not in config_fields
+    assert "deployment_types" not in config_fields
+
+    assert "snapshot_ids" in snapshot_fields
+    assert "config_ids" not in snapshot_fields
+    assert "deployment_types" not in snapshot_fields

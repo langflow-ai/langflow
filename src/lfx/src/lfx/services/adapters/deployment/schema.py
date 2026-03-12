@@ -352,27 +352,48 @@ class SnapshotListResult(ProviderResultModel):
 
 
 class _BaseListParams(BaseModel):
-    """Shared cross-entity filter fields for list operations."""
+    """Shared list-filter fields."""
 
     provider_params: ProviderPayload | None = Field(
         None,
-        description="Provider-specific query params payload.",
-    )
-    deployment_types: list[DeploymentType] | None = Field(
-        None,
-        description="Deployment types to include in the result set.",
+        description="Provider-specific query params to filter by.",
     )
     deployment_ids: list[IdLike] | None = Field(
         None,
-        description="Deployment ids to include in the result set.",
+        description="Deployment ids to filter by.",
+    )
+
+    @staticmethod
+    def _normalize_filter_id_values(value: list[IdLike] | None, *, field_name: str) -> list[str] | None:
+        if value is None:
+            return None
+        normalized_ids = _normalize_and_validate_id_list(
+            [str(item) for item in value],
+            field_name=field_name,
+        )
+        # Keep first occurrence order while removing duplicates.
+        return list(dict.fromkeys(normalized_ids))
+
+    @field_validator("deployment_ids")
+    @classmethod
+    def validate_filter_ids(cls, value: list[IdLike] | None, info) -> list[str] | None:
+        return cls._normalize_filter_id_values(value, field_name=info.field_name)
+
+
+class DeploymentListParams(_BaseListParams):
+    """Query params for deployment list operations."""
+
+    deployment_types: list[DeploymentType] | None = Field(
+        None,
+        description="Deployment types to filter by.",
     )
     snapshot_ids: list[IdLike] | None = Field(
         None,
-        description="Snapshot ids to include in the result set.",
+        description="Snapshot ids to filter by.",
     )
     config_ids: list[IdLike] | None = Field(
         None,
-        description="Config ids to include in the result set.",
+        description="Config ids to filter by.",
     )
 
     @field_validator("deployment_types")
@@ -383,29 +404,38 @@ class _BaseListParams(BaseModel):
         # Keep first occurrence order while removing duplicates.
         return list(dict.fromkeys(value))
 
-    @field_validator("deployment_ids", "snapshot_ids", "config_ids")
+    @field_validator("snapshot_ids", "config_ids")
     @classmethod
-    def validate_filter_ids(cls, value: list[IdLike] | None, info) -> list[str] | None:
-        if value is None:
-            return None
-        normalized_ids = _normalize_and_validate_id_list(
-            [str(item) for item in value],
-            field_name=info.field_name,
-        )
-        # Keep first occurrence order while removing duplicates.
-        return list(dict.fromkeys(normalized_ids))
-
-
-class DeploymentListParams(_BaseListParams):
-    """Query params for deployment list operations."""
+    def validate_entity_filter_ids(cls, value: list[IdLike] | None, info) -> list[str] | None:
+        return cls._normalize_filter_id_values(value, field_name=info.field_name)
 
 
 class ConfigListParams(_BaseListParams):
     """Query params for config list operations."""
 
+    config_ids: list[IdLike] | None = Field(
+        None,
+        description="Config ids to filter by.",
+    )
+
+    @field_validator("config_ids")
+    @classmethod
+    def validate_config_ids(cls, value: list[IdLike] | None, info) -> list[str] | None:
+        return cls._normalize_filter_id_values(value, field_name=info.field_name)
+
 
 class SnapshotListParams(_BaseListParams):
     """Query params for snapshot list operations."""
+
+    snapshot_ids: list[IdLike] | None = Field(
+        None,
+        description="Snapshot ids to filter by.",
+    )
+
+    @field_validator("snapshot_ids")
+    @classmethod
+    def validate_snapshot_ids(cls, value: list[IdLike] | None, info) -> list[str] | None:
+        return cls._normalize_filter_id_values(value, field_name=info.field_name)
 
 
 class DeploymentCreate(BaseModel):
