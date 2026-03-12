@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import InspectionPanel from "../index";
 import type { AllNodeType } from "@/types/flow";
+import InspectionPanel from "../index";
 
 // Mock framer-motion
 jest.mock("framer-motion", () => ({
