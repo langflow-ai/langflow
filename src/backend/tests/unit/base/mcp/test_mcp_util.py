@@ -2102,10 +2102,10 @@ class TestNormalizeArgumentsForMcp:
         class Schema(BaseModel):
             count: int = Field(..., description="Count")
 
-        with pytest.raises(ValueError, match=r"expects integer.*boolean"):
+        with pytest.raises(ValueError, match=r"expects integer.*bool"):
             util._normalize_arguments_for_mcp({"count": True}, Schema, "test_tool")
 
-        with pytest.raises(ValueError, match=r"expects integer.*boolean"):
+        with pytest.raises(ValueError, match=r"expects integer.*bool"):
             util._normalize_arguments_for_mcp({"count": False}, Schema, "test_tool")
 
     def test_extra_keys_preserved_for_pydantic_validation(self):
