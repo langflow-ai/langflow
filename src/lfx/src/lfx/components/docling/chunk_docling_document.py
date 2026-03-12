@@ -20,9 +20,9 @@ class ChunkDoclingDocumentComponent(Component):
     inputs = [
         HandleInput(
             name="data_inputs",
-            display_name="Data or DataFrame",
+            display_name="JSON or Table",
             info="The data with documents to split in chunks.",
-            input_types=["Data", "DataFrame"],
+            input_types=["Data", "JSON", "DataFrame", "Table"],
             required=True,
         ),
         DropdownInput(
@@ -103,7 +103,7 @@ class ChunkDoclingDocumentComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="chunk_documents"),
+        Output(display_name="Table", name="dataframe", method="chunk_documents"),
     ]
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:

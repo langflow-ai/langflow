@@ -13,7 +13,7 @@ const PROVIDER_KEY_PREVIEW: Record<
   string,
   { prefix: string; totalLength: number }
 > = {
-  OpenAI: { prefix: "sk-proj-", totalLength: 164 },
+  OpenAI: { prefix: "sk-", totalLength: 164 },
   Anthropic: { prefix: "sk-ant-", totalLength: 108 },
   "Google Generative AI": { prefix: "AIza", totalLength: 39 },
   "IBM watsonx": { prefix: "", totalLength: 44 },
@@ -129,7 +129,7 @@ const ProviderConfigurationForm = ({
             <>
               {providerVariables[0].variable_name}
               {providerVariables[0].required && (
-                <span className="text-red-500 ml-1">*</span>
+                <span className="text-destructive ml-1">*</span>
               )}
             </>
           ) : (
@@ -174,7 +174,7 @@ const ProviderConfigurationForm = ({
                   <label className="text-[12px] font-medium text-muted-foreground">
                     {variable.variable_name}
                     {variable.required && (
-                      <span className="text-red-500 ml-1">*</span>
+                      <span className="text-destructive ml-1">*</span>
                     )}
                   </label>
                 )}
@@ -233,7 +233,7 @@ const ProviderConfigurationForm = ({
                         {validationState !== "invalid" &&
                           (validationState === "valid" ||
                             (isConfigured && !hasNewValue)) && (
-                            <span className="absolute right-8 top-1/2 -translate-y-1/2 text-green-500 pointer-events-none">
+                            <span className="absolute right-8 top-1/2 -translate-y-1/2 text-accent-emerald-foreground pointer-events-none">
                               <ForwardedIconComponent
                                 name="Check"
                                 className="h-4 w-4"
@@ -306,7 +306,7 @@ const ProviderConfigurationForm = ({
                           (isConfigured && !hasNewValue && !isEditing)) ? (
                         <ForwardedIconComponent
                           name="Check"
-                          className="h-4 w-4 text-green-500 pointer-events-none"
+                          className="h-4 w-4 text-accent-emerald-foreground pointer-events-none"
                         />
                       ) : undefined
                     }
