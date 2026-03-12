@@ -45,6 +45,7 @@
         "noUnreachable": "error",
         "noUnreachableSuper": "error",
         "noUnsafeFinally": "error",
+        "noUnusedImports": "error",
         "noUnusedLabels": "error",
         "noUnusedPrivateClassMembers": "error",
         "noUnusedVariables": "warn",
