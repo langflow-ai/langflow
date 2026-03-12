@@ -4,12 +4,12 @@ import { test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { zoomOut } from "../../utils/zoom-out";
-import { selectGptModel } from "../../utils/select-gpt-model";
 import {
   closeAdvancedOptions,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
+import { selectGptModel } from "../../utils/select-gpt-model";
+import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "should create a flow with decision",

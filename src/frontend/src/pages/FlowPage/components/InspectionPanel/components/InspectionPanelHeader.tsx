@@ -1,10 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import CodeAreaModal from "@/modals/codeAreaModal";
 import useAlertStore from "@/stores/alertStore";
@@ -13,8 +15,6 @@ import type { NodeDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 import { ToolbarButton } from "../../nodeToolbarComponent/components/toolbar-button";
 import EditableHeaderContent from "./EditableHeaderContent";
-import { ICON_STROKE_WIDTH } from "@/constants/constants";
-import { useHotkeys } from "react-hotkeys-hook";
 
 interface InspectionPanelHeaderProps {
   data: NodeDataType;

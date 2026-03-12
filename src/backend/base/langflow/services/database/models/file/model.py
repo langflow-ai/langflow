@@ -1,14 +1,21 @@
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from sqlmodel import Field, SQLModel, UniqueConstraint
+import sqlalchemy as sa
+from sqlalchemy import ForeignKey
+from sqlmodel import Column, Field, Relationship, SQLModel, UniqueConstraint
 
 from langflow.schema.serialize import UUIDstr
+
+if TYPE_CHECKING:
+    from langflow.services.database.models.user.model import User
 
 
 class File(SQLModel, table=True):  # type: ignore[call-arg]
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
-    user_id: UUID = Field(foreign_key="user.id")
+    user_id: UUID = Field(sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="CASCADE"), nullable=False))
+    user: "User" = Relationship(back_populates="files")
     name: str = Field(nullable=False)
     path: str = Field(nullable=False)
     size: int = Field(nullable=False)

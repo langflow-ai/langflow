@@ -1,11 +1,11 @@
 import { useCallback } from "react";
-import IconComponent from "@/components/common/genericIconComponent";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
-import type { NodeDataType } from "@/types/flow";
-import { cn } from "@/utils/utils";
-import useFlowStore from "@/stores/flowStore";
-import { scapeJSONParse } from "@/utils/reactflowUtils";
+import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import useFlowStore from "@/stores/flowStore";
+import type { NodeDataType } from "@/types/flow";
+import { scapeJSONParse } from "@/utils/reactflowUtils";
+import { cn } from "@/utils/utils";
 
 interface InspectionPanelEditFieldProps {
   data: NodeDataType;
