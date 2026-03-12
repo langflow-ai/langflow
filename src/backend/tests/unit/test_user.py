@@ -262,7 +262,7 @@ async def test_delete_user_wrong_id(client: AsyncClient, super_user_headers):
 
 
 @pytest.mark.api_key_required
-async def test_delete_user_cascades_to_files(client: AsyncClient, test_user, super_user_headers):
+async def test_delete_user_cascades_to_files(client: AsyncClient, test_user, super_user_headers):  # noqa: ARG001
     """Deleting a user should cascade-delete associated file records (e.g. _mcp_servers)."""
     user_id = test_user["id"]
 
