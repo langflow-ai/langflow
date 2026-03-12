@@ -1056,7 +1056,9 @@ async def test_should_report_installed_true_when_config_file_contains_matching_u
     tmp_path,
     monkeypatch,
 ):
-    """GIVEN: Config files exist with a matching project URL in mcpServers args
+    """Config with matching URL marks client as installed.
+
+    GIVEN: Config files exist with a matching project URL in mcpServers args
     WHEN:  GET /mcp/project/{id}/installed is called
     THEN:  Each client should have available=True AND installed=True
     """
@@ -1064,7 +1066,7 @@ async def test_should_report_installed_true_when_config_file_contains_matching_u
 
     # Write config files with matching URLs for all clients
     project_id = user_test_project.id
-    for name, path in client_paths.items():
+    for path in client_paths.values():
         config = {
             "mcpServers": {
                 "lf-test": {
@@ -1096,7 +1098,9 @@ async def test_should_report_installed_false_when_config_file_has_no_matching_ur
     tmp_path,
     monkeypatch,
 ):
-    """GIVEN: Config files exist but with a DIFFERENT project URL
+    """Config with non-matching URL reports installed=False.
+
+    GIVEN: Config files exist but with a DIFFERENT project URL
     WHEN:  GET /mcp/project/{id}/installed is called
     THEN:  available=True (file exists) but installed=False (URL doesn't match)
     """
@@ -1134,7 +1138,9 @@ async def test_should_report_available_false_when_app_directory_does_not_exist(
     tmp_path,
     monkeypatch,
 ):
-    """GIVEN: App directories do NOT exist (applications not installed)
+    """Missing app directory reports available=False.
+
+    GIVEN: App directories do NOT exist (applications not installed)
     WHEN:  GET /mcp/project/{id}/installed is called
     THEN:  available=False and installed=False for all clients
     """
@@ -1182,7 +1188,9 @@ async def test_should_report_available_true_when_config_file_has_corrupt_json(
     tmp_path,
     monkeypatch,
 ):
-    """GIVEN: Config files exist but contain invalid/corrupt JSON
+    """Corrupt JSON config reports available=True but installed=False.
+
+    GIVEN: Config files exist but contain invalid/corrupt JSON
     WHEN:  GET /mcp/project/{id}/installed is called
     THEN:  available=True (directory exists) but installed=False (can't parse config)
     """
