@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from lfx.services.adapters.deployment.schema import (
+        BaseFlowArtifact,
         DeploymentCreate,
         DeploymentCreateResult,
         DeploymentDeleteResult,
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
         ExecutionCreateResult,
         ExecutionStatusResult,
         IdLike,
+        MaterializeSnapshotsResult,
         RedeployResult,
     )
 
@@ -154,6 +156,17 @@ class DeploymentService(BaseDeploymentService):
     ) -> ExecutionStatusResult:
         """Get provider-agnostic deployment execution state/output."""
         raise DeploymentNotConfiguredError(method="get_execution")
+
+    async def materialize_snapshots(
+        self,
+        *,
+        user_id: IdLike,
+        raw_payloads: list[BaseFlowArtifact],
+        config_id: IdLike | None = None,
+        db: AsyncSession,
+    ) -> MaterializeSnapshotsResult:
+        """Create provider-side snapshots from flow artifacts."""
+        raise DeploymentNotConfiguredError(method="materialize_snapshots")
 
     async def teardown(self) -> None:
         logger.debug("Deployment service teardown")
