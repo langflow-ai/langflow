@@ -217,10 +217,10 @@ async def get_deployment_execution(
 
 @router.get("/configs", response_model=DeploymentConfigListResponse)
 async def list_deployment_configs(
-    provider_id: DeploymentProviderAccountIdQuery,
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
-    deployment_id: DeploymentIdQuery | None = None,
+    deployment_id: DeploymentIdQuery,  # required today, not going to provide global listing for now
+    provider_id: DeploymentProviderAccountIdQuery | None = None,
     page: Annotated[int, Query(ge=1)] = 1,
     size: Annotated[int, Query(ge=1, le=50)] = 20,
 ):
