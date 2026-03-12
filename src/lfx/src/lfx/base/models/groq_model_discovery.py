@@ -156,18 +156,23 @@ class GroqModelDiscovery:
             return False
         except Exception as e:  # noqa: BLE001
             error_msg = str(e).lower()
+            # Genuine capability error: model does not support chat completions
+            if "does not support chat completions" in error_msg:
+                logger.debug(f"{model_id}: does not support chat completions")
+                return False
+            # Access/entitlement errors: model likely supports chat but is not accessible for this key
             if any(
                 phrase in error_msg
                 for phrase in [
-                    "does not support chat completions",
                     "terms acceptance",
                     "terms_required",
                     "model_terms_required",
                     "not available",
                 ]
             ):
-                logger.debug(f"{model_id}: does not support chat completions")
-                return False
+                logger.info(f"{model_id}: chat completion not accessible for this API key ({e})")
+                # Do not mark the model as non-chat; assume chat is supported but not usable with this key
+                return True
             # Other errors (rate limits, transient failures) - assume chat is supported
             logger.warning(f"Error testing chat for {model_id}: {e}")
             return True
