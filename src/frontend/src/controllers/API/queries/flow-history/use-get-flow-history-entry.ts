@@ -16,10 +16,17 @@ export const useGetFlowHistoryEntry: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const getEntryFn = async (): Promise<FlowHistoryEntryWithData> => {
-    const response = await api.get<FlowHistoryEntryWithData>(
-      `${getURL("FLOWS")}/${flowId}/history/${historyId}`,
-    );
-    return response.data;
+    try {
+      const response = await api.get<FlowHistoryEntryWithData>(
+        `${getURL("FLOWS")}/${flowId}/history/${historyId}`,
+      );
+      return response.data;
+    } catch {
+      const response = await api.get<FlowHistoryEntryWithData>(
+        `${getURL("FLOWS")}/${flowId}/versions/${historyId}`,
+      );
+      return response.data;
+    }
   };
 
   return query(["useGetFlowHistoryEntry", { flowId, historyId }], getEntryFn, {

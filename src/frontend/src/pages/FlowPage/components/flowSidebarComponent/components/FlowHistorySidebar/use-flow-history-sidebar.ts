@@ -255,11 +255,21 @@ export function useFlowHistorySidebar(flowId: string) {
       setRestoreDialogEntry(null);
       setIsRestoring(true);
       try {
-        const response = await api.post(
-          `${getURL("FLOWS")}/${flowId}/history/${entry.id}/activate`,
-          null,
-          { params: { save_draft: true } },
-        );
+        const response = await (async () => {
+          try {
+            return await api.post(
+              `${getURL("FLOWS")}/${flowId}/history/${entry.id}/activate`,
+              null,
+              { params: { save_draft: true } },
+            );
+          } catch {
+            return await api.post(
+              `${getURL("FLOWS")}/${flowId}/versions/${entry.id}/activate`,
+              null,
+              { params: { save_draft: true } },
+            );
+          }
+        })();
         const updatedFlow = response.data;
         queryClient.invalidateQueries({ queryKey: ["useGetFlowHistory"] });
         const flow = {
@@ -296,9 +306,17 @@ export function useFlowHistorySidebar(flowId: string) {
   const handleExport = useCallback(
     async (entry: FlowHistoryEntry) => {
       try {
-        const response = await api.get(
-          `${getURL("FLOWS")}/${flowId}/history/${entry.id}`,
-        );
+        const response = await (async () => {
+          try {
+            return await api.get(
+              `${getURL("FLOWS")}/${flowId}/history/${entry.id}`,
+            );
+          } catch {
+            return await api.get(
+              `${getURL("FLOWS")}/${flowId}/versions/${entry.id}`,
+            );
+          }
+        })();
         const data = response.data?.data;
         const tag = response.data?.version_tag ?? "version";
         if (!data) {

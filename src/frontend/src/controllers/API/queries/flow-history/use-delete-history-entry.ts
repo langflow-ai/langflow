@@ -16,23 +16,26 @@ export const useDeleteHistoryEntry: useMutationFunctionType<
   const { mutate, queryClient } = UseRequestProcessor();
 
   const deleteEntryFn = async (payload: IDeleteHistoryEntry): Promise<void> => {
-    await api.delete(
-      `${getURL("FLOWS")}/${payload.flowId}/history/${payload.historyId}`,
-    );
+    try {
+      await api.delete(
+        `${getURL("FLOWS")}/${payload.flowId}/history/${payload.historyId}`,
+      );
+    } catch {
+      await api.delete(
+        `${getURL("FLOWS")}/${payload.flowId}/versions/${payload.historyId}`,
+      );
+    }
   };
 
-  const mutation: UseMutationResult<void, any, IDeleteHistoryEntry> = mutate(
-    ["useDeleteHistoryEntry"],
-    deleteEntryFn,
-    {
+  const mutation: UseMutationResult<void, unknown, IDeleteHistoryEntry> =
+    mutate(["useDeleteHistoryEntry"], deleteEntryFn, {
       ...options,
-      onSettled: (_, __, variables) => {
+      onSettled: () => {
         queryClient.refetchQueries({
-          queryKey: ["useGetFlowHistory", { flowId: variables?.flowId }],
+          queryKey: ["useGetFlowHistory"],
         });
       },
-    },
-  );
+    });
 
   return mutation;
 };

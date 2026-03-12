@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
+import {
+  useGetDeploymentProviders,
+  useGetDeployments,
+} from "@/controllers/API/queries/deployments/use-deployments";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import ExportModal from "@/modals/exportModal";
@@ -14,6 +18,17 @@ import FlowVersionsTableRow from "./FlowVersionsTableRow";
 type FlowHistoryApiResponse = {
   entries: FlowHistoryEntry[];
   deployment_counts?: Record<string, number>;
+};
+
+type FlowVersionApiResponse = {
+  entries: FlowHistoryEntry[];
+};
+
+type MatchedDeployment = {
+  id: string;
+  name: string;
+  type: string;
+  mode?: string;
 };
 
 type FlowVersionsTableProps = {
@@ -41,6 +56,65 @@ export default function FlowVersionsTable({
   const [isLoadingHistoryByFlowId, setIsLoadingHistoryByFlowId] = useState<
     Record<string, boolean>
   >({});
+  const expandedHistoryIds = useMemo(() => {
+    return Array.from(expandedFlowIds).flatMap((flowId) => {
+      return (historyByFlowId[flowId]?.entries ?? []).map((entry) => entry.id);
+    });
+  }, [expandedFlowIds, historyByFlowId]);
+  const shouldLoadDeploymentMatches = expandedHistoryIds.length > 0;
+
+  const providersQuery = useGetDeploymentProviders({
+    enabled: shouldLoadDeploymentMatches,
+    refetchOnWindowFocus: false,
+  });
+  const activeProviderId = providersQuery.data?.providers?.[0]?.id ?? "";
+
+  const deploymentsQuery = useGetDeployments(
+    {
+      providerId: activeProviderId,
+      page: 1,
+      pageSize: 100,
+      historyIds: expandedHistoryIds,
+      matchLimit: 100,
+    },
+    {
+      enabled: shouldLoadDeploymentMatches && Boolean(activeProviderId),
+      refetchOnWindowFocus: false,
+    },
+  );
+
+  const deploymentMatchesByHistoryId = useMemo<
+    Record<string, MatchedDeployment[]>
+  >(() => {
+    const acc: Record<string, MatchedDeployment[]> = {};
+    for (const deployment of deploymentsQuery.data?.deployments ?? []) {
+      const matchedIds = Array.isArray(
+        deployment.provider_data?.matched_history_ids,
+      )
+        ? deployment.provider_data.matched_history_ids
+        : [];
+      if (matchedIds.length === 0) {
+        continue;
+      }
+      const item: MatchedDeployment = {
+        id: deployment.id,
+        name: deployment.name,
+        type: deployment.type,
+        mode:
+          typeof deployment.provider_data?.mode === "string"
+            ? deployment.provider_data.mode
+            : undefined,
+      };
+      for (const historyId of matchedIds) {
+        if (!historyId) continue;
+        if (!acc[historyId]) {
+          acc[historyId] = [];
+        }
+        acc[historyId].push(item);
+      }
+    }
+    return acc;
+  }, [deploymentsQuery.data?.deployments]);
 
   useEffect(() => {
     const flowIds = new Set(flows.map((flow) => flow.id));
@@ -63,11 +137,25 @@ export default function FlowVersionsTable({
       }
       setIsLoadingHistoryByFlowId((prev) => ({ ...prev, [flowId]: true }));
       try {
-        const response = await api.get<FlowHistoryApiResponse>(
-          `${getURL("FLOWS")}/${flowId}/history/`,
-          { params: { limit: 20, offset: 0 } },
-        );
-        setHistoryByFlowId((prev) => ({ ...prev, [flowId]: response.data }));
+        try {
+          const response = await api.get<FlowHistoryApiResponse>(
+            `${getURL("FLOWS")}/${flowId}/history/`,
+            { params: { limit: 20, offset: 0 } },
+          );
+          setHistoryByFlowId((prev) => ({ ...prev, [flowId]: response.data }));
+        } catch {
+          const fallbackResponse = await api.get<FlowVersionApiResponse>(
+            `${getURL("FLOWS")}/${flowId}/versions/`,
+            { params: { limit: 20, offset: 0 } },
+          );
+          setHistoryByFlowId((prev) => ({
+            ...prev,
+            [flowId]: {
+              entries: fallbackResponse.data.entries ?? [],
+              deployment_counts: {},
+            },
+          }));
+        }
       } catch {
         setHistoryByFlowId((prev) => ({
           ...prev,
@@ -79,6 +167,14 @@ export default function FlowVersionsTable({
     },
     [historyByFlowId, isLoadingHistoryByFlowId],
   );
+
+  useEffect(() => {
+    for (const flow of flows) {
+      if (!historyByFlowId[flow.id] && !isLoadingHistoryByFlowId[flow.id]) {
+        void loadHistoryForFlow(flow.id);
+      }
+    }
+  }, [flows, historyByFlowId, isLoadingHistoryByFlowId, loadHistoryForFlow]);
 
   const rows = useMemo(() => {
     return flows.map((flow) => {
@@ -126,7 +222,7 @@ export default function FlowVersionsTable({
     <div className="px-5 pb-5 pt-7">
       <div
         className={cn(
-          "grid items-center gap-4 px-4 py-4 text-xs font-medium text-muted-foreground",
+          "grid items-center px-4 py-4 text-xs font-medium text-muted-foreground",
           tableGridCols,
         )}
       >
@@ -155,7 +251,11 @@ export default function FlowVersionsTable({
               versionCount={versionCount}
               deployedEntryCount={deployedEntryCount}
               deploymentCounts={deploymentCounts}
+              deploymentMatchesByHistoryId={deploymentMatchesByHistoryId}
               isLoadingHistory={isLoadingHistory}
+              canExpand={
+                hasLoadedHistory && versionCount !== null && versionCount > 1
+              }
               folderId={folderId}
               tableGridCols={tableGridCols}
               isExpanded={expandedFlowIds.has(flow.id)}

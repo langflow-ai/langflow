@@ -20,22 +20,33 @@ export const usePostCreateSnapshot: useMutationFunctionType<
     payload: ICreateSnapshot,
   ): Promise<FlowHistoryEntry> => {
     const body: FlowHistoryCreate = { description: payload.description };
-    const response = await api.post<FlowHistoryEntry>(
-      `${getURL("FLOWS")}/${payload.flowId}/history/`,
-      body,
-    );
-    return response.data;
+    try {
+      const response = await api.post<FlowHistoryEntry>(
+        `${getURL("FLOWS")}/${payload.flowId}/history/`,
+        body,
+      );
+      return response.data;
+    } catch {
+      const response = await api.post<FlowHistoryEntry>(
+        `${getURL("FLOWS")}/${payload.flowId}/versions/`,
+        body,
+      );
+      return response.data;
+    }
   };
 
-  const mutation: UseMutationResult<FlowHistoryEntry, any, ICreateSnapshot> =
-    mutate(["usePostCreateSnapshot"], createSnapshotFn, {
-      ...options,
-      onSettled: (_, __, variables) => {
-        queryClient.refetchQueries({
-          queryKey: ["useGetFlowHistory", { flowId: variables?.flowId }],
-        });
-      },
-    });
+  const mutation: UseMutationResult<
+    FlowHistoryEntry,
+    unknown,
+    ICreateSnapshot
+  > = mutate(["usePostCreateSnapshot"], createSnapshotFn, {
+    ...options,
+    onSettled: () => {
+      queryClient.refetchQueries({
+        queryKey: ["useGetFlowHistory"],
+      });
+    },
+  });
 
   return mutation;
 };

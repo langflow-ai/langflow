@@ -17,11 +17,19 @@ export const useGetFlowHistory: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const getFlowHistoryFn = async (): Promise<FlowHistoryListResponse> => {
-    const response = await api.get<FlowHistoryListResponse>(
-      `${getURL("FLOWS")}/${flowId}/history/`,
-      { params: { limit, offset } },
-    );
-    return response.data;
+    try {
+      const response = await api.get<FlowHistoryListResponse>(
+        `${getURL("FLOWS")}/${flowId}/history/`,
+        { params: { limit, offset } },
+      );
+      return response.data;
+    } catch {
+      const response = await api.get<FlowHistoryListResponse>(
+        `${getURL("FLOWS")}/${flowId}/versions/`,
+        { params: { limit, offset } },
+      );
+      return response.data;
+    }
   };
 
   return query(

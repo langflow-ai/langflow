@@ -19,7 +19,17 @@ type FlowVersionsTableRowProps = {
   versionCount: number | null;
   deployedEntryCount: number;
   deploymentCounts: Record<string, number>;
+  deploymentMatchesByHistoryId: Record<
+    string,
+    Array<{
+      id: string;
+      name: string;
+      type: string;
+      mode?: string;
+    }>
+  >;
   isLoadingHistory: boolean;
+  canExpand: boolean;
   folderId?: string;
   tableGridCols: string;
   isExpanded: boolean;
@@ -37,7 +47,9 @@ export default function FlowVersionsTableRow({
   versionCount,
   deployedEntryCount,
   deploymentCounts,
+  deploymentMatchesByHistoryId,
   isLoadingHistory,
+  canExpand,
   folderId,
   tableGridCols,
   isExpanded,
@@ -47,20 +59,6 @@ export default function FlowVersionsTableRow({
   const navigate = useCustomNavigate();
 
   const flowStatus = deployedEntryCount > 0 ? "Deployed" : "Draft";
-  const mockTimestamp = flow.updated_at ?? new Date().toISOString();
-  const mockEntries: FlowHistoryEntry[] = [
-    {
-      id: `${flow.id}-mock-history-1`,
-      flow_id: flow.id,
-      user_id: flow.user_id ?? "",
-      version_number: 1,
-      created_at: mockTimestamp,
-      description: "Mock version entry",
-      version_tag: "v1",
-    },
-  ];
-  const visibleEntries = entries.length > 0 ? entries : mockEntries;
-
   return (
     <div className="border-b border-border/60 last:border-b-0">
       <div
@@ -70,19 +68,26 @@ export default function FlowVersionsTableRow({
         )}
       >
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="rounded pl-3 text-muted-foreground"
-            onClick={(event) => {
-              event.stopPropagation();
-              onToggleExpand();
-            }}
-          >
-            <ForwardedIconComponent
-              name={isExpanded ? "ChevronDown" : "ChevronRight"}
-              className="h-4 w-4 text-primary"
-            />
-          </button>
+          {canExpand ? (
+            <button
+              type="button"
+              className="rounded pl-3 text-muted-foreground"
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleExpand();
+              }}
+            >
+              <ForwardedIconComponent
+                name="ChevronRight"
+                className={cn(
+                  "h-4 w-4 text-primary transition-transform duration-200 ease-in-out",
+                  isExpanded && "rotate-90",
+                )}
+              />
+            </button>
+          ) : (
+            <span className="h-4 w-4 pl-3" />
+          )}
           <button
             type="button"
             className="truncate text-left text-sm font-medium"
@@ -183,70 +188,105 @@ export default function FlowVersionsTableRow({
         </span>
       </div>
 
-      {isExpanded && !hasLoadedHistory && isLoadingHistory && (
+      {canExpand && (
         <div
           className={cn(
-            "grid items-center border-t border-border/50 px-4 py-5 text-sm text-muted-foreground",
-            tableGridCols,
+            "grid transition-all duration-300 ease-in-out",
+            isExpanded
+              ? "grid-rows-[1fr] opacity-100"
+              : "grid-rows-[0fr] opacity-0",
           )}
         >
-          <span className="pl-11">Loading versions...</span>
-          <span>-</span>
-          <span>-</span>
-          <span>-</span>
-          <span />
+          <div className="overflow-hidden">
+            {!hasLoadedHistory && isLoadingHistory && (
+              <div
+                className={cn(
+                  "grid items-center border-t border-border/50 px-4 py-5 text-sm text-muted-foreground",
+                  tableGridCols,
+                )}
+              >
+                <span className="pl-11">Loading versions...</span>
+                <span>-</span>
+                <span>-</span>
+                <span>-</span>
+                <span />
+              </div>
+            )}
+            {!isLoadingHistory &&
+              entries.map((entry) => {
+                const matchedDeployments =
+                  deploymentMatchesByHistoryId[entry.id] ?? [];
+                const isDeployed =
+                  matchedDeployments.length > 0 ||
+                  (deploymentCounts[entry.id] ?? 0) > 0;
+
+                const deploymentNames = matchedDeployments
+                  .map((deployment) => deployment.name.trim())
+                  .filter(Boolean)
+                  .join(", ");
+
+                return (
+                  <div
+                    key={entry.id}
+                    className={cn(
+                      "grid items-center border-t border-border/50 px-4 py-5 text-sm transition-colors hover:bg-muted/20",
+                      tableGridCols,
+                    )}
+                  >
+                    <button
+                      type="button"
+                      className="col-span-4 grid grid-cols-[2.4fr_1fr_1fr_1.2fr] items-center text-left text-muted-foreground"
+                      onClick={() => {
+                        const targetPath = `/flow/${flow.id}${folderId ? `/folder/${folderId}` : ""}`;
+                        navigate(
+                          `${targetPath}?historyId=${encodeURIComponent(entry.id)}`,
+                        );
+                      }}
+                    >
+                      <div className="flex items-center gap-2 pl-[36px] text-muted-foreground">
+                        <div className="min-w-0">
+                          <span className="block truncate">
+                            {entry.description?.trim()
+                              ? entry.description
+                              : flow.name}
+                          </span>
+                          {deploymentNames && (
+                            <span className="mt-0.5 block truncate text-xs">
+                              Deployments: {deploymentNames}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <span>{entry.version_tag}</span>
+                      <span
+                        className={cn(
+                          "inline-flex w-fit items-center gap-1 text-sm font-medium",
+                          isDeployed
+                            ? "text-foreground"
+                            : "text-muted-foreground",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "h-2 w-2 rounded-full mr-1",
+                            isDeployed
+                              ? "bg-emerald-500"
+                              : "bg-muted-foreground/60",
+                          )}
+                        />
+                        {isDeployed ? "Deployed" : "Draft"}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {timeElapsed(entry.created_at)} ago
+                      </span>
+                    </button>
+                    <span />
+                  </div>
+                );
+              })}
+          </div>
         </div>
       )}
-      {isExpanded &&
-        !isLoadingHistory &&
-        visibleEntries.map((entry) => {
-          const isDeployed = (deploymentCounts[entry.id] ?? 0) > 0;
-          return (
-            <div
-              key={entry.id}
-              className={cn(
-                "grid items-center border-t border-border/50 px-4 py-5 text-sm transition-colors bg-muted/20",
-                tableGridCols,
-              )}
-            >
-              <button
-                type="button"
-                className="col-span-4 grid grid-cols-[2.4fr_1fr_1fr_1.2fr] items-center text-left text-muted-foreground"
-                onClick={() => {
-                  const targetPath = `/flow/${flow.id}${folderId ? `/folder/${folderId}` : ""}`;
-                  navigate(
-                    `${targetPath}?historyId=${encodeURIComponent(entry.id)}`,
-                  );
-                }}
-              >
-                <div className="flex items-center gap-2 pl-[36px] text-muted-foreground">
-                  <span className="truncate">
-                    {entry.description?.trim() ? entry.description : flow.name}
-                  </span>
-                </div>
-                <span>{entry.version_tag}</span>
-                <span
-                  className={cn(
-                    "inline-flex w-fit items-center gap-1 text-sm font-medium",
-                    isDeployed ? "text-foreground" : "text-muted-foreground",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "h-2 w-2 rounded-full mr-1",
-                      isDeployed ? "bg-emerald-500" : "bg-muted-foreground/60",
-                    )}
-                  />
-                  {isDeployed ? "Deployed" : "Draft"}
-                </span>
-                <span className="text-muted-foreground">
-                  {timeElapsed(entry.created_at)} ago
-                </span>
-              </button>
-              <span />
-            </div>
-          );
-        })}
     </div>
   );
 }
