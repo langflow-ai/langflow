@@ -64,5 +64,5 @@ def downgrade() -> None:
     with op.batch_alter_table('file', schema=None) as batch_op:
         batch_op.drop_constraint(fk_name, type_='foreignkey')
         batch_op.create_foreign_key(
-            None, 'user', ['user_id'], ['id']
+            "fk_file_user_id_user", 'user', ['user_id'], ['id']
         )
