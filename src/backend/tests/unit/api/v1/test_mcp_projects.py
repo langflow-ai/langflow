@@ -1064,13 +1064,7 @@ async def test_should_report_installed_true_when_config_file_contains_matching_u
     # Write config files with matching URLs for all clients
     project_id = user_test_project.id
     for path in client_paths.values():
-        config = {
-            "mcpServers": {
-                "lf-test": {
-                    "args": [f"https://langflow.local/api/v1/mcp/project/{project_id}/sse"]
-                }
-            }
-        }
+        config = {"mcpServers": {"lf-test": {"args": [f"https://langflow.local/api/v1/mcp/project/{project_id}/sse"]}}}
         path.write_text(json.dumps(config))
 
     response = await client.get(
