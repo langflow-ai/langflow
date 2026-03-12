@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   Dialog,
@@ -12,10 +13,6 @@ jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
   default: () => null,
 }));
-
-import { render, screen } from "@testing-library/react";
-import type { ReactElement } from "react";
-import { TooltipProvider } from "@/components/ui/tooltip";
 
 const renderWithProviders = (ui: ReactElement) => {
   return render(<TooltipProvider>{ui}</TooltipProvider>);
