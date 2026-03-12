@@ -451,6 +451,15 @@ export function removeApiKeys(flow: FlowType): FlowType {
       const field = template[key];
 
       if (field.password) {
+        // Preserve env/global variable names for api_key so imported flows
+        // can still resolve credentials, but strip any raw secrets.
+        if (
+          key === "api_key" &&
+          ((typeof field.value === "string" && looksLikeVariableName(field.value)) ||
+            field.load_from_db === true)
+        ) {
+          continue;
+        }
         field.value = "";
         field.load_from_db = false;
       }
