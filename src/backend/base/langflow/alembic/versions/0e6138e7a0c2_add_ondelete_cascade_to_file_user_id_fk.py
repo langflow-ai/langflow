@@ -14,8 +14,8 @@ from langflow.utils import migration
 
 
 # revision identifiers, used by Alembic.
-revision: str = '0e6138e7a0c2'
-down_revision: str | None = 'fc7f696a57bf'
+revision: str = "0e6138e7a0c2"  # pragma: allowlist secret
+down_revision: str | None = "fc7f696a57bf"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
