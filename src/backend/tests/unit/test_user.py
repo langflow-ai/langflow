@@ -327,7 +327,7 @@ async def test_delete_user_db_level_cascade(client):  # noqa: ARG001
     db_service = get_db_service()
     async with db_service.engine.connect() as conn:
         await conn.execute(text("PRAGMA foreign_keys = ON"))
-        await conn.execute(text("DELETE FROM user WHERE id = :id"), {"id": str(user_id)})
+        await conn.execute(text('DELETE FROM "user" WHERE id = :id'), {"id": str(user_id)})
         await conn.commit()
 
     # Verify the file was cascade-deleted at the DB level (use a fresh session to avoid cache)
