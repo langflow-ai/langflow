@@ -1,7 +1,7 @@
 import { useHotkeys } from "react-hotkeys-hook";
+import useFlowStore from "@/stores/flowStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import isWrappedWithClass from "../../PageComponent/utils/is-wrapped-with-class";
-import useFlowStore from "@/stores/flowStore";
 
 export default function useShortcuts({
   showOverrideModal,

@@ -1,5 +1,5 @@
-import { disableItem } from "../disable-item";
 import type { UniqueInputsComponents } from "../../types";
+import { disableItem } from "../disable-item";
 
 describe("disableItem", () => {
   describe("ChatInput component", () => {

@@ -1,7 +1,7 @@
-import React from "react";
 import { render, waitFor } from "@testing-library/react";
-import SortableListComponent from "./index";
+import React from "react";
 import * as ReactSortableModule from "react-sortablejs";
+import SortableListComponent from "./index";
 
 // Mock ListSelectionComponent to avoid its complexity
 jest.mock("@/CustomNodes/GenericNode/components/ListSelectionComponent", () => {

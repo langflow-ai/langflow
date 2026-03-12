@@ -1,8 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-
-import type { FlowType } from "@/types/flow";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import type { FlowType } from "@/types/flow";
 
 const downloadFlowMock = jest.fn();
 const removeApiKeysMock = jest.fn((flow: any) => flow);

@@ -1,7 +1,7 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import type { Page } from "@playwright/test";
 
 test.describe("Session Deletion Data Leakage Fix", () => {
   // Helper to send a message in the playground
