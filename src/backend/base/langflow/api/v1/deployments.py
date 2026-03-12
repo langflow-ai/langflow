@@ -1063,17 +1063,14 @@ async def update_deployment(
                 project_id=deployment_row.project_id,
                 db=session,
             )
-            materialize_snapshots = getattr(deployment_adapter, "materialize_snapshots", None)
-            if materialize_snapshots is None:
-                msg = "Deployment adapter does not support flow version snapshot materialization."
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=msg)
             with _handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
-                created_snapshot_ids = await materialize_snapshots(
+                materialize_result = await deployment_adapter.materialize_snapshots(
                     user_id=current_user.id,
                     raw_payloads=[artifact for _, artifact in add_artifacts],
                     config_id=payload.config.config_id if payload.config else None,
                     db=session,
                 )
+                created_snapshot_ids = materialize_result.snapshot_ids
             created_snapshot_ids = [
                 str(snapshot_id).strip() for snapshot_id in created_snapshot_ids if str(snapshot_id).strip()
             ]
