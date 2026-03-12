@@ -977,3 +977,73 @@ async def test_mcp_longterm_token_fails_without_superuser():
     async with session_scope() as session:
         with pytest.raises(HTTPException, match="Auto login required to create a long-term token"):
             await create_user_longterm_token(session)
+
+
+def _prepare_installed_check_env(monkeypatch, tmp_path):
+    """Set up environment for check_installed_mcp_servers tests.
+
+    Creates per-client config directories under tmp_path so that
+    ``get_config_path`` returns paths whose *parent* directories exist
+    but whose config *files* may or may not exist.
+    """
+    client_paths = {
+        "cursor": tmp_path / "cursor" / "mcp.json",
+        "windsurf": tmp_path / "windsurf" / "mcp_config.json",
+        "claude": tmp_path / "claude" / "claude_desktop_config.json",
+    }
+    # Create parent directories (simulating installed applications)
+    for path in client_paths.values():
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+    async def fake_get_config_path(client_name):
+        return client_paths[client_name]
+
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_config_path", fake_get_config_path)
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.should_use_mcp_composer", lambda project: False)  # noqa: ARG005
+
+    async def fake_streamable(project_id):
+        return f"https://langflow.local/api/v1/mcp/project/{project_id}/streamable"
+
+    async def fake_sse(project_id):
+        return f"https://langflow.local/api/v1/mcp/project/{project_id}/sse"
+
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_project_streamable_http_url", fake_streamable)
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_project_sse_url", fake_sse)
+
+    return client_paths
+
+
+async def test_should_report_available_true_when_app_directory_exists_but_config_file_missing(
+    client: AsyncClient,
+    user_test_project,
+    logged_in_headers,
+    tmp_path,
+    monkeypatch,
+):
+    """Bug: FileNotFoundError when config file is missing marks client as unavailable.
+
+    GIVEN: App directories exist (e.g. ~/.cursor/) but config files don't exist yet
+    WHEN:  GET /mcp/project/{id}/installed is called
+    THEN:  Each client should have available=True (app is installed) and installed=False (not configured)
+    """
+    _prepare_installed_check_env(monkeypatch, tmp_path)
+
+    response = await client.get(
+        f"/api/v1/mcp/project/{user_test_project.id}/installed",
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200
+    results = response.json()
+
+    # All three clients should be reported
+    assert len(results) == 3
+
+    for entry in results:
+        assert entry["available"] is True, (
+            f"{entry['name']} should be available (directory exists) "
+            f"even when config file is missing"
+        )
+        assert entry["installed"] is False, (
+            f"{entry['name']} should not be installed (config file doesn't exist)"
+        )
