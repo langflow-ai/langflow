@@ -1,11 +1,11 @@
 import { Panel } from "@xyflow/react";
-import { motion, AnimatePresence } from "framer-motion";
-import { memo, useState, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { memo, useEffect, useState } from "react";
+import { Separator } from "@/components/ui/separator";
 import type { AllNodeType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 import InspectionPanelFields from "./components/InspectionPanelFields";
 import InspectionPanelHeader from "./components/InspectionPanelHeader";
-import { Separator } from "@/components/ui/separator";
 
 interface InspectionPanelProps {
   selectedNode: AllNodeType | null;

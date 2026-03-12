@@ -1,6 +1,6 @@
+import type { Edge } from "@xyflow/react";
 import { LANGFLOW_SUPPORTED_TYPES } from "@/constants/constants";
 import { scapedJSONStringfy } from "@/utils/reactflowUtils";
-import type { Edge } from "@xyflow/react";
 
 export type DisplayHandleTemplate = {
   type?: string;

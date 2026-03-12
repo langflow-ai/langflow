@@ -3,8 +3,8 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
-import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 import { selectAnthropicModel } from "../../utils/select-anthropic-model";
+import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "Custom Component Generator",
