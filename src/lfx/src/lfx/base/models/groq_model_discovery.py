@@ -93,9 +93,8 @@ class GroqModelDiscovery:
                     logger.debug(f"{model_id}: does not support chat completions, skipping")
                     continue
                 if supports_chat is None:
-                    # Transient/access error - skip to avoid caching a false negative
-                    logger.info(f"{model_id}: chat test indeterminate, skipping (will retry next refresh)")
-                    continue
+                    # Transient/access error - assume chat is supported (benefit of the doubt)
+                    logger.info(f"{model_id}: chat test indeterminate, assuming chat supported")
                 supports_tools = self._test_tool_calling(model_id)
                 if supports_tools is None:
                     # Transient/access error on tool test - skip to avoid caching a false negative
