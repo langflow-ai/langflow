@@ -7,8 +7,10 @@ Tests cover:
 """
 
 import json
+import sys
 from unittest.mock import MagicMock, Mock, patch
 
+import pytest
 from lfx.base.models.groq_model_discovery import GroqModelDiscovery, get_groq_models
 
 
@@ -286,15 +288,13 @@ class TestChatCompletionDetection:
 
         assert result is True
 
-    @patch("groq.Groq")
-    def test_chat_completion_import_error_returns_false(self, mock_groq, mock_api_key):
-        """Test that ImportError during chat test returns False."""
-        mock_groq.side_effect = ImportError("groq module not found")
-
-        discovery = GroqModelDiscovery(api_key=mock_api_key)
-        result = discovery._test_chat_completion("test-model")
-
-        assert result is False
+    def test_chat_completion_import_error_raises(self, mock_api_key):
+        """Test that ImportError propagates when the groq package is not installed."""
+        # Simulate groq not being installed by hiding it from sys.modules
+        with patch.dict(sys.modules, {"groq": None}):
+            discovery = GroqModelDiscovery(api_key=mock_api_key)
+            with pytest.raises(ImportError):
+                discovery._test_chat_completion("test-model")
 
     @patch("lfx.base.models.groq_model_discovery.requests.get")
     @patch("groq.Groq")
@@ -492,6 +492,31 @@ class TestGroqModelDiscoveryErrors:
 
         # This should not raise an exception
         discovery._save_cache(sample_models_metadata)
+
+    @patch("lfx.base.models.groq_model_discovery.requests.get")
+    def test_import_error_during_chat_test_returns_fallback(self, mock_get, mock_api_key, temp_cache_dir):
+        """Test that get_models returns fallback models when groq is not installed.
+
+        When _test_chat_completion raises ImportError (groq package absent),
+        the ImportError propagates to get_models which must fall back to
+        hardcoded model metadata instead of crashing.
+        """
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            "data": [{"id": "llama-3.1-8b-instant", "object": "model"}]
+        }
+        mock_response.raise_for_status = Mock()
+        mock_get.return_value = mock_response
+
+        with patch.dict(sys.modules, {"groq": None}):
+            discovery = GroqModelDiscovery(api_key=mock_api_key)
+            discovery.CACHE_FILE = temp_cache_dir / ".cache" / "test_cache.json"
+            models = discovery.get_models(force_refresh=True)
+
+        # Should return the hardcoded fallback list, not an empty dict
+        assert "llama-3.1-8b-instant" in models
+        assert "llama-3.3-70b-versatile" in models
+        assert len(models) == 2  # exactly the two fallback models
 
     @patch("groq.Groq")
     def test_tool_calling_import_error_returns_false(self, mock_groq, mock_api_key):

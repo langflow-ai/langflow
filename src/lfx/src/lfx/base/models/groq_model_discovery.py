@@ -192,7 +192,7 @@ class GroqModelDiscovery:
         try:
             import groq
 
-            client = groq.Groq(api_key=self.api_key)
+            client = groq.Groq(api_key=self.api_key, base_url=self.base_url)
 
             # Simple tool definition
             tools = [
