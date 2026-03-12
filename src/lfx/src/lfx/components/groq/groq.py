@@ -117,6 +117,7 @@ class GroqModel(LCModelComponent):
                     except (ValueError, KeyError, TypeError, ImportError) as e:
                         logger.exception(f"Error getting model names: {e}")
                         ids = GROQ_MODELS
+                    ids = ids or GROQ_MODELS
                     build_config.setdefault("model_name", {})
                     build_config["model_name"]["options"] = ids
                     build_config["model_name"].setdefault("value", ids[0])
