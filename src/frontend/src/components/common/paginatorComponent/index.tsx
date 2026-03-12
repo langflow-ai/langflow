@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
 import {
   PAGINATION_PAGE,
   PAGINATION_ROWS_COUNT,
   PAGINATION_SIZE,
 } from "@/constants/constants";
+import { useEffect, useState } from "react";
 import type { PaginatorComponentType } from "../../../types/components";
 import IconComponent from "../../common/genericIconComponent";
 import { Button } from "../../ui/button";
@@ -43,7 +43,7 @@ export default function PaginatorComponent({
   };
 
   return (
-    <div className="flex flex-1 items-center justify-between px-6">
+    <div className="flex flex-1 items-center justify-between">
       <div className="flex items-center justify-end gap-1 text-mmd text-secondary-foreground">
         {(pageIndex - 1) * pageSize + 1}-
         {Math.min(totalRowsCount, (pageIndex - 1) * pageSize + pageSize)}{" "}

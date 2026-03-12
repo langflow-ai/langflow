@@ -1,5 +1,3 @@
-import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
 import PaginatorComponent from "@/components/common/paginatorComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import { IS_MAC } from "@/constants/constants";
@@ -16,6 +14,8 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import HeaderComponent from "../../components/header";
 import HeaderToolbar from "../../components/header/components/HeaderToolbar";
 import ListComponent from "../../components/list";
@@ -36,6 +36,9 @@ const HomePage = ({
     return savedView === "grid" || savedView === "list" ? savedView : "list";
   });
   const [newProjectModal, setNewProjectModal] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showTopScrollFade, setShowTopScrollFade] = useState(false);
+  const [showBottomScrollFade, setShowBottomScrollFade] = useState(false);
   const { folderId } = useParams();
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(12);
@@ -100,6 +103,48 @@ const HomePage = ({
     setSearch(newSearch);
     setPageIndex(1);
   }, []);
+
+  const updateScrollFades = useCallback(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) {
+      setShowTopScrollFade(false);
+      setShowBottomScrollFade(false);
+      return;
+    }
+
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+    const isScrollable = scrollHeight > clientHeight + 1;
+
+    setShowTopScrollFade(isScrollable && scrollTop > 2);
+    setShowBottomScrollFade(
+      isScrollable && scrollTop + clientHeight < scrollHeight - 2,
+    );
+  }, []);
+
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) {
+      return;
+    }
+
+    updateScrollFades();
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateScrollFades();
+    });
+
+    resizeObserver.observe(scrollContainer);
+    if (scrollContainer.firstElementChild) {
+      resizeObserver.observe(scrollContainer.firstElementChild);
+    }
+
+    window.addEventListener("resize", updateScrollFades);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateScrollFades);
+    };
+  }, [updateScrollFades]);
 
   const isEmptyFolder =
     flows?.find(
@@ -278,13 +323,13 @@ const HomePage = ({
       dragMessage={`Drop your ${isEmptyFolder ? "flows or components" : flowType} here`}
     >
       <div
-        className="flex h-full w-full flex-col overflow-y-auto bg-secondary"
+        className="flex h-full w-full flex-col overflow-hidden bg-secondary"
         data-testid="cards-wrapper"
       >
         <div className="flex h-full w-full flex-col bg-secondary">
           {ENABLE_DATASTAX_LANGFLOW && <CustomBanner />}
-          <div className="flex flex-1 flex-col justify-start">
-            <div className="flex h-full flex-col justify-start">
+          <div className="flex min-h-0 flex-1 flex-col justify-start">
+            <div className="flex h-full min-h-0 flex-col justify-start">
               <HeaderComponent
                 folderName={folderName}
                 flowType={flowType}
@@ -294,7 +339,7 @@ const HomePage = ({
               {!isLoading && flowType === "deployments" ? (
                 <DeploymentsTab />
               ) : (
-                <div className="3xl:container flex h-full flex-col">
+                <div className="3xl:container flex h-full min-h-0 flex-col">
                   {showToolbar && (
                     <HeaderToolbar
                       flowType={flowType}
@@ -312,86 +357,105 @@ const HomePage = ({
                   {isEmptyFolder ? (
                     <EmptyFolder setOpenModal={setNewProjectModal} />
                   ) : (
-                    <div className="flex h-full flex-col bg-secondary">
-                      {isLoading ? (
-                        view === "grid" ? (
-                          <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
-                            <ListSkeleton />
-                            <ListSkeleton />
-                          </div>
-                        ) : (
-                          <div className="mt-4 flex flex-col gap-1">
-                            <ListSkeleton />
-                            <ListSkeleton />
-                          </div>
-                        )
-                      ) : flowType === "mcp" ? (
-                        <CustomMcpServerTab folderName={folderName} />
-                      ) : flowType === "flows" &&
-                        view === "list" &&
-                        data &&
-                        data.pagination.total > 0 ? (
-                        <FlowVersionsTable
-                          flows={data.flows}
-                          folderId={folderId ?? undefined}
+                    <div className="flex h-full min-h-0 flex-col bg-secondary">
+                      <div className="relative min-h-0 flex-1">
+                        <div
+                          ref={scrollContainerRef}
+                          onScroll={updateScrollFades}
+                          className="h-full overflow-y-auto"
+                        >
+                          {isLoading ? (
+                            view === "grid" ? (
+                              <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
+                                <ListSkeleton />
+                                <ListSkeleton />
+                              </div>
+                            ) : (
+                              <div className="mt-4 flex flex-col gap-1">
+                                <ListSkeleton />
+                                <ListSkeleton />
+                              </div>
+                            )
+                          ) : flowType === "mcp" ? (
+                            <CustomMcpServerTab folderName={folderName} />
+                          ) : flowType === "flows" &&
+                            view === "list" &&
+                            data &&
+                            data.pagination.total > 0 ? (
+                            <FlowVersionsTable
+                              flows={data.flows}
+                              folderId={folderId ?? undefined}
+                            />
+                          ) : (flowType === "flows" ||
+                            flowType === "components") &&
+                            data &&
+                            data.pagination.total > 0 ? (
+                            view === "grid" ? (
+                              <div className="p-5 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
+                                {data.flows.map((flow, index) => (
+                                  <ListComponent
+                                    key={flow.id}
+                                    flowData={flow}
+                                    selected={selectedFlows.includes(flow.id)}
+                                    setSelected={(selected) =>
+                                      setSelectedFlow(selected, flow.id, index)
+                                    }
+                                    shiftPressed={
+                                      isShiftPressed || isCtrlPressed
+                                    }
+                                  />
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="flex flex-col gap-1 p-5">
+                                {data.flows.map((flow, index) => (
+                                  <ListComponent
+                                    key={flow.id}
+                                    flowData={flow}
+                                    selected={selectedFlows.includes(flow.id)}
+                                    setSelected={(selected) =>
+                                      setSelectedFlow(selected, flow.id, index)
+                                    }
+                                    shiftPressed={
+                                      isShiftPressed || isCtrlPressed
+                                    }
+                                  />
+                                ))}
+                              </div>
+                            )
+                          ) : flowType === "flows" ? (
+                            <div className="pt-24 text-center text-sm text-secondary-foreground">
+                              No flows in this project.{" "}
+                              <a
+                                onClick={() => setNewProjectModal(true)}
+                                className="cursor-pointer underline"
+                              >
+                                Create a new flow
+                              </a>
+                              , or browse the store.
+                            </div>
+                          ) : (
+                            <div className="pt-24 text-center text-sm text-secondary-foreground">
+                              No saved or custom components. Learn more about{" "}
+                              <a
+                                href="https://docs.langflow.org/components-custom-components"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="underline"
+                              >
+                                creating custom components
+                              </a>
+                              , or browse the store.
+                            </div>
+                          )}
+                        </div>
+                        <div
+                          className={`pointer-events-none absolute inset-x-0 top-0 h-7 bg-gradient-to-b from-secondary via-secondary/80 to-transparent transition-opacity duration-200 ${showTopScrollFade ? "opacity-100" : "opacity-0"}`}
                         />
-                      ) : (flowType === "flows" || flowType === "components") &&
-                        data &&
-                        data.pagination.total > 0 ? (
-                        view === "grid" ? (
-                          <div className="p-5 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
-                            {data.flows.map((flow, index) => (
-                              <ListComponent
-                                key={flow.id}
-                                flowData={flow}
-                                selected={selectedFlows.includes(flow.id)}
-                                setSelected={(selected) =>
-                                  setSelectedFlow(selected, flow.id, index)
-                                }
-                                shiftPressed={isShiftPressed || isCtrlPressed}
-                              />
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="flex flex-col gap-1 p-5">
-                            {data.flows.map((flow, index) => (
-                              <ListComponent
-                                key={flow.id}
-                                flowData={flow}
-                                selected={selectedFlows.includes(flow.id)}
-                                setSelected={(selected) =>
-                                  setSelectedFlow(selected, flow.id, index)
-                                }
-                                shiftPressed={isShiftPressed || isCtrlPressed}
-                              />
-                            ))}
-                          </div>
-                        )
-                      ) : flowType === "flows" ? (
-                        <div className="pt-24 text-center text-sm text-secondary-foreground">
-                          No flows in this project.{" "}
-                          <a
-                            onClick={() => setNewProjectModal(true)}
-                            className="cursor-pointer underline"
-                          >
-                            Create a new flow
-                          </a>
-                          , or browse the store.
-                        </div>
-                      ) : (
-                        <div className="pt-24 text-center text-sm text-secondary-foreground">
-                          No saved or custom components. Learn more about{" "}
-                          <a
-                            href="https://docs.langflow.org/components-custom-components"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="underline"
-                          >
-                            creating custom components
-                          </a>
-                          , or browse the store.
-                        </div>
-                      )}
+                        <div
+                          className={`pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-secondary via-secondary/80 to-transparent transition-opacity duration-200 ${showBottomScrollFade ? "opacity-100" : "opacity-0"}`}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -402,16 +466,18 @@ const HomePage = ({
             !isLoading &&
             !isEmptyFolder &&
             data.pagination.total >= 10 && (
-              <div className="flex justify-end px-3 py-4">
-                <PaginatorComponent
-                  pageIndex={data.pagination.page}
-                  pageSize={data.pagination.size}
-                  rowsCount={[12, 24, 48, 96]}
-                  totalRowsCount={data.pagination.total}
-                  paginate={handlePageChange}
-                  pages={data.pagination.pages}
-                  isComponent={flowType === "components"}
-                />
+              <div className="3xl:container">
+                <div className="flex justify-end p-5">
+                  <PaginatorComponent
+                    pageIndex={data.pagination.page}
+                    pageSize={data.pagination.size}
+                    rowsCount={[12, 24, 48, 96]}
+                    totalRowsCount={data.pagination.total}
+                    paginate={handlePageChange}
+                    pages={data.pagination.pages}
+                    isComponent={flowType === "components"}
+                  />
+                </div>
               </div>
             )}
         </div>
@@ -421,8 +487,8 @@ const HomePage = ({
         openModal={newProjectModal}
         setOpenModal={setNewProjectModal}
         openDeleteFolderModal={false}
-        setOpenDeleteFolderModal={() => {}}
-        handleDeleteFolder={() => {}}
+        setOpenDeleteFolderModal={() => { }}
+        handleDeleteFolder={() => { }}
       />
     </CardsWrapComponent>
   );

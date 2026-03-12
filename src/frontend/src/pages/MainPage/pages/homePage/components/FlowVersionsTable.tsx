@@ -1,4 +1,3 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import {
@@ -13,6 +12,7 @@ import useAlertStore from "@/stores/alertStore";
 import type { FlowType } from "@/types/flow";
 import type { FlowHistoryEntry } from "@/types/flow/history";
 import { cn } from "@/utils/utils";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import FlowVersionsTableRow from "./FlowVersionsTableRow";
 
 type FlowHistoryApiResponse = {
@@ -184,7 +184,7 @@ export default function FlowVersionsTable({
       const deploymentCounts = historyResponse?.deployment_counts ?? {};
       const deployedEntryCount = hasLoadedHistory
         ? entries.filter((entry) => (deploymentCounts[entry.id] ?? 0) > 0)
-            .length
+          .length
         : flow.has_deployments
           ? 1
           : 0;
@@ -254,7 +254,7 @@ export default function FlowVersionsTable({
               deploymentMatchesByHistoryId={deploymentMatchesByHistoryId}
               isLoadingHistory={isLoadingHistory}
               canExpand={
-                hasLoadedHistory && versionCount !== null && versionCount > 1
+                hasLoadedHistory && versionCount !== null && versionCount > 0
               }
               folderId={folderId}
               tableGridCols={tableGridCols}
