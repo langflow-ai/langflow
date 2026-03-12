@@ -280,11 +280,14 @@ async def test_delete_user_cascades_to_files(client: AsyncClient, test_user, sup
     async with session_getter(get_db_service()) as session:
         assert await session.get(File, file_id) is not None
 
-    # Delete the user
-    response = await client.delete(f"/api/v1/users/{user_id}", headers=super_user_headers)
-    assert response.status_code == 200, response.json()
+    # Delete the user using a Core-level bulk DELETE to bypass ORM relationship cascades
+    async with session_getter(get_db_service()) as session:
+        from sqlalchemy import delete
 
-    # Verify the file was cascade-deleted
+        await session.exec(delete(User).where(User.id == user_id))
+        await session.commit()
+
+    # Verify the file was cascade-deleted by the database FK
     async with session_getter(get_db_service()) as session:
         assert await session.get(File, file_id) is None
 
