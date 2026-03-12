@@ -48,6 +48,10 @@ DeploymentIdPath = Annotated[
     UUID,
     Path(description="Langflow DB deployment UUID (`deployment.id`)."),
 ]
+DeploymentIdQuery = Annotated[
+    UUID,
+    Query(description="Langflow DB deployment UUID (`deployment.id`)."),
+]
 
 
 # API provider-context contract matrix:
@@ -216,6 +220,7 @@ async def list_deployment_configs(
     provider_id: DeploymentProviderAccountIdQuery,
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
+    deployment_id: DeploymentIdQuery | None = None,
     page: Annotated[int, Query(ge=1)] = 1,
     size: Annotated[int, Query(ge=1, le=50)] = 20,
 ):
