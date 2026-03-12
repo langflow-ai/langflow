@@ -153,7 +153,8 @@ class GroqModelDiscovery:
 
         except ImportError:
             logger.warning("groq package not installed, cannot test chat completion")
-            return False
+            # Propagate the ImportError so callers can fall back to hardcoded model metadata
+            raise
         except Exception as e:  # noqa: BLE001
             error_msg = str(e).lower()
             # Genuine capability error: model does not support chat completions
