@@ -26,7 +26,13 @@ class DeploymentType(str, Enum):
 
 
 class BaseFlowArtifact(BaseModel):
-    """Model representing a payload for a flow."""
+    """Langflow-side flow data to be materialized into a provider-side snapshot.
+
+    A flow artifact is the raw input — nodes, edges, and metadata — that an
+    adapter converts into whatever provider-specific resource represents
+    "a deployable flow."  For example, WXO materializes artifacts into tools;
+    a Kubernetes adapter might produce ConfigMaps or OCI images.
+    """
 
     model_config = ConfigDict(extra="allow")  # e.g., viewport - good for viewing the flow in the UI
 
@@ -68,9 +74,17 @@ SnapshotList = Annotated[list[BaseFlowArtifact], Field(min_length=1)]
 
 
 class SnapshotItem(BaseModel):
-    """Model representing a result for a snapshot item."""
+    """Provider-side representation of a materialized flow artifact.
 
-    id: IdLike = Field(description="The id of the snapshot item")
+    A snapshot is an immutable, provider-owned copy of a Langflow flow
+    version's data.  The ``id`` is an opaque, provider-assigned identifier
+    (e.g. a wxO tool ID, a K8s ConfigMap name, an S3 key, a Lambda layer
+    ARN).  Langflow stores this ID in ``provider_snapshot_id`` on the
+    ``flow_version_deployment_attachment`` table to track which Langflow
+    flow version maps to which provider resource.
+    """
+
+    id: IdLike = Field(description="Opaque provider-assigned snapshot identifier.")
     name: str = Field(description="The name of the snapshot item")
     description: str | None = Field(None, description="The description of the snapshot item")
     provider_data: dict | None = Field(None, description="The data of the snapshot item from the provider")
@@ -79,7 +93,8 @@ class SnapshotItem(BaseModel):
 class SnapshotItems(BaseModel):
     """Snapshot input for deployment create.
 
-    Accept raw snapshot artifact payloads for deployment create.
+    Contains raw flow artifacts to be materialized into provider-side
+    snapshots during deployment creation.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -290,7 +305,10 @@ class DeploymentCreateResult(BaseDeploymentData, ProviderResultModel):
     )
     snapshot_ids: list[IdLike] = Field(
         default_factory=list,
-        description="Snapshot ids produced during deployment creation.",
+        description=(
+            "Opaque provider-assigned snapshot ids produced during deployment creation, "
+            "one per input flow artifact in the same order."
+        ),
     )
 
 
@@ -494,6 +512,21 @@ class ExecutionStatusResult(ExecutionResultBase):
     response types: create responses and status responses represent different API
     stages and may diverge as the contract evolves.
     """
+
+
+class MaterializeSnapshotsResult(BaseModel):
+    """Result of materializing flow artifacts into provider-side snapshots.
+
+    Each input ``BaseFlowArtifact`` produces exactly one provider-side
+    snapshot resource.  The returned ``snapshot_ids`` are opaque,
+    provider-assigned identifiers (e.g. a wxO tool ID, a K8s ConfigMap
+    name, an S3 key) stored as ``provider_snapshot_id`` in the
+    ``flow_version_deployment_attachment`` table.
+    """
+
+    snapshot_ids: list[IdLike] = Field(
+        description="Opaque provider-assigned snapshot ids, one per input artifact, in the same order.",
+    )
 
 
 class DeploymentListTypesResult(ProviderResultModel):

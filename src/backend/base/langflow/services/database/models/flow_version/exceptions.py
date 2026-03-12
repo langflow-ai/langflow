@@ -20,3 +20,7 @@ class FlowVersionConflictError(FlowVersionError):
 
 class FlowVersionNotFoundError(FlowVersionError):
     """Raised when a version entry is not found."""
+
+
+class FlowVersionDeployedError(FlowVersionError):
+    """Raised when an operation targets a flow version attached to a deployment."""

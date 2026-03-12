@@ -5,6 +5,7 @@ from .deployment_provider_account import DeploymentProviderAccount
 from .file import File
 from .flow import Flow
 from .flow_version import FlowVersion
+from .flow_version_deployment_attachment import FlowVersionDeploymentAttachment
 from .folder import Folder
 from .jobs import Job
 from .message import MessageTable
@@ -20,6 +21,7 @@ __all__ = [
     "File",
     "Flow",
     "FlowVersion",
+    "FlowVersionDeploymentAttachment",
     "Folder",
     "Job",
     "MessageTable",

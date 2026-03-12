@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from lfx.services.adapters.deployment.schema import (
+        BaseFlowArtifact,
         DeploymentCreate,
         DeploymentCreateResult,
         DeploymentDeleteResult,
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
         ExecutionCreateResult,
         ExecutionStatusResult,
         IdLike,
+        MaterializeSnapshotsResult,
         RedeployResult,
     )
     from lfx.services.interfaces import DeploymentServiceProtocol
@@ -160,6 +162,22 @@ class BaseDeploymentService(Service, ABC):
         db: AsyncSession,
     ) -> ExecutionStatusResult:
         """Get provider-agnostic deployment execution state/output."""
+
+    @abstractmethod
+    async def materialize_snapshots(
+        self,
+        *,
+        user_id: IdLike,
+        raw_payloads: list[BaseFlowArtifact],
+        config_id: IdLike | None = None,
+        db: AsyncSession,
+    ) -> MaterializeSnapshotsResult:
+        """Create provider-side snapshots from flow artifacts.
+
+        Used when adding flow versions to an existing deployment.
+        Returns a result containing one snapshot id per input artifact,
+        in the same order as ``raw_payloads``.
+        """
 
 
 if TYPE_CHECKING:
