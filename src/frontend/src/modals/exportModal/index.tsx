@@ -57,7 +57,7 @@ const ExportModal = forwardRef(
         setOpen={setOpen}
         onSubmit={async () => {
           try {
-            const flowToExport: FlowType = {
+            let flowToExport: FlowType = {
               id: currentFlow!.id,
               data: currentFlow!.data!,
               description,

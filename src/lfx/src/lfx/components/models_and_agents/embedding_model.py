@@ -3,9 +3,11 @@ from typing import Any
 from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
 from lfx.base.embeddings.model import LCEmbeddingsModel
 from lfx.base.models.unified_models import (
+    apply_provider_variable_config_to_build_config,
     get_api_key_for_provider,
     get_embedding_class,
     get_embedding_model_options,
+    get_provider_for_model_name,
     get_unified_models_detailed,
     update_model_options_in_build_config,
 )
@@ -34,7 +36,6 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
-        # Update model options
         build_config = update_model_options_in_build_config(
             component=self,
             build_config=build_config,
@@ -44,20 +45,23 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             field_value=field_value,
         )
 
-        # Show/hide provider-specific fields based on selected model
-        if field_name == "model" and isinstance(field_value, list) and len(field_value) > 0:
-            selected_model = field_value[0]
-            provider = selected_model.get("provider", "")
+        current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
+        provider = ""
+        if isinstance(current_model_value, list) and current_model_value:
+            selected_model = current_model_value[0]
+            provider = (selected_model.get("provider") or "").strip()
+            if not provider and selected_model.get("name"):
+                provider = get_provider_for_model_name(str(selected_model["name"]))
 
-            # Show/hide watsonx fields
+        if provider:
+            build_config = apply_provider_variable_config_to_build_config(build_config, provider)
+
+            # Embedding-specific WatsonX toggles not covered by provider metadata
             is_watsonx = provider == "IBM WatsonX"
-            build_config["base_url_ibm_watsonx"]["show"] = is_watsonx
-            build_config["project_id"]["show"] = is_watsonx
-            build_config["truncate_input_tokens"]["show"] = is_watsonx
-            build_config["input_text"]["show"] = is_watsonx
-            if is_watsonx:
-                build_config["base_url_ibm_watsonx"]["required"] = True
-                build_config["project_id"]["required"] = True
+            if "truncate_input_tokens" in build_config:
+                build_config["truncate_input_tokens"]["show"] = is_watsonx
+            if "input_text" in build_config:
+                build_config["input_text"]["show"] = is_watsonx
 
         return build_config
 

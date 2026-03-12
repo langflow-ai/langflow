@@ -17,6 +17,7 @@ from lfx.base.models.unified_models import (
     apply_provider_variable_config_to_build_config,
     get_language_model_options,
     get_llm,
+    get_provider_for_model_name,
     update_model_options_in_build_config,
 )
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
@@ -489,29 +490,21 @@ class AgentComponent(ToolCallingAgentComponent):
         )
         build_config = dotdict(build_config)
 
-        # Iterate over all providers in the MODEL_PROVIDERS_DICT
         if field_name == "model":
-            # Update input types for all fields
             build_config = self.update_input_types(build_config)
 
-            # Show/hide provider-specific fields based on selected model
-            # Get current model value - from field_value if model is being changed, otherwise from build_config
-            current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
-            if isinstance(current_model_value, list) and len(current_model_value) > 0:
-                selected_model = current_model_value[0]
-                provider = selected_model.get("provider", "")
+        current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
+        provider = ""
+        if isinstance(current_model_value, list) and current_model_value:
+            selected_model = current_model_value[0]
+            provider = (selected_model.get("provider") or "").strip()
+            if not provider and selected_model.get("name"):
+                provider = get_provider_for_model_name(str(selected_model["name"]))
 
-                # Hide provider-specific fields by default before applying provider config
-                for field in ["base_url_ibm_watsonx", "project_id"]:
-                    if field in build_config:
-                        build_config[field]["show"] = False
-                        build_config[field]["required"] = False
+        if provider:
+            build_config = apply_provider_variable_config_to_build_config(build_config, provider)
 
-                # Apply provider variable configuration (advanced, required, info, env var fallback)
-                if provider:
-                    build_config = apply_provider_variable_config_to_build_config(build_config, provider)
-
-            # Validate required keys
+        if field_name == "model":
             default_keys = [
                 "code",
                 "_type",
