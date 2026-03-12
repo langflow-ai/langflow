@@ -17,7 +17,11 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { CustomLink } from "@/customization/components/custom-link";
-import { ENABLE_PUBLISH, ENABLE_WIDGET, ENABLE_SHARE } from "@/customization/feature-flags";
+import {
+  ENABLE_PUBLISH,
+  ENABLE_WIDGET,
+  ENABLE_SHARE,
+} from "@/customization/feature-flags";
 import { customMcpOpen } from "@/customization/utils/custom-mcp-open";
 import ApiModal from "@/modals/apiModal";
 import EmbedModal from "@/modals/EmbedModal/embed-modal";
@@ -129,25 +133,25 @@ export default function PublishDropdown({
             <span>Export</span>
           </DropdownMenuItem>
           {ENABLE_SHARE ? (
-          <CustomLink
-            className={cn("flex-1")}
-            to={`/mcp/folder/${folderId}`}
-            target={customMcpOpen()}
-          >
-            <DropdownMenuItem
-              className="deploy-dropdown-item group"
-              onClick={() => {}}
-              data-testid="mcp-server-item"
+            <CustomLink
+              className={cn("flex-1")}
+              to={`/mcp/folder/${folderId}`}
+              target={customMcpOpen()}
             >
-              <IconComponent name="Mcp" className={`icon-size mr-2`} />
-              <span>MCP Server</span>
-              <IconComponent
-                name="ExternalLink"
-                className={`icon-size ml-auto hidden group-hover:block`}
-              />
-            </DropdownMenuItem>
-          </CustomLink>
-          ):(
+              <DropdownMenuItem
+                className="deploy-dropdown-item group"
+                onClick={() => {}}
+                data-testid="mcp-server-item"
+              >
+                <IconComponent name="Mcp" className={`icon-size mr-2`} />
+                <span>MCP Server</span>
+                <IconComponent
+                  name="ExternalLink"
+                  className={`icon-size ml-auto hidden group-hover:block`}
+                />
+              </DropdownMenuItem>
+            </CustomLink>
+          ) : (
             <DropdownMenuItem
               className="deploy-dropdown-item group"
               onClick={() => {}}
