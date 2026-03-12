@@ -12,6 +12,8 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from lfx.services.adapters.deployment.schema import (
+        ConfigListParams,
+        ConfigListResult,
         DeploymentCreate,
         DeploymentCreateResult,
         DeploymentDeleteResult,
@@ -29,6 +31,8 @@ if TYPE_CHECKING:
         ExecutionStatusResult,
         IdLike,
         RedeployResult,
+        SnapshotListParams,
+        SnapshotListResult,
     )
     from lfx.services.settings.base import Settings
 
@@ -368,6 +372,28 @@ class DeploymentServiceProtocol(Protocol):
         db: AsyncSession,
     ) -> ExecutionStatusResult:
         """Get provider-agnostic deployment execution state/output."""
+        ...
+
+    @abstractmethod
+    async def list_configs(
+        self,
+        *,
+        user_id: IdLike,
+        params: ConfigListParams | None = None,
+        db: AsyncSession,
+    ) -> ConfigListResult:
+        """List configs visible to this adapter."""
+        ...
+
+    @abstractmethod
+    async def list_snapshots(
+        self,
+        *,
+        user_id: IdLike,
+        params: SnapshotListParams | None = None,
+        db: AsyncSession,
+    ) -> SnapshotListResult:
+        """List snapshots visible to this adapter."""
         ...
 
     @abstractmethod

@@ -271,6 +271,23 @@ class DeploymentProviderAccountListResponse(_PaginatedResponse):
     providers: list[DeploymentProviderAccountGetResponse]
 
 
+class DeploymentConfigListItem(BaseModel):
+    """Lean config representation used in list responses."""
+
+    id: str = Field(description="Provider-owned config identifier.")
+    name: str
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    provider_data: dict[str, Any] | None = Field(
+        default=None,
+        description="Provider-owned opaque payload returned by the deployment provider.",
+    )
+
+
+class DeploymentConfigListResponse(_PaginatedResponse):
+    configs: list[DeploymentConfigListItem]
+
+
 class DeploymentCreateResponse(_DeploymentResponseBase):
     """API response for deployment creation."""
 
