@@ -336,6 +336,8 @@ export const lazyIconsMapping = {
     })),
   Milvus: () =>
     import("@/icons/Milvus").then((mod) => ({ default: mod.MilvusIcon })),
+  MiniMax: () =>
+    import("@/icons/MiniMax").then((mod) => ({ default: mod.MiniMaxIcon })),
   Missive: () =>
     import("@/icons/Missive").then((mod) => ({ default: mod.MissiveIcon })),
   Mistral: () =>
