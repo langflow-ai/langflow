@@ -483,8 +483,6 @@ body {
 }
 
 /* Inline Icons */
-.markdown svg,
-.markdown img[src*="icon"],
 .markdown .icon {
   width: 16px !important;
   height: 16px !important;
