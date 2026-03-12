@@ -502,9 +502,7 @@ class TestGroqModelDiscoveryErrors:
         hardcoded model metadata instead of crashing.
         """
         mock_response = Mock()
-        mock_response.json.return_value = {
-            "data": [{"id": "llama-3.1-8b-instant", "object": "model"}]
-        }
+        mock_response.json.return_value = {"data": [{"id": "llama-3.1-8b-instant", "object": "model"}]}
         mock_response.raise_for_status = Mock()
         mock_get.return_value = mock_response
 
