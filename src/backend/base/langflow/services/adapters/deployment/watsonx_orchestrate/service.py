@@ -11,10 +11,10 @@ from fastapi import HTTPException, status
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 from lfx.services.adapters.deployment.base import BaseDeploymentService
 from lfx.services.adapters.deployment.exceptions import (
+    AuthenticationError,
     DeploymentConflictError,
     DeploymentError,
     DeploymentNotFoundError,
-    DeploymentServiceError,
     DeploymentSupportError,
     InvalidContentError,
     InvalidDeploymentOperationError,
@@ -22,6 +22,9 @@ from lfx.services.adapters.deployment.exceptions import (
 )
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
+    ConfigListItem,
+    ConfigListParams,
+    ConfigListResult,
     DeploymentCreate,
     DeploymentCreateResult,
     DeploymentDeleteResult,
@@ -40,6 +43,9 @@ from lfx.services.adapters.deployment.schema import (
     IdLike,
     ProviderPayload,
     RedeployResult,
+    SnapshotItem,
+    SnapshotListParams,
+    SnapshotListResult,
     _normalize_and_validate_id,
 )
 
@@ -72,9 +78,12 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import
     process_raw_flows_with_app_id,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
+    _require_single_deployment_id,
     build_agent_payload,
+    dedupe_list,
     extract_agent_tool_ids,
     extract_error_detail,
+    raise_as_deployment_error,
     resolve_resource_name_prefix,
     validate_wxo_name,
 )
@@ -87,6 +96,7 @@ if TYPE_CHECKING:
 
     from ibm_watsonx_orchestrate_clients.agents.agent_client import AgentUpsertResponse
     from lfx.services.settings.service import SettingsService
+    from sqlalchemy.ext.asyncio import AsyncSession
 
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 
@@ -284,7 +294,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 raise InvalidContentError(message=msg) from None
             msg = f"{ErrorPrefix.CREATE.value} error details: {error_detail}"
             raise DeploymentError(message=msg, error_code="deployment_error") from None
-        except DeploymentServiceError:
+        except (AuthenticationError, DeploymentConflictError, InvalidContentError):
             raise
         except Exception:
             logger.exception("Unexpected error during wxO deployment creation")
@@ -365,19 +375,13 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 )
                 for agent in raw_agents
             ]
-        except DeploymentServiceError:
-            raise
-        except (ClientAPIException, HTTPException) as exc:
-            if isinstance(exc, ClientAPIException):
-                error_detail = extract_error_detail(getattr(exc.response, "text", ""))
-            else:
-                error_detail = extract_error_detail(str(exc.detail))
-            msg = f"{ErrorPrefix.LIST.value} error details: {error_detail}"
-            raise DeploymentError(message=msg, error_code="deployment_error") from None
-        except Exception:
-            logger.exception("Unexpected error while listing wxO deployments")
-            msg = f"{ErrorPrefix.LIST.value} Please check server logs for details."
-            raise DeploymentError(message=msg, error_code="deployment_error") from None
+        except Exception as exc:  # noqa: BLE001
+            raise_as_deployment_error(
+                exc,
+                error_prefix=ErrorPrefix.LIST,
+                log_msg="Unexpected error while listing wxO deployments",
+                pass_through=(AuthenticationError, InvalidDeploymentTypeError),
+            )
 
         return DeploymentListResult(
             deployments=deployments,
@@ -500,11 +504,11 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 raise DeploymentNotFoundError(msg) from None
             msg = f"{ErrorPrefix.DELETE.value} error details: {extract_error_detail(e.response.text)}"
             raise DeploymentError(msg, error_code="deployment_error") from None
-        except DeploymentServiceError:
+        except (AuthenticationError, DeploymentNotFoundError):
             raise
         except Exception:
             logger.exception("Unexpected error while deleting wxO deployment %s", agent_id)
-            msg = f"An unexpected error occurred while deleting deployment '{agent_id}'."
+            msg = f"{ErrorPrefix.DELETE.value} Please check server logs for details."
             raise DeploymentError(msg, error_code="deployment_error") from None
 
         return DeploymentDeleteResult(id=agent_id)
@@ -531,19 +535,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     "status": "connected",
                     "environment": derive_agent_environment(agent),
                 }
-        except DeploymentServiceError:
-            raise
-        except (ClientAPIException, HTTPException) as exc:
-            if isinstance(exc, ClientAPIException):
-                error_detail = extract_error_detail(getattr(exc.response, "text", ""))
-            else:
-                error_detail = extract_error_detail(str(exc.detail))
-            msg = f"{ErrorPrefix.HEALTH.value} error details: {error_detail}"
-            raise DeploymentError(message=msg, error_code="deployment_error") from None
-        except Exception:
-            logger.exception("Unexpected error fetching wxO deployment status")
-            msg = f"{ErrorPrefix.HEALTH.value} Please check server logs for details."
-            raise DeploymentError(message=msg, error_code="deployment_error") from None
+        except Exception as exc:  # noqa: BLE001
+            raise_as_deployment_error(
+                exc,
+                error_prefix=ErrorPrefix.HEALTH,
+                log_msg="Unexpected error fetching wxO deployment status",
+            )
 
         return DeploymentStatusResult(
             id=agent_id,
@@ -558,8 +555,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         self,
         *,
         user_id: IdLike,
+        deployment_type: DeploymentType | None = None,  # noqa: ARG002
         payload: ExecutionCreate,
-        db: Any,
+        db: AsyncSession,
     ) -> ExecutionCreateResult:
         """Create a provider-agnostic deployment execution."""
         agent_id = _normalize_and_validate_id(str(payload.deployment_id), field_name="deployment_id")
@@ -574,19 +572,13 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 provider_data=provider_data,
                 deployment_id=agent_id,
             )
-        except DeploymentServiceError:
-            raise
-        except (ClientAPIException, HTTPException) as exc:
-            if isinstance(exc, ClientAPIException):
-                error_detail = extract_error_detail(getattr(exc.response, "text", ""))
-            else:
-                error_detail = extract_error_detail(str(exc.detail))
-            msg = f"{ErrorPrefix.CREATE_EXECUTION.value} error details: {error_detail}"
-            raise DeploymentError(message=msg, error_code="deployment_error") from None
-        except Exception as exc:
-            logger.exception("Unexpected error creating wxO deployment execution")
-            msg = "An unexpected error occurred while creating a deployment execution in Watsonx Orchestrate."
-            raise DeploymentError(message=msg, error_code="deployment_error") from exc
+        except Exception as exc:  # noqa: BLE001
+            raise_as_deployment_error(
+                exc,
+                error_prefix=ErrorPrefix.CREATE_EXECUTION,
+                log_msg="Unexpected error creating wxO deployment execution",
+                pass_through=(AuthenticationError, DeploymentNotFoundError, InvalidContentError),
+            )
 
         return ExecutionCreateResult(
             execution_id=agent_run_result.get("run_id"),
@@ -599,7 +591,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         *,
         user_id: IdLike,
         execution_id: IdLike,
-        db: Any,
+        deployment_type: DeploymentType | None = None,  # noqa: ARG002
+        db: AsyncSession,
     ) -> ExecutionStatusResult:
         """Get provider-agnostic deployment execution state/output."""
         run_id = _normalize_and_validate_id(str(execution_id), field_name="execution_id")
@@ -615,6 +608,116 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             execution_id=run_id,
             deployment_id=agent_run_result.get("agent_id"),
             provider_result=agent_run_result,
+        )
+
+    async def list_configs(
+        self,
+        *,
+        user_id: IdLike,
+        params: ConfigListParams | None = None,
+        db: AsyncSession,
+    ) -> ConfigListResult:
+        """List configs visible to this adapter."""
+        agent_id = _require_single_deployment_id(params, resource_label="config")
+        clients = await self._get_provider_clients(user_id=user_id, db=db)
+
+        try:
+            agent = await asyncio.to_thread(clients.agent.get_draft_by_id, agent_id)
+        except Exception as exc:  # noqa: BLE001
+            raise_as_deployment_error(
+                exc,
+                error_prefix=ErrorPrefix.LIST_CONFIGS,
+                log_msg="Unexpected error while listing wxO deployment configs",
+            )
+
+        if not agent:
+            msg = f"Deployment '{agent_id}' not found."
+            raise DeploymentNotFoundError(msg)
+
+        tool_ids = agent.get("tools", []) if isinstance(agent, dict) else []
+        tool_ids = dedupe_list(tool_ids)
+
+        if not tool_ids:
+            return ConfigListResult(
+                configs=[],
+                provider_result={"deployment_id": agent_id, "tool_ids": []},
+            )
+
+        tools: list[dict]
+
+        try:
+            tools = await asyncio.to_thread(clients.tool.get_drafts_by_ids, tool_ids)
+        except Exception as exc:  # noqa: BLE001
+            raise_as_deployment_error(
+                exc,
+                error_prefix=ErrorPrefix.LIST_CONFIGS,
+                log_msg="Unexpected error while listing wxO tools for config extraction",
+            )
+
+        app_ids: set[str] = set()
+        for tool in tools or []:
+            if not isinstance(tool, dict):
+                continue
+            connections: dict = tool.get("binding", {}).get("langflow", {}).get("connections", {})
+            if not connections:
+                continue
+            app_ids.update(connections.keys())
+
+        return ConfigListResult(
+            configs=[ConfigListItem(id=app_id, name=app_id) for app_id in app_ids],
+            provider_result={"deployment_id": agent_id},
+        )
+
+    async def list_snapshots(
+        self,
+        *,
+        user_id: IdLike,
+        params: SnapshotListParams | None = None,
+        db: AsyncSession,
+    ) -> SnapshotListResult:
+        """List snapshots visible to this adapter."""
+        agent_id = _require_single_deployment_id(params, resource_label="snapshot")
+        clients = await self._get_provider_clients(user_id=user_id, db=db)
+
+        try:
+            agent = await asyncio.to_thread(clients.agent.get_draft_by_id, agent_id)
+        except Exception as exc:  # noqa: BLE001
+            raise_as_deployment_error(
+                exc,
+                error_prefix=ErrorPrefix.LIST,
+                log_msg="Unexpected error while listing wxO deployment snapshots",
+            )
+
+        if not agent or not isinstance(agent, dict):
+            msg = f"Deployment '{agent_id}' not found."
+            raise DeploymentNotFoundError(msg)
+
+        tools: list[dict] = []
+        requested_tool_ids = dedupe_list(agent.get("tools", []))
+        if requested_tool_ids:
+            try:
+                tools = await asyncio.to_thread(clients.tool.get_drafts_by_ids, requested_tool_ids)
+            except Exception as exc:  # noqa: BLE001
+                raise_as_deployment_error(
+                    exc,
+                    error_prefix=ErrorPrefix.LIST,
+                    log_msg="Unexpected error while listing wxO tools for snapshot extraction",
+                )
+
+        snapshots = [
+            SnapshotItem(
+                id=tool["id"],
+                name=tool.get("name") or tool["id"],
+            )
+            for tool in (tools or [])
+            if tool.get("id")
+        ]
+        if not snapshots and requested_tool_ids:
+            snapshots = [SnapshotItem(id=tool_id, name=tool_id) for tool_id in requested_tool_ids]
+
+        return SnapshotListResult(
+            snapshots=snapshots,
+            provider_result={"deployment_id": agent_id},
         )
 
     async def _create_agent_deployment(
