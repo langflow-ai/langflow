@@ -224,7 +224,7 @@ async def list_deployment_configs(
     page: Annotated[int, Query(ge=1)] = 1,
     size: Annotated[int, Query(ge=1, le=50)] = 20,
 ):
-    """List deployment configs for the selected Langflow provider-account UUID."""
+    """List deployment configs."""
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
