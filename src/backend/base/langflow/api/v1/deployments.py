@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from typing import Annotated
+
+from lfx.log.logger import logger
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -160,8 +162,12 @@ def _resolve_deployment_type(row: Deployment, fallback: DeploymentType | None = 
         try:
             return DeploymentType(row.deployment_type)
         except ValueError:
-            pass
-    return fallback or DeploymentType.AGENT
+            msg = f"Unknown deployment_type '{row.deployment_type}' for deployment {row.id}"
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+    if fallback is not None:
+        return fallback
+    msg = f"Deployment {row.id} has no deployment_type set"
+    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
 
 
 def _raise_http_for_value_error(exc: ValueError) -> None:
@@ -195,6 +201,7 @@ def _handle_adapter_errors():
     except HTTPException:
         raise
     except Exception as exc:
+        logger.exception("Unhandled adapter error: %s", exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 
@@ -239,7 +246,10 @@ def _normalize_flow_version_query_ids(flow_version_ids: list[str] | None) -> lis
     seen: set[UUID] = set()
     for raw in flow_version_ids:
         flow_version_uuid = _as_uuid(raw.strip())
-        if flow_version_uuid is None or flow_version_uuid in seen:
+        if flow_version_uuid is None:
+            msg = f"Invalid UUID in flow_version_ids query parameter: '{raw}'"
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+        if flow_version_uuid in seen:
             continue
         seen.add(flow_version_uuid)
         normalized.append(flow_version_uuid)
@@ -275,6 +285,7 @@ async def _resolve_deployment_adapter(
     try:
         deployment_adapter = get_deployment_adapter(adapter_key)
     except Exception as exc:
+        logger.exception("Failed to resolve deployment adapter for key '%s': %s", adapter_key, exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
     if deployment_adapter is None:
         raise HTTPException(
@@ -412,20 +423,23 @@ async def _build_flow_artifacts_from_flow_versions(
         project_id=project_id,
         db=db,
     )
-    return [
-        (
+    artifacts: list[tuple[UUID, BaseFlowArtifact]] = []
+    for row in rows:
+        if row.flow_version_data is None:
+            msg = f"Flow version {row.flow_version_id} has no data (snapshot may be corrupted)."
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+        artifacts.append((
             row.flow_version_id,
             BaseFlowArtifact(
                 id=row.flow_id,
                 name=row.flow_name,
                 description=row.flow_description,
-                data=row.flow_version_data or {},
+                data=row.flow_version_data,
                 tags=row.flow_tags,
                 provider_data={"project_id": str(project_id)},
             ),
-        )
-        for row in rows
-    ]
+        ))
+    return artifacts
 
 
 def _to_adapter_create_config(payload: DeploymentCreateRequest) -> ConfigItem | None:
@@ -494,14 +508,24 @@ async def _sync_page_with_provider(
             break
 
         resource_keys = [row.resource_key for row, _, _ in batch]
-        provider_view = await deployment_adapter.list(
-            user_id=user_id,
-            db=db,
-            params=DeploymentListParams(
-                deployment_types=[deployment_type] if deployment_type is not None else None,
-                provider_params={"ids": resource_keys},
-            ),
-        )
+        try:
+            provider_view = await deployment_adapter.list(
+                user_id=user_id,
+                db=db,
+                params=DeploymentListParams(
+                    deployment_types=[deployment_type] if deployment_type is not None else None,
+                    provider_params={"ids": resource_keys},
+                ),
+            )
+        except Exception as exc:
+            logger.exception(
+                "Provider sync failed for provider %s while reconciling deployments",
+                provider_id,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Failed to reconcile deployments with provider: {exc}",
+            ) from exc
         provider_ids = {str(item.id) for item in provider_view.deployments if item.id}
         provider_names = {item.name for item in provider_view.deployments if item.name}
         for row, attached_count, matched_flow_versions in batch:
@@ -509,6 +533,12 @@ async def _sync_page_with_provider(
                 accepted_rows.append((row, attached_count, matched_flow_versions))
                 cursor += 1
                 continue
+            logger.info(
+                "Removing orphaned local deployment row %s (resource_key=%s) — not found on provider %s",
+                row.id,
+                row.resource_key,
+                provider_id,
+            )
             await delete_deployment_by_resource_key(
                 db,
                 user_id=user_id,
@@ -538,7 +568,8 @@ async def _attach_flow_versions(
     for ref in payload.flow_version_ids.ids:
         flow_version_id = _as_uuid(ref)
         if flow_version_id is None:
-            continue
+            msg = f"Invalid flow version id: {ref}"
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
         await create_deployment_attachment(
             db,
             user_id=user_id,
@@ -772,7 +803,13 @@ async def create_deployment(
         valid_flow_version_uuid_ids = [
             flow_version_id for flow_version_id in flow_version_uuid_ids if flow_version_id is not None
         ]
-        snapshot_id_by_flow_version_id = dict(zip(valid_flow_version_uuid_ids, created_snapshot_ids, strict=False))
+        if len(valid_flow_version_uuid_ids) != len(created_snapshot_ids):
+            msg = (
+                f"Snapshot count mismatch on create: {len(valid_flow_version_uuid_ids)} "
+                f"flow versions vs {len(created_snapshot_ids)} snapshot ids"
+            )
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+        snapshot_id_by_flow_version_id = dict(zip(valid_flow_version_uuid_ids, created_snapshot_ids, strict=True))
     await _attach_flow_versions(
         payload=payload,
         user_id=current_user.id,
@@ -1029,7 +1066,7 @@ async def update_deployment(
             if materialize_snapshots is None:
                 msg = "Deployment adapter does not support flow version snapshot materialization."
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=msg)
-            with deployment_provider_scope(deployment_row.deployment_provider_account_id):
+            with _handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
                 created_snapshot_ids = await materialize_snapshots(
                     user_id=current_user.id,
                     raw_payloads=[artifact for _, artifact in add_artifacts],
@@ -1044,7 +1081,7 @@ async def update_deployment(
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
             added_snapshot_bindings = [
                 (flow_version_id, snapshot_id)
-                for (flow_version_id, _), snapshot_id in zip(add_artifacts, created_snapshot_ids, strict=False)
+                for (flow_version_id, _), snapshot_id in zip(add_artifacts, created_snapshot_ids, strict=True)
             ]
             snapshot_add_ids = [snapshot_id for _, snapshot_id in added_snapshot_bindings]
 
