@@ -109,7 +109,7 @@ class APIRequestComponent(Component):
                 },
             ],
             value=[],
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
             advanced=True,
             real_time_refresh=True,
         ),
@@ -133,7 +133,7 @@ class APIRequestComponent(Component):
             ],
             value=[{"key": "User-Agent", "value": "Langflow/1.0"}],
             advanced=True,
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
             real_time_refresh=True,
         ),
         IntInput(

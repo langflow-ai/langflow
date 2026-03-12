@@ -116,7 +116,7 @@ class MemoryComponent(Component):
 
     outputs = [
         Output(display_name="Message", name="messages_text", method="retrieve_messages_as_text", dynamic=True),
-        Output(display_name="Dataframe", name="dataframe", method="retrieve_messages_dataframe", dynamic=True),
+        Output(display_name="Table", name="dataframe", method="retrieve_messages_dataframe", dynamic=True),
     ]
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
@@ -139,9 +139,7 @@ class MemoryComponent(Component):
                     Output(
                         display_name="Messages", name="messages_text", method="retrieve_messages_as_text", dynamic=True
                     ),
-                    Output(
-                        display_name="Dataframe", name="dataframe", method="retrieve_messages_dataframe", dynamic=True
-                    ),
+                    Output(display_name="Table", name="dataframe", method="retrieve_messages_dataframe", dynamic=True),
                 ]
         return frontend_node
 

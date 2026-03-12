@@ -49,7 +49,7 @@ class FirecrawlScrapeApi(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="scrape"),
+        Output(display_name="JSON", name="data", method="scrape"),
     ]
 
     def scrape(self) -> Data:

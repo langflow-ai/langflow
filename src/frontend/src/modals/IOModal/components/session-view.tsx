@@ -2,6 +2,7 @@ import { useIsFetching } from "@tanstack/react-query";
 import type { NewValueParams, SelectionChangedEvent } from "ag-grid-community";
 import cloneDeep from "lodash/cloneDeep";
 import { useEffect, useMemo, useState } from "react";
+import { removeMessages } from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
 import Loading from "@/components/ui/loading";
 import {
   useDeleteMessages,
@@ -32,7 +33,7 @@ export default function SessionView({
 
   // Fetch messages for the specific session
   const messageQueryParams = useMemo(() => {
-    const params: any = {};
+    const params: Record<string, string> = {};
     if (session) {
       params.session_id = session;
     }
@@ -53,7 +54,7 @@ export default function SessionView({
   // Update messages store when data is fetched
   useEffect(() => {
     if (queryData && typeof queryData === "object" && "rows" in queryData) {
-      const rowsData = queryData.rows as { data?: any[] } | undefined;
+      const rowsData = queryData.rows as { data?: unknown[] } | undefined;
       if (rowsData && typeof rowsData === "object" && "data" in rowsData) {
         const fetchedMessages = rowsData.data || [];
         setMessages(fetchedMessages);
@@ -71,6 +72,9 @@ export default function SessionView({
   const { mutate: deleteMessages } = useDeleteMessages({
     onSuccess: () => {
       deleteMessagesStore(selectedRows);
+      if (session && id) {
+        removeMessages(selectedRows, session, id);
+      }
       setSelectedRows([]);
       setSuccessData({
         title: "Messages deleted successfully.",
@@ -85,7 +89,9 @@ export default function SessionView({
 
   const { mutate: updateMessageMutation } = useUpdateMessage();
 
-  function handleUpdateMessage(event: NewValueParams<any, string>) {
+  function handleUpdateMessage(
+    event: NewValueParams<Record<string, unknown>, string>,
+  ) {
     const newValue = event.newValue;
     const field = event.column.getColId();
     const row = cloneDeep(event.data);

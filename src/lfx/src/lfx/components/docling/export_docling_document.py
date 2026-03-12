@@ -18,9 +18,9 @@ class ExportDoclingDocumentComponent(Component):
     inputs = [
         HandleInput(
             name="data_inputs",
-            display_name="Data or DataFrame",
+            display_name="JSON or Table",
             info="The data with documents to export.",
-            input_types=["Data", "DataFrame"],
+            input_types=["Data", "JSON", "DataFrame", "Table"],
             required=True,
         ),
         DropdownInput(
@@ -66,7 +66,7 @@ class ExportDoclingDocumentComponent(Component):
 
     outputs = [
         Output(display_name="Exported data", name="data", method="export_document"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="Table", name="dataframe", method="as_dataframe"),
     ]
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:

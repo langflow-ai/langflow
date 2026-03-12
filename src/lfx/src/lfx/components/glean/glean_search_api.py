@@ -105,7 +105,7 @@ class GleanSearchAPIComponent(LCToolComponent):
     icon: str = "Glean"
 
     outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
+        Output(display_name="Table", name="dataframe", method="fetch_content_dataframe"),
     ]
 
     inputs = [

@@ -122,6 +122,7 @@ export const nodeColors: { [char: string]: string } = {
   unknown: "#9CA3AF",
   Document: "#65a30d",
   Data: "#dc2626",
+  JSON: "#dc2626",
   Message: "#4f46e5",
   number: "#7E22CF",
   Prompt: "#7c3aed",
@@ -131,6 +132,8 @@ export const nodeColors: { [char: string]: string } = {
   Agent: "#903BBE",
   AgentExecutor: "#903BBE",
   Tool: "#00fbfc",
+  DataFrame: "#ec4899",
+  Table: "#ec4899",
 };
 
 export const nodeColorsName: { [char: string]: string } = {
@@ -174,6 +177,7 @@ export const nodeColorsName: { [char: string]: string } = {
   unknown: "gray",
   Document: "lime",
   Data: "red",
+  JSON: "red",
   Message: "indigo",
   Prompt: "violet",
   Embeddings: "emerald",
@@ -186,6 +190,7 @@ export const nodeColorsName: { [char: string]: string } = {
   BaseChatMessageHistory: "orange",
   Memory: "orange",
   DataFrame: "pink",
+  Table: "pink",
 };
 
 export const FILE_ICONS = {

@@ -376,9 +376,11 @@ test(
         .locator('[data-testid^="session-"][data-testid$="-more-menu"]')
         .last()
         .click();
-      // await page.getByTestId("clear-chat-option").click();
-      // await page.getByTestId("icon-MoreHorizontal").last().click();
-      await page.getByText("Delete", { exact: true }).last().click();
+      const clearSessionOption = page.locator(
+        '[data-testid="clear-chat-option"], [data-testid="delete-session-option"]',
+      );
+      await expect(clearSessionOption.last()).toBeVisible({ timeout: 10000 });
+      await clearSessionOption.last().click();
 
       await page.waitForSelector("text=Run Flow", {
         timeout: 30000,

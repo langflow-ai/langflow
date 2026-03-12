@@ -1,11 +1,10 @@
+import { useEffect, useState } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
+import MultiselectComponent from "@/components/core/parameterRenderComponent/components/multiselectComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProviderVariable } from "@/constants/providerConstants";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { cn } from "@/utils/utils";
-import { useEffect, useState } from "react";
-import MultiselectComponent from "@/components/core/parameterRenderComponent/components/multiselectComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
 import useAlertStore from "@/stores/alertStore";
 import DisconnectWarning from "./DisconnectWarning";
 import { Provider } from "./types";
@@ -14,7 +13,7 @@ const PROVIDER_KEY_PREVIEW: Record<
   string,
   { prefix: string; totalLength: number }
 > = {
-  OpenAI: { prefix: "sk-proj-", totalLength: 164 },
+  OpenAI: { prefix: "sk-", totalLength: 164 },
   Anthropic: { prefix: "sk-ant-", totalLength: 108 },
   "Google Generative AI": { prefix: "AIza", totalLength: 39 },
   "IBM watsonx": { prefix: "", totalLength: 44 },
@@ -123,14 +122,14 @@ const ProviderConfigurationForm = ({
   if (!selectedProvider) return null;
 
   return (
-    <div className="flex flex-col gap-1 p-4">
+    <div className="flex flex-col gap-1 px-4 pt-4">
       <div className="flex flex-row gap-1 min-w-[300px]">
         <span className="text-[13px] font-semibold mr-auto">
           {isSingleVariableProvider ? (
             <>
               {providerVariables[0].variable_name}
               {providerVariables[0].required && (
-                <span className="text-red-500 ml-1">*</span>
+                <span className="text-destructive ml-1">*</span>
               )}
             </>
           ) : (
@@ -175,7 +174,7 @@ const ProviderConfigurationForm = ({
                   <label className="text-[12px] font-medium text-muted-foreground">
                     {variable.variable_name}
                     {variable.required && (
-                      <span className="text-red-500 ml-1">*</span>
+                      <span className="text-destructive ml-1">*</span>
                     )}
                   </label>
                 )}
@@ -234,7 +233,7 @@ const ProviderConfigurationForm = ({
                         {validationState !== "invalid" &&
                           (validationState === "valid" ||
                             (isConfigured && !hasNewValue)) && (
-                            <span className="absolute right-8 top-1/2 -translate-y-1/2 text-green-500 pointer-events-none">
+                            <span className="absolute right-8 top-1/2 -translate-y-1/2 text-accent-emerald-foreground pointer-events-none">
                               <ForwardedIconComponent
                                 name="Check"
                                 className="h-4 w-4"
@@ -307,7 +306,7 @@ const ProviderConfigurationForm = ({
                           (isConfigured && !hasNewValue && !isEditing)) ? (
                         <ForwardedIconComponent
                           name="Check"
-                          className="h-4 w-4 text-green-500 pointer-events-none"
+                          className="h-4 w-4 text-accent-emerald-foreground pointer-events-none"
                         />
                       ) : undefined
                     }
@@ -338,8 +337,8 @@ const ProviderConfigurationForm = ({
               {validationFailed
                 ? "Retry Save"
                 : isAlreadyConfigured
-                  ? "Replace Configuration"
-                  : "Save Configuration"}
+                  ? "Replace"
+                  : "Save"}
             </Button>
           </div>
         </div>
@@ -379,7 +378,7 @@ const ProviderConfigurationForm = ({
           setShowDisconnectWarning(false);
         }}
         isLoading={isDeleting}
-        className="absolute inset-0 m-4 bg-background z-50 border-destructive border"
+        className="absolute inset-0 m-4 bg-background z-50 border-destructive border h-[165px]"
       />
     </div>
   );

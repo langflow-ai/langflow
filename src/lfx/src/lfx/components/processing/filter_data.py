@@ -15,7 +15,7 @@ class FilterDataComponent(Component):
     inputs = [
         DataInput(
             name="data",
-            display_name="Data",
+            display_name="JSON",
             info="Data object to filter.",
         ),
         MessageTextInput(

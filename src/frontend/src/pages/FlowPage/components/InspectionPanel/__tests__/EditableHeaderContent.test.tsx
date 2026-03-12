@@ -1,8 +1,13 @@
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { renderHook } from "@testing-library/react";
-import EditableHeaderContent from "../components/EditableHeaderContent";
 import type { NodeDataType } from "@/types/flow";
+import EditableHeaderContent from "../components/EditableHeaderContent";
 
 // Mock Markdown component
 jest.mock("react-markdown", () => {
