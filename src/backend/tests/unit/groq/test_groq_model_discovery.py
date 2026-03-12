@@ -267,16 +267,16 @@ class TestChatCompletionDetection:
         assert result is False
 
     @patch("groq.Groq")
-    def test_chat_completion_terms_required_returns_true(
+    def test_chat_completion_terms_required_returns_none(
         self, mock_groq, mock_api_key, mock_groq_client_chat_terms_required
     ):
-        """Test that access/entitlement errors still assume chat is supported."""
+        """Test that access/entitlement errors cause _test_chat_completion to return None."""
         mock_groq.return_value = mock_groq_client_chat_terms_required()
 
         discovery = GroqModelDiscovery(api_key=mock_api_key)
         result = discovery._test_chat_completion("gated-model")
 
-        assert result is True
+        assert result is None
 
     @patch("groq.Groq")
     def test_chat_completion_transient_error_returns_true(self, mock_groq, mock_api_key, mock_groq_client_rate_limit):
