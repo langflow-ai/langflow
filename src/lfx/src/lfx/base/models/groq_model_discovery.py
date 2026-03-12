@@ -87,12 +87,20 @@ class GroqModelDiscovery:
             logger.info(f"Testing {len(llm_models)} LLM models for capabilities...")
             for model_id in llm_models:
                 supports_chat = self._test_chat_completion(model_id)
-                if not supports_chat:
+                if supports_chat is False:
                     # Model doesn't support chat completions at all (e.g. speech models)
                     non_llm_models.append(model_id)
                     logger.debug(f"{model_id}: does not support chat completions, skipping")
                     continue
+                if supports_chat is None:
+                    # Transient/access error - skip to avoid caching a false negative
+                    logger.info(f"{model_id}: chat test indeterminate, skipping (will retry next refresh)")
+                    continue
                 supports_tools = self._test_tool_calling(model_id)
+                if supports_tools is None:
+                    # Transient/access error on tool test - skip to avoid caching a false negative
+                    logger.info(f"{model_id}: tool test indeterminate, skipping (will retry next refresh)")
+                    continue
                 models_metadata[model_id] = {
                     "name": model_id,
                     "provider": self._get_provider_name(model_id),
@@ -132,7 +140,7 @@ class GroqModelDiscovery:
         # Use direct access to raise KeyError if 'data' is missing
         return [model["id"] for model in model_list["data"]]
 
-    def _test_chat_completion(self, model_id: str) -> bool:
+    def _test_chat_completion(self, model_id: str) -> bool | None:
         """Test if a model supports basic chat completions.
 
         This filters out non-chat models (e.g. TTS, speech, embedding models)
@@ -142,7 +150,8 @@ class GroqModelDiscovery:
             model_id: The model ID to test
 
         Returns:
-            True if model supports chat completions, False otherwise
+            True if model supports chat completions, False if it does not,
+            None if the result is indeterminate (transient/access errors).
         """
         try:
             import groq
@@ -173,21 +182,22 @@ class GroqModelDiscovery:
             ):
                 logger.info(f"{model_id}: chat completion not accessible for this API key ({e})")
                 # Do not mark the model as non-chat; assume chat is supported but not usable with this key
-                return True
-            # Other errors (rate limits, transient failures) - assume chat is supported
+                return None
+            # Other errors (rate limits, transient failures) - indeterminate
             logger.warning(f"Error testing chat for {model_id}: {e}")
-            return True
+            return None
         else:
             return True
 
-    def _test_tool_calling(self, model_id: str) -> bool:
+    def _test_tool_calling(self, model_id: str) -> bool | None:
         """Test if a model supports tool calling.
 
         Args:
             model_id: The model ID to test
 
         Returns:
-            True if model supports tool calling, False otherwise
+            True if model supports tool calling, False if it does not,
+            None if the result is indeterminate (transient/access errors).
         """
         try:
             import groq
@@ -222,11 +232,24 @@ class GroqModelDiscovery:
             return False
         except Exception as e:  # noqa: BLE001
             error_msg = str(e).lower()
+            # Genuine capability error: model does not support tools
             if "tool" in error_msg:
                 return False
-            # Any other API error (rate limits, transient failures, etc)
+            # Access/entitlement errors: model may support tools but is not accessible for this key
+            if any(
+                phrase in error_msg
+                for phrase in [
+                    "terms acceptance",
+                    "terms_required",
+                    "model_terms_required",
+                    "not available",
+                ]
+            ):
+                logger.info(f"{model_id}: tool calling not testable for this API key ({e})")
+                return None
+            # Any other API error (rate limits, transient failures, etc) - indeterminate
             logger.warning(f"Error testing tool calling for {model_id}: {e}")
-            return False
+            return None
         else:
             return True
 
