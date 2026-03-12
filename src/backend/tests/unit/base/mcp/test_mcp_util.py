@@ -2188,6 +2188,160 @@ class TestNormalizeArgumentsForMcp:
         result = util._normalize_arguments_for_mcp({"params": {"search": "test"}}, Schema, "test_tool")
         assert result == {"params": {"search": "test"}}
 
+    def test_str_to_bool_false_variants(self):
+        """Test str 'false'/'0'/'no' when bool expected -> False."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            flag: bool = Field(..., description="Flag")
+
+        for val in ("false", "0", "no"):
+            result = util._normalize_arguments_for_mcp({"flag": val}, Schema, "test_tool")
+            assert result == {"flag": False}
+            assert result["flag"] is False
+
+    def test_dict_expected_json_parses_to_list_raises(self):
+        """Test dict expected but JSON string parses to list -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        with pytest.raises(ValueError, match=r"expects object \(dict\)") as exc_info:
+            util._normalize_arguments_for_mcp({"params": '["a", "b"]'}, Schema, "my_tool")
+
+        assert "my_tool" in str(exc_info.value)
+        assert "Parameter 'params'" in str(exc_info.value)
+        assert "JSON parsed to list" in str(exc_info.value)
+
+    def test_list_expected_json_parses_to_dict_raises(self):
+        """Test list expected but JSON string parses to dict -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list = Field(..., description="Items")
+
+        with pytest.raises(ValueError, match=r"expects array \(list\)") as exc_info:
+            util._normalize_arguments_for_mcp({"items": '{"x": 1}'}, Schema, "list_tool")
+
+        assert "list_tool" in str(exc_info.value)
+        assert "Parameter 'items'" in str(exc_info.value)
+        assert "JSON parsed to dict" in str(exc_info.value)
+
+    def test_int_expected_non_integer_float_raises(self):
+        """Test int expected but float 3.14 (non-integer) -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+
+        with pytest.raises(ValueError, match=r"expects integer") as exc_info:
+            util._normalize_arguments_for_mcp({"count": 3.14}, Schema, "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'count'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_int_expected_list_or_dict_raises(self):
+        """Test int expected but list/dict value -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+
+        for val in ([], {}):
+            with pytest.raises(ValueError, match=r"expects integer"):
+                util._normalize_arguments_for_mcp({"count": val}, Schema, "test_tool")
+
+    def test_float_expected_invalid_str_raises(self):
+        """Test float expected but str 'abc' -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            value: float = Field(..., description="Value")
+
+        with pytest.raises(ValueError, match=r"expects number") as exc_info:
+            util._normalize_arguments_for_mcp({"value": "abc"}, Schema, "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'value'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_float_expected_list_or_dict_raises(self):
+        """Test float expected but list/dict value -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            value: float = Field(..., description="Value")
+
+        for val in ([], {}):
+            with pytest.raises(ValueError, match=r"expects number"):
+                util._normalize_arguments_for_mcp({"value": val}, Schema, "test_tool")
+
+    def test_bool_expected_invalid_str_raises(self):
+        """Test bool expected but str 'maybe' -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            flag: bool = Field(..., description="Flag")
+
+        with pytest.raises(ValueError, match=r"expects.*bool") as exc_info:
+            util._normalize_arguments_for_mcp({"flag": "maybe"}, Schema, "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'flag'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_bool_expected_int_raises(self):
+        """Test bool expected but int 1 -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            flag: bool = Field(..., description="Flag")
+
+        with pytest.raises(ValueError, match=r"expects.*bool") as exc_info:
+            util._normalize_arguments_for_mcp({"flag": 1}, Schema, "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'flag'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_dict_expected_non_str_value_raises(self):
+        """Test dict expected but list value (not str) -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        with pytest.raises(ValueError, match=r"expects object \(dict\)") as exc_info:
+            util._normalize_arguments_for_mcp({"params": ["a", "b"]}, Schema, "my_tool")
+
+        assert "my_tool" in str(exc_info.value)
+        assert "Parameter 'params'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_list_expected_non_str_value_raises(self):
+        """Test list expected but dict value (not str) -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list = Field(..., description="Items")
+
+        with pytest.raises(ValueError, match=r"expects array \(list\)") as exc_info:
+            util._normalize_arguments_for_mcp({"items": {"x": 1}}, Schema, "list_tool")
+
+        assert "list_tool" in str(exc_info.value)
+        assert "Parameter 'items'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_try_convert_value_none_raises(self):
+        """Test _try_convert_value with None when scalar type expected -> raises ValueError (direct caller)."""
+        with pytest.raises(ValueError, match=r"expects.*but received None") as exc_info:
+            util._try_convert_value(None, int, "count", "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'count'" in str(exc_info.value)
+
 
 class TestSnakeToCamelConversion:
     """Test the _snake_to_camel function from json_schema module."""
