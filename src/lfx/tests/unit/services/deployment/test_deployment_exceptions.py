@@ -109,6 +109,8 @@ def test_deployment_service_is_base_deployment_service() -> None:
         ("create", {"user_id": "u1", "payload": None, "db": None}),
         ("list_types", {"user_id": "u1", "db": None}),
         ("list", {"user_id": "u1", "db": None}),
+        ("list_configs", {"user_id": "u1", "db": None}),
+        ("list_snapshots", {"user_id": "u1", "db": None}),
         ("get", {"user_id": "u1", "deployment_id": "d1", "db": None}),
         ("update", {"user_id": "u1", "deployment_id": "d1", "payload": None, "db": None}),
         ("redeploy", {"user_id": "u1", "deployment_id": "d1", "db": None}),

@@ -72,7 +72,6 @@ class SnapshotItem(BaseModel):
 
     id: IdLike = Field(description="The id of the snapshot item")
     name: str = Field(description="The name of the snapshot item")
-    description: str | None = Field(None, description="The description of the snapshot item")
     provider_data: dict | None = Field(None, description="The data of the snapshot item from the provider")
 
 
@@ -254,6 +253,16 @@ class ConfigDeploymentBindingUpdate(BaseModel):
         return self
 
 
+class ConfigListItem(BaseModel):
+    """Model representing a result for a config list item."""
+
+    id: IdLike = Field(description="The id of the config item")
+    name: str = Field(description="The name of the config item")
+    created_at: datetime.datetime | None = Field(None, description="The created timestamp of the config item")
+    updated_at: datetime.datetime | None = Field(None, description="The last updated timestamp of the config item")
+    provider_data: dict | None = Field(None, description="The data of the config item from the provider")
+
+
 class ProviderDataModel(BaseModel):
     """Base model for provider metadata payloads."""
 
@@ -330,8 +339,20 @@ class DeploymentListResult(ProviderResultModel):
     deployments: list[ItemResult] = Field(description="The list of deployments")
 
 
-class DeploymentListParams(BaseModel):
-    """Query params for deployment list operations."""
+class ConfigListResult(ProviderResultModel):
+    """Model representing a result for a config list operation."""
+
+    configs: list[ConfigListItem] = Field(description="The list of configs")
+
+
+class SnapshotListResult(ProviderResultModel):
+    """Model representing a result for a snapshot list operation."""
+
+    snapshots: list[SnapshotItem] = Field(description="The list of snapshots")
+
+
+class _BaseListParams(BaseModel):
+    """Shared cross-entity filter fields for list operations."""
 
     provider_params: ProviderPayload | None = Field(
         None,
@@ -373,6 +394,18 @@ class DeploymentListParams(BaseModel):
         )
         # Keep first occurrence order while removing duplicates.
         return list(dict.fromkeys(normalized_ids))
+
+
+class DeploymentListParams(_BaseListParams):
+    """Query params for deployment list operations."""
+
+
+class ConfigListParams(_BaseListParams):
+    """Query params for config list operations."""
+
+
+class SnapshotListParams(_BaseListParams):
+    """Query params for snapshot list operations."""
 
 
 class DeploymentCreate(BaseModel):
