@@ -21,6 +21,7 @@ from lfx.io import (
     Output,
     SecretStrInput,
     SliderInput,
+    StrInput,
     TableInput,
 )
 from lfx.log.logger import logger
@@ -87,7 +88,7 @@ class ChatOllamaComponent(LCModelComponent):
     default_table_row_schema = build_model_from_schema([default_table_row]).model_json_schema()
 
     inputs = [
-        MessageTextInput(
+        StrInput(
             name="base_url",
             display_name="Ollama API URL",
             info="Endpoint of the Ollama API. Defaults to http://localhost:11434.",
@@ -230,8 +231,8 @@ class ChatOllamaComponent(LCModelComponent):
     outputs = [
         Output(display_name="Text", name="text_output", method="text_response"),
         Output(display_name="Language Model", name="model_output", method="build_model"),
-        Output(display_name="Data", name="data_output", method="build_data_output"),
-        Output(display_name="DataFrame", name="dataframe_output", method="build_dataframe_output"),
+        Output(display_name="JSON", name="data_output", method="build_data_output"),
+        Output(display_name="Table", name="dataframe_output", method="build_dataframe_output"),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]

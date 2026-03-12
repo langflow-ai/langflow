@@ -15,7 +15,19 @@ type Message = {
   category?: string;
   properties?: {
     state?: "partial" | "complete";
-    source?: { id?: string };
+    source?: {
+      id?: string;
+      display_name?: string;
+      source?: string;
+    };
+    icon?: string;
+    background_color?: string;
+    text_color?: string;
+    targets?: string[];
+    edited?: boolean;
+    allow_markdown?: boolean;
+    positive_feedback?: boolean | null;
+    build_duration?: number | null;
     [key: string]: unknown;
   };
   content_blocks?: ContentBlock[];

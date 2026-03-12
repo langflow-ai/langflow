@@ -286,9 +286,9 @@ class TextOperations(Component):
         operation_name = self._extract_operation_name(field_value)
 
         if operation_name == "Word Count":
-            frontend_node["outputs"].append(Output(display_name="Data", name="data", method="get_data"))
+            frontend_node["outputs"].append(Output(display_name="JSON", name="data", method="get_data"))
         elif operation_name == "Text to DataFrame":
-            frontend_node["outputs"].append(Output(display_name="DataFrame", name="dataframe", method="get_dataframe"))
+            frontend_node["outputs"].append(Output(display_name="Table", name="dataframe", method="get_dataframe"))
         elif operation_name == "Text Join":
             frontend_node["outputs"].append(Output(display_name="Text", name="text", method="get_text"))
             frontend_node["outputs"].append(Output(display_name="Message", name="message", method="get_message"))

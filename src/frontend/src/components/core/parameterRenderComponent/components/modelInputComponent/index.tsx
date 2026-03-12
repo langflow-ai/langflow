@@ -1,47 +1,29 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
-import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
+import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ModelProviderModal from "@/modals/modelProviderModal";
 import useAlertStore from "@/stores/alertStore";
 import type { APIClassType } from "@/types/api";
-import { cn } from "@/utils/utils";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
-import {
-  Command,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from "../../../../ui/command";
+import { Command } from "../../../../ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverContentWithoutPortal,
-  PopoverTrigger,
 } from "../../../../ui/popover";
 import type { BaseInputProps } from "../../types";
-
-/** Represents a single model option in the dropdown */
-export interface ModelOption {
-  id?: string;
-  name: string;
-  icon: string;
-  provider: string;
-  metadata?: Record<string, unknown>;
-}
-
-export interface ModelInputComponentType {
-  options?: ModelOption[];
-  placeholder?: string;
-  externalOptions?: any;
-}
-
-export type SelectedModel = ModelOption;
+import ModelList from "./components/ModelList";
+import ModelTrigger from "./components/ModelTrigger";
+import type {
+  ModelInputComponentType,
+  ModelOption,
+  SelectedModel,
+} from "./types";
 
 export default function ModelInputComponent({
   id,
@@ -57,19 +39,19 @@ export default function ModelInputComponent({
   showParameter = true,
   editNode,
   inspectionPanel,
+  showEmptyState = false,
 }: BaseInputProps<any> & ModelInputComponentType): JSX.Element | null {
   const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
-  const [refreshOptions, setRefreshOptions] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<SelectedModel | null>(
-    null,
-  );
   const [openManageProvidersDialog, setOpenManageProvidersDialog] =
     useState(false);
+  const [isRefreshingAfterClose, setIsRefreshingAfterClose] = useState(false);
+  const [refreshOptions, setRefreshOptions] = useState(false);
+  const { refreshAllModelInputs } = useRefreshModelInputs();
 
   // Ref to track if we've already processed the empty options state
-  // Prevents infinite loop when no models are available
+  // prevents infinite loop when no models are available
   const hasProcessedEmptyRef = useRef(false);
 
   const postTemplateValue = usePostTemplateValue({
@@ -83,16 +65,20 @@ export default function ModelInputComponent({
       ? "llm"
       : "embeddings";
 
-  const { data: providersData = [], isLoading: isLoadingProviders } =
-    useGetModelProviders({});
+  const {
+    data: providersData = [],
+    isLoading: isLoadingProviders,
+    isFetching: isFetchingProviders,
+  } = useGetModelProviders({});
   const { data: enabledModelsData, isLoading: isLoadingEnabledModels } =
     useGetEnabledModels();
 
   const isLoading = isLoadingProviders || isLoadingEnabledModels;
 
-  // Determines if we should show the model selector or the "Setup Provider" button
   const hasEnabledProviders = useMemo(() => {
-    return providersData?.some((provider) => provider.is_enabled);
+    return providersData?.some(
+      (provider) => provider.is_enabled || provider.is_configured,
+    );
   }, [providersData]);
 
   // Groups models by their provider name for sectioned display in dropdown.
@@ -123,66 +109,56 @@ export default function ModelInputComponent({
     [groupedOptions],
   );
 
-  // Sync local selectedModel state with the external value prop and available options.
-  // Handles three cases: no available models (clear selection), current value exists in options (keep it),
-  // or current value is invalid/missing (select first available model).
-  useEffect(() => {
-    // Skip auto-selection when in connection mode (value is "connect_other_models" string)
+  // Derive the currently selected model from the value prop
+  const selectedModel = useMemo(() => {
+    // If we're in connection mode, we don't have a normal selected model
     if (value === "connect_other_models") {
-      return;
+      return null;
     }
 
-    const availableOptions = flatOptions;
     const currentName = value?.[0]?.name;
+    if (!currentName) {
+      // Logic to auto-select the first model if none is selected
+      // We only do this check if we have options available
+      if (flatOptions.length > 0 && !hasProcessedEmptyRef.current) {
+        // If we haven't processed empty state yet, we render the first one
+        return flatOptions[0];
+      }
+      return null;
+    }
 
-    // No available models: clear selection/value
-    if (!availableOptions || availableOptions.length === 0) {
-      // Only process empty state once to prevent infinite loop
+    return (
+      flatOptions.find((option) => option.name === currentName) ||
+      // Fallback: If the saved name isn't in the list (e.g. disabled), select first available?
+      // Or keep displaying the stale one? Original logic selected first available.
+      (flatOptions.length > 0 ? flatOptions[0] : null)
+    );
+  }, [value, flatOptions]);
+
+  useEffect(() => {
+    // Only proceed if we have options and haven't selected a value
+    if (flatOptions.length > 0 && (!value || value.length === 0)) {
+      // Check ref to avoid infinite loops
       if (!hasProcessedEmptyRef.current) {
+        const firstOption = flatOptions[0];
+        // Construct the new value object
+        const newValue = [
+          {
+            ...(firstOption.id && { id: firstOption.id }),
+            name: firstOption.name,
+            icon: firstOption.icon || "Bot",
+            provider: firstOption.provider || "Unknown",
+            metadata: firstOption.metadata ?? {},
+          },
+        ];
+        handleOnNewValue({ value: newValue });
         hasProcessedEmptyRef.current = true;
-        // Only call handleOnNewValue if value is not already empty
-        if (value && Array.isArray(value) && value.length > 0) {
-          handleOnNewValue({ value: [] });
-        }
-      }
-      setSelectedModel(null);
-      return;
-    }
-
-    // Reset the empty state flag when we have options
-    hasProcessedEmptyRef.current = false;
-
-    // If current value exists in refreshed options, keep it
-    if (currentName) {
-      const existingModel = availableOptions.find(
-        (option) => option.name === currentName,
-      );
-      if (existingModel) {
-        setSelectedModel(existingModel);
-        return;
       }
     }
-
-    // Otherwise select the first available model
-    const firstOption = availableOptions[0];
-    const newValue = [
-      {
-        ...(firstOption.id && { id: firstOption.id }),
-        name: firstOption.name,
-        icon: firstOption.icon || "Bot",
-        provider: firstOption.provider || "Unknown",
-        metadata: firstOption.metadata ?? {},
-      },
-    ];
-
-    handleOnNewValue({ value: newValue });
-    setSelectedModel(firstOption);
   }, [flatOptions, value, handleOnNewValue]);
 
   /**
    * Handles model selection from the dropdown.
-   * Constructs a normalized value object and propagates it to the parent.
-   * The value is wrapped in an array to match the expected format.
    */
   const handleModelSelect = useCallback(
     (modelName: string) => {
@@ -203,49 +179,52 @@ export default function ModelInputComponent({
       ];
 
       handleOnNewValue({ value: newValue });
-      setSelectedModel(selectedOption);
+      setOpen(false);
     },
     [flatOptions, handleOnNewValue],
   );
 
+  const handleRefreshButtonPress = useCallback(async () => {
+    setOpen(false);
+    setRefreshOptions(true);
+    try {
+      await refreshAllModelInputs({ silent: true });
+    } catch {
+      // refreshAllModelInputs handles its own error notifications via alertStore
+    } finally {
+      setRefreshOptions(false);
+    }
+  }, [refreshAllModelInputs]);
+
   const handleManageProvidersDialogClose = useCallback(() => {
     setOpenManageProvidersDialog(false);
-    // Note: Don't call handleRefreshButtonPress here - the cleanup effect in
-    // ModelProvidersContent triggers refreshAllModelInputs which properly validates
-    // model values against available options. Calling both causes a race condition
-    // where the debounced mutateTemplate overwrites the validated value.
+    setIsRefreshingAfterClose(true);
   }, []);
 
-  const handleExternalOptions = useCallback(
-    async (optionValue: string) => {
-      setOpen(false);
+  // Clear the refreshing indicator after the providers query completes a full
+  // refetch cycle (isFetchingProviders: false → true → false). We track whether
+  // we've seen the fetch start so we don't clear prematurely before the
+  // invalidation has even been triggered by refreshAllModelInputs.
+  const hasSeenFetchStartRef = useRef(false);
+  useEffect(() => {
+    if (!isRefreshingAfterClose) {
+      hasSeenFetchStartRef.current = false;
+      return;
+    }
+    if (isFetchingProviders) {
+      hasSeenFetchStartRef.current = true;
+    } else if (hasSeenFetchStartRef.current) {
+      setIsRefreshingAfterClose(false);
+    }
+  }, [isRefreshingAfterClose, isFetchingProviders]);
 
-      // Clear the current selection UI state
-      setSelectedModel(null);
-
-      // Pass the optionValue ("connect_other_models") as both the field value and to mutateTemplate
-      // This way the backend knows we're in connection mode
-      handleOnNewValue({ value: optionValue });
-
-      await mutateTemplate(
-        optionValue,
-        nodeId!,
-        nodeClass!,
-        handleNodeClass!,
-        postTemplateValue,
-        setErrorData,
-        "model",
-      );
-    },
-    [
-      nodeId,
-      nodeClass,
-      handleNodeClass,
-      postTemplateValue,
-      setErrorData,
-      handleOnNewValue,
-    ],
-  );
+  // Safety timeout: clear loading even if no refetch cycle is detected
+  // (e.g. no model nodes on canvas, or the refresh was a no-op)
+  useEffect(() => {
+    if (!isRefreshingAfterClose) return;
+    const timeout = setTimeout(() => setIsRefreshingAfterClose(false), 5000);
+    return () => clearTimeout(timeout);
+  }, [isRefreshingAfterClose]);
 
   const renderLoadingButton = () => (
     <Button
@@ -258,85 +237,6 @@ export default function ModelInputComponent({
     </Button>
   );
 
-  const renderSelectedIcon = () => {
-    if (disabled || options.length === 0) {
-      return null;
-    }
-
-    return selectedModel?.icon ? (
-      <ForwardedIconComponent
-        name={selectedModel.icon || "Bot"}
-        className="h-4 w-4 flex-shrink-0"
-      />
-    ) : null;
-  };
-
-  // Renders either a "Setup Provider" button (no providers) or the model selector dropdown trigger
-  const renderTriggerButton = () =>
-    !hasEnabledProviders ? (
-      <Button
-        variant="default"
-        loading={isLoading}
-        size="sm"
-        className="w-full"
-        onClick={() => setOpenManageProvidersDialog(true)}
-      >
-        <ForwardedIconComponent name="Brain" className="h-4 w-4" />
-        <div className="text-[13px]">{placeholder || "Setup Provider"}</div>
-      </Button>
-    ) : (
-      <div className="flex w-full flex-col">
-        <PopoverTrigger asChild>
-          <Button
-            disabled={disabled || options.length === 0}
-            variant="primary"
-            size="xs"
-            role="combobox"
-            ref={refButton}
-            aria-expanded={open}
-            data-testid={id}
-            className={cn(
-              "dropdown-component-false-outline py-2",
-              "no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
-            )}
-          >
-            <span
-              className="flex w-full items-center gap-2 overflow-hidden"
-              data-testid={`value-dropdown-${id}`}
-            >
-              {renderSelectedIcon()}
-              <span className="truncate">
-                {disabled ? (
-                  RECEIVING_INPUT_VALUE
-                ) : (
-                  <div
-                    className={cn(
-                      "truncate",
-                      !selectedModel?.name && "text-muted-foreground",
-                    )}
-                  >
-                    {selectedModel?.name || "Select a model"}
-                  </div>
-                )}
-              </span>
-            </span>
-            <ForwardedIconComponent
-              name={disabled ? "Lock" : "ChevronsUpDown"}
-              className={cn(
-                "ml-2 h-4 w-4 shrink-0 text-foreground",
-                disabled
-                  ? "text-placeholder-foreground hover:text-placeholder-foreground"
-                  : "hover:text-foreground",
-              )}
-            />
-          </Button>
-        </PopoverTrigger>
-      </div>
-    );
-
-  const footerButtonClass =
-    "w-full flex cursor-pointer items-center justify-start gap-2 truncate py-2 text-xs text-muted-foreground px-3 hover:bg-accent group";
-
   const renderFooterButton = (
     label: string,
     icon: string,
@@ -344,7 +244,7 @@ export default function ModelInputComponent({
     testId?: string,
   ) => (
     <Button
-      className={footerButtonClass}
+      className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-2 text-xs text-muted-foreground px-3 hover:bg-accent group"
       unstyled
       data-testid={testId}
       onClick={onClick}
@@ -359,49 +259,6 @@ export default function ModelInputComponent({
     </Button>
   );
 
-  const renderOptionsList = () => (
-    <CommandList className="max-h-[300px] overflow-y-auto">
-      {Object.entries(groupedOptions).map(([provider, models]) => (
-        <CommandGroup className="p-0" key={provider}>
-          <div className="text-xs font-semibold my-2 ml-4 text-muted-foreground flex items-center justify-between pr-4">
-            <div className="flex items-center">{provider}</div>
-          </div>
-          {models.map((data) => (
-            <CommandItem
-              key={data.name}
-              value={data.name}
-              onSelect={() => {
-                handleModelSelect(data.name);
-                setOpen(false);
-              }}
-              className="w-full items-center rounded-none"
-              data-testid={`${data.name}-option`}
-            >
-              <div className="flex w-full items-center gap-2">
-                <ForwardedIconComponent
-                  name={data.icon || "Bot"}
-                  className="h-4 w-4 shrink-0 text-primary ml-2"
-                />
-                <div className="truncate text-[13px]">{data.name}</div>
-                <div className="pl-2 ml-auto">
-                  <ForwardedIconComponent
-                    name="Check"
-                    className={cn(
-                      "h-4 w-4 shrink-0 text-primary",
-                      selectedModel?.name === data.name
-                        ? "opacity-100"
-                        : "opacity-0",
-                    )}
-                  />
-                </div>
-              </div>
-            </CommandItem>
-          ))}
-        </CommandGroup>
-      ))}
-    </CommandList>
-  );
-
   const renderManageProvidersButton = () => (
     <div className="bottom-0 bg-background">
       {renderFooterButton(
@@ -411,17 +268,6 @@ export default function ModelInputComponent({
         "manage-model-providers",
       )}
     </div>
-  );
-
-  const renderNoProviders = () => (
-    <CommandList className="max-h-[300px] overflow-y-auto">
-      <CommandItem
-        disabled
-        className="w-full px-4 py-2 text-[13px] text-muted-foreground"
-      >
-        No Models Enabled
-      </CommandItem>
-    </CommandList>
   );
 
   const renderPopoverContent = () => {
@@ -437,9 +283,17 @@ export default function ModelInputComponent({
         style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
       >
         <Command className="flex flex-col">
-          {Object.keys(groupedOptions).length > 0
-            ? renderOptionsList()
-            : renderNoProviders()}
+          <ModelList
+            groupedOptions={groupedOptions}
+            selectedModel={selectedModel}
+            onSelect={handleModelSelect}
+          />
+          {renderFooterButton(
+            "Refresh List",
+            "RotateCw",
+            handleRefreshButtonPress,
+            "refresh-model-list",
+          )}
           {renderManageProvidersButton()}
         </Command>
       </PopoverContentInput>
@@ -450,8 +304,12 @@ export default function ModelInputComponent({
     return null;
   }
 
-  // Loading state
-  if (!options || options.length === 0 || refreshOptions) {
+  // Loading state (skip if showEmptyState is true - we want to show the empty dropdown instead)
+  if (
+    ((!options || options.length === 0) && !showEmptyState) ||
+    isRefreshingAfterClose ||
+    refreshOptions
+  ) {
     return <div className="w-full">{renderLoadingButton()}</div>;
   }
 
@@ -459,7 +317,20 @@ export default function ModelInputComponent({
   return (
     <>
       <Popover open={open} onOpenChange={setOpen}>
-        <div className="w-full truncate">{renderTriggerButton()}</div>
+        <div className="w-full truncate">
+          <ModelTrigger
+            open={open}
+            disabled={disabled}
+            options={options}
+            selectedModel={selectedModel}
+            placeholder={placeholder}
+            hasEnabledProviders={hasEnabledProviders ?? false}
+            onOpenManageProviders={() => setOpenManageProvidersDialog(true)}
+            id={id}
+            refButton={refButton}
+            showEmptyState={showEmptyState}
+          />
+        </div>
         {renderPopoverContent()}
       </Popover>
 

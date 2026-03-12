@@ -82,7 +82,7 @@ test(
     expect(firstResponseText.length).toBeGreaterThan(0);
 
     // await page.getByText("Close").last().click();
-    await page.getByTestId("playground-btn-flow-io").click();
+    await page.getByTestId("playground-close-button").click();
 
     // Freeze the Chat Output node (not Prompt) so the entire response is cached
     await page.getByText("Chat Output", { exact: true }).last().click();

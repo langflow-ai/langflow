@@ -4,7 +4,7 @@ from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
 from lfx.base.embeddings.model import LCEmbeddingsModel
 from lfx.base.models.unified_models import (
     get_api_key_for_provider,
-    get_embedding_classes,
+    get_embedding_class,
     get_embedding_model_options,
     get_unified_models_detailed,
     update_model_options_in_build_config,
@@ -199,10 +199,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             msg = f"No embedding class defined in metadata for {model_name}"
             raise ValueError(msg)
 
-        embedding_class = get_embedding_classes().get(embedding_class_name)
-        if not embedding_class:
-            msg = f"Unknown embedding class: {embedding_class_name}"
-            raise ValueError(msg)
+        embedding_class = get_embedding_class(embedding_class_name)
 
         # Build kwargs using parameter mapping for primary instance
         kwargs = self._build_kwargs(model, metadata)

@@ -1,11 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { AnimatedConditional } from "@/components/ui/animated-close";
-import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
-import { useIsMobile } from "@/hooks/use-mobile";
 import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
-import { clearSessionMessages } from "../../utils/message-utils";
-import { useEditSessionInfo } from "../hooks/use-edit-session-info";
 import { useRenameSession } from "../hooks/use-rename-session";
 import { useSessionHasMessages } from "../hooks/use-session-has-messages";
 import { useSessionMoreMenuHandlers } from "../hooks/use-session-more-menu-handlers";
@@ -30,7 +26,8 @@ export function ChatHeader({
   onClose,
   openLogsModal,
   setOpenLogsModal,
-  renameLocalSession,
+  onRenameSession,
+  onClearChat,
 }: ChatHeaderProps & { sessions: string[] }) {
   // State to coordinate menu open/close
   const [sessionsDropdownOpen, setSessionsDropdownOpen] = useState(false);
@@ -41,11 +38,10 @@ export function ChatHeader({
     [currentSessionId, currentFlowId],
   );
 
-  // Session edit/delete logic
-  const { handleRename, handleDelete } = useEditSessionInfo({
-    flowId: currentFlowId,
-    renameLocalSession,
-  });
+  // Rename UI state — delegates actual rename to parent callback
+  const handleRename = async (sessionId: string, newSessionId: string) => {
+    await onRenameSession?.(sessionId, newSessionId);
+  };
 
   const { isEditing, handleEditStart, handleEditCancel, handleEditSave } =
     useRenameSession({
@@ -53,64 +49,21 @@ export function ChatHeader({
       handleRename,
       onSessionSelect,
     });
-  const handleEditStartLogged = () => {
-    handleEditStart();
-  };
-
-  const isMobile = useIsMobile();
   // Keep session actions (including logs) available in fullscreen
   const isSessionDropdownVisible = true;
   const isDefaultSession = currentSessionId === currentFlowId;
-  const deleteSessionMutation = useDeleteSession({});
-  const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const handleDeleteSessionInternal = () => {
     if (!currentSessionId || isDefaultSession || !currentFlowId) return;
-
-    deleteSessionMutation.mutate(
-      { sessionId: currentSessionId },
-      {
-        onSuccess: () => {
-          // Clear messages from React Query cache
-          clearSessionMessages(currentSessionId, currentFlowId);
-          // Call the delete handler to update session list and selected session
-          handleDelete(currentSessionId);
-          // Call the parent callback
-          onDeleteSession?.(currentSessionId);
-          setSuccessData({
-            title: "Session deleted successfully.",
-          });
-        },
-        onError: () => {
-          setErrorData({
-            title: "Error deleting session.",
-          });
-        },
-      },
-    );
+    onDeleteSession?.(currentSessionId);
+    setSuccessData({ title: "Session deleted successfully." });
   };
 
   const handleClearChat = () => {
     if (!currentSessionId || !isDefaultSession || !currentFlowId) return;
-
-    deleteSessionMutation.mutate(
-      { sessionId: currentSessionId },
-      {
-        onSuccess: () => {
-          // Clear messages from React Query cache
-          clearSessionMessages(currentSessionId, currentFlowId);
-          setSuccessData({
-            title: "Chat cleared successfully.",
-          });
-        },
-        onError: () => {
-          setErrorData({
-            title: "Error clearing chat.",
-          });
-        },
-      },
-    );
+    onClearChat?.();
+    setSuccessData({ title: "Chat cleared successfully." });
   };
 
   const { onMessageLogs } = useSessionMoreMenuHandlers({
@@ -126,7 +79,7 @@ export function ChatHeader({
   const moreMenu = (
     <AnimatedConditional isOpen={isSessionDropdownVisible}>
       <SessionMoreMenu
-        onRename={handleEditStartLogged}
+        onRename={handleEditStart}
         onMessageLogs={onMessageLogs}
         onClearChat={handleClearChat}
         onDelete={handleDeleteSessionInternal}
@@ -154,7 +107,7 @@ export function ChatHeader({
   return (
     <div
       className={cn(
-        "flex items-center border-b border-transparent bg-background relative overflow-visible",
+        "flex items-center border-b border-transparent relative overflow-visible",
         "justify-between px-4 py-3",
         className,
       )}

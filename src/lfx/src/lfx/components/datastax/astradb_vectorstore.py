@@ -2,10 +2,20 @@ from astrapy import DataAPIClient
 from langchain_core.documents import Document
 
 from lfx.base.datastax.astradb_base import AstraDBBaseComponent
+from lfx.base.models.unified_models import get_embedding_model_options, update_model_options_in_build_config
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
 from lfx.helpers.data import docs_to_data
-from lfx.io import BoolInput, DropdownInput, FloatInput, HandleInput, IntInput, NestedDictInput, QueryInput, StrInput
+from lfx.io import (
+    BoolInput,
+    DropdownInput,
+    FloatInput,
+    IntInput,
+    ModelInput,
+    NestedDictInput,
+    QueryInput,
+    StrInput,
+)
 from lfx.schema.data import Data
 from lfx.serialization import serialize
 from lfx.utils.version import get_version_info
@@ -22,13 +32,15 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
     inputs = [
         *AstraDBBaseComponent.inputs,
         *LCVectorStoreComponent.inputs,
-        HandleInput(
+        ModelInput(
             name="embedding_model",
             display_name="Embedding Model",
-            input_types=["Embeddings"],
             info="Specify the Embedding Model. Not required for Astra Vectorize collections.",
             required=False,
             show=True,
+            model_type="embedding",
+            input_types=["Embeddings"],
+            real_time_refresh=True,
         ),
         StrInput(
             name="content_field",
@@ -124,6 +136,19 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
         field_name: str | None = None,
     ) -> dict:
         """Update build configuration with proper handling of embedding and search options."""
+        # Update model options for ModelInput only when relevant
+        # Only refresh when: initial load (None), embedding_model field changes, or api_key changes
+        if field_name in (None, "embedding_model", "api_key"):
+            build_config = update_model_options_in_build_config(
+                component=self,
+                build_config=build_config,
+                cache_key_prefix="astradb_embedding_model_options",
+                get_options_func=get_embedding_model_options,
+                field_name=field_name,
+                field_value=field_value if field_name == "embedding_model" else None,
+                model_field_name="embedding_model",
+            )
+
         # Handle base astra db build config updates
         build_config = await super().update_build_config(
             build_config,

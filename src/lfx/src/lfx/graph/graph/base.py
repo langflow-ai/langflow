@@ -17,7 +17,6 @@ from typing import TYPE_CHECKING, Any, cast
 
 from ag_ui.core import RunFinishedEvent, RunStartedEvent
 
-from lfx.events.observability.lifecycle_events import observable
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.edge.base import CycleEdge, Edge
 from lfx.graph.graph.constants import Finish, lazy_load_vertex_dict
@@ -669,6 +668,7 @@ class Graph:
                 run_name=run_name,
                 user_id=self.user_id,
                 session_id=self.session_id,
+                flow_id=self.flow_id,
             )
 
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
@@ -751,7 +751,6 @@ class Graph:
                 raise ValueError(msg)
             vertex.update_raw_params(inputs, overwrite=True)
 
-    @observable
     async def _run(
         self,
         *,
