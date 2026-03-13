@@ -3,11 +3,11 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { uploadFile } from "../../utils/upload-file";
 import {
   closeAdvancedOptions,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
+import { uploadFile } from "../../utils/upload-file";
 
 test(
   "user must be able to send an image on chat using advanced tool on ChatInputComponent",
