@@ -1,0 +1,15 @@
+/**
+ * Local override of the default DocItem layout styles.
+ * Copied from @docusaurus/theme-classic with minimal adjustments.
+ */
+
+.docItemContainer header + *,
+.docItemContainer article > *:first-child {
+  margin-top: 0;
+}
+
+@media (min-width: 997px) {
+  .docItemCol {
+    max-width: 75% !important;
+  }
+}
