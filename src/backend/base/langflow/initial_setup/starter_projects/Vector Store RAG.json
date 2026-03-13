@@ -2851,7 +2851,7 @@
                 "dependencies": [
                   {
                     "name": "astrapy",
-                    "version": "2.2.1"
+                    "version": "2.1.0"
                   },
                   {
                     "name": "langchain_core",
@@ -3932,7 +3932,7 @@
                 "dependencies": [
                   {
                     "name": "astrapy",
-                    "version": "2.2.1"
+                    "version": "2.1.0"
                   },
                   {
                     "name": "langchain_core",
