@@ -1471,7 +1471,7 @@
   "Agent": {
     "versions": {
       "0.3.0": "108da32d83f1",
-      "0.3.1": "343c921b276e"
+      "0.3.1": "7db77aa1eed6"
     }
   },
   "EmbeddingModel": {
