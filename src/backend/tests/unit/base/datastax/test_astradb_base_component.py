@@ -433,7 +433,7 @@ class TestUpdateBuildConfig:
             }
         ]
 
-        result = await mock_component.update_build_config(mock_build_config, "", "collection_name")
+        result = await mock_component.update_build_config(mock_build_config, "", "embedding_model")
 
         assert "db1" in result["database_name"]["options"]
         mock_init_db.assert_called_once()

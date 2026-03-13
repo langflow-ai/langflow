@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib
 import os
 import re
+import warnings
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -60,8 +61,16 @@ EMBEDDING_PROVIDER_CLASS_MAPPING: dict[str, str] = {
     "IBM watsonx.ai": "WatsonxEmbeddings",  # Alias used by MODEL_PROVIDERS_DICT
 }
 
+# NOTE: These module-level caches are never invalidated.  This is intentional
+# for production, but tests that need to swap model/embedding classes should
+# patch `get_model_class` / `get_embedding_class` at the *call site* rather
+# than mutating these dicts, to avoid cross-test pollution.
 _model_class_cache: dict[str, type] = {}
 _embedding_class_cache: dict[str, type] = {}
+
+# TTL for the per-user model-options cache inside update_model_options_in_build_config.
+# Short enough to pick up global-variable changes quickly.
+_MODEL_OPTIONS_CACHE_TTL_SECONDS = 30
 
 
 def get_model_class(class_name: str) -> type:
@@ -140,6 +149,11 @@ def get_model_classes() -> dict[str, type]:
     .. deprecated::
         Use :func:`get_model_class` instead to import only the provider you need.
     """
+    warnings.warn(
+        "get_model_classes() is deprecated. Use get_model_class() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return {name: get_model_class(name) for name in _MODEL_CLASS_IMPORTS}
 
 
@@ -149,6 +163,11 @@ def get_embedding_classes() -> dict[str, type]:
     .. deprecated::
         Use :func:`get_embedding_class` instead to import only the provider you need.
     """
+    warnings.warn(
+        "get_embedding_classes() is deprecated. Use get_embedding_class() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return {name: get_embedding_class(name) for name in _EMBEDDING_CLASS_IMPORTS}
 
 
@@ -219,22 +238,40 @@ def _get_all_provider_specific_field_names() -> set[str]:
 def apply_provider_variable_config_to_build_config(
     build_config: dict,
     provider: str,
+    user_id: UUID | str | None = None,
 ) -> dict:
     """Apply provider variable metadata to component build config fields.
 
+    This function updates the build config fields based on the provider's variable metadata
+    stored in the `component_metadata` nested dict:
+    - Sets `required` based on `component_metadata.required`
+    - Sets `advanced` based on `component_metadata.advanced`
+    - Sets `info` based on `component_metadata.info`
+    - Sets `show` to True for fields that have a mapping_field for this provider
+
+    Args:
+        build_config: The component's build configuration dict
+        provider: The selected provider name (e.g., "OpenAI", "IBM WatsonX")
+        user_id: The user ID used to retrieve stored credential values from the
+            variable service. Falls back to environment variables when None or
+            when a variable is not found in the database.
+
+    Returns:
+        Updated build_config dict
+    """
+    provider_vars = get_provider_all_variables(provider)
+
+    """
     First hides all provider-specific fields (so switching e.g. IBM -> OpenAI
     does not leave IBM fields visible), then shows and configures only the
     current provider's fields.
     """
-    import os
-
     all_provider_fields = _get_all_provider_specific_field_names()
     for field_name in all_provider_fields:
         if field_name in build_config:
             build_config[field_name]["show"] = False
             build_config[field_name]["required"] = False
 
-    provider_vars = get_provider_all_variables(provider)
     vars_by_field = {}
     for v in provider_vars:
         component_meta = v.get("component_metadata", {})
@@ -242,6 +279,10 @@ def apply_provider_variable_config_to_build_config(
         if mapping_field:
             vars_by_field[mapping_field] = v
 
+    # Fetch all stored credential values for this provider in one call so we
+    # use the variable service (DB-first, env fallback) rather than reading
+    # os.environ directly.
+    stored_values = get_all_variables_for_provider(user_id, provider)
     for field_name, var_info in vars_by_field.items():
         if field_name not in build_config:
             continue
@@ -264,16 +305,20 @@ def apply_provider_variable_config_to_build_config(
 
         field_config["show"] = True
 
-        env_var_key = var_info.get("variable_key")
-        if env_var_key:
-            env_value = os.environ.get(env_var_key)
-            if env_value and str(env_value).strip():
-                field_config["value"] = env_var_key
+        # Pre-populate with the variable name (never the raw secret) when a
+        # credential is available in the database or environment.  Setting
+        # load_from_db=True tells the runtime to resolve the actual value.
+        var_key = var_info.get("variable_key")
+        if var_key:
+            has_stored = var_key in stored_values and stored_values[var_key].strip()
+            has_env = bool(os.environ.get(var_key, "").strip())
+            if has_stored or has_env:
+                field_config["value"] = var_key
                 field_config["load_from_db"] = True
                 logger.debug(
-                    "Set field %s to env var name %s (value resolved at runtime)",
+                    "Set field %s to variable name %s (value resolved at runtime)",
                     field_name,
-                    env_var_key,
+                    var_key,
                 )
 
     return build_config
@@ -676,6 +721,105 @@ def _validate_and_get_enabled_providers(
     return enabled
 
 
+class _VarWithValue:
+    """Simple wrapper for passing raw variable values to _validate_and_get_enabled_providers."""
+
+    __slots__ = ("value",)
+
+    def __init__(self, value):
+        self.value = value
+
+
+async def _get_model_status(user_id: UUID | str) -> tuple[set[str], set[str]]:
+    """Fetch disabled and explicitly enabled model sets for a user.
+
+    Returns:
+        A tuple of (disabled_models, explicitly_enabled_models).
+    """
+    async with session_scope() as session:
+        variable_service = get_variable_service()
+        if variable_service is None:
+            return set(), set()
+        from langflow.services.variable.service import DatabaseVariableService
+
+        if not isinstance(variable_service, DatabaseVariableService):
+            return set(), set()
+        all_vars = await variable_service.get_all(
+            user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+            session=session,
+        )
+        disabled: set[str] = set()
+        enabled: set[str] = set()
+        for var in all_vars:
+            if var.name == "__disabled_models__" and var.value:
+                with contextlib.suppress(json.JSONDecodeError, TypeError):
+                    disabled = set(json.loads(var.value))
+            elif var.name == "__enabled_models__" and var.value:
+                with contextlib.suppress(json.JSONDecodeError, TypeError):
+                    enabled = set(json.loads(var.value))
+        return disabled, enabled
+
+
+async def _fetch_enabled_providers_for_user(user_id: UUID | str) -> set[str]:
+    """Shared helper for get_language_model_options and get_embedding_model_options.
+
+    Fetches provider variables from the database and returns the set of providers
+    that have valid credentials configured.
+    """
+    async with session_scope() as session:
+        variable_service = get_variable_service()
+        if variable_service is None:
+            return set()
+
+        from langflow.services.variable.service import DatabaseVariableService
+
+        if not isinstance(variable_service, DatabaseVariableService):
+            return set()
+
+        # Get all variable names (VariableRead has value=None for credentials)
+        all_vars = await variable_service.get_all(
+            user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+            session=session,
+        )
+        all_var_names = {var.name for var in all_vars}
+
+        provider_variable_map = get_model_provider_variable_mapping()
+
+        # Build dict with raw Variable values (encrypted for secrets, plaintext for others)
+        # We need to fetch raw Variable objects because VariableRead has value=None for credentials
+        all_provider_variables = {}
+        user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
+
+        for provider in provider_variable_map:
+            # Get ALL variables for this provider (not just the primary one)
+            provider_vars = get_provider_all_variables(provider)
+
+            for var_info in provider_vars:
+                var_name = var_info.get("variable_key")
+                if not var_name or var_name not in all_var_names:
+                    # Variable not configured by user
+                    continue
+
+                if var_name in all_provider_variables:
+                    # Already fetched
+                    continue
+
+                try:
+                    # Get the raw Variable object to access the actual value
+                    variable_obj = await variable_service.get_variable_object(
+                        user_id=user_id_uuid, name=var_name, session=session
+                    )
+                    if variable_obj and variable_obj.value:
+                        all_provider_variables[var_name] = _VarWithValue(variable_obj.value)
+                except Exception as e:  # noqa: BLE001
+                    # Variable not found or error accessing it - skip
+                    logger.error(f"Error accessing variable {var_name} for provider {provider}: {e}")
+                    continue
+
+        # Use shared helper to validate and get enabled providers
+        return _validate_and_get_enabled_providers(all_provider_variables, provider_variable_map)
+
+
 def get_provider_from_variable_key(variable_key: str) -> str | None:
     """Get provider name from a variable key.
 
@@ -846,110 +990,17 @@ def get_language_model_options(
         )
 
     # Get disabled and explicitly enabled models for this user if user_id is provided
-    disabled_models = set()
-    explicitly_enabled_models = set()
+    disabled_models: set[str] = set()
+    explicitly_enabled_models: set[str] = set()
     if user_id:
-        try:
-
-            async def _get_model_status():
-                async with session_scope() as session:
-                    variable_service = get_variable_service()
-                    if variable_service is None:
-                        return set(), set()
-                    from langflow.services.variable.service import DatabaseVariableService
-
-                    if not isinstance(variable_service, DatabaseVariableService):
-                        return set(), set()
-                    all_vars = await variable_service.get_all(
-                        user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
-                        session=session,
-                    )
-                    disabled = set()
-                    enabled = set()
-                    import json
-
-                    for var in all_vars:
-                        if var.name == "__disabled_models__" and var.value:
-                            with contextlib.suppress(json.JSONDecodeError, TypeError):
-                                disabled = set(json.loads(var.value))
-                        elif var.name == "__enabled_models__" and var.value:
-                            with contextlib.suppress(json.JSONDecodeError, TypeError):
-                                enabled = set(json.loads(var.value))
-                    return disabled, enabled
-
-            disabled_models, explicitly_enabled_models = run_until_complete(_get_model_status())
-        except Exception:  # noqa: BLE001, S110
-            # If we can't get model status, continue without filtering
-            pass
+        with contextlib.suppress(Exception):
+            disabled_models, explicitly_enabled_models = run_until_complete(_get_model_status(user_id))
 
     # Get enabled providers (those with credentials configured and validated)
     enabled_providers = set()
     if user_id:
-        try:
-
-            async def _get_enabled_providers():
-                async with session_scope() as session:
-                    variable_service = get_variable_service()
-                    if variable_service is None:
-                        return set()
-
-                    from langflow.services.variable.service import DatabaseVariableService
-
-                    if not isinstance(variable_service, DatabaseVariableService):
-                        return set()
-
-                    # Get all variable names (VariableRead has value=None for credentials)
-                    all_vars = await variable_service.get_all(
-                        user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
-                        session=session,
-                    )
-                    all_var_names = {var.name for var in all_vars}
-
-                    provider_variable_map = get_model_provider_variable_mapping()
-
-                    # Simple wrapper class for passing values to _validate_and_get_enabled_providers
-                    class VarWithValue:
-                        def __init__(self, value):
-                            self.value = value
-
-                    # Build dict with raw Variable values (encrypted for secrets, plaintext for others)
-                    # We need to fetch raw Variable objects because VariableRead has value=None for credentials
-                    all_provider_variables = {}
-                    user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
-
-                    for provider in provider_variable_map:
-                        # Get ALL variables for this provider (not just the primary one)
-                        provider_vars = get_provider_all_variables(provider)
-
-                        for var_info in provider_vars:
-                            var_name = var_info.get("variable_key")
-                            if not var_name or var_name not in all_var_names:
-                                # Variable not configured by user
-                                continue
-
-                            if var_name in all_provider_variables:
-                                # Already fetched
-                                continue
-
-                            try:
-                                # Get the raw Variable object to access the actual value
-                                variable_obj = await variable_service.get_variable_object(
-                                    user_id=user_id_uuid, name=var_name, session=session
-                                )
-                                if variable_obj and variable_obj.value:
-                                    all_provider_variables[var_name] = VarWithValue(variable_obj.value)
-                            except Exception as e:  # noqa: BLE001
-                                # Variable not found or error accessing it - skip
-                                logger.error(f"Error accessing variable {var_name} for provider {provider}: {e}")
-                                continue
-
-                    # Use shared helper to validate and get enabled providers
-                    return _validate_and_get_enabled_providers(all_provider_variables, provider_variable_map)
-
-            enabled_providers = run_until_complete(_get_enabled_providers())
-        except Exception:  # noqa: BLE001, S110
-            # If we can't get enabled providers, show all
-            pass
+        with contextlib.suppress(Exception):
+            enabled_providers = run_until_complete(_fetch_enabled_providers_for_user(user_id))
 
     # Replace static defaults with actual available models from configured instances
     if enabled_providers:
@@ -1067,110 +1118,17 @@ def get_embedding_model_options(user_id: UUID | str | None = None) -> list[dict[
     )
 
     # Get disabled and explicitly enabled models for this user if user_id is provided
-    disabled_models = set()
-    explicitly_enabled_models = set()
+    disabled_models: set[str] = set()
+    explicitly_enabled_models: set[str] = set()
     if user_id:
-        try:
-
-            async def _get_model_status():
-                async with session_scope() as session:
-                    variable_service = get_variable_service()
-                    if variable_service is None:
-                        return set(), set()
-                    from langflow.services.variable.service import DatabaseVariableService
-
-                    if not isinstance(variable_service, DatabaseVariableService):
-                        return set(), set()
-                    all_vars = await variable_service.get_all(
-                        user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
-                        session=session,
-                    )
-                    disabled = set()
-                    enabled = set()
-                    import json
-
-                    for var in all_vars:
-                        if var.name == "__disabled_models__" and var.value:
-                            with contextlib.suppress(json.JSONDecodeError, TypeError):
-                                disabled = set(json.loads(var.value))
-                        elif var.name == "__enabled_models__" and var.value:
-                            with contextlib.suppress(json.JSONDecodeError, TypeError):
-                                enabled = set(json.loads(var.value))
-                    return disabled, enabled
-
-            disabled_models, explicitly_enabled_models = run_until_complete(_get_model_status())
-        except Exception:  # noqa: BLE001, S110
-            # If we can't get model status, continue without filtering
-            pass
+        with contextlib.suppress(Exception):
+            disabled_models, explicitly_enabled_models = run_until_complete(_get_model_status(user_id))
 
     # Get enabled providers (those with credentials configured and validated)
     enabled_providers = set()
     if user_id:
-        try:
-
-            async def _get_enabled_providers():
-                async with session_scope() as session:
-                    variable_service = get_variable_service()
-                    if variable_service is None:
-                        return set()
-
-                    from langflow.services.variable.service import DatabaseVariableService
-
-                    if not isinstance(variable_service, DatabaseVariableService):
-                        return set()
-
-                    # Get all variable names (VariableRead has value=None for credentials)
-                    all_vars = await variable_service.get_all(
-                        user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
-                        session=session,
-                    )
-                    all_var_names = {var.name for var in all_vars}
-
-                    provider_variable_map = get_model_provider_variable_mapping()
-
-                    # Simple wrapper class for passing values to _validate_and_get_enabled_providers
-                    class VarWithValue:
-                        def __init__(self, value):
-                            self.value = value
-
-                    # Build dict with raw Variable values (encrypted for secrets, plaintext for others)
-                    # We need to fetch raw Variable objects because VariableRead has value=None for credentials
-                    all_provider_variables = {}
-                    user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
-
-                    for provider in provider_variable_map:
-                        # Get ALL variables for this provider (not just the primary one)
-                        provider_vars = get_provider_all_variables(provider)
-
-                        for var_info in provider_vars:
-                            var_name = var_info.get("variable_key")
-                            if not var_name or var_name not in all_var_names:
-                                # Variable not configured by user
-                                continue
-
-                            if var_name in all_provider_variables:
-                                # Already fetched
-                                continue
-
-                            try:
-                                # Get the raw Variable object to access the actual value
-                                variable_obj = await variable_service.get_variable_object(
-                                    user_id=user_id_uuid, name=var_name, session=session
-                                )
-                                if variable_obj and variable_obj.value:
-                                    all_provider_variables[var_name] = VarWithValue(variable_obj.value)
-                            except Exception as e:  # noqa: BLE001
-                                # Variable not found or error accessing it - skip
-                                logger.error(f"Error accessing variable {var_name} for provider {provider}: {e}")
-                                continue
-
-                    # Use shared helper to validate and get enabled providers
-                    return _validate_and_get_enabled_providers(all_provider_variables, provider_variable_map)
-
-            enabled_providers = run_until_complete(_get_enabled_providers())
-        except Exception:  # noqa: BLE001, S110
-            # If we can't get enabled providers, show all
-            pass
+        with contextlib.suppress(Exception):
+            enabled_providers = run_until_complete(_fetch_enabled_providers_for_user(user_id))
 
     # Replace static defaults with actual available models from configured instances
     if enabled_providers:
@@ -1480,7 +1438,7 @@ def get_llm(
         kwargs["stream_usage"] = True
 
     # Add provider-specific parameters
-    if provider == "IBM WatsonX":
+    if provider in {"IBM WatsonX", "IBM watsonx.ai"}:
         # For watsonx, url and project_id are required parameters
         # Try database first, then component values, then environment variables
         url_param = metadata.get("url_param", "url")
@@ -1537,7 +1495,7 @@ def get_llm(
         return model_class(**kwargs)
     except Exception as e:
         # If instantiation fails and it's WatsonX, provide additional context
-        if provider == "IBM WatsonX" and ("url" in str(e).lower() or "project" in str(e).lower()):
+        if provider in {"IBM WatsonX", "IBM watsonx.ai"} and ("url" in str(e).lower() or "project" in str(e).lower()):
             msg = (
                 f"Failed to initialize IBM WatsonX model: {e}\n\n"
                 "IBM WatsonX requires additional configuration parameters (API endpoint URL and project ID). "
@@ -1546,6 +1504,214 @@ def get_llm(
             )
             raise ValueError(msg) from e
         # Re-raise the original exception for other cases
+        raise
+
+
+def get_embeddings(
+    model,
+    user_id: UUID | str | None,
+    api_key=None,
+    *,
+    api_base=None,
+    dimensions=None,
+    chunk_size=None,
+    request_timeout=None,
+    max_retries=None,
+    show_progress_bar=None,
+    model_kwargs=None,
+    watsonx_url=None,
+    watsonx_project_id=None,
+    watsonx_truncate_input_tokens=None,
+    watsonx_input_text=None,
+    ollama_base_url=None,
+) -> Any:
+    """Instantiate an embeddings model from a model selection dict.
+
+    This mirrors :func:`get_llm` but for embedding models.  It accepts the
+    same model-selection list format produced by ``get_embedding_model_options``
+    (or a raw ``Embeddings`` instance for passthrough).
+
+    Args:
+        model: Model selection - a list with one dict (``[{'name': ..., 'provider': ..., 'metadata': ...}]``)
+               or an already-instantiated ``Embeddings`` object.
+        user_id: Current user id (used to look up stored API keys).
+        api_key: Explicit API key override.
+        api_base: Optional base URL override.
+        dimensions: Optional output dimensions.
+        chunk_size: Optional embedding batch size.
+        request_timeout: Optional request timeout.
+        max_retries: Optional max retries.
+        show_progress_bar: Optional progress bar flag.
+        model_kwargs: Optional extra kwargs passed to the provider.
+        watsonx_url: Optional IBM WatsonX API endpoint URL.
+        watsonx_project_id: Optional IBM WatsonX project ID.
+        watsonx_truncate_input_tokens: Optional IBM WatsonX truncate input tokens limit.
+        watsonx_input_text: Optional IBM WatsonX flag to include original text in output.
+        ollama_base_url: Optional Ollama base URL.
+
+    Returns:
+        An instantiated embeddings object.
+    """
+    # Coerce provider-specific string params
+    ollama_base_url = _to_str(ollama_base_url)
+    watsonx_url = _to_str(watsonx_url)
+    watsonx_project_id = _to_str(watsonx_project_id)
+
+    # Passthrough: already-instantiated Embeddings object from a connection
+    try:
+        from langchain_core.embeddings import Embeddings as BaseEmbeddings
+
+        if isinstance(model, BaseEmbeddings):
+            return model
+    except ImportError:
+        pass
+
+    # Validate input
+    if not model or not isinstance(model, list) or len(model) == 0:
+        msg = "An embedding model selection is required"
+        raise ValueError(msg)
+
+    model_dict = model[0]
+    model_name = model_dict.get("name")
+    provider = model_dict.get("provider")
+    metadata = model_dict.get("metadata", {})
+
+    # --- resolve API key -----------------------------------------------------
+    api_key = get_api_key_for_provider(user_id, provider, api_key)
+    if not api_key and provider != "Ollama":
+        provider_variable_map = get_model_provider_variable_mapping()
+        variable_name = provider_variable_map.get(provider, f"{provider.upper().replace(' ', '_')}_API_KEY")
+        msg = (
+            f"{provider} API key is required. "
+            f"Please provide it in the component or configure it globally as {variable_name}."
+        )
+        raise ValueError(msg)
+
+    if not model_name:
+        msg = "Embedding model name is required"
+        raise ValueError(msg)
+
+    # Get embedding class from metadata
+    embedding_class_name = metadata.get("embedding_class")
+    if not embedding_class_name:
+        msg = f"No embedding class defined in metadata for {model_name}"
+        raise ValueError(msg)
+    embedding_class = get_embedding_class(embedding_class_name)
+
+    # --- build kwargs from param_mapping -------------------------------------
+    param_mapping: dict[str, str] = metadata.get("param_mapping", {})
+    if not param_mapping:
+        msg = (
+            f"Parameter mapping not found in metadata for model '{model_name}' (provider: {provider}). "
+            "This usually means the model was saved with an older format that is no longer recognized. "
+            "Please re-select the embedding model in the component configuration."
+        )
+        raise ValueError(msg)
+
+    kwargs: dict[str, Any] = {}
+
+    # Model name
+    if "model" in param_mapping:
+        kwargs[param_mapping["model"]] = model_name
+    elif "model_id" in param_mapping:
+        kwargs[param_mapping["model_id"]] = model_name
+
+    # API key
+    if "api_key" in param_mapping and api_key:
+        kwargs[param_mapping["api_key"]] = api_key
+
+    # Optional parameters - only add when both a value is supplied *and* the
+    # provider's param_mapping declares the corresponding key.
+    optional_params: dict[str, Any] = {
+        "api_base": _to_str(api_base) or None,
+        "dimensions": int(dimensions) if dimensions else None,
+        "chunk_size": int(chunk_size) if chunk_size else None,
+        "request_timeout": float(request_timeout) if request_timeout else None,
+        "max_retries": int(max_retries) if max_retries else None,
+        "show_progress_bar": show_progress_bar,
+        "model_kwargs": model_kwargs if model_kwargs else None,
+    }
+
+    # Watson-specific parameters
+    if provider in {"IBM WatsonX", "IBM watsonx.ai"}:
+        watsonx_provider_vars = get_all_variables_for_provider(user_id, provider)
+        url_value = watsonx_url or watsonx_provider_vars.get("WATSONX_URL") or os.environ.get("WATSONX_URL")
+        pid_value = (
+            watsonx_project_id
+            or watsonx_provider_vars.get("WATSONX_PROJECT_ID")
+            or os.environ.get("WATSONX_PROJECT_ID")
+        )
+
+        has_url = bool(url_value)
+        has_project_id = bool(pid_value)
+
+        if has_url and has_project_id:
+            if "url" in param_mapping:
+                kwargs[param_mapping["url"]] = url_value
+            if "project_id" in param_mapping:
+                kwargs[param_mapping["project_id"]] = pid_value
+        elif has_url or has_project_id:
+            missing = "project ID (WATSONX_PROJECT_ID)" if has_url else "URL (WATSONX_URL)"
+            provided = "URL" if has_url else "project ID"
+            msg = (
+                f"IBM WatsonX requires both a URL and project ID. "
+                f"You provided a watsonx {provided} but no {missing}. "
+                f"Please configure the missing value in the component or set the environment variable."
+            )
+            raise ValueError(msg)
+
+        # Build WatsonX embed params (truncate_input_tokens, return_options)
+        watsonx_params = {}
+        if watsonx_truncate_input_tokens is not None:
+            try:
+                from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
+
+                watsonx_params[EmbedTextParamsMetaNames.TRUNCATE_INPUT_TOKENS] = int(watsonx_truncate_input_tokens)
+            except ImportError:
+                watsonx_params["truncate_input_tokens"] = int(watsonx_truncate_input_tokens)
+        if watsonx_input_text is not None:
+            try:
+                from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
+
+                watsonx_params[EmbedTextParamsMetaNames.RETURN_OPTIONS] = {"input_text": bool(watsonx_input_text)}
+            except ImportError:
+                watsonx_params["return_options"] = {"input_text": bool(watsonx_input_text)}
+        if watsonx_params:
+            kwargs["params"] = watsonx_params
+
+    # Ollama-specific parameters
+    if provider == "Ollama" and "base_url" in param_mapping:
+        provider_vars = get_all_variables_for_provider(user_id, provider)
+        base_url_value = (
+            ollama_base_url
+            or provider_vars.get("OLLAMA_BASE_URL")
+            or os.environ.get("OLLAMA_BASE_URL")
+            or "http://localhost:11434"
+        )
+        kwargs[param_mapping["base_url"]] = base_url_value
+
+    # Add optional parameters if they have values and are mapped
+    for param_name, param_value in optional_params.items():
+        if param_value is not None and param_name in param_mapping:
+            # Google wraps timeout in a dict
+            if (
+                param_name == "request_timeout"
+                and provider == "Google Generative AI"
+                and isinstance(param_value, (int, float))
+            ):
+                kwargs[param_mapping[param_name]] = {"timeout": param_value}
+            else:
+                kwargs[param_mapping[param_name]] = param_value
+
+    try:
+        return embedding_class(**kwargs)
+    except Exception as e:
+        if provider == "IBM WatsonX" and ("url" in str(e).lower() or "project" in str(e).lower()):
+            msg = (
+                f"Failed to initialize IBM WatsonX embedding model: {e}\n\n"
+                "IBM WatsonX requires additional configuration parameters (API endpoint URL and project ID)."
+            )
+            raise ValueError(msg) from e
         raise
 
 
@@ -1590,7 +1756,7 @@ def update_model_options_in_build_config(
     # On initial load, check if the component has static options
     if field_name is None and static_options_cache_key not in component.cache:
         # Check if the model field in build_config already has options set
-        existing_options = build_config.get("model", {}).get("options")
+        existing_options = build_config.get(model_field_name, {}).get("options")
         if existing_options:
             # Component specified static options - mark them as static
             component.cache[static_options_cache_key] = True
@@ -1604,18 +1770,18 @@ def update_model_options_in_build_config(
         if field_value == "connect_other_models":
             # User explicitly selected "Connect other models", show the handle
             if cache_key_prefix == "embedding_model_options":
-                build_config["model"]["input_types"] = ["Embeddings"]
+                build_config[model_field_name]["input_types"] = ["Embeddings"]
             else:
-                build_config["model"]["input_types"] = ["LanguageModel"]
+                build_config[model_field_name]["input_types"] = ["LanguageModel"]
         else:
             # Default case or model selection: hide the handle
-            build_config["model"]["input_types"] = []
+            build_config[model_field_name]["input_types"] = []
         return build_config
 
     # Cache key based on user_id
     cache_key = f"{cache_key_prefix}_{component.user_id}"
     cache_timestamp_key = f"{cache_key}_timestamp"
-    cache_ttl = 30  # 30 seconds TTL to catch global variable changes faster
+    cache_ttl = _MODEL_OPTIONS_CACHE_TTL_SECONDS
 
     # Check if cache is expired
     cache_expired = False
@@ -1640,8 +1806,10 @@ def update_model_options_in_build_config(
             component.cache[cache_key] = {"options": options}
             component.cache[cache_timestamp_key] = time.time()
         except KeyError as exc:
-            # If we can't get user-specific options, fall back to empty
-            component.log("Failed to fetch user-specific model options: %s", exc)
+            # If we can't get user-specific options, fall back to empty.
+            # Logged as warning (not debug) so silent UI failures are visible
+            # in server logs for easier troubleshooting.
+            logger.warning("Failed to fetch user-specific model options: %s", exc)
             component.cache[cache_key] = {"options": []}
             component.cache[cache_timestamp_key] = time.time()
 
@@ -1729,5 +1897,117 @@ def update_model_options_in_build_config(
         build_config[model_field_name]["input_types"] = ["Embeddings"]
     else:
         build_config[model_field_name]["input_types"] = ["LanguageModel"]
+
+    return build_config
+
+
+@lru_cache(maxsize=1)
+def _get_all_provider_mapped_fields() -> set[str]:
+    """Collect all unique component_metadata.mapping_field values across all providers.
+
+    These are the fields that may need to be shown/hidden based on the selected provider.
+    """
+    fields: set[str] = set()
+    for meta in model_provider_metadata.values():
+        for var in meta.get("variables", []):
+            mapping_field = var.get("component_metadata", {}).get("mapping_field")
+            if mapping_field:
+                fields.add(mapping_field)
+    return fields
+
+
+def handle_model_input_update(
+    component: Any,
+    build_config: dict,
+    field_value: Any,
+    field_name: str | None = None,
+    *,
+    cache_key_prefix: str = "language_model_options",
+    get_options_func: Callable | None = None,
+    model_field_name: str = "model",
+) -> dict:
+    """Full update_build_config lifecycle for any component with a ModelInput.
+
+    Composes three steps:
+    1. Refresh/cache model options via update_model_options_in_build_config()
+    2. Hide all provider-specific fields by default
+    3. Show/configure the right fields for the selected provider via
+       apply_provider_variable_config_to_build_config()
+
+    Components using ModelInput can call this single function instead of
+    re-implementing the three steps individually.
+
+    Args:
+        component: The component instance (must have .cache and .user_id).
+        build_config: The build configuration dict to update.
+        field_value: The current value of the field being changed.
+        field_name: The name of the field being changed, if any.
+        cache_key_prefix: Cache key prefix for model options
+            (e.g. "language_model_options" or "embedding_model_options").
+        get_options_func: Function to fetch model options. Defaults to
+            get_language_model_options if not provided.
+        model_field_name: The name of the model field in build_config (default: "model").
+            Must match the corresponding parameter in update_model_options_in_build_config.
+
+    Returns:
+        Updated build_config dict.
+    """
+    if get_options_func is None:
+        get_options_func = get_language_model_options
+
+    # Step 1: Refresh/cache model options, set defaults and input_types
+    build_config = update_model_options_in_build_config(
+        component=component,
+        build_config=build_config,
+        cache_key_prefix=cache_key_prefix,
+        get_options_func=get_options_func,
+        field_name=field_name,
+        field_value=field_value,
+        model_field_name=model_field_name,
+    )
+
+    # When the user directly edits a provider-specific field (e.g. api_key),
+    # skip the provider reset/re-population so their value is preserved.
+    provider_mapped_fields = _get_all_provider_mapped_fields()
+    if field_name in provider_mapped_fields:
+        return build_config
+
+    # Step 2: Hide all provider-specific fields and clear their values by default.
+    # Clearing values ensures that when Step 3 re-configures for the newly selected
+    # provider, the auto-population logic can set the correct credential (e.g.
+    # switching OpenAI → Anthropic replaces OPENAI_API_KEY with ANTHROPIC_API_KEY).
+    for field in provider_mapped_fields:
+        if field in build_config:
+            build_config[field]["show"] = False
+            build_config[field]["required"] = False
+            build_config[field]["value"] = ""
+
+    # Step 3: Show/configure the right fields for the selected provider
+    # Use field_value when the user actively changed the model selection;
+    # otherwise (initial load with empty field_value, or other field changes)
+    # fall back to the value in build_config (which Step 1 may have set to the default model).
+    current_model_value = (
+        field_value
+        if field_name == model_field_name and field_value
+        else build_config.get(model_field_name, {}).get("value")
+    )
+    if isinstance(current_model_value, list) and len(current_model_value) > 0:
+        provider = current_model_value[0].get("provider", "")
+        if provider:
+            build_config = apply_provider_variable_config_to_build_config(
+                build_config, provider, user_id=getattr(component, "user_id", None)
+            )
+
+        # Also handle WatsonX-specific embedding fields that are not in provider metadata
+        if cache_key_prefix == "embedding_model_options":
+            is_watsonx = provider == "IBM WatsonX"
+            if "truncate_input_tokens" in build_config:
+                build_config["truncate_input_tokens"]["show"] = is_watsonx
+            if "input_text" in build_config:
+                build_config["input_text"]["show"] = is_watsonx
+
+    # Ensure the API key field is always visible regardless of provider selection
+    if "api_key" in build_config:
+        build_config["api_key"]["show"] = True
 
     return build_config

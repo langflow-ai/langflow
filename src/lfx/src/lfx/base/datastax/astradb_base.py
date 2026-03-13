@@ -740,7 +740,7 @@ class AstraDBBaseComponent(Component):
                 return self.reset_dimension_field(build_config)
 
         # Initial execution or token/environment change
-        first_run = field_name == "collection_name" and not field_value and not build_config["database_name"]["options"]
+        first_run = field_name == "embedding_model" and not field_value and not build_config["database_name"]["options"]
         if first_run or field_name in {"token", "environment"}:
             return self.reset_database_list(build_config)
 

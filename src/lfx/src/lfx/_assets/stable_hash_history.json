@@ -782,7 +782,7 @@
   "AstraDB": {
     "versions": {
       "0.3.0": "9ca3747e73d6",
-      "0.3.1": "9ca3747e73d6"
+      "0.3.1": "00f7944e3c3e"
     }
   },
   "AssistantsCreateAssistant": {
@@ -925,7 +925,8 @@
   },
   "KnowledgeIngestion": {
     "versions": {
-      "0.3.0": "f74dd1ddff98"
+      "0.3.0": "f74dd1ddff98",
+      "0.3.1": "097dea15b3b8"
     }
   },
   "KnowledgeRetrieval": {
@@ -1248,7 +1249,7 @@
   "CSVAgent": {
     "versions": {
       "0.3.0": "1888a727f9dd",
-      "0.3.1": "1888a727f9dd"
+      "0.3.1": "550088b86234"
     }
   },
   "LangChainFakeEmbeddings": {
@@ -1308,13 +1309,13 @@
   "OpenAIToolsAgent": {
     "versions": {
       "0.3.0": "21bfd16796e5",
-      "0.3.1": "21bfd16796e5"
+      "0.3.1": "8652124a0fa8"
     }
   },
   "OpenAPIAgent": {
     "versions": {
       "0.3.0": "a4a7564100da",
-      "0.3.1": "a4a7564100da"
+      "0.3.1": "0daea4aa923c"
     }
   },
   "RecursiveCharacterTextSplitter": {
@@ -1350,7 +1351,7 @@
   "SQLAgent": {
     "versions": {
       "0.3.0": "550c16461236",
-      "0.3.1": "550c16461236"
+      "0.3.1": "e6dfb9ec7ac5"
     }
   },
   "SQLDatabase": {
@@ -1368,7 +1369,7 @@
   "ToolCallingAgent": {
     "versions": {
       "0.3.0": "cdeb13ac7430",
-      "0.3.1": "cdeb13ac7430"
+      "0.3.1": "e6bc0ba930a6"
     }
   },
   "VectorStoreInfo": {
@@ -1386,7 +1387,7 @@
   "XMLAgent": {
     "versions": {
       "0.3.0": "17a0cb4c48a8",
-      "0.3.1": "17a0cb4c48a8"
+      "0.3.1": "8906e2818133"
     }
   },
   "LangWatchEvaluator": {
@@ -1398,19 +1399,19 @@
   "BatchRunComponent": {
     "versions": {
       "0.3.0": "f20d52a329ad",
-      "0.3.1": "f20d52a329ad"
+      "0.3.1": "fbbd31aef9e9"
     }
   },
   "Smart Transform": {
     "versions": {
       "0.3.0": "4fb127dc371c",
-      "0.3.1": "e9c638ca3f34"
+      "0.3.1": "0e4809be4e0c"
     }
   },
   "SmartRouter": {
     "versions": {
       "0.3.0": "7bdefeec6280",
-      "0.3.1": "86404d4beb95"
+      "0.3.1": "7abdc2a34004"
     }
   },
   "LLMSelectorComponent": {
@@ -1422,7 +1423,7 @@
   "StructuredOutput": {
     "versions": {
       "0.3.0": "058ca1f51e9f",
-      "0.3.1": "058ca1f51e9f"
+      "0.3.1": "415f9be2e23f"
     }
   },
   "LMStudioEmbeddingsComponent": {
@@ -1470,19 +1471,19 @@
   "Agent": {
     "versions": {
       "0.3.0": "108da32d83f1",
-      "0.3.1": "40d1976f4718"
+      "0.3.1": "7db77aa1eed6"
     }
   },
   "EmbeddingModel": {
     "versions": {
       "0.3.0": "c5ce0982da48",
-      "0.3.1": "b5cf1a06bba8"
+      "0.3.1": "965b8431bfd8"
     }
   },
   "LanguageModelComponent": {
     "versions": {
       "0.3.0": "4af3c0cc0dcf",
-      "0.3.1": "e9233312b063"
+      "0.3.1": "5572546e82aa"
     }
   },
   "MCPTools": {
@@ -2130,7 +2131,7 @@
   "GuardrailValidator": {
     "versions": {
       "0.3.0": "70918cbb8522",
-      "0.3.1": "70918cbb8522"
+      "0.3.1": "668e50408a04"
     }
   },
   "LiteLLMProxyModel": {
