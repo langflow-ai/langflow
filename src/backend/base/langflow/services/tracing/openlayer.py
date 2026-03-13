@@ -16,7 +16,7 @@ from langflow.schema.message import Message
 from langflow.services.tracing.base import BaseTracer
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Sequence
     from uuid import UUID
 
     from langchain.callbacks.base import BaseCallbackHandler
@@ -27,7 +27,6 @@ if TYPE_CHECKING:
 # Component name constants
 CHAT_OUTPUT_NAMES = ("Chat Output", "ChatOutput")
 CHAT_INPUT_NAMES = ("Text Input", "Chat Input", "TextInput", "ChatInput")
-AGENT_NAMES = ("Agent",)
 
 
 class FlowMetadata(TypedDict):
@@ -62,6 +61,8 @@ class OpenlayerTracer(BaseTracer):
 
         # Store component steps using SDK Step objects
         self.component_steps: dict[str, Any] = {}
+        # Track the LangFlow trace_type per component (e.g. "agent", "tool", "llm")
+        self.component_trace_types: dict[str, str] = {}
         self.trace_obj: Any | None = None
         self.langchain_handler: Any | None = None
 
@@ -98,7 +99,7 @@ class OpenlayerTracer(BaseTracer):
         required_keys = ["api_key", "inference_pipeline_id"]
         for key in required_keys:
             if key not in config or not config[key]:
-                logger.debug("Openlayer tracer not initialized: missing required key '{}'", key)
+                logger.debug("Openlayer tracer not initialized: missing required key '%s'", key)
                 return False
 
         try:
@@ -132,20 +133,24 @@ class OpenlayerTracer(BaseTracer):
             openlayer_tracer._publish = False
             configure(inference_pipeline_id=config["inference_pipeline_id"])
 
-            # Build step type map once for reuse in add_trace
+            # Build step type map once for reuse in add_trace.
+            # LangFlow "llm" components are model builders (e.g. LiteLLM Proxy,
+            # Language Model) - they configure the model object but the actual LLM call
+            # is captured as a nested ChatCompletionStep by the LangChain callback handler.
+            # So we map "llm" to USER_CALL to avoid duplicate chat_completion steps.
             self._step_type_map = {
-                "llm": self._openlayer_enums.StepType.CHAT_COMPLETION,
+                "llm": self._openlayer_enums.StepType.USER_CALL,
                 "chain": self._openlayer_enums.StepType.USER_CALL,
                 "tool": self._openlayer_enums.StepType.TOOL,
                 "agent": self._openlayer_enums.StepType.AGENT,
                 "retriever": self._openlayer_enums.StepType.RETRIEVER,
                 "prompt": self._openlayer_enums.StepType.USER_CALL,
             }
-        except ImportError as e:
-            logger.debug("Openlayer tracer not initialized: import error - {}", e)
+        except ImportError:
+            logger.debug("Openlayer tracer not initialized: openlayer package not installed")
             return False
-        except Exception as e:  # noqa: BLE001
-            logger.debug("Openlayer tracer not initialized: unexpected error - {}", e)
+        except Exception:  # noqa: BLE001
+            logger.debug("Openlayer tracer not initialized: unexpected error during setup", exc_info=True)
             return False
         else:
             return True
@@ -177,15 +182,28 @@ class OpenlayerTracer(BaseTracer):
             self.user_id = inputs["user_id"]
             self._user_session_context.set_user_id(self.user_id)
 
-        # Clean component name
-        name = trace_name.removesuffix(f" ({trace_id})")
+        # Resolve component name: prefer vertex display_name (reflects user renames),
+        # fall back to trace_name stripped of the id suffix.
+        name = (
+            vertex.display_name
+            if vertex and hasattr(vertex, "display_name")
+            else trace_name.removesuffix(f" ({trace_id})")
+        )
+
+        # For tool-type components, prefer the actual tool name from metadata
+        if trace_type == "tool" and metadata:
+            tool_name = metadata.get("display_name") or metadata.get("tool_name")
+            if not tool_name and isinstance(metadata.get("serialized"), dict):
+                tool_name = metadata["serialized"].get("name")
+            if tool_name:
+                name = tool_name
 
         # Map LangFlow trace_type to Openlayer StepType
         step_type = self._step_type_map.get(trace_type, self._openlayer_enums.StepType.USER_CALL)
 
-        # Convert inputs and metadata
+        # Convert inputs; keep metadata lightweight (only selected keys)
         converted_inputs = self._convert_to_openlayer_types(inputs) if inputs else {}
-        converted_metadata = self._convert_to_openlayer_types(metadata) if metadata else {}
+        converted_metadata = self._slim_metadata(metadata) if metadata else {}
 
         # Create Step using SDK step_factory
         try:
@@ -199,8 +217,9 @@ class OpenlayerTracer(BaseTracer):
         except Exception:  # noqa: BLE001
             return
 
-        # Store step and set as current in SDK context
+        # Store step and trace_type, set as current in SDK context
         self.component_steps[trace_id] = step
+        self.component_trace_types[trace_id] = trace_type
 
         # Set as current step so LangChain callbacks can nest under it
         self._openlayer_tracer._current_step.set(step)
@@ -229,7 +248,14 @@ class OpenlayerTracer(BaseTracer):
 
         # Update output
         if outputs:
-            step.output = self._convert_to_openlayer_types(outputs)
+            converted = self._convert_to_openlayer_types(outputs)
+            # For agent steps, prefer the "output" key over the full dict
+            # (which also contains "messages" with the raw LangChain message list)
+            trace_type = self.component_trace_types.get(trace_id)
+            if trace_type == "agent" and "output" in converted:
+                step.output = converted["output"]
+            else:
+                step.output = converted
 
         # Add error and logs to metadata
         if error:
@@ -280,6 +306,20 @@ class OpenlayerTracer(BaseTracer):
             if not trace_data or not isinstance(trace_data, dict):
                 return  # finally block will still execute
 
+            # Add agent names to trace output for visibility
+            agent_names = [
+                step.name
+                for tid, step in self.component_steps.items()
+                if self.component_trace_types.get(tid) == "agent"
+            ]
+            if agent_names:
+                trace_data["agents"] = agent_names
+
+            # Collect agent and tool names from the final serialized steps tree
+            agents_called, tools_called = self._collect_step_names(trace_data)
+            trace_data["agents_called"] = agents_called
+            trace_data["tools_called"] = tools_called
+
             # Aggregate token/model data from nested ChatCompletionSteps.
             # post_process_trace only reads tokens from the root step (UserCallStep),
             # which has no token data. We walk nested steps to surface this info.
@@ -314,9 +354,8 @@ class OpenlayerTracer(BaseTracer):
                     config=config,
                 )
 
-        except Exception as e:  # noqa: BLE001
-            # Log unexpected exceptions for troubleshooting
-            logger.debug("Openlayer tracer end() failed: {}", e)
+        except Exception:  # noqa: BLE001
+            logger.warning("Openlayer tracing/upload failed", exc_info=True)
         finally:
             # Always clean up SDK context regardless of early returns or exceptions
             self._cleanup_sdk_context()
@@ -327,6 +366,28 @@ class OpenlayerTracer(BaseTracer):
             self._openlayer_tracer._current_step.set(None)
         except Exception:  # noqa: BLE001, S110
             pass
+
+    def _collect_step_names(self, trace_data: dict[str, Any]) -> tuple[list[str], list[str]]:
+        """Collect agent and tool step names from the serialized trace steps tree."""
+        agent_names: list[str] = []
+        tool_names: list[str] = []
+        agent_val = self._openlayer_enums.StepType.AGENT.value
+        tool_val = self._openlayer_enums.StepType.TOOL.value
+
+        def _walk(steps: list[dict[str, Any]]) -> None:
+            for step in steps:
+                st = step.get("type")
+                name = step.get("name", "")
+                if st == agent_val and name:
+                    agent_names.append(name)
+                elif st == tool_val and name:
+                    tool_names.append(name)
+                nested = step.get("steps")
+                if nested:
+                    _walk(nested)
+
+        _walk(trace_data.get("steps", []))
+        return agent_names, tool_names
 
     def _aggregate_llm_data(self, trace_data: dict[str, Any]) -> None:
         """Aggregate token and model data from nested ChatCompletionStep dicts.
@@ -353,7 +414,7 @@ class OpenlayerTracer(BaseTracer):
             nonlocal total_cost, model, provider, model_parameters
 
             for step in steps:
-                if step.get("type") == "chat_completion":
+                if step.get("type") == self._openlayer_enums.StepType.CHAT_COMPLETION.value:
                     total_prompt_tokens += step.get("promptTokens") or 0
                     total_completion_tokens += step.get("completionTokens") or 0
                     total_tokens += step.get("tokens") or 0
@@ -390,7 +451,7 @@ class OpenlayerTracer(BaseTracer):
 
     def _extract_flow_metadata(
         self,
-        components: Iterable[Any],
+        components: dict[str, Any],
         error: Exception | None = None,
     ) -> FlowMetadata:
         metadata: FlowMetadata = {
@@ -406,7 +467,8 @@ class OpenlayerTracer(BaseTracer):
             metadata["error"] = str(error)
             metadata["chat_output"] = f"Error: {error}"
 
-        for step in components:
+        for trace_id, step in components.items():
+            trace_type = self.component_trace_types.get(trace_id)
             # Extract Chat Output (only if no error, since error takes precedence)
             if step.name in CHAT_OUTPUT_NAMES and not error:
                 chat_output = self._safe_get_input(step, "input_value")
@@ -415,15 +477,18 @@ class OpenlayerTracer(BaseTracer):
 
             # Extract Agent response as fallback (when no Chat Output component)
             if (
-                step.name in AGENT_NAMES
+                trace_type == "agent"
                 and not error
                 and metadata["chat_output"] == "Flow completed"
                 and hasattr(step, "output")
-                and isinstance(step.output, dict)
+                and step.output
             ):
-                response = step.output.get("response")
-                if response:
-                    metadata["chat_output"] = response if isinstance(response, str) else str(response)
+                if isinstance(step.output, str):
+                    metadata["chat_output"] = step.output
+                elif isinstance(step.output, dict):
+                    response = step.output.get("response")
+                    if response:
+                        metadata["chat_output"] = response if isinstance(response, str) else str(response)
 
             # Extract Chat Input
             if step.name in CHAT_INPUT_NAMES:
@@ -465,41 +530,60 @@ class OpenlayerTracer(BaseTracer):
         if not langchain_traces:
             return
 
-        # Find target component: prefer Agent, then fall back to LLM/chain types
-        target_component = None
-        for component_step in self.component_steps.values():
-            if component_step.name in AGENT_NAMES:
-                target_component = component_step
+        # Build a default target: prefer agent, then llm/chain component
+        default_target = None
+        for trace_id, component_step in self.component_steps.items():
+            if self.component_trace_types.get(trace_id) == "agent":
+                default_target = component_step
                 break
-
-        if target_component is None:
-            for component_step in self.component_steps.values():
-                if (
-                    hasattr(component_step, "step_type")
-                    and hasattr(component_step.step_type, "value")
-                    and component_step.step_type.value
-                    in [
-                        "llm",
-                        "chain",
-                        "agent",
-                        "chat_completion",
-                    ]
-                ):
-                    target_component = component_step
+        if default_target is None:
+            for trace_id, component_step in self.component_steps.items():
+                if self.component_trace_types.get(trace_id) in ("llm", "chain"):
+                    default_target = component_step
                     break
 
-        for lc_trace in langchain_traces.values():
+        # Integrate each LangChain root trace into the matching component step.
+        # When multiple roots exist, try to match each root to its component;
+        # fall back to the default target if no match is found.
+        for root_id, lc_trace in langchain_traces.items():
+            target = self.component_steps.get(str(root_id)) or default_target
             for lc_step in lc_trace.steps:
-                # Convert LangChain objects before integration.
-                # In the external trace path, the SDK skips _convert_step_objects_recursively,
-                # so raw LangChain objects (BaseMessage, etc.) remain in inputs/output.
-                # We must convert them here to ensure JSON serialization works in to_dict().
                 self._convert_langchain_step(lc_step)
-                if target_component:
-                    target_component.add_nested_step(lc_step)
+                self._fix_tool_step_names(lc_step)
+                if target:
+                    target.add_nested_step(lc_step)
 
         # Clear handler's traces after integration
         self.langchain_handler._traces_by_root.clear()
+
+    def _fix_tool_step_names(self, step: Any) -> None:
+        """Fix generic 'Tool' names on ToolStep objects from the LangChain handler.
+
+        The Openlayer SDK's LangChain callback falls back to 'Tool' when the
+        `name` kwarg is absent.  The actual tool name lives in the step's
+        metadata (display_name, serialized.name, or tags).
+        """
+        if (
+            hasattr(step, "step_type")
+            and hasattr(step.step_type, "value")
+            and step.step_type.value == "tool"
+            and step.name == "Tool"
+            and step.metadata
+        ):
+            tool_name = step.metadata.get("display_name") or step.metadata.get("tool_name")
+            if not tool_name and isinstance(step.metadata.get("serialized"), dict):
+                tool_name = step.metadata["serialized"].get("name")
+            if not tool_name:
+                tags = step.metadata.get("tags")
+                if tags and isinstance(tags, list) and tags:
+                    tool_name = tags[0]
+            if tool_name:
+                step.name = tool_name
+                if hasattr(step, "function_name") and step.function_name == "Tool":
+                    step.function_name = tool_name
+
+        for nested in getattr(step, "steps", []):
+            self._fix_tool_step_names(nested)
 
     def _convert_langchain_step(self, step: Any) -> None:
         """Convert LangChain objects in a step to JSON-serializable format.
@@ -544,12 +628,19 @@ class OpenlayerTracer(BaseTracer):
 
         Searches Chat Input components first, then Agent components.
         """
-        for names in (CHAT_INPUT_NAMES, AGENT_NAMES):
-            for key, value in flow_inputs.items():
-                if isinstance(value, dict) and any(name in key for name in names):
-                    input_val = value.get("input_value")
-                    if input_val:
-                        return self._convert_to_openlayer_type(input_val)
+        # First try Chat Input components by name
+        for key, value in flow_inputs.items():
+            if isinstance(value, dict) and any(name in key for name in CHAT_INPUT_NAMES):
+                input_val = value.get("input_value")
+                if input_val:
+                    return self._convert_to_openlayer_type(input_val)
+        # Fall back to agent components by trace_type
+        agent_ids = {tid for tid, tt in self.component_trace_types.items() if tt == "agent"}
+        for key, value in flow_inputs.items():
+            if isinstance(value, dict) and any(aid in key for aid in agent_ids):
+                input_val = value.get("input_value")
+                if input_val:
+                    return self._convert_to_openlayer_type(input_val)
         return None
 
     def _resolve_root_output(
@@ -571,10 +662,11 @@ class OpenlayerTracer(BaseTracer):
                         chat_output_found = True
                         break
 
-            # If no Chat Output found, try Agent component output
+            # If no Chat Output found, try Agent component output (by trace_type)
             if not chat_output_found:
+                agent_ids = {tid for tid, tt in self.component_trace_types.items() if tt == "agent"}
                 for key, value in flow_outputs.items():
-                    if any(name in key for name in AGENT_NAMES) and isinstance(value, dict):
+                    if isinstance(value, dict) and any(aid in key for aid in agent_ids):
                         response = value.get("response")
                         if response:
                             root_output = self._convert_to_openlayer_type(response)
@@ -603,7 +695,7 @@ class OpenlayerTracer(BaseTracer):
         flow_name, _ = self._parse_trace_name(self.trace_name)
 
         # Extract metadata from components with error handling
-        extracted_metadata = self._extract_flow_metadata(self.component_steps.values(), error=error)
+        extracted_metadata = self._extract_flow_metadata(self.component_steps, error=error)
 
         root_input = self._resolve_root_input(flow_inputs, extracted_metadata)
         root_output = self._resolve_root_output(flow_outputs, error, extracted_metadata)
@@ -637,6 +729,33 @@ class OpenlayerTracer(BaseTracer):
             self.trace_obj.add_step(root_step)
 
         return [root_step]
+
+    # Keys worth keeping in step metadata (lightweight context for debugging)
+    _METADATA_KEEP_KEYS = frozenset(
+        {
+            "display_name",
+            "tool_name",
+            "tool_description",
+            "model_name",
+            "model_provider",
+            "temperature",
+            "error",
+            "logs",
+            "tags",
+        }
+    )
+
+    def _slim_metadata(self, metadata: dict[str, Any] | None) -> dict[str, Any]:
+        """Return a lightweight version of metadata for the step payload.
+
+        Only keeps a curated set of keys to avoid bloating the trace with
+        large serialized objects, full tool code, etc.
+        """
+        if not metadata:
+            return {}
+        return {
+            str(k): self._convert_to_openlayer_type(v) for k, v in metadata.items() if k in self._METADATA_KEEP_KEYS
+        }
 
     def _convert_to_openlayer_types(self, io_dict: dict[str, Any]) -> dict[str, Any]:
         if io_dict is None:
