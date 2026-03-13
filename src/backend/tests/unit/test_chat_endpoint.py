@@ -432,3 +432,16 @@ async def test_cancel_build_with_cancelled_error(client, json_memory_chatbot_no_
     finally:
         # Restore the original function to avoid affecting other tests
         monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", original_cancel_flow_build)
+
+
+@pytest.mark.benchmark
+async def test_build_flow_direct(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Test the build flow endpoint with direct event delivery."""
+    # First create the flow
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Start the build with direct event delivery
+    response = await build_flow(client, flow_id, logged_in_headers, event_delivery="direct")
+    # Use the same consume_and_assert_stream function to verify the events
+    # We pass None as job_id since direct delivery doesn't use job_ids
+    await consume_and_assert_stream(response, None)
