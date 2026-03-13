@@ -603,7 +603,7 @@ def test_get_embeddings_watsonx_error_wraps_message(mock_get_vars, mock_get_clas
 
 
 def test_handle_model_input_update_hides_all_provider_fields_by_default():
-    """Provider-specific fields should be hidden when no model is selected."""
+    """Provider-specific fields should be hidden when no model is selected (except api_key which is always visible)."""
     component = _make_mock_component()
     provider_fields = _get_all_provider_mapped_fields()
 
@@ -619,7 +619,11 @@ def test_handle_model_input_update_hides_all_provider_fields_by_default():
     )
 
     for f in provider_fields:
-        assert result[f]["show"] is False
+        if f == "api_key":
+            # api_key is always forced visible at the end of handle_model_input_update
+            assert result[f]["show"] is True
+        else:
+            assert result[f]["show"] is False
         assert result[f]["required"] is False
 
 
