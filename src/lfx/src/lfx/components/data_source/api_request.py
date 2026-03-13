@@ -440,10 +440,23 @@ class APIRequestComponent(Component):
                 "Only enable this if you trust the target server."
             )
 
-        # if self.mode == "cURL" and self.curl_input:
-        #     self._build_config = self.parse_curl(self.curl_input, dotdict())
-        #     # After parsing curl, get the normalized URL
-        #     url = self._build_config["url_input"]["value"]
+        # Ensure that the body and headers get processed when used in tool mode
+        if self.mode == "cURL" and self.curl_input:
+            # Initialize build_config with current values
+            build_config = dotdict(
+                {
+                    "url_input": {"value": url},
+                    "method": {"value": method},
+                    "headers": {"value": headers},
+                    "body": {"value": body},
+                }
+            )
+            build_config = self.parse_curl(self.curl_input, build_config)
+            # Extract all parsed values from curl
+            url = build_config["url_input"]["value"]
+            method = build_config["method"]["value"]
+            headers = build_config["headers"]["value"]
+            body = build_config["body"]["value"]
 
         # Normalize URL before validation
         url = self._normalize_url(url)
