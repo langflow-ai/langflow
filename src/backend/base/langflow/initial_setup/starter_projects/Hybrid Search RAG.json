@@ -9,20 +9,12 @@
             "dataType": "ParserComponent",
             "id": "ParserComponent-TR5bm",
             "name": "parsed_text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-uBHDy",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
+            "inputTypes": ["Data", "JSON", "DataFrame", "Table", "Message"],
             "type": "other"
           }
         },
@@ -41,16 +33,12 @@
             "dataType": "ChatInput",
             "id": "ChatInput-ozpcK",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "StructuredOutput-dSKGb",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -69,19 +57,12 @@
             "dataType": "StructuredOutput",
             "id": "StructuredOutput-dSKGb",
             "name": "dataframe_output",
-            "output_types": [
-              "Table"
-            ]
+            "output_types": ["Table"]
           },
           "targetHandle": {
             "fieldName": "input_data",
             "id": "ParserComponent-3GmW3",
-            "inputTypes": [
-              "DataFrame",
-              "Table",
-              "Data",
-              "JSON"
-            ],
+            "inputTypes": ["DataFrame", "Table", "Data", "JSON"],
             "type": "other"
           }
         },
@@ -100,16 +81,12 @@
             "dataType": "ChatInput",
             "id": "ChatInput-ozpcK",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "search_query",
             "id": "AstraDB-AkDya",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "query"
           }
         },
@@ -127,16 +104,12 @@
             "dataType": "ParserComponent",
             "id": "ParserComponent-3GmW3",
             "name": "parsed_text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "lexical_terms",
             "id": "AstraDB-AkDya",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "query"
           }
         },
@@ -153,19 +126,12 @@
             "dataType": "AstraDB",
             "id": "AstraDB-AkDya",
             "name": "search_results",
-            "output_types": [
-              "JSON"
-            ]
+            "output_types": ["JSON"]
           },
           "targetHandle": {
             "fieldName": "input_data",
             "id": "ParserComponent-TR5bm",
-            "inputTypes": [
-              "DataFrame",
-              "Table",
-              "Data",
-              "JSON"
-            ],
+            "inputTypes": ["DataFrame", "Table", "Data", "JSON"],
             "type": "other"
           }
         },
@@ -181,9 +147,7 @@
         "data": {
           "id": "ChatInput-ozpcK",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -229,9 +193,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -262,9 +224,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -355,10 +315,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -375,9 +332,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -398,9 +353,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -457,9 +410,7 @@
         "data": {
           "id": "ParserComponent-3GmW3",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -467,12 +418,7 @@
             "display_name": "Parser",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "input_data",
-              "mode",
-              "pattern",
-              "sep"
-            ],
+            "field_order": ["input_data", "mode", "pattern", "sep"],
             "frozen": false,
             "icon": "braces",
             "legacy": false,
@@ -502,9 +448,7 @@
                 "name": "parsed_text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -535,12 +479,7 @@
                 "display_name": "JSON or Table",
                 "dynamic": false,
                 "info": "Accepts either a DataFrame or a Data object.",
-                "input_types": [
-                  "DataFrame",
-                  "Table",
-                  "Data",
-                  "JSON"
-                ],
+                "input_types": ["DataFrame", "Table", "Data", "JSON"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_data",
@@ -559,10 +498,7 @@
                 "dynamic": false,
                 "info": "Convert into raw string instead of using a template.",
                 "name": "mode",
-                "options": [
-                  "Parser",
-                  "Stringify"
-                ],
+                "options": ["Parser", "Stringify"],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
@@ -580,9 +516,7 @@
                 "display_name": "Template",
                 "dynamic": true,
                 "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -604,9 +538,7 @@
                 "display_name": "Separator",
                 "dynamic": false,
                 "info": "String used to separate rows/items.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -644,9 +576,7 @@
         "data": {
           "id": "ChatOutput-uBHDy",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -701,9 +631,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -752,9 +680,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -775,9 +701,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -825,10 +749,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -845,9 +766,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -868,9 +787,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -926,9 +843,7 @@
         "data": {
           "id": "ParserComponent-TR5bm",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -936,12 +851,7 @@
             "display_name": "Parser",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "input_data",
-              "mode",
-              "pattern",
-              "sep"
-            ],
+            "field_order": ["input_data", "mode", "pattern", "sep"],
             "frozen": false,
             "icon": "braces",
             "last_updated": "2025-09-29T15:17:07.310Z",
@@ -972,9 +882,7 @@
                 "name": "parsed_text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1005,12 +913,7 @@
                 "display_name": "JSON or Table",
                 "dynamic": false,
                 "info": "Accepts either a DataFrame or a Data object.",
-                "input_types": [
-                  "DataFrame",
-                  "Table",
-                  "Data",
-                  "JSON"
-                ],
+                "input_types": ["DataFrame", "Table", "Data", "JSON"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_data",
@@ -1029,10 +932,7 @@
                 "dynamic": false,
                 "info": "Convert into raw string instead of using a template.",
                 "name": "mode",
-                "options": [
-                  "Parser",
-                  "Stringify"
-                ],
+                "options": ["Parser", "Stringify"],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
@@ -1050,9 +950,7 @@
                 "display_name": "Template",
                 "dynamic": true,
                 "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1074,9 +972,7 @@
                 "display_name": "Separator",
                 "dynamic": false,
                 "info": "String used to separate rows/items.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1140,12 +1036,7 @@
         "data": {
           "id": "StructuredOutput-dSKGb",
           "node": {
-            "base_classes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table"
-            ],
+            "base_classes": ["Data", "JSON", "DataFrame", "Table"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1199,9 +1090,7 @@
                 "name": "structured_output",
                 "selected": "JSON",
                 "tool_mode": true,
-                "types": [
-                  "JSON"
-                ],
+                "types": ["JSON"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1213,9 +1102,7 @@
                 "name": "dataframe_output",
                 "selected": "Table",
                 "tool_mode": true,
-                "types": [
-                  "Table"
-                ],
+                "types": ["Table"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1267,9 +1154,7 @@
                 "display_name": "Input Message",
                 "dynamic": false,
                 "info": "The input message to the language model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1302,9 +1187,7 @@
                   }
                 },
                 "info": "Select your model provider",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "language",
@@ -1378,9 +1261,7 @@
                       "context_length": 128000,
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5.1"
-                      ]
+                      "reasoning_models": ["gpt-5.1"]
                     },
                     "name": "gpt-5.1",
                     "provider": "OpenAI"
@@ -1393,9 +1274,7 @@
                       "context_length": 128000,
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5"
-                      ]
+                      "reasoning_models": ["gpt-5"]
                     },
                     "name": "gpt-5",
                     "provider": "OpenAI"
@@ -1408,9 +1287,7 @@
                       "context_length": 128000,
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5-mini"
-                      ]
+                      "reasoning_models": ["gpt-5-mini"]
                     },
                     "name": "gpt-5-mini",
                     "provider": "OpenAI"
@@ -1423,9 +1300,7 @@
                       "context_length": 128000,
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5-nano"
-                      ]
+                      "reasoning_models": ["gpt-5-nano"]
                     },
                     "name": "gpt-5-nano",
                     "provider": "OpenAI"
@@ -1438,9 +1313,7 @@
                       "context_length": 128000,
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5-chat-latest"
-                      ]
+                      "reasoning_models": ["gpt-5-chat-latest"]
                     },
                     "name": "gpt-5-chat-latest",
                     "provider": "OpenAI"
@@ -1596,13 +1469,7 @@
                     "edit_mode": "inline",
                     "formatter": "text",
                     "name": "type",
-                    "options": [
-                      "str",
-                      "int",
-                      "float",
-                      "bool",
-                      "dict"
-                    ],
+                    "options": ["str", "int", "float", "bool", "dict"],
                     "type": "str"
                   },
                   {
@@ -1636,9 +1503,7 @@
                 "display_name": "Schema Name",
                 "dynamic": false,
                 "info": "Provide a name for the output data schema.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1660,9 +1525,7 @@
                 "display_name": "Format Instructions",
                 "dynamic": false,
                 "info": "The instructions to the language model for formatting the output.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1781,9 +1644,7 @@
                 "name": "search_results",
                 "selected": "JSON",
                 "tool_mode": true,
-                "types": [
-                  "JSON"
-                ],
+                "types": ["JSON"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1795,9 +1656,7 @@
                 "name": "dataframe",
                 "selected": "Table",
                 "tool_mode": true,
-                "types": [
-                  "Table"
-                ],
+                "types": ["Table"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1810,9 +1669,7 @@
                 "name": "vectorstoreconnection",
                 "selected": "VectorStore",
                 "tool_mode": true,
-                "types": [
-                  "VectorStore"
-                ],
+                "types": ["VectorStore"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2232,9 +2089,7 @@
                   }
                 },
                 "info": "Specify the Embedding Model. Not required for Astra Vectorize collections.",
-                "input_types": [
-                  "Embeddings"
-                ],
+                "input_types": ["Embeddings"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2455,11 +2310,7 @@
                 "external_options": {},
                 "info": "The environment for the Astra DB API Endpoint.",
                 "name": "environment",
-                "options": [
-                  "prod",
-                  "test",
-                  "dev"
-                ],
+                "options": ["prod", "test", "dev"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -2500,10 +2351,7 @@
                 "display_name": "Ingest Data",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Data",
-                  "DataFrame"
-                ],
+                "input_types": ["Data", "DataFrame"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "ingest_data",
@@ -2548,9 +2396,7 @@
                 "display_name": "Lexical Terms",
                 "dynamic": false,
                 "info": "Add additional terms/keywords to augment search precision.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2623,10 +2469,7 @@
                 "info": "Determine how your content is matched: Vector finds semantic similarity, and Hybrid Search (suggested) combines both approaches with a reranker.",
                 "load_from_db": false,
                 "name": "search_method",
-                "options": [
-                  "Hybrid Search",
-                  "Vector Search"
-                ],
+                "options": ["Hybrid Search", "Vector Search"],
                 "options_metadata": [
                   {
                     "icon": "SearchHybrid"
@@ -2654,9 +2497,7 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "Enter a query to run a similarity search.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2794,11 +2635,5 @@
   "is_component": false,
   "last_tested_version": "1.7.1",
   "name": "Hybrid Search RAG",
-  "tags": [
-    "openai",
-    "astradb",
-    "rag",
-    "q-a",
-    "hybrid"
-  ]
+  "tags": ["openai", "astradb", "rag", "q-a", "hybrid"]
 }

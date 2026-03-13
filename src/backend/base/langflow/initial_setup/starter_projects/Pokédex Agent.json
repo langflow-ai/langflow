@@ -7,16 +7,12 @@
             "dataType": "APIRequest",
             "id": "APIRequest-omX8o",
             "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "Agent-R27kt",
-            "inputTypes": [
-              "Tool"
-            ],
+            "inputTypes": ["Tool"],
             "type": "other"
           }
         },
@@ -32,16 +28,12 @@
             "dataType": "ChatInput",
             "id": "ChatInput-JJmqy",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "Agent-R27kt",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -57,20 +49,12 @@
             "dataType": "Agent",
             "id": "Agent-R27kt",
             "name": "response",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-lbrgJ",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
+            "inputTypes": ["Data", "JSON", "DataFrame", "Table", "Message"],
             "type": "str"
           }
         },
@@ -86,9 +70,7 @@
         "data": {
           "id": "ChatInput-JJmqy",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "category": "inputs",
             "conditional_paths": [],
@@ -136,9 +118,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -170,9 +150,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -262,10 +240,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -282,9 +257,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -305,9 +278,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -364,9 +335,7 @@
         "data": {
           "id": "ChatOutput-lbrgJ",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "category": "outputs",
             "conditional_paths": [],
@@ -423,9 +392,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -475,9 +442,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -498,9 +463,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -551,10 +514,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -571,9 +531,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -594,9 +552,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -736,12 +692,7 @@
         "data": {
           "id": "APIRequest-omX8o",
           "node": {
-            "base_classes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table"
-            ],
+            "base_classes": ["Data", "JSON", "DataFrame", "Table"],
             "beta": false,
             "category": "data",
             "conditional_paths": [],
@@ -807,9 +758,7 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -823,10 +772,7 @@
                 "display_name": "Body",
                 "dynamic": false,
                 "info": "The body to send with the request as a dictionary (for POST, PATCH, PUT).",
-                "input_types": [
-                  "Data",
-                  "JSON"
-                ],
+                "input_types": ["Data", "JSON"],
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "body",
@@ -895,9 +841,7 @@
                 "display_name": "cURL",
                 "dynamic": false,
                 "info": "Paste a curl command to populate the fields. This will fill in the dictionary fields for headers and body.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -938,10 +882,7 @@
                 "display_name": "Headers",
                 "dynamic": false,
                 "info": "The headers to send with the request",
-                "input_types": [
-                  "Data",
-                  "JSON"
-                ],
+                "input_types": ["Data", "JSON"],
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "headers",
@@ -1014,13 +955,7 @@
                 "dynamic": false,
                 "info": "The HTTP method to use.",
                 "name": "method",
-                "options": [
-                  "GET",
-                  "POST",
-                  "PATCH",
-                  "PUT",
-                  "DELETE"
-                ],
+                "options": ["GET", "POST", "PATCH", "PUT", "DELETE"],
                 "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -1039,10 +974,7 @@
                 "dynamic": false,
                 "info": "Enable cURL mode to populate fields from a cURL command.",
                 "name": "mode",
-                "options": [
-                  "URL",
-                  "cURL"
-                ],
+                "options": ["URL", "cURL"],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
@@ -1059,10 +991,7 @@
                 "display_name": "Query Parameters",
                 "dynamic": false,
                 "info": "The query parameters to append to the URL.",
-                "input_types": [
-                  "Data",
-                  "JSON"
-                ],
+                "input_types": ["Data", "JSON"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "query_params",
@@ -1151,9 +1080,7 @@
                     "name": "make_api_request",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "make_api_request"
-                    ]
+                    "tags": ["make_api_request"]
                   }
                 ]
               },
@@ -1163,9 +1090,7 @@
                 "display_name": "URL",
                 "dynamic": false,
                 "info": "Enter the URL for the request.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1204,9 +1129,7 @@
         "data": {
           "id": "Agent-R27kt",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1270,9 +1193,7 @@
                 "name": "response",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1308,9 +1229,7 @@
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1404,9 +1323,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1431,9 +1348,7 @@
                 "display_name": "Output Format Instructions",
                 "dynamic": false,
                 "info": "Generic Template for structured output formatting. Valid only with Structured response.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1478,9 +1393,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1561,9 +1474,7 @@
                   }
                 },
                 "info": "Select your model provider",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "language",
@@ -1609,10 +1520,7 @@
                 "display_name": "Output Schema",
                 "dynamic": false,
                 "info": "Schema Validation: Define the structure and data types for structured output. No validation if no output schema.",
-                "input_types": [
-                  "DataFrame",
-                  "Table"
-                ],
+                "input_types": ["DataFrame", "Table"],
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "output_schema",
@@ -1644,13 +1552,7 @@
                     "display_name": "Type",
                     "edit_mode": "inline",
                     "name": "type",
-                    "options": [
-                      "str",
-                      "int",
-                      "float",
-                      "bool",
-                      "dict"
-                    ],
+                    "options": ["str", "int", "float", "bool", "dict"],
                     "type": "str"
                   },
                   {
@@ -1700,9 +1602,7 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1726,9 +1626,7 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": [
-                  "Tool"
-                ],
+                "input_types": ["Tool"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "tools",
@@ -1795,7 +1693,5 @@
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Pokédex Agent",
-  "tags": [
-    "agents"
-  ]
+  "tags": ["agents"]
 }

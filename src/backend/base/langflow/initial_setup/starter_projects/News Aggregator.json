@@ -9,16 +9,12 @@
             "dataType": "AgentQL",
             "id": "AgentQL-064NO",
             "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "Agent-ZH2Rd",
-            "inputTypes": [
-              "Tool"
-            ],
+            "inputTypes": ["Tool"],
             "type": "other"
           }
         },
@@ -37,16 +33,12 @@
             "dataType": "ChatInput",
             "id": "ChatInput-S2wgk",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "Agent-ZH2Rd",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -65,20 +57,12 @@
             "dataType": "Agent",
             "id": "Agent-ZH2Rd",
             "name": "response",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-jNfAw",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
+            "inputTypes": ["Data", "JSON", "DataFrame", "Table", "Message"],
             "type": "other"
           }
         },
@@ -97,20 +81,12 @@
             "dataType": "ChatOutput",
             "id": "ChatOutput-jNfAw",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input",
             "id": "SaveToFile-VVVVb",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
+            "inputTypes": ["Data", "JSON", "DataFrame", "Table", "Message"],
             "type": "other"
           }
         },
@@ -182,10 +158,7 @@
           "display_name": "AgentQL Query Data",
           "id": "AgentQL-064NO",
           "node": {
-            "base_classes": [
-              "Data",
-              "JSON"
-            ],
+            "base_classes": ["Data", "JSON"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -242,9 +215,7 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -349,10 +320,7 @@
                 "dynamic": false,
                 "info": "'standard' uses deep data analysis, while 'fast' trades some depth of analysis for speed.",
                 "name": "mode",
-                "options": [
-                  "fast",
-                  "standard"
-                ],
+                "options": ["fast", "standard"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -370,9 +338,7 @@
                 "display_name": "Prompt",
                 "dynamic": false,
                 "info": "A Natural Language description of the data to extract from the page. Alternative to AgentQL query.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -395,9 +361,7 @@
                 "display_name": "AgentQL Query",
                 "dynamic": false,
                 "info": "The AgentQL query to execute. Learn more at https://docs.agentql.com/agentql-query or use a prompt.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -475,9 +439,7 @@
                     "name": "build_output",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "build_output"
-                    ]
+                    "tags": ["build_output"]
                   }
                 ]
               },
@@ -487,9 +449,7 @@
                 "display_name": "URL",
                 "dynamic": false,
                 "info": "The URL of the public web page you want to extract data from.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -552,9 +512,7 @@
         "data": {
           "id": "ChatInput-S2wgk",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "category": "inputs",
             "conditional_paths": [],
@@ -602,9 +560,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -636,9 +592,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -728,10 +682,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -748,9 +699,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -771,9 +720,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -856,9 +803,7 @@
         "data": {
           "id": "ChatOutput-jNfAw",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -913,9 +858,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -964,9 +907,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -987,9 +928,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1037,10 +976,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1057,9 +993,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1080,9 +1014,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1139,9 +1071,7 @@
         "data": {
           "id": "Agent-ZH2Rd",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1205,9 +1135,7 @@
                 "name": "response",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1243,9 +1171,7 @@
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1339,9 +1265,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1366,9 +1290,7 @@
                 "display_name": "Output Format Instructions",
                 "dynamic": false,
                 "info": "Generic Template for structured output formatting. Valid only with Structured response.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1413,9 +1335,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1496,9 +1416,7 @@
                   }
                 },
                 "info": "Select your model provider",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "language",
@@ -1544,10 +1462,7 @@
                 "display_name": "Output Schema",
                 "dynamic": false,
                 "info": "Schema Validation: Define the structure and data types for structured output. No validation if no output schema.",
-                "input_types": [
-                  "DataFrame",
-                  "Table"
-                ],
+                "input_types": ["DataFrame", "Table"],
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "output_schema",
@@ -1579,13 +1494,7 @@
                     "display_name": "Type",
                     "edit_mode": "inline",
                     "name": "type",
-                    "options": [
-                      "str",
-                      "int",
-                      "float",
-                      "bool",
-                      "dict"
-                    ],
+                    "options": ["str", "int", "float", "bool", "dict"],
                     "type": "str"
                   },
                   {
@@ -1635,9 +1544,7 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1661,9 +1568,7 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": [
-                  "Tool"
-                ],
+                "input_types": ["Tool"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "tools",
@@ -1721,9 +1626,7 @@
         "data": {
           "id": "SaveToFile-VVVVb",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1800,9 +1703,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2058,13 +1959,7 @@
                 "external_options": {},
                 "info": "Select the file format for local storage.",
                 "name": "local_format",
-                "options": [
-                  "csv",
-                  "excel",
-                  "json",
-                  "markdown",
-                  "txt"
-                ],
+                "options": ["csv", "excel", "json", "markdown", "txt"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -2184,8 +2079,5 @@
   "is_component": false,
   "last_tested_version": "1.6.0",
   "name": "News Aggregator",
-  "tags": [
-    "web-scraping",
-    "agents"
-  ]
+  "tags": ["web-scraping", "agents"]
 }

@@ -9,17 +9,12 @@
             "dataType": "ChatInput",
             "id": "ChatInput-tFM3s",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "question",
             "id": "Prompt-dOXUU",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
+            "inputTypes": ["Message", "Text"],
             "type": "str"
           }
         },
@@ -38,17 +33,12 @@
             "dataType": "parser",
             "id": "parser-w1MvR",
             "name": "parsed_text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "context",
             "id": "Prompt-dOXUU",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
+            "inputTypes": ["Message", "Text"],
             "type": "str"
           }
         },
@@ -67,20 +57,12 @@
             "dataType": "File",
             "id": "File-CByFc",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "data_inputs",
             "id": "SplitText-dINDR",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
+            "inputTypes": ["Data", "JSON", "DataFrame", "Table", "Message"],
             "type": "other"
           }
         },
@@ -99,16 +81,12 @@
             "dataType": "Prompt",
             "id": "Prompt-dOXUU",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "LanguageModelComponent-GRGRg",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -127,20 +105,12 @@
             "dataType": "LanguageModelComponent",
             "id": "LanguageModelComponent-GRGRg",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-RZFDG",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
+            "inputTypes": ["Data", "JSON", "DataFrame", "Table", "Message"],
             "type": "str"
           }
         },
@@ -159,16 +129,12 @@
             "dataType": "ChatInput",
             "id": "ChatInput-tFM3s",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "search_query",
             "id": "AstraDB-hIUdP",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "query"
           }
         },
@@ -186,17 +152,12 @@
             "dataType": "SplitText",
             "id": "SplitText-dINDR",
             "name": "dataframe",
-            "output_types": [
-              "Table"
-            ]
+            "output_types": ["Table"]
           },
           "targetHandle": {
             "fieldName": "ingest_data",
             "id": "AstraDB-mGHwS",
-            "inputTypes": [
-              "Data",
-              "DataFrame"
-            ],
+            "inputTypes": ["Data", "DataFrame"],
             "type": "other"
           }
         },
@@ -214,9 +175,7 @@
           "display_name": "Chat Input",
           "id": "ChatInput-tFM3s",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -261,9 +220,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -294,9 +251,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -378,10 +333,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -395,9 +347,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -415,9 +365,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -473,16 +421,11 @@
           "display_name": "Prompt",
           "id": "Prompt-dOXUU",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
-              "template": [
-                "context",
-                "question"
-              ]
+              "template": ["context", "question"]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
@@ -518,9 +461,7 @@
                 "name": "prompt",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -553,10 +494,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -576,10 +514,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -613,9 +548,7 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "tool_placeholder",
@@ -658,10 +591,7 @@
           "display_name": "Split Text",
           "id": "SplitText-dINDR",
           "node": {
-            "base_classes": [
-              "Data",
-              "JSON"
-            ],
+            "base_classes": ["Data", "JSON"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -710,9 +640,7 @@
                 "name": "dataframe",
                 "selected": "Table",
                 "tool_mode": true,
-                "types": [
-                  "Table"
-                ],
+                "types": ["Table"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -818,12 +746,7 @@
                 "dynamic": false,
                 "info": "Whether to keep the separator in the output chunks and where to place it.",
                 "name": "keep_separator",
-                "options": [
-                  "False",
-                  "True",
-                  "Start",
-                  "End"
-                ],
+                "options": ["False", "True", "Start", "End"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -839,9 +762,7 @@
                 "display_name": "Separator",
                 "dynamic": false,
                 "info": "The character to split on. Use \\n for newline. Examples: \\n\\n for paragraphs, \\n for lines, . for sentences",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "separator",
@@ -860,9 +781,7 @@
                 "display_name": "Text Key",
                 "dynamic": false,
                 "info": "The key to use for the text column.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -979,9 +898,7 @@
           "display_name": "Chat Output",
           "id": "ChatOutput-RZFDG",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1035,9 +952,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1086,9 +1001,7 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1109,9 +1022,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -1158,10 +1069,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1177,9 +1085,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -1199,9 +1105,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -1326,9 +1230,7 @@
         "data": {
           "id": "parser-w1MvR",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "category": "processing",
             "conditional_paths": [],
@@ -1337,12 +1239,7 @@
             "display_name": "Parser",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "mode",
-              "pattern",
-              "input_data",
-              "sep"
-            ],
+            "field_order": ["mode", "pattern", "input_data", "sep"],
             "frozen": false,
             "icon": "braces",
             "key": "parser",
@@ -1360,9 +1257,7 @@
                 "name": "parsed_text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1394,12 +1289,7 @@
                 "display_name": "JSON or Table",
                 "dynamic": false,
                 "info": "Accepts either a DataFrame or a Data object.",
-                "input_types": [
-                  "DataFrame",
-                  "Table",
-                  "Data",
-                  "JSON"
-                ],
+                "input_types": ["DataFrame", "Table", "Data", "JSON"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_data",
@@ -1418,10 +1308,7 @@
                 "dynamic": false,
                 "info": "Convert into raw string instead of using a template.",
                 "name": "mode",
-                "options": [
-                  "Parser",
-                  "Stringify"
-                ],
+                "options": ["Parser", "Stringify"],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
@@ -1439,9 +1326,7 @@
                 "display_name": "Template",
                 "dynamic": true,
                 "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1463,9 +1348,7 @@
                 "display_name": "Separator",
                 "dynamic": false,
                 "info": "String used to separate rows/items.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1504,9 +1387,7 @@
         "data": {
           "id": "File-CByFc",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1582,9 +1463,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1750,9 +1629,7 @@
                 "display_name": "Doc Key",
                 "dynamic": false,
                 "info": "The key to use for the DoclingDocument column.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1794,11 +1671,7 @@
                 "display_name": "Server File Path",
                 "dynamic": false,
                 "info": "Data object with a 'file_path' property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports same file types.",
-                "input_types": [
-                  "Data",
-                  "JSON",
-                  "Message"
-                ],
+                "input_types": ["Data", "JSON", "Message"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "file_path",
@@ -1933,10 +1806,7 @@
                 "external_options": {},
                 "info": "OCR engine to use. Only available when pipeline is set to 'standard'.",
                 "name": "ocr_engine",
-                "options": [
-                  "None",
-                  "easyocr"
-                ],
+                "options": ["None", "easyocr"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -2024,10 +1894,7 @@
                 "external_options": {},
                 "info": "Docling pipeline to use",
                 "name": "pipeline",
-                "options": [
-                  "standard",
-                  "vlm"
-                ],
+                "options": ["standard", "vlm"],
                 "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -2193,10 +2060,7 @@
         "data": {
           "id": "LanguageModelComponent-GRGRg",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2255,9 +2119,7 @@
                 "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -2272,9 +2134,7 @@
                 "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2356,7 +2216,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from lfx.base.models.model import LCModelComponent\nfrom lfx.base.models.unified_models import (\n    apply_provider_variable_config_to_build_config,\n    get_language_model_options,\n    get_llm,\n    update_model_options_in_build_config,\n)\nfrom lfx.base.models.watsonx_constants import IBM_WATSONX_URLS\nfrom lfx.field_typing import LanguageModel\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, StrInput\nfrom lfx.io import IntInput, MessageInput, ModelInput, MultilineInput, SecretStrInput, SliderInput\n\nDEFAULT_OLLAMA_URL = \"http://localhost:11434\"\n\n\nclass LanguageModelComponent(LCModelComponent):\n    display_name = \"Language Model\"\n    description = \"Runs a language model given a specified provider.\"\n    documentation: str = \"https://docs.langflow.org/components-models\"\n    icon = \"brain-circuit\"\n    category = \"models\"\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Model Provider API key\",\n            required=False,\n            show=True,\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"base_url_ibm_watsonx\",\n            display_name=\"watsonx API Endpoint\",\n            info=\"The base URL of the API (IBM watsonx.ai only)\",\n            options=IBM_WATSONX_URLS,\n            value=IBM_WATSONX_URLS[0],\n            show=False,\n            real_time_refresh=True,\n        ),\n        StrInput(\n            name=\"project_id\",\n            display_name=\"watsonx Project ID\",\n            info=\"The project ID associated with the foundation model (IBM watsonx.ai only)\",\n            show=False,\n            required=False,\n        ),\n        StrInput(\n            name=\"ollama_base_url\",\n            display_name=\"Ollama API URL\",\n            info=f\"Endpoint of the Ollama API (Ollama only). Defaults to {DEFAULT_OLLAMA_URL}\",\n            value=DEFAULT_OLLAMA_URL,\n            show=False,\n            real_time_refresh=True,\n        ),\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"The input text to send to the model\",\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"A system message that helps set the behavior of the assistant\",\n            advanced=False,\n        ),\n        BoolInput(\n            name=\"stream\",\n            display_name=\"Stream\",\n            info=\"Whether to stream the response\",\n            value=False,\n            advanced=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Controls randomness in responses\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            info=\"Maximum number of tokens to generate. Field name varies by provider.\",\n            advanced=True,\n            range_spec=RangeSpec(min=1, max=128000, step=1, step_type=\"int\"),\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:\n        return get_llm(\n            model=self.model,\n            user_id=self.user_id,\n            api_key=self.api_key,\n            temperature=self.temperature,\n            stream=self.stream,\n            max_tokens=getattr(self, \"max_tokens\", None),\n            watsonx_url=getattr(self, \"base_url_ibm_watsonx\", None),\n            watsonx_project_id=getattr(self, \"project_id\", None),\n            ollama_base_url=getattr(self, \"ollama_base_url\", None),\n        )\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        \"\"\"Dynamically update build config with user-filtered model options.\"\"\"\n        # Update model options\n        build_config = update_model_options_in_build_config(\n            component=self,\n            build_config=build_config,\n            cache_key_prefix=\"language_model_options\",\n            get_options_func=get_language_model_options,\n            field_name=field_name,\n            field_value=field_value,\n        )\n\n        # Hide all provider-specific fields by default\n        for field in [\"api_key\", \"base_url_ibm_watsonx\", \"project_id\", \"ollama_base_url\"]:\n            if field in build_config:\n                build_config[field][\"show\"] = False\n                build_config[field][\"required\"] = False\n\n        # Show/configure provider-specific fields based on selected model\n        # Get current model value - from field_value if model is being changed, otherwise from build_config\n        current_model_value = field_value if field_name == \"model\" else build_config.get(\"model\", {}).get(\"value\")\n        if isinstance(current_model_value, list) and len(current_model_value) > 0:\n            selected_model = current_model_value[0]\n            provider = selected_model.get(\"provider\", \"\")\n\n            if provider:\n                # Apply provider variable configuration (required_for_component, advanced, env var fallback)\n                build_config = apply_provider_variable_config_to_build_config(build_config, provider)\n\n        return build_config\n"
+                "value": "from lfx.base.models.model import LCModelComponent\nfrom lfx.base.models.unified_models import (\n    apply_provider_variable_config_to_build_config,\n    get_language_model_options,\n    get_llm,\n    get_provider_for_model_name,\n    update_model_options_in_build_config,\n)\nfrom lfx.base.models.watsonx_constants import IBM_WATSONX_URLS\nfrom lfx.field_typing import LanguageModel\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, StrInput\nfrom lfx.io import IntInput, MessageInput, ModelInput, MultilineInput, SecretStrInput, SliderInput\n\nDEFAULT_OLLAMA_URL = \"http://localhost:11434\"\n\n\nclass LanguageModelComponent(LCModelComponent):\n    display_name = \"Language Model\"\n    description = \"Runs a language model given a specified provider.\"\n    documentation: str = \"https://docs.langflow.org/components-models\"\n    icon = \"brain-circuit\"\n    category = \"models\"\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Model Provider API key\",\n            required=False,\n            show=True,\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"base_url_ibm_watsonx\",\n            display_name=\"watsonx API Endpoint\",\n            info=\"The base URL of the API (IBM watsonx.ai only)\",\n            options=IBM_WATSONX_URLS,\n            value=IBM_WATSONX_URLS[0],\n            show=False,\n            real_time_refresh=True,\n        ),\n        StrInput(\n            name=\"project_id\",\n            display_name=\"watsonx Project ID\",\n            info=\"The project ID associated with the foundation model (IBM watsonx.ai only)\",\n            show=False,\n            required=False,\n        ),\n        StrInput(\n            name=\"ollama_base_url\",\n            display_name=\"Ollama API URL\",\n            info=f\"Endpoint of the Ollama API (Ollama only). Defaults to {DEFAULT_OLLAMA_URL}\",\n            value=DEFAULT_OLLAMA_URL,\n            show=False,\n            real_time_refresh=True,\n        ),\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"The input text to send to the model\",\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"A system message that helps set the behavior of the assistant\",\n            advanced=False,\n        ),\n        BoolInput(\n            name=\"stream\",\n            display_name=\"Stream\",\n            info=\"Whether to stream the response\",\n            value=False,\n            advanced=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Controls randomness in responses\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            info=\"Maximum number of tokens to generate. Field name varies by provider.\",\n            advanced=True,\n            range_spec=RangeSpec(min=1, max=128000, step=1, step_type=\"int\"),\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:\n        return get_llm(\n            model=self.model,\n            user_id=self.user_id,\n            api_key=self.api_key,\n            temperature=self.temperature,\n            stream=self.stream,\n            max_tokens=getattr(self, \"max_tokens\", None),\n            watsonx_url=getattr(self, \"base_url_ibm_watsonx\", None),\n            watsonx_project_id=getattr(self, \"project_id\", None),\n            ollama_base_url=getattr(self, \"ollama_base_url\", None),\n        )\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        \"\"\"Dynamically update build config with user-filtered model options.\"\"\"\n        # Update model options\n        build_config = update_model_options_in_build_config(\n            component=self,\n            build_config=build_config,\n            cache_key_prefix=\"language_model_options\",\n            get_options_func=get_language_model_options,\n            field_name=field_name,\n            field_value=field_value,\n        )\n\n        current_model_value = field_value if field_name == \"model\" else build_config.get(\"model\", {}).get(\"value\")\n        provider = \"\"\n        if isinstance(current_model_value, list) and current_model_value:\n            selected_model = current_model_value[0]\n            provider = (selected_model.get(\"provider\") or \"\").strip()\n            if not provider and selected_model.get(\"name\"):\n                provider = get_provider_for_model_name(str(selected_model[\"name\"]))\n\n        if provider:\n            build_config = apply_provider_variable_config_to_build_config(build_config, provider)\n\n        return build_config\n"
               },
               "input_value": {
                 "_input_type": "MessageInput",
@@ -2364,9 +2224,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input text to send to the model",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2475,9 +2333,7 @@
                       "context_length": 128000,
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5.1"
-                      ]
+                      "reasoning_models": ["gpt-5.1"]
                     },
                     "name": "gpt-5.1",
                     "provider": "OpenAI"
@@ -2490,9 +2346,7 @@
                       "context_length": 128000,
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5"
-                      ]
+                      "reasoning_models": ["gpt-5"]
                     },
                     "name": "gpt-5",
                     "provider": "OpenAI"
@@ -2505,9 +2359,7 @@
                       "context_length": 128000,
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5-mini"
-                      ]
+                      "reasoning_models": ["gpt-5-mini"]
                     },
                     "name": "gpt-5-mini",
                     "provider": "OpenAI"
@@ -2520,9 +2372,7 @@
                       "context_length": 128000,
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5-nano"
-                      ]
+                      "reasoning_models": ["gpt-5-nano"]
                     },
                     "name": "gpt-5-nano",
                     "provider": "OpenAI"
@@ -2535,9 +2385,7 @@
                       "context_length": 128000,
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5-chat-latest"
-                      ]
+                      "reasoning_models": ["gpt-5-chat-latest"]
                     },
                     "name": "gpt-5-chat-latest",
                     "provider": "OpenAI"
@@ -2660,9 +2508,7 @@
                 "display_name": "Ollama API URL",
                 "dynamic": false,
                 "info": "Endpoint of the Ollama API (Ollama only). Defaults to http://localhost:11434",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2729,9 +2575,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "A system message that helps set the behavior of the assistant",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2851,7 +2695,7 @@
                 "dependencies": [
                   {
                     "name": "astrapy",
-                    "version": "2.1.0"
+                    "version": "2.2.0"
                   },
                   {
                     "name": "langchain_core",
@@ -2882,9 +2726,7 @@
                 "name": "search_results",
                 "selected": "JSON",
                 "tool_mode": true,
-                "types": [
-                  "JSON"
-                ],
+                "types": ["JSON"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -2896,9 +2738,7 @@
                 "name": "dataframe",
                 "selected": "Table",
                 "tool_mode": true,
-                "types": [
-                  "Table"
-                ],
+                "types": ["Table"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -2911,9 +2751,7 @@
                 "name": "vectorstoreconnection",
                 "selected": "VectorStore",
                 "tool_mode": true,
-                "types": [
-                  "VectorStore"
-                ],
+                "types": ["VectorStore"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -3333,9 +3171,7 @@
                   }
                 },
                 "info": "Specify the Embedding Model. Not required for Astra Vectorize collections.",
-                "input_types": [
-                  "Embeddings"
-                ],
+                "input_types": ["Embeddings"],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "embedding",
@@ -3555,11 +3391,7 @@
                 "external_options": {},
                 "info": "The environment for the Astra DB API Endpoint.",
                 "name": "environment",
-                "options": [
-                  "prod",
-                  "test",
-                  "dev"
-                ],
+                "options": ["prod", "test", "dev"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -3600,10 +3432,7 @@
                 "display_name": "Ingest Data",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Data",
-                  "DataFrame"
-                ],
+                "input_types": ["Data", "DataFrame"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "ingest_data",
@@ -3648,9 +3477,7 @@
                 "display_name": "Lexical Terms",
                 "dynamic": false,
                 "info": "Add additional terms/keywords to augment search precision.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3722,10 +3549,7 @@
                 "external_options": {},
                 "info": "Determine how your content is matched: Vector finds semantic similarity, and Hybrid Search (suggested) combines both approaches with a reranker.",
                 "name": "search_method",
-                "options": [
-                  "Hybrid Search",
-                  "Vector Search"
-                ],
+                "options": ["Hybrid Search", "Vector Search"],
                 "options_metadata": [
                   {
                     "icon": "SearchHybrid"
@@ -3753,9 +3577,7 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "Enter a query to run a similarity search.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3932,7 +3754,7 @@
                 "dependencies": [
                   {
                     "name": "astrapy",
-                    "version": "2.1.0"
+                    "version": "2.2.0"
                   },
                   {
                     "name": "langchain_core",
@@ -3963,9 +3785,7 @@
                 "name": "search_results",
                 "selected": "JSON",
                 "tool_mode": true,
-                "types": [
-                  "JSON"
-                ],
+                "types": ["JSON"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -3977,9 +3797,7 @@
                 "name": "dataframe",
                 "selected": "Table",
                 "tool_mode": true,
-                "types": [
-                  "Table"
-                ],
+                "types": ["Table"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -3992,9 +3810,7 @@
                 "name": "vectorstoreconnection",
                 "selected": "VectorStore",
                 "tool_mode": true,
-                "types": [
-                  "VectorStore"
-                ],
+                "types": ["VectorStore"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -4414,9 +4230,7 @@
                   }
                 },
                 "info": "Specify the Embedding Model. Not required for Astra Vectorize collections.",
-                "input_types": [
-                  "Embeddings"
-                ],
+                "input_types": ["Embeddings"],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "embedding",
@@ -4636,11 +4450,7 @@
                 "external_options": {},
                 "info": "The environment for the Astra DB API Endpoint.",
                 "name": "environment",
-                "options": [
-                  "prod",
-                  "test",
-                  "dev"
-                ],
+                "options": ["prod", "test", "dev"],
                 "options_metadata": [],
                 "override_skip": false,
                 "placeholder": "",
@@ -4681,10 +4491,7 @@
                 "display_name": "Ingest Data",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Data",
-                  "DataFrame"
-                ],
+                "input_types": ["Data", "DataFrame"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "ingest_data",
@@ -4729,9 +4536,7 @@
                 "display_name": "Lexical Terms",
                 "dynamic": false,
                 "info": "Add additional terms/keywords to augment search precision.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -4803,10 +4608,7 @@
                 "external_options": {},
                 "info": "Determine how your content is matched: Vector finds semantic similarity, and Hybrid Search (suggested) combines both approaches with a reranker.",
                 "name": "search_method",
-                "options": [
-                  "Hybrid Search",
-                  "Vector Search"
-                ],
+                "options": ["Hybrid Search", "Vector Search"],
                 "options_metadata": [
                   {
                     "icon": "SearchHybrid"
@@ -4834,9 +4636,7 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "Enter a query to run a similarity search.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -4974,10 +4774,5 @@
   "is_component": false,
   "last_tested_version": "1.7.1",
   "name": "Vector Store RAG",
-  "tags": [
-    "openai",
-    "astradb",
-    "rag",
-    "q-a"
-  ]
+  "tags": ["openai", "astradb", "rag", "q-a"]
 }
