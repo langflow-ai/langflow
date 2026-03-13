@@ -89,7 +89,7 @@ async def list_flows_by_flow_folder(
     *,
     user_id: str | None = None,
     flow_id: str | None = None,
-    order_params: dict | None = None,  # noqa: B006, ARG001
+    order_params: dict | None = None,
 ) -> list[Data]:
     """Lists flows for the given user and in the same folder as the specified flow.
 
