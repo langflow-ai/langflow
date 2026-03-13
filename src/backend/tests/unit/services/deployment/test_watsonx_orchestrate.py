@@ -16,6 +16,7 @@ from lfx.services.adapters.deployment.exceptions import (
     DeploymentNotFoundError,
     InvalidContentError,
     InvalidDeploymentOperationError,
+    OperationNotSupportedError,
 )
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
@@ -1400,6 +1401,40 @@ async def test_get_execution_requires_execution_id(monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_get_execution_handles_client_api_exception(monkeypatch):
+    from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_base = FakeBaseClient()
+
+    def failing_get(path: str, params=None):  # noqa: ARG001
+        resp = SimpleNamespace(status_code=500, text='{"detail": "internal error"}')
+        raise ClientAPIException(response=resp)
+
+    fake_base._get = failing_get
+    fake_clients = _with_wxo_wrappers(
+        SimpleNamespace(
+            _base=fake_base,
+            agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+            tool=FakeToolClient([]),
+            connections=FakeConnectionsClient(),
+        )
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(DeploymentError, match="getting a deployment execution"):
+        await service.get_execution(
+            user_id="user-1",
+            db=object(),
+            execution_id="run-1",
+        )
+
+
+@pytest.mark.anyio
 async def test_list_configs_single_deployment_scope(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
@@ -1462,6 +1497,42 @@ async def test_list_snapshots_single_deployment_scope(monkeypatch):
     )
 
     assert [snapshot.id for snapshot in result.snapshots] == ["tool-1", "tool-2"]
+
+
+@pytest.mark.anyio
+async def test_list_configs_without_deployment_id_raises(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(OperationNotSupportedError, match="requires exactly one deployment_id"):
+        await service.list_configs(user_id="user-1", db=object(), params=None)
+
+
+@pytest.mark.anyio
+async def test_list_snapshots_without_deployment_id_raises(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(OperationNotSupportedError, match="requires exactly one deployment_id"):
+        await service.list_snapshots(user_id="user-1", db=object(), params=None)
 
 
 # ---------------------------------------------------------------------------
@@ -1714,6 +1785,30 @@ async def test_get_deployment_not_found_raises(monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_get_deployment_handles_client_api_exception(monkeypatch):
+    from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+
+    class FailingAgentClient(FakeAgentClient):
+        def get_draft_by_id(self, deployment_id: str):  # noqa: ARG002
+            resp = SimpleNamespace(status_code=500, text='{"detail": "internal error"}')
+            raise ClientAPIException(response=resp)
+
+    fake_clients = SimpleNamespace(
+        agent=FailingAgentClient(None),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(DeploymentError, match="getting a deployment"):
+        await service.get(user_id="user-1", deployment_id="dep-1", db=object())
+
+
+@pytest.mark.anyio
 async def test_delete_deployment_calls_agent_delete(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_agent = FakeAgentClient({"id": "dep-1", "tools": []})
@@ -1788,8 +1883,8 @@ async def test_get_status_not_found(monkeypatch):
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    result = await service.get_status(user_id="user-1", deployment_id="dep-1", db=object())
-    assert result.provider_data["status"] == "not found"
+    with pytest.raises(DeploymentNotFoundError, match="dep-1"):
+        await service.get_status(user_id="user-1", deployment_id="dep-1", db=object())
 
 
 @pytest.mark.anyio
@@ -2360,16 +2455,16 @@ def test_wxo_credentials_repr_masks_api_key():
 
 
 @pytest.mark.anyio
-async def test_redeploy_raises_not_implemented():
+async def test_redeploy_raises_operation_not_supported():
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(OperationNotSupportedError, match="Redeployment is not supported"):
         await service.redeploy(user_id="user-1", deployment_id="dep-1", db=object())
 
 
 @pytest.mark.anyio
-async def test_duplicate_raises_not_implemented():
+async def test_duplicate_raises_operation_not_supported():
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(OperationNotSupportedError, match="duplication is not supported"):
         await service.duplicate(user_id="user-1", deployment_id="dep-1", db=object())
 
 

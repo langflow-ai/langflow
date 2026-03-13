@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ibm_watsonx_orchestrate_core.types.connections import ConnectionEnvironment
 from lfx.services.adapters.deployment.schema import DeploymentGetResult, DeploymentType, ItemResult
 
 
@@ -46,8 +47,6 @@ def get_deployment_detail_metadata(
 
 
 def derive_agent_environment(agent: dict[str, Any]) -> str:
-    from ibm_watsonx_orchestrate_core.types.connections import ConnectionEnvironment
-
     environments = agent.get("environments", [])
     if not isinstance(environments, list) or not environments:
         return "unknown"

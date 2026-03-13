@@ -163,6 +163,8 @@ ignore_missing_imports = true
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+# TODO(WXO): Remove testpypi index and uv.sources once the ibm-watsonx-orchestrate
+# packages publish their official release to PyPI (expected late March 2026).
 [[tool.uv.index]]
 name = "testpypi"
 url = "https://test.pypi.org/simple"
@@ -360,7 +362,8 @@ astrapy = ["astrapy>=2.1.0,<3.0.0"]
 # Windows-specific
 gassist = ["gassist>=0.0.1; sys_platform == 'win32'"]
 
-# SDKs for IBM watsonx Orchestrate deployment adapter
+# SDKs for IBM watsonx Orchestrate deployment adapter.
+# TODO(WXO): Pin to stable versions once official PyPI releases land (late March 2026).
 ibm-watsonx = [
     "ibm-cloud-sdk-core~=3.24.4",
     "ibm-watsonx-orchestrate-clients==2.3.2.dev5117; python_version >= '3.11'",
