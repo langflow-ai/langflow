@@ -78,14 +78,15 @@ class MessageBase(SQLModel):
                 message.files = image_paths
 
         if isinstance(message.timestamp, str):
-            # Convert timestamp string in format "YYYY-MM-DD HH:MM:SS.FFFF UTC" to datetime
+            # Convert timestamp string in format "YYYY-MM-DD HH:MM:SS.ffffff UTC" to datetime
             try:
                 timestamp = datetime.strptime(message.timestamp, TF_WITH_TZ_AND_MICROSECONDS).replace(
                     tzinfo=timezone.utc
                 )
             except ValueError:
-                # Fallback for ISO format if the above fails
-                timestamp = datetime.fromisoformat(message.timestamp).replace(tzinfo=timezone.utc)
+                # Fallback for ISO format if the above fails; astimezone preserves offset if present
+                parsed = datetime.fromisoformat(message.timestamp)
+                timestamp = parsed.astimezone(timezone.utc) if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
         else:
             timestamp = message.timestamp
         if not flow_id and message.flow_id:
