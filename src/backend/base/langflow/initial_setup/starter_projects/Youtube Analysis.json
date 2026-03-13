@@ -2474,6 +2474,8 @@
             "field_order": [
               "model",
               "api_key",
+              "base_url_ibm_watsonx",
+              "project_id",
               "system_message",
               "df",
               "column_name",

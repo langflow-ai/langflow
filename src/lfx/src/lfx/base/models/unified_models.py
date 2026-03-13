@@ -2002,4 +2002,8 @@ def handle_model_input_update(
             if "input_text" in build_config:
                 build_config["input_text"]["show"] = is_watsonx
 
+    # Ensure the API key field is always visible regardless of provider selection
+    if "api_key" in build_config:
+        build_config["api_key"]["show"] = True
+
     return build_config
