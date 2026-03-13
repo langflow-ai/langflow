@@ -1032,7 +1032,7 @@
   "GleanSearchAPIComponent": {
     "versions": {
       "0.3.0": "469618609b03",
-      "0.3.1": "469618609b03"
+      "0.3.1": "98e0dfb4935a"
     }
   },
   "GmailLoaderComponent": {
@@ -1902,7 +1902,7 @@
   "WikidataAPI": {
     "versions": {
       "0.3.0": "4752066f8971",
-      "0.3.1": "4752066f8971"
+      "0.3.1": "a5cd27095828"
     }
   },
   "WikipediaAPI": {
@@ -2052,7 +2052,7 @@
   "WikidataComponent": {
     "versions": {
       "0.3.0": "5f6398d72116",
-      "0.3.1": "5f6398d72116"
+      "0.3.1": "0cea9ab1fe54"
     }
   },
   "WikipediaComponent": {
