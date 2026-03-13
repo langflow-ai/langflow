@@ -30,7 +30,7 @@ class LanguageModelComponent(LCModelComponent):
         SecretStrInput(
             name="api_key",
             display_name="API Key",
-            info="Model Provider API key",
+            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
             required=False,
             show=True,
             real_time_refresh=True,

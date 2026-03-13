@@ -187,7 +187,7 @@ class KnowledgeIngestionComponent(Component):
         SecretStrInput(
             name="api_key",
             display_name="Embedding Provider API Key",
-            info="API key for the embedding provider to generate embeddings.",
+            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
             advanced=True,
             required=False,
         ),
