@@ -517,6 +517,27 @@ message_tasks: dict[str, asyncio.Task] = {}
 last_sender_by_session: defaultdict[str, str | None] = defaultdict(lambda: None)
 
 
+async def cleanup_session(session_id: str, flow_id: str | None = None) -> None:
+    voice_config_cache.pop(session_id, None)
+    tts_config_cache.pop(session_id, None)
+
+    if flow_id is not None:
+        queue_keys = [f"{flow_id}:{session_id}"]
+    else:
+        queue_keys = [k for k in message_queues if k.endswith(f":{session_id}")]
+
+    for queue_key in queue_keys:
+        task = message_tasks.pop(queue_key, None)
+        if task is not None and not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+        message_queues.pop(queue_key, None)
+        last_sender_by_session.pop(queue_key, None)
+
+
 async def get_flow_desc_from_db(flow_id: str) -> Flow:
     async with session_scope() as session:
         stmt = select(Flow).where(Flow.id == UUID(flow_id))
@@ -1121,6 +1142,7 @@ async def flow_as_tool_websocket(
         # Make sure to clean up the task
         if vad_task and not vad_task.done():
             vad_task.cancel()
+        await cleanup_session(session_id, flow_id)
 
 
 @router.websocket("/ws/flow_tts/{flow_id}")
@@ -1324,6 +1346,8 @@ async def flow_tts_websocket(
     except Exception as e:  # noqa: BLE001
         await logger.aerror(f"Unexpected error: {e}")
         await logger.aerror(traceback.format_exc())
+    finally:
+        await cleanup_session(session_id, flow_id)
 
 
 def extract_transcript(json_data):
