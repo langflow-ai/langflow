@@ -43,7 +43,7 @@ class WikidataComponent(Component):
 
             # Send request to Wikidata API
             wikidata_api_url = "https://www.wikidata.org/w/api.php"
-            response = httpx.get(wikidata_api_url, params=params)
+            response = httpx.get(wikidata_api_url, params=params, timeout=10.0)
             response.raise_for_status()
             response_json = response.json()
 

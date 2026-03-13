@@ -29,7 +29,7 @@ class WikidataAPIWrapper(BaseModel):
         }
 
         # Send request to Wikidata API
-        response = httpx.get(self.wikidata_api_url, params=params)
+        response = httpx.get(self.wikidata_api_url, params=params, timeout=10.0)
         response.raise_for_status()
         response_json = response.json()
 

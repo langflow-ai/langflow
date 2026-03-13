@@ -53,8 +53,10 @@ async def list_flows_by_flow_folder(
     *,
     user_id: str | None = None,
     flow_id: str | None = None,
-    order_params: dict | None = {"column": "updated_at", "direction": "desc"},  # noqa: B006
+    order_params: dict | None = None,
 ) -> list[Data]:
+    if order_params is None:
+        order_params = {}
     if not user_id:
         msg = "Session is invalid"
         raise ValueError(msg)
