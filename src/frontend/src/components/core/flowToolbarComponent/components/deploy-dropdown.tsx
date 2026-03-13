@@ -17,7 +17,11 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { CustomLink } from "@/customization/components/custom-link";
-import { ENABLE_PUBLISH, ENABLE_WIDGET } from "@/customization/feature-flags";
+import {
+  ENABLE_PUBLISH,
+  ENABLE_WIDGET,
+  ENABLE_SHARE,
+} from "@/customization/feature-flags";
 import { customMcpOpen } from "@/customization/utils/custom-mcp-open";
 import ApiModal from "@/modals/apiModal";
 import EmbedModal from "@/modals/EmbedModal/embed-modal";
@@ -116,6 +120,7 @@ export default function PublishDropdown({
             className="deploy-dropdown-item group"
             onClick={() => setOpenApiModal(true)}
             data-testid="api-access-item"
+            disabled={!ENABLE_SHARE}
           >
             <IconComponent name="Code2" className={`icon-size mr-2`} />
             <span>API access</span>
@@ -127,28 +132,39 @@ export default function PublishDropdown({
             <IconComponent name="Download" className={`icon-size mr-2`} />
             <span>Export</span>
           </DropdownMenuItem>
-          <CustomLink
-            className={cn("flex-1")}
-            to={`/mcp/folder/${folderId}`}
-            target={customMcpOpen()}
-          >
+          {ENABLE_SHARE ? (
+            <CustomLink
+              className={cn("flex-1")}
+              to={`/mcp/folder/${folderId}`}
+              target={customMcpOpen()}
+            >
+              <DropdownMenuItem
+                className="deploy-dropdown-item group"
+                data-testid="mcp-server-item"
+              >
+                <IconComponent name="Mcp" className={`icon-size mr-2`} />
+                <span>MCP Server</span>
+                <IconComponent
+                  name="ExternalLink"
+                  className={`icon-size ml-auto hidden group-hover:block`}
+                />
+              </DropdownMenuItem>
+            </CustomLink>
+          ) : (
             <DropdownMenuItem
               className="deploy-dropdown-item group"
-              onClick={() => {}}
               data-testid="mcp-server-item"
+              disabled={!ENABLE_SHARE}
             >
               <IconComponent name="Mcp" className={`icon-size mr-2`} />
               <span>MCP Server</span>
-              <IconComponent
-                name="ExternalLink"
-                className={`icon-size ml-auto hidden group-hover:block`}
-              />
             </DropdownMenuItem>
-          </CustomLink>
+          )}
           {ENABLE_WIDGET && (
             <DropdownMenuItem
               onClick={() => setOpenEmbedModal(true)}
               className="deploy-dropdown-item group"
+              disabled={!ENABLE_SHARE}
             >
               <IconComponent name="Columns2" className={`icon-size mr-2`} />
               <span>Embed into site</span>
@@ -158,8 +174,7 @@ export default function PublishDropdown({
           {ENABLE_PUBLISH && (
             <DropdownMenuItem
               className="deploy-dropdown-item group"
-              disabled={!hasIO}
-              onClick={() => {}}
+              disabled={!ENABLE_SHARE || !hasIO}
               data-testid="shareable-playground"
             >
               <div className="flex w-full items-center justify-between">
