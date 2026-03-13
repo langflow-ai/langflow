@@ -178,7 +178,7 @@ async def delete_messages_session(
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     """Delete messages for a single session.
-    
+
     Only deletes messages from sessions belonging to flows owned by the current user.
     """
     try:
@@ -187,14 +187,14 @@ async def delete_messages_session(
         stmt = stmt.join(Flow, MessageTable.flow_id == Flow.id)
         stmt = stmt.where(Flow.user_id == current_user.id)
         stmt = stmt.where(col(MessageTable.session_id) == session_id)
-        
+
         result = await session.exec(stmt)
         message_ids = list(result)
-        
+
         if not message_ids:
             # No messages found for this user's flows with this session_id
             return {"message": "Messages deleted successfully"}
-        
+
         # Delete only the messages that belong to the user
         await session.exec(
             delete(MessageTable)
@@ -216,7 +216,7 @@ async def delete_messages_sessions(
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     """Bulk delete messages for multiple sessions at once.
-    
+
     Only deletes messages from sessions belonging to flows owned by the current user.
 
     Args:
@@ -246,14 +246,14 @@ async def delete_messages_sessions(
         stmt = stmt.join(Flow, MessageTable.flow_id == Flow.id)
         stmt = stmt.where(Flow.user_id == current_user.id)
         stmt = stmt.where(col(MessageTable.session_id).in_(session_ids))
-        
+
         result = await session.exec(stmt)
         message_ids = list(result)
-        
+
         if not message_ids:
             # No messages found for this user's flows with these session_ids
             return {"message": "No sessions to delete", "deleted_count": 0}
-        
+
         # Delete only the messages that belong to the user
         await session.exec(
             delete(MessageTable)
