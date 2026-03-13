@@ -977,3 +977,215 @@ async def test_mcp_longterm_token_fails_without_superuser():
     async with session_scope() as session:
         with pytest.raises(HTTPException, match="Auto login required to create a long-term token"):
             await create_user_longterm_token(session)
+
+
+def _prepare_installed_check_env(monkeypatch, tmp_path):
+    """Set up environment for check_installed_mcp_servers tests.
+
+    Creates per-client config directories under tmp_path so that
+    ``get_config_path`` returns paths whose *parent* directories exist
+    but whose config *files* may or may not exist.
+    """
+    client_paths = {
+        "cursor": tmp_path / "cursor" / "mcp.json",
+        "windsurf": tmp_path / "windsurf" / "mcp_config.json",
+        "claude": tmp_path / "claude" / "claude_desktop_config.json",
+    }
+    # Create parent directories (simulating installed applications)
+    for path in client_paths.values():
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+    async def fake_get_config_path(client_name):
+        return client_paths[client_name]
+
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_config_path", fake_get_config_path)
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.should_use_mcp_composer", lambda project: False)  # noqa: ARG005
+
+    async def fake_streamable(project_id):
+        return f"https://langflow.local/api/v1/mcp/project/{project_id}/streamable"
+
+    async def fake_sse(project_id):
+        return f"https://langflow.local/api/v1/mcp/project/{project_id}/sse"
+
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_project_streamable_http_url", fake_streamable)
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_project_sse_url", fake_sse)
+
+    return client_paths
+
+
+async def test_should_report_available_true_when_app_directory_exists_but_config_file_missing(
+    client: AsyncClient,
+    user_test_project,
+    logged_in_headers,
+    tmp_path,
+    monkeypatch,
+):
+    """Bug: FileNotFoundError when config file is missing marks client as unavailable.
+
+    GIVEN: App directories exist (e.g. ~/.cursor/) but config files don't exist yet
+    WHEN:  GET /mcp/project/{id}/installed is called
+    THEN:  Each client should have available=True (app is installed) and installed=False (not configured)
+    """
+    _prepare_installed_check_env(monkeypatch, tmp_path)
+
+    response = await client.get(
+        f"/api/v1/mcp/project/{user_test_project.id}/installed",
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200
+    results = response.json()
+
+    # All three clients should be reported
+    assert len(results) == 3
+
+    for entry in results:
+        assert entry["available"] is True, (
+            f"{entry['name']} should be available (directory exists) even when config file is missing"
+        )
+        assert entry["installed"] is False, f"{entry['name']} should not be installed (config file doesn't exist)"
+
+
+async def test_should_report_installed_true_when_config_file_contains_matching_url(
+    client: AsyncClient,
+    user_test_project,
+    logged_in_headers,
+    tmp_path,
+    monkeypatch,
+):
+    """Config with matching URL marks client as installed.
+
+    GIVEN: Config files exist with a matching project URL in mcpServers args
+    WHEN:  GET /mcp/project/{id}/installed is called
+    THEN:  Each client should have available=True AND installed=True
+    """
+    client_paths = _prepare_installed_check_env(monkeypatch, tmp_path)
+
+    # Write config files with matching URLs for all clients
+    project_id = user_test_project.id
+    for path in client_paths.values():
+        config = {"mcpServers": {"lf-test": {"args": [f"https://langflow.local/api/v1/mcp/project/{project_id}/sse"]}}}
+        path.write_text(json.dumps(config))
+
+    response = await client.get(
+        f"/api/v1/mcp/project/{project_id}/installed",
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200
+    results = response.json()
+
+    for entry in results:
+        assert entry["available"] is True, f"{entry['name']} should be available"
+        assert entry["installed"] is True, f"{entry['name']} should be installed (config has matching URL)"
+
+
+async def test_should_report_installed_false_when_config_file_has_no_matching_url(
+    client: AsyncClient,
+    user_test_project,
+    logged_in_headers,
+    tmp_path,
+    monkeypatch,
+):
+    """Config with non-matching URL reports installed=False.
+
+    GIVEN: Config files exist but with a DIFFERENT project URL
+    WHEN:  GET /mcp/project/{id}/installed is called
+    THEN:  available=True (file exists) but installed=False (URL doesn't match)
+    """
+    client_paths = _prepare_installed_check_env(monkeypatch, tmp_path)
+
+    for path in client_paths.values():
+        config = {"mcpServers": {"other-server": {"args": ["https://other-server.example.com/sse"]}}}
+        path.write_text(json.dumps(config))
+
+    response = await client.get(
+        f"/api/v1/mcp/project/{user_test_project.id}/installed",
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200
+    results = response.json()
+
+    for entry in results:
+        assert entry["available"] is True, f"{entry['name']} should be available"
+        assert entry["installed"] is False, f"{entry['name']} should not be installed (URL doesn't match)"
+
+
+async def test_should_report_available_false_when_app_directory_does_not_exist(
+    client: AsyncClient,
+    user_test_project,
+    logged_in_headers,
+    tmp_path,
+    monkeypatch,
+):
+    """Missing app directory reports available=False.
+
+    GIVEN: App directories do NOT exist (applications not installed)
+    WHEN:  GET /mcp/project/{id}/installed is called
+    THEN:  available=False and installed=False for all clients
+    """
+    # Point to paths whose parent directories do NOT exist
+    nonexistent_paths = {
+        "cursor": tmp_path / "nonexistent_cursor" / "mcp.json",
+        "windsurf": tmp_path / "nonexistent_windsurf" / "mcp_config.json",
+        "claude": tmp_path / "nonexistent_claude" / "claude_desktop_config.json",
+    }
+
+    async def fake_get_config_path(client_name):
+        return nonexistent_paths[client_name]
+
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_config_path", fake_get_config_path)
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.should_use_mcp_composer", lambda project: False)  # noqa: ARG005
+
+    async def fake_streamable(project_id):
+        return f"https://langflow.local/api/v1/mcp/project/{project_id}/streamable"
+
+    async def fake_sse(project_id):
+        return f"https://langflow.local/api/v1/mcp/project/{project_id}/sse"
+
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_project_streamable_http_url", fake_streamable)
+    monkeypatch.setattr("langflow.api.v1.mcp_projects.get_project_sse_url", fake_sse)
+
+    response = await client.get(
+        f"/api/v1/mcp/project/{user_test_project.id}/installed",
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200
+    results = response.json()
+
+    for entry in results:
+        assert entry["available"] is False, f"{entry['name']} should not be available (directory doesn't exist)"
+        assert entry["installed"] is False
+
+
+async def test_should_report_available_true_when_config_file_has_corrupt_json(
+    client: AsyncClient,
+    user_test_project,
+    logged_in_headers,
+    tmp_path,
+    monkeypatch,
+):
+    """Corrupt JSON config reports available=True but installed=False.
+
+    GIVEN: Config files exist but contain invalid/corrupt JSON
+    WHEN:  GET /mcp/project/{id}/installed is called
+    THEN:  available=True (directory exists) but installed=False (can't parse config)
+    """
+    client_paths = _prepare_installed_check_env(monkeypatch, tmp_path)
+
+    for path in client_paths.values():
+        path.write_text("{corrupt json content!!! not valid")
+
+    response = await client.get(
+        f"/api/v1/mcp/project/{user_test_project.id}/installed",
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200
+    results = response.json()
+
+    for entry in results:
+        assert entry["available"] is True, f"{entry['name']} should be available (directory exists)"
+        assert entry["installed"] is False, f"{entry['name']} should not be installed (JSON is corrupt)"
