@@ -514,14 +514,22 @@ class TestMergeOperation:
         connection order.
         """
         # Arrange — exact scenario from bug report
-        df_a = DataFrame(pd.DataFrame({
-            "customer_id": ["CUST-001", "CUST-002", "CUST-003", "CUST-004"],
-            "name": ["Alice", "Bob", "Carol", "David"],
-        }))
-        df_b = DataFrame(pd.DataFrame({
-            "customer_id": ["CUST-001", "CUST-002", "CUST-005", "CUST-006"],
-            "product": ["Notebook", "Mouse", "Keyboard", "Monitor"],
-        }))
+        df_a = DataFrame(
+            pd.DataFrame(
+                {
+                    "customer_id": ["CUST-001", "CUST-002", "CUST-003", "CUST-004"],
+                    "name": ["Alice", "Bob", "Carol", "David"],
+                }
+            )
+        )
+        df_b = DataFrame(
+            pd.DataFrame(
+                {
+                    "customer_id": ["CUST-001", "CUST-002", "CUST-005", "CUST-006"],
+                    "product": ["Notebook", "Mouse", "Keyboard", "Monitor"],
+                }
+            )
+        )
 
         # Act — df_a is explicitly set as left, df_b as right
         component.left_dataframe = df_a
@@ -543,14 +551,22 @@ class TestMergeOperation:
     def test_should_preserve_right_rows_when_right_merge_with_explicit_inputs(self, component):
         """Test that right merge deterministically preserves all rows from the explicit right DataFrame."""
         # Arrange — same data, but now we want df_b's rows preserved
-        df_a = DataFrame(pd.DataFrame({
-            "customer_id": ["CUST-001", "CUST-002", "CUST-003", "CUST-004"],
-            "name": ["Alice", "Bob", "Carol", "David"],
-        }))
-        df_b = DataFrame(pd.DataFrame({
-            "customer_id": ["CUST-001", "CUST-002", "CUST-005", "CUST-006"],
-            "product": ["Notebook", "Mouse", "Keyboard", "Monitor"],
-        }))
+        df_a = DataFrame(
+            pd.DataFrame(
+                {
+                    "customer_id": ["CUST-001", "CUST-002", "CUST-003", "CUST-004"],
+                    "name": ["Alice", "Bob", "Carol", "David"],
+                }
+            )
+        )
+        df_b = DataFrame(
+            pd.DataFrame(
+                {
+                    "customer_id": ["CUST-001", "CUST-002", "CUST-005", "CUST-006"],
+                    "product": ["Notebook", "Mouse", "Keyboard", "Monitor"],
+                }
+            )
+        )
 
         # Act — df_a is left, df_b is right, merge type is "right"
         component.left_dataframe = df_a
@@ -571,14 +587,22 @@ class TestMergeOperation:
 
     def test_should_swap_results_when_left_right_inputs_are_swapped(self, component):
         """Test that swapping left/right inputs produces different, deterministic results."""
-        df_a = DataFrame(pd.DataFrame({
-            "customer_id": ["CUST-001", "CUST-002", "CUST-003"],
-            "name": ["Alice", "Bob", "Carol"],
-        }))
-        df_b = DataFrame(pd.DataFrame({
-            "customer_id": ["CUST-002", "CUST-004"],
-            "city": ["NYC", "Chicago"],
-        }))
+        df_a = DataFrame(
+            pd.DataFrame(
+                {
+                    "customer_id": ["CUST-001", "CUST-002", "CUST-003"],
+                    "name": ["Alice", "Bob", "Carol"],
+                }
+            )
+        )
+        df_b = DataFrame(
+            pd.DataFrame(
+                {
+                    "customer_id": ["CUST-002", "CUST-004"],
+                    "city": ["NYC", "Chicago"],
+                }
+            )
+        )
 
         # Left merge with df_a as left
         component.left_dataframe = df_a
