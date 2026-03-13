@@ -134,7 +134,7 @@ As an alternative to the previous setup, particularly for self-hosted Langfuse, 
     docker compose exec langflow python -c "import requests, os; addr = os.environ.get('LANGFUSE_BASE_URL'); print(addr); res = requests.get(addr, timeout=5); print(res.status_code)"
     ```
 
-    If there is an error, make sure you have set the `LANGFUSE_BASE_URL` environment variable in your terminal session.
+    If there is an error, make sure you have set the `LANGFUSE_BASE_URL` environment variable in your `docker-compose.yml` file.
 
     Output similar to the following indicates success:
 
