@@ -65,11 +65,6 @@ def update_projects_components_with_latest_component_versions(project_data, all_
     all_types_dict_flat = {}
     for category in all_types_dict.values():
         for key, component in category.items():
-            # Strip hash_history from component metadata before using in flows
-            # hash_history is internal metadata for tracking component evolution
-            # and should only exist in component_index.json, not in saved flows
-            if "metadata" in component and "hash_history" in component["metadata"]:
-                del component["metadata"]["hash_history"]
             all_types_dict_flat[key] = component
 
     node_changes_log = defaultdict(list)
