@@ -7,7 +7,7 @@ license = {text = "Apache-2.0"}
 authors = [
     {name = "Langflow Contributors"}
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.10,<3.14"
 keywords = [
     "workflow",
     "langflow",
@@ -21,14 +21,15 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
 
 dependencies = [
-    "stepflow-py>=0.10.0",
-    "stepflow-orchestrator>=0.10.0",
+    "stepflow-py>=0.10.0; python_version >= '3.11'",
+    "stepflow-orchestrator>=0.10.0; python_version >= '3.11'",
     "pyyaml>=6.0",
     "msgspec>=0.19.0",
     "jsonschema>=4.17.0",
@@ -61,7 +62,7 @@ build-backend = "hatchling.build"
 packages = ["src/langflow_stepflow"]
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py310"
 line-length = 88
 src = ["src", "tests"]
 

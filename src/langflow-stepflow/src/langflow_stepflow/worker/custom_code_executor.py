@@ -5,6 +5,7 @@ Uses a pre-compilation approach to eliminate context calls during execution.
 """
 
 import inspect
+from collections import OrderedDict
 from typing import Any
 
 from stepflow_py.worker import StepflowContext
@@ -21,6 +22,8 @@ from .handlers import (
     ToolWrapperInputHandler,
 )
 
+_COMPILED_CACHE_MAX_SIZE = 128
+
 
 class CustomCodeExecutor(BaseExecutor):
     """Executes Langflow custom code components by compiling code from blobs.
@@ -33,7 +36,7 @@ class CustomCodeExecutor(BaseExecutor):
     def __init__(self):
         """Initialize custom code executor."""
         super().__init__()
-        self.compiled_components: dict[str, Any] = {}
+        self.compiled_components: OrderedDict[str, Any] = OrderedDict()
 
     def _get_input_handlers(self) -> list[InputHandler]:
         """Return input handlers for custom code execution.
@@ -133,6 +136,8 @@ class CustomCodeExecutor(BaseExecutor):
                 # Pass blob_id to compilation for better tracing
                 compiled_component = await self._compile_component(blob_data, blob_id)
                 self.compiled_components[blob_id] = compiled_component
+                if len(self.compiled_components) > _COMPILED_CACHE_MAX_SIZE:
+                    self.compiled_components.popitem(last=False)
 
     def _extract_blob_ids(self, input_data: dict[str, Any]) -> set[str]:
         """Extract all blob IDs that need to be compiled from input data."""
@@ -369,7 +374,7 @@ class CustomCodeExecutor(BaseExecutor):
             user_id: str | None = None
             session_id: str | None = None
             context: dict | None = None
-            vertices: list = []
+            vertices: tuple = ()
 
         try:
             from lfx.custom.custom_component import (
@@ -427,5 +432,7 @@ class CustomCodeExecutor(BaseExecutor):
         return None
 
     async def _execute_sync_method_safely(self, method, component_type: str):
-        """Execute sync method safely in async context."""
-        return method()
+        """Execute sync method in a thread pool to avoid blocking the event loop."""
+        import asyncio
+
+        return await asyncio.to_thread(method)

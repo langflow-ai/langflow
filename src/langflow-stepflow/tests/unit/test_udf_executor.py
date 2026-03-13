@@ -889,8 +889,8 @@ class EnhancedTestComponent(Component):
         # The lfx Agent component code accesses graph.vertices internally
         vertices = graph.vertices
         assert vertices is not None
-        assert isinstance(vertices, list)
-        assert len(vertices) == 0  # Empty list for EnhancedPlaceholderGraph
+        assert isinstance(vertices, (list, tuple))
+        assert len(vertices) == 0  # Empty default for EnhancedPlaceholderGraph
 
     @pytest.mark.asyncio
     async def test_agent_component_execution_attempt(

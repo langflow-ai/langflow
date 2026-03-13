@@ -495,8 +495,15 @@ class NodeProcessor:
 
         for dep_node_id in deps:
             if dep_node_id in node_output_refs:
-                # Get field name this dependency maps to
-                field_name = field_map.get(dep_node_id, "input")
+                field_name = field_map.get(dep_node_id)
+                if field_name is None:
+                    logger.warning(
+                        "No field mapping for dependency %s -> %s; "
+                        "edge may be missing targetHandle.fieldName",
+                        dep_node_id,
+                        node_id,
+                    )
+                    continue
                 # Map dependency output to input field
                 inputs[field_name] = node_output_refs[dep_node_id]
 

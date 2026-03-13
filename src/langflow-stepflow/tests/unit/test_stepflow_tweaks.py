@@ -1,13 +1,13 @@
 """Tests for Stepflow-level tweaks functionality."""
 
 import pytest
+from tests.helpers.tweaks_builder import TweaksBuilder
 
 from langflow_stepflow.translation.stepflow_tweaks import (
     apply_stepflow_tweaks_to_dict,
     convert_tweaks_to_overrides,
 )
 from langflow_stepflow.translation.translator import LangflowConverter
-from tests.helpers.tweaks_builder import TweaksBuilder
 
 
 class TestStepflowTweaks:
@@ -17,7 +17,7 @@ class TestStepflowTweaks:
         """Test basic tweaks to overrides conversion."""
         tweaks = {
             "LanguageModelComponent-kBOja": {
-                "api_key": "sk-test-key",
+                "api_key": "test-api-key",
                 "temperature": 0.7,
             }
         }
@@ -32,7 +32,7 @@ class TestStepflowTweaks:
         assert "input" in step_override["value"]
 
         input_overrides = step_override["value"]["input"]["input"]
-        assert input_overrides["api_key"] == "sk-test-key"
+        assert input_overrides["api_key"] == "test-api-key"
         assert input_overrides["temperature"] == 0.7
 
     def test_convert_tweaks_to_overrides_empty(self):

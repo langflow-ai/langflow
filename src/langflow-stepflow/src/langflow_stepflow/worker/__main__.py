@@ -59,7 +59,6 @@ def main():
     import os
 
     import nest_asyncio  # type: ignore
-
     from stepflow_py.worker.observability import setup_observability
 
     setup_observability()
@@ -69,6 +68,8 @@ def main():
     if os.environ.get("LANGFLOW_DATABASE_URL"):
         from langflow.services.utils import initialize_services, teardown_services
 
+        # Teardown first to clear any stale state from a previous run,
+        # then initialize fresh services for this worker process.
         asyncio.run(teardown_services())
         asyncio.run(initialize_services())
 

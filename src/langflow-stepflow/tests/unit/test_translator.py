@@ -4,8 +4,8 @@ from typing import Any
 
 import pytest
 
-from langflow_stepflow.translation.translator import LangflowConverter
 from langflow_stepflow.exceptions import ConversionError
+from langflow_stepflow.translation.translator import LangflowConverter
 
 
 def unwrap_value(value: Any) -> Any:
@@ -41,6 +41,7 @@ class TestLangflowConverter:
     def test_init_default(self):
         """Test default initialization."""
         converter = LangflowConverter()
+        assert converter is not None
 
     def test_convert_simple_workflow(
         self, converter: LangflowConverter, simple_langflow_workflow: dict[str, Any]

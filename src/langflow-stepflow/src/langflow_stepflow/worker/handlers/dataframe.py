@@ -16,7 +16,10 @@ def _is_data_list(value: list[Any]) -> bool:
     if not non_null:
         return False
     return all(
-        (isinstance(item, dict) and ("text" in item or "__class_name__" in item))
+        (
+            isinstance(item, dict)
+            and ("text" in item or item.get("__class_name__") == "Data")
+        )
         or (hasattr(item, "__class__") and item.__class__.__name__ == "Data")
         for item in non_null
     )
