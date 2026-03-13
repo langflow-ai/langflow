@@ -103,7 +103,7 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
 
 async def teardown_superuser(settings_service, session: AsyncSession) -> None:
     """Teardown the superuser."""
-    # If AUTO_LOGIN is True, we will remove the default superuser
+    # If AUTO_LOGIN is False, we will remove the default superuser
     # from the database.
 
     if not settings_service.auth_settings.AUTO_LOGIN:
