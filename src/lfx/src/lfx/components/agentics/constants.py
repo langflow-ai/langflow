@@ -49,9 +49,7 @@ TRANSDUCTION_GENERATE = "generate"
 TRANSDUCTION_TYPES = [TRANSDUCTION_AMAP, TRANSDUCTION_AREDUCE, TRANSDUCTION_GENERATE]
 
 # Error messages for user feedback
-ERROR_AGENTICS_NOT_INSTALLED = (
-    "Agentics-py is not installed. Please install it with `uv pip install agentics-py`."
-)
+ERROR_AGENTICS_NOT_INSTALLED = "Agentics-py is not installed. Please install it with `uv pip install agentics-py`."
 ERROR_API_KEY_REQUIRED = "{provider} API key is required. Please configure it in your settings or provide it directly."
 ERROR_UNSUPPORTED_PROVIDER = (
     f"Unsupported provider: {{provider}}. Supported providers: {', '.join(SUPPORTED_PROVIDERS)}"
