@@ -215,6 +215,7 @@ class AgentComponent(ToolCallingAgentComponent):
                 "metadata": {},
             }
         ]
+
     def _get_max_tokens_value(self):
         """Return the user-supplied max_tokens or None when unset/zero."""
         val = getattr(self, "max_tokens", None)

@@ -117,19 +117,6 @@ class LambdaFilterComponent(Component):
         """Dynamically update build config with user-filtered model options."""
         return handle_model_input_update(self, build_config, field_value, field_name)
 
-        current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
-        provider = ""
-        if isinstance(current_model_value, list) and current_model_value:
-            selected_model = current_model_value[0]
-            provider = (selected_model.get("provider") or "").strip()
-            if not provider and selected_model.get("name"):
-                provider = get_provider_for_model_name(str(selected_model["name"]))
-
-        if provider:
-            build_config = apply_provider_variable_config_to_build_config(build_config, provider)
-
-        return build_config
-
     def get_data_structure(self, data):
         """Extract the structure of data, replacing values with their types."""
         if isinstance(data, list):
