@@ -56,7 +56,7 @@ def test_get_messages():
         ]
     )
     limit = 2
-    messages = get_messages(sender="User", session_id="session_id2", limit=limit)
+    messages = get_messages(sender="User", session_id="session_id2", limit=limit, order="ASC")
     assert len(messages) == limit
     assert messages[0].text == "Test message 1"
     assert messages[1].text == "Test message 2"
@@ -71,7 +71,7 @@ async def test_aget_messages():
         ]
     )
     limit = 2
-    messages = await aget_messages(sender="User", session_id="session_id2", limit=limit)
+    messages = await aget_messages(sender="User", session_id="session_id2", limit=limit, order="ASC")
     assert len(messages) == limit
     assert messages[0].text == "Test message 1"
     assert messages[1].text == "Test message 2"
