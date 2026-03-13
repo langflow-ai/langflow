@@ -20,6 +20,7 @@ from lfx.services.adapters.deployment.exceptions import (
     InvalidContentError,
     InvalidDeploymentOperationError,
     InvalidDeploymentTypeError,
+    OperationNotSupportedError,
     RateLimitError,
     ResourceNotFoundError,
     ServiceUnavailableError,
@@ -51,6 +52,7 @@ def test_exception_hierarchy_is_preserved() -> None:
     assert issubclass(ResourceNotFoundError, DeploymentError)
     assert issubclass(DeploymentNotFoundError, ResourceNotFoundError)
     assert issubclass(DeploymentNotConfiguredError, DeploymentError)
+    assert issubclass(OperationNotSupportedError, DeploymentError)
 
 
 def test_exception_error_codes_are_set() -> None:
@@ -67,6 +69,7 @@ def test_exception_error_codes_are_set() -> None:
     assert InvalidDeploymentOperationError().error_code == "invalid_deployment_operation"
     assert AuthSchemeError().error_code == "unsupported_auth_type"
     assert DeploymentNotConfiguredError().error_code == "deployment_not_configured"
+    assert OperationNotSupportedError().error_code == "operation_not_supported"
 
 
 def test_deployment_type_exceptions_have_distinct_default_messages() -> None:

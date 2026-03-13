@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from cachetools import TTLCache
 from fastapi import HTTPException, status
@@ -20,6 +20,7 @@ from lfx.services.adapters.deployment.exceptions import (
     InvalidContentError,
     InvalidDeploymentOperationError,
     InvalidDeploymentTypeError,
+    OperationNotSupportedError,
 )
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
@@ -108,6 +109,7 @@ from langflow.services.deps import get_settings_service
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from typing import Any
     from uuid import UUID
 
     from ibm_watsonx_orchestrate_clients.agents.agent_client import AgentUpsertResponse
@@ -133,7 +135,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         self._client_managers: TTLCache = TTLCache(maxsize=128, ttl=3600)
         self.set_ready()
 
-    async def _get_provider_clients(self, *, user_id: UUID | str, db: Any) -> WxOClient:
+    async def _get_provider_clients(self, *, user_id: UUID | str, db: AsyncSession) -> WxOClient:
         return await get_provider_clients(
             user_id=user_id,
             db=db,
@@ -145,7 +147,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         *,
         user_id: IdLike,
         payload: DeploymentCreate,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentCreateResult:
         """Create a deployment in Watsonx Orchestrate."""
         # The wxO API does not have an endpoint to create
@@ -335,7 +337,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         self,
         *,
         user_id: IdLike,  # noqa: ARG002
-        db: Any,  # noqa: ARG002
+        db: AsyncSession,  # noqa: ARG002
     ) -> DeploymentListTypesResult:
         """List deployment types supported by the provider."""
         return DeploymentListTypesResult(deployment_types=list(SUPPORTED_ADAPTER_DEPLOYMENT_TYPES))
@@ -344,7 +346,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         self,
         *,
         user_id: IdLike,
-        db: Any,
+        db: AsyncSession,
         params: DeploymentListParams | None = None,
     ) -> DeploymentListResult:
         """List deployments from Watsonx Orchestrate."""
@@ -360,7 +362,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
             if invalid_deployment_types:
                 invalid_values = ", ".join([dtype.value for dtype in invalid_deployment_types])
-                msg = f"{ErrorPrefix.LIST.value}watsonx Orchestrate has no such deployment type(s): '{invalid_values}'."
+                msg = (
+                    f"{ErrorPrefix.LIST.value} watsonx Orchestrate has no such deployment type(s): '{invalid_values}'."
+                )
                 raise InvalidDeploymentTypeError(message=msg)
 
             query_params: ProviderPayload = {}
@@ -410,11 +414,19 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         user_id: IdLike,
         deployment_id: IdLike,
         deployment_type: DeploymentType | None = None,  # noqa: ARG002
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentGetResult:
         """Get a deployment (agent) from Watsonx Orchestrate."""
         client_manager = await self._get_provider_clients(user_id=user_id, db=db)
-        agent = await asyncio.to_thread(client_manager.agent.get_draft_by_id, deployment_id)
+        try:
+            agent = await asyncio.to_thread(client_manager.agent.get_draft_by_id, deployment_id)
+        except Exception as exc:  # noqa: BLE001
+            raise_as_deployment_error(
+                exc,
+                error_prefix=ErrorPrefix.GET,
+                log_msg="Unexpected error fetching wxO deployment",
+                pass_through=(AuthenticationError, AuthorizationError, DeploymentNotFoundError),
+            )
         if not agent:
             msg = f"Deployment '{deployment_id}' not found."
             raise DeploymentNotFoundError(msg)
@@ -430,7 +442,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         deployment_id: IdLike,
         deployment_type: DeploymentType | None = None,  # noqa: ARG002
         payload: DeploymentUpdate,
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentUpdateResult:
         """Update deployment metadata, snapshot bindings, and/or connection binding."""
         try:
@@ -516,25 +528,26 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     async def redeploy(
         self,
         *,
-        user_id: IdLike,
-        deployment_id: IdLike,
-        deployment_type: DeploymentType | None = None,
-        db: Any,
+        user_id: IdLike,  # noqa: ARG002
+        deployment_id: IdLike,  # noqa: ARG002
+        deployment_type: DeploymentType | None = None,  # noqa: ARG002
+        db: AsyncSession,  # noqa: ARG002
     ) -> RedeployResult:
         """Trigger a deployment redeployment for the agent in draft environment."""
-        raise NotImplementedError
+        msg = "Redeployment is not supported by the watsonx Orchestrate adapter."
+        raise OperationNotSupportedError(message=msg)
 
     async def duplicate(
         self,
         *,
-        user_id: IdLike,
-        deployment_id: IdLike,
-        deployment_type: DeploymentType | None = None,
-        db: Any,
+        user_id: IdLike,  # noqa: ARG002
+        deployment_id: IdLike,  # noqa: ARG002
+        deployment_type: DeploymentType | None = None,  # noqa: ARG002
+        db: AsyncSession,  # noqa: ARG002
     ) -> DeploymentDuplicateResult:
         """Duplicate an existing deployment."""
-        _ = user_id, deployment_id, deployment_type, db
-        raise NotImplementedError
+        msg = "Deployment duplication is not supported by the watsonx Orchestrate adapter."
+        raise OperationNotSupportedError(message=msg)
 
     async def delete(
         self,
@@ -542,7 +555,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         user_id: IdLike,
         deployment_id: IdLike,
         deployment_type: DeploymentType | None = None,  # noqa: ARG002
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentDeleteResult:
         """Delete only the deployment agent (keep tools/configs reusable)."""
         logger.info("Deleting wxO deployment deployment_id=%s", deployment_id)
@@ -572,22 +585,15 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         user_id: IdLike,
         deployment_id: IdLike,
         deployment_type: DeploymentType | None = None,  # noqa: ARG002
-        db: Any,
+        db: AsyncSession,
     ) -> DeploymentStatusResult:
         """Get deployment health directly from wxO release status endpoint."""
         agent_id = _normalize_and_validate_id(str(deployment_id), field_name="deployment_id")
 
         clients = await self._get_provider_clients(user_id=user_id, db=db)
 
-        status_data: dict[str, Any] = {}
-
         try:
             agent = await asyncio.to_thread(clients.agent.get_draft_by_id, agent_id)
-            if agent:
-                status_data = {
-                    "status": "connected",
-                    "environment": derive_agent_environment(agent),
-                }
         except Exception as exc:  # noqa: BLE001
             raise_as_deployment_error(
                 exc,
@@ -595,12 +601,14 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 log_msg="Unexpected error fetching wxO deployment status",
             )
 
+        if not agent or isinstance(agent, str):  # the adk returns a string if not found
+            raise DeploymentNotFoundError(deployment_id=agent_id)
+
         return DeploymentStatusResult(
             id=agent_id,
-            provider_data=status_data
-            or {
-                "status": "not found",
-                "environment": "unknown",
+            provider_data={
+                "status": "connected",
+                "environment": derive_agent_environment(agent),
             },
         )
 
@@ -652,10 +660,18 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         clients = await self._get_provider_clients(user_id=user_id, db=db)
 
-        agent_run_result = await get_agent_run(
-            clients,
-            run_id=run_id,
-        )
+        try:
+            agent_run_result = await get_agent_run(
+                clients,
+                run_id=run_id,
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise_as_deployment_error(
+                exc,
+                error_prefix=ErrorPrefix.GET_EXECUTION,
+                log_msg="Unexpected error fetching wxO deployment execution",
+                pass_through=(AuthenticationError, AuthorizationError, DeploymentNotFoundError, InvalidContentError),
+            )
 
         return ExecutionStatusResult(
             execution_id=run_id,
@@ -779,7 +795,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         user_id: UUID | str,
         tool_ids: list[str],
         data: BaseDeploymentData,
-        db: Any,
+        db: AsyncSession,
     ) -> AgentUpsertResponse:
         """Create an agent deployment."""
         clients = await self._get_provider_clients(user_id=user_id, db=db)

@@ -176,6 +176,23 @@ class DeploymentNotFoundError(ResourceNotFoundError):
         self.error_code = "deployment_not_found"
 
 
+class OperationNotSupportedError(DeploymentError):
+    """Raised when a deployment operation is not supported by the current adapter.
+
+    Use this for operations that are valid in the abstract contract but
+    are not implemented by the active adapter (e.g. ``redeploy`` or
+    ``duplicate`` on a provider that does not support them).
+    """
+
+    def __init__(
+        self,
+        message: str = "This operation is not supported by the current deployment adapter.",
+        *,
+        cause: Exception | None = None,
+    ):
+        super().__init__(message, error_code="operation_not_supported", cause=cause)
+
+
 class DeploymentNotConfiguredError(DeploymentError):
     """Raised when no concrete deployment adapter has been registered.
 

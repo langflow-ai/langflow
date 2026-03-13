@@ -12,6 +12,7 @@ from lfx.services.adapters.deployment.exceptions import (
     DeploymentError,
     DeploymentServiceError,
     InvalidContentError,
+    OperationNotSupportedError,
     raise_for_status_and_detail,
 )
 from lfx.services.adapters.deployment.schema import _normalize_and_validate_id
@@ -95,7 +96,11 @@ def _require_single_deployment_id(
 ) -> str:
     deployment_ids = params.deployment_ids if params else None
     if not deployment_ids:
-        raise NotImplementedError
+        msg = (
+            f"watsonx Orchestrate {resource_label} listing requires exactly one "
+            "deployment_id. Global listing is not supported by this adapter."
+        )
+        raise OperationNotSupportedError(message=msg)
     if len(deployment_ids) != 1:
         msg = (
             f"watsonx Orchestrate {resource_label} listing currently supports "
