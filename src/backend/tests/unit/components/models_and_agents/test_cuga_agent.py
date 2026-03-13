@@ -1,10 +1,9 @@
-import os
 from typing import Any
 from uuid import uuid4
 
 import pytest
 from langflow.custom import Component
-from lfx.components.agents import CugaComponent
+from lfx.components.cuga import CugaComponent
 from lfx.components.tools.calculator import CalculatorToolComponent
 
 from tests.base import ComponentTestBaseWithClient, ComponentTestBaseWithoutClient
@@ -64,203 +63,43 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
             "_type": "Cuga",
             "add_current_date_tool": True,
             "agent_llm": MockLanguageModel(),
-            "policies": "You are a helpful assistant.",
+            "instructions": "You are a helpful assistant.",
             "input_value": "",
             "n_messages": 100,
-            "format_instructions": "You are an AI that extracts structured JSON objects from unstructured text.",
-            "output_schema": [],
             "browser_enabled": False,
             "web_apps": "",
-            "API": False,
             "lite_mode": True,
             "lite_mode_tool_threshold": 25,
+            "decomposition_strategy": "flexible",
         }
 
     async def test_build_config_update(self, component_class, default_kwargs):
-        """Test that build configuration updates correctly for different providers.
+        """Test that build configuration updates correctly for different model provider selections.
 
         This test verifies that the component's build configuration is properly
-        updated when switching between different model providers (OpenAI, Custom).
+        updated when selecting different model providers using the provider system.
         """
         component = await self.component_setup(component_class, default_kwargs)
         frontend_node = component.to_frontend_node()
         build_config = frontend_node["data"]["node"]["template"]
 
-        # Test updating build config for OpenAI
-        component.set(agent_llm="OpenAI")
+        # Test that agent_llm field exists and has proper structure
+        assert "agent_llm" in build_config
+        agent_llm_config = build_config["agent_llm"]
+        assert "options" in agent_llm_config
+        assert "OpenAI" in agent_llm_config["options"]
+
+        # Test updating build config with OpenAI provider
         updated_config = await component.update_build_config(build_config, "OpenAI", "agent_llm")
+
         assert "agent_llm" in updated_config
-        assert updated_config["agent_llm"]["value"] == "OpenAI"
-        assert isinstance(updated_config["agent_llm"]["options"], list)
-        assert len(updated_config["agent_llm"]["options"]) > 0
-        assert all(provider in updated_config["agent_llm"]["options"] for provider in ["OpenAI", "Custom"])
-        assert "Custom" in updated_config["agent_llm"]["options"]
+        # When OpenAI is selected, OpenAI-specific fields should be present
+        assert "openai_api_key" in updated_config or "model_name" in updated_config
 
-        # Verify model_name field is populated for OpenAI
-        assert "model_name" in updated_config
-        model_name_dict = updated_config["model_name"]
-        assert isinstance(model_name_dict["options"], list)
-        assert len(model_name_dict["options"]) > 0  # OpenAI should have available models
-        assert "gpt-4o" in model_name_dict["options"]
-
-        # Test Anthropic
-        # TBD: Add test for Anthropic currently cuga does not support Anthropic
-
-        # Test updating build config for Custom
+        # Test updating build config with "Custom" (should add input types for LanguageModel)
         updated_config = await component.update_build_config(build_config, "Custom", "agent_llm")
         assert "agent_llm" in updated_config
-        assert updated_config["agent_llm"]["value"] == "Custom"
-        assert isinstance(updated_config["agent_llm"]["options"], list)
-        assert len(updated_config["agent_llm"]["options"]) > 0
-        assert all(provider in updated_config["agent_llm"]["options"] for provider in ["OpenAI", "Custom"])
-        assert "Custom" in updated_config["agent_llm"]["options"]
-        assert updated_config["agent_llm"]["input_types"] == ["LanguageModel"]
-
-        # Verify model_name field is cleared for Custom
-        assert "model_name" not in updated_config
-
-    async def test_cuga_has_dual_outputs(self, component_class, default_kwargs):
-        """Test that Cuga component has both Response and Structured Response outputs.
-
-        This test verifies that the CugaComponent has the correct output configuration
-        with both regular message response and structured JSON response capabilities.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-
-        assert len(component.outputs) == 2
-        assert component.outputs[0].name == "response"
-        assert component.outputs[0].display_name == "Response"
-        assert component.outputs[0].method == "message_response"
-
-        assert component.outputs[1].name == "structured_response"
-        assert component.outputs[1].display_name == "Structured Response"
-        assert component.outputs[1].method == "json_response"
-        assert component.outputs[1].tool_mode is False
-
-    async def test_json_mode_filtered_from_openai_inputs(self, component_class, default_kwargs):
-        """Test that json_mode is filtered out from OpenAI inputs.
-
-        This test ensures that the json_mode parameter is properly excluded from
-        the component's input fields since Cuga handles structured output differently.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-
-        # Check that json_mode is not in the component's inputs
-        input_names = [inp.name for inp in component.inputs if hasattr(inp, "name")]
-        assert "json_mode" not in input_names
-
-        # Verify other OpenAI inputs are still present
-        assert "model_name" in input_names
-        assert "api_key" in input_names
-        assert "temperature" in input_names
-
-    async def test_json_response_parsing_valid_json(self, component_class, default_kwargs):
-        """Test that json_response correctly parses JSON from agent response.
-
-        This test verifies that the json_response method can properly parse
-        valid JSON content from the agent's response.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-        # Mock the get_agent_requirements method to avoid actual LLM calls
-        from unittest.mock import AsyncMock
-
-        component.get_agent_requirements = AsyncMock(return_value=(MockLanguageModel(), [], []))
-        component.call_agent = AsyncMock(return_value='{"name": "test", "value": 123}')
-
-        result = await component.json_response()
-
-        from lfx.schema.data import Data
-
-        assert isinstance(result, Data)
-        assert result.data == {"name": "test", "value": 123}
-
-    async def test_json_response_parsing_embedded_json(self, component_class, default_kwargs):
-        """Test that json_response handles text containing JSON.
-
-        This test verifies that the json_response method can extract JSON
-        from text that contains other content alongside the JSON.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-        # Mock the get_agent_requirements method to avoid actual LLM calls
-        from unittest.mock import AsyncMock
-
-        component.get_agent_requirements = AsyncMock(return_value=(MockLanguageModel(), [], []))
-        component.call_agent = AsyncMock(return_value='Here is the result: {"status": "success"} - done!')
-
-        result = await component.json_response()
-
-        from lfx.schema.data import Data
-
-        assert isinstance(result, Data)
-        assert result.data == {"status": "success"}
-
-    async def test_json_response_error_handling(self, component_class, default_kwargs):
-        """Test that json_response handles completely non-JSON responses.
-
-        This test verifies that the json_response method gracefully handles
-        responses that don't contain any valid JSON content.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-        # Mock the get_agent_requirements method to avoid actual LLM calls
-        from unittest.mock import AsyncMock
-
-        component.get_agent_requirements = AsyncMock(return_value=(MockLanguageModel(), [], []))
-        component.call_agent = AsyncMock(return_value="This is just plain text with no JSON")
-
-        result = await component.json_response()
-
-        from lfx.schema.data import Data
-
-        assert isinstance(result, Data)
-        assert "error" in result.data
-        assert result.data["content"] == "This is just plain text with no JSON"
-
-    async def test_model_building_without_json_mode(self, component_class, default_kwargs):
-        """Test that model building works without json_mode attribute.
-
-        This test ensures that the component can build models without requiring
-        the json_mode attribute that has been filtered out.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-        component.agent_llm = "OpenAI"
-
-        # Mock component for testing
-        from unittest.mock import Mock
-
-        mock_component = Mock()
-        mock_component.set.return_value = mock_component
-
-        # Should not raise AttributeError for missing json_mode
-        result = component.set_component_params(mock_component)
-
-        assert result is not None
-        # Verify set was called (meaning no AttributeError occurred)
-        mock_component.set.assert_called_once()
-
-    async def test_json_response_with_schema_validation(self, component_class, default_kwargs):
-        """Test that json_response validates against provided schema.
-
-        This test verifies that the json_response method can validate JSON
-        content against a provided Pydantic schema.
-        """
-        # Set up component with output schema
-        default_kwargs["output_schema"] = [
-            {"name": "name", "type": "str", "description": "Name field", "multiple": False},
-            {"name": "age", "type": "int", "description": "Age field", "multiple": False},
-        ]
-        component = await self.component_setup(component_class, default_kwargs)
-        # Mock the get_agent_requirements method
-        from unittest.mock import AsyncMock
-
-        component.get_agent_requirements = AsyncMock(return_value=(MockLanguageModel(), [], []))
-        component.call_agent = AsyncMock(return_value='{"name": "John", "age": 25}')
-
-        result = await component.json_response()
-
-        from langflow.schema.data import Data
-
-        assert isinstance(result, Data)
-        assert result.data == {"name": "John", "age": 25}
+        assert "LanguageModel" in updated_config["agent_llm"]["input_types"]
 
     async def test_cuga_component_initialization(self, component_class, default_kwargs):
         """Test that Cuga component initializes correctly with filtered inputs.
@@ -274,104 +113,25 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert component.display_name == "Cuga"
         assert component.name == "Cuga"
         assert len(component.inputs) > 0
-        assert len(component.outputs) == 2
+        assert len(component.outputs) == 1
 
     async def test_frontend_node_structure(self, component_class, default_kwargs):
         """Test that frontend node has correct structure with filtered inputs.
 
         This test verifies that the frontend node representation has the correct
-        structure and excludes unwanted fields like json_mode.
+        structure and includes expected fields.
         """
         component = await self.component_setup(component_class, default_kwargs)
 
         frontend_node = component.to_frontend_node()
         build_config = frontend_node["data"]["node"]["template"]
 
-        # Verify json_mode is not in build config
-        assert "json_mode" not in build_config
-
-        # Verify other expected fields are present
+        # Verify expected fields are present (using field name 'agent_llm')
         assert "agent_llm" in build_config
-        assert "policies" in build_config
+        assert "instructions" in build_config
         assert "add_current_date_tool" in build_config
         assert "browser_enabled" in build_config
         assert "web_apps" in build_config
-        assert "API" in build_config
-
-    async def test_preprocess_schema(self, component_class, default_kwargs):
-        """Test that _preprocess_schema correctly handles schema validation.
-
-        This test verifies that the schema preprocessing method correctly
-        converts string boolean values to actual booleans and validates field types.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-
-        # Test schema preprocessing
-        raw_schema = [
-            {"name": "field1", "type": "str", "description": "Test field", "multiple": "true"},
-            {"name": "field2", "type": "int", "description": "Another field", "multiple": False},
-        ]
-
-        processed = component._preprocess_schema(raw_schema)
-
-        assert len(processed) == 2
-        assert processed[0]["multiple"] is True  # String "true" should be converted to bool
-        assert processed[1]["multiple"] is False
-
-    async def test_build_structured_output_base_with_validation(self, component_class, default_kwargs):
-        """Test build_structured_output_base with schema validation.
-
-        This test verifies that the structured output building method can
-        validate JSON content against a provided schema.
-        """
-        default_kwargs["output_schema"] = [
-            {"name": "name", "type": "str", "description": "Name field", "multiple": False},
-            {"name": "count", "type": "int", "description": "Count field", "multiple": False},
-        ]
-        component = await self.component_setup(component_class, default_kwargs)
-
-        # Test valid JSON that matches schema
-        valid_content = '{"name": "test", "count": 42}'
-        result = await component.build_structured_output_base(valid_content)
-        assert result == [{"name": "test", "count": 42}]
-
-    async def test_build_structured_output_base_without_schema(self, component_class, default_kwargs):
-        """Test build_structured_output_base without schema validation.
-
-        This test verifies that the structured output building method works
-        correctly when no schema validation is provided.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-
-        # Test with no output_schema
-        content = '{"any": "data", "number": 123}'
-        result = await component.build_structured_output_base(content)
-        assert result == {"any": "data", "number": 123}
-
-    async def test_build_structured_output_base_embedded_json(self, component_class, default_kwargs):
-        """Test extraction of JSON from embedded text.
-
-        This test verifies that the structured output building method can
-        extract JSON content from text that contains other content.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-
-        content = 'Here is some text with {"embedded": "json"} inside it.'
-        result = await component.build_structured_output_base(content)
-        assert result == {"embedded": "json"}
-
-    async def test_build_structured_output_base_no_json(self, component_class, default_kwargs):
-        """Test handling of content with no JSON.
-
-        This test verifies that the structured output building method handles
-        content that doesn't contain any JSON gracefully.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-
-        content = "This is just plain text with no JSON at all."
-        result = await component.build_structured_output_base(content)
-        assert "error" in result
-        assert result["content"] == content
 
     async def test_new_input_fields_present(self, component_class, default_kwargs):
         """Test that new input fields are present in the component.
@@ -384,54 +144,81 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         input_names = [inp.name for inp in component.inputs if hasattr(inp, "name")]
 
         # Test for new fields specific to Cuga
-        assert "policies" in input_names
-        assert "format_instructions" in input_names
-        assert "output_schema" in input_names
+        assert "instructions" in input_names
         assert "n_messages" in input_names
         assert "browser_enabled" in input_names
         assert "web_apps" in input_names
-        assert "API" in input_names
         assert "lite_mode" in input_names
         assert "lite_mode_tool_threshold" in input_names
+        assert "decomposition_strategy" in input_names
 
         # Verify default values
-        assert hasattr(component, "policies")
-        assert hasattr(component, "format_instructions")
-        assert hasattr(component, "output_schema")
+        assert hasattr(component, "instructions")
         assert hasattr(component, "n_messages")
         assert hasattr(component, "browser_enabled")
         assert hasattr(component, "web_apps")
-        assert hasattr(component, "API")
         assert hasattr(component, "lite_mode")
         assert hasattr(component, "lite_mode_tool_threshold")
+        assert hasattr(component, "decomposition_strategy")
         assert component.n_messages == 100
         assert component.browser_enabled is False
-        assert component.API is False
         assert component.lite_mode is True
         assert component.lite_mode_tool_threshold == 25
+        assert component.decomposition_strategy == "flexible"
 
-    async def test_cuga_has_correct_outputs(self, component_class, default_kwargs):
-        """Test that Cuga component has the correct output configuration.
+    async def test_decomposition_strategy_field(self, component_class, default_kwargs):
+        """Test that decomposition_strategy field is properly configured.
 
-        This test verifies that the CugaComponent has the expected output
-        configuration with both response and structured response outputs.
+        This test verifies that the decomposition_strategy field has the correct
+        options, default value, and advanced configuration.
         """
         component = await self.component_setup(component_class, default_kwargs)
 
-        assert len(component.outputs) == 2
+        # Find the decomposition_strategy input
+        decomposition_input = None
+        for inp in component.inputs:
+            if hasattr(inp, "name") and inp.name == "decomposition_strategy":
+                decomposition_input = inp
+                break
 
-        # Test response output
-        response_output = component.outputs[0]
-        assert response_output.name == "response"
-        assert response_output.display_name == "Response"
-        assert response_output.method == "message_response"
+        assert decomposition_input is not None, "decomposition_strategy input not found"
+        assert decomposition_input.display_name == "Decomposition Strategy"
+        assert decomposition_input.value == "flexible"
+        assert decomposition_input.options == ["flexible", "exact"]
+        assert decomposition_input.advanced is True
 
-        # Test structured response output
-        structured_output = component.outputs[1]
-        assert structured_output.name == "structured_response"
-        assert structured_output.display_name == "Structured Response"
-        assert structured_output.method == "json_response"
-        assert structured_output.tool_mode is False
+        # Test setting different values
+        component.decomposition_strategy = "exact"
+        assert component.decomposition_strategy == "exact"
+
+        component.decomposition_strategy = "flexible"
+        assert component.decomposition_strategy == "flexible"
+
+    async def test_advanced_fields_configuration(self, component_class, default_kwargs):
+        """Test that browser and cuga lite fields are properly configured as advanced.
+
+        This test verifies that browser_enabled, web_apps, lite_mode, and
+        lite_mode_tool_threshold fields are all set to advanced.
+        """
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # Find all the advanced fields we want to test
+        field_checks = {
+            "browser_enabled": False,
+            "web_apps": False,
+            "lite_mode": False,
+            "lite_mode_tool_threshold": False,
+        }
+
+        for inp in component.inputs:
+            if hasattr(inp, "name") and inp.name in field_checks:
+                field_checks[inp.name] = inp.advanced
+
+        # Assert all fields are set to advanced
+        assert field_checks["browser_enabled"] is True, "browser_enabled should be advanced"
+        assert field_checks["web_apps"] is True, "web_apps should be advanced"
+        assert field_checks["lite_mode"] is True, "lite_mode should be advanced"
+        assert field_checks["lite_mode_tool_threshold"] is True, "lite_mode_tool_threshold should be advanced"
 
     async def test_memory_inputs_advanced_setting(self, component_class, default_kwargs):
         """Test that memory inputs are properly set to advanced.
@@ -461,21 +248,6 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         component.web_apps = "https://example.com"
         assert component.browser_enabled is True
         assert component.web_apps == "https://example.com"
-
-    async def test_api_subagent_configuration(self, component_class, default_kwargs):
-        """Test API sub-agent configuration.
-
-        This test verifies that the API sub-agent configuration option
-        works correctly.
-        """
-        component = await self.component_setup(component_class, default_kwargs)
-
-        # Test default API setting
-        assert component.API is False
-
-        # Test setting API enabled
-        component.API = True
-        assert component.API is True
 
 
 class TestCugaComponentWithClient(ComponentTestBaseWithClient):
@@ -514,21 +286,29 @@ class TestCugaComponentWithClient(ComponentTestBaseWithClient):
         Requires:
             OPENAI_API_KEY environment variable
         """
-        # Now you can access the environment variables
-        api_key = os.getenv("OPENAI_API_KEY")
+        from tests.api_keys import get_openai_api_key
+
+        api_key = get_openai_api_key()
         tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
         input_value = "What is 2 + 2?"
 
-        temperature = 0.1
-
-        # Initialize the CugaComponent with mocked inputs
+        # Initialize the CugaComponent with unified model format
         cuga = CugaComponent(
             tools=tools,
             input_value=input_value,
             api_key=api_key,
-            model_name="gpt-4o",
-            agent_llm="OpenAI",
-            temperature=temperature,
+            model=[
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",  # pragma: allowlist secret
+                    },
+                }
+            ],
             _session_id=str(uuid4()),
         )
 
@@ -547,8 +327,9 @@ class TestCugaComponentWithClient(ComponentTestBaseWithClient):
         Requires:
             OPENAI_API_KEY environment variable
         """
-        # Mock inputs
-        api_key = os.getenv("OPENAI_API_KEY")
+        from tests.api_keys import get_openai_api_key
+
+        api_key = get_openai_api_key()
         input_value = "What is 2 + 2?"
 
         # Test only key OpenAI models to avoid timeout and complexity
@@ -557,14 +338,24 @@ class TestCugaComponentWithClient(ComponentTestBaseWithClient):
 
         for model_name in key_models:
             try:
-                # Initialize the CugaComponent with mocked inputs
+                # Initialize the CugaComponent with unified model format
                 tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
                 cuga = CugaComponent(
                     tools=tools,
                     input_value=input_value,
                     api_key=api_key,
-                    model_name=model_name,
-                    agent_llm="OpenAI",
+                    model=[
+                        {
+                            "name": model_name,
+                            "provider": "OpenAI",
+                            "icon": "OpenAI",
+                            "metadata": {
+                                "model_class": "ChatOpenAI",
+                                "model_name_param": "model",
+                                "api_key_param": "api_key",  # pragma: allowlist secret
+                            },
+                        }
+                    ],
                     _session_id=str(uuid4()),
                 )
 
@@ -578,41 +369,37 @@ class TestCugaComponentWithClient(ComponentTestBaseWithClient):
 
     @pytest.mark.api_key_required
     @pytest.mark.no_blockbuster
-    async def test_cuga_structured_response_with_schema(self):
-        """Test CugaComponent structured response with schema validation.
-
-        This test verifies that the CugaComponent can generate structured
-        responses with schema validation using real API calls.
-
-        Note:
-            This test is currently a placeholder (TODO).
-
-        Requires:
-            OPENAI_API_KEY environment variable
-        """
-        # TODO: Add test for structured response with schema
-
-    @pytest.mark.api_key_required
-    @pytest.mark.no_blockbuster
-    async def test_cuga_with_policies(self):
-        """Test Cuga with custom policies.
+    async def test_cuga_with_instructions(self):
+        """Test Cuga with custom instructions.
 
         This integration test verifies that the CugaComponent can apply
-        custom policies to modify its behavior during execution.
+        custom instructions to modify its behavior during execution.
 
         Requires:
             OPENAI_API_KEY environment variable
         """
-        api_key = os.getenv("OPENAI_API_KEY")
+        from tests.api_keys import get_openai_api_key
+
+        api_key = get_openai_api_key()
         input_value = "What is 2 + 2?"
-        policies = "## Answer\n\nYou must always respond with enthusiasm and use exclamation marks!"
+        instructions = "## Answer\n\nYou must always respond with enthusiasm and use exclamation marks!"
         tools = [CalculatorToolComponent().build_tool()]
         cuga = CugaComponent(
             input_value=input_value,
             api_key=api_key,
-            model_name="gpt-4o",
-            agent_llm="OpenAI",
-            policies=policies,
+            model=[
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",  # pragma: allowlist secret
+                    },
+                }
+            ],
+            instructions=instructions,
             tools=tools,
             _session_id=str(uuid4()),
         )

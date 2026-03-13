@@ -32,4 +32,18 @@ VARIABLES_TO_GET_FROM_ENVIRONMENT = [
     "NOVITA_API_KEY",
     "TAVILY_API_KEY",
     "COMETAPI_KEY",
+    # IBM WatsonX variables
+    "WATSONX_APIKEY",
+    "WATSONX_PROJECT_ID",
+    "WATSONX_URL",
 ]
+
+# Agentic experience specific variables
+AGENTIC_VARIABLES = [
+    "FLOW_ID",
+    "COMPONENT_ID",
+    "FIELD_NAME",
+    "ASTRA_TOKEN",
+]
+
+DEFAULT_AGENTIC_VARIABLE_VALUE = ""

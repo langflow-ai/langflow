@@ -130,7 +130,7 @@ export default function UpdateComponentModal({
       size="small-update"
       className="px-4 py-3"
     >
-      <BaseModal.Trigger asChild>{children ?? <></>}</BaseModal.Trigger>
+      <BaseModal.Trigger asChild>{children ?? <span />}</BaseModal.Trigger>
       <BaseModal.Header>
         <span className="">
           Update{" "}

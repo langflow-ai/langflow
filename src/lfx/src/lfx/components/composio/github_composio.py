@@ -3,7 +3,7 @@ from lfx.base.composio.composio_base import ComposioBaseComponent
 
 class ComposioGitHubAPIComponent(ComposioBaseComponent):
     display_name: str = "GitHub"
-    icon = "Github"
+    icon = "GithubComposio"
     documentation: str = "https://docs.composio.dev"
     app_name = "github"
 

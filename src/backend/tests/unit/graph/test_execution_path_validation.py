@@ -33,15 +33,18 @@ TEST_FLOWS = [
 
 @pytest.fixture
 def loop_csv_path() -> Generator[Path, None, None]:
-    """Move loop_test.csv to user's cache directory."""
-    from platformdirs import user_cache_dir
+    """Copy loop_test.csv to current working directory so File component can find it.
 
-    user_cache_dir = user_cache_dir("langflow")
-    file_path = Path(user_cache_dir) / "loop_test.csv"
+    The File component resolves relative paths relative to the current working directory,
+    so we need to place the file there rather than in the cache directory.
+    """
+    # Copy to current working directory
+    file_path = Path.cwd() / "loop_test.csv"
     shutil.copy(TEST_DATA_DIR / "loop_test.csv", file_path.as_posix())
     yield file_path
     # Remove the file
-    file_path.unlink()
+    if file_path.exists():
+        file_path.unlink()
 
 
 async def run_via_async_start_traced(graph: Graph) -> ExecutionTrace:

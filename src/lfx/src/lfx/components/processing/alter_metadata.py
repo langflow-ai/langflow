@@ -19,7 +19,7 @@ class AlterMetadataComponent(Component):
             display_name="Input",
             info="Object(s) to which Metadata should be added",
             required=False,
-            input_types=["Message", "Data"],
+            input_types=["Message", "Data", "JSON"],
             is_list=True,
         ),
         StrInput(
@@ -32,7 +32,7 @@ class AlterMetadataComponent(Component):
             name="metadata",
             display_name="Metadata",
             info="Metadata to add to each object",
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
             required=True,
         ),
         MessageTextInput(
@@ -47,12 +47,12 @@ class AlterMetadataComponent(Component):
     outputs = [
         Output(
             name="data",
-            display_name="Data",
+            display_name="JSON",
             info="List of Input objects each with added Metadata",
             method="process_output",
         ),
         Output(
-            display_name="DataFrame",
+            display_name="Table",
             name="dataframe",
             info="Data objects as a DataFrame, with metadata as columns",
             method="as_dataframe",

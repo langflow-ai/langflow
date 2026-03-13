@@ -11,7 +11,7 @@ from lfx.schema.data import Data
 class CalculatorComponent(Component):
     display_name = "Calculator"
     description = "Perform basic arithmetic operations on a given expression."
-    documentation: str = "https://docs.langflow.org/components-helpers#calculator"
+    documentation: str = "https://docs.langflow.org/calculator"
     icon = "calculator"
 
     # Cache operators dictionary as a class variable
@@ -33,7 +33,7 @@ class CalculatorComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="result", type_=Data, method="evaluate_expression"),
+        Output(display_name="JSON", name="result", type_=Data, method="evaluate_expression"),
     ]
 
     def _eval_expr(self, node: ast.AST) -> float:

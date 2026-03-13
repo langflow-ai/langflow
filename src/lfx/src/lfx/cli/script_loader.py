@@ -6,6 +6,7 @@ containing LFX graph variables.
 
 import ast
 import importlib.util
+import inspect
 import json
 import sys
 from contextlib import contextmanager
@@ -14,9 +15,8 @@ from typing import TYPE_CHECKING, Any
 
 import typer
 
-from lfx.graph import Graph
-
 if TYPE_CHECKING:
+    from lfx.graph import Graph
     from lfx.schema.message import Message
 
 
@@ -35,21 +35,33 @@ def temporary_sys_path(path: str):
 
 def _load_module_from_script(script_path: Path) -> Any:
     """Load a Python module from a script file."""
-    spec = importlib.util.spec_from_file_location("script_module", script_path)
+    # Use the script name as the module name to allow inspect to find it
+    module_name = script_path.stem
+    spec = importlib.util.spec_from_file_location(module_name, script_path)
     if spec is None or spec.loader is None:
         msg = f"Could not create module spec for '{script_path}'"
         raise ImportError(msg)
 
     module = importlib.util.module_from_spec(spec)
 
-    with temporary_sys_path(str(script_path.parent)):
-        spec.loader.exec_module(module)
+    # Register in sys.modules so inspect.getmodule works
+    sys.modules[module_name] = module
+
+    try:
+        with temporary_sys_path(str(script_path.parent)):
+            spec.loader.exec_module(module)
+    except Exception:
+        if module_name in sys.modules:
+            del sys.modules[module_name]
+        raise
 
     return module
 
 
-def _validate_graph_instance(graph_obj: Any) -> Graph:
+def _validate_graph_instance(graph_obj: Any) -> "Graph":
     """Extract information from a graph object."""
+    from lfx.graph import Graph
+
     if not isinstance(graph_obj, Graph):
         msg = f"Graph object is not a LFX Graph instance: {type(graph_obj)}"
         raise TypeError(msg)
@@ -71,26 +83,39 @@ def _validate_graph_instance(graph_obj: Any) -> Graph:
     return graph_obj
 
 
-def load_graph_from_script(script_path: Path) -> Graph:
-    """Load and execute a Python script to extract the 'graph' variable.
+async def load_graph_from_script(script_path: Path) -> "Graph":
+    """Load and execute a Python script to extract the 'graph' variable or call 'get_graph' function.
 
     Args:
         script_path (Path): Path to the Python script file
 
     Returns:
-        dict: Information about the loaded graph variable including the graph object itself
+        Graph: The loaded and validated graph instance
     """
     try:
         # Load the module
         module = _load_module_from_script(script_path)
 
-        # Check if 'graph' variable exists
-        if not hasattr(module, "graph"):
-            msg = "No 'graph' variable found in the executed script"
+        graph_obj = None
+
+        # First, try to get graph from 'get_graph' function (preferred for async code)
+        if hasattr(module, "get_graph") and callable(module.get_graph):
+            get_graph_func = module.get_graph
+
+            # Check if get_graph is async and handle accordingly
+            if inspect.iscoroutinefunction(get_graph_func):
+                graph_obj = await get_graph_func()
+            else:
+                graph_obj = get_graph_func()
+
+        # Fallback to 'graph' variable for backward compatibility
+        elif hasattr(module, "graph"):
+            graph_obj = module.graph
+
+        if graph_obj is None:
+            msg = "No 'graph' variable or 'get_graph()' function found in the executed script"
             raise ValueError(msg)
 
-        # Extract graph information
-        graph_obj = module.graph
         return _validate_graph_instance(graph_obj)
 
     except (
@@ -178,13 +203,13 @@ def extract_structured_result(results: list, *, extract_text: bool = True) -> di
 
 
 def find_graph_variable(script_path: Path) -> dict | None:
-    """Parse a Python script and find the 'graph' variable assignment.
+    """Parse a Python script and find the 'graph' variable assignment or 'get_graph' function.
 
     Args:
         script_path (Path): Path to the Python script file
 
     Returns:
-        dict | None: Information about the graph variable if found, None otherwise
+        dict | None: Information about the graph variable or get_graph function if found, None otherwise
     """
     try:
         with script_path.open(encoding="utf-8") as f:
@@ -193,8 +218,36 @@ def find_graph_variable(script_path: Path) -> dict | None:
         # Parse the script using AST
         tree = ast.parse(content)
 
-        # Look for assignments to 'graph' variable
+        # Look for 'get_graph' function definitions (preferred) or 'graph' variable assignments
         for node in ast.walk(tree):
+            # Check for get_graph function definition
+            if isinstance(node, ast.FunctionDef) and node.name == "get_graph":
+                line_number = node.lineno
+                is_async = isinstance(node, ast.AsyncFunctionDef)
+
+                return {
+                    "line_number": line_number,
+                    "type": "function_definition",
+                    "function": "get_graph",
+                    "is_async": is_async,
+                    "arg_count": len(node.args.args),
+                    "source_line": content.split("\n")[line_number - 1].strip(),
+                }
+
+            # Check for async get_graph function definition
+            if isinstance(node, ast.AsyncFunctionDef) and node.name == "get_graph":
+                line_number = node.lineno
+
+                return {
+                    "line_number": line_number,
+                    "type": "function_definition",
+                    "function": "get_graph",
+                    "is_async": True,
+                    "arg_count": len(node.args.args),
+                    "source_line": content.split("\n")[line_number - 1].strip(),
+                }
+
+            # Fallback: look for assignments to 'graph' variable
             if isinstance(node, ast.Assign):
                 # Check if any target is named 'graph'
                 for target in node.targets:

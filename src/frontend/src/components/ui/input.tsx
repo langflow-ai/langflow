@@ -7,13 +7,40 @@ export interface InputProps
   icon?: string;
   inputClassName?: string;
   placeholder?: string;
+  placeholderClassName?: string;
+  endIcon?: React.ReactNode;
+  /** @deprecated use endIcon with JSX directly */
+  endIconClassName?: string;
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   (
-    { className, inputClassName, icon = "", type, placeholder, ...props },
+    {
+      className,
+      inputClassName,
+      icon = "",
+      endIcon,
+      endIconClassName = "",
+      type,
+      placeholder,
+      ...props
+    },
     ref,
   ) => {
+    // Support legacy string endIcon (icon name) for backwards compatibility
+    const resolvedEndIcon =
+      typeof endIcon === "string" ? (
+        <ForwardedIconComponent
+          name={endIcon}
+          className={cn(
+            "pointer-events-none h-4 w-4 text-muted-foreground",
+            endIconClassName,
+          )}
+        />
+      ) : (
+        endIcon
+      );
+
     return (
       <label
         className={cn(
@@ -34,6 +61,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           className={cn(
             "nopan nodelete nodrag noflow primary-input !placeholder-transparent",
             icon && "pl-9",
+            resolvedEndIcon && "pr-9",
             icon ? inputClassName : className,
           )}
           ref={ref}
@@ -48,6 +76,14 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         >
           {placeholder}
         </span>
+        {resolvedEndIcon && (
+          <div
+            data-testid="input-end-icon"
+            className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center"
+          >
+            {resolvedEndIcon}
+          </div>
+        )}
       </label>
     );
   },

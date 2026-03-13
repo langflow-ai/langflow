@@ -14,7 +14,9 @@ from lfx.log.logger import logger
 from langflow.services.base import Service
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
 from langflow.services.telemetry.schema import (
+    MAX_TELEMETRY_URL_SIZE,
     ComponentIndexPayload,
+    ComponentInputsPayload,
     ComponentPayload,
     EmailPayload,
     ExceptionPayload,
@@ -23,7 +25,6 @@ from langflow.services.telemetry.schema import (
     ShutdownPayload,
     VersionPayload,
 )
-from langflow.utils.registered_email_util import get_email_model
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
@@ -127,6 +128,8 @@ class TelemetryService(Service):
 
     async def _send_email_telemetry(self) -> None:
         """Send the telemetry event for the registered email address."""
+        from langflow.utils.registered_email_util import get_email_model
+
         payload: EmailPayload | None = get_email_model()
 
         if not payload:
@@ -169,6 +172,19 @@ class TelemetryService(Service):
 
     async def log_package_component(self, payload: ComponentPayload) -> None:
         await self._queue_event((self.send_telemetry_data, payload, "component"))
+
+    async def log_package_component_inputs(self, payload: ComponentInputsPayload) -> None:
+        """Log component input values, splitting into multiple requests if needed.
+
+        Args:
+            payload: Component inputs payload to log
+        """
+        # Split payload if it exceeds URL size limit
+        chunks = payload.split_if_needed(max_url_size=MAX_TELEMETRY_URL_SIZE)
+
+        # Queue each chunk separately
+        for chunk in chunks:
+            await self._queue_event((self.send_telemetry_data, chunk, "component_inputs"))
 
     async def log_component_index(self, payload: ComponentIndexPayload) -> None:
         await self._queue_event((self.send_telemetry_data, payload, "component_index"))
@@ -235,9 +251,15 @@ class TelemetryService(Service):
             if self.worker_task:
                 await self._cancel_task(self.worker_task, "Cancel telemetry worker task")
             if self.log_package_version_task:
-                await self._cancel_task(self.log_package_version_task, "Cancel telemetry log package version task")
+                await self._cancel_task(
+                    self.log_package_version_task,
+                    "Cancel telemetry log package version task",
+                )
             if self.log_package_email_task:
-                await self._cancel_task(self.log_package_email_task, "Cancel telemetry log package email task")
+                await self._cancel_task(
+                    self.log_package_email_task,
+                    "Cancel telemetry log package email task",
+                )
             await self.client.aclose()
         except Exception:  # noqa: BLE001
             await logger.aexception("Error stopping tracing service")

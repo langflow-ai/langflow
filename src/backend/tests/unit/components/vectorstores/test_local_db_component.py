@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -381,3 +382,28 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
 
         assert collections == ["collection1", "collection2", "collection3"]
         mock_list.assert_called_once()
+
+    def test_build_vector_store_disabled_in_astra_cloud(
+        self, component_class: type[LocalDBComponent], default_kwargs: dict[str, Any]
+    ) -> None:
+        """Test that build_vector_store raises an error when ASTRA_CLOUD_DISABLE_COMPONENT is true."""
+        with patch.dict(os.environ, {"ASTRA_CLOUD_DISABLE_COMPONENT": "true"}):
+            component: LocalDBComponent = component_class().set(**default_kwargs)
+
+            with pytest.raises(ValueError) as exc_info:  # noqa: PT011
+                component.build_vector_store()
+
+            # Verify the error message mentions cloud/astra
+            error_msg = str(exc_info.value).lower()
+            assert "astra" in error_msg or "cloud" in error_msg or "s3" in error_msg
+
+    def test_build_vector_store_works_when_not_in_astra_cloud(
+        self, component_class: type[LocalDBComponent], default_kwargs: dict[str, Any]
+    ) -> None:
+        """Test that build_vector_store works normally when ASTRA_CLOUD_DISABLE_COMPONENT is false."""
+        with patch.dict(os.environ, {"ASTRA_CLOUD_DISABLE_COMPONENT": "false"}):
+            component: LocalDBComponent = component_class().set(**default_kwargs)
+
+            # Should work without raising cloud-related errors
+            vector_store = component.build_vector_store()
+            assert vector_store is not None

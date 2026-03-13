@@ -1,17 +1,13 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from lfx.components.models_and_agents.embedding_model import (
-    OPENAI_EMBEDDING_MODEL_NAMES,
-    WATSONX_EMBEDDING_MODEL_NAMES,
-    EmbeddingModelComponent,
-)
+from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
+from lfx.components.models_and_agents import EmbeddingModelComponent
 
-from tests.base import ComponentTestBaseWithClient
+from tests.base import ComponentTestBaseWithoutClient
 
 
-@pytest.mark.usefixtures("client")
-class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
+class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self):
         return EmbeddingModelComponent
@@ -19,9 +15,27 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
     @pytest.fixture
     def default_kwargs(self):
         return {
-            "provider": "OpenAI",
-            "model": "text-embedding-3-small",
-            "api_key": "test-api-key",  # pragma:allowlist secret
+            "model": [
+                {
+                    "name": "text-embedding-3-small",
+                    "provider": "OpenAI",
+                    "metadata": {
+                        "embedding_class": "OpenAIEmbeddings",
+                        "param_mapping": {
+                            "model": "model",
+                            "api_key": "api_key",
+                            "api_base": "base_url",
+                            "dimensions": "dimensions",
+                            "chunk_size": "chunk_size",
+                            "request_timeout": "request_timeout",
+                            "max_retries": "max_retries",
+                            "show_progress_bar": "show_progress_bar",
+                            "model_kwargs": "model_kwargs",
+                        },
+                    },
+                }
+            ],
+            "api_key": "test-api-key",
             "chunk_size": 1000,
             "max_retries": 3,
             "show_progress_bar": False,
@@ -30,190 +44,216 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithClient):
     @pytest.fixture
     def file_names_mapping(self):
         """Return the file names mapping for version-specific files."""
+        return []
 
-    async def test_update_build_config_openai(self, component_class, default_kwargs):
-        component = component_class(**default_kwargs)
-        build_config = {
-            "model": {"options": [], "value": ""},
-            "api_key": {"display_name": "API Key", "required": True, "show": True},
-            "api_base": {"display_name": "API Base URL", "value": ""},
-            "base_url_ibm_watsonx": {"show": False},
-            "project_id": {"show": False},
-            "ollama_base_url": {"show": False},
-        }
-        updated_config = await component.update_build_config(build_config, "OpenAI", "provider")
-        assert updated_config["model"]["options"] == OPENAI_EMBEDDING_MODEL_NAMES
-        assert updated_config["model"]["value"] == OPENAI_EMBEDDING_MODEL_NAMES[0]
-        assert updated_config["api_key"]["display_name"] == "OpenAI API Key"
-        assert updated_config["api_key"]["required"] is True
-        assert updated_config["api_key"]["show"] is True
-        assert updated_config["api_base"]["display_name"] == "OpenAI API Base URL"
-        assert updated_config["project_id"]["show"] is False
-        assert updated_config["base_url_ibm_watsonx"]["show"] is False
-        assert updated_config["ollama_base_url"]["show"] is False
-
-    @patch("lfx.components.models.embedding_model.get_ollama_models")
-    @patch("lfx.components.models.embedding_model.is_valid_ollama_url")
-    async def test_update_build_config_ollama(
-        self, mock_is_valid_url, mock_get_ollama_models, component_class, default_kwargs
+    @patch("lfx.components.models_and_agents.embedding_model.get_unified_models_detailed")
+    @patch("lfx.components.models_and_agents.embedding_model.get_api_key_for_provider")
+    @patch("lfx.components.models_and_agents.embedding_model.get_embedding_class")
+    def test_build_embeddings_openai(
+        self, mock_get_embedding_class, mock_get_api_key, mock_get_unified_models, component_class, default_kwargs
     ):
-        # Mock the validation and model fetching
-        mock_is_valid_url.return_value = True
-        mock_get_ollama_models.return_value = ["nomic-embed-text", "mxbai-embed-large"]
-
-        component = component_class(**default_kwargs)
-        component.ollama_base_url = "http://localhost:11434"
-        build_config = {
-            "model": {"options": [], "value": ""},
-            "api_key": {"display_name": "API Key", "required": True, "show": True},
-            "api_base": {"display_name": "API Base URL", "value": ""},
-            "project_id": {"show": False},
-            "base_url_ibm_watsonx": {"show": False},
-            "ollama_base_url": {"show": False},
-        }
-        updated_config = await component.update_build_config(build_config, "Ollama", "provider")
-        assert updated_config["model"]["options"] == ["nomic-embed-text", "mxbai-embed-large"]
-        assert updated_config["model"]["value"] == "nomic-embed-text"
-        assert updated_config["api_key"]["display_name"] == "API Key (Optional)"
-        assert updated_config["api_key"]["required"] is False
-        assert updated_config["api_key"]["show"] is False
-        assert updated_config["api_base"]["show"] is False
-        assert updated_config["project_id"]["show"] is False
-        assert updated_config["base_url_ibm_watsonx"]["show"] is False
-        assert updated_config["ollama_base_url"]["show"] is True
-
-    async def test_update_build_config_watsonx(self, component_class, default_kwargs):
-        component = component_class(**default_kwargs)
-        build_config = {
-            "model": {"options": [], "value": ""},
-            "api_key": {"display_name": "API Key", "required": True, "show": True},
-            "api_base": {"display_name": "API Base URL", "value": ""},
-            "project_id": {"show": False},
-            "base_url_ibm_watsonx": {"show": False},
-            "ollama_base_url": {"show": False},
-        }
-        updated_config = await component.update_build_config(build_config, "IBM watsonx.ai", "provider")
-        assert updated_config["model"]["options"] == WATSONX_EMBEDDING_MODEL_NAMES
-        assert updated_config["model"]["value"] == WATSONX_EMBEDDING_MODEL_NAMES[0]
-        assert updated_config["api_key"]["display_name"] == "IBM watsonx.ai API Key"
-        assert updated_config["api_key"]["required"] is True
-        assert updated_config["api_key"]["show"] is True
-        assert updated_config["api_base"]["show"] is False
-        assert updated_config["base_url_ibm_watsonx"]["show"] is True
-        assert updated_config["project_id"]["show"] is True
-        assert updated_config["ollama_base_url"]["show"] is False
-
-    @patch("lfx.components.models_and_agents.embedding_model.OpenAIEmbeddings")
-    async def test_build_embeddings_openai(self, mock_openai_embeddings, component_class, default_kwargs):
+        # Setup mock for get_api_key_for_provider
+        mock_get_api_key.return_value = "test-key"
+        # Setup mock for get_unified_models_detailed to return empty (no available models)
+        mock_get_unified_models.return_value = []
         # Setup mock
+        mock_openai_class = MagicMock()
         mock_instance = MagicMock()
-        mock_openai_embeddings.return_value = mock_instance
+        mock_openai_class.return_value = mock_instance
+        mock_get_embedding_class.return_value = mock_openai_class
 
         # Create and configure the component
         component = component_class(**default_kwargs)
-        component.provider = "OpenAI"
-        component.model = "text-embedding-3-small"
-        component.api_key = "test-key"  # pragma:allowlist secret
+        component._user_id = "test-user-id"
+        component.api_key = "test-key"
         component.chunk_size = 1000
         component.max_retries = 3
         component.show_progress_bar = False
+        component.api_base = None
+        component.dimensions = None
+        component.request_timeout = None
+        component.model_kwargs = None
 
         # Build the embeddings
         embeddings = component.build_embeddings()
+
+        # Verify the embedding class getter was called
+        mock_get_embedding_class.assert_called_once_with("OpenAIEmbeddings")
 
         # Verify the OpenAIEmbeddings was called with the correct parameters
-        mock_openai_embeddings.assert_called_once_with(
+        mock_openai_class.assert_called_once_with(
             model="text-embedding-3-small",
-            dimensions=None,
-            base_url=None,
-            api_key="test-key",  # pragma:allowlist secret
+            api_key="test-key",
             chunk_size=1000,
             max_retries=3,
-            timeout=None,
             show_progress_bar=False,
-            model_kwargs={},
         )
-        assert embeddings == mock_instance
 
-    @patch("langchain_ollama.OllamaEmbeddings")
-    async def test_build_embeddings_ollama(self, mock_ollama_embeddings, component_class, default_kwargs):
+        # Verify the result is wrapped in EmbeddingsWithModels
+        assert isinstance(embeddings, EmbeddingsWithModels)
+        assert embeddings.embeddings == mock_instance
+        assert embeddings.available_models == {}
+
+    @patch("lfx.components.models_and_agents.embedding_model.get_api_key_for_provider")
+    def test_build_embeddings_openai_missing_api_key(self, mock_get_api_key, component_class, default_kwargs):
+        # Setup mock to return None (no API key)
+        mock_get_api_key.return_value = None
+
+        component = component_class(**default_kwargs)
+        component._user_id = "test-user-id"
+        component.api_key = None
+
+        with pytest.raises(ValueError, match="OpenAI API key is required"):
+            component.build_embeddings()
+
+    def test_build_embeddings_invalid_model_format(self, component_class, default_kwargs):
+        component = component_class(**default_kwargs)
+        component.model = None
+
+        with pytest.raises(ValueError, match="Model must be a non-empty list"):
+            component.build_embeddings()
+
+    @patch("lfx.components.models_and_agents.embedding_model.get_api_key_for_provider")
+    @patch("lfx.components.models_and_agents.embedding_model.get_embedding_class")
+    def test_build_embeddings_unknown_embedding_class(
+        self, mock_get_embedding_class, mock_get_api_key, component_class, default_kwargs
+    ):
+        # Setup mock for get_api_key_for_provider
+        mock_get_api_key.return_value = "test-key"
+        # Setup mock to raise ValueError for unknown class
+        mock_get_embedding_class.side_effect = ValueError("Unknown embedding class: UnknownEmbeddingClass")
+
+        component = component_class(**default_kwargs)
+        component._user_id = "test-user-id"
+        component.model = [
+            {
+                "name": "unknown-model",
+                "provider": "Unknown",
+                "metadata": {
+                    "embedding_class": "UnknownEmbeddingClass",
+                    "param_mapping": {},
+                },
+            }
+        ]
+
+        with pytest.raises(ValueError, match="Unknown embedding class: UnknownEmbeddingClass"):
+            component.build_embeddings()
+
+    @patch("lfx.components.models_and_agents.embedding_model.get_unified_models_detailed")
+    @patch("lfx.components.models_and_agents.embedding_model.get_api_key_for_provider")
+    @patch("lfx.components.models_and_agents.embedding_model.get_embedding_class")
+    def test_build_embeddings_google(
+        self, mock_get_embedding_class, mock_get_api_key, mock_get_unified_models, component_class
+    ):
+        # Setup mock for get_api_key_for_provider
+        mock_get_api_key.return_value = "test-google-key"
+        # Setup mock for get_unified_models_detailed to return empty (no available models)
+        mock_get_unified_models.return_value = []
+
         # Setup mock
+        mock_google_class = MagicMock()
         mock_instance = MagicMock()
-        mock_ollama_embeddings.return_value = mock_instance
+        mock_google_class.return_value = mock_instance
+        mock_get_embedding_class.return_value = mock_google_class
 
-        # Create and configure the component
-        kwargs = default_kwargs.copy()
-        kwargs["provider"] = "Ollama"
-        kwargs["model"] = "nomic-embed-text"
-        component = component_class(**kwargs)
-        component.api_base = "http://localhost:11434"
+        # Create component with Google Generative AI configuration
+        component = component_class(
+            model=[
+                {
+                    "name": "models/text-embedding-004",
+                    "provider": "Google Generative AI",
+                    "metadata": {
+                        "embedding_class": "GoogleGenerativeAIEmbeddings",
+                        "param_mapping": {
+                            "model": "model",
+                            "api_key": "google_api_key",
+                            "request_timeout": "request_options",
+                            "model_kwargs": "client_options",
+                        },
+                    },
+                }
+            ],
+            api_key="test-google-key",
+        )
+        component._user_id = "test-user-id"
+        component.api_base = None
+        component.dimensions = None
+        component.chunk_size = None
+        component.request_timeout = None
+        component.max_retries = None
+        component.show_progress_bar = None
+        component.model_kwargs = None
 
         # Build the embeddings
         embeddings = component.build_embeddings()
 
-        # Verify the OllamaEmbeddings was called with the correct parameters
-        mock_ollama_embeddings.assert_called_once_with(
-            model="nomic-embed-text",
-            base_url="http://localhost:11434",
-        )
-        assert embeddings == mock_instance
+        # Verify the embedding class getter was called
+        mock_get_embedding_class.assert_called_once_with("GoogleGenerativeAIEmbeddings")
 
-    @patch("langchain_ibm.WatsonxEmbeddings")
-    async def test_build_embeddings_watsonx(self, mock_watsonx_embeddings, component_class, default_kwargs):
-        # Setup mock
-        mock_instance = MagicMock()
-        mock_watsonx_embeddings.return_value = mock_instance
+        # Verify the GoogleGenerativeAIEmbeddings was called with the correct parameters
+        mock_google_class.assert_called_once_with(
+            model="models/text-embedding-004",
+            google_api_key="test-google-key",
+        )
+
+        # Verify the result is wrapped in EmbeddingsWithModels
+        assert isinstance(embeddings, EmbeddingsWithModels)
+        assert embeddings.embeddings == mock_instance
+        assert embeddings.available_models == {}
+
+    @patch("lfx.components.models_and_agents.embedding_model.get_unified_models_detailed")
+    @patch("lfx.components.models_and_agents.embedding_model.get_api_key_for_provider")
+    @patch("lfx.components.models_and_agents.embedding_model.get_embedding_class")
+    def test_build_embeddings_with_available_models(
+        self, mock_get_embedding_class, mock_get_api_key, mock_get_unified_models, component_class, default_kwargs
+    ):
+        """Test that available_models dict is populated from unified models."""
+        # Setup mock for get_api_key_for_provider
+        mock_get_api_key.return_value = "test-key"
+
+        # Setup mock for get_unified_models_detailed to return multiple models
+        mock_get_unified_models.return_value = [
+            {
+                "provider": "OpenAI",
+                "models": [
+                    {"model_name": "text-embedding-3-small"},
+                    {"model_name": "text-embedding-3-large"},
+                    {"model_name": "text-embedding-ada-002"},
+                ],
+            }
+        ]
+
+        # Setup mock for embedding classes
+        mock_openai_class = MagicMock()
+        # Create different mock instances for each model
+        mock_instances = {
+            "text-embedding-3-small": MagicMock(name="small"),
+            "text-embedding-3-large": MagicMock(name="large"),
+            "text-embedding-ada-002": MagicMock(name="ada"),
+        }
+        mock_openai_class.side_effect = lambda **kwargs: mock_instances.get(kwargs.get("model"), MagicMock())
+        mock_get_embedding_class.return_value = mock_openai_class
 
         # Create and configure the component
-        kwargs = default_kwargs.copy()
-        kwargs["provider"] = "IBM watsonx.ai"
-        kwargs["model"] = "ibm/granite-embedding-125m-english"
-        component = component_class(**kwargs)
-        component.project_id = "test-project-id"
+        component = component_class(**default_kwargs)
+        component._user_id = "test-user-id"
+        component.api_key = "test-key"
+        component.chunk_size = 1000
+        component.max_retries = 3
+        component.show_progress_bar = False
+        component.api_base = None
+        component.dimensions = None
+        component.request_timeout = None
+        component.model_kwargs = None
 
         # Build the embeddings
         embeddings = component.build_embeddings()
 
-        # Verify the WatsonxEmbeddings was called with the correct parameters
-        mock_watsonx_embeddings.assert_called_once_with(
-            model_id="ibm/granite-embedding-125m-english",
-            url="https://us-south.ml.cloud.ibm.com",
-            apikey="test-api-key",  # pragma:allowlist secret
-            project_id="test-project-id",
-        )
-        assert embeddings == mock_instance
+        # Verify the result is wrapped in EmbeddingsWithModels
+        assert isinstance(embeddings, EmbeddingsWithModels)
 
-    async def test_build_embeddings_watsonx_missing_project_id(self, component_class, default_kwargs):
-        kwargs = default_kwargs.copy()
-        kwargs["provider"] = "IBM watsonx.ai"
-        component = component_class(**kwargs)
-        component.project_id = None
-
-        with pytest.raises(ValueError, match=r"Project ID is required for IBM watsonx.ai"):
-            component.build_embeddings()
-
-    async def test_build_embeddings_openai_missing_api_key(self, component_class, default_kwargs):
-        component = component_class(**default_kwargs)
-        component.provider = "OpenAI"
-        component.api_key = None
-
-        with pytest.raises(ValueError, match="OpenAI API key is required when using OpenAI provider"):
-            component.build_embeddings()
-
-    async def test_build_embeddings_watsonx_missing_api_key(self, component_class, default_kwargs):
-        kwargs = default_kwargs.copy()
-        kwargs["provider"] = "IBM watsonx.ai"
-        kwargs["api_key"] = None
-        component = component_class(**kwargs)
-        component.api_key = None
-        component.project_id = "test-project"
-
-        with pytest.raises(ValueError, match=r"IBM watsonx.ai API key is required when using IBM watsonx.ai provider"):
-            component.build_embeddings()
-
-    async def test_build_embeddings_unknown_provider(self, component_class, default_kwargs):
-        component = component_class(**default_kwargs)
-        component.provider = "Unknown"
-
-        with pytest.raises(ValueError, match="Unknown provider: Unknown"):
-            component.build_embeddings()
+        # Verify available_models contains all models from unified models
+        assert "text-embedding-3-small" in embeddings.available_models
+        assert "text-embedding-3-large" in embeddings.available_models
+        assert "text-embedding-ada-002" in embeddings.available_models
+        assert len(embeddings.available_models) == 3

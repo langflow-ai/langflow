@@ -156,6 +156,7 @@ class TestTelemetryPayloadValidation:
         """Test ComponentPayload creation and serialization with aliases."""
         payload = ComponentPayload(
             component_name="TestComponent",
+            component_id="TestComponent-abc123",
             component_seconds=42,
             component_success=True,
             component_error_message="Test error",
@@ -164,6 +165,7 @@ class TestTelemetryPayloadValidation:
 
         # Test direct attribute access
         assert payload.component_name == "TestComponent"
+        assert payload.component_id == "TestComponent-abc123"
         assert payload.component_seconds == 42
         assert payload.component_success is True
         assert payload.component_error_message == "Test error"
@@ -173,6 +175,7 @@ class TestTelemetryPayloadValidation:
         serialized = payload.model_dump(by_alias=True)
         expected = {
             "componentName": "TestComponent",
+            "componentId": "TestComponent-abc123",
             "componentSeconds": 42,
             "componentSuccess": True,
             "componentErrorMessage": "Test error",
@@ -184,14 +187,52 @@ class TestTelemetryPayloadValidation:
     def test_component_payload_optional_fields(self):
         """Test ComponentPayload with optional fields."""
         # Test minimal required fields
-        payload = ComponentPayload(component_name="MinimalComponent", component_seconds=5, component_success=False)
+        payload = ComponentPayload(
+            component_name="MinimalComponent",
+            component_id="MinimalComponent-xyz789",
+            component_seconds=5,
+            component_success=False,
+        )
 
         assert payload.component_error_message is None
         assert payload.client_type is None
 
         # Test serialization excludes None values
         serialized = payload.model_dump(by_alias=True, exclude_none=True)
-        expected = {"componentName": "MinimalComponent", "componentSeconds": 5, "componentSuccess": False}
+        expected = {
+            "componentName": "MinimalComponent",
+            "componentId": "MinimalComponent-xyz789",
+            "componentSeconds": 5,
+            "componentSuccess": False,
+        }
+        assert serialized == expected
+
+    def test_component_inputs_payload_creation_and_serialization(self):
+        """Test ComponentInputsPayload creation and serialization."""
+        from langflow.services.telemetry.schema import ComponentInputsPayload
+
+        payload = ComponentInputsPayload(
+            component_run_id="run-abc-123",
+            component_id="OpenAIModel-xyz789",
+            component_name="OpenAIModel",
+            component_inputs={"temperature": 0.7, "model": "gpt-4"},
+        )
+
+        assert payload.component_run_id == "run-abc-123"
+        assert payload.component_id == "OpenAIModel-xyz789"
+        assert payload.component_name == "OpenAIModel"
+        assert payload.component_inputs == {"temperature": 0.7, "model": "gpt-4"}
+
+        serialized = payload.model_dump(by_alias=True)
+        expected = {
+            "componentRunId": "run-abc-123",
+            "componentId": "OpenAIModel-xyz789",
+            "componentName": "OpenAIModel",
+            "componentInputs": {"temperature": 0.7, "model": "gpt-4"},
+            "clientType": None,
+            "chunkIndex": None,
+            "totalChunks": None,
+        }
         assert serialized == expected
 
     def test_playground_payload_creation_and_serialization(self):
@@ -349,7 +390,9 @@ class TestTelemetryPayloadValidation:
     def test_base_payload_client_type_inheritance(self):
         """Test that all payload types inherit client_type from BasePayload."""
         payloads = [
-            ComponentPayload(component_name="test", component_seconds=1, component_success=True),
+            ComponentPayload(
+                component_name="test", component_id="test-123", component_seconds=1, component_success=True
+            ),
             PlaygroundPayload(playground_seconds=1, playground_success=True),
             RunPayload(run_seconds=1, run_success=True),
             VersionPayload(
@@ -401,3 +444,194 @@ class TestTelemetryPayloadValidation:
         assert "runIsWebhook" not in exclude_unset
         assert "runErrorMessage" not in exclude_unset
         assert "clientType" not in exclude_unset
+
+
+class TestComponentInputTelemetry:
+    """Test suite for component input telemetry tracking."""
+
+    def test_serialize_primitive_values(self):
+        """Test that primitive values are serialized correctly."""
+        from lfx.serialization.serialization import serialize
+
+        # Test primitives
+        assert serialize("test") == "test"
+        assert serialize(42) == 42
+        assert serialize(3.14) == 3.14
+        bool_value = True
+        assert serialize(bool_value) is True
+        assert serialize(None) is None
+
+    def test_serialize_list_of_primitives(self):
+        """Test that lists of primitives are serialized correctly."""
+        from lfx.serialization.serialization import serialize
+
+        assert serialize([1, 2, 3]) == [1, 2, 3]
+        assert serialize(["a", "b", "c"]) == ["a", "b", "c"]
+        assert serialize([True, False]) == [True, False]
+        assert serialize([1, "two", 3.0, None]) == [1, "two", 3.0, None]
+
+    def test_serialize_dict(self):
+        """Test that dictionaries are serialized recursively."""
+        from lfx.serialization.serialization import serialize
+
+        result = serialize({"key": "value", "num": 42})
+        assert result == {"key": "value", "num": 42}
+
+        nested = serialize({"outer": {"inner": "value"}})
+        assert nested == {"outer": {"inner": "value"}}
+
+    def test_serialize_bytes(self):
+        """Test that bytes are decoded to strings."""
+        from lfx.serialization.serialization import serialize
+
+        result = serialize(b"test")
+        assert isinstance(result, str)
+        assert result == "test"
+
+    def test_serialize_complex_objects(self):
+        """Test that complex objects return useful representations."""
+        from lfx.serialization.serialization import serialize
+
+        class CustomClass:
+            def __str__(self):
+                return "CustomClass instance"
+
+        obj = CustomClass()
+        result = serialize(obj)
+        assert isinstance(result, str)
+        assert result == "CustomClass instance"
+
+    def test_serialize_unserializable_object(self):
+        """Test that truly unserializable objects return a sentinel."""
+        from lfx.serialization.serialization import serialize
+
+        # Create an object that can't be easily serialized
+        class UnserializableClass:
+            def __str__(self):
+                msg = "Cannot convert to string"
+                raise ValueError(msg)
+
+        obj = UnserializableClass()
+        result = serialize(obj)
+        # Should return "[Unserializable Object]" string
+        assert result == "[Unserializable Object]"
+
+    def test_component_inputs_payload_with_dict(self):
+        """Test ComponentInputsPayload with dict."""
+        from langflow.services.telemetry.schema import ComponentInputsPayload
+
+        inputs_dict = {
+            "temperature": 0.7,
+            "model": "gpt-4",
+            "max_tokens": 1000,
+        }
+
+        payload = ComponentInputsPayload(
+            component_run_id="run-123",
+            component_id="OpenAI-abc",
+            component_name="OpenAI",
+            component_inputs=inputs_dict,
+        )
+
+        serialized = payload.model_dump(by_alias=True, exclude_none=True)
+        assert "componentInputs" in serialized
+        assert serialized["componentInputs"]["temperature"] == 0.7
+        assert serialized["componentInputs"]["model"] == "gpt-4"
+
+    def test_sensitive_field_types_constant(self):
+        """Test that SENSITIVE_FIELD_TYPES contains expected types."""
+        from lfx.inputs.input_mixin import SENSITIVE_FIELD_TYPES, FieldTypes
+
+        # Verify sensitive types are included
+        assert FieldTypes.PASSWORD in SENSITIVE_FIELD_TYPES
+        assert FieldTypes.AUTH in SENSITIVE_FIELD_TYPES
+        assert FieldTypes.FILE in SENSITIVE_FIELD_TYPES
+        assert FieldTypes.CONNECTION in SENSITIVE_FIELD_TYPES
+        assert FieldTypes.MCP in SENSITIVE_FIELD_TYPES
+
+    def test_track_in_telemetry_field_exists(self):
+        """Test that track_in_telemetry field exists in input classes."""
+        from lfx.inputs.inputs import BoolInput, IntInput, SecretStrInput, StrInput
+
+        # Regular input should default to False (opt-in model)
+        regular_input = StrInput(name="test")
+        assert hasattr(regular_input, "track_in_telemetry")
+        assert regular_input.track_in_telemetry is False
+
+        # Secret input should default to False
+        secret_input = SecretStrInput(name="password")
+        assert hasattr(secret_input, "track_in_telemetry")
+        assert secret_input.track_in_telemetry is False
+
+        # Safe inputs explicitly opt-in to tracking
+        int_input = IntInput(name="count")
+        assert hasattr(int_input, "track_in_telemetry")
+        assert int_input.track_in_telemetry is True
+
+        bool_input = BoolInput(name="flag")
+        assert hasattr(bool_input, "track_in_telemetry")
+        assert bool_input.track_in_telemetry is True
+
+    def test_multiple_component_inputs_same_run(self):
+        """Test multiple ComponentInputsPayload for same run_id."""
+        from langflow.services.telemetry.schema import ComponentInputsPayload
+
+        run_id = "run-xyz-789"
+
+        # First component
+        payload1 = ComponentInputsPayload(
+            component_run_id=run_id,
+            component_id="Component1-abc",
+            component_name="Component1",
+            component_inputs={"input1": "value1"},
+        )
+
+        # Second component with same run_id
+        payload2 = ComponentInputsPayload(
+            component_run_id=run_id,
+            component_id="Component2-def",
+            component_name="Component2",
+            component_inputs={"input2": "value2"},
+        )
+
+        # Both should have same run_id but different component_id
+        assert payload1.component_run_id == payload2.component_run_id
+        assert payload1.component_id != payload2.component_id
+
+    def test_component_payload_with_run_id_integration(self):
+        """Test ComponentPayload with run_id for joining data."""
+        from langflow.services.telemetry.schema import ComponentInputsPayload, ComponentPayload
+
+        run_id = "run-integration-123"
+        component_id = "TestComponent-xyz"
+        component_name = "TestComponent"
+
+        # Create execution payload
+        execution_payload = ComponentPayload(
+            component_name=component_name,
+            component_id=component_id,
+            component_seconds=5,
+            component_success=True,
+            component_run_id=run_id,
+        )
+
+        # Create inputs payload
+        inputs_payload = ComponentInputsPayload(
+            component_run_id=run_id,
+            component_id=component_id,
+            component_name=component_name,
+            component_inputs={"param": "value"},
+        )
+
+        # Verify they can be joined via run_id
+        assert execution_payload.component_run_id == inputs_payload.component_run_id
+        assert execution_payload.component_id == inputs_payload.component_id
+
+        # Serialize both
+        exec_serialized = execution_payload.model_dump(by_alias=True, exclude_none=True)
+        inputs_serialized = inputs_payload.model_dump(by_alias=True, exclude_none=True)
+
+        # Both should have componentRunId in camelCase
+        assert "componentRunId" in exec_serialized
+        assert "componentRunId" in inputs_serialized
+        assert exec_serialized["componentRunId"] == inputs_serialized["componentRunId"]

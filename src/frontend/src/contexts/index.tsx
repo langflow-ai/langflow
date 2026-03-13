@@ -7,8 +7,10 @@ import { TooltipProvider } from "../components/ui/tooltip";
 import { ApiInterceptor } from "../controllers/API/api";
 import { AuthProvider } from "./authContext";
 
+// Export queryClient for use in utility functions (e.g., messageUtils, buildUtils)
+export const queryClient = new QueryClient();
+
 export default function ContextWrapper({ children }: { children: ReactNode }) {
-  const queryClient = new QueryClient();
   //element to wrap all context
   return (
     <>

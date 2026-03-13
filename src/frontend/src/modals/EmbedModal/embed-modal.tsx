@@ -4,6 +4,7 @@ import {
   oneDark,
   oneLight,
 } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { CustomAPIGenerator } from "@/customization/components/custom-api-generator";
 import { useDarkStore } from "@/stores/darkStore";
 import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
@@ -63,36 +64,39 @@ export default function EmbedModal({
         </div>
       </BaseModal.Header>
       <BaseModal.Content className="">
-        <div className="relative flex h-full w-full">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={copyToClipboard}
-            data-testid="btn-copy-code"
-            className="!hover:bg-foreground group absolute right-2 top-2"
-          >
-            {isCopied ? (
-              <IconComponent
-                name="Check"
-                className="h-5 w-5 text-muted-foreground"
-              />
-            ) : (
-              <IconComponent
-                name="Copy"
-                className="!h-5 !w-5 text-muted-foreground"
-              />
-            )}
-          </Button>
-          <SyntaxHighlighter
-            showLineNumbers={true}
-            wrapLongLines={true}
-            language="html"
-            style={isDark ? oneDark : oneLight}
-            className="!mt-0 h-full w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
-          >
-            {embedCode}
-          </SyntaxHighlighter>
-        </div>
+        <>
+          <CustomAPIGenerator isOpen={open} isEmbedded={true} />
+          <div className="relative flex h-full w-full">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={copyToClipboard}
+              data-testid="btn-copy-code"
+              className="!hover:bg-foreground group absolute right-2 top-2"
+            >
+              {isCopied ? (
+                <IconComponent
+                  name="Check"
+                  className="h-5 w-5 text-muted-foreground"
+                />
+              ) : (
+                <IconComponent
+                  name="Copy"
+                  className="!h-5 !w-5 text-muted-foreground"
+                />
+              )}
+            </Button>
+            <SyntaxHighlighter
+              showLineNumbers={true}
+              wrapLongLines={true}
+              language="html"
+              style={isDark ? oneDark : oneLight}
+              className="!mt-0 h-full w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
+            >
+              {embedCode}
+            </SyntaxHighlighter>
+          </div>
+        </>
       </BaseModal.Content>
     </BaseModal>
   );

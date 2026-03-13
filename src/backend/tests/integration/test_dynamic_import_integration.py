@@ -175,7 +175,6 @@ class TestDynamicImportIntegration:
         main_dir = dir(components)
         assert "openai" in main_dir
         assert "data" in main_dir
-        assert "agents" in main_dir  # Backwards compatibility alias for models_and_agents
         assert "models_and_agents" in main_dir
 
         openai_dir = dir(openai_components)

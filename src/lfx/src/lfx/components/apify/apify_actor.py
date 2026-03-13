@@ -22,7 +22,7 @@ class ApifyActorsComponent(Component):
         "Use Apify Actors to extract data from hundreds of places fast. "
         "This component can be used in a flow to retrieve data or as a tool with an agent."
     )
-    documentation: str = "http://docs.langflow.org/integrations-apify"
+    documentation: str = "https://docs.langflow.org/bundles-apify"
     icon = "Apify"
     name = "ApifyActors"
 

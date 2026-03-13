@@ -33,10 +33,11 @@ const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
   <Button
     data-testid={testId}
     className={cn(
-      "group flex items-center justify-center !py-1.5 !px-2 hover:bg-accent h-full rounded-none",
+      "group flex items-center justify-center !py-1.5 !px-2 hover:bg-accent h-full rounded-none ",
       disabled && "cursor-not-allowed opacity-50",
     )}
     onClick={onClick}
+    shouldScale={false}
     variant="ghost"
     disabled={disabled}
     title={tooltipText || ""}
@@ -76,7 +77,7 @@ const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
         value={toggleValue}
         handleOnNewValue={onClick}
         editNode={true}
-        id="helper_lines"
+        id={`${testId}-toggle`}
         disabled={false}
       />
     )}

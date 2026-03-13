@@ -1,4 +1,5 @@
 import json
+import math
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
@@ -48,32 +49,37 @@ class MessageBase(SQLModel):
     @field_validator("files", mode="before")
     @classmethod
     def validate_files(cls, value):
-        if not value:
-            value = []
-        return value
+        return value or []
 
     @field_validator("session_id", mode="before")
     @classmethod
     def validate_session_id(cls, value):
         if isinstance(value, UUID):
-            value = str(value)
+            return str(value)
         return value
 
     @classmethod
     def from_message(cls, message: "Message", flow_id: str | UUID | None = None):
-        # first check if the record has all the required fields
         if message.text is None or not message.sender or not message.sender_name:
             msg = "The message does not have the required fields (text, sender, sender_name)."
             raise ValueError(msg)
+
         if message.files:
             image_paths = []
             for file in message.files:
                 if hasattr(file, "path") and hasattr(file, "url") and file.path:
                     session_id = message.session_id
-                    if session_id:
-                        image_paths.append(f"{session_id}{file.path.split(str(session_id))[1]}")
+                    if session_id and str(session_id) in file.path:
+                        parts = file.path.split(str(session_id))
+                        if len(parts) > 1:
+                            image_paths.append(f"{session_id}{parts[1]}")
+                        else:
+                            image_paths.append(file.path)
                     else:
                         image_paths.append(file.path)
+                elif isinstance(file, str):
+                    image_paths.append(file)
+
             if image_paths:
                 message.files = image_paths
 
@@ -89,10 +95,10 @@ class MessageBase(SQLModel):
                 timestamp = parsed.astimezone(timezone.utc) if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
         else:
             timestamp = message.timestamp
+
         if not flow_id and message.flow_id:
             flow_id = message.flow_id
-        # If the text is not a string, it means it could be
-        # async iterator so we simply add it as an empty string
+
         message_text = "" if not isinstance(message.text, str) else message.text
 
         properties = (
@@ -100,6 +106,7 @@ class MessageBase(SQLModel):
             if hasattr(message.properties, "model_dump_json")
             else message.properties
         )
+
         content_blocks = []
         for content_block in message.content_blocks or []:
             content = content_block.model_dump_json() if hasattr(content_block, "model_dump_json") else content_block
@@ -129,19 +136,22 @@ class MessageBase(SQLModel):
 
 class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
     model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)
+
     __tablename__ = "message"
+
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-
     flow_id: UUID | None = Field(default=None)
-    files: list[str] = Field(sa_column=Column(JSON))
-    properties: dict | Properties = Field(default_factory=lambda: Properties().model_dump(), sa_column=Column(JSON))  # type: ignore[assignment]
-    category: str = Field(sa_column=Column(Text))
-    content_blocks: list[dict | ContentBlock] = Field(default_factory=list, sa_column=Column(JSON))  # type: ignore[assignment]
 
-    # We need to make sure the datetimes have timezone after running session.refresh
-    # because we are losing the timezone information when we save the message to the database
-    # and when we read it back. We use field_validator to make sure the datetimes have timezone
-    # after running session.refresh
+    files: list[str] = Field(sa_column=Column(JSON))
+    properties: dict | Properties = Field(  # type: ignore[assignment]
+        default_factory=lambda: Properties().model_dump(),
+        sa_column=Column(JSON),
+    )
+    category: str = Field(sa_column=Column(Text))
+    content_blocks: list[dict | ContentBlock] = Field(  # type: ignore[assignment]
+        default_factory=list,
+        sa_column=Column(JSON),
+    )
 
     @field_validator("flow_id", mode="before")
     @classmethod
@@ -149,30 +159,50 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
         if value is None:
             return value
         if isinstance(value, str):
-            value = UUID(value)
+            return UUID(value)
+        return value
+
+    @staticmethod
+    def _sanitize_json(value):
+        """Replace float NaN/Infinity with None to avoid PostgreSQL jsonb rejection."""
+        if isinstance(value, float):
+            if not math.isfinite(value):
+                return None
+            return value
+
+        if isinstance(value, dict):
+            return {k: MessageTable._sanitize_json(v) for k, v in value.items()}
+
+        if isinstance(value, list):
+            return [MessageTable._sanitize_json(v) for v in value]
+
         return value
 
     @field_validator("properties", "content_blocks", mode="before")
     @classmethod
     def validate_properties_or_content_blocks(cls, value):
         if isinstance(value, list):
-            return [cls.validate_properties_or_content_blocks(item) for item in value]
-        if hasattr(value, "model_dump"):
-            return value.model_dump()
-        if isinstance(value, str):
-            return json.loads(value)
-        return value
+            value = [cls.validate_properties_or_content_blocks(item) for item in value]
+        elif hasattr(value, "model_dump"):
+            value = value.model_dump()
+        elif isinstance(value, str):
+            value = json.loads(value)
+
+        return cls._sanitize_json(value)
 
     @field_serializer("properties", "content_blocks")
     @classmethod
     def serialize_properties_or_content_blocks(cls, value) -> dict | list[dict]:
+        # Redundant sanitization here acts as a defensive measure for rows
+        # already in the database that might contain NaN/Infinity values.
         if isinstance(value, list):
-            return [cls.serialize_properties_or_content_blocks(item) for item in value]
-        if hasattr(value, "model_dump"):
-            return value.model_dump()
-        if isinstance(value, str):
-            return json.loads(value)
-        return value
+            value = [cls.serialize_properties_or_content_blocks(item) for item in value]
+        elif hasattr(value, "model_dump"):
+            value = value.model_dump()
+        elif isinstance(value, str):
+            value = json.loads(value)
+
+        return cls._sanitize_json(value)
 
 
 class MessageRead(MessageBase):

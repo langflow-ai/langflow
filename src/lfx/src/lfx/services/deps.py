@@ -2,21 +2,34 @@
 
 from __future__ import annotations
 
-import inspect
-from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING
+import threading
+from contextlib import asynccontextmanager, suppress
+from typing import TYPE_CHECKING, cast
+
+from fastapi import HTTPException
+from sqlalchemy.exc import InvalidRequestError
 
 from lfx.log.logger import logger
+from lfx.services.config_discovery import resolve_config_dir
 from lfx.services.schema import ServiceType
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+    from pathlib import Path
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from lfx.services.adapters.registry import AdapterRegistry
     from lfx.services.interfaces import (
+        AuthServiceProtocol,
         CacheServiceProtocol,
         ChatServiceProtocol,
         DatabaseServiceProtocol,
+        DeploymentServiceProtocol,
         SettingsServiceProtocol,
         StorageServiceProtocol,
         TracingServiceProtocol,
+        TransactionServiceProtocol,
         VariableServiceProtocol,
     )
 
@@ -52,11 +65,21 @@ def get_service(service_type: ServiceType, default=None):
         return None
 
 
-def get_db_service() -> DatabaseServiceProtocol | None:
-    """Retrieves the database service instance."""
+def get_db_service() -> DatabaseServiceProtocol:
+    """Retrieves the database service instance.
+
+    Returns a NoopDatabaseService if no real database service is available,
+    ensuring that session_scope() always has a valid database service to work with.
+    """
+    from lfx.services.database.service import NoopDatabaseService
     from lfx.services.schema import ServiceType
 
-    return get_service(ServiceType.DATABASE_SERVICE)
+    db_service = get_service(ServiceType.DATABASE_SERVICE)
+    if db_service is None:
+        # Return noop database service when no real database service is available
+        # This allows lfx to work in standalone mode without requiring database setup
+        return NoopDatabaseService()
+    return db_service
 
 
 def get_storage_service() -> StorageServiceProtocol | None:
@@ -101,29 +124,144 @@ def get_tracing_service() -> TracingServiceProtocol | None:
     return get_service(ServiceType.TRACING_SERVICE)
 
 
-@asynccontextmanager
-async def session_scope():
-    """Session scope context manager.
+def get_transaction_service() -> TransactionServiceProtocol | None:
+    """Retrieves the transaction service instance.
 
-    Returns a real session if database service is available, otherwise a NoopSession.
-    This ensures code can always call session methods without None checking.
+    Returns the transaction service for logging component executions.
+    Returns None if no transaction service is registered.
     """
-    db_service = get_db_service()
-    if db_service is None or inspect.isabstract(type(db_service)):
-        from lfx.services.session import NoopSession
+    from lfx.services.schema import ServiceType
 
-        yield NoopSession()
-        return
-
-    async with db_service.with_session() as session:
-        yield session
+    return get_service(ServiceType.TRANSACTION_SERVICE)
 
 
-def get_session():
-    """Get database session.
+def get_auth_service() -> AuthServiceProtocol | None:
+    """Retrieves the auth service instance.
 
-    Returns a session from the database service if available, otherwise NoopSession.
+    Returns the pluggable auth service (minimal LFX or full Langflow when configured).
     """
+    from lfx.services.schema import ServiceType
+
+    return get_service(ServiceType.AUTH_SERVICE)
+
+
+def _get_deployment_registry() -> AdapterRegistry[DeploymentServiceProtocol]:
+    """Retrieve the deployment adapter registry singleton.
+
+    Discovery still needs to be triggered separately via
+    ``registry.discover(config_dir=...)``.
+    """
+    from lfx.services.adapters.registry import get_adapter_registry
+    from lfx.services.adapters.schema import AdapterType
+
+    return cast(
+        "AdapterRegistry[DeploymentServiceProtocol]",
+        get_adapter_registry(adapter_type=AdapterType.DEPLOYMENT),
+    )
+
+
+_deployment_discovery_lock = threading.Lock()
+
+
+def get_deployment_adapter(
+    adapter_key: str,
+) -> DeploymentServiceProtocol | None:
+    """Resolve a singleton deployment adapter instance by key.
+
+    Args:
+        adapter_key: Deployment adapter registry key (for example ``"local"``).
+    """
+    registry = _get_deployment_registry()
+    if not registry.is_discovered:
+        with _deployment_discovery_lock:
+            # Double-check after acquiring lock to avoid redundant discovery.
+            if not registry.is_discovered:
+                registry.discover(config_dir=_resolve_adapter_config_dir())
+    instance = registry.get_instance(adapter_key, factory=lambda adapter_class: adapter_class())
+    if instance is None:
+        logger.warning(
+            f"No deployment adapter found for key='{adapter_key}'. "
+            f"Available keys: {registry.list_keys()}. "
+            f"Check your lfx.toml or adapter registration."
+        )
+    return instance
+
+
+def _resolve_adapter_config_dir() -> Path:
+    """Resolve config directory for adapter discovery."""
+    return resolve_config_dir(None, settings_service=get_settings_service())
+
+
+async def get_session():
     msg = "get_session is deprecated, use session_scope instead"
     logger.warning(msg)
     raise NotImplementedError(msg)
+
+
+async def injectable_session_scope():
+    async with session_scope() as session:
+        yield session
+
+
+@asynccontextmanager
+async def session_scope() -> AsyncGenerator[AsyncSession, None]:
+    """Context manager for managing an async session scope with auto-commit for write operations.
+
+    This is used with `async with session_scope() as session:` for direct session management.
+    It ensures that the session is properly committed if no exceptions occur,
+    and rolled back if an exception is raised.
+    Use session_scope_readonly() for read-only operations to avoid unnecessary commits and locks.
+
+    Yields:
+        AsyncSession: The async session object.
+
+    Raises:
+        Exception: If an error occurs during the session scope.
+    """
+    db_service = get_db_service()
+    async with db_service._with_session() as session:  # noqa: SLF001
+        try:
+            yield session
+            await session.commit()
+        except HTTPException:
+            # HTTPExceptions are control flow in FastAPI (returning 4xx/5xx responses),
+            # not actual errors. Don't log them - FastAPI's exception handlers will
+            # take care of the HTTP response. Just rollback any uncommitted changes.
+            if session.is_active:
+                with suppress(InvalidRequestError):
+                    await session.rollback()
+            raise
+        except Exception as e:
+            # Actual application/database errors - log at error level
+            await logger.aexception("An error occurred during the session scope.", exception=e)
+
+            # Only rollback if session is still in a valid state
+            if session.is_active:
+                with suppress(InvalidRequestError):
+                    # Session was already rolled back by SQLAlchemy
+                    await session.rollback()
+            raise
+        # No explicit close needed - _with_session() handles it
+
+
+async def injectable_session_scope_readonly():
+    async with session_scope_readonly() as session:
+        yield session
+
+
+@asynccontextmanager
+async def session_scope_readonly() -> AsyncGenerator[AsyncSession, None]:
+    """Context manager for managing a read-only async session scope.
+
+    This is used with `async with session_scope_readonly() as session:` for direct session management
+    when only reading data. No auto-commit or rollback - the session is simply closed after use.
+
+    Yields:
+        AsyncSession: The async session object.
+    """
+    db_service = get_db_service()
+    async with db_service._with_session() as session:  # noqa: SLF001
+        yield session
+        # No commit - read-only
+        # No clean up - client is responsible (plus, read only sessions are not committed)
+        # No explicit close needed - _with_session() handles it

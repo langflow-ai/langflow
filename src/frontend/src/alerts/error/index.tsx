@@ -61,13 +61,12 @@ export default function ErrorAlert({
                     <li key={index} className="word-break-break-word">
                       <span className="">
                         <Markdown
-                          linkTarget="_blank"
                           remarkPlugins={[remarkGfm]}
                           className="align-text-top"
                           components={{
                             a: ({ node, ...props }) => (
                               <a
-                                href={props.href}
+                                {...props}
                                 target="_blank"
                                 className="underline"
                                 rel="noopener noreferrer"

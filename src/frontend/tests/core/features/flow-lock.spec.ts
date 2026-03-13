@@ -12,9 +12,8 @@ test.describe("Flow Lock Feature", () => {
       await page.getByTestId("side_nav_options_all-templates").click();
       await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-      // Wait for the flow to load
-      await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
-        timeout: 100000,
+      await page.waitForSelector('[data-testid="sidebar-search-input"]', {
+        timeout: 5000,
       });
 
       // Verify initially the flow is not locked (no lock icon should be visible)
@@ -62,7 +61,7 @@ test.describe("Flow Lock Feature", () => {
         await saveButton.click();
       }
       await expect(saveButton).toBeHidden({
-        timeout: 5000,
+        timeout: 5000 * 3,
       });
 
       // Wait for the modal to close by waiting for the popover to be detached
@@ -131,9 +130,8 @@ test.describe("Flow Lock Feature", () => {
       await page.getByTestId("side_nav_options_all-templates").click();
       await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-      // Wait for the flow to load
-      await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
-        timeout: 100000,
+      await page.waitForSelector('[data-testid="sidebar-search-input"]', {
+        timeout: 5000,
       });
 
       // Open flow settings

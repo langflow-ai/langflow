@@ -10,14 +10,14 @@ from lfx.template.field.base import Output
 class ParserComponent(Component):
     display_name = "Parser"
     description = "Extracts text using a template."
-    documentation: str = "https://docs.langflow.org/components-processing#parser"
+    documentation: str = "https://docs.langflow.org/parser"
     icon = "braces"
 
     inputs = [
         HandleInput(
             name="input_data",
-            display_name="Data or DataFrame",
-            input_types=["DataFrame", "Data"],
+            display_name="JSON or Table",
+            input_types=["DataFrame", "Table", "Data", "JSON"],
             info="Accepts either a DataFrame or a Data object.",
             required=True,
         ),

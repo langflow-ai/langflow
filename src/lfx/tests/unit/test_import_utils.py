@@ -15,18 +15,18 @@ class TestImportAttr:
     def test_import_module_with_none_module_name(self):
         """Test importing a module when module_name is None."""
         # This should import the module directly using the attr_name
-        result = import_mod("agents", None, "lfx.components")
+        result = import_mod("models_and_agents", None, "lfx.components")
 
-        # Should return the agents module
+        # Should return the models_and_agents module
         assert result is not None
         assert hasattr(result, "__all__")
 
     def test_import_module_with_module_name(self):
         """Test importing a module when module_name is __module__."""
         # This should import the module directly using the attr_name
-        result = import_mod("agents", "__module__", "lfx.components")
+        result = import_mod("models_and_agents", "__module__", "lfx.components")
 
-        # Should return the agents module
+        # Should return the models_and_agents module
         assert result is not None
         assert hasattr(result, "__all__")
 
@@ -126,8 +126,8 @@ class TestImportAttr:
     def test_caching_independence(self):
         """Test that import_mod doesn't interfere with Python's module caching."""
         # Multiple calls should work consistently
-        result1 = import_mod("agents", "__module__", "lfx.components")
-        result2 = import_mod("agents", "__module__", "lfx.components")
+        result1 = import_mod("models_and_agents", "__module__", "lfx.components")
+        result2 = import_mod("models_and_agents", "__module__", "lfx.components")
 
         # Should return the same module object (Python's import caching)
         assert result1 is result2

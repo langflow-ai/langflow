@@ -2,7 +2,7 @@ import sqlite3
 from pathlib import Path
 
 import pytest
-from lfx.components.utilities.sql_executor import SQLComponent
+from lfx.components.data_source.sql_executor import SQLComponent
 from lfx.schema import DataFrame, Message
 
 from tests.base import ComponentTestBaseWithoutClient

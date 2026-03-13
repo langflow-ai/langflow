@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { autoInstallers } from "../../utils/mcpServerUtils";
 import { McpAutoInstallContent } from "../McpAutoInstallContent";
 
 jest.mock("@/components/common/genericIconComponent", () => ({
@@ -99,7 +100,34 @@ describe("McpAutoInstallContent", () => {
 
     const buttons = screen.getAllByRole("button");
     fireEvent.click(buttons[0]);
-    expect(mockInstall).toHaveBeenCalledWith("cursor", "Cursor");
+    expect(mockInstall).toHaveBeenCalledWith(
+      "cursor",
+      "Cursor",
+      "streamablehttp",
+    );
+  });
+
+  it("calls installClient without transport for legacy installers", () => {
+    const mockInstall = jest.fn();
+    const originalTransport = autoInstallers[0].transport;
+    autoInstallers[0].transport = undefined;
+    try {
+      render(
+        <McpAutoInstallContent
+          isLocalConnection={true}
+          installedMCPData={[{ name: "cursor", available: true }]}
+          loadingMCP={[]}
+          installClient={mockInstall}
+          installedClients={[]}
+        />,
+      );
+
+      const buttons = screen.getAllByRole("button");
+      fireEvent.click(buttons[0]);
+      expect(mockInstall).toHaveBeenCalledWith("cursor", "Cursor", undefined);
+    } finally {
+      autoInstallers[0].transport = originalTransport;
+    }
   });
 
   it("disables button when not local connection", () => {

@@ -2,8 +2,10 @@ import asyncio
 import json
 import os
 import re
+import sys
+import tempfile
 import warnings
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
@@ -17,6 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_pagination import add_pagination
+from filelock import FileLock
 from lfx.interface.utils import setup_llm_caching
 from lfx.log.logger import configure, logger
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -24,9 +27,11 @@ from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
-from langflow.api import health_check_router, log_router, router
+from langflow.api import health_check_router, log_router
+from langflow.api.router import router
 from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.initial_setup.setup import (
+    copy_profile_pictures,
     create_or_update_starter_projects,
     initialize_auto_login_default_superuser,
     load_bundles_from_urls,
@@ -34,9 +39,18 @@ from langflow.initial_setup.setup import (
     sync_flows_from_fs,
 )
 from langflow.middleware import ContentSizeLimitMiddleware
-from langflow.services.deps import get_queue_service, get_service, get_settings_service, get_telemetry_service
+from langflow.plugin_routes import load_plugin_routes
+from langflow.services.database.service import UnsupportedPostgreSQLVersionError
+from langflow.services.deps import (
+    get_queue_service,
+    get_service,
+    get_settings_service,
+    get_telemetry_service,
+    session_scope,
+)
 from langflow.services.schema import ServiceType
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
+from langflow.utils.mcp_cleanup import cleanup_mcp_sessions
 
 if TYPE_CHECKING:
     from tempfile import TemporaryDirectory
@@ -45,6 +59,10 @@ if TYPE_CHECKING:
 
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
+
+# Suppress ResourceWarning from anyio streams (SSE connections)
+warnings.filterwarnings("ignore", category=ResourceWarning, message=".*MemoryObjectReceiveStream.*")
+warnings.filterwarnings("ignore", category=ResourceWarning, message=".*MemoryObjectSendStream.*")
 
 _tasks: list[asyncio.Task] = []
 
@@ -123,18 +141,8 @@ def warn_about_future_cors_changes(settings):
 
     if using_defaults:
         logger.warning(
-            "DEPRECATION NOTICE: Starting in v2.0, CORS will be more restrictive by default. "
-            "Current behavior allows all origins (*) with credentials enabled. "
-            "Consider setting LANGFLOW_CORS_ORIGINS for production deployments. "
-            "See documentation for secure CORS configuration."
-        )
-
-    # Additional warning for potentially insecure configuration
-    if settings.cors_origins == "*" and settings.cors_allow_credentials:
-        logger.warning(
-            "SECURITY NOTICE: Current CORS configuration allows all origins with credentials. "
-            "In v2.0, credentials will be automatically disabled when using wildcard origins. "
-            "Specify exact origins in LANGFLOW_CORS_ORIGINS to use credentials securely."
+            "CORS: Using permissive defaults (all origins + credentials). "
+            "Set LANGFLOW_CORS_ORIGINS for production. Stricter defaults in v2.0."
         )
 
 
@@ -170,6 +178,11 @@ def get_lifespan(*, fix_migration=False, version=None):
             setup_llm_caching()
             await logger.adebug(f"LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
+            current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Copying profile pictures")
+            await copy_profile_pictures()
+            await logger.adebug(f"Profile pictures copied in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
             if get_settings_service().auth_settings.AUTO_LOGIN:
                 current_time = asyncio.get_event_loop().time()
                 await logger.adebug("Initializing default super user")
@@ -199,9 +212,6 @@ def get_lifespan(*, fix_migration=False, version=None):
             # the initialization work.
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Creating/updating starter projects")
-            import tempfile
-
-            from filelock import FileLock
 
             lock_file = Path(tempfile.gettempdir()) / "langflow_starter_projects.lock"
             lock = FileLock(lock_file, timeout=1)
@@ -219,6 +229,21 @@ def get_lifespan(*, fix_migration=False, version=None):
                     f"Failed to acquire lock for starter projects: {e}. Starter projects may not be created or updated."
                 )
 
+            # Initialize agentic global variables early (before MCP server and flows)
+            if get_settings_service().settings.agentic_experience:
+                from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_global_variables
+
+                current_time = asyncio.get_event_loop().time()
+                await logger.ainfo("Initializing agentic global variables...")
+                try:
+                    async with session_scope() as session:
+                        await initialize_agentic_global_variables(session)
+                    await logger.adebug(
+                        f"Agentic global variables initialized in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                    )
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(f"Failed to initialize agentic global variables: {e}")
+
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Starting telemetry service")
             telemetry_service.start()
@@ -231,6 +256,21 @@ def get_lifespan(*, fix_migration=False, version=None):
             await logger.adebug(
                 f"started MCP Composer service in {asyncio.get_event_loop().time() - current_time:.2f}s"
             )
+
+            # Auto-configure Agentic MCP server if enabled (after variables are initialized)
+            if get_settings_service().settings.agentic_experience:
+                from langflow.api.utils.mcp.agentic_mcp import auto_configure_agentic_mcp_server
+
+                current_time = asyncio.get_event_loop().time()
+                await logger.ainfo("Configuring Agentic MCP server...")
+                try:
+                    async with session_scope() as session:
+                        await auto_configure_agentic_mcp_server(session)
+                    await logger.adebug(
+                        f"Agentic MCP server configured in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                    )
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(f"Failed to configure agentic MCP server: {e}")
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Loading flows")
@@ -268,10 +308,28 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Allows the server to start first to avoid race conditions with MCP Server startup
             mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
 
-            yield
+            # v1 and project MCP server context managers
+            from langflow.api.v1.mcp import start_streamable_http_manager
+            from langflow.api.v1.mcp_projects import start_project_task_group
 
+            await start_streamable_http_manager()
+            await start_project_task_group()
+
+            yield
         except asyncio.CancelledError:
             await logger.adebug("Lifespan received cancellation signal")
+        except UnsupportedPostgreSQLVersionError:
+            # Normally caught by the pre-flight check in __main__.py
+            # before the server starts.  If we get here anyway (e.g.
+            # direct uvicorn invocation via ``make backend``), exit
+            # immediately and tell the parent (reloader) to stop.
+            import signal
+
+            sys.stdout.flush()
+            sys.stderr.flush()
+            with suppress(ProcessLookupError, PermissionError):
+                os.kill(os.getppid(), signal.SIGTERM)
+            os._exit(3)
         except Exception as exc:
             if "langflow migration --fix" not in str(exc):
                 logger.exception(exc)
@@ -279,6 +337,10 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await log_exception_to_telemetry(exc, "lifespan")
             raise
         finally:
+            # CRITICAL: Cleanup MCP sessions FIRST, before any other shutdown logic.
+            # This ensures MCP subprocesses are killed even if shutdown is interrupted.
+            await cleanup_mcp_sessions()
+
             # Clean shutdown with progress indicator
             # Create shutdown progress (show verbose timing if log level is DEBUG)
             from langflow.__main__ import get_number_of_workers
@@ -299,6 +361,20 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                 # Step 1: Cancelling Background Tasks
                 with shutdown_progress.step(1):
+                    from langflow.api.v1.mcp import stop_streamable_http_manager
+                    from langflow.api.v1.mcp_projects import stop_project_task_group
+
+                    # Shutdown MCP project servers
+                    try:
+                        await stop_project_task_group()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop MCP Project servers: {e}")
+                    # Close MCP server streamable-http session manager .run() context manager
+                    try:
+                        await stop_streamable_http_manager()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop MCP server streamable-http session manager: {e}")
+                    # Cancel background tasks
                     tasks_to_cancel = []
                     if sync_flows_from_fs_task:
                         sync_flows_from_fs_task.cancel()
@@ -457,6 +533,9 @@ def create_app():
     app.include_router(health_check_router)
     app.include_router(log_router)
 
+    # Discover and register additional routers from plugins (langflow.plugins entry-point)
+    load_plugin_routes(app)
+
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
         if isinstance(exc, HTTPException):
@@ -510,6 +589,15 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
 
     @app.exception_handler(404)
     async def custom_404_handler(_request, _exc):
+        # Return JSON for all API endpoints to prevent HTML responses
+        if _request.url.path.startswith("/api"):
+            # Extract detail from HTTPException if available
+            detail = _exc.detail if isinstance(_exc, HTTPException) else "Not Found"
+            return JSONResponse(
+                status_code=404,
+                content=detail if isinstance(detail, dict) else {"detail": detail},
+            )
+
         path = anyio.Path(static_files_dir) / "index.html"
 
         if not await path.exists():

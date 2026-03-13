@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import re
-from typing import TYPE_CHECKING, Literal
+from copy import deepcopy
+from typing import TYPE_CHECKING
 
 import pandas as pd
 from langchain_core.tools import BaseTool, ToolException
@@ -22,7 +23,6 @@ if TYPE_CHECKING:
     from lfx.events.event_manager import EventManager
     from lfx.inputs.inputs import InputTypes
     from lfx.io import Output
-    from lfx.schema.content_block import ContentBlock
     from lfx.schema.dotdict import dotdict
 
 TOOL_TYPES_SET = {"Tool", "BaseTool", "StructuredTool"}
@@ -42,15 +42,9 @@ def build_description(component: Component) -> str:
 
 async def send_message_noop(
     message: Message,
-    text: str | None = None,  # noqa: ARG001
-    background_color: str | None = None,  # noqa: ARG001
-    text_color: str | None = None,  # noqa: ARG001
-    icon: str | None = None,  # noqa: ARG001
-    content_blocks: list[ContentBlock] | None = None,  # noqa: ARG001
-    format_type: Literal["default", "error", "warning", "info"] = "default",  # noqa: ARG001
     id_: str | None = None,  # noqa: ARG001
     *,
-    allow_markdown: bool = True,  # noqa: ARG001
+    skip_db_update: bool = False,  # noqa: ARG001
 ) -> Message:
     """No-op implementation of send_message."""
     return message
@@ -90,14 +84,20 @@ def _patch_send_message_decorator(component, func):
 
 
 def _build_output_function(component: Component, output_method: Callable, event_manager: EventManager | None = None):
+    method_name = output_method.__name__
+
     def output_function(*args, **kwargs):
+        # Create an isolated copy to prevent race conditions when this
+        # tool is invoked concurrently by an agent (GitHub issue #8791)
+        comp = deepcopy(component)
+        local_method = getattr(comp, method_name)
         try:
             if event_manager:
-                event_manager.on_build_start(data={"id": component.get_id()})
-            component.set(*args, **kwargs)
-            result = output_method()
+                event_manager.on_build_start(data={"id": comp.get_id()})
+            comp.set(*args, **kwargs)
+            result = local_method()
             if event_manager:
-                event_manager.on_build_end(data={"id": component.get_id()})
+                event_manager.on_build_end(data={"id": comp.get_id()})
         except Exception as e:
             raise ToolException(e) from e
 
@@ -114,14 +114,20 @@ def _build_output_function(component: Component, output_method: Callable, event_
 def _build_output_async_function(
     component: Component, output_method: Callable, event_manager: EventManager | None = None
 ):
+    method_name = output_method.__name__
+
     async def output_function(*args, **kwargs):
+        # Create an isolated copy to prevent race conditions when this
+        # tool is invoked concurrently by an agent (GitHub issue #8791)
+        comp = deepcopy(component)
+        local_method = getattr(comp, method_name)
         try:
             if event_manager:
-                await asyncio.to_thread(event_manager.on_build_start, data={"id": component.get_id()})
-            component.set(*args, **kwargs)
-            result = await output_method()
+                await asyncio.to_thread(event_manager.on_build_start, data={"id": comp.get_id()})
+            comp.set(*args, **kwargs)
+            result = await local_method()
             if event_manager:
-                await asyncio.to_thread(event_manager.on_build_end, data={"id": component.get_id()})
+                await asyncio.to_thread(event_manager.on_build_end, data={"id": comp.get_id()})
         except Exception as e:
             raise ToolException(e) from e
         if isinstance(result, Message):

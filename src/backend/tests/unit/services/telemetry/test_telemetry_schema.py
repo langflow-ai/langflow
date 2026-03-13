@@ -378,6 +378,7 @@ class TestComponentPayload:
         """Test ComponentPayload initialization with valid parameters."""
         payload = ComponentPayload(
             component_name="TextInput",
+            component_id="comp-123",
             component_seconds=2,
             component_success=True,
             component_error_message=None,
@@ -396,6 +397,7 @@ class TestComponentPayload:
         """Test ComponentPayload initialization with error message."""
         payload = ComponentPayload(
             component_name="LLMChain",
+            component_id="comp-456",
             component_seconds=5,
             component_success=False,
             component_error_message="API rate limit exceeded",
@@ -414,6 +416,7 @@ class TestComponentPayload:
         """Test ComponentPayload serialization to dictionary."""
         payload = ComponentPayload(
             component_name="OpenAI",
+            component_id="comp-789",
             component_seconds=3,
             component_success=True,
             component_error_message=None,
@@ -434,6 +437,7 @@ class TestComponentPayload:
         """Test ComponentPayload accepts negative seconds (no validation in schema)."""
         payload = ComponentPayload(
             component_name="TestComponent",
+            component_id="comp-neg",
             component_seconds=-1,
             component_success=True,
             component_error_message=None,
@@ -446,6 +450,7 @@ class TestComponentPayload:
         """Test ComponentPayload with empty component name."""
         payload = ComponentPayload(
             component_name="",
+            component_id="comp-empty",
             component_seconds=1,
             component_success=True,
             component_error_message=None,
@@ -458,6 +463,7 @@ class TestComponentPayload:
         """Test ComponentPayload with special characters in component name."""
         payload = ComponentPayload(
             component_name="Custom-Component_v1.0",
+            component_id="comp-special",
             component_seconds=1,
             component_success=True,
             component_error_message=None,
@@ -527,6 +533,7 @@ class TestPayloadEdgeCases:
 
         payload = ComponentPayload(
             component_name=long_name,
+            component_id="comp-long",
             component_seconds=1,
             component_success=True,
             component_error_message=None,
@@ -581,6 +588,7 @@ class TestPayloadEdgeCases:
         # Test ComponentPayload
         component_payload = ComponentPayload(
             component_name="TestComponent",
+            component_id="comp-test",
             component_seconds=1,
             component_success=True,
             component_error_message=None,
@@ -662,6 +670,7 @@ class TestPayloadIntegration:
         component_payloads = [
             ComponentPayload(
                 component_name="TextInput",
+                component_id="comp-input",
                 component_seconds=1,
                 component_success=True,
                 component_error_message=None,
@@ -670,6 +679,7 @@ class TestPayloadIntegration:
             ),
             ComponentPayload(
                 component_name="OpenAI",
+                component_id="comp-openai",
                 component_seconds=5,
                 component_success=True,
                 component_error_message=None,
@@ -678,6 +688,7 @@ class TestPayloadIntegration:
             ),
             ComponentPayload(
                 component_name="TextOutput",
+                component_id="comp-output",
                 component_seconds=1,
                 component_success=True,
                 component_error_message=None,
@@ -713,6 +724,7 @@ class TestPayloadIntegration:
         # Component that fails
         failed_component = ComponentPayload(
             component_name="OpenAI",
+            component_id="comp-failed",
             component_seconds=5,
             component_success=False,
             component_error_message="API rate limit exceeded",
@@ -801,6 +813,7 @@ def sample_component_payload():
     """Fixture providing sample component payload for tests."""
     return ComponentPayload(
         component_name="TextInput",
+        component_id="comp-fixture",
         component_seconds=2,
         component_success=True,
         component_error_message=None,

@@ -76,12 +76,20 @@ export default function NodeDescription({
     }
     return (
       <MemoizedMarkdown
-        linkTarget="_blank"
         className={cn(
           "markdown prose flex w-full flex-col leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background",
-          stickyNote ? "text-mmd" : "text-xs",
+          stickyNote
+            ? "!text-base !font-medium leading-relaxed [&_p]:!text-base [&_p]:!font-medium [&_li]:!text-base [&_li]:!font-medium"
+            : "text-xs",
           mdClassName,
         )}
+        components={{
+          a: ({ node, ...props }) => (
+            <a {...props} target="_blank" rel="noopener noreferrer">
+              {props.children}
+            </a>
+          ),
+        }}
       >
         {String(description)}
       </MemoizedMarkdown>
@@ -156,7 +164,7 @@ export default function NodeDescription({
             className={cn(
               "nowheel w-full text-xs focus:border-primary focus:ring-0",
               stickyNote
-                ? "overflow-auto p-0 px-2 pt-0.5 !text-mmd"
+                ? "overflow-auto p-0 px-2 pt-0.5 !text-base font-medium"
                 : "px-2 py-0.5",
               inputClassName,
             )}
@@ -189,6 +197,7 @@ export default function NodeDescription({
           className={cn(
             "nodoubleclick generic-node-desc-text h-full cursor-grab text-muted-foreground word-break-break-word",
             description === "" || !description ? "font-light italic" : "",
+            stickyNote && "text-base font-medium overflow-auto max-h-full",
             placeholderClassName,
           )}
           onDoubleClick={handleDoubleClickFn}

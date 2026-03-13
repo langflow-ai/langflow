@@ -3,14 +3,15 @@ from asyncio import to_thread
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, EmailStr
 
 from langflow.logging import logger
+from langflow.services.auth.utils import get_current_active_user
 from langflow.services.deps import get_telemetry_service
 from langflow.services.telemetry.schema import EmailPayload
 
-router = APIRouter(tags=["Registration API"], prefix="/registration")
+router = APIRouter(tags=["Registration API"], prefix="/registration", include_in_schema=False)
 
 
 # Data model for registration
@@ -135,7 +136,7 @@ async def _send_email_telemetry(email: str) -> None:
     logger.debug(f"Successfully sent email telemetry event: {payload.email}")
 
 
-@router.get("/")
+@router.get("/", dependencies=[Depends(get_current_active_user)])
 async def get_registration():
     """Get the registered user (if any)."""
     try:

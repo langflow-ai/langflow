@@ -251,9 +251,14 @@ class TestAPIEndpoints:
 
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
+        from langflow.services.auth.utils import get_current_active_user
 
         app = FastAPI()
         app.include_router(router)
+
+        # Override auth dependency to bypass authentication
+        app.dependency_overrides[get_current_active_user] = lambda: MagicMock()
+
         client = TestClient(app)
 
         response = client.get("/registration/")  # Fixed: Added /registration prefix
@@ -271,9 +276,14 @@ class TestAPIEndpoints:
 
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
+        from langflow.services.auth.utils import get_current_active_user
 
         app = FastAPI()
         app.include_router(router)
+
+        # Override auth dependency to bypass authentication
+        app.dependency_overrides[get_current_active_user] = lambda: MagicMock()
+
         client = TestClient(app)
 
         response = client.get("/registration/")  # Fixed: Added /registration prefix
@@ -289,9 +299,14 @@ class TestAPIEndpoints:
 
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
+        from langflow.services.auth.utils import get_current_active_user
 
         app = FastAPI()
         app.include_router(router)
+
+        # Override auth dependency to bypass authentication
+        app.dependency_overrides[get_current_active_user] = lambda: MagicMock()
+
         client = TestClient(app)
 
         response = client.get("/registration/")  # Fixed: Added /registration prefix
@@ -328,6 +343,7 @@ class TestIntegration:
         """Test API endpoints with actual file operations."""
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
+        from langflow.services.auth.utils import get_current_active_user
 
         # Set up temporary file path
         test_file = tmp_path / "registration.json"
@@ -335,6 +351,10 @@ class TestIntegration:
 
         app = FastAPI()
         app.include_router(router)
+
+        # Override auth dependency to bypass authentication
+        app.dependency_overrides[get_current_active_user] = lambda: MagicMock()
+
         client = TestClient(app)
 
         # Test registration

@@ -5,14 +5,14 @@ slug: /components-agents
 
 import PartialAgentsWork from '@site/docs/_partial-agents-work.mdx';
 
-Langflow's **Agent** and **MCP Tools** components are critical for building agent flows.
-These components define the behavior and capabilities of AI agents in your flows.
+Langflow's **Agent** component is critical for building agent flows.
+This component defines the behavior and capabilities of AI agents in your flows.
 
 <PartialAgentsWork />
 
 ## Examples of agent flows
 
-For examples of flows using the **Agent** and **MCP Tools** components, see the following:
+For examples of flows using the **Agent** component, see the following:
 
 * [Langflow quickstart](/get-started-quickstart): Start with the **Simple Agent** template, modify its tools, and then learn how to use an agent flow in an application.
 
@@ -21,7 +21,7 @@ For examples of flows using the **Agent** and **MCP Tools** components, see the 
 
 * [Use an agent as a tool](/agents-tools#use-an-agent-as-a-tool): Create a multi-agent flow.
 
-* [Use Langflow as an MCP client](/mcp-client) and [Use Langflow as an MCP server](/mcp-server): Use the **Agent** and **MCP Tools** components to implement the Model Context Protocol (MCP) in your flows.
+* [Use Langflow as an MCP client](/mcp-client) and [Use Langflow as an MCP server](/mcp-server): Use the **Agent** and [**MCP Tools** component](/mcp-tools) to implement the Model Context Protocol (MCP) in your flows.
 
 ## Agent component {#agent-component}
 
@@ -29,30 +29,14 @@ The **Agent** component is the primary agent actor in your agent flows.
 This component uses an LLM integration to respond to input, such as a chat message or file upload.
 
 The agent can use the tools already available in the base LLM as well as additional tools that you connect to the **Agent** component's **Tools** port.
-You can connect any Langflow component as a tool, including other **Agent** components and MCP servers through the [**MCP Tools** component](#mcp-connection).
+You can connect any Langflow component as a tool, including other **Agent** components and MCP servers through the [**MCP Tools** component](/mcp-tools).
 
 For more information about using this component, see [Use Langflow agents](/agents).
 
-## MCP Tools component {#mcp-connection}
-
-The **MCP Tools** component connects to a Model Context Protocol (MCP) server and exposes the MCP server's functions as tools for Langflow agents to use to respond to input.
-
-In addition to publicly available MCP servers and your own custom-built MCP servers, you can connect Langflow MCP servers, which allow your agent to use your Langflow flows as tools.
-To do this, use the **MCP Tools** component's [SSE mode](/mcp-client#mcp-sse-mode) to connect to your Langflow project's MCP server at the `/api/v1/mcp/sse` endpoint.
-
-For more information, see [Use Langflow as an MCP client](/mcp-client) and [Use Langflow as an MCP server](/mcp-server).
-
-<details>
-<summary>Earlier versions of the MCP Tools component</summary>
-
-* In Langflow version 1.5, the **MCP Connection** component was renamed to the **MCP Tools** component.
-* In Langflow version 1.3, the **MCP Tools (stdio)** and **MCP Tools (SSE)** components were removed and replaced by the unified **MCP Connection** component, which was later renamed to **MCP Tools**.
-
-</details>
-
 ## See also
 
-* [**Message History** component](/components-helpers#message-history)
+* [**MCP Tools** component](/mcp-tools)
+* [**Message History** component](/message-history)
 * [Store chat memory](/memory#store-chat-memory)
 * [Bundles](/components-bundle-components)
 * [Legacy LangChain components](/bundles-langchain#legacy-langchain-components)

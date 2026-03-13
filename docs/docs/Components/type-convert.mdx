@@ -1,0 +1,138 @@
+---
+title: Type Convert
+slug: /type-convert
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialCurlyBraces from '@site/docs/_partial-escape-curly-braces.mdx';
+
+The **Type Convert** component converts data from one type to another.
+It supports `Data`, `DataFrame`, and `Message` data types.
+
+<Tabs>
+<TabItem value="data" label="Data" default>
+
+A `Data` object is a structured object that contains a primary `text` key and other key-value pairs:
+
+```json
+"data": {
+  "text": "User Profile",
+  "name": "Charlie Lastname",
+  "age": 28,
+  "email": "charlie.lastname@example.com"
+},
+```
+
+The larger context associated with a component's `data` dictionary also identifies which key is the primary `text_key`, and it can provide an optional default value if the primary key isn't specified.
+For example:
+
+```json
+{
+  "text_key": "text",
+  "data": {
+    "text": "User Profile",
+    "name": "Charlie Lastname",
+    "age": 28,
+    "email": "charlie.lastname@example.com"
+  },
+  "default_value": ""
+}
+```
+
+</TabItem>
+<TabItem value="dataframe" label="DataFrame">
+
+A `DataFrame` is an array that represents a tabular data structure with rows and columns.
+
+It consists of a list (array) of dictionary objects, where each dictionary represents a row.
+Each key in the dictionaries corresponds to a column name.
+For example, the following `DataFrame` contains two rows with columns for `name`, `age`, and `email`:
+
+```json
+[
+  {
+    "name": "Charlie Lastname",
+    "age": 28,
+    "email": "charlie.lastname@example.com"
+  },
+  {
+    "name": "Bobby Othername",
+    "age": 25,
+    "email": "bobby.othername@example.com"
+  }
+]
+```
+
+</TabItem>
+<TabItem value="message" label="Message">
+
+A `Message` is primarily for passing a `text` string, such as`"Name: Charlie Lastname, Age: 28, Email: charlie.lastname@example.com"`.
+However, the entire `Message` object can include metadata about the message, particularly when used as chat input or output.
+
+</TabItem>
+</Tabs>
+
+For more information, see [Langflow data types](/data-types).
+
+## Use the Type Convert component in a flow
+
+The **Type Convert** component is typically used to transform data into a format required by a downstream component.
+For example, if a component outputs a `Message`, but the following component requires `Data`, then you can use the **Type Convert** component to reformat the `Message` as `Data` before passing it to the downstream component.
+
+The following example uses the **Type Convert** component to convert the `DataFrame` output from a **Web Search** component into `Message` data that is passed as text input for an LLM:
+
+1. Create a flow based on the **Basic prompting** template.
+
+2. Add a **Web Search** component to the flow, and then enter a search query, such as `environmental news`.
+
+3. In the **Prompt Template** component, replace the contents of the **Template** field with the following text:
+
+    ```text
+    Answer the user's question using the {context}
+    ```
+
+    The curly braces define a [prompt variable](/components-prompts#define-variables-in-prompts) that becomes an input field on the **Prompt Template** component.
+    In this example, you will use the **context** field to pass the search results into the template, as explained in the next steps.
+
+3. Add a **Type Convert** component to the flow, and then set the **Output Type** to **Message**.
+
+    Because the **Web Search** component's `DataFrame` output is incompatible with the **context** variable's `Message` input, you must use the **Type Convert** component to change the `DataFrame` to a `Message` in order to pass the search results to the **Prompt Template** component.
+
+4. Connect the additional components to the rest of the flow:
+
+    * Connect the **Web Search** component's output to the **Type Convert** component's input.
+    * Connect the **Type Convert** component's output to the **Prompt Template** component's **context** input.
+
+    ![Convert web search output to text input](/img/component-type-convert-and-web-search.png)
+
+5. In the **Language Model** component, add your OpenAI API key.
+
+    If you want to use a different provider or model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
+
+6. Click **Playground**, and then ask something relevant to your search query, such as `latest news` or `what's the latest research on the environment?`.
+
+    <details>
+    <summary>Result</summary>
+
+    The LLM uses the search results context, your chat message, and it's built-in training data to respond to your question.
+    For example:
+
+    ```text
+    Here are some of the latest news articles related to the environment:
+    Ozone Pollution and Global Warming: A recent study highlights that ozone pollution is a significant global environmental concern, threatening human health and crop production while exacerbating global warming. Read more
+    ...
+    ```
+
+    </details>
+
+## Type Convert parameters
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_data | Input Data | Input parameter. The data to convert. Accepts `Data`, `DataFrame`, or `Message` input. |
+| output_type | Output Type | Input parameter. The desired output type, as one of **Data**, **DataFrame** or **Message**. |
+| output | Output | Output parameter. The converted data in the specified format. The output port changes depending on the selected **Output Type**. |
+

@@ -95,6 +95,7 @@ module.exports = {
       label: "Develop",
       items: [
         "Develop/api-keys-and-authentication",
+        "Develop/jwt-authentication",
         "Develop/install-custom-dependencies",
         "Develop/configuration-global-variables",
         "Develop/environment-variables",
@@ -123,6 +124,7 @@ module.exports = {
               id: "Develop/enterprise-database-guide",
               label: "Database guide for enterprise administrators"
             },
+            "Develop/knowledge",
           ],
         },
         {
@@ -130,6 +132,7 @@ module.exports = {
           label: "Observability",
           items: [
             "Develop/logging",
+            "Develop/traces",
             {
               type: "category",
               label: "Monitoring",
@@ -138,6 +141,7 @@ module.exports = {
                 "Develop/integrations-langfuse",
                 "Develop/integrations-langsmith",
                 "Develop/integrations-langwatch",
+                "Develop/integrations-openlayer",
                 "Develop/integrations-opik",
                 "Develop/integrations-instana-traceloop",
               ],
@@ -250,6 +254,11 @@ module.exports = {
             },
           ]
         },
+        {
+          type: "doc",
+          id: "Deployment/security",
+          label: "Security",
+        },
       ],
     },
     {
@@ -261,28 +270,92 @@ module.exports = {
           type: "category",
           label: "Core components",
           items: [
-            "Components/components-io",
-            "Components/components-agents",
             {
               type: "category",
-              label: "Models",
+              label: "Input / Output",
               items: [
-                "Components/components-models",
-                "Components/components-embedding-models",
+                "Components/chat-input-and-output",
+                "Components/text-input-and-output",
+                "Components/webhook",
               ]
             },
-            "Components/components-data",
             {
               type: "category",
               label: "Processing",
               items: [
-                "Components/components-processing",
-                "Components/components-prompts",
+                "Components/data-operations",
+                "Components/dataframe-operations",
+                "Components/dynamic-create-data",
+                "Components/parser",
+                "Components/split-text",
+                "Components/type-convert",
               ]
             },
-            "Components/components-logic",
-            "Components/components-helpers",
-            "Components/components-tools",
+            {
+              type: "category",
+              label: "Data Source",
+              items: [
+                "Components/api-request",
+                "Components/mock-data",
+                "Components/url",
+                "Components/web-search",
+              ]
+            },
+            {
+              type: "category",
+              label: "Files and Knowledge",
+              items: [
+                "Components/directory",
+                "Components/knowledge-base",
+                "Components/read-file",
+                "Components/write-file",
+              ]
+            },
+            {
+              type: "category",
+              label: "Flow Controls",
+              items: [
+                "Components/if-else",
+                "Components/loop",
+                "Components/notify-and-listen",
+                "Components/run-flow",
+              ]
+            },
+            {
+              type: "category",
+              label: "LLM Operations",
+              items: [
+                "Components/batch-run",
+                "Components/guardrails",
+                "Components/llm-selector",
+                "Components/smart-router",
+                "Components/smart-transform",
+                "Components/structured-output",
+              ]
+            },
+            {
+              type: "category",
+              label: "Models and Agents",
+              items: [
+                "Components/components-models",
+                "Components/components-prompts",
+                "Components/components-agents",
+                "Components/mcp-tools",
+                "Components/components-embedding-models",
+                "Components/message-history",
+              ]
+            },
+            {
+              type: "category",
+              label: "Utilities",
+              items: [
+                "Components/calculator",
+                "Components/current-date",
+                "Components/python-interpreter",
+                "Components/sql-database",
+              ]
+            },
+            "Components/legacy-core-components",
           ],
         },
         {
@@ -290,7 +363,9 @@ module.exports = {
           label: "Bundles",
           items: [
             "Components/components-bundles",
+            "Components/bundles-agentics",
             "Components/bundles-aiml",
+            "Components/bundles-altk",
             "Components/bundles-amazon",
             "Components/bundles-anthropic",
             "Components/bundles-apify",
@@ -305,7 +380,10 @@ module.exports = {
             "Components/bundles-clickhouse",
             "Components/bundles-cloudflare",
             "Components/bundles-cohere",
+            "Components/bundles-cometapi",
+            "Components/bundles-composio",
             "Components/bundles-couchbase",
+            "Components/bundles-cuga",
             "Components/bundles-datastax",
             "Components/bundles-deepseek",
             "Components/bundles-docling",
@@ -320,6 +398,7 @@ module.exports = {
             "Components/bundles-ibm",
             "Components/bundles-icosacomputing",
             "Components/bundles-langchain",
+            "Components/bundles-lite-llm",
             "Components/bundles-lmstudio",
             "Components/bundles-maritalk",
             "Components/bundles-mem0",
@@ -342,6 +421,7 @@ module.exports = {
             "Components/bundles-serper",
             "Components/bundles-supabase",
             "Components/bundles-upstash",
+            "Components/bundles-vllm",
             "Components/bundles-vectara",
             "Components/bundles-vertexai",
             "Components/bundles-weaviate",
@@ -370,6 +450,22 @@ module.exports = {
           type: "doc",
           id: "API-Reference/api-flows-run",
           label: "Flow trigger endpoints",
+        },
+        {
+          type: "category",
+          label: "Developer API (Beta)",
+          items: [
+            {
+              type: "doc",
+              id: "API-Reference/workflows-api",
+              label: "Workflow API (Beta)",
+            },
+            {
+              type: "link",
+              label: "Workflow API specification (Beta)",
+              href: "/api/workflow",
+            },
+          ],
         },
         {
           type: "doc",
@@ -425,20 +521,9 @@ module.exports = {
         "Contributing/contributing-community",
         "Contributing/contributing-how-to-contribute",
         "Contributing/contributing-components",
+        "Contributing/contributing-bundles",
         "Contributing/contributing-component-tests",
         "Contributing/contributing-templates",
-        "Contributing/contributing-bundles",
-      ],
-    },
-    {
-      type: "category",
-      label: "Release notes",
-      items: [
-        {
-          type: "doc",
-          id: "Support/release-notes",
-          label: "Release notes",
-        },
       ],
     },
     {
@@ -459,6 +544,11 @@ module.exports = {
           type: "doc",
           id: "Support/luna-for-langflow",
           label: "IBM Elite Support for Langflow",
+        },
+        {
+          type: "doc",
+          id: "Support/release-notes",
+          label: "Release notes",
         },
       ],
     },

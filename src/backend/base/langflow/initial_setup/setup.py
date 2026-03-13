@@ -34,8 +34,12 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER_FOLDER_NAME
-from langflow.services.auth.utils import create_super_user
+from langflow.initial_setup.constants import (
+    ASSISTANT_FOLDER_DESCRIPTION,
+    ASSISTANT_FOLDER_NAME,
+    STARTER_FOLDER_DESCRIPTION,
+    STARTER_FOLDER_NAME,
+)
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.constants import (
     DEFAULT_FOLDER_DESCRIPTION,
@@ -43,7 +47,13 @@ from langflow.services.database.models.folder.constants import (
     LEGACY_FOLDER_NAMES,
 )
 from langflow.services.database.models.folder.model import Folder, FolderCreate, FolderRead
-from langflow.services.deps import get_settings_service, get_storage_service, get_variable_service, session_scope
+from langflow.services.deps import (
+    get_auth_service,
+    get_settings_service,
+    get_storage_service,
+    get_variable_service,
+    session_scope,
+)
 
 # In the folder ./starter_projects we have a few JSON files that represent
 # starter projects. We want to load these into the database so that users
@@ -55,7 +65,12 @@ def update_projects_components_with_latest_component_versions(project_data, all_
     all_types_dict_flat = {}
     for category in all_types_dict.values():
         for key, component in category.items():
-            all_types_dict_flat[key] = component  # noqa: PERF403
+            # Strip hash_history from component metadata before using in flows
+            # hash_history is internal metadata for tracking component evolution
+            # and should only exist in component_index.json, not in saved flows
+            if "metadata" in component and "hash_history" in component["metadata"]:
+                del component["metadata"]["hash_history"]
+            all_types_dict_flat[key] = component
 
     node_changes_log = defaultdict(list)
     project_data_copy = deepcopy(project_data)
@@ -80,15 +95,26 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             }
             has_tool_outputs = any(output.get("types") == ["Tool"] for output in node_data.get("outputs", []))
             if "outputs" in latest_node and not has_tool_outputs and not is_tool_or_agent:
-                # Set selected output as the previous selected output
-                for output in latest_node["outputs"]:
+                # Deep copy to avoid mutating the shared latest_node template across flows
+                new_outputs = deepcopy(latest_node["outputs"])
+                # Set selected output as the previous selected output with type migration support
+                type_migrations = {
+                    "Data": "JSON",
+                    "DataFrame": "Table",
+                }
+                for output in new_outputs:
                     node_data_output = next(
                         (output_ for output_ in node_data["outputs"] if output_["name"] == output["name"]),
                         None,
                     )
                     if node_data_output:
-                        output["selected"] = node_data_output.get("selected")
-                node_data["outputs"] = latest_node["outputs"]
+                        old_selected = node_data_output.get("selected")
+                        if old_selected:
+                            # Old flows may use Data/DataFrame; map to JSON/Table for backward compatibility
+                            migrated_selected = type_migrations.get(old_selected, old_selected)
+                            if migrated_selected in output.get("types", []):
+                                output["selected"] = migrated_selected
+                node_data["outputs"] = new_outputs
 
             if node_data["template"]["_type"] != latest_template["_type"]:
                 node_data["template"]["_type"] = latest_template["_type"]
@@ -414,13 +440,29 @@ def update_edges_with_latest_component_versions(project_data):
                     source_handle["name"] = output_data.get("name")
 
             # Determine the new output types based on the output data
+            # Always prefer "types" over "selected" to ensure we use the current type names (JSON/Table)
+            # rather than potentially stale "selected" values (Data/DataFrame)
             if output_data:
                 if len(output_data.get("types", [])) == 1:
                     new_output_types = output_data.get("types", [])
-                elif output_data.get("selected"):
-                    new_output_types = [output_data.get("selected")]
+                elif len(output_data.get("types", [])) > 1 and output_data.get("selected"):
+                    # Only use "selected" if there are multiple types available
+                    # and selected is present
+                    selected = output_data.get("selected")
+                    # Migrate old type names to new ones
+                    type_migrations = {
+                        "Data": "JSON",
+                        "DataFrame": "Table",
+                    }
+                    migrated_selected = type_migrations.get(selected, selected)
+                    # Verify the migrated selected is in the available types
+                    if migrated_selected in output_data.get("types", []):
+                        new_output_types = [migrated_selected]
+                    else:
+                        # Fallback to first type if selected is invalid
+                        new_output_types = output_data.get("types", [])
                 else:
-                    new_output_types = []
+                    new_output_types = output_data.get("types", [])
             else:
                 new_output_types = []
 
@@ -524,8 +566,7 @@ async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, di
     async for file in folder.glob("*.json"):
         attempt = 0
         while attempt < retries:
-            async with async_open(str(file), "r", encoding="utf-8") as f:
-                content = await f.read()
+            content = await file.read_text(encoding="utf-8")
             try:
                 project = orjson.loads(content)
                 starter_projects.append((file, project))
@@ -697,7 +738,6 @@ async def delete_starter_projects(session, folder_id) -> None:
     flows = await get_all_flows_similar_to_project(session, folder_id)
     for flow in flows:
         await session.delete(flow)
-    await session.commit()
 
 
 async def folder_exists(session, folder_name):
@@ -711,11 +751,177 @@ async def get_or_create_starter_folder(session):
         new_folder = FolderCreate(name=STARTER_FOLDER_NAME, description=STARTER_FOLDER_DESCRIPTION)
         db_folder = Folder.model_validate(new_folder, from_attributes=True)
         session.add(db_folder)
-        await session.commit()
+        await session.flush()
         await session.refresh(db_folder)
         return db_folder
     stmt = select(Folder).where(Folder.name == STARTER_FOLDER_NAME)
     return (await session.exec(stmt)).first()
+
+
+async def get_or_create_assistant_folder(session, user_id: UUID):
+    """Create or get the Langflow Assistant folder for a specific user.
+
+    This folder contains agentic flows and cannot be deleted.
+
+    Args:
+        session: Database session
+        user_id: The ID of the user who owns the folder
+
+    Returns:
+        The Langflow Assistant folder
+    """
+    stmt = select(Folder).where(Folder.user_id == user_id, Folder.name == ASSISTANT_FOLDER_NAME)
+    result = await session.exec(stmt)
+    folder = result.first()
+
+    if not folder:
+        new_folder = FolderCreate(name=ASSISTANT_FOLDER_NAME, description=ASSISTANT_FOLDER_DESCRIPTION)
+        db_folder = Folder.model_validate(new_folder, from_attributes=True)
+        db_folder.user_id = user_id
+        session.add(db_folder)
+        await session.commit()
+        await session.refresh(db_folder)
+        return db_folder
+    return folder
+
+
+async def load_agentic_flows() -> list[tuple[anyio.Path, dict]]:
+    """Load agentic flows from the agentic/flows directory.
+
+    Returns:
+        List of tuples containing (file_path, flow_data)
+    """
+    agentic_flows: list[tuple[anyio.Path, dict]] = []
+    # Get the path to the agentic/flows directory
+    folder = anyio.Path(__file__).parent.parent / "agentic" / "flows"
+
+    if not await folder.exists():
+        await logger.adebug(f"Agentic flows directory does not exist: {folder}")
+        return agentic_flows
+
+    await logger.adebug("Loading agentic flows")
+    async for file in folder.glob("*.json"):
+        try:
+            async with async_open(str(file), "r", encoding="utf-8") as f:
+                content = await f.read()
+            flow = orjson.loads(content)
+            agentic_flows.append((file, flow))
+            await logger.adebug(f"Loaded agentic flow: {file.name}")
+        except (OSError, orjson.JSONDecodeError) as e:
+            await logger.aexception(f"Error loading agentic flow {file}: {e}")
+
+    await logger.adebug(f"Loaded {len(agentic_flows)} agentic flows")
+    return agentic_flows
+
+
+async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID) -> None:
+    """Create or update agentic flows in the Langflow Assistant folder for a user.
+
+    This function is called on user login to ensure that all agentic flows
+    are present and up-to-date in the user's Langflow Assistant folder.
+
+    The function will:
+    - Extract flow_id and endpoint_name from the JSON
+    - Skip updates if flow already exists (only create new flows)
+    - Create new flows if they don't exist
+
+    Args:
+        session: Database session
+        user_id: The ID of the user
+    """
+    from lfx.services.deps import get_settings_service
+
+    # Only configure if agentic experience is enabled
+    settings_service = get_settings_service()
+    if not settings_service.settings.agentic_experience:
+        await logger.adebug("Agentic experience disabled, skipping agentic flows creation")
+        return
+
+    try:
+        # Get or create the Langflow Assistant folder
+        assistant_folder = await get_or_create_assistant_folder(session, user_id)
+
+        # Load all agentic flows from the directory
+        agentic_flows = await load_agentic_flows()
+
+        if not agentic_flows:
+            await logger.adebug("No agentic flows found to load")
+            return
+
+        flows_created = 0
+        flows_updated = 0
+
+        for _, flow_data in agentic_flows:
+            # Extract flow metadata from JSON
+            (
+                flow_name,
+                flow_description,
+                flow_is_component,
+                updated_at_datetime,
+                project_data,
+                flow_icon,
+                flow_icon_bg_color,
+                flow_gradient,
+                flow_tags,
+            ) = get_project_data(flow_data)
+
+            # Extract flow_id and endpoint_name from JSON
+            flow_id = flow_data.get("id")
+            flow_endpoint_name = flow_data.get("endpoint_name")
+
+            # Convert flow_id to UUID if it's a valid UUID string
+            if flow_id and isinstance(flow_id, str):
+                try:
+                    flow_id = UUID(flow_id)
+                except ValueError:
+                    await logger.awarning(f"Invalid UUID for flow {flow_name}: {flow_id}, will use auto-generated ID")
+                    flow_id = None
+
+            # Try to find an existing flow by ID or endpoint_name
+            existing_flow = await find_existing_flow(session, flow_id, flow_endpoint_name)
+
+            if existing_flow:
+                # Skip update if flow already exists
+                await logger.adebug(f"Agentic flow already exists, skipping: {flow_name}")
+                flows_updated += 1
+            else:
+                try:
+                    await logger.adebug(f"Creating agentic flow: {flow_name}")
+                    # Create new flow with ID and endpoint_name from JSON
+                    new_project = FlowCreate(
+                        name=flow_name,
+                        description=flow_description,
+                        icon=flow_icon,
+                        icon_bg_color=flow_icon_bg_color,
+                        data=project_data,
+                        is_component=flow_is_component,
+                        updated_at=updated_at_datetime,
+                        folder_id=assistant_folder.id,
+                        gradient=flow_gradient,
+                        tags=flow_tags,
+                        endpoint_name=flow_endpoint_name,  # Set endpoint_name from JSON
+                    )
+                    db_flow = Flow.model_validate(new_project, from_attributes=True)
+
+                    # Set the ID from JSON if provided
+                    if flow_id:
+                        db_flow.id = flow_id
+
+                    session.add(db_flow)
+                    flows_created += 1
+                except Exception:  # noqa: BLE001
+                    await logger.aexception(f"Error while creating agentic flow {flow_name}")
+
+        if flows_created > 0 or flows_updated > 0:
+            await session.commit()
+            await logger.adebug(
+                f"Successfully created {flows_created} and skipped {flows_updated} existing agentic flows"
+            )
+        else:
+            await logger.adebug("No agentic flows to create")
+
+    except Exception:  # noqa: BLE001
+        await logger.aexception("Error in create_or_update_agentic_flows")
 
 
 def _is_valid_uuid(val):
@@ -863,8 +1069,8 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
 
         # Ensure that the flow is associated with an existing default folder
         if existing.folder_id is None:
-            folder_id = await get_or_create_default_folder(session, user_id)
-            existing.folder_id = folder_id
+            folder = await get_or_create_default_folder(session, user_id)
+            existing.folder_id = folder.id
 
         if isinstance(existing.id, str):
             try:
@@ -923,7 +1129,8 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
             # 1. Delete all existing starter projects
             successfully_updated_projects = 0
             await delete_starter_projects(session, new_folder.id)
-            await copy_profile_pictures()
+            # Profile pictures are now served directly from the package installation directory
+            # No need to copy them to config_dir
 
             # 2. Update all starter projects with the latest component versions (this modifies the actual file data)
             for project_path, project in starter_projects:
@@ -1020,8 +1227,13 @@ async def initialize_auto_login_default_superuser() -> None:
         raise ValueError(msg)
 
     async with session_scope() as async_session:
-        super_user = await create_super_user(db=async_session, username=username, password=password)
+        super_user = await get_auth_service().create_super_user(username, password, db=async_session)
         await get_variable_service().initialize_user_variables(super_user.id, async_session)
+        # Initialize agentic variables if agentic experience is enabled
+        from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
+
+        if get_settings_service().settings.agentic_experience:
+            await initialize_agentic_user_variables(super_user.id, async_session)
         _ = await get_or_create_default_folder(async_session, super_user.id)
     await logger.adebug("Super user initialized")
 
@@ -1069,7 +1281,7 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
                 legacy_folder.description = DEFAULT_FOLDER_DESCRIPTION
                 session.add(legacy_folder)
                 try:
-                    await session.commit()
+                    await session.flush()
                     await session.refresh(legacy_folder)
                     return FolderRead.model_validate(legacy_folder, from_attributes=True)
                 except sa.exc.IntegrityError:
@@ -1081,7 +1293,7 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
     try:
         folder_obj = Folder(user_id=user_id, name=DEFAULT_FOLDER_NAME, description=DEFAULT_FOLDER_DESCRIPTION)
         session.add(folder_obj)
-        await session.commit()
+        await session.flush()
         await session.refresh(folder_obj)
     except sa.exc.IntegrityError as e:
         # Another worker may have created the folder concurrently.
@@ -1098,6 +1310,7 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
 async def sync_flows_from_fs():
     flow_mtimes = {}
     fs_flows_polling_interval = get_settings_service().settings.fs_flows_polling_interval / 1000
+    storage_service = get_storage_service()
     try:
         while True:
             try:
@@ -1106,7 +1319,14 @@ async def sync_flows_from_fs():
                     flows = (await session.exec(stmt)).all()
                     for flow in flows:
                         mtime = flow_mtimes.setdefault(flow.id, 0)
-                        path = anyio.Path(flow.fs_path)
+                        # Resolve path: if relative, construct full path using user's flows directory
+                        fs_path_str = flow.fs_path
+                        if not Path(fs_path_str).is_absolute():
+                            # Relative path - construct full path
+                            path = storage_service.data_dir / "flows" / str(flow.user_id) / fs_path_str
+                        else:
+                            # Absolute path - use as-is
+                            path = anyio.Path(fs_path_str)
                         try:
                             if await path.exists():
                                 new_mtime = (await path.stat()).st_mtime
@@ -1118,7 +1338,7 @@ async def sync_flows_from_fs():
                                                 setattr(flow, field_name, new_value)
                                         if folder_id := update_data.get("folder_id"):
                                             flow.folder_id = UUID(folder_id)
-                                        await session.commit()
+                                        await session.flush()
                                         await session.refresh(flow)
                                     except Exception:  # noqa: BLE001
                                         await logger.aexception(

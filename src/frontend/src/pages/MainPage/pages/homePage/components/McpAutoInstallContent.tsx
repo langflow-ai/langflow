@@ -1,6 +1,7 @@
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
+import type { MCPTransport } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import { toSpaceCase } from "@/utils/stringManipulation";
 import { cn } from "@/utils/utils";
 import { autoInstallers } from "../utils/mcpServerUtils";
@@ -9,7 +10,11 @@ interface McpAutoInstallContentProps {
   isLocalConnection: boolean;
   installedMCPData?: Array<{ name?: string; available?: boolean }>;
   loadingMCP: string[];
-  installClient: (name: string, title?: string) => void;
+  installClient: (
+    name: string,
+    title?: string,
+    transport?: MCPTransport,
+  ) => void;
   installedClients?: string[];
 }
 
@@ -22,7 +27,7 @@ export const McpAutoInstallContent = ({
 }: McpAutoInstallContentProps) => (
   <div className="flex flex-col gap-1 mt-4">
     {!isLocalConnection && (
-      <div className="mb-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+      <div className="mb-2 rounded-md bg-accent-amber px-3 py-2 text-sm text-accent-amber-foreground">
         <div className="flex items-center gap-3">
           <ForwardedIconComponent
             name="AlertTriangle"
@@ -58,7 +63,13 @@ export const McpAutoInstallContent = ({
                 (client) => client.name === installer.name,
               )?.available
             }
-            onClick={() => installClient(installer.name, installer.title)}
+            onClick={() =>
+              installClient(
+                installer.name,
+                installer.title,
+                installer.transport,
+              )
+            }
           >
             <div className="flex items-center gap-4 text-sm font-medium">
               <ForwardedIconComponent

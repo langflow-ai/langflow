@@ -3,10 +3,17 @@ import { type ReactNode, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Separator } from "@/components/ui/separator";
 import useFlowStore from "@/stores/flowStore";
+import type { AllNodeType } from "@/types/flow";
 import CanvasControlsDropdown from "./CanvasControlsDropdown";
 import HelpDropdown from "./HelpDropdown";
 
-const CanvasControls = ({ children }: { children?: ReactNode }) => {
+const CanvasControls = ({
+  children,
+  selectedNode,
+}: {
+  children?: ReactNode;
+  selectedNode: AllNodeType | null;
+}) => {
   const reactFlowStoreApi = useStoreApi();
   const isFlowLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
@@ -23,8 +30,8 @@ const CanvasControls = ({ children }: { children?: ReactNode }) => {
   return (
     <Panel
       data-testid="main_canvas_controls"
-      className="react-flow__controls !left-auto !m-2 flex !flex-row rounded-md border border-border bg-background fill-foreground stroke-foreground text-primary [&>button]:border-0"
-      position="bottom-right"
+      className="react-flow__controls !m-2 flex !flex-row rounded-md border border-border bg-background fill-foreground stroke-foreground text-primary [&>button]:border-0"
+      position="bottom-left"
     >
       {children}
       {children && (
@@ -32,7 +39,7 @@ const CanvasControls = ({ children }: { children?: ReactNode }) => {
           <Separator orientation="vertical" />
         </span>
       )}
-      <CanvasControlsDropdown />
+      <CanvasControlsDropdown selectedNode={selectedNode} />
       <span>
         <Separator orientation="vertical" />
       </span>

@@ -9,7 +9,7 @@ from lfx.inputs.inputs import DataInput, DropdownInput, IntInput
 class LanguageRecursiveTextSplitterComponent(LCTextSplitterComponent):
     display_name: str = "Language Recursive Text Splitter"
     description: str = "Split text into chunks of a specified length based on language."
-    documentation: str = "https://docs.langflow.org/components/text-splitters#languagerecursivetextsplitter"
+    documentation: str = "https://docs.langflow.org/bundles-langchain"
     name = "LanguageRecursiveTextSplitter"
     icon = "LangChain"
 
@@ -30,7 +30,7 @@ class LanguageRecursiveTextSplitterComponent(LCTextSplitterComponent):
             name="data_input",
             display_name="Input",
             info="The texts to split.",
-            input_types=["Document", "Data"],
+            input_types=["Document", "Data", "JSON"],
             required=True,
         ),
         DropdownInput(
