@@ -1,7 +1,5 @@
 import asyncio
-import gc
 import json
-import shutil
 import uuid
 from datetime import datetime, timezone
 from http import HTTPStatus
@@ -78,11 +76,11 @@ async def create_knowledge_base(
         try:
             client = KBStorageHelper.get_fresh_chroma_client(kb_path)
             client.create_collection(name=kb_name)
-            # Explicitly delete reference to help release handle
-            client = None
-            gc.collect()
         except (OSError, ValueError, chromadb.errors.ChromaError) as e:
             logger.warning("Initial Chroma setup for %s failed: %s", kb_name, e)
+        finally:
+            client = None
+            KBStorageHelper.release_chroma_resources(kb_path)
 
         # Serialize column_config for persistence
         column_config_dicts = None
@@ -130,7 +128,7 @@ async def create_knowledge_base(
     except Exception as e:
         # Clean up if something went wrong
         if kb_path.exists():
-            shutil.rmtree(kb_path)
+            KBStorageHelper.delete_storage(kb_path, kb_name)
         await logger.aerror("Error creating knowledge base: %s", e)
         raise HTTPException(status_code=500, detail="Internal error creating knowledge base") from e
 
@@ -593,8 +591,9 @@ async def get_knowledge_base_chunks(
         await logger.aerror("Error getting chunks for '%s': %s", kb_name, e)
         raise HTTPException(status_code=500, detail="Error getting chunks.") from e
     finally:
+        client = None
         chroma = None
-        gc.collect()
+        KBStorageHelper.release_chroma_resources(kb_path)
 
 
 @router.delete("/{kb_name}", status_code=HTTPStatus.OK)
@@ -603,11 +602,11 @@ async def delete_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -
     try:
         kb_path = _resolve_kb_path(kb_name, current_user)
 
-        # Explicitly teardown KB storage to flush Chroma handles before directory deletion
-        KBStorageHelper.teardown_storage(kb_path, kb_name)
-
-        # Delete the entire knowledge base directory
-        shutil.rmtree(kb_path)
+        if not KBStorageHelper.delete_storage(kb_path, kb_name):
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to delete knowledge base '{kb_name}'. The database may be in use.",
+            )
 
     except HTTPException:
         raise
@@ -636,12 +635,8 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
                 continue
 
             try:
-                # Explicitly teardown KB storage to flush Chroma handles before directory deletion
-                KBStorageHelper.teardown_storage(kb_path, kb_name)
-
-                # Delete the entire knowledge base directory
-                shutil.rmtree(kb_path)
-                deleted_count += 1
+                if KBStorageHelper.delete_storage(kb_path, kb_name):
+                    deleted_count += 1
             except (OSError, PermissionError) as e:
                 await logger.aexception("Error deleting knowledge base '%s': %s", kb_name, e)
                 # Continue with other deletions even if one fails

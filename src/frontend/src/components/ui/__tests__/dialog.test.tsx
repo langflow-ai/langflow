@@ -14,7 +14,7 @@ jest.mock("@/components/common/genericIconComponent", () => ({
   default: () => null,
 }));
 
-const renderWithProviders = (ui: ReactElement) => {
+const renderWithProviders = (ui: React.ReactElement) => {
   return render(<TooltipProvider>{ui}</TooltipProvider>);
 };
 
