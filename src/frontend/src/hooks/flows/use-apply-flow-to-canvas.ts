@@ -1,8 +1,8 @@
 import { cloneDeep } from "lodash";
 import { useCallback } from "react";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { FlowType } from "@/types/flow";
 import { processFlows } from "@/utils/reactflowUtils";
 

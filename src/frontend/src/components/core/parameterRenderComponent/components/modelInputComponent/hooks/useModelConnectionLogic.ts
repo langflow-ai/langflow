@@ -1,9 +1,9 @@
+import { useCallback } from "react";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useFlowStore from "@/stores/flowStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 import { groupByFamily } from "@/utils/utils";
-import { useCallback } from "react";
 
 interface UseModelConnectionLogicProps {
   nodeId: string;

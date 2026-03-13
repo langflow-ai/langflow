@@ -1,12 +1,12 @@
 import * as dotenv from "dotenv";
 import path from "path";
 import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
 import { unselectNodes } from "../../utils/unselect-nodes";
-import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
 
 test(
   "Instagram Copywriter",
