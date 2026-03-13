@@ -140,7 +140,6 @@ export default function PublishDropdown({
             >
               <DropdownMenuItem
                 className="deploy-dropdown-item group"
-                onClick={() => {}}
                 data-testid="mcp-server-item"
               >
                 <IconComponent name="Mcp" className={`icon-size mr-2`} />
@@ -154,7 +153,6 @@ export default function PublishDropdown({
           ) : (
             <DropdownMenuItem
               className="deploy-dropdown-item group"
-              onClick={() => {}}
               data-testid="mcp-server-item"
               disabled={!ENABLE_SHARE}
             >
@@ -177,7 +175,6 @@ export default function PublishDropdown({
             <DropdownMenuItem
               className="deploy-dropdown-item group"
               disabled={!ENABLE_SHARE || !hasIO}
-              onClick={() => {}}
               data-testid="shareable-playground"
             >
               <div className="flex w-full items-center justify-between">
