@@ -124,7 +124,7 @@ class GroqModelDiscovery:
             # Save to cache
             self._save_cache(models_metadata)
 
-        except (requests.RequestException, KeyError, ValueError, ImportError) as e:
+        except (requests.RequestException, KeyError, ValueError, ImportError):
             logger.exception("Error discovering models")
             return self._get_fallback_models()
         else:

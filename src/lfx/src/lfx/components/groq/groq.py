@@ -101,7 +101,7 @@ class GroqModel(LCModelComponent):
                 logger.info(f"Loaded {len(model_ids)} Groq models with tool calling support")
             else:
                 logger.info(f"Loaded {len(model_ids)} Groq models")
-        except (ValueError, KeyError, TypeError, ImportError) as e:
+        except (ValueError, KeyError, TypeError, ImportError):
             logger.exception("Error getting model names")
             # Fallback to hardcoded list from groq_constants.py
             return GROQ_MODELS
@@ -114,7 +114,7 @@ class GroqModel(LCModelComponent):
                 if len(self.api_key) != 0:
                     try:
                         ids = self.get_models(tool_model_enabled=self.tool_model_enabled)
-                    except (ValueError, KeyError, TypeError, ImportError) as e:
+                    except (ValueError, KeyError, TypeError, ImportError):
                         logger.exception("Error getting model names")
                         ids = GROQ_MODELS
                     ids = ids or GROQ_MODELS
