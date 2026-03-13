@@ -10,7 +10,7 @@ from sqlmodel import JSON, Column, Field, SQLModel
 
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.properties import Properties
-from langflow.schema.validators import str_to_timestamp_validator
+from langflow.schema.validators import TF_WITH_TZ_AND_MICROSECONDS, str_to_timestamp, str_to_timestamp_validator
 
 if TYPE_CHECKING:
     from langflow.schema.message import Message
@@ -38,11 +38,11 @@ class MessageBase(SQLModel):
         if isinstance(value, datetime):
             if value.tzinfo is None:
                 value = value.replace(tzinfo=timezone.utc)
-            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
+            return value.strftime(TF_WITH_TZ_AND_MICROSECONDS)
 
         if isinstance(value, str):
-            value = datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
-            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
+            dt = str_to_timestamp(value)  # unified, UTC-normalized
+            return dt.strftime(TF_WITH_TZ_AND_MICROSECONDS)
 
         return value
 
@@ -84,10 +84,15 @@ class MessageBase(SQLModel):
                 message.files = image_paths
 
         if isinstance(message.timestamp, str):
+            # Convert timestamp string in format "YYYY-MM-DD HH:MM:SS.ffffff UTC" to datetime
             try:
-                timestamp = datetime.strptime(message.timestamp, "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
+                timestamp = datetime.strptime(message.timestamp, TF_WITH_TZ_AND_MICROSECONDS).replace(
+                    tzinfo=timezone.utc
+                )
             except ValueError:
-                timestamp = datetime.fromisoformat(message.timestamp).replace(tzinfo=timezone.utc)
+                # Fallback for ISO format if the above fails; astimezone preserves offset if present
+                parsed = datetime.fromisoformat(message.timestamp)
+                timestamp = parsed.astimezone(timezone.utc) if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
         else:
             timestamp = message.timestamp
 

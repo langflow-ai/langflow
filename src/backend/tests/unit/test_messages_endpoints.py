@@ -1,10 +1,10 @@
-from datetime import datetime, timezone
 from urllib.parse import quote
 from uuid import UUID
 
 import pytest
 from httpx import AsyncClient
 from langflow.memory import aadd_messagetables
+from langflow.schema.validators import str_to_timestamp, timestamp_to_str
 
 # Assuming you have these imports available
 from langflow.services.database.models.flow.model import Flow
@@ -140,8 +140,8 @@ async def test_successfully_update_session_id(client, logged_in_headers, created
     for message in messages:
         assert message["session_id"] == new_session_id
         response_timestamp = message["timestamp"]
-        timestamp = datetime.strptime(response_timestamp, "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
-        timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S %Z")
+        timestamp = str_to_timestamp(response_timestamp)
+        timestamp_str = timestamp_to_str(timestamp)
         assert timestamp_str == response_timestamp
 
     # Check if the messages ordered by timestamp are in the correct order
