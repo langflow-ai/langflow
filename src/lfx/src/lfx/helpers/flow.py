@@ -89,7 +89,7 @@ async def list_flows_by_flow_folder(
     *,
     user_id: str | None = None,
     flow_id: str | None = None,
-    order_params: dict | None = {"column": "updated_at", "direction": "desc"},  # noqa: B006, ARG001
+    order_params: dict | None = None,  # noqa: B006, ARG001
 ) -> list[Data]:
     """Lists flows for the given user and in the same folder as the specified flow.
 
@@ -118,6 +118,8 @@ async def list_flows_by_flow_folder(
         ValueError: If user_id is not provided.
         ValueError: If Flow ID is not provided.
     """
+    if order_params is None:
+        order_params = {}
     if not user_id:
         msg = "Session is invalid"
         raise ValueError(msg)

@@ -76,7 +76,7 @@ def is_nightly(v: str) -> bool:
 def fetch_latest_version(package_name: str, *, include_prerelease: bool) -> str | None:
     package_name = package_name.replace(" ", "-").lower()
     try:
-        response = httpx.get(f"https://pypi.org/pypi/{package_name}/json")
+        response = httpx.get(f"https://pypi.org/pypi/{package_name}/json", timeout=10.0)
         versions = response.json()["releases"].keys()
         valid_versions = [v for v in versions if include_prerelease or not is_pre_release(v)]
         if not valid_versions:

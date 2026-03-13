@@ -24,7 +24,7 @@ def upload(file_path: str, host: str, flow_id: str):
     try:
         url = f"{host}/api/v1/upload/{flow_id}"
         with Path(file_path).open("rb") as file:
-            response = httpx.post(url, files={"file": file})
+            response = httpx.post(url, files={"file": file}, timeout=10.0)
             if response.status_code in {httpx.codes.OK, httpx.codes.CREATED}:
                 return response.json()
     except Exception as e:

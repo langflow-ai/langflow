@@ -176,6 +176,7 @@ def wait_for_server_ready(host, port, protocol) -> None:
             status_code = httpx.get(
                 f"{protocol}://{health_check_host}:{port}/health",
                 verify=health_check_host not in ("127.0.0.1", "localhost"),
+                timeout=10.0,
             ).status_code
         except HTTPError:
             time.sleep(1)

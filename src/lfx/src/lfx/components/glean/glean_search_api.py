@@ -86,6 +86,7 @@ class GleanAPIWrapper(BaseModel):
             request_details["url"],
             json=request_details["payload"],
             headers=request_details["headers"],
+            timeout=10.0,
         )
 
         response.raise_for_status()

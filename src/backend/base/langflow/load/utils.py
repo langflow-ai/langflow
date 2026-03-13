@@ -20,7 +20,7 @@ def get_flow(url: str, flow_id: str):
     """
     try:
         flow_url = f"{url}/api/v1/flows/{flow_id}"
-        response = httpx.get(flow_url)
+        response = httpx.get(flow_url, timeout=10.0)
         if response.status_code == httpx.codes.OK:
             json_response = response.json()
             return FlowBase(**json_response).model_dump()
