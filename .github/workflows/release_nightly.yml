@@ -24,7 +24,7 @@ on:
         required: false
         type: boolean
         default: false
-      nightly_tag_main:
+      nightly_tag_release:
         description: "Tag for the nightly main build"
         required: true
         type: string
@@ -60,7 +60,7 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.nightly_tag_main }}
+          ref: ${{ inputs.nightly_tag_release }}
           persist-credentials: true
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
@@ -126,7 +126,7 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.nightly_tag_main }}
+          ref: ${{ inputs.nightly_tag_release }}
           persist-credentials: true
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
@@ -223,7 +223,7 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.nightly_tag_main}}
+          ref: ${{ inputs.nightly_tag_release}}
           persist-credentials: true
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
@@ -269,8 +269,8 @@ jobs:
             echo "Name $name does not match langflow-nightly. Exiting the workflow."
             exit 1
           fi
-          if [ "$version" != "${{ inputs.nightly_tag_main }}" ]; then
-            echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_main }}. Exiting the workflow."
+          if [ "$version" != "${{ inputs.nightly_tag_release }}" ]; then
+            echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_release }}. Exiting the workflow."
             exit 1
           fi
           # Strip the leading `v` from the version
@@ -326,7 +326,7 @@ jobs:
       - name: Check out the code
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.nightly_tag_main }}
+          ref: ${{ inputs.nightly_tag_release }}
           persist-credentials: true
       - name: Download LFX artifact
         uses: actions/download-artifact@v7
@@ -354,7 +354,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.nightly_tag_main }}
+          ref: ${{ inputs.nightly_tag_release }}
           persist-credentials: true
       - name: Download base artifact
         uses: actions/download-artifact@v7
@@ -382,7 +382,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.nightly_tag_main }}
+          ref: ${{ inputs.nightly_tag_release }}
           persist-credentials: true
       - name: Download main artifact
         uses: actions/download-artifact@v7
@@ -407,7 +407,7 @@ jobs:
     needs: [build-nightly-base, build-nightly-main]
     uses: ./.github/workflows/docker-nightly-build.yml
     with:
-      ref: ${{ inputs.nightly_tag_main }}
+      ref: ${{ inputs.nightly_tag_release }}
       release_type: nightly-base
       push_to_registry: ${{ inputs.push_to_registry }}
     secrets: inherit
@@ -418,7 +418,7 @@ jobs:
     needs: [build-nightly-main, call_docker_build_base]
     uses: ./.github/workflows/docker-nightly-build.yml
     with:
-      ref: ${{ inputs.nightly_tag_main }}
+      ref: ${{ inputs.nightly_tag_release }}
       release_type: nightly-main
       push_to_registry: ${{ inputs.push_to_registry }}
     secrets: inherit
@@ -430,9 +430,9 @@ jobs:
   #   needs: [build-nightly-main]
   #   uses: ./.github/workflows/docker-nightly-build.yml
   #   with:
-  #     ref: ${{ inputs.nightly_tag_main }}
+  #     ref: ${{ inputs.nightly_tag_release }}
   #     release_type: nightly-main-all
-  #     main_version: ${{ inputs.nightly_tag_main }}
+  #     main_version: ${{ inputs.nightly_tag_release }}
   #   secrets: inherit
 
   # call_docker_build_main_ep:
@@ -441,7 +441,7 @@ jobs:
   #   needs: [build-nightly-main, call_docker_build_main]
   #   uses: ./.github/workflows/docker-build-v2.yml
   #   with:
-  #     ref: ${{ inputs.nightly_tag_main }}
+  #     ref: ${{ inputs.nightly_tag_release }}
   #     release_type: main-ep
   #     push_to_registry: ${{ inputs.push_to_registry }}
   #   secrets: inherit

@@ -69,11 +69,15 @@ jobs:
           | tail -n 1 > branch.txt
 
           BRANCH=$(cat branch.txt)
-          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
-          echo "Using release branch: $BRANCH"
+          if [ -z "$BRANCH" ]; then
+            echo "No release-* branch found in ${{ github.repository }}"
+            exit 1
+          fi
+           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+           echo "Using release branch: $BRANCH"
   create-nightly-tag:
     if: github.repository == 'langflow-ai/langflow'
-    needs: resolve-release-branch
+    needs: [validate-inputs, resolve-release-branch]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -323,10 +327,11 @@ jobs:
   #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   release-nightly-build:
-    if: github.repository == 'langflow-ai/langflow' && always() && needs.frontend-tests.result != 'failure' && needs.backend-unit-tests.result != 'failure' && needs.build-hash-history.result != 'failure'
+    if: github.repository == 'langflow-ai/langflow' && always() && needs.validate-inputs.result == 'success' && needs.frontend-tests.result != 'failure' && needs.backend-unit-tests.result != 'failure' && needs.build-hash-history.result != 'failure'
     name: Run Nightly Langflow Build
     needs:
       [
+        validate-inputs,
         create-nightly-tag,
         frontend-tests,
         backend-unit-tests,
