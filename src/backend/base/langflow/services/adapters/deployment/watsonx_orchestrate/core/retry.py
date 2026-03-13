@@ -122,6 +122,50 @@ async def rollback_created_resources(
             logger.warning("Rollback failed for app_id=%s", app_id, exc_info=True)
 
 
+async def rollback_update_resources(
+    *,
+    clients: WxOClient,
+    created_tool_ids: list[str],
+    created_app_id: str | None,
+    original_tools: dict[str, dict],
+) -> None:
+    """Best-effort rollback for update operations.
+
+    Restores mutated tools first, then deletes newly created tools, then deletes
+    newly created config. Unlike ``rollback_created_resources`` this never
+    deletes the deployment/agent itself.
+    """
+    logger.info(
+        "Rolling back update resources: created_tool_ids=%s, created_app_id=%s, mutated_tools=%s",
+        created_tool_ids,
+        created_app_id,
+        list(original_tools.keys()),
+    )
+    for tool_id, original_tool in reversed(list(original_tools.items())):
+        try:
+            await retry_rollback(
+                lambda tid=tool_id, payload=original_tool: asyncio.to_thread(
+                    clients.tool.update,
+                    tid,
+                    payload,
+                )
+            )
+        except Exception:  # noqa: BLE001
+            logger.warning("Rollback failed: could not restore tool payload for tool_id=%s", tool_id, exc_info=True)
+
+    for tool_id in reversed(created_tool_ids):
+        try:
+            await retry_rollback(lambda tid=tool_id: delete_tool_if_exists(clients, tool_id=tid))
+        except Exception:  # noqa: BLE001
+            logger.warning("Rollback failed for created tool_id=%s", tool_id, exc_info=True)
+
+    if created_app_id:
+        try:
+            await retry_rollback(lambda: delete_config_if_exists(clients, app_id=created_app_id))
+        except Exception:  # noqa: BLE001
+            logger.warning("Rollback failed for created app_id=%s", created_app_id, exc_info=True)
+
+
 async def delete_agent_if_exists(clients: WxOClient, *, agent_id: str) -> None:
     try:
         await asyncio.to_thread(clients.agent.delete, agent_id)

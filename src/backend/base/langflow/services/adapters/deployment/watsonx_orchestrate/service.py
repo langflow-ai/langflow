@@ -12,6 +12,7 @@ from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 from lfx.services.adapters.deployment.base import BaseDeploymentService
 from lfx.services.adapters.deployment.exceptions import (
     AuthenticationError,
+    AuthorizationError,
     DeploymentConflictError,
     DeploymentError,
     DeploymentNotFoundError,
@@ -22,6 +23,7 @@ from lfx.services.adapters.deployment.exceptions import (
 )
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
+    ConfigDeploymentBindingUpdate,
     ConfigListItem,
     ConfigListParams,
     ConfigListResult,
@@ -43,6 +45,7 @@ from lfx.services.adapters.deployment.schema import (
     IdLike,
     ProviderPayload,
     RedeployResult,
+    SnapshotDeploymentBindingUpdate,
     SnapshotItem,
     SnapshotListParams,
     SnapshotListResult,
@@ -56,9 +59,11 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
     ErrorPrefix,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import (
+    create_config,
     process_config,
     resolve_create_app_id,
     validate_config_create_input,
+    validate_connection,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import (
     create_agent_run,
@@ -67,6 +72,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution im
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import (
     retry_create,
     rollback_created_resources,
+    rollback_update_resources,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.status import (
     derive_agent_environment,
@@ -75,7 +81,17 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.status impor
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
     build_snapshot_tool_names,
+    create_and_upload_wxo_flow_tools,
     process_raw_flows_with_app_id,
+    update_existing_tool_connection_bindings,
+)
+from langflow.services.adapters.deployment.watsonx_orchestrate.update_helpers import (
+    SnapshotUpdateOps,
+    apply_update_mutations_with_rollback,
+    build_update_payload_from_spec,
+    compute_target_tool_sets,
+    extract_snapshot_ops,
+    validate_update_guards,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     _require_single_deployment_id,
@@ -102,13 +118,7 @@ if TYPE_CHECKING:
 
 
 class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
-    """Deployment adapter for Watsonx Orchestrate.
-
-    Mapping used by this adapter:
-    - deployment -> wxO agent bound to exactly one connection app_id and many tools
-    - snapshot -> wxO tool (langflow binding) and "immutable" once created
-    - config -> wxO connection configuration (+ credentials), keyed by app_id
-    """
+    """Deployment adapter for Watsonx Orchestrate."""
 
     name = "deployment_service"
 
@@ -294,7 +304,14 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 raise InvalidContentError(message=msg) from None
             msg = f"{ErrorPrefix.CREATE.value} error details: {error_detail}"
             raise DeploymentError(message=msg, error_code="deployment_error") from None
-        except (AuthenticationError, DeploymentConflictError, InvalidContentError):
+        except (
+            AuthenticationError,
+            DeploymentConflictError,
+            InvalidContentError,
+            InvalidDeploymentOperationError,
+            InvalidDeploymentTypeError,
+            DeploymentSupportError,
+        ):
             raise
         except Exception:
             logger.exception("Unexpected error during wxO deployment creation")
@@ -380,7 +397,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 exc,
                 error_prefix=ErrorPrefix.LIST,
                 log_msg="Unexpected error while listing wxO deployments",
-                pass_through=(AuthenticationError, InvalidDeploymentTypeError),
+                pass_through=(AuthenticationError, AuthorizationError, InvalidDeploymentTypeError),
             )
 
         return DeploymentListResult(
@@ -416,49 +433,85 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         db: Any,
     ) -> DeploymentUpdateResult:
         """Update deployment metadata, snapshot bindings, and/or connection binding."""
-        clients = await self._get_provider_clients(user_id=user_id, db=db)
+        try:
+            clients = await self._get_provider_clients(user_id=user_id, db=db)
+            agent_id = _normalize_and_validate_id(str(deployment_id), field_name="deployment_id")
 
-        agent_id = _normalize_and_validate_id(str(deployment_id), field_name="deployment_id")
-        agent = await asyncio.to_thread(clients.agent.get_draft_by_id, agent_id)
+            agent = await asyncio.to_thread(clients.agent.get_draft_by_id, agent_id)
 
-        if not agent:
-            msg = f"Deployment '{agent_id}' not found."
-            raise DeploymentNotFoundError(msg)
+            if not agent:
+                msg = f"Deployment '{agent_id}' not found."
+                raise DeploymentNotFoundError(msg)
 
-        config = payload.config
+            # base agent payload to build for final update call
+            update_payload: dict[str, Any] = build_update_payload_from_spec(payload.spec)
 
-        if config and "config_id" in config.model_fields_set:
-            msg = (
-                "Replacing or unbinding deployment "
-                "configuration/connection via patch "
-                "is not allowed for watsonx Orchestrate "
-                "deployments in Langflow. "
-                "Please do not set the config_id field."
+            # config update operations to apply
+            config: ConfigDeploymentBindingUpdate | None = payload.config
+
+            # snapshot update operations to apply
+            snapshot_update: SnapshotDeploymentBindingUpdate | None = payload.snapshot
+            snapshot_ops: SnapshotUpdateOps = extract_snapshot_ops(snapshot_update)
+
+            # early validation for patch policies
+            validate_update_guards(
+                config=config,
+                has_snapshot_adds=snapshot_ops.has_snapshot_adds,
             )
-            raise InvalidDeploymentOperationError(message=msg)
 
-        update_payload: dict[str, Any] = {}
+            # base_tool_ids: tools already bound to the agent
+            # existing_target_tool_ids: base_tool_ids + snapshot_update.add_ids
+            base_tool_ids, existing_target_tool_ids = compute_target_tool_sets(
+                agent=agent,
+                snapshot_ops=snapshot_ops,
+                config=config,
+            )
 
-        if payload.spec:
-            spec_updates = payload.spec.model_dump(exclude_unset=True)
-            if "name" in spec_updates:
-                update_payload.update(
-                    {
-                        "name": validate_wxo_name(spec_updates["name"]),
-                        "display_name": spec_updates["name"],
-                    }
-                )
-            if "description" in spec_updates:
-                update_payload["description"] = spec_updates["description"]
+            added_snapshot_ids: list[str] = await apply_update_mutations_with_rollback(
+                clients=clients,
+                user_id=user_id,
+                db=db,
+                client_cache=self._client_managers,
+                agent_id=agent_id,
+                config=config,
+                payload_provider_data=payload.provider_data,
+                snapshot_update=snapshot_update,
+                snapshot_ops=snapshot_ops,
+                base_tool_ids=base_tool_ids,
+                existing_target_tool_ids=existing_target_tool_ids,
+                update_payload=update_payload,
+                validate_connection_fn=validate_connection,
+                create_config_fn=create_config,
+                retry_create_fn=retry_create,
+                create_and_upload_wxo_flow_tools_fn=create_and_upload_wxo_flow_tools,
+                update_existing_tool_connection_bindings_fn=update_existing_tool_connection_bindings,
+                rollback_update_resources_fn=rollback_update_resources,
+            )
 
-        if payload.snapshot:
-            msg = "Updating snapshot bindings is not supported by watsonx Orchestrate."
-            raise InvalidDeploymentOperationError(message=msg)
+            return DeploymentUpdateResult(
+                id=deployment_id,
+                snapshot_ids=added_snapshot_ids,
+            )
 
-        if update_payload:
-            await asyncio.to_thread(clients.agent.update, agent_id, update_payload)
-
-        return DeploymentUpdateResult(id=deployment_id)
+        except (ClientAPIException, HTTPException) as exc:
+            raise_as_deployment_error(
+                exc,
+                error_prefix=ErrorPrefix.UPDATE,
+                log_msg="Unexpected provider error during wxO deployment update",
+            )
+        except (
+            AuthenticationError,
+            AuthorizationError,
+            DeploymentNotFoundError,
+            InvalidContentError,
+            InvalidDeploymentOperationError,
+            DeploymentConflictError,
+        ):
+            raise
+        except Exception:
+            logger.exception("Unexpected error during wxO deployment update")
+            msg = f"{ErrorPrefix.UPDATE.value} Please check server logs for details."
+            raise DeploymentError(message=msg, error_code="deployment_error") from None
 
     async def redeploy(
         self,
@@ -504,7 +557,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 raise DeploymentNotFoundError(msg) from None
             msg = f"{ErrorPrefix.DELETE.value} error details: {extract_error_detail(e.response.text)}"
             raise DeploymentError(msg, error_code="deployment_error") from None
-        except (AuthenticationError, DeploymentNotFoundError):
+        except (AuthenticationError, AuthorizationError, DeploymentNotFoundError):
             raise
         except Exception:
             logger.exception("Unexpected error while deleting wxO deployment %s", agent_id)
@@ -577,7 +630,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 exc,
                 error_prefix=ErrorPrefix.CREATE_EXECUTION,
                 log_msg="Unexpected error creating wxO deployment execution",
-                pass_through=(AuthenticationError, DeploymentNotFoundError, InvalidContentError),
+                pass_through=(AuthenticationError, AuthorizationError, DeploymentNotFoundError, InvalidContentError),
             )
 
         return ExecutionCreateResult(

@@ -12,6 +12,7 @@ from lfx.services.adapters.deployment.exceptions import (
     DeploymentError,
     DeploymentServiceError,
     InvalidContentError,
+    raise_for_status_and_detail,
 )
 from lfx.services.adapters.deployment.schema import _normalize_and_validate_id
 
@@ -80,6 +81,13 @@ def dedupe_list(items: list[str]) -> list[str]:
     return result
 
 
+def normalize_and_dedupe_ids(values: list[Any] | None, *, field_name: str) -> list[str]:
+    """Normalize id values to non-empty strings and dedupe while preserving order."""
+    if not values:
+        return []
+    return dedupe_list([_normalize_and_validate_id(str(value), field_name=field_name) for value in values])
+
+
 def _require_single_deployment_id(
     params: ConfigListParams | SnapshotListParams | None,
     *,
@@ -125,6 +133,12 @@ def _resolve_exc_detail(exc: ClientAPIException | HTTPException) -> str:
     return str(extract_error_detail(str(exc.detail)))
 
 
+def _resolve_exc_status_code(exc: ClientAPIException | HTTPException) -> int | None:
+    if isinstance(exc, ClientAPIException):
+        return int(getattr(exc.response, "status_code", 0) or 0) or None
+    return int(exc.status_code)
+
+
 def raise_as_deployment_error(
     exc: Exception,
     *,
@@ -139,9 +153,13 @@ def raise_as_deployment_error(
         msg = f"{error_prefix.value} Please check server logs for details."
         raise DeploymentError(message=msg, error_code="deployment_error") from None
     if isinstance(exc, (ClientAPIException, HTTPException)):
+        status_code = _resolve_exc_status_code(exc)
         detail = _resolve_exc_detail(exc)
-        msg = f"{error_prefix.value} error details: {detail}"
-        raise DeploymentError(message=msg, error_code="deployment_error") from None
+        raise_for_status_and_detail(
+            status_code=status_code,
+            detail=detail,
+            message_prefix=error_prefix.value,
+        )
     logger.exception(log_msg)
     msg = f"{error_prefix.value} Please check server logs for details."
     raise DeploymentError(message=msg, error_code="deployment_error") from None
