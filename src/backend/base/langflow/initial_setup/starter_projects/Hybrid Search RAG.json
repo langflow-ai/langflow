@@ -1728,6 +1728,7 @@
               "search_query",
               "should_cache_vector_store",
               "embedding_model",
+              "api_key",
               "content_field",
               "deletion_field",
               "ignore_invalid_documents",
