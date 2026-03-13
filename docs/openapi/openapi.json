@@ -4,6 +4,98 @@
     "title": "Langflow",
     "version": "1.8.0"
   },
+  "$defs": {
+    "ComponentOutput": {
+      "description": "Component output schema.",
+      "properties": {
+        "type": {
+          "description": "Type of the component output (e.g., 'message', 'data', 'tool', 'text')",
+          "title": "Type",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/JobStatus"
+        },
+        "content": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Content"
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Metadata"
+        }
+      },
+      "required": [
+        "type",
+        "status"
+      ],
+      "title": "ComponentOutput",
+      "type": "object"
+    },
+    "ErrorDetail": {
+      "description": "Error detail schema.",
+      "properties": {
+        "error": {
+          "title": "Error",
+          "type": "string"
+        },
+        "code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Code"
+        },
+        "details": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Details"
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "title": "ErrorDetail",
+      "type": "object"
+    },
+    "JobStatus": {
+      "description": "Job execution status.",
+      "enum": [
+        "queued",
+        "in_progress",
+        "completed",
+        "failed",
+        "cancelled",
+        "timed_out"
+      ],
+      "title": "JobStatus",
+      "type": "string"
+    }
+  },
   "paths": {
     "/api/v1/build/{flow_id}/flow": {
       "post": {
@@ -663,7 +755,7 @@
           "Base"
         ],
         "summary": "Get Config",
-        "description": "Retrieve the current application configuration settings.<br><br>Requires authentication to prevent exposure of sensitive configuration details.<br><br>Returns:<br>    ConfigResponse: The configuration settings of the application.<br><br>Raises:<br>    HTTPException: If an error occurs while retrieving the configuration.",
+        "description": "Retrieve application configuration settings.<br><br>Returns different configuration based on authentication status:<br>- Authenticated users: Full ConfigResponse with all settings<br>- Unauthenticated users: PublicConfigResponse with limited, safe-to-expose settings<br><br>Args:<br>    user: The authenticated user, or None if unauthenticated.<br><br>Returns:<br>    ConfigResponse | PublicConfigResponse: Configuration settings appropriate for the user's auth status.<br><br>Raises:<br>    HTTPException: If an error occurs while retrieving the configuration.",
         "operationId": "get_config_api_v1_config_get",
         "responses": {
           "200": {
@@ -671,7 +763,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConfigResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ConfigResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicConfigResponse"
+                    }
+                  ],
+                  "title": "Response Get Config Api V1 Config Get"
                 }
               }
             }
@@ -2647,6 +2747,320 @@
         }
       }
     },
+    "/api/v1/monitor/traces": {
+      "get": {
+        "tags": [
+          "Traces"
+        ],
+        "summary": "Get Traces",
+        "description": "Get list of traces for a flow.<br><br>Args:<br>    current_user: Authenticated user (required for authorization)<br>    flow_id: Filter by flow ID<br>    session_id: Filter by session ID<br>    status: Filter by trace status<br>    query: Search query for trace name/id/session id<br>    start_time: Filter traces starting on/after this time (ISO)<br>    end_time: Filter traces starting on/before this time (ISO)<br>    page: Page number (1-based)<br>    size: Page size<br><br>Returns:<br>    List of traces",
+        "operationId": "get_traces_api_v1_monitor_traces_get",
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "flow_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Flow Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SpanStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Query"
+            }
+          },
+          {
+            "name": "start_time",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start Time"
+            }
+          },
+          {
+            "name": "end_time",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End Time"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TraceListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Traces"
+        ],
+        "summary": "Delete Traces By Flow",
+        "description": "Delete all traces for a flow.<br><br>Args:<br>    flow_id: The ID of the flow whose traces should be deleted.<br>    current_user: The authenticated user (required for authorization).",
+        "operationId": "delete_traces_by_flow_api_v1_monitor_traces_delete",
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "flow_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Flow Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/monitor/traces/{trace_id}": {
+      "get": {
+        "tags": [
+          "Traces"
+        ],
+        "summary": "Get Trace",
+        "description": "Get a single trace with its hierarchical span tree.<br><br>Args:<br>    trace_id: The ID of the trace to retrieve.<br>    current_user: The authenticated user (required for authorization).<br><br>Returns:<br>    TraceRead containing the trace and its hierarchical span tree.",
+        "operationId": "get_trace_api_v1_monitor_traces__trace_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Trace Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TraceRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Traces"
+        ],
+        "summary": "Delete Trace",
+        "description": "Delete a trace and all its spans.<br><br>Args:<br>    trace_id: The ID of the trace to delete.<br>    current_user: The authenticated user (required for authorization).",
+        "operationId": "delete_trace_api_v1_monitor_traces__trace_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Trace Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/projects/": {
       "get": {
         "tags": [
@@ -3181,7 +3595,7 @@
         ],
         "summary": "Handle Streamable Http",
         "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_v1_mcp_streamable_post",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable_delete",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -3205,7 +3619,7 @@
         ],
         "summary": "Handle Streamable Http",
         "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_v1_mcp_streamable_post",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable_delete",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -3229,7 +3643,7 @@
         ],
         "summary": "Handle Streamable Http",
         "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_v1_mcp_streamable_post",
+        "operationId": "handle_streamable_http_api_v1_mcp_streamable_delete",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -3263,80 +3677,6 @@
             }
           }
         }
-      }
-    },
-    "/api/v1/mcp/streamable/": {
-      "get": {
-        "tags": [
-          "mcp"
-        ],
-        "summary": "Handle Streamable Http",
-        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_v1_mcp_streamable__post",
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearerCookie": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ]
-      },
-      "post": {
-        "tags": [
-          "mcp"
-        ],
-        "summary": "Handle Streamable Http",
-        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_v1_mcp_streamable__post",
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearerCookie": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ]
-      },
-      "delete": {
-        "tags": [
-          "mcp"
-        ],
-        "summary": "Handle Streamable Http",
-        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_v1_mcp_streamable__post",
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearerCookie": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ]
       }
     },
     "/api/v1/mcp/project/{project_id}": {
@@ -3669,13 +4009,13 @@
           }
         }
       },
-      "post": {
+      "delete": {
         "tags": [
           "mcp_projects"
         ],
         "summary": "Handle Project Streamable Http",
         "description": "Handle Streamable HTTP connections for a specific project.",
-        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_post",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_delete",
         "parameters": [
           {
             "name": "project_id",
@@ -3710,7 +4050,7 @@
         ],
         "summary": "Handle Project Streamable Http",
         "description": "Handle Streamable HTTP connections for a specific project.",
-        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_post",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_delete",
         "parameters": [
           {
             "name": "project_id",
@@ -3739,120 +4079,13 @@
           }
         }
       },
-      "delete": {
-        "tags": [
-          "mcp_projects"
-        ],
-        "summary": "Handle Project Streamable Http",
-        "description": "Handle Streamable HTTP connections for a specific project.",
-        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_post",
-        "parameters": [
-          {
-            "name": "project_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Project Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/mcp/project/{project_id}/streamable/": {
       "post": {
         "tags": [
           "mcp_projects"
         ],
         "summary": "Handle Project Streamable Http",
         "description": "Handle Streamable HTTP connections for a specific project.",
-        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__post",
-        "parameters": [
-          {
-            "name": "project_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Project Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "mcp_projects"
-        ],
-        "summary": "Handle Project Streamable Http",
-        "description": "Handle Streamable HTTP connections for a specific project.",
-        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__post",
-        "parameters": [
-          {
-            "name": "project_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Project Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "mcp_projects"
-        ],
-        "summary": "Handle Project Streamable Http",
-        "description": "Handle Streamable HTTP connections for a specific project.",
-        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable__post",
+        "operationId": "handle_project_streamable_http_api_v1_mcp_project__project_id__streamable_delete",
         "parameters": [
           {
             "name": "project_id",
@@ -4355,7 +4588,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UploadFileResponse"
+                  "$ref": "#/components/schemas/langflow__api__schemas__UploadFileResponse"
                 }
               }
             }
@@ -4398,7 +4631,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/File"
+                    "$ref": "#/components/schemas/langflow__services__database__models__file__model__File"
                   },
                   "title": "Response List Files Api V2 Files  Get"
                 }
@@ -4484,7 +4717,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UploadFileResponse"
+                  "$ref": "#/components/schemas/langflow__api__schemas__UploadFileResponse"
                 }
               }
             }
@@ -4527,7 +4760,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/File"
+                    "$ref": "#/components/schemas/langflow__services__database__models__file__model__File"
                   },
                   "title": "Response List Files Api V2 Files Get"
                 }
@@ -4783,7 +5016,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UploadFileResponse"
+                  "$ref": "#/components/schemas/langflow__api__schemas__UploadFileResponse"
                 }
               }
             }
@@ -4995,9 +5228,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "additionalProperties": true,
-                "title": "Server Config"
+                "$ref": "#/components/schemas/MCPServerConfig"
               }
             }
           }
@@ -5056,9 +5287,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "additionalProperties": true,
-                "title": "Server Config"
+                "$ref": "#/components/schemas/MCPServerConfig"
               }
             }
           }
@@ -5168,10 +5397,269 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/WorkflowExecutionResponse"
+                      "$defs": {
+                        "ComponentOutput": {
+                          "description": "Component output schema.",
+                          "properties": {
+                            "type": {
+                              "description": "Type of the component output (e.g., 'message', 'data', 'tool', 'text')",
+                              "title": "Type",
+                              "type": "string"
+                            },
+                            "status": {
+                              "$ref": "#/$defs/JobStatus"
+                            },
+                            "content": {
+                              "anyOf": [
+                                {},
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "title": "Content"
+                            },
+                            "metadata": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": true,
+                                  "type": "object"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "title": "Metadata"
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "status"
+                          ],
+                          "title": "ComponentOutput",
+                          "type": "object"
+                        },
+                        "ErrorDetail": {
+                          "description": "Error detail schema.",
+                          "properties": {
+                            "error": {
+                              "title": "Error",
+                              "type": "string"
+                            },
+                            "code": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "title": "Code"
+                            },
+                            "details": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": true,
+                                  "type": "object"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "title": "Details"
+                            }
+                          },
+                          "required": [
+                            "error"
+                          ],
+                          "title": "ErrorDetail",
+                          "type": "object"
+                        },
+                        "JobStatus": {
+                          "description": "Job execution status.",
+                          "enum": [
+                            "queued",
+                            "in_progress",
+                            "completed",
+                            "failed",
+                            "cancelled",
+                            "timed_out"
+                          ],
+                          "title": "JobStatus",
+                          "type": "string"
+                        }
+                      },
+                      "description": "Synchronous workflow execution response.",
+                      "properties": {
+                        "flow_id": {
+                          "title": "Flow Id",
+                          "type": "string"
+                        },
+                        "job_id": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "format": "uuid",
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Job Id"
+                        },
+                        "object": {
+                          "const": "response",
+                          "default": "response",
+                          "title": "Object",
+                          "type": "string"
+                        },
+                        "created_timestamp": {
+                          "title": "Created Timestamp",
+                          "type": "string"
+                        },
+                        "status": {
+                          "$ref": "#/$defs/JobStatus"
+                        },
+                        "errors": {
+                          "default": [],
+                          "items": {
+                            "$ref": "#/$defs/ErrorDetail"
+                          },
+                          "title": "Errors",
+                          "type": "array"
+                        },
+                        "inputs": {
+                          "additionalProperties": true,
+                          "default": {},
+                          "title": "Inputs",
+                          "type": "object"
+                        },
+                        "outputs": {
+                          "additionalProperties": {
+                            "$ref": "#/$defs/ComponentOutput"
+                          },
+                          "default": {},
+                          "title": "Outputs",
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "flow_id",
+                        "status"
+                      ],
+                      "title": "WorkflowExecutionResponse",
+                      "type": "object"
                     },
                     {
-                      "$ref": "#/components/schemas/WorkflowJobResponse"
+                      "$defs": {
+                        "ErrorDetail": {
+                          "description": "Error detail schema.",
+                          "properties": {
+                            "error": {
+                              "title": "Error",
+                              "type": "string"
+                            },
+                            "code": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "title": "Code"
+                            },
+                            "details": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": true,
+                                  "type": "object"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "title": "Details"
+                            }
+                          },
+                          "required": [
+                            "error"
+                          ],
+                          "title": "ErrorDetail",
+                          "type": "object"
+                        },
+                        "JobStatus": {
+                          "description": "Job execution status.",
+                          "enum": [
+                            "queued",
+                            "in_progress",
+                            "completed",
+                            "failed",
+                            "cancelled",
+                            "timed_out"
+                          ],
+                          "title": "JobStatus",
+                          "type": "string"
+                        }
+                      },
+                      "description": "Background job response.",
+                      "properties": {
+                        "job_id": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "format": "uuid",
+                              "type": "string"
+                            }
+                          ],
+                          "title": "Job Id"
+                        },
+                        "flow_id": {
+                          "title": "Flow Id",
+                          "type": "string"
+                        },
+                        "object": {
+                          "const": "job",
+                          "default": "job",
+                          "title": "Object",
+                          "type": "string"
+                        },
+                        "created_timestamp": {
+                          "title": "Created Timestamp",
+                          "type": "string"
+                        },
+                        "status": {
+                          "$ref": "#/$defs/JobStatus"
+                        },
+                        "links": {
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "title": "Links",
+                          "type": "object"
+                        },
+                        "errors": {
+                          "default": [],
+                          "items": {
+                            "$ref": "#/$defs/ErrorDetail"
+                          },
+                          "title": "Errors",
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "job_id",
+                        "flow_id",
+                        "status"
+                      ],
+                      "title": "WorkflowJobResponse",
+                      "type": "object"
                     }
                   ],
                   "discriminator": {
@@ -5275,6 +5763,98 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "$defs": {
+                    "ComponentOutput": {
+                      "description": "Component output schema.",
+                      "properties": {
+                        "type": {
+                          "description": "Type of the component output (e.g., 'message', 'data', 'tool', 'text')",
+                          "title": "Type",
+                          "type": "string"
+                        },
+                        "status": {
+                          "$ref": "#/$defs/JobStatus"
+                        },
+                        "content": {
+                          "anyOf": [
+                            {},
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Content"
+                        },
+                        "metadata": {
+                          "anyOf": [
+                            {
+                              "additionalProperties": true,
+                              "type": "object"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Metadata"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "status"
+                      ],
+                      "title": "ComponentOutput",
+                      "type": "object"
+                    },
+                    "ErrorDetail": {
+                      "description": "Error detail schema.",
+                      "properties": {
+                        "error": {
+                          "title": "Error",
+                          "type": "string"
+                        },
+                        "code": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Code"
+                        },
+                        "details": {
+                          "anyOf": [
+                            {
+                              "additionalProperties": true,
+                              "type": "object"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "title": "Details"
+                        }
+                      },
+                      "required": [
+                        "error"
+                      ],
+                      "title": "ErrorDetail",
+                      "type": "object"
+                    },
+                    "JobStatus": {
+                      "description": "Job execution status.",
+                      "enum": [
+                        "queued",
+                        "in_progress",
+                        "completed",
+                        "failed",
+                        "cancelled",
+                        "timed_out"
+                      ],
+                      "title": "JobStatus",
+                      "type": "string"
+                    }
+                  },
                   "description": "Synchronous workflow execution response.",
                   "properties": {
                     "flow_id": {
@@ -5307,12 +5887,12 @@
                       "type": "string"
                     },
                     "status": {
-                      "$ref": "#/components/schemas/JobStatus_2"
+                      "$ref": "#/$defs/JobStatus"
                     },
                     "errors": {
                       "default": [],
                       "items": {
-                        "$ref": "#/components/schemas/ErrorDetail_2"
+                        "$ref": "#/$defs/ErrorDetail"
                       },
                       "title": "Errors",
                       "type": "array"
@@ -5325,7 +5905,7 @@
                     },
                     "outputs": {
                       "additionalProperties": {
-                        "$ref": "#/components/schemas/ComponentOutput_1"
+                        "$ref": "#/$defs/ComponentOutput"
                       },
                       "default": {},
                       "title": "Outputs",
@@ -5438,57 +6018,13 @@
         ]
       }
     },
-    "/api/mcp/sse": {
+    "/health": {
       "get": {
         "tags": [
-          "mcp"
+          "Health Check"
         ],
-        "summary": "Handle Sse",
-        "operationId": "handle_sse_api_mcp_sse_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearerCookie": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ]
-      },
-      "head": {
-        "tags": [
-          "mcp"
-        ],
-        "summary": "Im Alive",
-        "operationId": "im_alive_api_mcp_sse_head",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/mcp/": {
-      "post": {
-        "tags": [
-          "mcp"
-        ],
-        "summary": "Handle Messages",
-        "operationId": "handle_messages_api_mcp__post",
+        "summary": "Health",
+        "operationId": "health_health_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -5499,171 +6035,6 @@
             }
           }
         }
-      }
-    },
-    "/api/mcp/streamable": {
-      "get": {
-        "tags": [
-          "mcp"
-        ],
-        "summary": "Handle Streamable Http",
-        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_mcp_streamable_post",
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearerCookie": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ]
-      },
-      "post": {
-        "tags": [
-          "mcp"
-        ],
-        "summary": "Handle Streamable Http",
-        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_mcp_streamable_post",
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearerCookie": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ]
-      },
-      "delete": {
-        "tags": [
-          "mcp"
-        ],
-        "summary": "Handle Streamable Http",
-        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_mcp_streamable_post",
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearerCookie": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ]
-      },
-      "head": {
-        "tags": [
-          "mcp"
-        ],
-        "summary": "Streamable Health",
-        "operationId": "streamable_health_api_mcp_streamable_head",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/mcp/streamable/": {
-      "get": {
-        "tags": [
-          "mcp"
-        ],
-        "summary": "Handle Streamable Http",
-        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_mcp_streamable__post",
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearerCookie": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ]
-      },
-      "post": {
-        "tags": [
-          "mcp"
-        ],
-        "summary": "Handle Streamable Http",
-        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_mcp_streamable__post",
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearerCookie": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ]
-      },
-      "delete": {
-        "tags": [
-          "mcp"
-        ],
-        "summary": "Handle Streamable Http",
-        "description": "Streamable HTTP endpoint for MCP clients that support the new transport.",
-        "operationId": "handle_streamable_http_api_mcp_streamable__post",
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearerCookie": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ]
       }
     },
     "/health_check": {
@@ -6211,7 +6582,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File"
           }
         },
@@ -6225,7 +6596,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File"
           }
         },
@@ -6239,7 +6610,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File"
           }
         },
@@ -6253,7 +6624,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File"
           }
         },
@@ -6267,7 +6638,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File"
           }
         },
@@ -6456,6 +6827,33 @@
       },
       "ConfigResponse": {
         "properties": {
+          "max_file_size_upload": {
+            "type": "integer",
+            "title": "Max File Size Upload"
+          },
+          "event_delivery": {
+            "type": "string",
+            "enum": [
+              "polling",
+              "streaming",
+              "direct"
+            ],
+            "title": "Event Delivery"
+          },
+          "voice_mode_available": {
+            "type": "boolean",
+            "title": "Voice Mode Available"
+          },
+          "frontend_timeout": {
+            "type": "integer",
+            "title": "Frontend Timeout"
+          },
+          "type": {
+            "type": "string",
+            "const": "full",
+            "title": "Type",
+            "default": "full"
+          },
           "feature_flags": {
             "$ref": "#/components/schemas/FeatureFlags"
           },
@@ -6466,10 +6864,6 @@
           "serialization_max_text_length": {
             "type": "integer",
             "title": "Serialization Max Text Length"
-          },
-          "frontend_timeout": {
-            "type": "integer",
-            "title": "Frontend Timeout"
           },
           "auto_saving": {
             "type": "boolean",
@@ -6483,10 +6877,6 @@
             "type": "integer",
             "title": "Health Check Max Retries"
           },
-          "max_file_size_upload": {
-            "type": "integer",
-            "title": "Max File Size Upload"
-          },
           "webhook_polling_interval": {
             "type": "integer",
             "title": "Webhook Polling Interval"
@@ -6499,22 +6889,9 @@
             "type": "integer",
             "title": "Public Flow Expiration"
           },
-          "event_delivery": {
-            "type": "string",
-            "enum": [
-              "polling",
-              "streaming",
-              "direct"
-            ],
-            "title": "Event Delivery"
-          },
           "webhook_auth_enable": {
             "type": "boolean",
             "title": "Webhook Auth Enable"
-          },
-          "voice_mode_available": {
-            "type": "boolean",
-            "title": "Voice Mode Available"
           },
           "default_folder_name": {
             "type": "string",
@@ -6527,24 +6904,25 @@
         },
         "type": "object",
         "required": [
+          "max_file_size_upload",
+          "event_delivery",
+          "voice_mode_available",
+          "frontend_timeout",
           "feature_flags",
           "serialization_max_items_length",
           "serialization_max_text_length",
-          "frontend_timeout",
           "auto_saving",
           "auto_saving_interval",
           "health_check_max_retries",
-          "max_file_size_upload",
           "webhook_polling_interval",
           "public_flow_cleanup_interval",
           "public_flow_expiration",
-          "event_delivery",
           "webhook_auth_enable",
-          "voice_mode_available",
           "default_folder_name",
           "hide_getting_started_progress"
         ],
-        "title": "ConfigResponse"
+        "title": "ConfigResponse",
+        "description": "Full configuration response for authenticated users.\n\nThe 'type' field is a discriminator to distinguish from PublicConfigResponse."
       },
       "ContentBlock": {
         "properties": {
@@ -6612,61 +6990,6 @@
         "additionalProperties": false,
         "type": "object",
         "title": "FeatureFlags"
-      },
-      "File": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "user_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "User Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "path": {
-            "type": "string",
-            "title": "Path"
-          },
-          "size": {
-            "type": "integer",
-            "title": "Size"
-          },
-          "provider": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Provider"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Updated At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "user_id",
-          "name",
-          "path",
-          "size"
-        ],
-        "title": "File"
       },
       "Flow": {
         "properties": {
@@ -8226,6 +8549,78 @@
         "title": "MCPProjectUpdateRequest",
         "description": "Request model for updating MCP project settings including auth."
       },
+      "MCPServerConfig": {
+        "properties": {
+          "command": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Command"
+          },
+          "args": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Args"
+          },
+          "env": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Env"
+          },
+          "headers": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Headers"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "MCPServerConfig",
+        "description": "Pydantic model for MCP server configuration."
+      },
       "MCPSettings": {
         "properties": {
           "id": {
@@ -8898,10 +9293,71 @@
             "type": "array",
             "title": "Targets",
             "default": []
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Usage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "build_duration": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Build Duration"
           }
         },
         "type": "object",
         "title": "Properties"
+      },
+      "PublicConfigResponse": {
+        "properties": {
+          "max_file_size_upload": {
+            "type": "integer",
+            "title": "Max File Size Upload"
+          },
+          "event_delivery": {
+            "type": "string",
+            "enum": [
+              "polling",
+              "streaming",
+              "direct"
+            ],
+            "title": "Event Delivery"
+          },
+          "voice_mode_available": {
+            "type": "boolean",
+            "title": "Voice Mode Available"
+          },
+          "frontend_timeout": {
+            "type": "integer",
+            "title": "Frontend Timeout"
+          },
+          "type": {
+            "type": "string",
+            "const": "public",
+            "title": "Type",
+            "default": "public"
+          }
+        },
+        "type": "object",
+        "required": [
+          "max_file_size_upload",
+          "event_delivery",
+          "voice_mode_available",
+          "frontend_timeout"
+        ],
+        "title": "PublicConfigResponse",
+        "description": "Configuration response for public/unauthenticated endpoints like the public playground.\n\nContains only the configuration values needed for public features, without sensitive data.\nThe 'type' field is a discriminator to distinguish from full ConfigResponse."
       },
       "ResultData": {
         "properties": {
@@ -9212,6 +9668,159 @@
         "type": "object",
         "title": "Source"
       },
+      "SpanReadResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "$ref": "#/components/schemas/SpanType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SpanStatus"
+          },
+          "startTime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starttime"
+          },
+          "endTime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endtime"
+          },
+          "latencyMs": {
+            "type": "integer",
+            "title": "Latencyms"
+          },
+          "inputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inputs"
+          },
+          "outputs": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outputs"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "modelName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modelname"
+          },
+          "tokenUsage": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokenusage"
+          },
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/SpanReadResponse"
+            },
+            "type": "array",
+            "title": "Children"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "type",
+          "status",
+          "startTime",
+          "endTime",
+          "latencyMs",
+          "inputs",
+          "outputs",
+          "error",
+          "modelName",
+          "tokenUsage"
+        ],
+        "title": "SpanReadResponse",
+        "description": "Response model for a single span, with nested children.\n\nSerializes to camelCase JSON to match the frontend API contract."
+      },
+      "SpanStatus": {
+        "type": "string",
+        "enum": [
+          "unset",
+          "ok",
+          "error"
+        ],
+        "title": "SpanStatus",
+        "description": "OpenTelemetry status codes.\n\n- UNSET: Default status, span has not ended yet\n- OK: Span completed successfully\n- ERROR: Span completed with an error"
+      },
+      "SpanType": {
+        "type": "string",
+        "enum": [
+          "chain",
+          "llm",
+          "tool",
+          "retriever",
+          "embedding",
+          "parser",
+          "agent"
+        ],
+        "title": "SpanType",
+        "description": "Types of spans that can be recorded."
+      },
       "TextContent": {
         "additionalProperties": true,
         "type": "object"
@@ -9219,6 +9828,217 @@
       "ToolContent": {
         "additionalProperties": true,
         "type": "object"
+      },
+      "TraceListResponse": {
+        "properties": {
+          "traces": {
+            "items": {
+              "$ref": "#/components/schemas/TraceSummaryRead"
+            },
+            "type": "array",
+            "title": "Traces"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "traces",
+          "total",
+          "pages"
+        ],
+        "title": "TraceListResponse",
+        "description": "Paginated list response for traces."
+      },
+      "TraceRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SpanStatus"
+          },
+          "startTime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starttime"
+          },
+          "endTime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endtime"
+          },
+          "totalLatencyMs": {
+            "type": "integer",
+            "title": "Totallatencyms"
+          },
+          "totalTokens": {
+            "type": "integer",
+            "title": "Totaltokens"
+          },
+          "flowId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Flowid"
+          },
+          "sessionId": {
+            "type": "string",
+            "title": "Sessionid"
+          },
+          "input": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "spans": {
+            "items": {
+              "$ref": "#/components/schemas/SpanReadResponse"
+            },
+            "type": "array",
+            "title": "Spans"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "status",
+          "startTime",
+          "endTime",
+          "totalLatencyMs",
+          "totalTokens",
+          "flowId",
+          "sessionId"
+        ],
+        "title": "TraceRead",
+        "description": "Response model for a single trace with its hierarchical span tree.\n\nSerializes to camelCase JSON to match the frontend API contract."
+      },
+      "TraceSummaryRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SpanStatus"
+          },
+          "startTime": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starttime"
+          },
+          "totalLatencyMs": {
+            "type": "integer",
+            "title": "Totallatencyms"
+          },
+          "totalTokens": {
+            "type": "integer",
+            "title": "Totaltokens"
+          },
+          "flowId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Flowid"
+          },
+          "sessionId": {
+            "type": "string",
+            "title": "Sessionid"
+          },
+          "input": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "status",
+          "startTime",
+          "totalLatencyMs",
+          "totalTokens",
+          "flowId",
+          "sessionId"
+        ],
+        "title": "TraceSummaryRead",
+        "description": "Lightweight trace model for list endpoint.\n\nSerializes to camelCase JSON to match the frontend API contract."
       },
       "TransactionLogsResponse": {
         "properties": {
@@ -9298,47 +10118,45 @@
           }
         ]
       },
-      "UploadFileResponse": {
+      "Usage": {
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "path": {
-            "type": "string",
-            "format": "path",
-            "title": "Path"
-          },
-          "size": {
-            "type": "integer",
-            "title": "Size"
-          },
-          "provider": {
+          "input_tokens": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "integer"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Provider"
+            "title": "Input Tokens"
+          },
+          "output_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Tokens"
+          },
+          "total_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Tokens"
           }
         },
         "type": "object",
-        "required": [
-          "id",
-          "name",
-          "path",
-          "size"
-        ],
-        "title": "UploadFileResponse",
-        "description": "File upload response schema."
+        "title": "Usage",
+        "description": "Token usage information from LLM responses."
       },
       "UserCreate": {
         "properties": {
@@ -9593,6 +10411,13 @@
           "type": {
             "type": "string",
             "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
           }
         },
         "type": "object",
@@ -9835,6 +10660,48 @@
         "title": "WorkflowStopResponse",
         "description": "Response schema for stopping workflow."
       },
+      "langflow__api__schemas__UploadFileResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "path": {
+            "type": "string",
+            "format": "path",
+            "title": "Path"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "path",
+          "size"
+        ],
+        "title": "UploadFileResponse",
+        "description": "File upload response schema."
+      },
       "langflow__api__v1__schemas__UploadFileResponse": {
         "properties": {
           "flowId": {
@@ -9854,6 +10721,61 @@
         ],
         "title": "UploadFileResponse",
         "description": "Upload file response schema."
+      },
+      "langflow__services__database__models__file__model__File": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "name",
+          "path",
+          "size"
+        ],
+        "title": "File"
       },
       "lfx__utils__schemas__File": {
         "properties": {
@@ -9878,357 +10800,6 @@
         ],
         "title": "File",
         "description": "File schema."
-      },
-      "ComponentOutput": {
-        "description": "Component output schema.",
-        "properties": {
-          "type": {
-            "description": "Type of the component output (e.g., 'message', 'data', 'tool', 'text')",
-            "title": "Type",
-            "type": "string"
-          },
-          "status": {
-            "$ref": "#/components/schemas/JobStatus"
-          },
-          "content": {
-            "anyOf": [
-              {},
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content"
-          },
-          "metadata": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Metadata"
-          }
-        },
-        "required": [
-          "type",
-          "status"
-        ],
-        "title": "ComponentOutput",
-        "type": "object"
-      },
-      "ErrorDetail": {
-        "description": "Error detail schema.",
-        "properties": {
-          "error": {
-            "title": "Error",
-            "type": "string"
-          },
-          "code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Code"
-          },
-          "details": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Details"
-          }
-        },
-        "required": [
-          "error"
-        ],
-        "title": "ErrorDetail",
-        "type": "object"
-      },
-      "JobStatus": {
-        "description": "Job execution status.",
-        "enum": [
-          "queued",
-          "in_progress",
-          "completed",
-          "failed",
-          "cancelled",
-          "timed_out"
-        ],
-        "title": "JobStatus",
-        "type": "string"
-      },
-      "ErrorDetail_1": {
-        "description": "Error detail schema.",
-        "properties": {
-          "error": {
-            "title": "Error",
-            "type": "string"
-          },
-          "code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Code"
-          },
-          "details": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Details"
-          }
-        },
-        "required": [
-          "error"
-        ],
-        "title": "ErrorDetail",
-        "type": "object"
-      },
-      "JobStatus_1": {
-        "description": "Job execution status.",
-        "enum": [
-          "queued",
-          "in_progress",
-          "completed",
-          "failed",
-          "cancelled",
-          "timed_out"
-        ],
-        "title": "JobStatus",
-        "type": "string"
-      },
-      "ComponentOutput_1": {
-        "description": "Component output schema.",
-        "properties": {
-          "type": {
-            "description": "Type of the component output (e.g., 'message', 'data', 'tool', 'text')",
-            "title": "Type",
-            "type": "string"
-          },
-          "status": {
-            "$ref": "#/components/schemas/JobStatus"
-          },
-          "content": {
-            "anyOf": [
-              {},
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content"
-          },
-          "metadata": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Metadata"
-          }
-        },
-        "required": [
-          "type",
-          "status"
-        ],
-        "title": "ComponentOutput",
-        "type": "object"
-      },
-      "ErrorDetail_2": {
-        "description": "Error detail schema.",
-        "properties": {
-          "error": {
-            "title": "Error",
-            "type": "string"
-          },
-          "code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Code"
-          },
-          "details": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Details"
-          }
-        },
-        "required": [
-          "error"
-        ],
-        "title": "ErrorDetail",
-        "type": "object"
-      },
-      "JobStatus_2": {
-        "description": "Job execution status.",
-        "enum": [
-          "queued",
-          "in_progress",
-          "completed",
-          "failed",
-          "cancelled",
-          "timed_out"
-        ],
-        "title": "JobStatus",
-        "type": "string"
-      },
-      "WorkflowExecutionResponse": {
-        "description": "Synchronous workflow execution response.",
-        "properties": {
-          "flow_id": {
-            "title": "Flow Id",
-            "type": "string"
-          },
-          "job_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Job Id"
-          },
-          "object": {
-            "const": "response",
-            "default": "response",
-            "title": "Object",
-            "type": "string"
-          },
-          "created_timestamp": {
-            "title": "Created Timestamp",
-            "type": "string"
-          },
-          "status": {
-            "$ref": "#/components/schemas/JobStatus"
-          },
-          "errors": {
-            "default": [],
-            "items": {
-              "$ref": "#/components/schemas/ErrorDetail"
-            },
-            "title": "Errors",
-            "type": "array"
-          },
-          "inputs": {
-            "additionalProperties": true,
-            "default": {},
-            "title": "Inputs",
-            "type": "object"
-          },
-          "outputs": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/ComponentOutput"
-            },
-            "default": {},
-            "title": "Outputs",
-            "type": "object"
-          }
-        },
-        "required": [
-          "flow_id",
-          "status"
-        ],
-        "title": "WorkflowExecutionResponse",
-        "type": "object"
-      },
-      "WorkflowJobResponse": {
-        "description": "Background job response.",
-        "properties": {
-          "job_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "format": "uuid",
-                "type": "string"
-              }
-            ],
-            "title": "Job Id"
-          },
-          "flow_id": {
-            "title": "Flow Id",
-            "type": "string"
-          },
-          "object": {
-            "const": "job",
-            "default": "job",
-            "title": "Object",
-            "type": "string"
-          },
-          "created_timestamp": {
-            "title": "Created Timestamp",
-            "type": "string"
-          },
-          "status": {
-            "$ref": "#/components/schemas/JobStatus_1"
-          },
-          "links": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "title": "Links",
-            "type": "object"
-          },
-          "errors": {
-            "default": [],
-            "items": {
-              "$ref": "#/components/schemas/ErrorDetail_1"
-            },
-            "title": "Errors",
-            "type": "array"
-          }
-        },
-        "required": [
-          "job_id",
-          "flow_id",
-          "status"
-        ],
-        "title": "WorkflowJobResponse",
-        "type": "object"
       }
     },
     "securitySchemes": {
