@@ -54,9 +54,30 @@ jobs:
         run: |
           echo "Cannot skip tests while push_to_registry is true."
           exit 1
+  resolve-release-branch:
+    runs-on: ubuntu-latest
+    outputs:
+      branch: ${{ steps.get_branch.outputs.branch }}
+    steps:
+      - name: Find latest release branch
+        id: get_branch
+        run: |
+          git ls-remote --heads https://github.com/${{ github.repository }} 'refs/heads/release-*' \
+          | awk '{print $2}' \
+          | sed 's|refs/heads/||' \
+          | sort -V \
+          | tail -n 1 > branch.txt
 
+          BRANCH=$(cat branch.txt)
+          if [ -z "$BRANCH" ]; then
+            echo "No release-* branch found in ${{ github.repository }}"
+            exit 1
+          fi
+           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+           echo "Using release branch: $BRANCH"
   create-nightly-tag:
     if: github.repository == 'langflow-ai/langflow'
+    needs: [validate-inputs, resolve-release-branch]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -65,13 +86,14 @@ jobs:
       # Required to create tag
       contents: write
     outputs:
-      main_tag: ${{ steps.generate_main_tag.outputs.main_tag }}
+      release_tag: ${{ steps.generate_release_tag.outputs.release_tag }}
       base_tag: ${{ steps.set_base_tag.outputs.base_tag }}
       lfx_tag: ${{ steps.generate_lfx_tag.outputs.lfx_tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
+          ref: ${{ needs.resolve-release-branch.outputs.branch }}
           persist-credentials: true
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
@@ -84,20 +106,20 @@ jobs:
         run: uv sync
 
       - name: Generate main nightly tag
-        id: generate_main_tag
+        id: generate_release_tag
         run: |
           # NOTE: This outputs the tag with the `v` prefix.
-          MAIN_TAG="$(uv run ./scripts/ci/pypi_nightly_tag.py main)"
-          echo "main_tag=$MAIN_TAG" >> $GITHUB_OUTPUT
-          echo "main_tag=$MAIN_TAG"
+          RELEASE_TAG="$(uv run ./scripts/ci/pypi_nightly_tag.py main)"
+          echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
+          echo "release_tag=$RELEASE_TAG"
 
       - name: Delete existing tag if it exists
-        id: check_main_tag
+        id: check_release_tag
         run: |
           git fetch --tags
-          git tag -d ${{ steps.generate_main_tag.outputs.main_tag }} || true
-          git push --delete origin ${{ steps.generate_main_tag.outputs.main_tag }} || true
-          echo "main_tag_exists=false" >> $GITHUB_OUTPUT
+          git tag -d ${{ steps.generate_release_tag.outputs.release_tag }} || true
+          git push --delete origin ${{ steps.generate_release_tag.outputs.release_tag }} || true
+          echo "release_tag_exists=false" >> $GITHUB_OUTPUT
 
       - name: Generate base nightly tag
         id: generate_base_tag
@@ -123,13 +145,13 @@ jobs:
           git config --global user.email "bot-nightly-builds@langflow.org"
           git config --global user.name "Langflow Bot"
 
-          MAIN_TAG="${{ steps.generate_main_tag.outputs.main_tag }}"
+          RELEASE_TAG="${{ steps.generate_release_tag.outputs.release_tag }}"
           BASE_TAG="${{ steps.generate_base_tag.outputs.base_tag }}"
           LFX_TAG="${{ steps.generate_lfx_tag.outputs.lfx_tag }}"
           echo "Updating LFX project version to $LFX_TAG"
           uv run ./scripts/ci/update_lfx_version.py $LFX_TAG
-          echo "Updating base project version to $BASE_TAG and updating main project version to $MAIN_TAG"
-          uv run --no-sync ./scripts/ci/update_pyproject_combined.py main $MAIN_TAG $BASE_TAG $LFX_TAG
+          echo "Updating base project version to $BASE_TAG and updating main project version to $RELEASE_TAG"
+          uv run --no-sync ./scripts/ci/update_pyproject_combined.py main $RELEASE_TAG $BASE_TAG $LFX_TAG
 
           uv lock
           cd src/backend/base && uv lock && cd ../../..
@@ -138,14 +160,14 @@ jobs:
           git add pyproject.toml src/backend/base/pyproject.toml src/lfx/pyproject.toml uv.lock src/backend/base/uv.lock
           git commit -m "Update version and project name"
 
-          echo "Tagging main with $MAIN_TAG"
-          if ! git tag -a $MAIN_TAG -m "Langflow nightly $MAIN_TAG"; then
+          echo "Tagging main with $RELEASE_TAG"
+          if ! git tag -a $RELEASE_TAG -m "Langflow nightly $RELEASE_TAG"; then
             echo "Tag creation failed. Exiting the workflow."
             exit 1
           fi
 
-          echo "Pushing main tag $MAIN_TAG"
-          if ! git push origin $MAIN_TAG; then
+          echo "Pushing main tag $RELEASE_TAG"
+          if ! git push origin $RELEASE_TAG; then
             echo "Tag push failed. Check if the tag already exists. Exiting the workflow."
             exit 1
           fi
@@ -154,7 +176,8 @@ jobs:
       - name: Checkout main nightly tag
         uses: actions/checkout@v6
         with:
-          ref: ${{ steps.generate_main_tag.outputs.main_tag }}
+          ref: ${{ steps.generate_release_tag.outputs.release_tag }}
+          persist-credentials: true
 
       - name: Retrieve Base Tag
         id: retrieve_base_tag
@@ -195,7 +218,7 @@ jobs:
       - name: Checkout nightly tag
         uses: actions/checkout@v6
         with:
-          ref: ${{ needs.create-nightly-tag.outputs.main_tag }}
+          ref: ${{ needs.create-nightly-tag.outputs.release_tag }}
           persist-credentials: true
 
       - name: "Setup Environment"
@@ -239,12 +262,12 @@ jobs:
           else
             echo "Hash history changes detected, committing..."
             # Commit to the nightly tag itself so builds include the hash history
-            git commit -m "Update nightly hash history for ${{ needs.create-nightly-tag.outputs.main_tag }}"
+            git commit -m "Update nightly hash history for ${{ needs.create-nightly-tag.outputs.release_tag }}"
 
-            echo "=== Updating nightly tag ${{ needs.create-nightly-tag.outputs.main_tag }} ==="
+            echo "=== Updating nightly tag ${{ needs.create-nightly-tag.outputs.release_tag }} ==="
             # Update the tag to include the hash history
-            git tag -f ${{ needs.create-nightly-tag.outputs.main_tag }}
-            git push -f origin ${{ needs.create-nightly-tag.outputs.main_tag }}
+            git tag -f ${{ needs.create-nightly-tag.outputs.release_tag }}
+            git push -f origin ${{ needs.create-nightly-tag.outputs.release_tag }}
 
             echo "=== Creating clean branch from main with only hash history changes ==="
             # Fetch latest main
@@ -254,11 +277,11 @@ jobs:
             git checkout -B nightly-hash-history-updates origin/main
 
             # Copy ONLY the hash history file from the nightly tag
-            git checkout ${{ needs.create-nightly-tag.outputs.main_tag }} -- src/lfx/src/lfx/_assets/nightly_hash_history.json
+            git checkout ${{ needs.create-nightly-tag.outputs.release_tag }} -- src/lfx/src/lfx/_assets/nightly_hash_history.json
 
             # Commit only this file
             git add src/lfx/src/lfx/_assets/nightly_hash_history.json
-            git commit -m "Update nightly hash history for ${{ needs.create-nightly-tag.outputs.main_tag }}"
+            git commit -m "Update nightly hash history for ${{ needs.create-nightly-tag.outputs.release_tag }}"
 
             # Force push the clean branch
             git push origin nightly-hash-history-updates --force
@@ -304,16 +327,23 @@ jobs:
   #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   release-nightly-build:
-    if: github.repository == 'langflow-ai/langflow' && always() && needs.frontend-tests.result != 'failure' && needs.backend-unit-tests.result != 'failure' && needs.build-hash-history.result != 'failure'
+    if: github.repository == 'langflow-ai/langflow' && always() && needs.validate-inputs.result == 'success' && needs.frontend-tests.result != 'failure' && needs.backend-unit-tests.result != 'failure' && needs.build-hash-history.result != 'failure'
     name: Run Nightly Langflow Build
-    needs: [create-nightly-tag, frontend-tests, backend-unit-tests, build-hash-history]
+    needs:
+      [
+        validate-inputs,
+        create-nightly-tag,
+        frontend-tests,
+        backend-unit-tests,
+        build-hash-history,
+      ]
     uses: ./.github/workflows/release_nightly.yml
     with:
       build_docker_base: true
       build_docker_main: true
       build_docker_ep: true
       build_lfx: true
-      nightly_tag_main: ${{ needs.create-nightly-tag.outputs.main_tag }}
+      nightly_tag_release: ${{ needs.create-nightly-tag.outputs.release_tag }}
       nightly_tag_base: ${{ needs.create-nightly-tag.outputs.base_tag }}
       nightly_tag_lfx: ${{ needs.create-nightly-tag.outputs.lfx_tag }}
       # When triggered by schedule, inputs.push_to_registry is not set, so default to true
@@ -323,7 +353,13 @@ jobs:
 
   slack-notification:
     name: Send Slack Notification
-    needs: [frontend-tests, backend-unit-tests, release-nightly-build, merge-hash-history-to-main]
+    needs:
+      [
+        frontend-tests,
+        backend-unit-tests,
+        release-nightly-build,
+        merge-hash-history-to-main,
+      ]
     if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.merge-hash-history-to-main.result == 'failure' || needs.release-nightly-build.result == 'success') }}
     runs-on: ubuntu-latest
     steps:
@@ -486,7 +522,7 @@ jobs:
 
             - Updates: `src/lfx/src/lfx/_assets/nightly_hash_history.json`
 
-            - Source: Nightly build tag ${{ needs.create-nightly-tag.outputs.main_tag || 'latest nightly' }}
+            - Source: Nightly build tag ${{ needs.create-nightly-tag.outputs.release_tag || 'latest nightly' }}
 
 
             This PR is automatically updated each night with the latest hash history.
