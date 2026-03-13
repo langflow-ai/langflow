@@ -305,30 +305,20 @@ def apply_provider_variable_config_to_build_config(
 
         field_config["show"] = True
 
-        # If no value is set, pre-populate from the stored credential value
+        # Pre-populate with the variable name (never the raw secret) when a
+        # credential is available in the database or environment.  Setting
+        # load_from_db=True tells the runtime to resolve the actual value.
         var_key = var_info.get("variable_key")
         if var_key:
-            current_value = field_config.get("value")
-            # Only set if field is empty/None
-            if not current_value or (isinstance(current_value, str) and not current_value.strip()):
-                stored_value = stored_values.get(var_key)
-                if stored_value and stored_value.strip():
-                    field_config["value"] = stored_value
-                    logger.debug(
-                        "Set field %s from stored variable %s",
-                        field_name,
-                        var_key,
-                    )
-        env_var_key = var_info.get("variable_key")
-        if env_var_key:
-            env_value = os.environ.get(env_var_key)
-            if env_value and str(env_value).strip():
-                field_config["value"] = env_var_key
+            has_stored = var_key in stored_values and stored_values[var_key].strip()
+            has_env = bool(os.environ.get(var_key, "").strip())
+            if has_stored or has_env:
+                field_config["value"] = var_key
                 field_config["load_from_db"] = True
                 logger.debug(
-                    "Set field %s to env var name %s (value resolved at runtime)",
+                    "Set field %s to variable name %s (value resolved at runtime)",
                     field_name,
-                    env_var_key,
+                    var_key,
                 )
 
     return build_config
@@ -1976,16 +1966,30 @@ def handle_model_input_update(
         model_field_name=model_field_name,
     )
 
-    # Step 2: Hide all provider-specific fields by default
-    for field in _get_all_provider_mapped_fields():
+    # When the user directly edits a provider-specific field (e.g. api_key),
+    # skip the provider reset/re-population so their value is preserved.
+    provider_mapped_fields = _get_all_provider_mapped_fields()
+    if field_name in provider_mapped_fields:
+        return build_config
+
+    # Step 2: Hide all provider-specific fields and clear their values by default.
+    # Clearing values ensures that when Step 3 re-configures for the newly selected
+    # provider, the auto-population logic can set the correct credential (e.g.
+    # switching OpenAI → Anthropic replaces OPENAI_API_KEY with ANTHROPIC_API_KEY).
+    for field in provider_mapped_fields:
         if field in build_config:
             build_config[field]["show"] = False
             build_config[field]["required"] = False
+            build_config[field]["value"] = ""
 
     # Step 3: Show/configure the right fields for the selected provider
-    # Note: use the value that was set (possibly by step 1's default-model logic) when field_name != model_field_name.
+    # Use field_value when the user actively changed the model selection;
+    # otherwise (initial load with empty field_value, or other field changes)
+    # fall back to the value in build_config (which Step 1 may have set to the default model).
     current_model_value = (
-        field_value if field_name == model_field_name else build_config.get(model_field_name, {}).get("value")
+        field_value
+        if field_name == model_field_name and field_value
+        else build_config.get(model_field_name, {}).get("value")
     )
     if isinstance(current_model_value, list) and len(current_model_value) > 0:
         provider = current_model_value[0].get("provider", "")

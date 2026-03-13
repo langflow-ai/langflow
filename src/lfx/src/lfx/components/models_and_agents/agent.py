@@ -249,6 +249,8 @@ class AgentComponent(ToolCallingAgentComponent):
         if not is_connected_model:
             validate_model_selection(selected_model)
 
+        # Ensure _get_llm() uses the resolved model (e.g. from legacy agent_llm/model_name)
+        self.model = selected_model
         llm_model = self._get_llm()
         if llm_model is None:
             msg = "No language model selected. Please choose a model to proceed."
