@@ -21,12 +21,18 @@ For example:
 All Agentics components return a **DataFrame**.
 
 ## Prerequisites
+0. Install langflow (if you haven't done it already)
+
+   ```bash
+      uv pip install langflow -U
+   ```
 
 1. Install the Agentics package in Langflow's virtual environment:
 
    ```bash
-   uv pip install agentics-py==0.3.1
+   uv pip install agentics-py
    ```
+   note: recommended distribution is agentics-py==0.3.3 
 
 2. Restart Langflow so the Agentics components are available:
 
@@ -63,7 +69,7 @@ For example, this schema definition creates the following DataFrame output:
 | Language Model | Dropdown | Select the LLM provider and model. Use guided experience. |
 | Input DataFrame | DataFrame | Optional. Example DataFrame to learn from; only first 50 rows used. If not provided, Schema is used. |
 | Schema | Table | Define columns to generate when no Input DataFrame is provided. See the component's schema definition. |
-| Instructions | String | Optional instructions for generation. |
+| Instructions | String | **Advanced.** Optional instructions for generation. |
 | Number of Rows to Generate | Integer | How many synthetic rows to create. Default: 10. |
 
 ## aMap component
@@ -147,7 +153,7 @@ It sums revenue into `total_revenue`, identifies the best-selling product in `be
 
 - **Token usage:** aMap scales with rows; aReduce sends all rows in one call; aGenerate scales with instances. Use smaller batches or sample large datasets to reduce cost.
 - **Batch size:** Default 10; max 25. Larger batches improve throughput but increase latency per batch.
-- **Errors:** If Agentics is not found, run `uv pip install agentics-py==0.3.1` and restart Langflow. For API/key errors, set the provider’s API key as a global variable or env var. For DataFrame errors, ensure input is a list of dicts or use a DataFrame component output.
+- **Errors:** If Agentics is not found, run `uv pip install agentics-py` and restart Langflow. For API/key errors, set the provider’s API key as a global variable or env var. For DataFrame errors, ensure input is a list of dicts or use a DataFrame component output.
 
 ## See also
 
