@@ -16,7 +16,7 @@ import { CfnDistribution, Distribution } from 'aws-cdk-lib/aws-cloudfront';
 import { NodejsBuild } from 'deploy-time-build';
 
 interface WebProps {
-  cluster:ecs.Cluster
+  cluster:ecs.Cluster;
   alb:elb.IApplicationLoadBalancer;
   albSG:ec2.SecurityGroup;
 }
