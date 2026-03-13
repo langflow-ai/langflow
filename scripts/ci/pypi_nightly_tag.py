@@ -27,6 +27,7 @@ def get_latest_published_version(build_type: str, *, is_nightly: bool) -> Versio
         raise ValueError(msg)
 
     res = requests.get(url, timeout=10)
+    res.raise_for_status()
     try:
         version_str = res.json()["info"]["version"]
     except Exception as e:
@@ -49,19 +50,18 @@ def create_tag(build_type: str):
 
     try:
         current_nightly_version = get_latest_published_version(build_type, is_nightly=True)
-        nightly_base_version = current_nightly_version.base_version
     except (requests.RequestException, KeyError, ValueError):
-        # If MAIN_TAG nightly doesn't exist on PyPI yet, this is the first nightly
+        # If nightly doesn't exist yet
         current_nightly_version = None
-        nightly_base_version = None
 
     build_number = "0"
     latest_base_version = current_version.base_version
-    nightly_base_version = current_nightly_version.base_version
+    nightly_base_version = current_nightly_version.base_version if current_nightly_version else None
 
     if latest_base_version == nightly_base_version:
         # If the latest version is the same as the nightly version, increment the build number
-        build_number = str(current_nightly_version.dev + 1)
+        dev_number = (current_nightly_version.dev or 0) if current_nightly_version else 0
+        build_number = str(dev_number + 1)
 
     new_nightly_version = latest_base_version + ".dev" + build_number
 
