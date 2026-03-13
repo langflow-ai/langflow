@@ -843,7 +843,8 @@ class Component(CustomComponent):
         # if value is a list of components, we need to process each component
         # Note this update make sure it is not a list str | int | float | bool | type(None)
         if isinstance(value, list) and not any(
-            isinstance(val, str | int | float | bool | type(None) | Message | Data | StructuredTool) for val in value
+            isinstance(val, str | int | float | bool | type(None) | Message | Data | StructuredTool | dict)
+            for val in value
         ):
             for val in value:
                 self._process_connection_or_parameter(key, val)
