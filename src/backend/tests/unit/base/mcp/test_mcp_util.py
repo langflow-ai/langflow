@@ -2073,6 +2073,69 @@ class TestNormalizeArgumentsForMcp:
         result = util._normalize_arguments_for_mcp({"count": 1, "optional": None}, Schema, "test_tool")
         assert result == {"count": 1, "optional": None}
 
+    def test_required_list_none_maps_to_empty(self):
+        """Test required list field with None -> maps to []."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list = Field(..., description="Items")
+
+        result = util._normalize_arguments_for_mcp({"items": None}, Schema, "test_tool")
+        assert result == {"items": []}
+        assert isinstance(result["items"], list)
+
+    def test_required_dict_none_maps_to_empty(self):
+        """Test required dict field with None -> maps to {}."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        result = util._normalize_arguments_for_mcp({"params": None}, Schema, "test_tool")
+        assert result == {"params": {}}
+        assert isinstance(result["params"], dict)
+
+    def test_required_str_none_maps_to_empty(self):
+        """Test required str field with None -> maps to ""."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            name: str = Field(..., description="Name")
+
+        result = util._normalize_arguments_for_mcp({"name": None}, Schema, "test_tool")
+        assert result == {"name": ""}
+        assert result["name"] == ""
+
+    def test_optional_list_none_unchanged(self):
+        """Test optional list field with None -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list[str] | None = Field(default=None, description="Items")
+
+        result = util._normalize_arguments_for_mcp({"items": None}, Schema, "test_tool")
+        assert result == {"items": None}
+
+    def test_optional_dict_none_unchanged(self):
+        """Test optional dict field with None -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict | None = Field(default=None, description="Params")
+
+        result = util._normalize_arguments_for_mcp({"params": None}, Schema, "test_tool")
+        assert result == {"params": None}
+
+    def test_optional_str_none_unchanged(self):
+        """Test optional str field with None -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            name: str | None = Field(default=None, description="Name")
+
+        result = util._normalize_arguments_for_mcp({"name": None}, Schema, "test_tool")
+        assert result == {"name": None}
+
     def test_str_to_list_when_optional_list_expected(self):
         r"""Test str '["a"]' when list[str] | None expected -> ["a"]."""
         from pydantic import BaseModel, Field

@@ -313,6 +313,15 @@ def _resolve_expected_type(annotation: Any) -> type | None:
     return None
 
 
+def _annotation_accepts_none(annotation: Any) -> bool:
+    """Check if annotation accepts None (e.g. Union[X, None], X | None)."""
+    origin = get_origin(annotation)
+    if origin is UnionType or origin is Union:
+        args = get_args(annotation)
+        return type(None) in args
+    return False
+
+
 def _is_pydantic_model_type(annotation: Any) -> bool:
     """Check if annotation refers to a Pydantic BaseModel (possibly in Union with None)."""
     ann = annotation
@@ -403,10 +412,15 @@ def _normalize_arguments_for_mcp(
     for field_name, model_field in arg_schema.model_fields.items():
         value = arguments.get(field_name)
         if value is None:
-            if model_field.is_required() or field_name in arguments:
-                result[field_name] = value
-            else:
+            if not (model_field.is_required() or field_name in arguments):
                 continue
+            expected = _resolve_expected_type(model_field.annotation)
+            if expected in (list, dict, str) and model_field.is_required():
+                result[field_name] = [] if expected is list else ({} if expected is dict else "")
+            elif expected in (list, dict, str) and _annotation_accepts_none(model_field.annotation):
+                result[field_name] = None
+            else:
+                result[field_name] = value
             continue
         expected = _resolve_expected_type(model_field.annotation)
         if expected is None:
