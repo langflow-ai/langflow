@@ -1013,6 +1013,13 @@ async def check_installed_mcp_servers(
                                 project_sse_url,
                                 list(config_data.get("mcpServers", {}).keys()),
                             )
+                    except FileNotFoundError:
+                        await logger.adebug(
+                            "%s config file not found at %s (directory exists, app installed but not configured)",
+                            client_name,
+                            config_path,
+                        )
+                        # available stays True, installed stays False — app is installed but not yet configured
                     except json.JSONDecodeError:
                         await logger.awarning("Failed to parse %s config JSON at: %s", client_name, config_path)
                         # available is True but installed remains False due to parse error

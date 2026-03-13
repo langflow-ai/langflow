@@ -69,6 +69,17 @@ def has_api_terms(word: str):
     return "api" in word and ("key" in word or ("token" in word and "tokens" not in word))
 
 
+def _get_provider_from_template(template: dict) -> str | None:
+    """Return provider name from template's model field, if any."""
+    model_field = template.get("model")
+    if not isinstance(model_field, dict):
+        return None
+    raw = model_field.get("value")
+    if isinstance(raw, list) and len(raw) > 0 and isinstance(raw[0], dict):
+        return raw[0].get("provider")
+    return None
+
+
 def remove_api_keys(flow: dict):
     """Remove api keys from flow data."""
     for node in flow.get("data", {}).get("nodes", []):
