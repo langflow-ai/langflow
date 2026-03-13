@@ -3,6 +3,7 @@ from langchain_core.documents import Document
 
 from lfx.base.datastax.astradb_base import AstraDBBaseComponent
 from lfx.base.models.unified_models import (
+    apply_provider_variable_config_to_build_config,
     get_embedding_model_options,
     get_embeddings,
     update_model_options_in_build_config,
@@ -18,6 +19,7 @@ from lfx.io import (
     ModelInput,
     NestedDictInput,
     QueryInput,
+    SecretStrInput,
     StrInput,
 )
 from lfx.schema.data import Data
@@ -45,6 +47,13 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
             model_type="embedding",
             input_types=["Embeddings"],
             real_time_refresh=True,
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
+            real_time_refresh=True,
+            advanced=True,
         ),
         StrInput(
             name="content_field",
@@ -161,6 +170,21 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
                 field_value=field_value if field_name == "embedding_model" else None,
                 model_field_name="embedding_model",
             )
+
+            # Auto-populate API key based on the selected embedding model's provider.
+            # Skip when user directly edits api_key to preserve their value.
+            if field_name != "api_key":
+                model_value = build_config.get("embedding_model", {}).get("value")
+                if isinstance(model_value, list) and model_value:
+                    provider = model_value[0].get("provider", "")
+                    if provider:
+                        build_config = apply_provider_variable_config_to_build_config(
+                            build_config, provider, user_id=getattr(self, "user_id", None)
+                        )
+
+            # Ensure the API key field is always visible
+            if "api_key" in build_config:
+                build_config["api_key"]["show"] = True
 
         # Handle base astra db build config updates
         build_config = await super().update_build_config(
