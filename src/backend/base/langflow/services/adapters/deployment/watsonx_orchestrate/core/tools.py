@@ -14,6 +14,7 @@ from cachetools import func
 from lfx.services.adapters.deployment.exceptions import InvalidContentError, InvalidDeploymentOperationError
 from lfx.utils.flow_requirements import generate_requirements_from_flow
 
+from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import retry_create
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     dedupe_list,
     normalize_wxo_name,
@@ -25,6 +26,82 @@ if TYPE_CHECKING:
     from lfx.services.adapters.deployment.schema import BaseFlowArtifact, SnapshotItems
 
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
+
+_WRITABLE_TOOL_FIELDS = (
+    "description",
+    "permission",
+    "name",
+    "display_name",
+    "input_schema",
+    "output_schema",
+    "binding",
+    "tags",
+    "is_async",
+    "restrictions",
+    "bundled_agent_id",
+)
+
+
+def to_writable_tool_payload(tool: dict[str, Any]) -> dict[str, Any]:
+    """Build tool payload accepted by wxO tool update endpoint."""
+    return {field: copy.deepcopy(tool[field]) for field in _WRITABLE_TOOL_FIELDS if field in tool}
+
+
+async def update_existing_tool_connection_bindings(
+    *,
+    clients: WxOClient,
+    existing_target_tool_ids: list[str],
+    resolved_connections: dict[str, str],
+    original_tools: dict[str, dict[str, Any]],
+) -> None:
+    """Apply resolved connection bindings to existing tools.
+
+    Captures original writable payloads for rollback before any update call.
+    Raises ``InvalidContentError`` when any expected tool id is missing.
+    """
+    if not existing_target_tool_ids:
+        return
+
+    tools = await asyncio.to_thread(clients.tool.get_drafts_by_ids, existing_target_tool_ids)
+    tool_by_id = {str(tool.get("id")): tool for tool in tools if isinstance(tool, dict) and tool.get("id")}
+    missing_tool_ids = [tool_id for tool_id in existing_target_tool_ids if tool_id not in tool_by_id]
+    if missing_tool_ids:
+        missing_ids = ", ".join(missing_tool_ids)
+        msg = f"Snapshot tool(s) not found: {missing_ids}"
+        raise InvalidContentError(message=msg)
+
+    tool_updates: list[tuple[str, dict[str, Any]]] = []
+    for tool_id in existing_target_tool_ids:
+        original_tool = to_writable_tool_payload(tool_by_id[tool_id])
+        original_tools[tool_id] = original_tool
+        writable_tool = copy.deepcopy(original_tool)
+        binding = writable_tool.setdefault("binding", {})
+        if not isinstance(binding, dict):
+            binding = {}
+            writable_tool["binding"] = binding
+        langflow_binding = binding.setdefault("langflow", {})
+        if not isinstance(langflow_binding, dict):
+            langflow_binding = {}
+            binding["langflow"] = langflow_binding
+        connections = langflow_binding.get("connections")
+        if not isinstance(connections, dict):
+            connections = {}
+            langflow_binding["connections"] = connections
+        connections.update(resolved_connections)
+        tool_updates.append((tool_id, writable_tool))
+
+    await asyncio.gather(
+        *(
+            retry_create(
+                lambda tid=tool_id, tool_payload=writable_tool: asyncio.to_thread(
+                    clients.tool.update,
+                    tid,
+                    tool_payload,
+                )
+            )
+            for tool_id, writable_tool in tool_updates
+        )
+    )
 
 
 def extract_langflow_artifact_from_zip(artifact_zip_bytes: bytes, *, snapshot_id: str) -> dict[str, Any]:
