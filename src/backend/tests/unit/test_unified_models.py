@@ -799,12 +799,13 @@ def test_handle_model_input_update_custom_field_name_reads_default_from_correct_
     with patch("lfx.base.models.unified_models.apply_provider_variable_config_to_build_config") as mock_apply:
         mock_apply.side_effect = lambda cfg, provider, **kw: cfg  # noqa: ARG005
 
-        # field_name is "api_key" (not the model field) — should read from build_config["my_model"]
+        # field_name is "temperature" (not the model field and not a provider-mapped field)
+        # — should read from build_config["my_model"]
         result = handle_model_input_update(
             component,
             build_config,
-            field_value="sk-test",
-            field_name="api_key",
+            field_value=0.5,
+            field_name="temperature",
             get_options_func=lambda user_id=None: [],  # noqa: ARG005
             model_field_name="my_model",
         )
