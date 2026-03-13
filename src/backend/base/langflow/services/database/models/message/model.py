@@ -58,6 +58,18 @@ class MessageBase(SQLModel):
             return str(value)
         return value
 
+    @field_serializer("timestamp")
+    def serialize_timestamp(self, value, _info):
+        if isinstance(value, datetime):
+            if value.tzinfo is None:
+                value = value.replace(tzinfo=timezone.utc)
+            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
+        if isinstance(value, str):
+            # Make sure the timestamp is in UTC
+            value = datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
+            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
+        return value
+
     @classmethod
     def from_message(cls, message: "Message", flow_id: str | UUID | None = None):
         if message.text is None or not message.sender or not message.sender_name:
