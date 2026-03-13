@@ -4,7 +4,7 @@ from lfx.base.models.unified_models import (
     handle_model_input_update,
 )
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
-from lfx.field_typing import LanguageModel
+from lfx.field_typing.constants import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, StrInput
 from lfx.io import IntInput, MessageInput, ModelInput, MultilineInput, SecretStrInput, SliderInput

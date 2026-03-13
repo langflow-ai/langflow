@@ -215,6 +215,23 @@ class AgentComponent(ToolCallingAgentComponent):
                 "metadata": {},
             }
         ]
+    def _get_max_tokens_value(self):
+        """Return the user-supplied max_tokens or None when unset/zero."""
+        val = getattr(self, "max_tokens", None)
+        if val in {"", 0}:
+            return None
+        return val
+
+    def _get_llm(self):
+        """Override parent to include max_tokens from the Agent's input field."""
+        return get_llm(
+            model=self.model,
+            user_id=self.user_id,
+            api_key=getattr(self, "api_key", None),
+            max_tokens=self._get_max_tokens_value(),
+            watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
+            watsonx_project_id=getattr(self, "project_id", None),
+        )
 
     async def get_agent_requirements(self):
         """Get the agent requirements for the agent."""
@@ -231,17 +248,10 @@ class AgentComponent(ToolCallingAgentComponent):
         if not is_connected_model:
             validate_model_selection(selected_model)
 
-        max_tokens_val = getattr(self, "max_tokens", None)
-        if max_tokens_val in {"", 0}:
-            max_tokens_val = None
-        llm_model = get_llm(
-            model=selected_model,
-            user_id=self.user_id,
-            api_key=self.api_key,
-            max_tokens=max_tokens_val,
-            watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
-            watsonx_project_id=getattr(self, "project_id", None),
-        )
+        llm_model = self._get_llm()
+        if llm_model is None:
+            msg = "No language model selected. Please choose a model to proceed."
+            raise ValueError(msg)
 
         # Get memory data
         self.chat_history = await self.get_memory_data()
@@ -518,7 +528,6 @@ class AgentComponent(ToolCallingAgentComponent):
         build_config = dotdict(build_config)
 
         if field_name == "model":
-            # Update input types for all fields
             build_config = self.update_input_types(build_config)
 
             # Validate required keys
