@@ -25,6 +25,9 @@ class GroqModelDiscovery:
     # Models to skip from LLM list (audio, TTS, guards, speech)
     SKIP_PATTERNS = ["whisper", "tts", "guard", "safeguard", "prompt-guard", "saba", "orpheus", "playai"]
 
+    # Phrases that indicate an access/entitlement error rather than a capability error
+    ACCESS_ERROR_PHRASES = ["terms acceptance", "terms_required", "model_terms_required", "not available"]
+
     def __init__(self, api_key: str | None = None, base_url: str = "https://api.groq.com"):
         """Initialize discovery with optional API key for testing.
 
@@ -122,10 +125,14 @@ class GroqModelDiscovery:
             self._save_cache(models_metadata)
 
         except (requests.RequestException, KeyError, ValueError, ImportError) as e:
-            logger.exception(f"Error discovering models: {e}")
+            logger.exception("Error discovering models")
             return self._get_fallback_models()
         else:
             return models_metadata
+
+    def _is_access_error(self, error_msg: str) -> bool:
+        """Return True if the lowercased error message indicates an access/entitlement issue."""
+        return any(phrase in error_msg for phrase in self.ACCESS_ERROR_PHRASES)
 
     def _fetch_available_models(self) -> list[str]:
         """Fetch list of available models from Groq API."""
@@ -164,21 +171,18 @@ class GroqModelDiscovery:
             # Propagate the ImportError so callers can fall back to hardcoded model metadata
             raise
         except Exception as e:  # noqa: BLE001
+            # The groq SDK does not expose a stable public exception hierarchy: errors can arrive as
+            # groq.APIStatusError, groq.BadRequestError, plain ValueError, or even undocumented
+            # runtime exceptions depending on the SDK version and the model being probed.  We
+            # therefore catch Exception broadly and discriminate solely on the error message text,
+            # which is the only reliable signal available across SDK versions.
             error_msg = str(e).lower()
             # Genuine capability error: model does not support chat completions
             if "does not support chat completions" in error_msg:
                 logger.debug(f"{model_id}: does not support chat completions")
                 return False
             # Access/entitlement errors: model likely supports chat but is not accessible for this key
-            if any(
-                phrase in error_msg
-                for phrase in [
-                    "terms acceptance",
-                    "terms_required",
-                    "model_terms_required",
-                    "not available",
-                ]
-            ):
+            if self._is_access_error(error_msg):
                 logger.info(f"{model_id}: chat completion not accessible for this API key ({e})")
                 # Do not mark the model as non-chat; assume chat is supported but not usable with this key
                 return None
@@ -228,22 +232,17 @@ class GroqModelDiscovery:
 
         except ImportError:
             logger.warning("groq package not installed, cannot test tool calling")
-            return False
+            raise
         except Exception as e:  # noqa: BLE001
+            # Same rationale as _test_chat_completion: the groq SDK's exception types are not
+            # stable across versions, so broad catching with message-based discrimination is the
+            # only portable approach.  See _test_chat_completion for a full explanation.
             error_msg = str(e).lower()
             # Genuine capability error: model does not support tools
             if "tool" in error_msg:
                 return False
             # Access/entitlement errors: model may support tools but is not accessible for this key
-            if any(
-                phrase in error_msg
-                for phrase in [
-                    "terms acceptance",
-                    "terms_required",
-                    "model_terms_required",
-                    "not available",
-                ]
-            ):
+            if self._is_access_error(error_msg):
                 logger.info(f"{model_id}: tool calling not testable for this API key ({e})")
                 return None
             # Any other API error (rate limits, transient failures, etc) - indeterminate
