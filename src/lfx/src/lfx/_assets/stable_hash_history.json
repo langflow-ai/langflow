@@ -911,7 +911,7 @@
   },
   "GroqModel": {
     "versions": {
-      "0.3.0": "2aee7de6ee88"
+      "0.3.0": "8a55d3fa8173"
     }
   },
   "HomeAssistantControl": {
