@@ -241,8 +241,9 @@ class DeploymentServiceProtocol(Protocol):
     Adapter-specific or advanced operations are defined on concrete deployment
     service classes.
 
-    ``deployment_type`` is accepted as an optional routing hint by all
-    operations that act on a specific deployment (including executions).
+    ``deployment_type`` is accepted as an optional routing hint by operations
+    that act on a specific deployment. For execution creation, it is provided
+    in the ``ExecutionCreate`` payload.
     """
 
     @abstractmethod
@@ -355,7 +356,6 @@ class DeploymentServiceProtocol(Protocol):
         self,
         *,
         user_id: IdLike,
-        deployment_type: DeploymentType | None = None,
         payload: ExecutionCreate,
         db: AsyncSession,
     ) -> ExecutionCreateResult:

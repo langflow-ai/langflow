@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from lfx.services.base import Service
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
+    from lfx.services.adapters.deployment.payloads import DeploymentPayloadSchemas
     from lfx.services.adapters.deployment.schema import (
         ConfigListParams,
         ConfigListResult,
@@ -46,6 +47,8 @@ class BaseDeploymentService(Service, ABC):
         ``db`` parameters are typed as ``AsyncSession`` to align with current
         LFX dependency injection and service protocols.
     """
+
+    payload_schemas: ClassVar[DeploymentPayloadSchemas | None] = None
 
     @abstractmethod
     async def create(
@@ -148,7 +151,6 @@ class BaseDeploymentService(Service, ABC):
         self,
         *,
         user_id: IdLike,
-        deployment_type: DeploymentType | None = None,
         payload: ExecutionCreate,
         db: AsyncSession,
     ) -> ExecutionCreateResult:
