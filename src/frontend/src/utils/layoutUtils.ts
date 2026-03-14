@@ -6,15 +6,19 @@ import type { AllNodeType, EdgeType } from "@/types/flow";
 const layoutOptions = {
   "elk.algorithm": "layered",
   "elk.direction": "RIGHT",
-  "elk.components.direction": "DOWN",
-  "elk.layered.spacing.edgeNodeBetweenLayers": "40",
-  "elk.spacing.nodeNode": "40",
-  "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
-  "elk.separateConnectedComponents": "true",
-  "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
+  "elk.edgeRouting": "ORTHOGONAL",
+  "elk.layered.unnecessaryBendpoints": "true",
+  "elk.layered.spacing.edgeNodeBetweenLayers": "50",
+  "elk.spacing.nodeNode": "60",
   "elk.spacing.componentComponent": `${NODE_WIDTH}`,
+  "elk.layered.nodePlacement.strategy": "SIMPLE",
+  "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
   "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
+  "elk.layered.cycleBreaking.strategy": "INTERACTIVE",
+  "elk.separateConnectedComponents": "true",
+  "elk.layered.mergeEdges": "true",
 };
+
 const elk = new ELK();
 
 // uses elkjs to give each node a layouted position
