@@ -40,7 +40,7 @@ from langflow.api.v1.schemas import (
     UploadFileResponse,
 )
 from langflow.events.event_manager import create_stream_tokens_event_manager
-from langflow.exceptions.api import APIException, InvalidChatInputError
+from langflow.exceptions.api import APIException, InvalidChatInputError, classify_component_error
 from langflow.exceptions.serialization import SerializationError
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
@@ -383,7 +383,14 @@ async def run_flow_generator(
         await client_consumed_queue.get()
     except Exception as e:  # noqa: BLE001 - Catch ALL exceptions to ensure errors are propagated in streaming
         await logger.aerror(f"Error running flow: {e}")
-        event_manager.on_error(data={"error": str(e)})
+        upstream_status, error_source = classify_component_error(e)
+        event_manager.on_error(
+            data={
+                "error": str(e),
+                "status_code": upstream_status,
+                "source": error_source,
+            }
+        )
     finally:
         await event_manager.queue.put((None, None, time.time))
 
@@ -524,7 +531,11 @@ async def _run_flow_internal(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
         if "not found" in str(exc):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-        raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
+        # Inspect the exception cause chain to determine if this is an
+        # upstream provider error (e.g. 429 rate-limit) rather than an
+        # internal failure, and return the appropriate HTTP status code.
+        upstream_status, _error_source = classify_component_error(exc)
+        raise APIException(status_code=upstream_status, exception=exc, flow=flow) from exc
     except InvalidChatInputError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except Exception as exc:
@@ -538,7 +549,8 @@ async def _run_flow_internal(
                 run_id=run_id,
             ),
         )
-        raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
+        upstream_status, _error_source = classify_component_error(exc)
+        raise APIException(status_code=upstream_status, exception=exc, flow=flow) from exc
 
     return result
 
