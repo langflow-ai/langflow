@@ -1,4 +1,5 @@
 import hashlib
+import logging
 from datetime import datetime, timezone
 from http import HTTPStatus
 from io import BytesIO
@@ -11,12 +12,24 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from lfx.services.settings.service import SettingsService
 from lfx.utils.helpers import build_content_type_from_extension
+from pydantic import BaseModel
+from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, ValidatedFileName
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
+
+
+class FlowFileInfo(BaseModel):
+    flow_id: str
+    flow_name: str
+    file_name: str
+    file_size: int
+
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Files"], prefix="/files")
 
@@ -272,6 +285,41 @@ async def list_profile_pictures(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return {"files": results}
+
+
+@router.get("/list")
+async def list_all_flow_files(
+    current_user: CurrentActiveUser,
+    session: DbSession,
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+) -> list[FlowFileInfo]:
+    """List all files across all flows owned by the current user."""
+    stmt = select(Flow).where(Flow.user_id == current_user.id)
+    flows = (await session.exec(stmt)).all()
+
+    result: list[FlowFileInfo] = []
+    for flow in flows:
+        try:
+            files = await storage_service.list_files(flow_id=str(flow.id))
+        except FileNotFoundError:
+            continue
+        except OSError:
+            logger.warning("Failed to list files for flow %s", flow.id)
+            continue
+        for file_name in files:
+            try:
+                file_size = await storage_service.get_file_size(flow_id=str(flow.id), file_name=file_name)
+            except (FileNotFoundError, OSError):
+                file_size = 0
+            result.append(
+                FlowFileInfo(
+                    flow_id=str(flow.id),
+                    flow_name=flow.name,
+                    file_name=file_name,
+                    file_size=file_size,
+                )
+            )
+    return result
 
 
 @router.get("/list/{flow_id}")
