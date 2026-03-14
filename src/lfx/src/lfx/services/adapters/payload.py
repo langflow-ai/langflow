@@ -34,7 +34,9 @@ class AdapterPayloadValidationError(ValueError):
     def __init__(self, *, model_name: str, error: ValidationError) -> None:
         self.model_name = model_name
         self.error = error
-        super().__init__(f"Invalid payload for '{model_name}': {error}")
+        # Keep public exception text sanitized to avoid leaking raw payload
+        # fragments from ValidationError.__str__() into logs/responses.
+        super().__init__(f"Invalid payload for '{model_name}'.")
 
 
 @dataclass(frozen=True)
