@@ -5,6 +5,7 @@ from ast import literal_eval
 from datetime import timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any
+from urllib.parse import unquote
 
 from fastapi import Depends, HTTPException, Path, Query
 from fastapi_pagination import Params
@@ -435,9 +436,9 @@ def extract_global_variables_from_headers(headers) -> dict[str, str]:
         Dictionary mapping variable names (uppercase) to their values
 
     Example:
-        headers = {"X-LANGFLOW-GLOBAL-VAR-API-KEY": "secret", "Content-Type": "application/json"}
+        headers = {"X-LANGFLOW-GLOBAL-VAR-FILE-NAME": "document.pdf", "Content-Type": "application/json"}
         result = extract_global_variables_from_headers(headers)
-        # Returns: {"API_KEY": "secret"}
+        # Returns: {"FILE-NAME": "document.pdf"}
     """
     variables: dict[str, str] = {}
 
@@ -446,7 +447,7 @@ def extract_global_variables_from_headers(headers) -> dict[str, str]:
             header_lower = header_name.lower()
             if header_lower.startswith(LANGFLOW_GLOBAL_VAR_HEADER_PREFIX):
                 var_name = header_lower[len(LANGFLOW_GLOBAL_VAR_HEADER_PREFIX) :].upper()
-                variables[var_name] = header_value
+                variables[var_name] = unquote(header_value)
     except Exception as exc:  # noqa: BLE001
         # Log the error but don't raise - we want to continue execution
         logger.exception("Failed to extract global variables from headers: %s", exc)
