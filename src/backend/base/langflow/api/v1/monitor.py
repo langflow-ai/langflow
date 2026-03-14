@@ -175,17 +175,100 @@ async def update_session_id(
 async def delete_messages_session(
     session_id: str,
     session: DbSession,
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ):
+    """Delete messages for a single session.
+
+    Only deletes messages from sessions belonging to flows owned by the current user.
+    """
     try:
+        # First, get message IDs that belong to the user's flows for this session
+        stmt = select(MessageTable.id)
+        stmt = stmt.join(Flow, MessageTable.flow_id == Flow.id)
+        stmt = stmt.where(Flow.user_id == current_user.id)
+        stmt = stmt.where(col(MessageTable.session_id) == session_id)
+
+        result = await session.exec(stmt)
+        message_ids = list(result)
+
+        if not message_ids:
+            # No messages found for this user's flows with this session_id
+            return {"message": "Messages deleted successfully"}
+
+        # Delete only the messages that belong to the user
         await session.exec(
             delete(MessageTable)
-            .where(col(MessageTable.session_id) == session_id)
+            .where(col(MessageTable.id).in_(message_ids))
             .execution_options(synchronize_session="fetch")
         )
+        await session.commit()
     except Exception as e:
+        await session.rollback()
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return {"message": "Messages deleted successfully"}
+
+
+@router.delete("/messages/sessions", status_code=200, dependencies=[Depends(get_current_active_user)])
+async def delete_messages_sessions(
+    session_ids: list[str],
+    session: DbSession,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """Bulk delete messages for multiple sessions at once.
+
+    Only deletes messages from sessions belonging to flows owned by the current user.
+
+    Args:
+        session_ids: List of session IDs to delete (max 500)
+        session: Database session
+        current_user: Current authenticated user
+
+    Returns:
+        Confirmation message with count of deleted sessions
+
+    Raises:
+        HTTPException: 400 if session_ids list exceeds 500 items
+        HTTPException: 500 if database operation fails
+    """
+    # Validate input size to prevent massive SQL IN clauses
+    if len(session_ids) > 500:
+        raise HTTPException(
+            status_code=400, detail="Cannot delete more than 500 sessions at once. Please batch your requests."
+        )
+
+    if not session_ids:
+        return {"message": "No sessions to delete", "deleted_count": 0}
+
+    try:
+        # First, get message IDs that belong to the user's flows for these sessions
+        stmt = select(MessageTable.id)
+        stmt = stmt.join(Flow, MessageTable.flow_id == Flow.id)
+        stmt = stmt.where(Flow.user_id == current_user.id)
+        stmt = stmt.where(col(MessageTable.session_id).in_(session_ids))
+
+        result = await session.exec(stmt)
+        message_ids = list(result)
+
+        if not message_ids:
+            # No messages found for this user's flows with these session_ids
+            return {"message": "No sessions to delete", "deleted_count": 0}
+
+        # Delete only the messages that belong to the user
+        await session.exec(
+            delete(MessageTable)
+            .where(col(MessageTable.id).in_(message_ids))
+            .execution_options(synchronize_session="fetch")
+        )
+        await session.commit()
+    except Exception as e:
+        await session.rollback()
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return {
+        "message": f"Messages deleted successfully for {len(session_ids)} sessions",
+        "deleted_count": len(session_ids),
+    }
 
 
 @router.get("/transactions", dependencies=[Depends(get_current_active_user)])

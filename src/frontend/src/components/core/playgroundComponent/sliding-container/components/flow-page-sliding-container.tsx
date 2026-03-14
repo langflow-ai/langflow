@@ -121,6 +121,18 @@ export function FlowPageSlidingContainerContent({
     setIsFullscreen(true);
   };
 
+  // Local cleanup without API call (for bulk delete)
+  const handleLocalCleanupAfterDelete = (sessionIds: string[]) => {
+    // For each deleted session, call deleteSession which handles all cleanup
+    sessionIds.forEach((sessionId) => {
+      deleteSession(sessionId);
+    });
+    // If current session was deleted, switch to default
+    if (activeSessionId && sessionIds.includes(activeSessionId)) {
+      selectSession(currentFlowId);
+    }
+  };
+
   const handleOpenLogs = (sessionId: string) => {
     selectSession(sessionId);
     setOpenLogsModal(true);
@@ -146,6 +158,7 @@ export function FlowPageSlidingContainerContent({
                 onDeleteSession={deleteSession}
                 onOpenLogs={handleOpenLogs}
                 onRenameSession={renameSession}
+                onLocalCleanupAfterDelete={handleLocalCleanupAfterDelete}
               />
             </div>
           </div>
@@ -207,3 +220,5 @@ export function FlowPageSlidingContainerContent({
     </div>
   );
 }
+
+// Made with Bob
