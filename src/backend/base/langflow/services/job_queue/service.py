@@ -345,6 +345,7 @@ class JobQueueService(Service):
             ("on_end_vertex", "end_vertex"),
             ("on_build_start", "build_start"),
             ("on_build_end", "build_end"),
+            ("on_progress", "progress"),
         ]
         for name, event_type in event_names_types:
             manager.register_event(name, event_type)
