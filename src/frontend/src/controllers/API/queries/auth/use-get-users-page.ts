@@ -7,29 +7,39 @@ import { UseRequestProcessor } from "../../services/request-processor";
 interface getUsersQueryParams {
   skip: number;
   limit: number;
+  username?: string;
 }
 
-export const useGetUsers: useMutationFunctionType<any, getUsersQueryParams> = (
-  options?,
-) => {
+interface getUsersResponse {
+  users: Users[];
+  total_count: number;
+}
+
+export const useGetUsers: useMutationFunctionType<
+  getUsersResponse,
+  getUsersQueryParams
+> = (options?) => {
   const { mutate } = UseRequestProcessor();
 
   async function getUsers({
     skip,
     limit,
-  }: getUsersQueryParams): Promise<Array<Users>> {
+    username,
+  }: getUsersQueryParams): Promise<getUsersResponse> {
     const res = await api.get(
-      `${getURL("USERS")}/?skip=${skip}&limit=${limit}`,
+      `${getURL("USERS")}/?skip=${skip}&limit=${limit}${
+        username ? `&username=${encodeURIComponent(username)}` : ""
+      }`,
     );
     if (res.status === 200) {
       return res.data;
     }
-    return [];
+    return { total_count: 0, users: [] };
   }
 
   const mutation: UseMutationResult<
-    getUsersQueryParams,
-    any,
+    getUsersResponse,
+    Error,
     getUsersQueryParams
   > = mutate(["useGetUsers"], getUsers, options);
 
