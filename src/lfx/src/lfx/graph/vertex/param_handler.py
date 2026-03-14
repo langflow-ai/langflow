@@ -190,7 +190,7 @@ class ParameterHandler:
         else:
             params = self._handle_other_direct_types(field_name, field, val, params)
 
-        if field.get("load_from_db"):
+        if field.get("load_from_db") or field.get("password"):
             load_from_db_fields.append(field_name)
 
         return params, load_from_db_fields

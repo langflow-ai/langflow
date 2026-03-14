@@ -85,8 +85,9 @@ def get_db_service() -> DatabaseServiceProtocol:
 def get_storage_service() -> StorageServiceProtocol | None:
     """Retrieves the storage service instance."""
     from lfx.services.schema import ServiceType
+    from lfx.services.storage.factory import StorageServiceFactory
 
-    return get_service(ServiceType.STORAGE_SERVICE)
+    return get_service(ServiceType.STORAGE_SERVICE, default=StorageServiceFactory())
 
 
 def get_settings_service() -> SettingsServiceProtocol | None:
