@@ -1,0 +1,47 @@
+{
+  "total_runs": 2,
+  "passed_runs": 0,
+  "failed_runs": 2,
+  "failure_rate": 1.0,
+  "is_flaky": false,
+  "is_unstable": false,
+  "is_consistently_failing": true,
+  "duration_stats": {
+    "average": 30.004774808883667,
+    "min": 30.002582788467407,
+    "max": 30.006966829299927,
+    "std_deviation": 0.0021920204162597656,
+    "coefficient_of_variation": 7.305571963868774e-05
+  },
+  "failure_patterns": {
+    "consecutive_failures": [
+      2
+    ],
+    "max_consecutive_failures": 2,
+    "common_errors": {}
+  },
+  "runs": [
+    {
+      "run_number": 1,
+      "exit_code": -1,
+      "duration": 30.006966829299927,
+      "passed": false,
+      "stdout_lines": 0,
+      "stderr_lines": 1
+    },
+    {
+      "run_number": 2,
+      "exit_code": -1,
+      "duration": 30.002582788467407,
+      "passed": false,
+      "stdout_lines": 0,
+      "stderr_lines": 1
+    }
+  ],
+  "meta": {
+    "total_detection_time": 60.00967192649841,
+    "runs_requested": 2,
+    "threshold": 0.1,
+    "timestamp": "2025-08-18T03:21:53.186799"
+  }
+}
