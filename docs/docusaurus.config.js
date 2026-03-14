@@ -517,6 +517,10 @@ const config = {
         searchParameters: {},
         searchPagePath: "search",
       },
+      // Optional: set DOCS_CHATBOT_PROXY_URL at build time to show the docs chatbot (proxy holds secrets)
+      customFields: {
+        docsChatbotProxyUrl: process.env.DOCS_CHATBOT_PROXY_URL || "",
+      },
     }),
 };
 
