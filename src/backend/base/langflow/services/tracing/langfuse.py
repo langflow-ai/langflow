@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import threading
 from collections import OrderedDict
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
@@ -22,6 +23,8 @@ if TYPE_CHECKING:
 
 
 class LangFuseTracer(BaseTracer):
+    _langfuse = None
+    _lock = threading.Lock()
     flow_id: str
 
     def __init__(
@@ -51,9 +54,14 @@ class LangFuseTracer(BaseTracer):
 
     def setup_langfuse(self, config) -> bool:
         try:
-            from langfuse import Langfuse
+            if not LangFuseTracer._langfuse:
+                with LangFuseTracer._lock:
+                    if not LangFuseTracer._langfuse:
+                        from langfuse import Langfuse
 
-            self._client = Langfuse(**config)
+                        LangFuseTracer._langfuse = Langfuse(**config)
+
+            self._client = LangFuseTracer._langfuse
             try:
                 from langfuse.api.core.request_options import RequestOptions
 
