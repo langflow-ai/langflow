@@ -122,7 +122,7 @@ async def run_graph(
 
 
 def validate_input(
-    graph_data: dict[str, Any], tweaks: Tweaks | dict[str, str | dict[str, Any]]
+    graph_data: dict[str, Any], tweaks: Tweaks | dict[str, bool | int | float | str | list[Any] | dict[str, Any]]
 ) -> list[dict[str, Any]]:
     if not isinstance(graph_data, dict) or not isinstance(tweaks, dict):
         msg = "graph_data and tweaks should be dictionaries"
@@ -216,7 +216,7 @@ def process_tweaks(
     tweaks_dict = cast("dict[str, Any]", tweaks.model_dump()) if not isinstance(tweaks, dict) else tweaks
     if "stream" not in tweaks_dict:
         tweaks_dict |= {"stream": stream}
-    nodes = validate_input(graph_data, cast("dict[str, str | dict[str, Any]]", tweaks_dict))
+    nodes = validate_input(graph_data, cast("dict[str, bool | int | float | str | list[Any] | dict[str, Any]]", tweaks_dict))
     nodes_map = {node.get("id"): node for node in nodes}
     nodes_display_name_map = {node.get("data", {}).get("node", {}).get("display_name"): node for node in nodes}
 
