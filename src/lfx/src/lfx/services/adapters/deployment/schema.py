@@ -104,10 +104,28 @@ class SnapshotItems(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    raw_payloads: SnapshotList = Field(
-        ...,
-        description="Raw snapshot payloads to create and bind for this deployment.",
+    raw_payloads: SnapshotList | None = Field(
+        None,
+        description="List of raw snapshot payloads to create and bind for this deployment. Omit to leave unchanged.",
     )
+    ids: list[IdLike] | None = Field(
+        None,
+        description="List of existing snapshot ids to bind to the deployment. Omit to leave unchanged.",
+    )
+
+    @field_validator("ids")
+    @classmethod
+    def validate_ids(cls, value: list[IdLike] | None) -> list[str] | None:
+        if value is None:
+            return None
+        return _normalize_and_dedupe_id_list(value, field_name="snapshot_id")
+
+    @model_validator(mode="after")
+    def validate_snapshot_source(self) -> "SnapshotItems":
+        if not self.raw_payloads and not self.ids:
+            msg = "At least one of 'raw_payloads' or 'ids' must be provided and non-empty."
+            raise ValueError(msg)
+        return self
 
 
 class SnapshotDeploymentBindingUpdate(BaseModel):
@@ -310,7 +328,7 @@ class BaseDeploymentData(ProviderSpecModel[T_DeploymentSpec]):
     type: DeploymentType = Field(description="The type of the deployment")
 
 
-class DeploymentCreateResult(BaseDeploymentData, ProviderResultModel[T_DeploymentCreateResult]):
+class DeploymentCreateResult(ProviderResultModel[T_DeploymentCreateResult]):
     """Model representing a result for a deployment creation operation."""
 
     id: IdLike = Field(description="The id of the created deployment")
@@ -320,7 +338,7 @@ class DeploymentCreateResult(BaseDeploymentData, ProviderResultModel[T_Deploymen
     )
     snapshot_ids: list[IdLike] = Field(
         default_factory=list,
-        description="Snapshot ids produced during deployment creation.",
+        description="Snapshot ids produced or boundduring deployment creation.",
     )
 
 
@@ -536,6 +554,10 @@ class ExecutionCreate(BaseModel):
     """Provider-agnostic deployment execution payload."""
 
     deployment_id: IdLike = Field(description="The id of the deployment to create an execution for.")
+    deployment_type: DeploymentType | None = Field(
+        default=None,
+        description="Optional deployment type routing hint for execution creation.",
+    )
 
     provider_data: T_ExecutionInput | None = Field(
         None,
