@@ -11,7 +11,7 @@ from langflow.api.v1.mappers.deployments.base import (
     DeploymentMapperRegistry,
 )
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadSchemas
-from lfx.services.adapters.payload import AdapterPayloadValidationError, PayloadSlot
+from lfx.services.adapters.payload import AdapterPayloadValidationError, PayloadSlot, PayloadSlotPolicy
 from pydantic import BaseModel
 
 
@@ -45,13 +45,19 @@ class _ApiSnapshotListParams(BaseModel):
 
 class _TypedMapper(BaseDeploymentMapper):
     api_payloads = DeploymentApiPayloads(
-        deployment_spec=PayloadSlot(_ApiSpec),
-        deployment_config=PayloadSlot(_ApiConfig),
-        deployment_update=PayloadSlot(_ApiUpdate),
-        execution_input=PayloadSlot(_ApiExecutionInput),
-        deployment_list_params=PayloadSlot(_ApiDeploymentListParams),
-        config_list_params=PayloadSlot(_ApiConfigListParams),
-        snapshot_list_params=PayloadSlot(_ApiSnapshotListParams),
+        deployment_spec=PayloadSlot(_ApiSpec, policy=PayloadSlotPolicy.VALIDATE_ONLY),
+        deployment_config=PayloadSlot(_ApiConfig, policy=PayloadSlotPolicy.VALIDATE_ONLY),
+        deployment_update=PayloadSlot(_ApiUpdate, policy=PayloadSlotPolicy.VALIDATE_ONLY),
+        execution_input=PayloadSlot(_ApiExecutionInput, policy=PayloadSlotPolicy.VALIDATE_ONLY),
+        deployment_list_params=PayloadSlot(_ApiDeploymentListParams, policy=PayloadSlotPolicy.VALIDATE_ONLY),
+        config_list_params=PayloadSlot(_ApiConfigListParams, policy=PayloadSlotPolicy.VALIDATE_ONLY),
+        snapshot_list_params=PayloadSlot(_ApiSnapshotListParams, policy=PayloadSlotPolicy.VALIDATE_ONLY),
+    )
+
+
+class _NormalizingMapper(BaseDeploymentMapper):
+    api_payloads = DeploymentApiPayloads(
+        deployment_config=PayloadSlot(_ApiConfig, policy=PayloadSlotPolicy.VALIDATE_AND_DUMP),
     )
 
 
@@ -106,11 +112,25 @@ async def test_base_mapper_resolvers_passthrough_when_slot_not_configured(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(("method_name", "payload"), INBOUND_METHOD_CASES)
-async def test_base_mapper_resolvers_validate_configured_slots(method_name: str, payload: dict[str, str | int]) -> None:
+async def test_base_mapper_resolvers_validate_configured_slots_without_re_serializing(
+    method_name: str, payload: dict[str, str | int]
+) -> None:
     mapper = _TypedMapper()
     resolver = getattr(mapper, method_name)
     resolved = await resolver(payload, db=None)  # type: ignore[arg-type]
     assert resolved == payload
+    assert resolved is payload
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolvers_apply_normalize_policy_when_slot_configured() -> None:
+    mapper = _NormalizingMapper()
+    payload: dict[str, str | int] = {"retries": "3"}
+
+    resolved = await mapper.resolve_deployment_config(payload, db=None)  # type: ignore[arg-type]
+
+    assert resolved == {"retries": 3}
+    assert resolved is not payload
 
 
 @pytest.mark.asyncio

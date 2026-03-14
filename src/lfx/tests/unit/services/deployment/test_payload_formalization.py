@@ -24,7 +24,7 @@ from lfx.services.adapters.deployment.schema import (
     SnapshotListParams,
     SnapshotListResult,
 )
-from lfx.services.adapters.payload import AdapterPayloadValidationError, PayloadSlot
+from lfx.services.adapters.payload import AdapterPayloadValidationError, PayloadSlot, PayloadSlotPolicy
 from pydantic import BaseModel
 
 
@@ -54,6 +54,10 @@ class _ConfigFilterModel(BaseModel):
 
 class _SnapshotFilterModel(BaseModel):
     label: str
+
+
+class _ApiLikeConfigModel(BaseModel):
+    retries: int
 
 
 class _Color(str, Enum):
@@ -108,6 +112,26 @@ def test_payload_slot_dump_json_serializes_uuid_datetime_enum_and_nested_model()
         "color": "blue",
         "nested": {"tag": "x"},
     }
+
+
+def test_payload_slot_apply_validate_only_policy_returns_original_payload() -> None:
+    slot = PayloadSlot(_SpecModel, policy=PayloadSlotPolicy.VALIDATE_ONLY)
+    raw = {"region": "us-east-1"}
+
+    applied = slot.apply(raw)
+
+    assert applied == raw
+    assert applied is raw
+
+
+def test_payload_slot_apply_validate_and_dump_policy_normalizes_payload() -> None:
+    slot = PayloadSlot(_ApiLikeConfigModel, policy=PayloadSlotPolicy.VALIDATE_AND_DUMP)
+    raw = {"retries": "3"}
+
+    applied = slot.apply(raw)
+
+    assert applied == {"retries": 3}
+    assert applied is not raw
 
 
 def test_deployment_payload_schemas_exposes_slots_and_active_slots() -> None:
