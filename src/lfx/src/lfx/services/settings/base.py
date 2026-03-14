@@ -169,6 +169,16 @@ class Settings(BaseSettings):
     Set to a file path (e.g., '/path/to/index.json') or URL (e.g., 'https://example.com/index.json')
     to use a custom index.
     """
+    component_category_allowlist: list[str] = []
+    """Comma-separated list of component category names to include from the component index.
+    If empty (default), all categories are included. If set, only the listed categories
+    will be available. Category names are case-insensitive.
+    Example: LANGFLOW_COMPONENT_CATEGORY_ALLOWLIST=openai,anthropic,google,processing"""
+    component_category_blocklist: list[str] = []
+    """Comma-separated list of component category names to exclude from the component index.
+    If empty (default), no categories are excluded. Applied after the allowlist.
+    Category names are case-insensitive.
+    Example: LANGFLOW_COMPONENT_CATEGORY_BLOCKLIST=prototypes,langchain_utilities"""
     langchain_cache: str = "InMemoryCache"
     load_flows_path: str | None = None
     bundle_urls: list[str] = []
