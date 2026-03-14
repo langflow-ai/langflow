@@ -30,7 +30,7 @@ class BaseDeploymentMapper:
     The base implementation is intentionally passthrough-first:
     inbound ``resolve_*`` methods return the original dict unless an
     API payload slot is configured for that field, in which case the
-    dict is validated and re-dumped through the slot model.
+    slot ``apply`` policy is used.
     Outbound ``shape_*`` methods return provider payloads unchanged, including
     the operation-specific result shapers:
     ``shape_deployment_create_result``, ``shape_deployment_operation_result``,
@@ -98,8 +98,7 @@ class BaseDeploymentMapper:
         """Validate a payload dict against a configured API slot."""
         if raw is None or slot is None:
             return raw
-        validated = slot.parse(raw)
-        return slot.dump(validated)
+        return slot.apply(raw)
 
 
 class DeploymentMapperRegistry:

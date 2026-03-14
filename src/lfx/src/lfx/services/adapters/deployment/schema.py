@@ -338,7 +338,7 @@ class DeploymentCreateResult(ProviderResultModel[T_DeploymentCreateResult]):
     )
     snapshot_ids: list[IdLike] = Field(
         default_factory=list,
-        description="Snapshot ids produced or boundduring deployment creation.",
+        description="Snapshot ids produced or bound during deployment creation.",
     )
 
 

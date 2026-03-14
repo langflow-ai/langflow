@@ -19,6 +19,7 @@ Ownership boundaries start here:
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
+from enum import Enum
 from typing import Any, Generic
 
 from pydantic import BaseModel, ValidationError
@@ -26,6 +27,13 @@ from typing_extensions import TypeVar
 
 AdapterPayload = dict[str, Any]
 T_Model = TypeVar("T_Model", bound=BaseModel)
+
+
+class PayloadSlotPolicy(str, Enum):
+    """Controls how a slot applies schema validation."""
+
+    VALIDATE_ONLY = "validate_only"
+    VALIDATE_AND_DUMP = "validate_and_dump"
 
 
 class AdapterPayloadValidationError(ValueError):
@@ -44,6 +52,7 @@ class PayloadSlot(Generic[T_Model]):
     """Layer-agnostic contract between raw payload dicts and typed models."""
 
     adapter_model: type[T_Model]
+    policy: PayloadSlotPolicy = PayloadSlotPolicy.VALIDATE_AND_DUMP
 
     def parse(self, raw: AdapterPayload) -> T_Model:
         """Validate and parse raw provider payload into the typed model."""
@@ -55,6 +64,13 @@ class PayloadSlot(Generic[T_Model]):
     def dump(self, value: T_Model) -> AdapterPayload:
         """Serialize typed model back into a plain provider payload dict."""
         return value.model_dump(mode="json")
+
+    def apply(self, raw: AdapterPayload) -> AdapterPayload:
+        """Apply slot policy to a raw payload dict."""
+        validated = self.parse(raw)
+        if self.policy is PayloadSlotPolicy.VALIDATE_ONLY:
+            return raw
+        return self.dump(validated)
 
 
 @dataclass(frozen=True)
