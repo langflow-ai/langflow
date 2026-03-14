@@ -1,5 +1,8 @@
-const MiniMaxSVG = (props) => (
+import React from "react";
+
+const MiniMaxSVG = React.forwardRef((props, ref) => (
   <svg
+    ref={ref}
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 24 24"
     width="24"
@@ -15,6 +18,8 @@ const MiniMaxSVG = (props) => (
       strokeLinejoin="round"
     />
   </svg>
-);
+));
+
+MiniMaxSVG.displayName = "MiniMaxSVG";
 
 export default MiniMaxSVG;
