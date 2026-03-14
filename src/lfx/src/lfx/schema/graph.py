@@ -16,7 +16,7 @@ class InputValue(BaseModel):
 
 
 class Tweaks(RootModel):
-    root: dict[str, str | dict[str, Any]] = Field(
+    root: dict[str, bool | int | float | str | list[Any] | dict[str, Any]] = Field(
         description="A dictionary of tweaks to adjust the flow's execution. "
         "Allows customizing flow behavior dynamically. "
         "All tweaks are overridden by the input values.",
