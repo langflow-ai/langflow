@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import fields
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from enum import Enum
 from uuid import UUID
 
@@ -208,7 +208,7 @@ def test_unparametrized_models_keep_dict_passthrough_behavior() -> None:
     )
     assert data.provider_spec == payload
 
-    now = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
+    now = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
     rich_slot = PayloadSlot(_RichPayload)
     dumped = rich_slot.dump(
         _RichPayload(
