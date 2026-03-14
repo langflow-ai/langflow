@@ -149,9 +149,6 @@ def test_generic_parametrization_applies_to_provider_fields() -> None:
 def test_generic_parametrization_applies_to_result_and_list_models() -> None:
     typed_create = DeploymentCreateResult[_ResultModel](
         id="dep_1",
-        name="dep",
-        description="",
-        type=DeploymentType.AGENT,
         provider_result={"external_url": "https://dep.example"},
     )
     typed_operation = DeploymentOperationResult[_ResultModel](
@@ -184,10 +181,7 @@ def test_generic_parametrization_applies_to_result_and_list_models() -> None:
     typed_config_params = ConfigListParams[_ConfigFilterModel](provider_params={"namespace": "prod"})
     typed_snapshot_params = SnapshotListParams[_SnapshotFilterModel](provider_params={"label": "nightly"})
 
-    # In this multi-inheritance model, provider_result currently resolves to dict.
-    # Keep this assertion explicit so we detect any future behavior change.
-    assert isinstance(typed_create.provider_result, dict)
-    assert typed_create.provider_result == {"external_url": "https://dep.example"}
+    assert isinstance(typed_create.provider_result, _ResultModel)
     assert isinstance(typed_operation.provider_result, _ResultModel)
     assert isinstance(typed_execution.provider_result, _ExecutionResultModel)
     assert isinstance(typed_item.provider_data, _StatusModel)
