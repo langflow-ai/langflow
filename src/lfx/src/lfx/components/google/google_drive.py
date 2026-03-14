@@ -2,6 +2,7 @@ import json
 from json.decoder import JSONDecodeError
 
 from google.auth.exceptions import RefreshError
+from pydantic import ConfigDict
 from google.oauth2.credentials import Credentials
 from langchain_google_community import GoogleDriveLoader
 
@@ -47,8 +48,7 @@ class GoogleDriveComponent(Component):
                 msg = "No credentials provided."
                 raise ValueError(msg)
 
-            class Config:
-                arbitrary_types_allowed = True
+            model_config = ConfigDict(arbitrary_types_allowed=True)
 
         json_string = self.json_string
 
