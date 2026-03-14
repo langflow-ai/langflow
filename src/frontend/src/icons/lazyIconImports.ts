@@ -117,6 +117,8 @@ export const lazyIconsMapping = {
     import("@/icons/Brandfetch").then((mod) => ({
       default: mod.BrandfetchIcon,
     })),
+  Brevo: () =>
+    import("@/icons/Brevo").then((mod) => ({ default: mod.BrevoIcon })),
   Brightdata: () =>
     import("@/icons/Brightdata").then((mod) => ({
       default: mod.BrightdataIcon,
@@ -147,6 +149,10 @@ export const lazyIconsMapping = {
     import("@/icons/Confluence").then((mod) => ({
       default: mod.ConfluenceIcon,
     })),
+  Connecteam: () =>
+    import("@/icons/Connecteam/index").then((mod) => ({
+      default: mod.ConnecteamIcon,
+    })),
   Couchbase: () =>
     import("@/icons/Couchbase").then((mod) => ({ default: mod.CouchbaseIcon })),
   Classroom: () =>
@@ -163,6 +169,8 @@ export const lazyIconsMapping = {
     import("@/icons/Docling").then((mod) => ({ default: mod.DoclingIcon })),
   Dropbox: () =>
     import("@/icons/Dropbox").then((mod) => ({ default: mod.DropboxIcon })),
+  Deepgram: () =>
+    import("@/icons/Deepgram").then((mod) => ({ default: mod.DeepgramIcon })),
   DuckDuckGo: () =>
     import("@/icons/DuckDuckGo").then((mod) => ({
       default: mod.DuckDuckGoIcon,
@@ -171,6 +179,8 @@ export const lazyIconsMapping = {
     import("@/icons/ElasticsearchStore").then((mod) => ({
       default: mod.ElasticsearchIcon,
     })),
+  Everhour: () =>
+    import("@/icons/Everhour").then((mod) => ({ default: mod.EverhourIcon })),
   Evernote: () =>
     import("@/icons/Evernote").then((mod) => ({ default: mod.EvernoteIcon })),
   Exa: () => import("@/icons/Exa").then((mod) => ({ default: mod.ExaIcon })),
@@ -273,6 +283,8 @@ export const lazyIconsMapping = {
     import("@/icons/hackerNews").then((mod) => ({
       default: mod.HackerNewsIcon,
     })),
+  Harvest: () =>
+    import("@/icons/Harvest").then((mod) => ({ default: mod.HarvestIcon })),
   HCD: () => import("@/icons/HCD").then((mod) => ({ default: mod.HCDIcon })),
   HomeAssistant: () =>
     import("@/icons/HomeAssistant").then((mod) => ({
@@ -311,6 +323,8 @@ export const lazyIconsMapping = {
     import("@/icons/linear").then((mod) => ({ default: mod.LinearIcon })),
   LangChain: () =>
     import("@/icons/LangChain").then((mod) => ({ default: mod.LangChainIcon })),
+  Lemlist: () =>
+    import("@/icons/lemlist").then((mod) => ({ default: mod.LemlistIcon })),
   Langwatch: () =>
     import("@/icons/Langwatch").then((mod) => ({ default: mod.LangwatchIcon })),
   LiteLLM: () =>
@@ -340,6 +354,8 @@ export const lazyIconsMapping = {
     import("@/icons/Missive").then((mod) => ({ default: mod.MissiveIcon })),
   Mistral: () =>
     import("@/icons/mistral").then((mod) => ({ default: mod.MistralIcon })),
+  Monday: () =>
+    import("@/icons/Monday").then((mod) => ({ default: mod.MondayIcon })),
   MongoDB: () =>
     import("@/icons/MongoDB").then((mod) => ({ default: mod.MongoDBIcon })),
   Needle: () =>
@@ -379,6 +395,8 @@ export const lazyIconsMapping = {
     import("@/icons/PerplexityComposio").then((mod) => ({
       default: mod.PerplexityIconComposio,
     })),
+  Plain: () =>
+    import("@/icons/Plain").then((mod) => ({ default: mod.PlainIcon })),
   Pinecone: () =>
     import("@/icons/Pinecone").then((mod) => ({ default: mod.PineconeIcon })),
   Postgres: () =>
@@ -441,10 +459,16 @@ export const lazyIconsMapping = {
     import("@/icons/Slides").then((mod) => ({ default: mod.SlidesIcon })),
   Spider: () =>
     import("@/icons/Spider").then((mod) => ({ default: mod.SpiderIcon })),
+  Sportsapi: () =>
+    import("@/icons/Sportsapi").then((mod) => ({ default: mod.SportsapiIcon })),
   Streamlit: () =>
     import("@/icons/Streamlit").then((mod) => ({ default: mod.Streamlit })),
   Supabase: () =>
     import("@/icons/supabase").then((mod) => ({ default: mod.SupabaseIcon })),
+  Synthflowai: () =>
+    import("@/icons/Synthflowai").then((mod) => ({
+      default: mod.SynthflowaiIcon,
+    })),
   Tavily: () =>
     import("@/icons/Tavily").then((mod) => ({ default: mod.TavilyIcon })),
   ThumbDownCustom: () =>
@@ -467,6 +491,8 @@ export const lazyIconsMapping = {
     import("@/icons/Twitter X").then((mod) => ({
       default: mod.TwitterXIcon,
     })),
+  Typefully: () =>
+    import("@/icons/Typefully").then((mod) => ({ default: mod.TypefullyIcon })),
   VLMRun: () =>
     import("@/icons/VLMRun").then((mod) => ({
       default: mod.VLMRunIcon,
@@ -492,4 +518,6 @@ export const lazyIconsMapping = {
     import("@/icons/Youtube").then((mod) => ({ default: mod.YoutubeIcon })),
   ZepMemory: () =>
     import("@/icons/ZepMemory").then((mod) => ({ default: mod.ZepMemoryIcon })),
+  Zohobooks: () =>
+    import("@/icons/Zohobooks").then((mod) => ({ default: mod.ZohobooksIcon })),
 };
