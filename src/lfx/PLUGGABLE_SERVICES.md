@@ -134,6 +134,28 @@ lfx/services/
 
 This keeps top-level services (DI-managed singletons) separate from adapter implementations (keyed registries with multiple implementations per type).
 
+### Payload Contract Ownership (Adapters vs API Layer)
+
+Payload contracts intentionally split ownership across layers:
+
+- **LFX owns shared slot primitives and slot taxonomy**:
+  - `lfx.services.adapters.payload` defines shared primitives (`PayloadSlot`, `ProviderPayloadSchemas`)
+  - each adapter domain in lfx defines canonical slot names once (for example deployment slots in
+    `lfx.services.adapters.deployment.payloads`)
+- **Adapters (LFX side) own adapter-facing payload models**:
+  - adapters populate their `*PayloadSchemas` registry with adapter-side models
+- **API hosts (for example Langflow) own API-facing payload models**:
+  - API mapper layers populate their own API payload registries
+  - API slots may differ from adapter slots when API-specific references or reshaping are required
+
+This boundary allows both layers to share one slot taxonomy while keeping API exceptions and
+transformation logic outside adapter implementations.
+
+Deployment is the concrete example in this repository:
+
+- LFX defines deployment slot taxonomy and adapter registry (`DeploymentPayloadFields` / `DeploymentPayloadSchemas`)
+- Langflow defines deployment API registry (`DeploymentApiPayloads`) and mapper behavior
+
 ### Error Handling Behavior
 
 - Invalid import paths (missing `module:ClassName`) are ignored with warning logs

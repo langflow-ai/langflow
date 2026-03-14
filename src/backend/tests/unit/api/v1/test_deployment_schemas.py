@@ -8,8 +8,10 @@ from uuid import uuid4
 import pytest
 from langflow.api.v1.schemas.deployments import (
     DeploymentConfigBindingUpdate,
+    DeploymentConfigCreate,
     DeploymentConfigListItem,
     DeploymentConfigListResponse,
+    DeploymentCreateRequest,
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountGetResponse,
     DeploymentProviderAccountUpdateRequest,
@@ -192,6 +194,31 @@ class TestDeploymentUpdateRequest:
     def test_rejects_explicit_null_only_payload(self):
         with pytest.raises(ValidationError, match="At least one of"):
             DeploymentUpdateRequest(spec=None)
+
+
+class TestSharedKernelProviderPayloadCompatibility:
+    def test_create_request_accepts_provider_spec_dict_through_strict_wrapper(self):
+        request = DeploymentCreateRequest(
+            provider_id=uuid4(),
+            spec={
+                "name": "deployment",
+                "description": "",
+                "type": "agent",
+                "provider_spec": {"region": "us-east-1", "size": "small"},
+            },
+        )
+        assert request.spec.provider_spec == {"region": "us-east-1", "size": "small"}
+
+    def test_config_create_accepts_provider_config_dict_through_strict_wrapper(self):
+        payload = DeploymentConfigCreate(
+            raw_payload={
+                "name": "cfg",
+                "description": "cfg-desc",
+                "provider_config": {"timeout_s": 30, "flags": {"dry_run": True}},
+            }
+        )
+        assert payload.raw_payload is not None
+        assert payload.raw_payload.provider_config == {"timeout_s": 30, "flags": {"dry_run": True}}
 
 
 # ---------------------------------------------------------------------------
