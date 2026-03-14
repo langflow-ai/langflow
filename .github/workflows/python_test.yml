@@ -45,6 +45,10 @@ on:
           - self-hosted
           - '["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]'
         default: ubuntu-latest
+
+permissions:
+  contents: read
+
 env:
   POETRY_VERSION: "1.8.2"
   NODE_VERSION: "22"

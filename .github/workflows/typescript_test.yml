@@ -63,6 +63,9 @@ on:
           - '["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]'
         default: ubuntu-latest
 
+permissions:
+  contents: read
+
 env:
   NODE_VERSION: "22"
   PYTHON_VERSION: "3.13"
