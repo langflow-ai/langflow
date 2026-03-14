@@ -216,7 +216,9 @@ def process_tweaks(
     tweaks_dict = cast("dict[str, Any]", tweaks.model_dump()) if not isinstance(tweaks, dict) else tweaks
     if "stream" not in tweaks_dict:
         tweaks_dict |= {"stream": stream}
-    nodes = validate_input(graph_data, cast("dict[str, bool | int | float | str | list[Any] | dict[str, Any]]", tweaks_dict))
+    nodes = validate_input(
+        graph_data, cast("dict[str, bool | int | float | str | list[Any] | dict[str, Any]]", tweaks_dict)
+    )
     nodes_map = {node.get("id"): node for node in nodes}
     nodes_display_name_map = {node.get("data", {}).get("node", {}).get("display_name"): node for node in nodes}
 
