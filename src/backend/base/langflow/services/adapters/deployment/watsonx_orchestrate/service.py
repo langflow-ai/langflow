@@ -22,6 +22,7 @@ from lfx.services.adapters.deployment.exceptions import (
     InvalidDeploymentTypeError,
     OperationNotSupportedError,
 )
+from lfx.services.adapters.deployment.payloads import DeploymentPayloadSchemas
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
     ConfigDeploymentBindingUpdate,
@@ -51,6 +52,7 @@ from lfx.services.adapters.deployment.schema import (
     SnapshotListResult,
     _normalize_and_validate_id,
 )
+from lfx.services.adapters.payload import PayloadSlot
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_provider_clients
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
@@ -84,6 +86,9 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import
     create_and_upload_wxo_flow_tools,
     process_raw_flows_with_app_id,
     update_existing_tool_connection_bindings,
+)
+from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
+    WatsonxDeploymentUpdatePayload,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.update_helpers import (
     SnapshotUpdateOps,
@@ -122,6 +127,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     """Deployment adapter for Watsonx Orchestrate."""
 
     name = "deployment_service"
+    payload_schemas = DeploymentPayloadSchemas(
+        deployment_update=PayloadSlot(WatsonxDeploymentUpdatePayload),
+    )
 
     def __init__(self, settings_service: SettingsService | None = None):
         super().__init__()
