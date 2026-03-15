@@ -44,7 +44,6 @@ from lfx.services.adapters.deployment.schema import (
     ExecutionCreateResult,
     ExecutionStatusResult,
     IdLike,
-    ProviderPayload,
     RedeployResult,
     SnapshotDeploymentBindingUpdate,
     SnapshotItem,
@@ -367,7 +366,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 )
                 raise InvalidDeploymentTypeError(message=msg)
 
-            query_params: ProviderPayload = {}
+            query_params: dict[str, Any] = {}
 
             if params and params.provider_params:
                 query_params = params.provider_params

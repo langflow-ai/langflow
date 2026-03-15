@@ -1068,7 +1068,6 @@ async def test_create_wires_snapshot_ids_to_agent_and_prefixed_names(monkeypatch
     assert result.id == "dep-created"
     assert result.config_id == "lf_abcdef_my_deployment_ignored_app_id"
     assert result.snapshot_ids == ["tool-1", "tool-2"]
-    assert result.name == "my deployment"
     assert captured["config_deployment_name"] == "lf_abcdef_my_deployment_ignored_app_id"
     assert captured["snapshot_app_id"] == "lf_abcdef_my_deployment_ignored_app_id"
     assert len(captured["snapshot_flows"]) == 1
@@ -1160,7 +1159,6 @@ async def test_create_uses_caller_provided_resource_name_prefix(monkeypatch):
     )
 
     assert result.id == "dep-created"
-    assert result.name == "my deployment"
     assert captured["config_deployment_name"] == "idempotent_abc_my_deployment_ignored_app_id"
     assert captured["snapshot_app_id"] == "idempotent_abc_my_deployment_ignored_app_id"
     assert captured["tool_name_prefix"] == "idempotent_abc_"

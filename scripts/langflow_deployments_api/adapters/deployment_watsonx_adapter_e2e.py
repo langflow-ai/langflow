@@ -31,7 +31,8 @@ Live lifecycle scenarios:
 - `live_delete_seed`: deletes seed deployment agent (expects Success).
 - `live_get_after_delete_not_found`: confirms deleted deployment is no longer fetchable
   (expects DeploymentNotFoundError).
-- `live_status_after_delete_not_found_state`: confirms status reports not found state after delete (expects Success).
+- `live_status_after_delete_not_found_state`: confirms status on deleted deployment returns not found
+  (expects DeploymentNotFoundError).
 
 Live negative scenarios:
 - `live_negative_create_seed`: creates a second seed deployment for negative-path checks (expects Success).
@@ -775,17 +776,14 @@ class WatsonxAdapterDirectE2E:
         )
 
         print("[life/11] live_status_after_delete_not_found_state")
-        status_code, detail, status_after_delete = await self._run_status(deployment_id)
-        status_not_found_ok = bool(
-            status_after_delete and getattr(status_after_delete, "provider_data", {}).get("status") == "not found"
-        )
+        status_code, detail, _ = await self._run_status(deployment_id)
         results.append(
             self._build_result(
                 name="live_status_after_delete_not_found_state",
-                expected={OUTCOME_SUCCESS},
+                expected={OUTCOME_NOT_FOUND},
                 actual_outcome=status_code,
                 detail=detail,
-                ok=status_code == OUTCOME_SUCCESS and status_not_found_ok,
+                ok=status_code == OUTCOME_NOT_FOUND,
             )
         )
 

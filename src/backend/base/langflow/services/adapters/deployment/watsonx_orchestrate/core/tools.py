@@ -196,8 +196,6 @@ def create_wxo_flow_tool(
             - artifacts: The supporting artifacts (the requirements.txt
                 and the flow json file) for the tool.
     """
-    from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import LangflowTool, create_langflow_tool
-
     flow_definition = flow_payload.model_dump()
 
     flow_provider_data = flow_definition.pop("provider_data", None)
@@ -231,7 +229,7 @@ def create_wxo_flow_tool(
             raise InvalidContentError(message=msg)
         flow_definition["last_tested_version"] = detected_version
 
-    tool: LangflowTool = create_langflow_tool(
+    tool = create_langflow_tool(
         tool_definition=flow_definition,
         connections=connections,
         show_details=False,
@@ -258,6 +256,17 @@ def create_wxo_flow_tool(
     )
 
     return tool_payload, artifacts
+
+
+def create_langflow_tool(*, tool_definition: dict[str, Any], connections: dict[str, str], show_details: bool) -> Any:
+    """Module-level wrapper to keep tool creation monkeypatchable in tests."""
+    from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import create_langflow_tool as _create_langflow_tool
+
+    return _create_langflow_tool(
+        tool_definition=tool_definition,
+        connections=connections,
+        show_details=show_details,
+    )
 
 
 async def create_and_upload_wxo_flow_tools(
