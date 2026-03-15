@@ -8,11 +8,29 @@ from lfx.schema.dataframe import DataFrame
 
 
 class DataFrameOperationsComponent(Component):
-    display_name = "DataFrame Operations"
-    description = "Perform various operations on a DataFrame."
+    display_name = "Table Operations"
+    description = "Perform various operations on a Table."
     documentation: str = "https://docs.langflow.org/dataframe-operations"
     icon = "table"
     name = "DataFrameOperations"
+    metadata = {
+        "keywords": [
+            "dataframe",
+            "dataframe operations",
+            "table",
+            "table operations",
+            "filter",
+            "sort",
+            "merge",
+            "concatenate",
+            "drop column",
+            "rename column",
+            "add column",
+            "select columns",
+            "replace value",
+            "drop duplicates",
+        ],
+    }
 
     OPERATION_CHOICES = [
         "Add Column",
@@ -32,7 +50,7 @@ class DataFrameOperationsComponent(Component):
     inputs = [
         DataFrameInput(
             name="df",
-            display_name="DataFrame",
+            display_name="Table",
             info="The input DataFrame to operate on. Connect multiple DataFrames for merge or concatenate operations.",
             required=True,
             is_list=True,
@@ -163,7 +181,7 @@ class DataFrameOperationsComponent(Component):
 
     outputs = [
         Output(
-            display_name="DataFrame",
+            display_name="Table",
             name="output",
             method="perform_operation",
             info="The resulting DataFrame after the operation.",

@@ -1,10 +1,11 @@
 import { render, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
-  DialogTitle,
   DialogDescription,
+  DialogTitle,
 } from "../dialog";
 
 // Mock genericIconComponent (already globally mocked, but be explicit)
@@ -13,11 +14,7 @@ jest.mock("@/components/common/genericIconComponent", () => ({
   default: () => null,
 }));
 
-import type { ReactElement } from "react";
-import { render, screen } from "@testing-library/react";
-import { TooltipProvider } from "@/components/ui/tooltip";
-
-const renderWithProviders = (ui: ReactElement) => {
+const renderWithProviders = (ui: React.ReactElement) => {
   return render(<TooltipProvider>{ui}</TooltipProvider>);
 };
 

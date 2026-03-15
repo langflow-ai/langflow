@@ -4,12 +4,12 @@ import { test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { zoomOut } from "../../utils/zoom-out";
-import { selectGptModel } from "../../utils/select-gpt-model";
 import {
   closeAdvancedOptions,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
+import { selectGptModel } from "../../utils/select-gpt-model";
+import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "should create a flow with decision",
@@ -247,19 +247,19 @@ test(
     await page.getByText("Check & Save").last().click();
     //---------------------------------- MAKE CONNECTIONS
     await page
-      .getByTestId("handle-createlist-shownode-data list-right")
+      .getByTestId("handle-createlist-shownode-json list-right")
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-parsedata-shownode-data-left")
+      .getByTestId("handle-parsedata-shownode-json-left")
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-createlist-shownode-data list-right")
+      .getByTestId("handle-createlist-shownode-json list-right")
       .nth(1)
       .click();
     await page
-      .getByTestId("handle-parsedata-shownode-data-left")
+      .getByTestId("handle-parsedata-shownode-json-left")
       .nth(1)
       .click();
     await page

@@ -102,10 +102,10 @@ jest.mock("@/controllers/API", () => ({
 }));
 
 import {
-  processEndVertexEvent,
-  processBatchedEvents,
-  BATCHABLE_EVENTS,
   BATCH_YIELD_MS,
+  BATCHABLE_EVENTS,
+  processBatchedEvents,
+  processEndVertexEvent,
 } from "../buildUtils";
 
 // --- Helpers ---

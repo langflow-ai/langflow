@@ -236,7 +236,12 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
-      needs.set-ci-condition.outputs.should-run-tests == 'true'
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (
+        inputs.run-all-tests ||
+        (needs.path-filter.result != 'skipped' &&
+        needs.path-filter.outputs.docs-only != 'true')
+      )
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: ${{ inputs.python-versions || '["3.10"]' }}
@@ -253,7 +258,12 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
-      needs.set-ci-condition.outputs.should-run-tests == 'true'
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (
+        inputs.run-all-tests ||
+        (needs.path-filter.result != 'skipped' &&
+        needs.path-filter.outputs.docs-only != 'true')
+      )
     uses: ./.github/workflows/jest_test.yml
     with:
       ref: ${{ inputs.ref || github.ref }}
@@ -266,7 +276,12 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
-      needs.set-ci-condition.outputs.should-run-tests == 'true'
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (
+        inputs.run-all-tests ||
+        (needs.path-filter.result != 'skipped' &&
+        needs.path-filter.outputs.docs-only != 'true')
+      )
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: ${{ inputs.frontend-tests-folder }}
