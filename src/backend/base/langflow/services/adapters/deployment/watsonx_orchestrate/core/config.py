@@ -5,6 +5,12 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Any
 
+from ibm_watsonx_orchestrate_core.types.connections import (
+    ConnectionConfiguration,
+    ConnectionEnvironment,
+    ConnectionPreference,
+    ConnectionSecurityScheme,
+)
 from lfx.services.adapters.deployment.exceptions import (
     InvalidContentError,
     InvalidDeploymentOperationError,
@@ -26,13 +32,6 @@ async def create_config(
     db: Any,
 ) -> str:
     """Create/update a wxO draft key-value connection config plus runtime credentials."""
-    from ibm_watsonx_orchestrate_core.types.connections import (
-        ConnectionConfiguration,
-        ConnectionEnvironment,
-        ConnectionPreference,
-        ConnectionSecurityScheme,
-    )
-
     app_id = validate_wxo_name(config.name)
 
     await asyncio.to_thread(clients.connections.create, payload={"app_id": app_id})
@@ -122,8 +121,6 @@ def resolve_create_app_id(
 
 
 async def validate_connection(connections_client: Any, *, app_id: str) -> Any:
-    from ibm_watsonx_orchestrate_core.types.connections import ConnectionEnvironment, ConnectionSecurityScheme
-
     connection = await asyncio.to_thread(connections_client.get_draft_by_app_id, app_id=app_id)
     config = await asyncio.to_thread(connections_client.get_config, app_id=app_id, env=ConnectionEnvironment.DRAFT)
     if not connection:

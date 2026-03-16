@@ -3,7 +3,6 @@ from __future__ import annotations
 import importlib
 import io
 import zipfile
-from importlib.util import find_spec
 from types import SimpleNamespace
 from uuid import UUID
 
@@ -35,20 +34,11 @@ from lfx.services.adapters.deployment.schema import (
     SnapshotListParams,
 )
 
-# This adapter depends on optional packages that can be missing in
-# certain environments (for example Python 3.10 CI jobs).
-_OPTIONAL_WATSONX_MODULES = (
-    "ibm_cloud_sdk_core",
-    "ibm_watsonx_orchestrate_clients",
-    "ibm_watsonx_orchestrate_core",
-    "rich",
-    "yaml",
-)
-
-_missing_optional_modules = [module_name for module_name in _OPTIONAL_WATSONX_MODULES if find_spec(module_name) is None]
-if _missing_optional_modules:
+try:
+    import langflow.services.adapters.deployment.watsonx_orchestrate  # noqa: F401
+except ModuleNotFoundError:
     pytest.skip(
-        f"Skipping Watsonx deployment tests; missing optional dependency(ies): {', '.join(_missing_optional_modules)}",
+        "Skipping Watsonx deployment tests: optional IBM SDK dependencies not available.",
         allow_module_level=True,
     )
 

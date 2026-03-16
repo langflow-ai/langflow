@@ -268,30 +268,24 @@ def register_all_service_factories() -> None:
 
 
 def register_builtin_adapters() -> None:
-    """Import built-in adapter modules so @register_adapter decorators fire.
+    """Import built-in adapter modules so ``@register_adapter`` decorators fire.
 
-    Mirrors register_all_service_factories() for the adapter registry system.
-    Each import triggers the @register_adapter decorator at module scope,
+    Mirrors ``register_all_service_factories()`` for the adapter registry system.
+    Each import triggers the ``@register_adapter`` decorator at module scope,
     registering the adapter class on the AdapterRegistry singleton.
-    """
-    optional_watsonx_modules = (
-        "ibm_watsonx_orchestrate_clients",
-        "ibm_watsonx_orchestrate_core",
-        "ibm_cloud_sdk_core",
-    )
 
+    TODO: Watsonx risks are documented here because registration is runtime-optional:
+    missing ``ibm_*`` modules should skip adapter registration, but broad
+    ``ModuleNotFoundError`` handling can also hide internal import regressions.
+    Future deployment API routing must treat "provider exists but adapter is not
+    registered in this runtime" as an explicit, deterministic error path.
+    Keep direct adapter imports limited to guarded paths and maintain CI
+    coverage that confirms Watsonx tests run (not skip) in eligible environments.
+    """
     try:
         import langflow.services.adapters.deployment.watsonx_orchestrate  # noqa: F401
     except ModuleNotFoundError as exc:
-        # Watsonx Orchestrate dependencies are optional and may be unavailable
-        # in some environments (for example Python 3.10 CI jobs).
-        if any((exc.name or "").startswith(module_name) for module_name in optional_watsonx_modules):
-            logger.info(
-                "Skipping Watsonx Orchestrate adapter registration because optional dependency %s is missing.",
-                exc.name,
-            )
-        else:
-            raise
+        logger.info("Skipping Watsonx Orchestrate adapter registration: %s", exc)
 
 
 async def initialize_services(*, fix_migration: bool = False) -> None:

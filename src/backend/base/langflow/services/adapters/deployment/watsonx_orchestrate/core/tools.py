@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from cachetools import func
+from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import create_langflow_tool as _create_langflow_tool
 from lfx.services.adapters.deployment.exceptions import InvalidContentError, InvalidDeploymentOperationError
 from lfx.utils.flow_requirements import generate_requirements_from_flow
 
@@ -277,8 +278,6 @@ def create_wxo_flow_tool(
 
 def create_langflow_tool(*, tool_definition: dict[str, Any], connections: dict[str, str], show_details: bool) -> Any:
     """Module-level wrapper to keep tool creation monkeypatchable in tests."""
-    from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import create_langflow_tool as _create_langflow_tool
-
     return _create_langflow_tool(
         tool_definition=tool_definition,
         connections=connections,

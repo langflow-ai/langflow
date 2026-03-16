@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from ibm_cloud_sdk_core.authenticators import Authenticator, IAMAuthenticator, MCSPAuthenticator
+from ibm_watsonx_orchestrate_clients.agents.agent_client import AgentClient
+from ibm_watsonx_orchestrate_clients.connections.connections_client import ConnectionsClient
+from ibm_watsonx_orchestrate_clients.tools.tool_client import ToolClient
+from ibm_watsonx_orchestrate_core.types.connections import KeyValueConnectionCredentials
 from lfx.services.adapters.deployment.exceptions import AuthSchemeError, CredentialResolutionError
 from lfx.services.adapters.deployment.schema import EnvVarSource, EnvVarValueSpec, IdLike
 
@@ -17,19 +22,12 @@ from langflow.services.deps import get_variable_service
 if TYPE_CHECKING:
     from uuid import UUID
 
-    from ibm_cloud_sdk_core.authenticators import Authenticator
-    from ibm_watsonx_orchestrate_core.types.connections import KeyValueConnectionCredentials
-
 
 def get_authenticator(instance_url: str, api_key: str) -> Authenticator:
     """Return the appropriate authenticator for the Watsonx Orchestrate API."""
     if ".cloud.ibm.com" in instance_url:
-        from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
-
         return IAMAuthenticator(apikey=api_key, url=WxOAuthURL.IBM_IAM.value)
     elif ".ibm.com" in instance_url:  # noqa: RET505 - explicitness
-        from ibm_cloud_sdk_core.authenticators import MCSPAuthenticator
-
         return MCSPAuthenticator(apikey=api_key, url=WxOAuthURL.MCSP.value)
 
     msg = f"Could not determine authentication scheme for instance URL: {instance_url}"
@@ -93,10 +91,6 @@ async def get_provider_clients(
         provider_id=provider_id,
     )
 
-    from ibm_watsonx_orchestrate_clients.agents.agent_client import AgentClient
-    from ibm_watsonx_orchestrate_clients.connections.connections_client import ConnectionsClient
-    from ibm_watsonx_orchestrate_clients.tools.tool_client import ToolClient
-
     instance_url: str = credentials.instance_url.rstrip("/")
 
     authenticator: Authenticator = get_authenticator(
@@ -122,8 +116,6 @@ async def resolve_runtime_credentials(
     db: Any,
 ) -> KeyValueConnectionCredentials:
     """Resolve runtime credentials from environment variables."""
-    from ibm_watsonx_orchestrate_core.types.connections import KeyValueConnectionCredentials
-
     resolved: dict[str, str] = {}
     for credential_key, env_var_value in environment_variables.items():
         resolved[credential_key] = await resolve_env_var_value(

@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:
-    from ibm_cloud_sdk_core.authenticators import Authenticator
-    from ibm_watsonx_orchestrate_clients.agents.agent_client import AgentClient
-    from ibm_watsonx_orchestrate_clients.common.base_client import BaseWXOClient
-    from ibm_watsonx_orchestrate_clients.connections.connections_client import ConnectionsClient
-    from ibm_watsonx_orchestrate_clients.tools.tool_client import ToolClient
+from ibm_cloud_sdk_core.authenticators import Authenticator
+from ibm_watsonx_orchestrate_clients.agents.agent_client import AgentClient
+from ibm_watsonx_orchestrate_clients.common.base_client import BaseWXOClient
+from ibm_watsonx_orchestrate_clients.connections.connections_client import ConnectionsClient
+from ibm_watsonx_orchestrate_clients.tools.tool_client import ToolClient
+
+_RUNTIME_IMPORTED_TYPES = (Authenticator, AgentClient, ConnectionsClient, ToolClient)
 
 
 @dataclass(slots=True)
@@ -23,8 +24,6 @@ class WxOClient:
     _base: BaseWXOClient = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        from ibm_watsonx_orchestrate_clients.common.base_client import BaseWXOClient
-
         self._base = BaseWXOClient(base_url=self.instance_url, authenticator=self.authenticator)
 
     # -- SDK private-method wrappers ------------------------------------------
