@@ -77,6 +77,8 @@ RUN apt-get update \
     && apt-get install --no-install-recommends -y curl git libpq5 gnupg xz-utils \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
+COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
 RUN ARCH=$(dpkg --print-architecture) \
     && if [ "$ARCH" = "amd64" ]; then NODE_ARCH="x64"; \
        elif [ "$ARCH" = "arm64" ]; then NODE_ARCH="arm64"; \
