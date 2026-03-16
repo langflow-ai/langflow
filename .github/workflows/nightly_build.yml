@@ -32,11 +32,6 @@ on:
         required: false
         type: boolean
         default: true
-      auto_merge_hash_history:
-        description: "Create PR to merge hash history back to main. Set to false when not running from main."
-        required: false
-        type: boolean
-        default: true
   schedule:
     # Run job at 00:00 UTC (4:00 PM PST / 5:00 PM PDT)
     - cron: "0 0 * * *"
@@ -54,9 +49,30 @@ jobs:
         run: |
           echo "Cannot skip tests while push_to_registry is true."
           exit 1
+  resolve-release-branch:
+    runs-on: ubuntu-latest
+    outputs:
+      branch: ${{ steps.get_branch.outputs.branch }}
+    steps:
+      - name: Find latest release branch
+        id: get_branch
+        run: |
+          git ls-remote --heads https://github.com/${{ github.repository }} 'refs/heads/release-*' \
+          | awk '{print $2}' \
+          | sed 's|refs/heads/||' \
+          | sort -V \
+          | tail -n 1 > branch.txt
 
+          BRANCH=$(cat branch.txt)
+          if [ -z "$BRANCH" ]; then
+            echo "No release-* branch found in ${{ github.repository }}"
+            exit 1
+          fi
+           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+           echo "Using release branch: $BRANCH"
   create-nightly-tag:
     if: github.repository == 'langflow-ai/langflow'
+    needs: [validate-inputs, resolve-release-branch]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -65,13 +81,14 @@ jobs:
       # Required to create tag
       contents: write
     outputs:
-      main_tag: ${{ steps.generate_main_tag.outputs.main_tag }}
+      release_tag: ${{ steps.generate_release_tag.outputs.release_tag }}
       base_tag: ${{ steps.set_base_tag.outputs.base_tag }}
       lfx_tag: ${{ steps.generate_lfx_tag.outputs.lfx_tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
+          ref: ${{ needs.resolve-release-branch.outputs.branch }}
           persist-credentials: true
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
@@ -84,20 +101,20 @@ jobs:
         run: uv sync
 
       - name: Generate main nightly tag
-        id: generate_main_tag
+        id: generate_release_tag
         run: |
           # NOTE: This outputs the tag with the `v` prefix.
-          MAIN_TAG="$(uv run ./scripts/ci/pypi_nightly_tag.py main)"
-          echo "main_tag=$MAIN_TAG" >> $GITHUB_OUTPUT
-          echo "main_tag=$MAIN_TAG"
+          RELEASE_TAG="$(uv run ./scripts/ci/pypi_nightly_tag.py main)"
+          echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
+          echo "release_tag=$RELEASE_TAG"
 
       - name: Delete existing tag if it exists
-        id: check_main_tag
+        id: check_release_tag
         run: |
           git fetch --tags
-          git tag -d ${{ steps.generate_main_tag.outputs.main_tag }} || true
-          git push --delete origin ${{ steps.generate_main_tag.outputs.main_tag }} || true
-          echo "main_tag_exists=false" >> $GITHUB_OUTPUT
+          git tag -d ${{ steps.generate_release_tag.outputs.release_tag }} || true
+          git push --delete origin ${{ steps.generate_release_tag.outputs.release_tag }} || true
+          echo "release_tag_exists=false" >> $GITHUB_OUTPUT
 
       - name: Generate base nightly tag
         id: generate_base_tag
@@ -123,13 +140,13 @@ jobs:
           git config --global user.email "bot-nightly-builds@langflow.org"
           git config --global user.name "Langflow Bot"
 
-          MAIN_TAG="${{ steps.generate_main_tag.outputs.main_tag }}"
+          RELEASE_TAG="${{ steps.generate_release_tag.outputs.release_tag }}"
           BASE_TAG="${{ steps.generate_base_tag.outputs.base_tag }}"
           LFX_TAG="${{ steps.generate_lfx_tag.outputs.lfx_tag }}"
           echo "Updating LFX project version to $LFX_TAG"
           uv run ./scripts/ci/update_lfx_version.py $LFX_TAG
-          echo "Updating base project version to $BASE_TAG and updating main project version to $MAIN_TAG"
-          uv run --no-sync ./scripts/ci/update_pyproject_combined.py main $MAIN_TAG $BASE_TAG $LFX_TAG
+          echo "Updating base project version to $BASE_TAG and updating main project version to $RELEASE_TAG"
+          uv run --no-sync ./scripts/ci/update_pyproject_combined.py main $RELEASE_TAG $BASE_TAG $LFX_TAG
 
           uv lock
           cd src/backend/base && uv lock && cd ../../..
@@ -138,14 +155,14 @@ jobs:
           git add pyproject.toml src/backend/base/pyproject.toml src/lfx/pyproject.toml uv.lock src/backend/base/uv.lock
           git commit -m "Update version and project name"
 
-          echo "Tagging main with $MAIN_TAG"
-          if ! git tag -a $MAIN_TAG -m "Langflow nightly $MAIN_TAG"; then
+          echo "Tagging main with $RELEASE_TAG"
+          if ! git tag -a $RELEASE_TAG -m "Langflow nightly $RELEASE_TAG"; then
             echo "Tag creation failed. Exiting the workflow."
             exit 1
           fi
 
-          echo "Pushing main tag $MAIN_TAG"
-          if ! git push origin $MAIN_TAG; then
+          echo "Pushing main tag $RELEASE_TAG"
+          if ! git push origin $RELEASE_TAG; then
             echo "Tag push failed. Check if the tag already exists. Exiting the workflow."
             exit 1
           fi
@@ -154,7 +171,8 @@ jobs:
       - name: Checkout main nightly tag
         uses: actions/checkout@v6
         with:
-          ref: ${{ steps.generate_main_tag.outputs.main_tag }}
+          ref: ${{ steps.generate_release_tag.outputs.release_tag }}
+          persist-credentials: true
 
       - name: Retrieve Base Tag
         id: retrieve_base_tag
@@ -179,90 +197,6 @@ jobs:
           else
             echo "No base tag found. Exiting the workflow."
             exit 1
-          fi
-
-  build-hash-history:
-    if: github.repository == 'langflow-ai/langflow'
-    name: Build Nightly Hash History
-    needs: create-nightly-tag
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -ex -o pipefail {0}
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout nightly tag
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.create-nightly-tag.outputs.main_tag }}
-          persist-credentials: true
-
-      - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-          python-version: ${{ env.PYTHON_VERSION }}
-          prune-cache: false
-
-      - name: Install the project
-        run: uv sync
-
-      - name: Force reinstall LFX to pick up version change
-        run: |
-          echo "Force reinstalling lfx-nightly to ensure version metadata is updated..."
-          uv pip install --reinstall --no-deps src/lfx
-
-      - name: Verify LFX version
-        run: |
-          echo "Checking installed LFX version..."
-          uv run python -c "from importlib.metadata import version; print(f'lfx-nightly version: {version(\"lfx-nightly\")}')" || \
-          uv run python -c "from importlib.metadata import version; print(f'lfx version: {version(\"lfx\")}')"
-
-      - name: Build and validate nightly hash history
-        run: |
-          # The script includes append-only validation
-          uv run python scripts/build_hash_history.py --nightly
-
-      - name: Commit and push hash history changes
-        run: |
-          echo "=== Configuring git ==="
-          git config --global user.email "bot-nightly-builds@langflow.org"
-          git config --global user.name "Langflow Bot"
-
-          echo "=== Checking for hash history changes ==="
-          # Check if there are changes to commit (handles if it's a new file for first run)
-          git add src/lfx/src/lfx/_assets/nightly_hash_history.json
-          if git diff --cached --quiet src/lfx/src/lfx/_assets/nightly_hash_history.json; then
-            echo "No changes to nightly hash history"
-          else
-            echo "Hash history changes detected, committing..."
-            # Commit to the nightly tag itself so builds include the hash history
-            git commit -m "Update nightly hash history for ${{ needs.create-nightly-tag.outputs.main_tag }}"
-
-            echo "=== Updating nightly tag ${{ needs.create-nightly-tag.outputs.main_tag }} ==="
-            # Update the tag to include the hash history
-            git tag -f ${{ needs.create-nightly-tag.outputs.main_tag }}
-            git push -f origin ${{ needs.create-nightly-tag.outputs.main_tag }}
-
-            echo "=== Creating clean branch from main with only hash history changes ==="
-            # Fetch latest main
-            git fetch origin main
-
-            # Create a new branch from main
-            git checkout -B nightly-hash-history-updates origin/main
-
-            # Copy ONLY the hash history file from the nightly tag
-            git checkout ${{ needs.create-nightly-tag.outputs.main_tag }} -- src/lfx/src/lfx/_assets/nightly_hash_history.json
-
-            # Commit only this file
-            git add src/lfx/src/lfx/_assets/nightly_hash_history.json
-            git commit -m "Update nightly hash history for ${{ needs.create-nightly-tag.outputs.main_tag }}"
-
-            # Force push the clean branch
-            git push origin nightly-hash-history-updates --force
-            echo "Updated nightly tag and created clean branch with only hash history changes"
           fi
 
   frontend-tests:
@@ -304,16 +238,17 @@ jobs:
   #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   release-nightly-build:
-    if: github.repository == 'langflow-ai/langflow' && always() && needs.frontend-tests.result != 'failure' && needs.backend-unit-tests.result != 'failure' && needs.build-hash-history.result != 'failure'
+    if: github.repository == 'langflow-ai/langflow' && always() && needs.frontend-tests.result != 'failure' && needs.backend-unit-tests.result != 'failure'
     name: Run Nightly Langflow Build
-    needs: [create-nightly-tag, frontend-tests, backend-unit-tests, build-hash-history]
+    needs:
+      [validate-inputs, create-nightly-tag, frontend-tests, backend-unit-tests]
     uses: ./.github/workflows/release_nightly.yml
     with:
       build_docker_base: true
       build_docker_main: true
       build_docker_ep: true
       build_lfx: true
-      nightly_tag_main: ${{ needs.create-nightly-tag.outputs.main_tag }}
+      nightly_tag_release: ${{ needs.create-nightly-tag.outputs.release_tag }}
       nightly_tag_base: ${{ needs.create-nightly-tag.outputs.base_tag }}
       nightly_tag_lfx: ${{ needs.create-nightly-tag.outputs.lfx_tag }}
       # When triggered by schedule, inputs.push_to_registry is not set, so default to true
@@ -323,12 +258,12 @@ jobs:
 
   slack-notification:
     name: Send Slack Notification
-    needs: [frontend-tests, backend-unit-tests, release-nightly-build, merge-hash-history-to-main]
-    if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.merge-hash-history-to-main.result == 'failure' || needs.release-nightly-build.result == 'success') }}
+    needs: [frontend-tests, backend-unit-tests, release-nightly-build]
+    if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.release-nightly-build.result == 'success') }}
     runs-on: ubuntu-latest
     steps:
       - name: Send failure notification to Slack
-        if: ${{ needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.merge-hash-history-to-main.result == 'failure' }}
+        if: ${{ needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' }}
         run: |
           # Determine which job failed
           FAILED_JOB="unknown"
@@ -338,8 +273,6 @@ jobs:
             FAILED_JOB="frontend-tests"
           elif [ "${{ needs.backend-unit-tests.result }}" == "failure" ]; then
             FAILED_JOB="backend-unit-tests"
-          elif [ "${{ needs.merge-hash-history-to-main.result }}" == "failure" ]; then
-            FAILED_JOB="merge-hash-history-to-main"
           fi
 
           curl -X POST -H 'Content-type: application/json' \
@@ -376,157 +309,6 @@ jobs:
               }
             ]
           }" ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
-
-  merge-hash-history-to-main:
-    name: Create PR to Merge Hash History to Main
-    needs: [create-nightly-tag, build-hash-history, release-nightly-build]
-    # Run if auto_merge_hash_history is true (default) or not set (scheduled runs)
-    # When triggered by schedule, inputs.auto_merge_hash_history is not set, so default to true
-    # Only run when the base branch is 'main' to prevent PRs from feature branches
-    if: github.repository == 'langflow-ai/langflow' && github.ref == 'refs/heads/main' && always() && needs.build-hash-history.result == 'success' && needs.release-nightly-build.result == 'success' && (github.event_name == 'schedule' || inputs.auto_merge_hash_history != false)
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - name: Checkout main branch
-        uses: actions/checkout@v6
-        with:
-          ref: main
-          fetch-depth: 0
-          persist-credentials: true
-
-      - name: Configure Git
-        run: |
-          git config --global user.email "bot-nightly-builds@langflow.org"
-          git config --global user.name "Langflow Bot"
-
-      - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-          python-version: ${{ env.PYTHON_VERSION }}
-          prune-cache: false
-
-      - name: Fetch nightly hash history branch
-        run: |
-          echo "=== Fetching nightly-hash-history-updates branch ==="
-          git fetch origin nightly-hash-history-updates || true
-          echo "Fetch completed"
-
-      - name: Check if branch exists and has changes
-        id: check_branch
-        run: |
-          echo "=== Checking branch status ==="
-          if git rev-parse --verify origin/nightly-hash-history-updates >/dev/null 2>&1; then
-            echo "branch_exists=true" >> $GITHUB_OUTPUT
-            echo "Branch exists"
-
-            # Check if there are differences between main and the nightly branch
-            echo "=== Comparing with main branch ==="
-            if git diff --quiet main origin/nightly-hash-history-updates -- src/lfx/src/lfx/_assets/nightly_hash_history.json; then
-              echo "has_changes=false" >> $GITHUB_OUTPUT
-              echo "No changes to merge"
-            else
-              echo "has_changes=true" >> $GITHUB_OUTPUT
-              echo "Changes detected - PR will be created/updated"
-            fi
-          else
-            echo "branch_exists=false" >> $GITHUB_OUTPUT
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "ERROR: Branch nightly-hash-history-updates does not exist!"
-            echo "This should have been created by the build-hash-history job."
-            exit 1
-          fi
-
-      - name: Validate and prepare PR
-        if: steps.check_branch.outputs.branch_exists == 'true' && steps.check_branch.outputs.has_changes == 'true'
-        run: |
-          echo "=== Checking out hash history file from nightly branch ==="
-          # Checkout the nightly hash history file to verify it
-          git checkout origin/nightly-hash-history-updates -- src/lfx/src/lfx/_assets/nightly_hash_history.json
-
-          echo "=== Verifying only hash history file was modified ==="
-          # Verify that ONLY the nightly_hash_history.json file was modified
-          CHANGED_FILES=$(git diff --name-only main)
-          if [ "$CHANGED_FILES" != "src/lfx/src/lfx/_assets/nightly_hash_history.json" ]; then
-            echo "ERROR: Unexpected files were modified: $CHANGED_FILES"
-            echo "Only nightly_hash_history.json should be changed"
-            exit 1
-          fi
-          echo "Only hash history file modified"
-
-          echo "=== Validating hash history file ==="
-          # Basic validation - ensure file exists and is valid JSON
-
-          if [ ! -f "src/lfx/src/lfx/_assets/nightly_hash_history.json" ]; then
-            echo "ERROR: nightly_hash_history.json file was deleted!"
-            exit 1
-          fi
-
-          if ! uv run python -c "import json; json.load(open('src/lfx/src/lfx/_assets/nightly_hash_history.json'))"; then
-            echo "ERROR: nightly_hash_history.json is not valid JSON!"
-            exit 1
-          fi
-
-          echo "Hash history file validation passed"
-          echo "Note: Append-only validation was performed during the build step"
-
-      - name: Create Pull Request
-        if: steps.check_branch.outputs.branch_exists == 'true' && steps.check_branch.outputs.has_changes == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_BODY: >-
-            This PR updates the nightly hash history file with the latest component hashes from the nightly build.
-
-
-            **Automated PR** - Generated by nightly build workflow
-
-
-            - Updates: `src/lfx/src/lfx/_assets/nightly_hash_history.json`
-
-            - Source: Nightly build tag ${{ needs.create-nightly-tag.outputs.main_tag || 'latest nightly' }}
-
-
-            This PR is automatically updated each night with the latest hash history.
-
-            Auto-merge is enabled - PR will merge automatically when checks pass.
-        run: |
-          echo "=== Creating or updating PR ==="
-
-          # Check if PR already exists
-          EXISTING_PR=$(gh pr list --head nightly-hash-history-updates --base main --json number --jq '.[0].number' 2>/dev/null || echo "")
-
-          if [ -n "$EXISTING_PR" ]; then
-            echo "PR #$EXISTING_PR already exists, updating..."
-            gh pr edit "$EXISTING_PR" \
-              --title "chore: update nightly hash history" \
-              --body "$PR_BODY"
-
-            echo "PR updated successfully"
-            PR_NUMBER="$EXISTING_PR"
-          else
-            echo "Creating new PR..."
-            PR_URL=$(gh pr create \
-              --title "chore: update nightly hash history" \
-              --body "$PR_BODY" \
-              --base main \
-              --head nightly-hash-history-updates)
-
-            echo "PR created: $PR_URL"
-            # Extract PR number from URL (works with both formats)
-            PR_NUMBER=$(echo "$PR_URL" | sed 's/.*\/pull\///' | sed 's/[^0-9].*//')
-          fi
-
-          # Enable auto-merge on the PR
-          echo "=== Enabling auto-merge ==="
-          if gh pr merge "$PR_NUMBER" --auto --squash; then
-            echo "Auto-merge enabled successfully"
-          else
-            echo "ERROR: Could not enable auto-merge on PR"
-            # TODO: Fail the job here (once you've got everything working on happy path)
-          fi
 
       - name: Send success notification to Slack
         if: ${{ !inputs.skip_slack && needs.release-nightly-build.result == 'success' }}
