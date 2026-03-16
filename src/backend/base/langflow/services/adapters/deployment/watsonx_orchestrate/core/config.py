@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from ibm_watsonx_orchestrate_core.types.connections import (
     ConnectionConfiguration,
@@ -21,6 +21,9 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.client import res
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import validate_wxo_name
 
 if TYPE_CHECKING:
+    from ibm_watsonx_orchestrate_clients.connections.connections_client import ConnectionsClient, GetConnectionResponse
+    from sqlalchemy.ext.asyncio import AsyncSession
+
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 
 
@@ -29,7 +32,7 @@ async def create_config(
     clients: WxOClient,
     config: DeploymentConfig,
     user_id: IdLike,
-    db: Any,
+    db: AsyncSession,
 ) -> str:
     """Create/update a wxO draft key-value connection config plus runtime credentials."""
     app_id = validate_wxo_name(config.name)
@@ -67,7 +70,7 @@ async def create_config(
 
 async def process_config(
     user_id: IdLike,
-    db: Any,
+    db: AsyncSession,
     deployment_name: str,
     config: ConfigItem | None,
     *,
@@ -120,21 +123,28 @@ def resolve_create_app_id(
     return f"{prefixed_deployment_name}_{normalized_config_name}_app_id"
 
 
-async def validate_connection(connections_client: Any, *, app_id: str) -> Any:
+async def validate_connection(connections_client: ConnectionsClient, *, app_id: str) -> GetConnectionResponse:
     connection = await asyncio.to_thread(connections_client.get_draft_by_app_id, app_id=app_id)
-    config = await asyncio.to_thread(connections_client.get_config, app_id=app_id, env=ConnectionEnvironment.DRAFT)
     if not connection:
+        msg = f"Connection '{app_id}' not found. Ensure the connection exists with a draft configuration."
+        raise InvalidContentError(message=msg)
+
+    config = await asyncio.to_thread(connections_client.get_config, app_id=app_id, env=ConnectionEnvironment.DRAFT)
+    if not config:
         msg = f"Connection '{app_id}' is missing draft config. Deployments require draft mode."
         raise InvalidContentError(message=msg)
+
     if config.security_scheme != ConnectionSecurityScheme.KEY_VALUE:
         msg = f"Connection '{app_id}' must use key-value credentials for Langflow flows."
         raise InvalidContentError(message=msg)
+
     runtime_credentials = await asyncio.to_thread(
         connections_client.get_credentials,
         app_id=app_id,
         env=ConnectionEnvironment.DRAFT,
         use_app_credentials=False,
     )
+
     if not runtime_credentials:
         msg = f"Connection '{app_id}' is missing draft runtime credentials."
         raise InvalidContentError(message=msg)

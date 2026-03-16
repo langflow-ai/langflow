@@ -21,6 +21,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
     CREATE_MAX_RETRIES,
     RETRY_INITIAL_DELAY_SECONDS,
     ROLLBACK_MAX_RETRIES,
+    UPDATE_MAX_RETRIES,
 )
 
 logger = logging.getLogger(__name__)
@@ -69,7 +70,7 @@ async def retry_update(operation: Operation[T]) -> T:
     """Retry write/update operations with the standard provider retry policy."""
     return await retry_with_backoff(
         operation,
-        max_attempts=CREATE_MAX_RETRIES,
+        max_attempts=UPDATE_MAX_RETRIES,
         should_retry=is_retryable_create_exception,
     )
 

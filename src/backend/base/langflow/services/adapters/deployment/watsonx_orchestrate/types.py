@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from ibm_cloud_sdk_core.authenticators import Authenticator
-from ibm_watsonx_orchestrate_clients.agents.agent_client import AgentClient
 from ibm_watsonx_orchestrate_clients.common.base_client import BaseWXOClient
-from ibm_watsonx_orchestrate_clients.connections.connections_client import ConnectionsClient
-from ibm_watsonx_orchestrate_clients.tools.tool_client import ToolClient
 
-_RUNTIME_IMPORTED_TYPES = (Authenticator, AgentClient, ConnectionsClient, ToolClient)
+if TYPE_CHECKING:
+    from ibm_cloud_sdk_core.authenticators import Authenticator
+    from ibm_watsonx_orchestrate_clients.agents.agent_client import AgentClient
+    from ibm_watsonx_orchestrate_clients.connections.connections_client import ConnectionsClient
+    from ibm_watsonx_orchestrate_clients.tools.tool_client import ToolClient
 
 
 @dataclass(slots=True)

@@ -15,7 +15,6 @@ from lfx.services.adapters.deployment.exceptions import (
     InvalidContentError,
     InvalidDeploymentOperationError,
 )
-from pydantic import ValidationError
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import ErrorPrefix
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import create_config, validate_connection
@@ -30,6 +29,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import
     FlowToolBindingSpec,
     ToolUploadBatchError,
     create_and_upload_wxo_flow_tools_with_bindings,
+    ensure_langflow_connections_binding,
     to_writable_tool_payload,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
@@ -55,6 +55,7 @@ if TYPE_CHECKING:
         DeploymentUpdate,
         IdLike,
     )
+    from sqlalchemy.ext.asyncio import AsyncSession
 
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 
@@ -153,17 +154,6 @@ def validate_provider_update_request_sections(payload: DeploymentUpdate) -> None
         raise InvalidDeploymentOperationError(message=msg)
 
 
-def parse_provider_update_payload(provider_data: dict[str, Any] | None) -> WatsonxDeploymentUpdatePayload | None:
-    """Parse provider_data into the typed Watsonx update payload when provided."""
-    if provider_data is None:
-        return None
-    try:
-        return WatsonxDeploymentUpdatePayload.model_validate(provider_data)
-    except ValidationError as exc:
-        msg = str(exc.errors()[0].get("msg") or exc)
-        raise InvalidContentError(message=msg) from None
-
-
 def build_provider_update_plan(
     *,
     agent: dict[str, Any],
@@ -238,7 +228,7 @@ async def _create_update_connection_with_conflict_mapping(
     app_id: str,
     payload: WatsonxConnectionRawPayload,
     user_id: IdLike,
-    db: Any,
+    db: AsyncSession,
 ) -> str:
     from lfx.services.adapters.deployment.schema import DeploymentConfig
 
@@ -296,18 +286,7 @@ async def _update_existing_tool_connection_deltas(
         original_tool = to_writable_tool_payload(tool_by_id[tool_id])
         original_tools[tool_id] = original_tool
         writable_tool = copy.deepcopy(original_tool)
-        binding = writable_tool.setdefault("binding", {})
-        if not isinstance(binding, dict):
-            binding = {}
-            writable_tool["binding"] = binding
-        langflow_binding = binding.setdefault("langflow", {})
-        if not isinstance(langflow_binding, dict):
-            langflow_binding = {}
-            binding["langflow"] = langflow_binding
-        connections = langflow_binding.get("connections")
-        if not isinstance(connections, dict):
-            connections = {}
-            langflow_binding["connections"] = connections
+        connections = ensure_langflow_connections_binding(writable_tool)
 
         for app_id in delta.unbind:
             connections.pop(app_id, None)
@@ -379,7 +358,7 @@ async def apply_provider_update_plan_with_rollback(
     *,
     clients: WxOClient,
     user_id: IdLike,
-    db: Any,
+    db: AsyncSession,
     agent_id: str,
     agent: dict[str, Any],
     update_payload: dict[str, Any],
@@ -412,7 +391,7 @@ async def apply_provider_update_plan_with_rollback(
                     for app_id in plan.existing_app_ids
                 )
             )
-            for app_id, connection in zip(plan.existing_app_ids, existing_connections, strict=False):
+            for app_id, connection in zip(plan.existing_app_ids, existing_connections, strict=True):
                 resolved_connections[app_id] = connection.connection_id
 
         if plan.raw_connections_to_create:
@@ -441,7 +420,7 @@ async def apply_provider_update_plan_with_rollback(
                 )
             )
             for create_plan, connection in zip(
-                plan.raw_connections_to_create, validated_created_connections, strict=False
+                plan.raw_connections_to_create, validated_created_connections, strict=True
             ):
                 resolved_connections[create_plan.operation_app_id] = connection.connection_id
 
@@ -463,7 +442,7 @@ async def apply_provider_update_plan_with_rollback(
                 created_tool_ids.extend(exc.created_tool_ids)
                 added_snapshot_ids.extend(exc.created_tool_ids)
                 raise exc.errors[0] from exc
-            for raw_plan, created_tool_id in zip(plan.raw_tools_to_create, raw_create_results, strict=False):
+            for raw_plan, created_tool_id in zip(plan.raw_tools_to_create, raw_create_results, strict=True):
                 tool_id = str(created_tool_id).strip()
                 if not tool_id:
                     msg = f"Failed to create tool for raw payload '{raw_plan.raw_name}'."

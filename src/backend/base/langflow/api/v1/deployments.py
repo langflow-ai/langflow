@@ -129,6 +129,10 @@ async def delete_provider_account(
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
 
 
+# TODO(deployments-cache): When implementing credential updates, invalidate
+# the WatsonxOrchestrateDeploymentService client cache (_client_managers) for
+# the affected provider_id to prevent stale credentials from being used until
+# TTL expiry. Or just build a new client on each call.
 @router.patch(
     "/providers/{provider_id}",
     response_model=DeploymentProviderAccountGetResponse,

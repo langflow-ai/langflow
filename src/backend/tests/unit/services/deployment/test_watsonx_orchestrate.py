@@ -47,6 +47,7 @@ service_module = importlib.import_module("langflow.services.adapters.deployment.
 update_helpers_module = importlib.import_module(
     "langflow.services.adapters.deployment.watsonx_orchestrate.update_helpers"
 )
+payloads_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.payloads")
 WatsonxOrchestrateDeploymentService = importlib.import_module(
     "langflow.services.adapters.deployment.watsonx_orchestrate"
 ).WatsonxOrchestrateDeploymentService
@@ -600,7 +601,7 @@ def test_ordered_unique_strs_preserves_encounter_order_and_safe_discard():
 
 
 def test_build_provider_update_plan_preserves_operation_encounter_order():
-    provider_update = update_helpers_module.parse_provider_update_payload(
+    provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
         {
             "resource_name_prefix": "lf_",
             "tools": {

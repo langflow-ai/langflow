@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from cachetools import func
+from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import LangflowTool
 from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import create_langflow_tool as _create_langflow_tool
 from lfx.services.adapters.deployment.exceptions import InvalidContentError, InvalidDeploymentOperationError
 from lfx.utils.flow_requirements import generate_requirements_from_flow
@@ -29,6 +30,9 @@ if TYPE_CHECKING:
 
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 
+# TODO: ensure all fields from here are used
+#  https://developer.watson-orchestrate.ibm.com/apis/tools/patch-a-tool
+#  as it is a PUT endpoint (don't want to lose any fields)
 _WRITABLE_TOOL_FIELDS = (
     "description",
     "permission",
@@ -64,6 +68,30 @@ def to_writable_tool_payload(tool: dict[str, Any]) -> dict[str, Any]:
     return {field: copy.deepcopy(tool[field]) for field in _WRITABLE_TOOL_FIELDS if field in tool}
 
 
+def _ensure_dict(parent: dict[str, Any], key: str) -> dict[str, Any]:
+    """Return ``parent[key]`` as a dict, replacing non-dict values with ``{}``."""
+    value = parent.setdefault(key, {})
+    if not isinstance(value, dict):
+        value = {}
+        parent[key] = value
+    return value
+
+
+def ensure_langflow_connections_binding(tool_payload: dict[str, Any]) -> dict[str, str]:
+    """Ensure ``binding.langflow.connections`` exists in *tool_payload* and return the mutable dict.
+
+    Non-dict values at any nesting level are silently replaced with ``{}``.
+    We intentionally do *not* raise on a malformed shape because
+    callers of this function are *writing* connection bindings into
+    these payloads (and the pre-mutation snapshot is captured for rollback),
+    replacing an unexpected value is traded with explcitiness
+    to prevent a stubbornly failing update.
+    """
+    binding = _ensure_dict(tool_payload, "binding")
+    langflow = _ensure_dict(binding, "langflow")
+    return _ensure_dict(langflow, "connections")
+
+
 async def update_existing_tool_connection_bindings(
     *,
     clients: WxOClient,
@@ -92,18 +120,7 @@ async def update_existing_tool_connection_bindings(
         original_tool = to_writable_tool_payload(tool_by_id[tool_id])
         original_tools[tool_id] = original_tool
         writable_tool = copy.deepcopy(original_tool)
-        binding = writable_tool.setdefault("binding", {})
-        if not isinstance(binding, dict):
-            binding = {}
-            writable_tool["binding"] = binding
-        langflow_binding = binding.setdefault("langflow", {})
-        if not isinstance(langflow_binding, dict):
-            langflow_binding = {}
-            binding["langflow"] = langflow_binding
-        connections = langflow_binding.get("connections")
-        if not isinstance(connections, dict):
-            connections = {}
-            langflow_binding["connections"] = connections
+        connections = ensure_langflow_connections_binding(writable_tool)
         connections.update(resolved_connections)
         tool_updates.append((tool_id, writable_tool))
 
@@ -150,7 +167,7 @@ def extract_langflow_artifact_from_zip(artifact_zip_bytes: bytes, *, snapshot_id
 
 def build_langflow_artifact_bytes(
     *,
-    tool: Any,
+    tool: LangflowTool,
     flow_definition: dict[str, Any],
     flow_filename: str | None = None,
 ) -> bytes:
@@ -238,7 +255,7 @@ def create_wxo_flow_tool(
             raise InvalidContentError(message=msg)
         flow_definition["last_tested_version"] = detected_version
 
-    tool = create_langflow_tool(
+    tool: LangflowTool = create_langflow_tool(
         tool_definition=flow_definition,
         connections=connections,
         show_details=False,
@@ -267,7 +284,12 @@ def create_wxo_flow_tool(
     return tool_payload, artifacts
 
 
-def create_langflow_tool(*, tool_definition: dict[str, Any], connections: dict[str, str], show_details: bool) -> Any:
+def create_langflow_tool(
+    *,
+    tool_definition: dict[str, Any],
+    connections: dict[str, str],
+    show_details: bool,
+) -> LangflowTool:
     """Module-level wrapper to keep tool creation monkeypatchable in tests."""
     return _create_langflow_tool(
         tool_definition=tool_definition,
@@ -400,11 +422,8 @@ async def process_raw_flows_with_app_id(
     )
 
 
-# TODO(WXO): Resolve the lfx version at runtime via importlib.metadata
-# instead of hard-coding it here. The blocker is that dev environments
-# install lfx in editable mode, so importlib.metadata may return an
-# unreleased version (e.g. 0.3.1) that isn't available on PyPI yet.
-_LFX_MINIMUM_REQUIREMENT = "lfx>=0.3.0rc3"
+# TODO(WXO): find a way to make this fallback not hard-coded.
+_LFX_MINIMUM_REQUIREMENT = "lfx>=0.3.0"
 
 
 @func.ttl_cache(maxsize=1, ttl=60)

@@ -73,13 +73,7 @@ def require_tool_id(tool_response: dict[str, Any]) -> str:
 
 
 def dedupe_list(items: list[str]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-    for item in items:
-        if item not in seen:
-            result.append(item)
-            seen.add(item)
-    return result
+    return list(dict.fromkeys(items))
 
 
 def normalize_and_dedupe_ids(values: list[Any] | None, *, field_name: str) -> list[str]:

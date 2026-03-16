@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from typing import Annotated, Literal
 
 from lfx.services.adapters.deployment.schema import BaseFlowArtifact, EnvVarKey, EnvVarValueSpec, NormalizedId
@@ -47,8 +48,8 @@ class WatsonxUpdateTools(BaseModel):
     @model_validator(mode="after")
     def validate_unique_raw_tool_names(self) -> WatsonxUpdateTools:
         raw_payloads = self.raw_payloads or []
-        names = [payload.name for payload in raw_payloads]
-        duplicates = sorted({name for name in names if names.count(name) > 1})
+        name_counts = Counter(payload.name for payload in raw_payloads)
+        duplicates = sorted(name for name, count in name_counts.items() if count > 1)
         if duplicates:
             msg = f"tools.raw_payloads contains duplicate names: {duplicates}"
             raise ValueError(msg)
@@ -81,8 +82,8 @@ class WatsonxUpdateConnections(BaseModel):
     @model_validator(mode="after")
     def validate_unique_raw_app_ids(self) -> WatsonxUpdateConnections:
         raw_payloads = self.raw_payloads or []
-        raw_app_ids = [payload.app_id for payload in raw_payloads]
-        duplicates = sorted({app_id for app_id in raw_app_ids if raw_app_ids.count(app_id) > 1})
+        app_id_counts = Counter(payload.app_id for payload in raw_payloads)
+        duplicates = sorted(app_id for app_id, count in app_id_counts.items() if count > 1)
         if duplicates:
             msg = f"connections.raw_payloads contains duplicate app_id values: {duplicates}"
             raise ValueError(msg)

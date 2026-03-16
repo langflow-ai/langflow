@@ -50,7 +50,7 @@ from lfx.services.adapters.deployment.schema import (
     SnapshotListResult,
     _normalize_and_validate_id,
 )
-from lfx.services.adapters.payload import PayloadSlot
+from lfx.services.adapters.payload import AdapterPayloadValidationError, PayloadSlot
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_provider_clients
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
@@ -87,7 +87,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.update_helpers im
     apply_provider_update_plan_with_rollback,
     build_provider_update_plan,
     build_update_payload_from_spec,
-    parse_provider_update_payload,
     validate_provider_update_request_sections,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
@@ -219,22 +218,19 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
             try:
                 created_app_id = await retry_create(
-                    lambda: process_config(
-                        clients=clients,
-                        user_id=user_id,
-                        db=db,
-                        deployment_name=prefixed_app_id,
-                        config=payload.config,
+                    lambda c=clients, u=user_id, d=db, dn=prefixed_app_id, cfg=payload.config: process_config(
+                        clients=c,
+                        user_id=u,
+                        db=d,
+                        deployment_name=dn,
+                        config=cfg,
                     )
                 )
 
                 if payload.snapshot and (flow_payloads := payload.snapshot.raw_payloads):
                     created_tool_ids = await retry_create(
-                        lambda: process_raw_flows_with_app_id(
-                            clients=clients,
-                            app_id=prefixed_app_id,
-                            flows=flow_payloads,
-                            tool_name_prefix=resource_prefix,
+                        lambda c=clients, ai=prefixed_app_id, fl=flow_payloads, tp=resource_prefix: (
+                            process_raw_flows_with_app_id(clients=c, app_id=ai, flows=fl, tool_name_prefix=tp)
                         )
                     )
 
@@ -251,11 +247,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 )
 
                 agent_create_response = await retry_create(
-                    lambda: self._create_agent_deployment(
-                        data=derived_spec,
-                        tool_ids=created_tool_ids,
-                        user_id=user_id,
-                        db=db,
+                    lambda c=clients, d=derived_spec, t=created_tool_ids: self._create_agent_deployment(
+                        clients=c,
+                        data=d,
+                        tool_ids=t,
                     )
                 )
             except Exception:
@@ -460,10 +455,18 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 if not update_payload:
                     msg = "provider_data is required when update operations do not include spec changes."
                     raise InvalidContentError(message=msg)
-                await retry_create(lambda: asyncio.to_thread(clients.agent.update, agent_id, update_payload))
+                await retry_create(
+                    lambda c=clients, aid=agent_id, p=update_payload: asyncio.to_thread(c.agent.update, aid, p)
+                )
                 return DeploymentUpdateResult(id=deployment_id, snapshot_ids=[])
 
-            provider_update = parse_provider_update_payload(payload.provider_data)
+            try:
+                provider_update = self.payload_schemas.deployment_update.parse(payload.provider_data)
+            except AdapterPayloadValidationError as exc:
+                first_error = exc.error.errors()[0] if exc.error.errors() else {}
+                msg = str(first_error.get("msg") or exc)
+                raise InvalidContentError(message=msg) from None
+
             provider_plan = build_provider_update_plan(
                 agent=agent,
                 provider_update=provider_update,
@@ -566,7 +569,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         deployment_type: DeploymentType | None = None,  # noqa: ARG002
         db: AsyncSession,
     ) -> DeploymentStatusResult:
-        """Get deployment health directly from wxO release status endpoint."""
+        """Get deployment status from wxO agent metadata.
+
+        Note: wxO does not expose a dedicated health endpoint for draft Agents. Status is
+        inferred from agent existence and environment metadata -- "connected"
+        means the agent draft was found, not that it is healthy at runtime.
+        """
         agent_id = _normalize_and_validate_id(str(deployment_id), field_name="deployment_id")
 
         clients = await self._get_provider_clients(user_id=user_id, db=db)
@@ -771,13 +779,11 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     async def _create_agent_deployment(
         self,
         *,
-        user_id: UUID | str,
+        clients: WxOClient,
         tool_ids: list[str],
         data: BaseDeploymentData,
-        db: AsyncSession,
     ) -> AgentUpsertResponse:
         """Create an agent deployment."""
-        clients = await self._get_provider_clients(user_id=user_id, db=db)
         payload = build_agent_payload(
             data=data,
             tool_ids=tool_ids,

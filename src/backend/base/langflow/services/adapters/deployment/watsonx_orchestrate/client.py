@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from ibm_cloud_sdk_core.authenticators import Authenticator, IAMAuthenticator, MCSPAuthenticator
 from ibm_watsonx_orchestrate_clients.agents.agent_client import AgentClient
@@ -21,6 +21,8 @@ from langflow.services.deps import get_variable_service
 
 if TYPE_CHECKING:
     from uuid import UUID
+
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 def get_authenticator(instance_url: str, api_key: str) -> Authenticator:
@@ -45,7 +47,7 @@ def get_current_provider_id() -> UUID:
 async def resolve_wxo_client_credentials(
     *,
     user_id: UUID | str,
-    db: Any,
+    db: AsyncSession,
     provider_id: UUID,
 ) -> WxOCredentials:
     """Resolve Watsonx Orchestrate client credentials from deployment provider account."""
@@ -77,7 +79,7 @@ async def resolve_wxo_client_credentials(
 async def get_provider_clients(
     *,
     user_id: UUID | str,
-    db: Any,
+    db: AsyncSession,
     client_cache: dict[str, WxOClient],
 ) -> WxOClient:
     provider_id = get_current_provider_id()
@@ -113,7 +115,7 @@ async def resolve_runtime_credentials(
     *,
     user_id: IdLike,
     environment_variables: dict[str, EnvVarValueSpec],
-    db: Any,
+    db: AsyncSession,
 ) -> KeyValueConnectionCredentials:
     """Resolve runtime credentials from environment variables."""
     resolved: dict[str, str] = {}
@@ -130,7 +132,7 @@ async def resolve_env_var_value(
     env_var_value: EnvVarValueSpec,
     *,
     user_id: IdLike,
-    db: Any,
+    db: AsyncSession,
 ) -> str:
     if env_var_value.source == EnvVarSource.RAW:
         return env_var_value.value
@@ -145,7 +147,7 @@ async def resolve_variable_value(
     variable_name: str,
     *,
     user_id: UUID | str,
-    db: Any,
+    db: AsyncSession,
     optional: bool = False,
     default_value: str | None = None,
 ) -> str:
@@ -166,13 +168,13 @@ async def resolve_variable_value(
         raise
     except (OSError, ValueError, TypeError, LookupError) as exc:
         if not optional:
-            msg = "Failed to resolve a credential variable for the watsonX Orchestrate deployment provider."
+            msg = "Failed to resolve a credential variable for the watsonx Orchestrate deployment provider."
             raise CredentialResolutionError(message=msg) from exc
     if optional:
         return default_value or ""
     msg = (
         "Failed to find a necessary credential for the "
-        "watsonX Orchestrate deployment provider. "
+        "watsonx Orchestrate deployment provider. "
         "Please ensure all credentials are provided and valid."
     )
     raise CredentialResolutionError(message=msg)

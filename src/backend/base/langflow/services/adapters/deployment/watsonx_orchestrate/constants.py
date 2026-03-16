@@ -9,6 +9,7 @@ from lfx.services.adapters.deployment.schema import DeploymentType
 
 SUPPORTED_ADAPTER_DEPLOYMENT_TYPES: set[DeploymentType] = {DeploymentType.AGENT}
 CREATE_MAX_RETRIES = 3
+UPDATE_MAX_RETRIES = 3
 ROLLBACK_MAX_RETRIES = 5
 RETRY_INITIAL_DELAY_SECONDS = 0.5
 PROVIDER_SPEC_RESOURCE_NAME_PREFIX_KEY = "resource_name_prefix"
