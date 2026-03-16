@@ -20,8 +20,15 @@ class TestImportUtils:
 
     def test_import_mod_with_module_name(self):
         """Test importing specific attribute from a module with missing dependencies."""
-        # Test importing a class that has missing dependencies - should raise ModuleNotFoundError
-        with pytest.raises(ModuleNotFoundError, match="No module named"):
+        # Simulate a missing dependency (not a missing module file) by patching import_module.
+        # The error message must NOT contain the package name so import_mod re-raises it.
+        from unittest.mock import patch
+
+        missing_dep_error = ModuleNotFoundError("No module named 'some_missing_package'")
+        with (
+            patch("lfx.components._importing.import_module", side_effect=missing_dep_error),
+            pytest.raises(ModuleNotFoundError, match="No module named"),
+        ):
             import_mod("OpenAIModelComponent", "openai_chat_model", "lfx.components.openai")
 
     def test_import_mod_without_module_name(self):
