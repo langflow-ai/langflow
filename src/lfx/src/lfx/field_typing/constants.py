@@ -9,6 +9,7 @@ try:
     from langchain_classic.agents.agent import AgentExecutor
     from langchain_classic.chains.base import Chain
     from langchain_classic.memory.chat_memory import BaseChatMemory
+    from langchain_classic.schema import BaseMemory
     from langchain_core.chat_history import BaseChatMessageHistory
     from langchain_core.document_loaders import BaseLoader
     from langchain_core.documents import Document
@@ -16,7 +17,6 @@ try:
     from langchain_core.embeddings import Embeddings
     from langchain_core.language_models import BaseLanguageModel, BaseLLM
     from langchain_core.language_models.chat_models import BaseChatModel
-    from langchain_classic.schema import BaseMemory
     from langchain_core.output_parsers import BaseLLMOutputParser, BaseOutputParser
     from langchain_core.prompts import BasePromptTemplate, ChatPromptTemplate, PromptTemplate
     from langchain_core.retrievers import BaseRetriever

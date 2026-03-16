@@ -3,8 +3,7 @@ from collections.abc import Sequence
 from typing import Any
 
 import requests
-from langchain_core.tools import Tool
-from langchain_core.tools import StructuredTool
+from langchain_core.tools import StructuredTool, Tool
 from pydantic.v1 import Field, create_model
 
 from lfx.base.langchain_utilities.model import LCToolComponent
