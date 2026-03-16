@@ -184,6 +184,76 @@ def _filter_sqlite_noise(diffs: list) -> list:
     return significant_diffs
 
 
+class _FakeColumn:
+    """Minimal stand-in for sqlalchemy Column used by FK constraint diffs."""
+
+    def __init__(self, name, table_name):
+        self.name = name
+        self.table = type("T", (), {"name": table_name})()
+
+
+class _FakeElement:
+    """Minimal stand-in for FK constraint element with a .column attribute."""
+
+    def __init__(self, column):
+        self.column = column
+
+
+class _FakeFK:
+    """Minimal stand-in for ForeignKeyConstraint used by autogenerate diffs."""
+
+    def __init__(self, parent_table, col_names, ref_table, ref_col_names):
+        self.parent = type("T", (), {"name": parent_table})()
+        self.columns = [_FakeColumn(c, parent_table) for c in col_names]
+        self.elements = [_FakeElement(_FakeColumn(rc, ref_table)) for rc in ref_col_names]
+
+
+class TestFilterSqliteNoise:
+    """Tests for _filter_sqlite_noise FK pair suppression logic."""
+
+    def test_paired_fk_same_target_suppressed(self):
+        """Paired remove_fk/add_fk on same columns with same target is noise."""
+        fk_rm = _FakeFK("flow", ["user_id"], "user", ["id"])
+        fk_add = _FakeFK("flow", ["user_id"], "user", ["id"])
+        diffs = [("remove_fk", fk_rm), ("add_fk", fk_add)]
+        assert _filter_sqlite_noise(diffs) == []
+
+    def test_unpaired_remove_fk_preserved(self):
+        """A remove_fk without matching add_fk is kept."""
+        fk_rm = _FakeFK("flow", ["user_id"], "user", ["id"])
+        diffs = [("remove_fk", fk_rm)]
+        result = _filter_sqlite_noise(diffs)
+        assert len(result) == 1
+        assert result[0][0] == "remove_fk"
+
+    def test_unpaired_add_fk_preserved(self):
+        """An add_fk without matching remove_fk is kept."""
+        fk_add = _FakeFK("flow", ["user_id"], "user", ["id"])
+        diffs = [("add_fk", fk_add)]
+        result = _filter_sqlite_noise(diffs)
+        assert len(result) == 1
+        assert result[0][0] == "add_fk"
+
+    def test_paired_fk_different_target_preserved(self):
+        """Paired remove_fk/add_fk pointing to different tables is a real change."""
+        fk_rm = _FakeFK("flow", ["user_id"], "user", ["id"])
+        fk_add = _FakeFK("flow", ["user_id"], "account", ["id"])
+        diffs = [("remove_fk", fk_rm), ("add_fk", fk_add)]
+        result = _filter_sqlite_noise(diffs)
+        assert len(result) == 2
+
+    def test_modify_nullable_always_suppressed(self):
+        """modify_nullable diffs are always SQLite noise."""
+        diffs = [("modify_nullable", "some_table", "some_col", {}, None, True)]
+        assert _filter_sqlite_noise(diffs) == []
+
+    def test_non_fk_diffs_preserved(self):
+        """Non-FK diffs like add_column pass through unchanged."""
+        diffs = [("add_column", "table", "col")]
+        result = _filter_sqlite_noise(diffs)
+        assert result == diffs
+
+
 def test_no_phantom_migrations():
     """Verify that models and migrations are in sync.
 
