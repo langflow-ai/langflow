@@ -48,7 +48,6 @@ _WRITABLE_TOOL_FIELDS = (
 class FlowToolBindingSpec:
     flow_payload: BaseFlowArtifact
     connections: dict[str, str]
-    app_id_for_prefix: str | None = None
 
 
 class ToolUploadBatchError(RuntimeError):
@@ -192,7 +191,6 @@ def create_wxo_flow_tool(
     *,
     flow_payload: BaseFlowArtifact,
     connections: dict[str, str],
-    app_id: str | None = None,
     tool_name_prefix: str,
 ) -> tuple[dict[str, Any], bytes]:
     """Create a Watsonx Orchestrate flow tool specification.
@@ -205,7 +203,6 @@ def create_wxo_flow_tool(
     Args:
         flow_payload: The flow payload to create the tool specification for.
         connections: The connections dictionary to create the tool specification for.
-        app_id: Connection app id used to namespace load_from_db variable references.
         tool_name_prefix: Deterministic prefix for the resulting tool name.
 
     Returns:
@@ -232,12 +229,6 @@ def create_wxo_flow_tool(
             "id": str(flow_definition.get("id")),
         }
     )
-
-    if app_id is not None:
-        flow_definition = prefix_flow_global_variable_references(
-            flow_definition,
-            app_id=app_id,
-        )
 
     # Fallback for flows that don't include last_tested_version in payload
     if not flow_definition.get("last_tested_version"):
@@ -290,14 +281,12 @@ async def create_and_upload_wxo_flow_tools(
     clients: WxOClient,
     flow_payloads: list[BaseFlowArtifact],
     connections: dict[str, str],
-    app_id: str | None = None,
     tool_name_prefix: str,
 ) -> list[str]:
     tool_bindings = [
         FlowToolBindingSpec(
             flow_payload=flow_payload,
             connections=connections,
-            app_id_for_prefix=app_id,
         )
         for flow_payload in flow_payloads
     ]
@@ -314,19 +303,10 @@ async def create_and_upload_wxo_flow_tools_with_bindings(
     tool_bindings: list[FlowToolBindingSpec],
     tool_name_prefix: str,
 ) -> list[str]:
-    def _resolve_app_id_for_prefix(*, tool_binding: FlowToolBindingSpec) -> str | None:
-        if tool_binding.app_id_for_prefix is not None:
-            normalized = tool_binding.app_id_for_prefix.strip()
-            return normalized or None
-        if not tool_binding.connections:
-            return None
-        return sorted(tool_binding.connections.keys())[0]
-
     specs = [
         create_wxo_flow_tool(
             flow_payload=tool_binding.flow_payload,
             connections=tool_binding.connections,
-            app_id=_resolve_app_id_for_prefix(tool_binding=tool_binding),
             tool_name_prefix=tool_name_prefix,
         )
         for tool_binding in tool_bindings
@@ -379,37 +359,6 @@ async def upload_wxo_flow_tool(
     return tool_id
 
 
-def prefix_flow_global_variable_references(
-    flow_definition: dict[str, Any],
-    *,
-    app_id: str,
-) -> dict[str, Any]:
-    """Return a deep copy of *flow_definition* with load-from-db variable names prefixed."""
-    normalized_app_id = app_id.strip()
-    if not normalized_app_id:
-        return flow_definition
-
-    result = copy.deepcopy(flow_definition)
-    prefix = f"{normalized_app_id}_"
-
-    def _walk(value: Any) -> None:
-        if isinstance(value, dict):
-            if value.get("load_from_db") is True and isinstance(value.get("value"), str):
-                variable_name = value["value"].strip()
-                if variable_name and not variable_name.startswith(prefix):
-                    value["value"] = f"{prefix}{variable_name}"
-            for child in value.values():
-                _walk(child)
-            return
-
-        if isinstance(value, list):
-            for item in value:
-                _walk(item)
-
-    _walk(result)
-    return result
-
-
 def build_snapshot_tool_names(
     *,
     snapshots: SnapshotItems | None,
@@ -447,7 +396,6 @@ async def process_raw_flows_with_app_id(
         clients=clients,
         flow_payloads=flows,
         connections={app_id: connection.connection_id},
-        app_id=app_id,
         tool_name_prefix=tool_name_prefix,
     )
 

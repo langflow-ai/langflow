@@ -464,7 +464,6 @@ async def test_update_provider_data_creates_raw_connection_and_raw_tool(monkeypa
         _ = clients
         first_binding = tool_bindings[0]
         captured["connections"] = first_binding.connections
-        captured["app_id"] = first_binding.app_id_for_prefix
         captured["tool_name_prefix"] = tool_name_prefix
         return ["new-tool-1"]
 
@@ -517,7 +516,6 @@ async def test_update_provider_data_creates_raw_connection_and_raw_tool(monkeypa
 
     assert captured["created_app_id"] == "lf_cfg"
     assert captured["connections"] == {"cfg": "conn-lf_cfg"}
-    assert captured["app_id"] == "cfg"
     assert captured["tool_name_prefix"] == "lf_"
     assert result.snapshot_ids == ["new-tool-1"]
     _, agent_payload = fake_agent.update_calls[0]
@@ -991,13 +989,11 @@ async def test_process_raw_flows_with_app_id_awaits_connection_validation(monkey
         clients,
         flow_payloads,
         connections,
-        app_id=None,
         tool_name_prefix,
     ):
         captured["clients"] = clients
         captured["flow_payloads"] = flow_payloads
         captured["connections"] = connections
-        captured["app_id"] = app_id
         captured["tool_name_prefix"] = tool_name_prefix
         return ["tool-1"]
 
@@ -1020,13 +1016,16 @@ async def test_process_raw_flows_with_app_id_awaits_connection_validation(monkey
 
     assert result == ["tool-1"]
     assert captured["connections"] == {"app-1": "conn-123"}
-    assert captured["app_id"] == "app-1"
     assert captured["tool_name_prefix"] == "lf_test_"
 
 
-def test_prefix_flow_global_variable_references_rewrites_load_from_db_values():
-    flow_definition = {
-        "data": {
+def test_create_wxo_flow_tool_keeps_load_from_db_global_values_unprefixed(monkeypatch):
+    captured_tool_definition = {}
+    flow_payload = BaseFlowArtifact(
+        id="00000000-0000-0000-0000-000000000001",
+        name="flow",
+        description="desc",
+        data={
             "nodes": [
                 {
                     "data": {
@@ -1036,10 +1035,6 @@ def test_prefix_flow_global_variable_references_rewrites_load_from_db_values():
                                     "load_from_db": True,
                                     "value": "OPENAI_API_KEY",
                                 },
-                                "already_prefixed": {
-                                    "load_from_db": True,
-                                    "value": "foo_ALREADY",
-                                },
                                 "plain_value": {
                                     "load_from_db": False,
                                     "value": "DO_NOT_TOUCH",
@@ -1048,19 +1043,40 @@ def test_prefix_flow_global_variable_references_rewrites_load_from_db_values():
                         }
                     }
                 }
-            ]
-        }
-    }
-
-    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
-        prefix_flow_global_variable_references,
+            ],
+            "edges": [],
+        },
+        tags=[],
+        provider_data={"project_id": "project-123"},
     )
 
-    updated = prefix_flow_global_variable_references(flow_definition, app_id="foo")
+    fake_tool = SimpleNamespace(
+        __tool_spec__=SimpleNamespace(
+            model_dump=lambda **kwargs: {"name": "flow"},  # noqa: ARG005
+        )
+    )
 
-    template = updated["data"]["nodes"][0]["data"]["node"]["template"]
-    assert template["api_key"]["value"] == "foo_OPENAI_API_KEY"
-    assert template["already_prefixed"]["value"] == "foo_ALREADY"
+    def mock_create_langflow_tool(*, tool_definition, connections, show_details):  # noqa: ARG001
+        captured_tool_definition.update(tool_definition)
+        return fake_tool
+
+    monkeypatch.setattr(tools_module, "create_langflow_tool", mock_create_langflow_tool)
+    monkeypatch.setattr(
+        tools_module,
+        "build_langflow_artifact_bytes",
+        lambda **kwargs: b"artifact",  # noqa: ARG005
+    )
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import create_wxo_flow_tool
+
+    create_wxo_flow_tool(
+        flow_payload=flow_payload,
+        connections={},
+        tool_name_prefix="lf_test_",
+    )
+
+    template = captured_tool_definition["data"]["nodes"][0]["data"]["node"]["template"]
+    assert template["api_key"]["value"] == "OPENAI_API_KEY"
     assert template["plain_value"]["value"] == "DO_NOT_TOUCH"
 
 
@@ -2242,7 +2258,7 @@ async def test_create_and_upload_wxo_flow_tools_with_bindings_journals_created_i
     monkeypatch.setattr(
         tools_module,
         "create_wxo_flow_tool",
-        lambda flow_payload, connections, app_id, tool_name_prefix: (  # noqa: ARG005
+        lambda flow_payload, connections, tool_name_prefix: (  # noqa: ARG005
             {"name": flow_payload.name, "description": flow_payload.description},
             b"artifact",
         ),
@@ -2259,7 +2275,6 @@ async def test_create_and_upload_wxo_flow_tools_with_bindings_journals_created_i
                 provider_data={"project_id": "project-1"},
             ),
             connections={"cfg-1": "conn-1"},
-            app_id_for_prefix="cfg-1",
         ),
         tools_module.FlowToolBindingSpec(
             flow_payload=BaseFlowArtifact(
@@ -2271,7 +2286,6 @@ async def test_create_and_upload_wxo_flow_tools_with_bindings_journals_created_i
                 provider_data={"project_id": "project-1"},
             ),
             connections={"cfg-1": "conn-1"},
-            app_id_for_prefix="cfg-1",
         ),
     ]
 

@@ -64,8 +64,12 @@ logger = logging.getLogger(__name__)
 class OrderedUniqueStrs:
     """Ordered, de-duplicating string collection used for deterministic update plans.
 
-    Values keep insertion order while repeated adds are ignored, so bind/unbind and
-    tool-id aggregation remain stable and idempotent across merge-style operations.
+    We intentionally avoid a plain list to avoid repeated O(n) membership checks.
+    Using a dictionary keeps membership/update checks O(1) while preserving insertion order.
+
+    Deterministic order is primarily for rollback correctness
+    Stable ordering ensures we undo the exact resources we created
+    in the correct (reverse) sequence.
     """
 
     def __init__(self, items: dict[str, None] | None = None) -> None:
@@ -446,8 +450,6 @@ async def apply_provider_update_plan_with_rollback(
                 FlowToolBindingSpec(
                     flow_payload=raw_plan.payload,
                     connections={app_id: resolved_connections[app_id] for app_id in raw_plan.app_ids},
-                    # Deterministic primary app_id used for flow variable-prefix rewriting.
-                    app_id_for_prefix=raw_plan.app_ids[0],
                 )
                 for raw_plan in plan.raw_tools_to_create
             ]
