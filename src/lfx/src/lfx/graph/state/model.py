@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from typing import Any, get_type_hints
 
-from pydantic import ConfigDict, computed_field, create_model
+from pydantic import BaseModel, ConfigDict, computed_field, create_model
 from pydantic.fields import FieldInfo
 
 
@@ -199,6 +199,7 @@ def create_state_model(model_name: str = "State", *, validate: bool = True, **kw
           with a 'get_output_by_method' attribute when validate is True.
     """
     fields = {}
+    computed_fields_dict = {}
 
     for name, value in kwargs.items():
         # Extract the return type from the method's type annotations
@@ -214,7 +215,8 @@ def create_state_model(model_name: str = "State", *, validate: bool = True, **kw
                 if ("get_output_by_method" not in str(e) and "__self__" not in str(e)) or validate:
                     raise
                 property_method = value
-            fields[name] = computed_field(property_method)
+            # Store computed fields separately to add them to the base class
+            computed_fields_dict[name] = computed_field(property_method)
         elif isinstance(value, FieldInfo):
             field_tuple = (value.annotation or Any, value)
             fields[name] = field_tuple
@@ -234,4 +236,15 @@ def create_state_model(model_name: str = "State", *, validate: bool = True, **kw
 
     # Create the model dynamically
     config_dict = ConfigDict(arbitrary_types_allowed=True, validate_assignment=True)
+
+    # If we have computed fields, create a base class with them first
+    if computed_fields_dict:
+        # Create a base class with computed fields
+        base_class_attrs = computed_fields_dict.copy()
+        base_class_attrs["model_config"] = config_dict
+        base_state_model = type(f"{model_name}Base", (BaseModel,), base_class_attrs)
+
+        # Then create the final model with the base class
+        return create_model(model_name, __base__=base_state_model, __config__=config_dict, **fields)
+    # No computed fields, just create the model directly
     return create_model(model_name, __config__=config_dict, **fields)

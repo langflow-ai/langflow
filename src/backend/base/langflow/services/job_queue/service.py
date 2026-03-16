@@ -174,7 +174,6 @@ class JobQueueService(Service):
             raise RuntimeError(msg)
 
         main_queue, event_manager, existing_task, _ = self._queues[job_id]
-
         if existing_task and not existing_task.done():
             logger.debug(f"Existing task for job_id {job_id} detected; cancelling it.")
             existing_task.cancel()
@@ -231,11 +230,24 @@ class JobQueueService(Service):
         if task and not task.done():
             await logger.adebug(f"Cancelling active task for job_id {job_id}")
             task.cancel()
-            await asyncio.wait([task])
-            # Log any exceptions that occurred during the task's execution.
-            if exc := task.exception():
-                await logger.aerror(f"Error in task for job_id {job_id}: {exc}")
-            await logger.adebug(f"Task cancellation complete for job_id {job_id}")
+            try:
+                await task
+            except asyncio.CancelledError as exc:
+                # Check if this was a user-initiated cancellation (user called task.cancel())
+                if task.cancelled():
+                    # User-initiated cancellation so we explicitly called task.cancel() above
+                    await logger.adebug(f"Task for job_id {job_id} was successfully cancelled.")
+                    # Re-raise with user cancellation message code
+                    exc.args = ("LANGFLOW_USER_CANCELLED",)
+                    raise
+                # System-initiated cancellation for other reasons
+                await logger.adebug(f"Task for job_id {job_id} was cancelled by system.")
+                exc.args = ("LANGFLOW_SYSTEM_CANCELLED",)
+                raise
+            except Exception as exc:
+                await logger.aerror(f"Error in task for job_id {job_id} during cancellation: {exc}")
+                raise
+        await logger.adebug(f"Task cancellation complete for job_id {job_id}")
 
         # Clear the queue since we just cancelled the task or it has completed
         items_cleared = 0
@@ -272,35 +284,45 @@ class JobQueueService(Service):
                 await logger.aerror(f"Exception encountered during periodic cleanup: {exc}")
 
     async def _cleanup_old_queues(self) -> None:
-        """Scan all registered job queues and clean up those with completed or failed tasks."""
+        """Scan all registered job queues and clean up those with completed, failed or orphaned tasks."""
         current_time = asyncio.get_running_loop().time()
 
         for job_id in list(self._queues.keys()):
             _, _, task, cleanup_time = self._queues[job_id]
-            if task:
-                await logger.adebug(
-                    f"Queue {job_id} status - Done: {task.done()}, "
-                    f"Cancelled: {task.cancelled()}, "
-                    f"Has exception: {task.exception() is not None if task.done() else 'N/A'}"
-                )
 
-                # Check if task should be marked for cleanup
-                if task and (task.cancelled() or (task.done() and task.exception() is not None)):
-                    if cleanup_time is None:
-                        # Mark for cleanup by setting the timestamp
-                        self._queues[job_id] = (
-                            self._queues[job_id][0],
-                            self._queues[job_id][1],
-                            self._queues[job_id][2],
-                            current_time,
-                        )
-                        await logger.adebug(
-                            f"Job queue for job_id {job_id} marked for cleanup - Task cancelled or failed"
-                        )
-                    elif current_time - cleanup_time >= self.CLEANUP_GRACE_PERIOD:
-                        # Enough time has passed, perform the actual cleanup
-                        await logger.adebug(f"Cleaning up job_id {job_id} after grace period")
-                        await self.cleanup_job(job_id)
+            should_cleanup = False
+            cleanup_reason = ""
+
+            # Case 1: Orphaned queue (created but task never started)
+            if task is None:
+                should_cleanup = True
+                cleanup_reason = "Orphaned queue (no task associated)"
+            # Case 2: Task has finished (Success, Failure, or Cancellation)
+            elif task.done():
+                should_cleanup = True
+                if task.cancelled():
+                    cleanup_reason = "Task cancelled"
+                elif task.exception() is not None:
+                    # Don't try to log the exception yet as it might be handled elsewhere;
+                    # the grace period allows other systems to inspect it if needed.
+                    cleanup_reason = "Task failed with exception"
+                else:
+                    cleanup_reason = "Task completed successfully"
+
+            if should_cleanup:
+                if cleanup_time is None:
+                    # Mark for cleanup by setting the timestamp
+                    self._queues[job_id] = (
+                        self._queues[job_id][0],
+                        self._queues[job_id][1],
+                        self._queues[job_id][2],
+                        current_time,
+                    )
+                    await logger.adebug(f"Job queue for job_id {job_id} marked for cleanup - {cleanup_reason}")
+                elif current_time - cleanup_time >= self.CLEANUP_GRACE_PERIOD:
+                    # Enough time has passed, perform the actual cleanup
+                    await logger.adebug(f"Cleaning up job_id {job_id} after grace period due to: {cleanup_reason}")
+                    await self.cleanup_job(job_id)
 
     def _create_default_event_manager(self, queue: asyncio.Queue) -> EventManager:
         """Creates the default event manager with predefined events.

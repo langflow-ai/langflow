@@ -10,15 +10,15 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("blank-flow").click();
-    await page.waitForSelector('[data-testid="disclosure-data"]', {
+    await page.waitForSelector('[data-testid="disclosure-data sources"]', {
       timeout: 3000,
       state: "visible",
     });
 
-    await page.getByTestId("disclosure-data").click();
+    await page.getByTestId("disclosure-data sources").click();
 
     await page
-      .getByTestId("dataAPI Request")
+      .getByTestId("data_sourceAPI Request")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-api-request").click();

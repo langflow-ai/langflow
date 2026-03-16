@@ -12,7 +12,14 @@ from pydantic import BaseModel
 
 from lfx.custom import validate
 from lfx.custom.custom_component.base_component import BaseComponent
-from lfx.helpers.flow import list_flows, load_flow, run_flow
+from lfx.helpers import (
+    get_flow_by_id_or_name,
+    list_flows,
+    list_flows_by_flow_folder,
+    list_flows_by_folder_id,
+    load_flow,
+    run_flow,
+)
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.services.deps import get_storage_service, get_variable_service, session_scope
@@ -97,7 +104,6 @@ class CustomComponent(BaseComponent):
         self.cache: TTLCache = TTLCache(maxsize=1024, ttl=60)
         self._results: dict = {}
         self._artifacts: dict = {}
-
         # Call parent's init after setting up our attributes
         super().__init__(**data)
 
@@ -450,23 +456,25 @@ class CustomComponent(BaseComponent):
         """Returns the variable for the current user with the specified name.
 
         Raises:
-            ValueError: If the user id is not set.
+            ValueError: If the user id is not set and variable not found in context.
 
         Returns:
             The variable for the current user with the specified name.
         """
-        if hasattr(self, "_user_id") and not self.user_id:
-            msg = f"User id is not set for {self.__class__.__name__}"
-            raise ValueError(msg)
-
         # Check graph context for request-level variable overrides first
+        # This allows run_flow to work without user_id when variables are passed
         if hasattr(self, "graph") and self.graph and hasattr(self.graph, "context"):
             context = self.graph.context
             if context and "request_variables" in context:
                 request_variables = context["request_variables"]
                 if name in request_variables:
-                    logger.debug(f"Found context override for variable '{name}': {request_variables[name]}")
+                    logger.debug(f"Found context override for variable '{name}'")
                     return request_variables[name]
+
+        # Only check user_id when we need to access the database
+        if hasattr(self, "_user_id") and not self.user_id:
+            msg = f"User id is not set for {self.__class__.__name__}"
+            raise ValueError(msg)
 
         variable_service = get_variable_service()  # Get service instance
         # Retrieve and decrypt the variable by name for the current user
@@ -548,14 +556,50 @@ class CustomComponent(BaseComponent):
         return run_until_complete(self.alist_flows())
 
     async def alist_flows(self) -> list[Data]:
-        if not self.user_id:
-            msg = "Session is invalid"
-            raise ValueError(msg)
-        try:
+        """List all flows for the current user."""
+        try:  # user id is validated in the function
             return await list_flows(user_id=str(self.user_id))
         except Exception as e:
             msg = f"Error listing flows: {e}"
             raise ValueError(msg) from e
+
+    async def alist_flows_by_flow_folder(self) -> list[Data]:
+        """List all flows for the current user in the same folder as the current flow."""
+        flow_id = self._get_runtime_or_frontend_node_attr("flow_id")
+        if flow_id is not None:
+            try:  # user and flow ids are validated in the function
+                return await list_flows_by_flow_folder(user_id=str(self.user_id), flow_id=str(flow_id))
+            except Exception as e:
+                msg = f"Error listing flows: {e}"
+                raise ValueError(msg) from e
+        return []
+
+    async def alist_flows_by_folder_id(self) -> list[Data]:
+        """List all flows for the current user in the same folder as the current flow."""
+        folder_id = self._get_runtime_or_frontend_node_attr("folder_id")
+        if folder_id is not None:
+            try:  # user and flow ids are validated in the function
+                return await list_flows_by_folder_id(
+                    user_id=str(self.user_id),
+                    folder_id=str(folder_id),
+                )
+            except Exception as e:
+                msg = f"Error listing flows: {e}"
+                raise ValueError(msg) from e
+        return []
+
+    async def aget_flow_by_id_or_name(self) -> Data | None:
+        flow_id = self._get_runtime_or_frontend_node_attr("flow_id")
+        flow_name = self._get_runtime_or_frontend_node_attr("flow_name")
+        if flow_id or flow_name:
+            try:  # user and flow ids are validated in the function
+                return await get_flow_by_id_or_name(
+                    user_id=str(self.user_id), flow_id=str(flow_id) if flow_id else None, flow_name=flow_name
+                )
+            except Exception as e:
+                msg = f"Error listing flows: {e}"
+                raise ValueError(msg) from e
+        return None
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
         """Builds the custom component.
@@ -586,3 +630,23 @@ class CustomComponent(BaseComponent):
         if self.tracing_service and hasattr(self.tracing_service, "get_langchain_callbacks"):
             return self.tracing_service.get_langchain_callbacks()
         return []
+
+    def _get_runtime_or_frontend_node_attr(self, attr_name: str) -> Any:
+        """Get attribute value from the attribute name.
+
+        Falls back to frontend node attribute version
+        if it was provided (expected when updating the component's
+        build config).
+
+        Args:
+            attr_name: The attribute name (e.g., "flow_id", "flow_name")
+
+        Returns:
+            The attribute value from runtime or frontend node attribute, or None if neither exists.
+        """
+        value = getattr(self, attr_name, None)
+        if value is None:
+            attr = f"_frontend_node_{attr_name}"
+            if hasattr(self, attr):
+                value = getattr(self, attr)
+        return value

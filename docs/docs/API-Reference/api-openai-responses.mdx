@@ -191,6 +191,7 @@ Fields set dynamically by Langflow:
 | `model` | `string` | The flow ID that was executed. |
 | `output` | `list[dict]` | Array of output items (messages, tool calls, etc.). |
 | `previous_response_id` | `string` | ID of previous response if continuing conversation. |
+| `usage` | `dict` | Token usage statistics if the `usage` field is available. Contains `prompt_tokens`, `completion_tokens`, and `total_tokens`. |
 
 <details>
 <summary>Fields with OpenAI-compatible default values</summary>
@@ -212,7 +213,7 @@ Fields set dynamically by Langflow:
 | `tools` | `list[dict]` | `[]` | Available tools. |
 | `top_p` | `float` | `1.0` | Top-p setting. |
 | `truncation` | `string` | `"disabled"` | Truncation setting. |
-| `usage` | `dict` | `null` | Usage statistics (if any). |
+| `usage` | `dict` | `null` | Token usage statistics. Set dynamically when available from flow components, otherwise `null`. See [Token usage tracking](#token-usage-tracking). |
 | `user` | `string` | `null` | User identifier (if any). |
 | `metadata` | `dict` | `{}` | Additional metadata. |
 
@@ -597,3 +598,122 @@ To avoid this, you can set the `FALLBACK_TO_ENV_VARS` environment variable is `t
 In the above example, `OPENAI_API_KEY` will fall back to the database variable if not provided in the header.
 `USER_ID` and `ENVIRONMENT` will fall back to environment variables if `FALLBACK_TO_ENV_VARS` is enabled.
 Otherwise, the flow fails.
+
+## Token usage tracking {#token-usage-tracking}
+
+The OpenAI Responses API endpoint tracks token usage when your flow uses language model components that provide token usage information. The `usage` field in the response contains statistics about the number of tokens used for the request and response.
+
+Token usage is automatically extracted from the flow execution results when the `usage` field is available.
+The `usage` field follows OpenAI's format with `prompt_tokens`, `completion_tokens`, and `total_tokens` fields.
+If token usage information is not available from the flow components, the `usage` field is `null`.
+
+The `usage` field is always present in the response, either with token counts or as `null`. The conditional checks shown in the examples below are optional defensive programming to handle cases where usage might not be available.
+
+<Tabs groupId="token-usage">
+<TabItem value="Python" label="Python" default>
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+  base_url="LANGFLOW_SERVER_URL/api/v1/",
+  default_headers={"x-api-key": "LANGFLOW_API_KEY"},
+  api_key="dummy-api-key"
+)
+
+response = client.responses.create(
+  model="FLOW_ID",
+  input="Explain quantum computing in simple terms"
+)
+
+# Access token usage if available
+if response.usage:
+    print(f"Prompt tokens: {response.usage.get('prompt_tokens', 0)}")
+    print(f"Completion tokens: {response.usage.get('completion_tokens', 0)}")
+    print(f"Total tokens: {response.usage.get('total_tokens', 0)}")
+else:
+    print("Token usage not available for this flow")
+```
+
+</TabItem>
+<TabItem value="TypeScript" label="TypeScript">
+
+```typescript
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "LANGFLOW_SERVER_URL/api/v1/",
+  defaultHeaders: {
+    "x-api-key": "LANGFLOW_API_KEY"
+  },
+  apiKey: "dummy-api-key"
+});
+
+const response = await client.responses.create({
+  model: "FLOW_ID",
+  input: "Explain quantum computing in simple terms"
+});
+
+// Access token usage if available
+if (response.usage) {
+  console.log(`Prompt tokens: ${response.usage.prompt_tokens || 0}`);
+  console.log(`Completion tokens: ${response.usage.completion_tokens || 0}`);
+  console.log(`Total tokens: ${response.usage.total_tokens || 0}`);
+} else {
+  console.log("Token usage not available for this flow");
+}
+```
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+```bash
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v1/responses" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "FLOW_ID",
+    "input": "Explain quantum computing in simple terms",
+    "stream": false
+  }'
+```
+
+<details>
+<summary>Response with token usage</summary>
+
+```json
+{
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "object": "response",
+  "created_at": 1756837941,
+  "status": "completed",
+  "model": "ced2ec91-f325-4bf0-8754-f3198c2b1563",
+  "output": [
+    {
+      "type": "message",
+      "id": "msg_a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "status": "completed",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "Quantum computing is a type of computing that uses quantum mechanical phenomena...",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 12,
+    "completion_tokens": 145,
+    "total_tokens": 157
+  },
+  "previous_response_id": null
+}
+```
+
+</details>
+
+</TabItem>
+</Tabs>

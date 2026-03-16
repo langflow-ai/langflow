@@ -1,7 +1,7 @@
 //Langflow Desktop Base URL
 export const baseURL = "";
 
-export const customDefaultShotrcuts = [
+export const customDefaultShortcuts = [
   {
     display_name: "Controls",
     name: "Advanced Settings",
@@ -31,11 +31,6 @@ export const customDefaultShotrcuts = [
     display_name: "Duplicate",
     name: "Duplicate",
     shortcut: "mod+d",
-  },
-  {
-    display_name: "Component Share",
-    name: "Component Share",
-    shortcut: "mod+shift+s",
   },
   {
     display_name: "Docs",
@@ -138,3 +133,8 @@ export const customDefaultShotrcuts = [
     shortcut: "mod+b",
   },
 ];
+export const customCodeTabsClass = {
+  step: "w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll",
+  default:
+    "!mt-0 h-full w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll",
+};

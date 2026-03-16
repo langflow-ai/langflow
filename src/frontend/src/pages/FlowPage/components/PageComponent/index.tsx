@@ -19,8 +19,6 @@ import {
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShallow } from "zustand/react/shallow";
-import { DefaultEdge } from "@/CustomEdges";
-import NoteNode from "@/CustomNodes/NoteNode";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
 import {
   COLOR_OPTIONS,
@@ -33,9 +31,9 @@ import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
+import InspectionPanel from "@/pages/FlowPage/components/InspectionPanel";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { isSupportedNodeTypes } from "@/utils/utils";
-import GenericNode from "../../../../CustomNodes/GenericNode";
 import {
   INVALID_SELECTION_ERROR_ALERT,
   UPLOAD_ALERT_LIST,
@@ -48,6 +46,7 @@ import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
+import useVersionPreviewStore from "../../../../stores/versionPreviewStore";
 import type { APIClassType } from "../../../../types/api";
 import type {
   AllNodeType,
@@ -63,11 +62,13 @@ import {
   updateIds,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
+import { edgeTypes, nodeTypes } from "../../consts";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import FlowBuildingComponent from "../flowBuildingComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import UpdateAllComponents from "../UpdateAllComponents";
 import HelperLines from "./components/helper-lines";
+import VersionPreviewOverlay from "./components/VersionPreviewOverlay";
 import {
   getHelperLines,
   getSnapPosition,
@@ -76,20 +77,10 @@ import {
 import {
   MemoizedBackground,
   MemoizedCanvasControls,
-  MemoizedLogCanvasControls,
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
-
-const nodeTypes = {
-  genericNode: GenericNode,
-  noteNode: NoteNode,
-};
-
-const edgeTypes = {
-  default: DefaultEdge,
-};
 
 export default function Page({
   view,
@@ -115,6 +106,9 @@ export default function Page({
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const isEmptyFlow = useRef(nodes.length === 0);
+
+  const previewLabel = useVersionPreviewStore((s) => s.previewLabel);
+  const isPreviewActive = previewLabel !== null;
   const onNodesChange = useFlowStore((state) => state.onNodesChange);
   const onEdgesChange = useFlowStore((state) => state.onEdgesChange);
   const setNodes = useFlowStore((state) => state.setNodes);
@@ -132,6 +126,9 @@ export default function Page({
     (state) => state.setLastCopiedSelection,
   );
   const onConnect = useFlowStore((state) => state.onConnect);
+  const setRightClickedNodeId = useFlowStore(
+    (state) => state.setRightClickedNodeId,
+  );
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const updateCurrentFlow = useFlowStore((state) => state.updateCurrentFlow);
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
@@ -224,6 +221,7 @@ export default function Page({
   }, [autoSaveFlow]);
 
   function handleUndo(e: KeyboardEvent) {
+    if (isPreviewActive) return;
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -232,6 +230,7 @@ export default function Page({
   }
 
   function handleRedo(e: KeyboardEvent) {
+    if (isPreviewActive) return;
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -240,6 +239,7 @@ export default function Page({
   }
 
   function handleGroup(e: KeyboardEvent) {
+    if (isPreviewActive) return;
     if (selectionMenuVisible) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -248,6 +248,7 @@ export default function Page({
   }
 
   function handleDuplicate(e: KeyboardEvent) {
+    if (isPreviewActive) return;
     e.preventDefault();
     e.stopPropagation();
     (e as unknown as Event).stopImmediatePropagation();
@@ -284,6 +285,7 @@ export default function Page({
   }
 
   function handleCut(e: KeyboardEvent) {
+    if (isPreviewActive) return;
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -294,6 +296,7 @@ export default function Page({
   }
 
   function handlePaste(e: KeyboardEvent) {
+    if (isPreviewActive) return;
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -311,6 +314,7 @@ export default function Page({
   }
 
   function handleDelete(e: KeyboardEvent) {
+    if (isPreviewActive) return;
     if (isLocked) return;
     if (!isWrappedWithClass(e, "nodelete") && lastSelection) {
       e.preventDefault();
@@ -326,6 +330,12 @@ export default function Page({
       }
       deleteNode(lastSelection.nodes.map((node) => node.id));
       deleteEdge(lastSelection.edges.map((edge) => edge.id));
+    }
+  }
+
+  function handleEscape(e: KeyboardEvent) {
+    if (e.key === "Escape") {
+      setRightClickedNodeId(null);
     }
   }
 
@@ -369,6 +379,8 @@ export default function Page({
   useHotkeys(downloadAction, handleDownload);
   //@ts-ignore
   useHotkeys("delete", handleDelete);
+  //@ts-ignore
+  useHotkeys("escape", handleEscape);
 
   const onConnectMod = useCallback(
     (params: Connection) => {
@@ -589,14 +601,38 @@ export default function Page({
   const onSelectionChange = useCallback(
     (flow: OnSelectionChangeParams): void => {
       setLastSelection(flow);
+      if (flow.nodes && (flow.nodes.length === 0 || flow.nodes.length > 1)) {
+        setRightClickedNodeId(null);
+      }
     },
-    [],
+    [setRightClickedNodeId],
+  );
+
+  const onNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: AllNodeType) => {
+      event.preventDefault();
+      if (isLocked) return;
+
+      // Set the right-clicked node ID to show its dropdown menu
+      setRightClickedNodeId(node.id);
+
+      // Focus/select the right-clicked node (same as left-click behavior)
+      setNodes((currentNodes) => {
+        return currentNodes.map((n) => ({
+          ...n,
+          selected: n.id === node.id,
+        }));
+      });
+    },
+    [isLocked, setRightClickedNodeId, setNodes],
   );
 
   const onPaneClick = useCallback(
     (event: React.MouseEvent) => {
       setFilterEdge([]);
       setFilterComponent("");
+      // Hide right-click dropdown when clicking on the pane
+      setRightClickedNodeId(null);
       if (isAddingNote) {
         const shadowBox = document.getElementById("shadow-box");
         if (shadowBox) {
@@ -621,6 +657,8 @@ export default function Page({
           id: newId,
           type: "noteNode",
           position: position || { x: 0, y: 0 },
+          width: NOTE_NODE_MIN_WIDTH,
+          height: NOTE_NODE_MIN_HEIGHT,
           data: {
             ...data,
             id: newId,
@@ -706,6 +744,43 @@ export default function Page({
     maxZoom: MAX_ZOOM,
   };
 
+  // Get inspection panel visibility from store
+  const inspectionPanelVisible = useFlowStore(
+    (state) => state.inspectionPanelVisible,
+  );
+
+  // Determine if a single generic node is selected
+  const hasSingleGenericNodeSelected =
+    lastSelection?.nodes?.length === 1 &&
+    lastSelection.nodes[0].type === "genericNode";
+
+  // Get the fresh node data from the store instead of using stale reference
+  const selectedNodeId = hasSingleGenericNodeSelected
+    ? lastSelection.nodes[0].id
+    : null;
+  const selectedNode = selectedNodeId
+    ? (nodes.find((n) => n.id === selectedNodeId) as AllNodeType)
+    : null;
+
+  // Determine if InspectionPanel should be visible
+  const showInspectionPanel = inspectionPanelVisible && !!selectedNode;
+
+  // Handler to close the inspection panel by deselecting all nodes
+  const handleCloseInspectionPanel = useCallback(() => {
+    setNodes((nds) =>
+      nds.map((node) => ({
+        ...node,
+        selected: false,
+      })),
+    );
+  }, [setNodes]);
+
+  useEffect(() => {
+    if (inspectionPanelVisible) {
+      setSelectionMenuVisible(false);
+    }
+  }, [inspectionPanelVisible]);
+
   return (
     <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
       {showCanvas ? (
@@ -713,13 +788,16 @@ export default function Page({
           <div id="react-flow-id" className="h-full w-full bg-canvas relative">
             {!view && (
               <>
-                <MemoizedLogCanvasControls />
                 <MemoizedCanvasControls
+                  selectedNode={selectedNode}
                   setIsAddingNote={setIsAddingNote}
                   shadowBoxWidth={shadowBoxWidth}
                   shadowBoxHeight={shadowBoxHeight}
                 />
-                <FlowToolbar />
+                {!isPreviewActive && <FlowToolbar />}
+                {inspectionPanelVisible && (
+                  <InspectionPanel selectedNode={selectedNode} />
+                )}
               </>
             )}
             <MemoizedSidebarTrigger />
@@ -734,27 +812,38 @@ export default function Page({
               edges={edges}
               onNodesChange={onNodesChangeWithHelperLines}
               onEdgesChange={onEdgesChange}
-              onConnect={isLocked ? undefined : onConnectMod}
+              onConnect={isLocked || isPreviewActive ? undefined : onConnectMod}
               disableKeyboardA11y={true}
-              nodesFocusable={!isLocked}
-              edgesFocusable={!isLocked}
+              nodesFocusable={!isLocked && !isPreviewActive}
+              edgesFocusable={!isLocked && !isPreviewActive}
+              nodesDraggable={!isPreviewActive}
+              nodesConnectable={!isPreviewActive}
+              elementsSelectable={!isPreviewActive}
               onInit={setReactFlowInstance}
               nodeTypes={nodeTypes}
-              onReconnect={isLocked ? undefined : onEdgeUpdate}
-              onReconnectStart={isLocked ? undefined : onEdgeUpdateStart}
-              onReconnectEnd={isLocked ? undefined : onEdgeUpdateEnd}
-              onNodeDrag={onNodeDrag}
-              onNodeDragStart={onNodeDragStart}
-              onSelectionDragStart={onSelectionDragStart}
+              onReconnect={
+                isLocked || isPreviewActive ? undefined : onEdgeUpdate
+              }
+              onReconnectStart={
+                isLocked || isPreviewActive ? undefined : onEdgeUpdateStart
+              }
+              onReconnectEnd={
+                isLocked || isPreviewActive ? undefined : onEdgeUpdateEnd
+              }
+              onNodeDrag={isPreviewActive ? undefined : onNodeDrag}
+              onNodeDragStart={isPreviewActive ? undefined : onNodeDragStart}
+              onSelectionDragStart={
+                isPreviewActive ? undefined : onSelectionDragStart
+              }
               elevateEdgesOnSelect={false}
-              onSelectionEnd={onSelectionEnd}
-              onSelectionStart={onSelectionStart}
+              onSelectionEnd={isPreviewActive ? undefined : onSelectionEnd}
+              onSelectionStart={isPreviewActive ? undefined : onSelectionStart}
               connectionRadius={30}
               edgeTypes={edgeTypes}
               connectionLineComponent={ConnectionLineComponent}
-              onDragOver={onDragOver}
-              onNodeDragStop={onNodeDragStop}
-              onDrop={onDrop}
+              onDragOver={isPreviewActive ? undefined : onDragOver}
+              onNodeDragStop={isPreviewActive ? undefined : onNodeDragStop}
+              onDrop={isPreviewActive ? undefined : onDrop}
               onSelectionChange={onSelectionChange}
               deleteKeyCode={[]}
               fitView={isEmptyFlow.current ? false : true}
@@ -765,18 +854,21 @@ export default function Page({
               maxZoom={MAX_ZOOM}
               zoomOnScroll={!view}
               zoomOnPinch={!view}
+              selectNodesOnDrag={false}
               panOnDrag={!view}
               panActivationKeyCode={""}
               proOptions={{ hideAttribution: true }}
               onPaneClick={onPaneClick}
               onEdgeClick={handleEdgeClick}
               onKeyDown={handleKeyDown}
+              onNodeContextMenu={onNodeContextMenu}
             >
               <FlowBuildingComponent />
               <UpdateAllComponents />
               <MemoizedBackground />
               {helperLineEnabled && <HelperLines helperLines={helperLines} />}
             </ReactFlow>
+            {isPreviewActive && <VersionPreviewOverlay />}
           </div>
           <div
             id="shadow-box"
@@ -787,6 +879,7 @@ export default function Page({
               backgroundColor: `${shadowBoxBackgroundColor}`,
               opacity: 0.7,
               pointerEvents: "none",
+              borderRadius: "12px",
               // Prevent shadow-box from showing unexpectedly during initial renders
               display: "none",
             }}

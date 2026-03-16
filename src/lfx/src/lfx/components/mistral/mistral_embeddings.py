@@ -1,4 +1,4 @@
-from langchain_mistralai.embeddings import MistralAIEmbeddings
+from langchain_mistralai import MistralAIEmbeddings
 from pydantic.v1 import SecretStr
 
 from lfx.base.models.model import LCModelComponent

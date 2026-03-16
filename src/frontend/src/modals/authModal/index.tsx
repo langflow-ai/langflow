@@ -34,7 +34,7 @@ const AuthModal = ({
     oauthHost?: string;
     oauthPort?: string;
     oauthServerUrl?: string;
-    oauthCallbackPath?: string;
+    oauthCallbackUrl?: string;
     oauthClientId?: string;
     oauthClientSecret?: string;
     oauthAuthUrl?: string;
@@ -45,7 +45,11 @@ const AuthModal = ({
     oauthHost: authSettings?.oauth_host || "",
     oauthPort: authSettings?.oauth_port || "",
     oauthServerUrl: authSettings?.oauth_server_url || "",
-    oauthCallbackPath: authSettings?.oauth_callback_path || "",
+    // Use oauth_callback_url if available, fallback to oauth_callback_path for backwards compatibility
+    oauthCallbackUrl:
+      authSettings?.oauth_callback_url ||
+      authSettings?.oauth_callback_path ||
+      "",
     oauthClientId: authSettings?.oauth_client_id || "",
     oauthClientSecret: authSettings?.oauth_client_secret || "",
     oauthAuthUrl: authSettings?.oauth_auth_url || "",
@@ -62,7 +66,11 @@ const AuthModal = ({
         oauthHost: authSettings.oauth_host || "",
         oauthPort: authSettings.oauth_port || "",
         oauthServerUrl: authSettings.oauth_server_url || "",
-        oauthCallbackPath: authSettings.oauth_callback_path || "",
+        // Use oauth_callback_url if available, fallback to oauth_callback_path for backwards compatibility
+        oauthCallbackUrl:
+          authSettings.oauth_callback_url ||
+          authSettings.oauth_callback_path ||
+          "",
         oauthClientId: authSettings.oauth_client_id || "",
         oauthClientSecret: authSettings.oauth_client_secret || "",
         oauthAuthUrl: authSettings.oauth_auth_url || "",
@@ -79,10 +87,38 @@ const AuthModal = ({
   };
 
   const handleAuthFieldChange = (field: string, value: string) => {
-    setAuthFields((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setAuthFields((prev) => {
+      const newFields = {
+        ...prev,
+        [field]: value,
+      };
+
+      // Auto-sync Server URL and Callback Path when Port or Host changes
+      if (field === "oauthPort" || field === "oauthHost") {
+        const host =
+          field === "oauthHost" ? value : prev.oauthHost || "localhost";
+        const port = field === "oauthPort" ? value : prev.oauthPort || "";
+
+        if (port) {
+          newFields.oauthServerUrl = `http://${host}:${port}`;
+
+          // Auto-sync callback URL if:
+          // 1. It's empty (initial setup), OR
+          // 2. It matches the standard format pattern (auto-update when host/port changes)
+          const isStandardFormat =
+            !prev.oauthCallbackUrl ||
+            /^https?:\/\/[^:/]+:\d+\/auth\/idaas\/callback$/.test(
+              prev.oauthCallbackUrl,
+            );
+
+          if (isStandardFormat) {
+            newFields.oauthCallbackUrl = `http://${host}:${port}/auth/idaas/callback`;
+          }
+        }
+      }
+
+      return newFields;
+    });
   };
 
   const handleSave = () => {
@@ -92,7 +128,7 @@ const AuthModal = ({
         oauth_host: authFields.oauthHost,
         oauth_port: authFields.oauthPort,
         oauth_server_url: authFields.oauthServerUrl,
-        oauth_callback_path: authFields.oauthCallbackPath,
+        oauth_callback_url: authFields.oauthCallbackUrl, // Use new field name
         oauth_client_id: authFields.oauthClientId,
         oauth_client_secret: authFields.oauthClientSecret,
         oauth_auth_url: authFields.oauthAuthUrl,
@@ -242,19 +278,19 @@ const AuthModal = ({
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label
-                      htmlFor="oauth-callback-path"
+                      htmlFor="oauth-callback-url"
                       className="!text-mmd font-medium"
                     >
-                      Callback Path
+                      Callback URL
                     </Label>
                     <Input
-                      id="oauth-callback-path"
+                      id="oauth-callback-url"
                       type="text"
                       placeholder="http://localhost:9000/auth/idaas/callback"
-                      value={authFields.oauthCallbackPath || ""}
+                      value={authFields.oauthCallbackUrl || ""}
                       onChange={(e) =>
                         handleAuthFieldChange(
-                          "oauthCallbackPath",
+                          "oauthCallbackUrl",
                           e.target.value,
                         )
                       }

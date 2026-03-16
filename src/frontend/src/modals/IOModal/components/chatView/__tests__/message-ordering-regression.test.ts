@@ -432,11 +432,13 @@ describe("Message Ordering Regression Tests - GitHub Issue #9186", () => {
 
   describe("Performance regression tests", () => {
     it("should maintain O(n log n) performance characteristics", () => {
-      const sizes = [10, 100, 1000];
+      // Use larger sizes to get meaningful timings above noise floor
+      const sizes = [100, 1000, 10000];
       const timings: number[] = [];
 
-      sizes.forEach((size) => {
-        const messages = Array.from({ length: size }, (_, i) =>
+      // Helper to create messages for a given size
+      const createMessagesForSize = (size: number) =>
+        Array.from({ length: size }, (_, i) =>
           createMessage(
             `msg-${i}`,
             `2025-08-29 08:${String(51 + (i % 10)).padStart(2, "0")}:${String(21 + (i % 60)).padStart(2, "0")} UTC`,
@@ -444,17 +446,42 @@ describe("Message Ordering Regression Tests - GitHub Issue #9186", () => {
           ),
         );
 
-        const startTime = performance.now();
-        [...messages].sort(sortSenderMessages);
-        const endTime = performance.now();
+      // Warmup run to allow JIT compilation
+      const warmupMessages = createMessagesForSize(1000);
+      [...warmupMessages].sort(sortSenderMessages);
 
-        timings.push(endTime - startTime);
+      sizes.forEach((size) => {
+        const messages = createMessagesForSize(size);
+
+        // Run multiple iterations and take the median for stability
+        const iterations = 3;
+        const iterationTimings: number[] = [];
+
+        for (let iter = 0; iter < iterations; iter++) {
+          const startTime = performance.now();
+          [...messages].sort(sortSenderMessages);
+          const endTime = performance.now();
+          iterationTimings.push(endTime - startTime);
+        }
+
+        // Use median timing to reduce noise impact
+        iterationTimings.sort((a, b) => a - b);
+        timings.push(iterationTimings[Math.floor(iterations / 2)]);
       });
 
       // Verify performance scales reasonably (not exponentially)
-      // Each 10x increase in size should not cause 100x increase in time
-      expect(timings[1]).toBeLessThan(timings[0] * 50); // 100 items vs 10 items
-      expect(timings[2]).toBeLessThan(timings[1] * 50); // 1000 items vs 100 items
+      // Each 10x increase in size should not cause more than 20x increase in time
+      // (allowing for O(n log n) which is ~13x for 10x size increase, plus noise margin)
+      // Only check ratios if base timing is above noise floor (0.1ms)
+      if (timings[0] > 0.1) {
+        expect(timings[1]).toBeLessThan(timings[0] * 20); // 1000 items vs 100 items
+      }
+      if (timings[1] > 0.1) {
+        expect(timings[2]).toBeLessThan(timings[1] * 20); // 10000 items vs 1000 items
+      }
+
+      // Always verify absolute performance: 10000 items should complete in under 100ms
+      expect(timings[2]).toBeLessThan(100);
     });
 
     it("should handle worst-case scenario: all messages have identical timestamps", () => {

@@ -1,6 +1,7 @@
 {
   "version": "0.2.0",
   "configurations": [
+
     {
       "name": "Debug Backend",
       "type": "debugpy",
@@ -79,6 +80,13 @@
       "purpose": ["debug-test"],
       "console": "integratedTerminal",
       "justMyCode": false
-    }
+    },
+    {
+    "name": "Python Debugger: Python File",
+    "type": "python",
+    "request": "launch",
+    "program": "${file}",
+    "console": "integratedTerminal"
+}
   ]
 }

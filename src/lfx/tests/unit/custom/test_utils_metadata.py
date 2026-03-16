@@ -3,7 +3,6 @@
 from unittest.mock import Mock, patch
 
 import pytest
-
 from lfx.custom.utils import _generate_code_hash, build_component_metadata, build_custom_component_template_from_inputs
 
 

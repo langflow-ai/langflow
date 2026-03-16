@@ -75,7 +75,6 @@ export default function TableAutoCellRender({
                 !api.getGridOption("onCellValueChanged")
               }
               load_from_db={true}
-              allowCustomValue={false}
               password={false}
               display_name=""
               placeholder=""

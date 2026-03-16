@@ -13,6 +13,20 @@ import { mutateTemplate } from "../helpers/mutate-template";
 
 const DEBOUNCE_TIME_1_SECOND = 1000;
 
+// Must match ALL_OPERATION_FIELDS in data_operations.py
+const DATA_OPERATIONS_OPERATION_FIELDS = [
+  "select_keys_input",
+  "filter_key",
+  "operator",
+  "filter_values",
+  "append_update_data",
+  "remove_keys_input",
+  "rename_keys_input",
+  "mapped_json_display",
+  "selected_key",
+  "query",
+];
+
 export type handleOnNewValueType = (
   changes: Partial<InputFieldType>,
   options?: {
@@ -110,6 +124,25 @@ const useHandleOnNewValue = ({
       Object.entries(changes).forEach(([key, value]) => {
         if (value !== undefined) parameter[key] = value;
       });
+
+      // When Data Operations "operations" list is cleared, optimistically hide operation-specific fields
+      // so the UI updates immediately without waiting for the debounced API response
+      if (
+        name === "operations" &&
+        Array.isArray(changes.value) &&
+        changes.value.length === 0 &&
+        node.display_name === "Data Operations"
+      ) {
+        for (const field of DATA_OPERATIONS_OPERATION_FIELDS) {
+          if (
+            template[field] &&
+            typeof template[field] === "object" &&
+            "show" in template[field]
+          ) {
+            template[field].show = false;
+          }
+        }
+      }
 
       const shouldUpdate = parameter.real_time_refresh;
 

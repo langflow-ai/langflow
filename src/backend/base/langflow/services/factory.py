@@ -87,15 +87,17 @@ def import_all_services_into_a_dict():
                 {
                     name: obj
                     for name, obj in inspect.getmembers(module, inspect.isclass)
-                    if issubclass(obj, Service) and obj is not Service
+                    if isinstance(obj, type) and issubclass(obj, Service) and obj is not Service
                 }
             )
         except Exception as exc:
             logger.exception(exc)
             msg = "Could not initialize services. Please check your settings."
             raise RuntimeError(msg) from exc
-    # Import settings service from lfx
+    # Import settings and auth base from lfx (used in type hints but not langflow Service subclasses)
+    from lfx.services.auth.base import BaseAuthService
     from lfx.services.settings.service import SettingsService
 
+    services["BaseAuthService"] = BaseAuthService
     services["SettingsService"] = SettingsService
     return services

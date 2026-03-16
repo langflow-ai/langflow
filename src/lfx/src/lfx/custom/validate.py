@@ -342,15 +342,24 @@ def prepare_global_scope(module):
             imports.append(node)
         elif isinstance(node, ast.ImportFrom) and node.module is not None:
             import_froms.append(node)
-        elif isinstance(node, ast.ClassDef | ast.FunctionDef | ast.Assign):
+        elif isinstance(node, ast.ClassDef | ast.FunctionDef | ast.Assign | ast.AnnAssign):
             definitions.append(node)
 
     for node in imports:
         for alias in node.names:
             module_name = alias.name
-            variable_name = alias.asname or alias.name
-            # Let importlib.import_module raise its own ModuleNotFoundError with the actual missing module
-            exec_globals[variable_name] = importlib.import_module(module_name)
+            # Import the full module path to ensure submodules are loaded
+            module_obj = importlib.import_module(module_name)
+
+            # Determine the variable name
+            if alias.asname:
+                # For aliased imports like "import yfinance as yf", use the imported module directly
+                variable_name = alias.asname
+                exec_globals[variable_name] = module_obj
+            else:
+                # For dotted imports like "urllib.request", set the variable to the top-level package
+                variable_name = module_name.split(".")[0]
+                exec_globals[variable_name] = importlib.import_module(variable_name)
 
     for node in import_froms:
         module_names_to_try = [node.module]

@@ -1,21 +1,23 @@
 // authStore.js
 
-import { Cookies } from "react-cookie";
 import { create } from "zustand";
 import {
   LANGFLOW_ACCESS_TOKEN,
   LANGFLOW_API_TOKEN,
+  LANGFLOW_REFRESH_TOKEN,
 } from "@/constants/constants";
 import type { AuthStoreType } from "@/types/zustand/auth";
+import { cookieManager, getCookiesInstance } from "@/utils/cookie-manager";
 
-const cookies = new Cookies();
 const useAuthStore = create<AuthStoreType>((set, get) => ({
   isAdmin: false,
-  isAuthenticated: !!cookies.get(LANGFLOW_ACCESS_TOKEN),
-  accessToken: cookies.get(LANGFLOW_ACCESS_TOKEN) ?? null,
+  // Authentication state is now determined by session validation, not cookie reads
+  // This allows HttpOnly cookies to work properly
+  isAuthenticated: false,
+  accessToken: null,
   userData: null,
   autoLogin: null,
-  apiKey: cookies.get(LANGFLOW_API_TOKEN),
+  apiKey: null,
   authenticationErrorCount: 0,
 
   setIsAdmin: (isAdmin) => set({ isAdmin }),
@@ -28,6 +30,12 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
     set({ authenticationErrorCount }),
 
   logout: async () => {
+    localStorage.removeItem(LANGFLOW_ACCESS_TOKEN);
+    localStorage.removeItem(LANGFLOW_API_TOKEN);
+    localStorage.removeItem(LANGFLOW_REFRESH_TOKEN);
+
+    cookieManager.clearAuthCookies();
+
     get().setIsAuthenticated(false);
     get().setIsAdmin(false);
 

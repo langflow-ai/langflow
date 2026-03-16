@@ -28,7 +28,9 @@ export type SidebarSection =
   | "components"
   | "bundles"
   | "mcp"
-  | "add_note";
+  | "versions"
+  | "add_note"
+  | "traces";
 
 // Helper function to get cookie value
 function getCookie(name: string): string | null {
@@ -60,6 +62,7 @@ function getInitialSidebarSection(
   ) {
     return cookieValue;
   }
+  // "versions" is not persisted — always start on a content section after refresh
   return defaultSection;
 }
 
@@ -136,8 +139,9 @@ const SidebarProvider = React.forwardRef<
 
         _setOpen(value);
 
-        // This sets the cookie to keep the sidebar state.
-        document.cookie = `${SIDEBAR_COOKIE_NAME}=${open}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+        // This sets the cookie to keep the sidebar state. Use the incoming value (or computed) instead of the stale `open` variable.
+        const nextOpen = typeof value === "function" ? value(open) : value;
+        document.cookie = `${SIDEBAR_COOKIE_NAME}=${nextOpen}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
       },
       [setOpenProp, open],
     );
@@ -312,7 +316,7 @@ const Sidebar = React.forwardRef<
         {/* This is what handles the sidebar gap on desktop */}
         <div
           className={cn(
-            "relative h-full w-[--sidebar-width] bg-transparent transition-[width] duration-200 ease-linear",
+            "relative h-full w-[--sidebar-width] bg-transparent transition-[width] duration-300 ease-in-out",
             "group-data-[collapsible=offcanvas]:w-0",
             "group-data-[side=right]:rotate-180",
             variant === "floating" || variant === "inset"
@@ -326,7 +330,7 @@ const Sidebar = React.forwardRef<
         />
         <div
           className={cn(
-            "absolute inset-y-0 z-50 flex h-full transition-[left,right,width] duration-200 ease-linear",
+            "absolute inset-y-0 z-50 flex h-full transition-[left,right,width] duration-300 ease-in-out",
             // Adjust width based on state and device
             "w-[--sidebar-width]",
             "max-sm:group-data-[state=collapsed]:w-[--sidebar-width-icon]",

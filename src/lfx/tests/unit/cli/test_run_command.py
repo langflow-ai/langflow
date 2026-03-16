@@ -8,7 +8,6 @@ from unittest.mock import patch
 
 import pytest
 import typer
-
 from lfx.cli.run import run
 
 
@@ -36,7 +35,7 @@ You can use this script as a template for building more complex conversational f
 from pathlib import Path
 
 from lfx.components.input_output import ChatInput, ChatOutput
-from lfx.schema.graph import Graph
+from lfx.graph import Graph
 from lfx.log.logger import LogConfig
 
 log_config = LogConfig(

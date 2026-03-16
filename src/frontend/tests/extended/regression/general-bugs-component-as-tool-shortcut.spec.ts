@@ -18,7 +18,7 @@ test(
     await page.getByTestId("sidebar-search-input").fill("prompt");
 
     await page
-      .getByTestId("processingPrompt Template")
+      .getByTestId("models_and_agentsPrompt Template")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-prompt-template").click();
@@ -42,11 +42,11 @@ test(
 
     await page.getByTestId("title-Prompt Template").click();
 
-    await page.waitForSelector('[data-testid="code-button-modal"]', {
+    await expect(page.getByTestId("code-button-modal").last()).toBeVisible({
       timeout: 3000,
     });
 
-    await page.getByTestId("code-button-modal").click();
+    await page.getByTestId("code-button-modal").last().click();
 
     const code = await extractAndCleanCode(page);
     const updatedCode = code!.replace("tool_mode=True", "tool_mode=False");

@@ -13,6 +13,12 @@ def opentelemetry_instance():
     return OpenTelemetry()
 
 
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_telemetry():
+    yield
+    OpenTelemetry().shutdown()
+
+
 def test_init(opentelemetry_instance):
     assert isinstance(opentelemetry_instance, OpenTelemetry)
     assert len(opentelemetry_instance._metrics) > 1

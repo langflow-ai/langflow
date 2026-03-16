@@ -85,6 +85,123 @@ async def list_flows(*, user_id: str | None = None) -> list[Data]:
     return []
 
 
+async def list_flows_by_flow_folder(
+    *,
+    user_id: str | None = None,
+    flow_id: str | None = None,
+    order_params: dict | None = {"column": "updated_at", "direction": "desc"},  # noqa: B006, ARG001
+) -> list[Data]:
+    """Lists flows for the given user and in the same folder as the specified flow.
+
+    Retrieves all flows belonging to the given user and identified by user_id
+    that belong to the same folder as the flow identified by flow_id if the flow belongs to the user.
+
+    Optionally accepts a dictionary of order parameters
+    to order the flows by the specified column and direction.
+    Default order column is "updated_at" and default order direction is "desc".
+
+    In lfx, this is a stub that returns an empty list since we don't have
+    a database backend by default.
+
+    Args:
+        user_id (str | None, optional): The user ID to list flows for. Defaults to None.
+        flow_id (str | None, optional): The flow ID to list flows in the same folder as. Defaults to None.
+        order_params (dict | None, optional): Parameters for ordering the flows.
+        Defaults to {"column": "updated_at", "direction": "desc"}.
+            - column: The column to order by. Defaults to "updated_at".
+            - direction: The direction to order by. Defaults to "desc".
+
+    Returns:
+        list[Data]: List of flows in the same folder as the flow identified by flow_id.
+
+    Raises:
+        ValueError: If user_id is not provided.
+        ValueError: If Flow ID is not provided.
+    """
+    if not user_id:
+        msg = "Session is invalid"
+        raise ValueError(msg)
+    if not flow_id:
+        msg = "Flow ID is required"
+        raise ValueError(msg)
+
+    # In lfx, we don't have a database backend by default
+    # This is a stub implementation
+    logger.warning("list_flows_by_flow_folder called but lfx doesn't have database backend by default")
+    return []
+
+
+async def list_flows_by_folder_id(
+    *,
+    user_id: str | None = None,
+    folder_id: str | None = None,
+) -> list[Data]:
+    """Lists flows for the given user and in the same folder as the specified folder.
+
+    Retrieves all flows belonging to the user identified by user_id
+    that belong to the same folder as the folder identified by folder_id
+    if the folder belongs to the user.
+
+    In lfx, this is a stub that returns an empty list since we don't have
+    a database backend by default.
+
+    Args:
+        user_id (str | None, optional): The user ID to list flows for. Defaults to None.
+        folder_id (str | None, optional): The folder ID to list flows in the same folder as. Defaults to None.
+
+    Returns:
+        list[Data]: List of flows in the same folder as the folder identified by folder_id.
+
+    Raises:
+        ValueError: If user_id is not provided.
+        ValueError: If Folder ID is not provided.
+    """
+    if not user_id:
+        msg = "Session is invalid"
+        raise ValueError(msg)
+    if not folder_id:
+        msg = "Folder ID is required"
+        raise ValueError(msg)
+
+    # In lfx, we don't have a database backend by default
+    # This is a stub implementation
+    logger.warning("list_flows_by_folder_id called but lfx doesn't have database backend by default")
+    return []
+
+
+async def get_flow_by_id_or_name(
+    user_id: str,
+    flow_id: str | None = None,
+    flow_name: str | None = None,
+) -> Data | None:
+    """Get a flow by ID or name.
+
+    Retrieves a flow by ID or name. If both are provided, flow_id is used.
+
+    In lfx, this is a stub that returns None since we don't have
+    a database backend by default.
+
+    Args:
+        user_id (str): The user ID to get the flow for.
+        flow_id (str | None, optional): The flow ID. Defaults to None.
+        flow_name (str | None, optional): The flow name. Defaults to None.
+
+    Returns:
+        Data | None: The flow data or None if not found.
+    """
+    if not user_id:
+        msg = "Session is invalid"
+        raise ValueError(msg)
+    if not (flow_id or flow_name):
+        msg = "Flow ID or Flow Name is required"
+        raise ValueError(msg)
+
+    # In lfx, we don't have a database backend by default
+    # This is a stub implementation
+    logger.warning("get_flow_by_id_or_name called but lfx doesn't have database backend by default")
+    return None
+
+
 async def load_flow(
     user_id: str,  # noqa: ARG001
     flow_id: str | None = None,
@@ -189,6 +306,3 @@ async def run_flow(
         types=types,
         fallback_to_env_vars=fallback_to_env_vars,
     )
-
-
-__all__ = ["build_schema_from_inputs", "get_arg_names", "get_flow_inputs", "list_flows", "load_flow", "run_flow"]

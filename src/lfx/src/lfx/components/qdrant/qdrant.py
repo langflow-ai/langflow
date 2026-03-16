@@ -1,5 +1,5 @@
-from langchain.embeddings.base import Embeddings
 from langchain_community.vectorstores import Qdrant
+from langchain_core.embeddings import Embeddings
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data

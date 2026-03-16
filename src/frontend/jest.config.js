@@ -3,8 +3,8 @@ module.exports = {
   testEnvironment: "jsdom",
   injectGlobals: true,
   moduleNameMapper: {
+    "\\.(css|less|scss|sass)$": "<rootDir>/src/__mocks__/styleMock.js",
     "^@/(.*)$": "<rootDir>/src/$1",
-    "\\.(css|less|scss|sass)$": "identity-obj-proxy",
     "^@jsonquerylang/jsonquery$":
       "<rootDir>/src/__mocks__/@jsonquerylang/jsonquery.js",
     "^vanilla-jsoneditor$": "<rootDir>/src/__mocks__/vanilla-jsoneditor.js",
@@ -17,7 +17,7 @@ module.exports = {
   ],
   testPathIgnorePatterns: ["/node_modules/", "test-utils.tsx"],
   transform: {
-    "^.+\\.(ts|tsx)$": "ts-jest",
+    "^.+\\.(ts|tsx)$": "<rootDir>/transform-import-meta.js",
   },
   moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json"],
   // Ignore node_modules except for packages that need transformation

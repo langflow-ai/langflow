@@ -26,7 +26,7 @@ class ParseJSONDataComponent(Component):
             display_name="Input",
             info="Data object to filter.",
             required=True,
-            input_types=["Message", "Data"],
+            input_types=["Message", "Data", "JSON"],
         ),
         MessageTextInput(
             name="query",
@@ -84,8 +84,8 @@ class ParseJSONDataComponent(Component):
 
         full_filter_str = json.dumps(to_filter_as_dict)
 
-        logger.info("to_filter: ", to_filter)
+        logger.info("to_filter: %s", to_filter)
 
         results = jq.compile(self.query).input_text(full_filter_str).all()
-        logger.info("results: ", results)
+        logger.info("results: %s", results)
         return [Data(data=value) if isinstance(value, dict) else Data(text=str(value)) for value in results]

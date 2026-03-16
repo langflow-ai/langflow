@@ -148,7 +148,7 @@ You need one **MCP Tools** component for each MCP server that you want your flow
 
 7. To test the weather MCP server, click <Icon name="Play" aria-hidden="true" /> **Playground**, and then ask the LLM `Is it safe to go hiking in the Adirondacks today?`
 
-    The  **Playground** shows you the agent's logic as it analyzes the request and select tools to use.
+    The **Playground** shows you the agent's logic as it analyzes the request and select tools to use.
 
     Ideally, the agent's response will be more specific than the previous response because of the additional context provided by the weather MCP server.
     For example:
@@ -162,7 +162,7 @@ You need one **MCP Tools** component for each MCP server that you want your flow
 
     This is a better response, but what makes this MCP server more valuable than just calling a weather API?
 
-    First, MCP servers are often customized for specific tasks, such as highly specialized actions or chained tools for complex, multi-step problem solving.
+    MCP servers are often customized for specific tasks, such as highly specialized actions or chained tools for complex, multi-step problem solving.
     Typically, you would have to write a custom script for a specific task, possibly including multiple API calls in a single script, and then you would have to either execute this script outside the context of the agent or provide it to your agent in some way.
 
     Instead, the MCP ensures that all MCP servers are added to agents in the same way, without having to know each server's specific endpoint structures or write custom integrations.

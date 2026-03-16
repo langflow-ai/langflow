@@ -1,5 +1,11 @@
 const Icon = (props) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" {...props}>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 100 100"
+    width="24"
+    height="24"
+    {...props}
+  >
     <path
       fill="#73787F"
       d="M19.8,40.6L14.3,56.8L9.4,40.6H3.9l8.1,24.2h4.4L25.7,48.8l5.3,16h4.4l8.1-24.2h-5.4l-4.9,16.2L25.7,40.6H19.8z"

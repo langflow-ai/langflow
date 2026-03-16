@@ -45,7 +45,7 @@ test(
       .isVisible({ timeout: 3000 });
     await page.getByText("Changes saved successfully").last().click();
 
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 30000,
     });
 

@@ -29,6 +29,7 @@ export default function FlowBuildingComponent() {
   const [dismissed, setDismissed] = useState(false);
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
   const prevIsBuilding = useRef(isBuilding);
+  const startTimeRef = useRef<number | null>(null);
   const pastBuildFlowParams = useFlowStore(
     (state) => state.pastBuildFlowParams,
   );
@@ -50,12 +51,17 @@ export default function FlowBuildingComponent() {
     if (isBuilding && !prevIsBuilding.current) {
       setDismissed(false);
       setDuration(0);
+      startTimeRef.current = Date.now();
     }
 
-    if (isBuilding) {
+    if (isBuilding && startTimeRef.current !== null) {
       intervalId = setInterval(() => {
-        setDuration((prev) => prev + 10);
+        setDuration(Date.now() - startTimeRef.current!);
       }, 10);
+    }
+
+    if (!isBuilding && prevIsBuilding.current) {
+      startTimeRef.current = null;
     }
 
     prevIsBuilding.current = isBuilding;
@@ -246,13 +252,12 @@ export default function FlowBuildingComponent() {
                         transition={{ duration: 0.2 }}
                       >
                         <Markdown
-                          linkTarget="_blank"
                           remarkPlugins={[remarkGfm]}
                           className="my-1.5 align-text-top truncate-doubleline"
                           components={{
                             a: ({ node, ...props }) => (
                               <a
-                                href={props.href}
+                                {...props}
                                 target="_blank"
                                 className="underline"
                                 rel="noopener noreferrer"

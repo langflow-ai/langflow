@@ -13,7 +13,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from lfx.base.mcp import util
-from lfx.base.mcp.util import MCPSessionManager, MCPSseClient, MCPStdioClient, _process_headers, validate_headers
+from lfx.base.mcp.util import (
+    MCPSessionManager,
+    MCPSseClient,
+    MCPStdioClient,
+    MCPStreamableHttpClient,
+    _process_headers,
+    update_tools,
+    validate_headers,
+)
 
 
 class TestMCPSessionManager:
@@ -186,11 +194,132 @@ class TestHeaderValidation:
         assert result == {"safe-header": "safe-value"}
 
 
-class TestSSEHeaderIntegration:
-    """Integration test to verify headers are properly passed through the entire SSE flow."""
+class TestGlobalVariableResolution:
+    """Test global variable resolution in headers."""
+
+    def test_resolve_global_variables_basic(self):
+        """Test basic global variable resolution in headers."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {"x-api-key": "MY_API_KEY", "authorization": "MY_TOKEN"}
+        request_variables = {"MY_API_KEY": "secret-key-123", "MY_TOKEN": "token-456"}  # pragma: allowlist secret
+
+        result = _resolve_global_variables_in_headers(headers, request_variables)
+
+        assert result == {"x-api-key": "secret-key-123", "authorization": "token-456"}
+
+    def test_resolve_global_variables_no_variables(self):
+        """Test header resolution when no request_variables provided."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {"x-api-key": "MY_API_KEY", "content-type": "application/json"}
+
+        # No request_variables
+        result = _resolve_global_variables_in_headers(headers, None)
+        assert result == headers
+
+        # Empty request_variables
+        result = _resolve_global_variables_in_headers(headers, {})
+        assert result == headers
+
+    def test_resolve_global_variables_partial_match(self):
+        """Test resolution when only some headers match variables."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {
+            "x-api-key": "MY_API_KEY",  # matches
+            "authorization": "static-token",  # no match
+            "x-custom": "MY_CUSTOM",  # matches
+        }
+        request_variables = {"MY_API_KEY": "resolved-key", "MY_CUSTOM": "custom-value"}  # pragma: allowlist secret
+
+        result = _resolve_global_variables_in_headers(headers, request_variables)
+
+        assert result == {
+            "x-api-key": "resolved-key",
+            "authorization": "static-token",
+            "x-custom": "custom-value",
+        }
+
+    def test_resolve_global_variables_non_string_values(self):
+        """Test that non-string header values are preserved."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {"x-api-key": "MY_KEY", "x-number": 123, "x-none": None}
+        request_variables = {"MY_KEY": "resolved"}
+
+        result = _resolve_global_variables_in_headers(headers, request_variables)
+
+        assert result == {"x-api-key": "resolved", "x-number": 123, "x-none": None}
+
+    def test_process_headers_with_request_variables_dict(self):
+        """Test _process_headers with dict input and request_variables."""
+        headers = {"x-api-key": "MY_API_KEY", "content-type": "application/json"}
+        request_variables = {"MY_API_KEY": "secret-123"}  # pragma: allowlist secret
+
+        result = _process_headers(headers, request_variables)
+
+        # Should resolve variable and normalize to lowercase
+        assert result == {"x-api-key": "secret-123", "content-type": "application/json"}
+
+    def test_process_headers_with_request_variables_list(self):
+        """Test _process_headers with list input and request_variables."""
+        headers = [
+            {"key": "x-api-key", "value": "MY_API_KEY"},
+            {"key": "Content-Type", "value": "application/json"},
+        ]
+        request_variables = {"MY_API_KEY": "secret-123"}  # pragma: allowlist secret
+
+        result = _process_headers(headers, request_variables)
+
+        # Should resolve variable and normalize to lowercase
+        assert result == {"x-api-key": "secret-123", "content-type": "application/json"}
+
+    def test_process_headers_without_request_variables(self):
+        """Test _process_headers maintains backward compatibility without request_variables."""
+        headers = {"X-API-Key": "static-value", "Content-Type": "application/json"}
+
+        result = _process_headers(headers)
+
+        # Should just normalize without resolution
+        assert result == {"x-api-key": "static-value", "content-type": "application/json"}
+
+    def test_resolve_global_variables_case_sensitive_matching(self):
+        """Test that variable name matching is case-sensitive."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {"x-api-key": "my_api_key", "x-token": "MY_API_KEY"}
+        request_variables = {"MY_API_KEY": "resolved-uppercase"}  # pragma: allowlist secret
+
+        result = _resolve_global_variables_in_headers(headers, request_variables)
+
+        # Only exact match should be resolved
+        assert result == {"x-api-key": "my_api_key", "x-token": "resolved-uppercase"}
+
+    def test_resolve_global_variables_empty_headers(self):
+        """Test resolution with empty headers."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        result = _resolve_global_variables_in_headers({}, {"VAR": "value"})
+        assert result == {}
+
+    def test_resolve_global_variables_special_characters(self):
+        """Test resolution with special characters in values."""
+        from lfx.base.mcp.util import _resolve_global_variables_in_headers
+
+        headers = {"authorization": "MY_TOKEN"}
+        request_variables = {"MY_TOKEN": "Bearer token-with-special!@#$%^&*()_+-=[]{}|;:,.<>?"}
+
+        result = _resolve_global_variables_in_headers(headers, request_variables)
+
+        assert result["authorization"] == "Bearer token-with-special!@#$%^&*()_+-=[]{}|;:,.<>?"
+
+
+class TestStreamableHTTPHeaderIntegration:
+    """Integration test to verify headers are properly passed through the entire StreamableHTTP flow."""
 
     async def test_headers_processing(self):
-        """Test that headers flow properly from server config through to SSE client connection."""
+        """Test that headers flow properly from server config through to StreamableHTTP client connection."""
         # Test the header processing function directly
         headers_input = [
             {"key": "Authorization", "value": "Bearer test-token"},
@@ -231,15 +360,15 @@ class TestSSEHeaderIntegration:
         result = _process_headers(invalid_headers)
         assert result == {"valid-header": "good"}
 
-    async def test_sse_client_header_storage(self):
+    async def test_streamable_http_client_header_storage(self):
         """Test that SSE client properly stores headers in connection params."""
-        sse_client = MCPSseClient()
+        streamable_http_client = MCPStreamableHttpClient()
         test_url = "http://test.url"
         test_headers = {"Authorization": "Bearer test123", "Custom": "value"}
 
         # Test that headers are properly stored in connection params
         # Set connection params as a dict like the implementation expects
-        sse_client._connection_params = {
+        streamable_http_client._connection_params = {
             "url": test_url,
             "headers": test_headers,
             "timeout_seconds": 30,
@@ -247,8 +376,250 @@ class TestSSEHeaderIntegration:
         }
 
         # Verify headers are stored
-        assert sse_client._connection_params["url"] == test_url
-        assert sse_client._connection_params["headers"] == test_headers
+        assert streamable_http_client._connection_params["url"] == test_url
+        assert streamable_http_client._connection_params["headers"] == test_headers
+
+
+class TestUpdateToolsStdioHeaders:
+    """Test that update_tools injects component headers into stdio args."""
+
+    @pytest.mark.asyncio
+    async def test_stdio_headers_injected_with_existing_headers_flag(self):
+        """Headers should be injected as --headers key value before the existing --headers flag."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "uvx",
+            "args": [
+                "mcp-proxy",
+                "--transport",
+                "streamablehttp",
+                "--headers",
+                "x-api-key",
+                "sk-existing",
+                "http://localhost:7860/api/v1/mcp/project/test/streamable",
+            ],
+            "headers": {"Authorization": "Bearer token123"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        mock_stdio.connect_to_server.assert_called_once()
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+
+        # The injected --headers should appear before the existing --headers
+        assert "--headers authorization 'Bearer token123' --headers x-api-key sk-existing" in full_command
+        # URL should still be at the end
+        assert full_command.endswith("http://localhost:7860/api/v1/mcp/project/test/streamable")
+
+    @pytest.mark.asyncio
+    async def test_stdio_headers_injected_without_existing_headers_flag(self):
+        """When no --headers flag exists, headers should be inserted before the last positional arg."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "uvx",
+            "args": [
+                "mcp-proxy",
+                "--transport",
+                "streamablehttp",
+                "http://localhost:7860/streamable",
+            ],
+            "headers": {"X-Api-Key": "my-key"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+
+        # --headers should be inserted before the URL
+        assert "--headers x-api-key my-key http://localhost:7860/streamable" in full_command
+
+    @pytest.mark.asyncio
+    async def test_stdio_multiple_headers_each_get_own_flag(self):
+        """Each header should get its own --headers key value triplet."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "uvx",
+            "args": [
+                "mcp-proxy",
+                "--transport",
+                "streamablehttp",
+                "--headers",
+                "x-api-key",
+                "sk-existing",
+                "http://localhost/streamable",
+            ],
+            "headers": {"X-Custom-One": "val1", "X-Custom-Two": "val2"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+
+        # Each header gets its own --headers flag
+        assert "--headers x-custom-one val1" in full_command
+        assert "--headers x-custom-two val2" in full_command
+        # Original header still present
+        assert "--headers x-api-key sk-existing" in full_command
+
+    @pytest.mark.asyncio
+    async def test_stdio_no_headers_leaves_args_unchanged(self):
+        """When no component headers are set, args should not be modified."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "uvx",
+            "args": ["mcp-proxy", "--transport", "streamablehttp", "http://localhost/streamable"],
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+        assert full_command == "uvx mcp-proxy --transport streamablehttp http://localhost/streamable"
+
+    @pytest.mark.asyncio
+    async def test_stdio_multiword_command_with_empty_args(self):
+        """A multi-word command string (e.g. 'uvx mcp-server-fetch') with empty args should be split correctly.
+
+        Regression test: shlex.join(["uvx mcp-server-fetch"]) used to produce
+        a single-quoted token that bash treated as one binary name, causing
+        'exec: uvx mcp-server-fetch: not found'.
+        """
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "uvx mcp-server-fetch",
+            "args": [],
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+        assert full_command == "uvx mcp-server-fetch"
+
+    @pytest.mark.asyncio
+    async def test_stdio_multiword_command_with_args(self):
+        """A multi-word command string combined with additional args should produce correct tokens."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "uvx mcp-server-fetch",
+            "args": ["--timeout", "30"],
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+        assert full_command == "uvx mcp-server-fetch --timeout 30"
+
+    @pytest.mark.asyncio
+    async def test_stdio_headers_appended_when_all_args_are_flags(self):
+        """When all args are flags (no positional URL), headers should be appended."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "some-tool",
+            "args": ["--verbose", "--debug"],
+            "headers": {"Authorization": "Bearer tok"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+        assert full_command == "some-tool --verbose --debug --headers authorization 'Bearer tok'"
+
+    @pytest.mark.asyncio
+    async def test_stdio_headers_appended_when_last_token_is_flag_value(self):
+        """When the last token is a flag's value, headers should be appended, not inserted before it."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "some-tool",
+            "args": ["--port", "8080"],
+            "headers": {"Authorization": "Bearer tok"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+        # 8080 is a value for --port, not a positional arg, so headers go at the end
+        assert full_command == "some-tool --port 8080 --headers authorization 'Bearer tok'"
+
+    @pytest.mark.asyncio
+    async def test_stdio_headers_inserted_before_positional_with_flag_value_pairs(self):
+        """Headers should be inserted before the last positional arg even when flag+value pairs precede it."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "uvx",
+            "args": ["mcp-proxy", "--port", "8080", "http://localhost/streamable"],
+            "headers": {"X-Api-Key": "my-key"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+        # --port 8080 is a flag pair; http://localhost/streamable is the positional arg
+        assert full_command == "uvx mcp-proxy --port 8080 --headers x-api-key my-key http://localhost/streamable"
+
+    @pytest.mark.asyncio
+    async def test_stdio_headers_inserted_before_last_positional_with_multiple_positionals(self):
+        """When multiple positional args exist, headers are inserted before the last one."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        server_config = {
+            "command": "uvx",
+            "args": ["mcp-proxy", "--transport", "streamablehttp", "extra-pos-arg", "http://localhost/streamable"],
+            "headers": {"X-Key": "val"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        full_command = mock_stdio.connect_to_server.call_args[0][0]
+        # Should insert before the last positional (the URL), not before "extra-pos-arg"
+        assert "--headers x-key val http://localhost/streamable" in full_command
+        assert "extra-pos-arg --headers" in full_command
+
+    @pytest.mark.asyncio
+    async def test_stdio_does_not_mutate_original_config(self):
+        """The original server_config args list should not be mutated."""
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = []
+        mock_stdio._connected = True
+
+        original_args = ["mcp-proxy", "--headers", "x-api-key", "sk-orig", "http://localhost/s"]
+        server_config = {
+            "command": "uvx",
+            "args": original_args,
+            "headers": {"X-Extra": "val"},
+        }
+
+        await update_tools("test-server", server_config, mcp_stdio_client=mock_stdio)
+
+        # Original list should be unchanged
+        assert original_args == ["mcp-proxy", "--headers", "x-api-key", "sk-orig", "http://localhost/s"]
 
 
 class TestFieldNameConversion:
@@ -522,7 +893,7 @@ class TestToolExecutionWithFieldConversion:
 
     def test_create_tool_func_with_camel_case_fields(self):
         """Test that create_tool_func handles camelCase field conversion."""
-        from unittest.mock import AsyncMock, MagicMock
+        from unittest.mock import AsyncMock
 
         from pydantic import Field, create_model
 
@@ -540,17 +911,14 @@ class TestToolExecutionWithFieldConversion:
         # Create tool function
         tool_func = util.create_tool_func("test_tool", test_schema, mock_client)
 
-        # Mock the event loop
-        mock_loop = MagicMock()
-        mock_loop.run_until_complete = MagicMock(return_value="tool_result")
-
-        with patch("asyncio.get_event_loop", return_value=mock_loop):
+        # Mock run_until_complete from async_helpers
+        with patch("lfx.base.mcp.util.run_until_complete", return_value="tool_result") as mock_run_until_complete:
             # Test with camelCase arguments
             result = tool_func(weatherMain="Snow", topN=6)
 
             assert result == "tool_result"
             # Verify that run_until_complete was called
-            mock_loop.run_until_complete.assert_called_once()
+            mock_run_until_complete.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_tool_coroutine_field_conversion_end_to_end(self):
@@ -662,7 +1030,7 @@ class TestToolExecutionWithFieldConversion:
 
     def test_tool_func_field_conversion_sync(self):
         """Test that create_tool_func handles field conversion in sync context."""
-        from unittest.mock import AsyncMock, MagicMock
+        from unittest.mock import AsyncMock
 
         from pydantic import Field, create_model
 
@@ -679,16 +1047,13 @@ class TestToolExecutionWithFieldConversion:
         # Create tool function
         tool_func = util.create_tool_func("test_tool", test_schema, mock_client)
 
-        # Mock asyncio.get_event_loop
-        mock_loop = MagicMock()
-        mock_loop.run_until_complete = MagicMock(return_value="sync_result")
-
-        with patch("asyncio.get_event_loop", return_value=mock_loop):
+        # Mock run_until_complete from async_helpers
+        with patch("lfx.base.mcp.util.run_until_complete", return_value="sync_result") as mock_run_until_complete:
             # Test with camelCase fields
             result = tool_func(userName="testuser", maxResults=10)
 
             assert result == "sync_result"
-            mock_loop.run_until_complete.assert_called_once()
+            mock_run_until_complete.assert_called_once()
 
 
 class TestMCPUtilityFunctions:
@@ -930,22 +1295,22 @@ class TestMCPStdioClientWithEverythingServer:
             await stdio_client.disconnect()
 
 
-class TestMCPSseClientWithDeepWikiServer:
+class TestMCPStreamableHttpClientWithDeepWikiServer:
     """Test MCPSseClient with the DeepWiki MCP server."""
 
     @pytest.fixture
-    def sse_client(self):
+    def streamable_http_client(self):
         """Create an SSE client for testing."""
-        return MCPSseClient()
+        return MCPStreamableHttpClient()
 
     @pytest.mark.asyncio
-    async def test_connect_to_deepwiki_server(self, sse_client):
+    async def test_connect_to_deepwiki_server(self, streamable_http_client):
         """Test connecting to the DeepWiki MCP server."""
         url = "https://mcp.deepwiki.com/sse"
 
         try:
             # Connect to the server
-            tools = await sse_client.connect_to_server(url)
+            tools = await streamable_http_client.connect_to_server(url)
 
             # Verify tools were returned
             assert len(tools) > 0
@@ -961,16 +1326,16 @@ class TestMCPSseClientWithDeepWikiServer:
             # If the server is not accessible, skip the test
             pytest.skip(f"DeepWiki server not accessible: {e}")
         finally:
-            await sse_client.disconnect()
+            await streamable_http_client.disconnect()
 
     @pytest.mark.asyncio
-    async def test_run_wiki_structure_tool(self, sse_client):
+    async def test_run_wiki_structure_tool(self, streamable_http_client):
         """Test running the read_wiki_structure tool."""
         url = "https://mcp.deepwiki.com/sse"
 
         try:
             # Connect to the server
-            tools = await sse_client.connect_to_server(url)
+            tools = await streamable_http_client.connect_to_server(url)
 
             # Find the read_wiki_structure tool
             wiki_tool = None
@@ -982,7 +1347,7 @@ class TestMCPSseClientWithDeepWikiServer:
             assert wiki_tool is not None, "read_wiki_structure tool not found"
 
             # Run the tool with a test repository (use repoName as expected by the API)
-            result = await sse_client.run_tool("read_wiki_structure", {"repoName": "microsoft/vscode"})
+            result = await streamable_http_client.run_tool("read_wiki_structure", {"repoName": "microsoft/vscode"})
 
             # Verify the result
             assert result is not None
@@ -993,16 +1358,16 @@ class TestMCPSseClientWithDeepWikiServer:
             # If the server is not accessible or the tool fails, skip the test
             pytest.skip(f"DeepWiki server test failed: {e}")
         finally:
-            await sse_client.disconnect()
+            await streamable_http_client.disconnect()
 
     @pytest.mark.asyncio
-    async def test_ask_question_tool(self, sse_client):
+    async def test_ask_question_tool(self, streamable_http_client):
         """Test running the ask_question tool."""
         url = "https://mcp.deepwiki.com/sse"
 
         try:
             # Connect to the server
-            tools = await sse_client.connect_to_server(url)
+            tools = await streamable_http_client.connect_to_server(url)
 
             # Find the ask_question tool
             ask_tool = None
@@ -1014,7 +1379,7 @@ class TestMCPSseClientWithDeepWikiServer:
             assert ask_tool is not None, "ask_question tool not found"
 
             # Run the tool with a test question (use repoName as expected by the API)
-            result = await sse_client.run_tool(
+            result = await streamable_http_client.run_tool(
                 "ask_question", {"repoName": "microsoft/vscode", "question": "What is VS Code?"}
             )
 
@@ -1027,14 +1392,14 @@ class TestMCPSseClientWithDeepWikiServer:
             # If the server is not accessible or the tool fails, skip the test
             pytest.skip(f"DeepWiki server test failed: {e}")
         finally:
-            await sse_client.disconnect()
+            await streamable_http_client.disconnect()
 
     @pytest.mark.asyncio
-    async def test_url_validation(self, sse_client):
+    async def test_url_validation(self, streamable_http_client):
         """Test URL validation for SSE connections."""
         # Test valid URL
         valid_url = "https://mcp.deepwiki.com/sse"
-        is_valid, error = await sse_client.validate_url(valid_url)
+        is_valid, error = await streamable_http_client.validate_url(valid_url)
         # Either valid or accessible, or rate-limited (429) which indicates server is reachable
         if not is_valid and "429" in error:
             # Rate limiting indicates the server is accessible but limiting requests
@@ -1044,28 +1409,9 @@ class TestMCPSseClientWithDeepWikiServer:
 
         # Test invalid URL
         invalid_url = "not_a_url"
-        is_valid, error = await sse_client.validate_url(invalid_url)
+        is_valid, error = await streamable_http_client.validate_url(invalid_url)
         assert not is_valid
         assert error != ""
-
-    @pytest.mark.asyncio
-    async def test_redirect_handling(self, sse_client):
-        """Test redirect handling for SSE connections."""
-        # Test with the DeepWiki URL
-        url = "https://mcp.deepwiki.com/sse"
-
-        try:
-            # Check for redirects
-            final_url = await sse_client.pre_check_redirect(url)
-
-            # Should return a URL (either original or redirected)
-            assert final_url is not None
-            assert isinstance(final_url, str)
-            assert final_url.startswith("http")
-
-        except Exception as e:
-            # If the server is not accessible, skip the test
-            pytest.skip(f"DeepWiki server not accessible for redirect test: {e}")
 
     @pytest.fixture
     def mock_tool(self):
@@ -1117,14 +1463,14 @@ class TestMCPSseClientUnit:
             mock_response.status_code = 200
             mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
 
-            is_valid, error_msg = await sse_client.validate_url("http://test.url", {})
+            is_valid, error_msg = await sse_client.validate_url("http://test.url")
 
             assert is_valid is True
             assert error_msg == ""
 
     async def test_validate_url_invalid_format(self, sse_client):
         """Test URL validation with invalid format."""
-        is_valid, error_msg = await sse_client.validate_url("invalid-url", {})
+        is_valid, error_msg = await sse_client.validate_url("invalid-url")
 
         assert is_valid is False
         assert "Invalid URL format" in error_msg
@@ -1136,7 +1482,7 @@ class TestMCPSseClientUnit:
             mock_response.status_code = 404
             mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
 
-            is_valid, error_msg = await sse_client.validate_url("http://test.url", {})
+            is_valid, error_msg = await sse_client.validate_url("http://test.url")
 
             assert is_valid is True
             assert error_msg == ""
@@ -1149,7 +1495,6 @@ class TestMCPSseClientUnit:
 
         with (
             patch.object(sse_client, "validate_url", return_value=(True, "")),
-            patch.object(sse_client, "pre_check_redirect", return_value=test_url),
             patch.object(sse_client, "_get_or_create_session") as mock_get_session,
         ):
             # Mock session
@@ -1194,29 +1539,10 @@ class TestMCPSseClientUnit:
             result_session = await sse_client._get_or_create_session()
 
             # Verify session manager was called with correct parameters including normalized headers
-            mock_manager.get_session.assert_called_once_with("test_context", sse_client._connection_params, "sse")
-            assert result_session == mock_session
-
-    async def test_pre_check_redirect_with_headers(self, sse_client):
-        """Test pre-check redirect functionality with custom headers."""
-        test_url = "http://test.url"
-        redirect_url = "http://redirect.url"
-        # Use pre-validated headers since pre_check_redirect expects already validated headers
-        test_headers = {"authorization": "Bearer token123"}  # already normalized
-
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_response = MagicMock()
-            mock_response.status_code = 307
-            mock_response.headers.get.return_value = redirect_url
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
-
-            result = await sse_client.pre_check_redirect(test_url, test_headers)
-
-            assert result == redirect_url
-            # Verify validated headers were passed to the request
-            mock_client.return_value.__aenter__.return_value.get.assert_called_with(
-                test_url, timeout=2.0, headers={"Accept": "text/event-stream", **test_headers}
+            mock_manager.get_session.assert_called_once_with(
+                "test_context", sse_client._connection_params, "streamable_http"
             )
+            assert result_session == mock_session
 
     async def test_run_tool_with_retry_on_connection_error(self, sse_client):
         """Test that run_tool retries on connection errors."""
@@ -1505,15 +1831,19 @@ class TestMCPStructuredTool:
 
     def test_run_passes_config_and_kwargs(self, mcp_tool, mock_client):
         """Test that run method properly passes config and kwargs to parent."""
+        from unittest.mock import patch
+
         input_data = {"weatherMain": "Clear", "topN": 1}
         config = {"some": "config"}
         extra_kwargs = {"extra": "param"}
 
-        # Just verify that the method completes successfully with config/kwargs
-        mcp_tool.run(input_data, config=config, **extra_kwargs)
+        # Mock run_until_complete from async_helpers
+        with patch("lfx.base.mcp.util.run_until_complete", return_value="tool_result"):
+            # Just verify that the method completes successfully with config/kwargs
+            mcp_tool.run(input_data, config=config, **extra_kwargs)
 
-        # Verify the tool was executed
-        mock_client.run_tool.assert_called_once()
+            # Verify the tool was executed
+            mock_client.run_tool.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_arun_passes_config_and_kwargs(self, mcp_tool, mock_client):

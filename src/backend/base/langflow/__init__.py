@@ -5,11 +5,15 @@ langflow.* to lfx.* to maintain compatibility with existing code that
 references the old langflow module structure.
 """
 
-import importlib
-import importlib.util
-import sys
-from types import ModuleType
-from typing import Any
+from langflow.helpers.windows_postgres_helper import configure_windows_postgres_event_loop
+
+configure_windows_postgres_event_loop(source="package_init")
+
+import importlib  # noqa: E402
+import importlib.util  # noqa: E402
+import sys  # noqa: E402
+from types import ModuleType  # noqa: E402
+from typing import Any  # noqa: E402
 
 
 class LangflowCompatibilityModule(ModuleType):
@@ -105,6 +109,7 @@ def _setup_compatibility_modules():
         "langflow.base.models.novita_constants": "lfx.base.models.novita_constants",
         "langflow.base.models.ollama_constants": "lfx.base.models.ollama_constants",
         "langflow.base.models.sambanova_constants": "lfx.base.models.sambanova_constants",
+        "langflow.base.models.cometapi_constants": "lfx.base.models.cometapi_constants",
         "langflow.base.prompts": "lfx.base.prompts",
         "langflow.base.prompts.api_utils": "lfx.base.prompts.api_utils",
         "langflow.base.prompts.utils": "lfx.base.prompts.utils",

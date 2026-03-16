@@ -16,12 +16,15 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
 
-    await page.waitForSelector('[data-testid="processingPrompt Template"]', {
-      timeout: 30000,
-    });
+    await page.waitForSelector(
+      '[data-testid="models_and_agentsPrompt Template"]',
+      {
+        timeout: 30000,
+      },
+    );
 
     await page
-      .locator('//*[@id="processingPrompt Template"]')
+      .locator('//*[@id="models_and_agentsPrompt Template"]')
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -29,15 +32,18 @@ test(
 
     await page.getByTestId("promptarea_prompt_template").click();
 
-    await page.getByTestId("modal-promptarea_prompt_template").fill("{text}");
-
-    const valueBadgeOne = await page.locator('//*[@id="badge0"]').innerText();
+    await page.getByTestId("promptarea_prompt_template").fill("{text}");
+    await adjustScreenView(page);
+    await page.getByTestId("button_open_prompt_modal").click();
+    //NOT SURE WE HAVE IT ON THE PAGE BUT WANT IT TO DOUBLE CHECK BEFORE REMOVING IT
+    const valueBadgeOne = await page.locator(`//*[@id="badge0"]`).innerText();
     if (valueBadgeOne != "text") {
       expect(false).toBeTruthy();
     }
 
     await page.getByTestId("genericModalBtnSave").click();
-
+    await page.locator('//*[@id="models_and_agentsPrompt Template"]');
+    await page.getByTestId("textarea_str_text").click();
     await page
       .getByTestId("textarea_str_text")
       .fill(

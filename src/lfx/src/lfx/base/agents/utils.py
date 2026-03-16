@@ -47,9 +47,22 @@ def data_to_messages(data: list[Data | Message]) -> list[BaseMessage]:
         data (List[Data | Message]): The data to convert.
 
     Returns:
-        List[BaseMessage]: The data as messages.
+        List[BaseMessage]: The data as messages, filtering out any with empty content.
     """
-    return [value.to_lc_message() for value in data]
+    messages = []
+    for value in data:
+        try:
+            lc_message = value.to_lc_message()
+            # Only add messages with non-empty content (prevents Anthropic API errors)
+            content = lc_message.content
+            if content and ((isinstance(content, str) and content.strip()) or (isinstance(content, list) and content)):
+                messages.append(lc_message)
+            else:
+                logger.warning("Skipping message with empty content in chat history")
+        except (ValueError, AttributeError) as e:
+            logger.warning(f"Failed to convert message to BaseMessage: {e}")
+            continue
+    return messages
 
 
 def validate_and_create_xml_agent(
@@ -209,6 +222,10 @@ def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
 def get_chat_output_sender_name(self) -> str | None:
     """Get sender_name from ChatOutput component."""
     if not hasattr(self, "graph") or not self.graph:
+        return None
+
+    # Check if graph has vertices attribute (PlaceholderGraph doesn't)
+    if not hasattr(self.graph, "vertices"):
         return None
 
     for vertex in self.graph.vertices:

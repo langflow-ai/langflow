@@ -6,6 +6,7 @@ import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { RECEIVING_INPUT_VALUE, SELECT_AN_OPTION } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
+import KnowledgeBaseUploadModal from "@/modals/knowledgeBaseUploadModal/KnowledgeBaseUploadModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useTypesStore } from "@/stores/typesStore";
@@ -59,6 +60,7 @@ export default function Dropdown({
   externalOptions,
   handleOnNewValue,
   toggle,
+  inspectionPanel,
   ...baseInputProps
 }: BaseInputProps & DropDownComponent): JSX.Element {
   const validOptions = useMemo(
@@ -82,6 +84,7 @@ export default function Dropdown({
   });
   const [filteredMetadata, setFilteredMetadata] = useState(optionsMetaData);
   const [refreshOptions, setRefreshOptions] = useState(false);
+  const [pendingSelect, setPendingSelect] = useState<string | null>(null);
   const refButton = useRef<HTMLButtonElement>(null);
 
   value = useMemo(() => {
@@ -100,7 +103,9 @@ export default function Dropdown({
   const { firstWord } = formatName(name);
   const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
   const PopoverContentDropdown =
-    children || editNode ? PopoverContent : PopoverContentWithoutPortal;
+    children || editNode || inspectionPanel
+      ? PopoverContent
+      : PopoverContentWithoutPortal;
   const { helperText, hasRefreshButton } = baseInputProps;
 
   // API and store hooks
@@ -114,7 +119,14 @@ export default function Dropdown({
   // Utility functions
   const filterMetadataKeys = (
     metadata: Record<string, any> = {},
-    excludeKeys: string[] = ["api_endpoint", "icon", "status", "org_id"],
+    excludeKeys: string[] = [
+      "api_endpoint",
+      "icon",
+      "status",
+      "org_id",
+      "id",
+      "updated_at",
+    ],
   ) => {
     return Object.fromEntries(
       Object.entries(metadata).filter(([key]) => !excludeKeys.includes(key)),
@@ -195,69 +207,7 @@ export default function Dropdown({
       name,
     );
 
-    // TODO: this is a hack to make the connect other models option work
-    // we should find a better way to do this
-    try {
-      if (value === "connect_other_models") {
-        const store = useFlowStore.getState();
-        const node = store.getNode(nodeId!);
-        const templateField = node?.data?.node?.template?.[name!];
-        if (!templateField) return;
-
-        const inputTypes: string[] =
-          (Array.isArray(templateField.input_types)
-            ? templateField.input_types
-            : []) || [];
-        const effectiveInputTypes =
-          inputTypes.length > 0 ? inputTypes : ["LanguageModel"];
-        const tooltipTitle: string =
-          (inputTypes && inputTypes.length > 0
-            ? inputTypes.join("\n")
-            : templateField.type) || "";
-
-        const myId = scapedJSONStringfy({
-          inputTypes: effectiveInputTypes,
-          type: templateField.type,
-          id: nodeId,
-          fieldName: name,
-          proxy: templateField.proxy,
-        });
-
-        const typesData = useTypesStore.getState().data;
-        const grouped = groupByFamily(
-          typesData,
-          (effectiveInputTypes && effectiveInputTypes.length > 0
-            ? effectiveInputTypes.join("\n")
-            : tooltipTitle) || "",
-          true,
-          store.nodes,
-        );
-
-        // Build a pseudo source so compatible target handles (left side) glow
-        const pseudoSourceHandle = scapedJSONStringfy({
-          fieldName: name,
-          id: nodeId,
-          inputTypes: effectiveInputTypes,
-          type: "str",
-        });
-
-        const filterObj = {
-          source: undefined,
-          sourceHandle: undefined,
-          target: nodeId,
-          targetHandle: pseudoSourceHandle,
-          type: "LanguageModel",
-          // Use a generic color; exact tone is resolved when user hovers/clicks handles
-          color: "datatype-fuchsia",
-        } as any;
-
-        // Show compatible handles glow
-        store.setFilterEdge(grouped);
-        store.setFilterType(filterObj);
-      }
-    } finally {
-      setWaitingForResponse(false);
-    }
+    setWaitingForResponse(false);
   };
 
   const handleRefreshButtonPress = async () => {
@@ -271,6 +221,10 @@ export default function Dropdown({
       handleNodeClass,
       postTemplateValue,
       setErrorData,
+      undefined, // parameterName
+      undefined, // callback
+      undefined, // toolMode
+      true, // isRefresh
     )?.then(() => {
       setTimeout(() => {
         setRefreshOptions(false);
@@ -283,7 +237,13 @@ export default function Dropdown({
 
     const metadata = filteredMetadata[index];
     const metadataEntries = Object.entries(metadata)
-      .filter(([key, value]) => value !== null && key !== "icon")
+      .filter(
+        ([key, value]) =>
+          value !== null &&
+          key !== "icon" &&
+          key !== "id" &&
+          key !== "updated_at",
+      )
       .map(([key, value]) => {
         const displayValue =
           typeof value === "string" && value.length > 20
@@ -296,6 +256,14 @@ export default function Dropdown({
       ? `${firstWord}: ${option}\n${metadataEntries.join("\n")}`
       : option;
   };
+
+  // Auto-select a newly created option (e.g. knowledge base) once it appears in the options list
+  useEffect(() => {
+    if (pendingSelect && options.includes(pendingSelect)) {
+      onSelect(pendingSelect);
+      setPendingSelect(null);
+    }
+  }, [options, pendingSelect, onSelect]);
 
   // Effects
   useEffect(() => {
@@ -494,7 +462,12 @@ export default function Dropdown({
                 <CommandItem
                   value={option}
                   onSelect={(currentValue) => {
-                    onSelect(currentValue);
+                    onSelect(
+                      currentValue,
+                      undefined,
+                      undefined,
+                      filteredMetadata?.[index],
+                    );
                     setOpen(false);
                     setWaitingForResponse(false);
                   }}
@@ -638,17 +611,39 @@ export default function Dropdown({
               </div>
             </CommandItem>
           )}
-          <NodeDialog
-            open={openDialog}
-            dialogInputs={dialogInputs}
-            onClose={() => {
-              setOpenDialog(false);
-              setOpen(false);
-            }}
-            nodeId={nodeId!}
-            name={name!}
-            nodeClass={nodeClass!}
-          />
+          {dialogInputs?.fields?.data?.node?.display_name ===
+            "Create Knowledge" ||
+          dialogInputs?.fields?.data?.node?.name === "create_knowledge_base" ? (
+            <KnowledgeBaseUploadModal
+              open={openDialog}
+              setOpen={(isOpen) => {
+                setOpenDialog(isOpen);
+                if (!isOpen) setOpen(false);
+              }}
+              onSubmit={(data) => {
+                setOpenDialog(false);
+                setOpen(false);
+                setPendingSelect(data.sourceName);
+                handleRefreshButtonPress();
+              }}
+              hideAdvanced
+            />
+          ) : (
+            <NodeDialog
+              open={openDialog}
+              dialogInputs={dialogInputs}
+              onClose={() => {
+                setOpenDialog(false);
+                setOpen(false);
+              }}
+              onCreated={(createdValue) => {
+                setPendingSelect(createdValue);
+              }}
+              nodeId={nodeId!}
+              name={name!}
+              nodeClass={nodeClass!}
+            />
+          )}
         </CommandGroup>
       )}
     </CommandList>
@@ -657,7 +652,7 @@ export default function Dropdown({
   const renderPopoverContent = () => (
     <PopoverContentDropdown
       side="bottom"
-      avoidCollisions={!!children}
+      avoidCollisions={!!children || inspectionPanel}
       className="noflow nowheel nopan nodelete nodrag p-0"
       style={
         children ? {} : { minWidth: refButton?.current?.clientWidth ?? "200px" }
@@ -667,7 +662,7 @@ export default function Dropdown({
         {options?.length > 0 && renderSearchInput()}
         {renderOptionsList()}
         {!sourceOptions?.fields && hasRefreshButton && (
-          <div className="sticky bottom-0 border-t bg-background">
+          <div className="border-t bg-background">
             <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-b-md py-3 text-xs font-semibold text-muted-foreground">
               <Button
                 className="w-full"

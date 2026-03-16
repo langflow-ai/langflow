@@ -2,27 +2,58 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+import structlog
+
+
+@pytest.fixture(autouse=True, scope="session")
+def setup_structlog():
+    """Configure structlog before any tests run.
+
+    This ensures the logger is properly initialized and not None,
+    which prevents AttributeError when tests mock logger.configure.
+    """
+    structlog.configure(
+        processors=[
+            structlog.processors.add_log_level,
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.dev.ConsoleRenderer(),
+        ],
+        wrapper_class=structlog.make_filtering_bound_logger(50),  # CRITICAL level
+        context_class=dict,
+        logger_factory=structlog.PrintLoggerFactory(),
+        cache_logger_on_first_use=False,
+    )
 
 
 # Set up test data paths
 def pytest_configure(config):  # noqa: ARG001
     """Configure pytest with data paths and check prerequisites."""
     # Check if langflow is installed first - fail fast
-    try:
-        import langflow  # noqa: F401
+    import os
 
-        pytest.exit(
-            "\n"
-            "ERROR: langflow is installed. These tests require langflow to NOT be installed.\n"
-            "Please run `uv sync` inside the lfx directory to create an isolated environment.\n"
-            "\n"
-            "The lfx tests are designed to run in isolation from langflow to ensure proper\n"
-            "packaging and dependency management.\n",
-            returncode=1,
-        )
-    except ImportError:
-        # Good, langflow is not installed
-        pass
+    if not os.getenv("LFX_TEST_ALLOW_LANGFLOW"):
+        try:
+            import langflow  # noqa: F401
+
+            pytest.exit(
+                "\n"
+                "=" * 80 + "\n"
+                "ERROR: langflow is installed. These tests require langflow to NOT be installed.\n"
+                "\n"
+                "To fix this, run these commands:\n"
+                "\n"
+                "    cd src/lfx\n"
+                "    uv sync\n"
+                "    uv run pytest ...\n"
+                "\n"
+                "The lfx tests are designed to run in isolation from langflow to ensure proper\n"
+                "packaging and dependency management.\n"
+                "=" * 80 + "\n",
+                returncode=1,
+            )
+        except ImportError:
+            # Good, langflow is not installed
+            pass
 
     # Set up test data paths
     data_path = Path(__file__).parent / "data"
@@ -54,9 +85,26 @@ def pytest_collection_modifyitems(config, items):  # noqa: ARG001
             item.add_marker(pytest.mark.slow)
 
 
+@pytest.fixture(autouse=True)
+def use_noop_database():
+    """Ensure all LFX tests use NoopDatabaseService.
+
+    This fixture automatically applies to all tests, ensuring that get_db_service()
+    always returns NoopDatabaseService, preventing tests from requiring a real database.
+    """
+    from lfx.services.database.service import NoopDatabaseService
+
+    with patch("lfx.services.deps.get_db_service", return_value=NoopDatabaseService()):
+        yield
+
+
 @pytest.fixture
 def use_noop_session():
-    """Force the use of NoopSession for testing."""
+    """Force the use of NoopSession for testing.
+
+    DEPRECATED: This fixture is kept for backwards compatibility but is no longer needed
+    since use_noop_database (autouse=True) ensures all tests use the noop database.
+    """
     from lfx.services.session import NoopSession
 
     # Mock session_scope to always return NoopSession

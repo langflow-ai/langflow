@@ -4,6 +4,8 @@ slug: /concepts-components
 ---
 
 import Icon from "@site/src/components/icon";
+import CodeSnippet from "@site/src/components/CodeSnippet";
+import RecursiveCharacterSource from "!!raw-loader!@langflow/src/lfx/src/lfx/components/langchain_utilities/recursive_character.py";
 
 Components are the building blocks of your flows.
 Like classes in an application, each component is designed for a specific use case or integration.
@@ -34,7 +36,13 @@ After adding a component to a flow, configure the component's parameters and con
 
 Each component has inputs, outputs, parameters, and controls related to the component's purpose.
 By default, components show only required and common options.
-To access additional settings and controls, including meta settings, use the [component's header menu](#component-header-menus).
+To access additional settings and controls, including meta settings, use the [component inspection panel](#component-inspection-panel).
+
+### Component inspection panel {#component-inspection-panel}
+
+When you select a component in the workspace, a component inspection panel appears on the right side of the screen.
+
+The inspection panel displays all of a component's parameters, including hidden or advanced parameters.
 
 ### Component header menus
 
@@ -42,11 +50,10 @@ To access a component's header menu, click the component in your workspace.
 
 ![Agent component](/img/agent-component.png)
 
-A few options are available directly on the header menu.
-For example:
+The following options are available directly on the header menu:
 
 - **Code**: Modify component settings by directly editing the component's Python code.
-- **Controls**: Adjust all component parameters, including optional settings that are hidden by default.
+- **Freeze**: Freeze a component and all upstream components to prevent re-running. For more information, see [Freeze a component](#freeze-a-component).
 - **Tool Mode**: Enable this option when combining a component with an **Agent** component.
 
 For all other options, including **Delete** and **Duplicate** controls, click <Icon name="Ellipsis" aria-hidden="true" /> **Show More**.
@@ -78,7 +85,7 @@ Use the freeze option if you expect consistent output from a component _and all 
 Freezing a component prevents that component and all upstream components from re-running, and it preserves the last output state for those components.
 Any future flow runs use the preserved output.
 
-To freeze a component, click the component in the workspace to expose the component's header menu, click <Icon name="Ellipsis" aria-hidden="true" /> **Show More**, and then select **Freeze**.
+To freeze a component, click the component in the workspace to expose the component's header menu, and then click **Freeze**.
 
 ## Component ports
 
@@ -98,7 +105,7 @@ For information about the programmatic representation of each data type, see [La
 * In the workspace, hover over a port to see connection details for that port.
 Click a port to <Icon name="Search" aria-hidden="true" /> **Search** for compatible components.
 
-* If two components have incompatible data types, you can use a processing component like the [**Type Convert** component](/components-processing#type-convert) to convert the data between components.
+* If two components have incompatible data types, you can use a processing component like the [**Type Convert** component](/type-convert) to convert the data between components.
 :::
 
 ### Dynamic ports
@@ -120,7 +127,7 @@ Some components can produce multiple types of output:
 
 For example, a language model component can output _either_ a **Model Response** or **Language Model**.
 The **Model Response** output produces [`Message`](/data-types#message) data that can be passed to another component's `Message` port.
-The **Language Model** output must be connected to a component with a **Language Model** input, such as the [**Structured Output** component](/components-processing#structured-output), that uses the attached LLM to power the receiving component's reasoning.
+The **Language Model** output must be connected to a component with a **Language Model** input, such as the [**Structured Output** component](/structured-output), that uses the attached LLM to power the receiving component's reasoning.
 
 ![Output type selection in the Language Model component](/img/select-output.png)
 
@@ -155,62 +162,32 @@ In the context of creating and running flows, component code does the following:
 * Passes results to the next component in the flow.
 
 All components inherit from a base `Component` class that defines the component's interface and behavior.
-For example, the [**Recursive Character Text Splitter** component](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/langchain_utilities/recursive_character.py) is a child of the [`LCTextSplitterComponent`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/base/textsplitters/model.py) class.
+For example, the [**Recursive Character Text Splitter** component](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/components/langchain_utilities/recursive_character.py) is a child of the [`LCTextSplitterComponent`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/base/textsplitters/model.py) class.
 
 Each component's code includes definitions for inputs and outputs, which are represented in the workspace as [component ports](#component-ports).
 For example, the `RecursiveCharacterTextSplitter` has four inputs. Each input definition specifies the input type, such as `IntInput`, as well as the encoded name, display name, description, and other parameters for that specific input.
 These values determine the component settings, such as display names and tooltips in the visual editor.
 
-```python
-    inputs = [
-        IntInput(
-            name="chunk_size",
-            display_name="Chunk Size",
-            info="The maximum length of each chunk.",
-            value=1000,
-        ),
-        IntInput(
-            name="chunk_overlap",
-            display_name="Chunk Overlap",
-            info="The amount of overlap between chunks.",
-            value=200,
-        ),
-        DataInput(
-            name="data_input",
-            display_name="Input",
-            info="The texts to split.",
-            input_types=["Document", "Data"],
-        ),
-        MessageTextInput(
-            name="separators",
-            display_name="Separators",
-            info='The characters to split on.\nIf left empty defaults to ["\\n\\n", "\\n", " ", ""].',
-            is_list=True,
-        ),
-    ]
-```
+<CodeSnippet
+  source={RecursiveCharacterSource}
+  startLine={17}
+  endLine={41}
+  language="python"
+  title="RecursiveCharacterTextSplitter inputs (from recursive_character.py)"
+  showLineNumbers
+/>
 
 Additionally, components have methods or functions that handle their functionality.
 For example, the `RecursiveCharacterTextSplitter` has two methods:
 
-```python
-    def get_data_input(self) -> Any:
-        return self.data_input
-
-    def build_text_splitter(self) -> TextSplitter:
-        if not self.separators:
-            separators: list[str] | None = None
-        else:
-            # check if the separators list has escaped characters
-            # if there are escaped characters, unescape them
-            separators = [unescape_string(x) for x in self.separators]
-
-        return RecursiveCharacterTextSplitter(
-            separators=separators,
-            chunk_size=self.chunk_size,
-            chunk_overlap=self.chunk_overlap,
-        )
-```
+<CodeSnippet
+  source={RecursiveCharacterSource}
+  startLine={45}
+  endLine={60}
+  language="python"
+  title="RecursiveCharacterTextSplitter methods (from recursive_character.py)"
+  showLineNumbers
+/>
 
 The `get_data_input` method retrieves the text to be split from the component's input, which makes the data available to the class.
 The `build_text_splitter` method creates a `RecursiveCharacterTextSplitter` object by calling its parent class's `build` method. Then, the text is split with the created splitter and passed to the next component.

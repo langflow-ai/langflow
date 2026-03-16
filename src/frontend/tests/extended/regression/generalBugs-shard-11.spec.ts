@@ -94,6 +94,6 @@ test(
     await toolCallingAgentInput.hover();
     await page.mouse.up();
 
-    expect(await page.locator(".react-flow__edge-interaction").count()).toBe(1);
+    expect(await page.locator(".react-flow__edge-interaction").count()).toBe(2);
   },
 );
