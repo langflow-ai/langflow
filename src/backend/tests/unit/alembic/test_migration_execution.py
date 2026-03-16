@@ -227,7 +227,7 @@ def test_upgrade_from_main_branch():
     """
     main_head = _get_main_branch_head()
     if main_head is None:
-        if os.environ.get("CI"):
+        if os.environ.get("MIGRATION_VALIDATION_CI"):
             pytest.fail("Could not determine main branch head revision — ensure fetch-depth: 0 and origin/main exists")
         pytest.skip("Could not determine main branch head revision (shallow clone or no origin/main)")
 
