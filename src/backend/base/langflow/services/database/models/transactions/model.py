@@ -7,6 +7,7 @@ from pydantic import field_serializer, field_validator
 from sqlmodel import JSON, Column, Field, SQLModel
 
 from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
+from langflow.services.database.models.base import LangflowBaseModel
 
 # Keys that should have their values masked for security
 # Pattern uses fullmatch-style matching to avoid false positives like "max_tokens"
@@ -110,7 +111,7 @@ def sanitize_data(data: dict[str, Any] | None) -> dict[str, Any] | None:
     return _sanitize_dict(data)
 
 
-class TransactionBase(SQLModel):
+class TransactionBase(LangflowBaseModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     vertex_id: str = Field(nullable=False)
     target_id: str | None = Field(default=None)

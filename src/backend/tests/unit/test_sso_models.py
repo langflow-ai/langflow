@@ -6,12 +6,13 @@ CASCADE delete, unique constraints, and default values.
 
 import pytest
 from langflow.services.database.models.auth.sso import SSOConfig, SSOUserProfile
+from langflow.services.database.models.base import LangflowBaseModel
 from langflow.services.database.models.user.model import User
 from sqlalchemy import event
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import StaticPool
-from sqlmodel import SQLModel, select
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 # Placeholder for User.password in tests (not a real secret)
@@ -40,11 +41,11 @@ def sso_db_engine():
 async def sso_async_session(sso_db_engine):
     """Async session with SSO and User tables created (real DB)."""
     async with sso_db_engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+        await conn.run_sync(LangflowBaseModel.metadata.create_all)
     async with AsyncSession(sso_db_engine, expire_on_commit=False) as session:
         yield session
     async with sso_db_engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
+        await conn.run_sync(LangflowBaseModel.metadata.drop_all)
     await sso_db_engine.dispose()
 
 

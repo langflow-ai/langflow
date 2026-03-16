@@ -6,10 +6,12 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, computed_field, field_serializer
 from pydantic import Field as PydanticField
 from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, UniqueConstraint, func
-from sqlmodel import JSON, Field, SQLModel
+from sqlmodel import JSON, Field
+
+from langflow.services.database.models.base import LangflowBaseModel
 
 
-class FlowVersion(SQLModel, table=True):  # type: ignore[call-arg]
+class FlowVersion(LangflowBaseModel, table=True):  # type: ignore[call-arg]
     __tablename__ = "flow_version"
     __mapper_args__ = {"confirm_deleted_rows": False}
 

@@ -33,6 +33,7 @@ from langflow.services.database.constants import (
     MIN_POSTGRESQL_MAJOR_VERSION,
     POSTGRESQL_VERSION_REQUIRED_MESSAGE,
 )
+from langflow.services.database.models.base import LangflowBaseModel
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.session import NoopSession
 from langflow.services.database.utils import Result, TableResults
@@ -494,9 +495,11 @@ class DatabaseService(Service):
         # This method is used for testing purposes only
         # We will check that all models are in the database
         # and that the database is up to date with all columns
-        # get all models that are subclasses of SQLModel
+        # get all models that are subclasses of LangflowBaseModel
         sql_models = [
-            model for model in models.__dict__.values() if isinstance(model, type) and issubclass(model, SQLModel)
+            model
+            for model in models.__dict__.values()
+            if isinstance(model, type) and issubclass(model, LangflowBaseModel)
         ]
         # Use engine.begin() for proper async connection management with NullPool
         async with self.engine.begin() as conn:
@@ -551,7 +554,7 @@ class DatabaseService(Service):
 
         logger.debug("Creating database and tables")
 
-        for table in SQLModel.metadata.sorted_tables:
+        for table in LangflowBaseModel.metadata.sorted_tables:
             try:
                 table.create(connection, checkfirst=True)
             except OperationalError as oe:

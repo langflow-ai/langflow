@@ -11,12 +11,13 @@ from sqlmodel import JSON, Column, Field, SQLModel
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.properties import Properties
 from langflow.schema.validators import str_to_timestamp_validator
+from langflow.services.database.models.base import LangflowBaseModel
 
 if TYPE_CHECKING:
     from langflow.schema.message import Message
 
 
-class MessageBase(SQLModel):
+class MessageBase(LangflowBaseModel):
     timestamp: Annotated[datetime, str_to_timestamp_validator] = Field(
         default_factory=lambda: datetime.now(timezone.utc)
     )

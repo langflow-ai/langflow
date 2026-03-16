@@ -4,12 +4,13 @@ from uuid import UUID, uuid4
 from sqlalchemy import Text, UniqueConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
+from langflow.services.database.models.base import LangflowBaseModel
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.user.model import User
 
 
-class FolderBase(SQLModel):
+class FolderBase(LangflowBaseModel):
     name: str = Field(index=True)
     description: str | None = Field(default=None, sa_column=Column(Text))
     auth_settings: dict | None = Field(

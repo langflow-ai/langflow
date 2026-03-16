@@ -9,6 +9,7 @@ from pydantic.alias_generators import to_camel
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, Text
 
 from langflow.serialization.serialization import serialize
+from langflow.services.database.models.base import LangflowBaseModel
 
 
 class SpanKind(str, Enum):
@@ -56,7 +57,7 @@ class SpanStatus(str, Enum):
     ERROR = "error"
 
 
-class TraceBase(SQLModel):
+class TraceBase(LangflowBaseModel):
     """Base model for traces."""
 
     name: str = Field(nullable=False, description="Name of the trace (usually flow name)")
@@ -199,7 +200,7 @@ class TraceCreate(SQLModel):
     session_id: str | None = None
 
 
-class SpanBase(SQLModel):
+class SpanBase(LangflowBaseModel):
     """Base model for spans (individual execution steps)."""
 
     name: str = Field(nullable=False, description="Name of the span following OTel convention: '{operation} {model}'")

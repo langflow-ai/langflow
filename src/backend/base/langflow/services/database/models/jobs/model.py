@@ -4,7 +4,9 @@ from uuid import UUID
 
 from sqlalchemy import Column, DateTime
 from sqlalchemy import Enum as SQLEnum
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field
+
+from langflow.services.database.models.base import LangflowBaseModel
 
 
 class JobStatus(str, Enum):
@@ -31,7 +33,7 @@ class JobType(str, Enum):
     EVALUATION = "evaluation"
 
 
-class JobBase(SQLModel):
+class JobBase(LangflowBaseModel):
     job_id: UUID = Field(primary_key=True, index=True)
     flow_id: UUID = Field(index=True)
     status: JobStatus = Field(

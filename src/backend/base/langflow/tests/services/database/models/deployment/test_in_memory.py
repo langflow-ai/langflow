@@ -10,6 +10,7 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
+from langflow.services.database.models.base import LangflowBaseModel
 from langflow.services.database.models.deployment.crud import (
     count_deployments_by_provider,
     create_deployment,
@@ -35,7 +36,7 @@ from sqlalchemy import event
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import StaticPool
-from sqlmodel import SQLModel, select
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 _TEST_PASSWORD = "hashed"  # noqa: S105  # pragma: allowlist secret
@@ -67,11 +68,11 @@ def db_engine_fixture():
 @pytest.fixture(name="db")
 async def db_fixture(db_engine):
     async with db_engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+        await conn.run_sync(LangflowBaseModel.metadata.create_all)
     async with AsyncSession(db_engine, expire_on_commit=False) as session:
         yield session
     async with db_engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
+        await conn.run_sync(LangflowBaseModel.metadata.drop_all)
     await db_engine.dispose()
 
 

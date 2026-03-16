@@ -50,7 +50,7 @@ repos:
     hooks:
       - id: local-biome-check
         name: biome check
-        entry: bash -c 'cd src/frontend && files=("${@#src/frontend/}") && npx @biomejs/biome check --write --files-ignore-unknown=true --diagnostic-level=error "${files[@]}"' --
+        entry: bash -c 'cd src/frontend && files=("${@#src/frontend/}") && npx @biomejs/biome check --write --files-ignore-unknown=true --no-errors-on-unmatched --diagnostic-level=error "${files[@]}"' --
         language: system
         types: [text]
         files: "^src/frontend/.*\\.(jsx?|tsx?|c(js|ts)|m(js|ts)|d\\.(ts|cts|mts)|jsonc?)$"

@@ -1,5 +1,6 @@
 from .api_key import ApiKey
 from .auth import SSOConfig, SSOUserProfile
+from .base import LangflowBaseModel
 from .deployment import Deployment
 from .deployment_provider_account import DeploymentProviderAccount
 from .file import File
@@ -12,6 +13,7 @@ from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
 from .user import User
 from .variable import Variable
+from .vertex_builds import VertexBuildTable
 
 __all__ = [
     "ApiKey",
@@ -22,6 +24,7 @@ __all__ = [
     "FlowVersion",
     "Folder",
     "Job",
+    "LangflowBaseModel",
     "MessageTable",
     "SSOConfig",
     "SSOUserProfile",
@@ -30,4 +33,5 @@ __all__ = [
     "TransactionTable",
     "User",
     "Variable",
+    "VertexBuildTable",
 ]

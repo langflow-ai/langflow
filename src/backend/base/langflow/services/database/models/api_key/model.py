@@ -3,9 +3,10 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from pydantic import field_validator
-from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
+from sqlmodel import Column, DateTime, Field, Relationship, func
 
 from langflow.schema.serialize import UUIDstr
+from langflow.services.database.models.base import LangflowBaseModel
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user.model import User
@@ -15,7 +16,7 @@ def utc_now():
     return datetime.now(timezone.utc)
 
 
-class ApiKeyBase(SQLModel):
+class ApiKeyBase(LangflowBaseModel):
     name: str | None = Field(index=True, nullable=True, default=None)
     last_used_at: datetime | None = Field(default=None, nullable=True)
     total_uses: int = Field(default=0)

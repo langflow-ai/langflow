@@ -8,6 +8,7 @@ from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
 from langflow.schema.serialize import UUIDstr
+from langflow.services.database.models.base import LangflowBaseModel
 from langflow.services.database.utils import validate_non_empty_string
 
 if TYPE_CHECKING:
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
     from langflow.services.database.models.user.model import User
 
 
-class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
+class Deployment(LangflowBaseModel, table=True):  # type: ignore[call-arg]
     __tablename__ = "deployment"
     __table_args__ = (
         UniqueConstraint("deployment_provider_account_id", "name", name="uq_deployment_name_in_provider"),

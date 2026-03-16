@@ -13,12 +13,13 @@ from uuid import uuid4
 
 import sqlalchemy as sa
 from sqlalchemy import Column, ForeignKey, Index
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field
 
 from langflow.schema.serialize import UUIDstr
+from langflow.services.database.models.base import LangflowBaseModel
 
 
-class SSOUserProfile(SQLModel, table=True):  # type: ignore[call-arg]
+class SSOUserProfile(LangflowBaseModel, table=True):  # type: ignore[call-arg]
     """SSO profile per user. Used by the SSO plugin for JIT provisioning and login."""
 
     __tablename__ = "sso_user_profile"
@@ -43,7 +44,7 @@ class SSOUserProfile(SQLModel, table=True):  # type: ignore[call-arg]
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
-class SSOConfig(SQLModel, table=True):  # type: ignore[call-arg]
+class SSOConfig(LangflowBaseModel, table=True):  # type: ignore[call-arg]
     """SSO provider configuration (persisted in DB). Used by the SSO plugin."""
 
     __tablename__ = "sso_config"

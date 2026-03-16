@@ -16,6 +16,7 @@ from sqlalchemy import Text, UniqueConstraint, text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.schema.data import Data
+from langflow.services.database.models.base import LangflowBaseModel
 
 if TYPE_CHECKING:
     from langflow.services.database.models.folder.model import Folder
@@ -29,7 +30,7 @@ class AccessTypeEnum(str, Enum):
     PUBLIC = "PUBLIC"
 
 
-class FlowBase(SQLModel):
+class FlowBase(LangflowBaseModel):
     # Supresses warnings during migrations
     __mapper_args__ = {"confirm_deleted_rows": False}
 

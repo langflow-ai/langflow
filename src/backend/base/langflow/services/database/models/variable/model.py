@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 from pydantic import ValidationInfo, field_validator
 from sqlmodel import JSON, Column, DateTime, Field, Relationship, SQLModel, func
 
+from langflow.services.database.models.base import LangflowBaseModel
 from langflow.services.variable.constants import CREDENTIAL_TYPE
 
 if TYPE_CHECKING:
@@ -15,7 +16,7 @@ def utc_now():
     return datetime.now(timezone.utc)
 
 
-class VariableBase(SQLModel):
+class VariableBase(LangflowBaseModel):
     name: str = Field(description="Name of the variable")
     value: str = Field(description="Encrypted value of the variable")
     default_fields: list[str] | None = Field(sa_column=Column(JSON))

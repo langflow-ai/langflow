@@ -1,20 +1,18 @@
-# noqa: INP001
 import asyncio
 import hashlib
+import inspect as python_inspect
 import os
 from logging.config import fileConfig
 from typing import Any
 
-
 from alembic import context
+from lfx.log.logger import logger
 from sqlalchemy import pool, text
 from sqlalchemy.event import listen
 from sqlalchemy.ext.asyncio import async_engine_from_config
+from sqlmodel import SQLModel
 
-from lfx.log.logger import logger
-
-from langflow.services.database.service import SQLModel
-
+from langflow.services.database.models.base import LangflowBaseModel
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -32,12 +30,112 @@ NAMING_CONVENTION = {
     "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
     "pk": "pk_%(table_name)s",
 }
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-target_metadata = SQLModel.metadata
+# ---------------------------------------------------------------------------
+# Use *isolated* LangflowBaseModel metadata — NOT the global SQLModel.metadata.
+# This ensures Alembic autogenerate only sees tables Langflow explicitly owns.
+# ---------------------------------------------------------------------------
+target_metadata = LangflowBaseModel.metadata
 target_metadata.naming_convention = NAMING_CONVENTION
+
+# ---------------------------------------------------------------------------
+# Table name whitelist derived from our isolated registry.
+# Used by the include_object hook to skip tables from external libraries.
+# ---------------------------------------------------------------------------
+_langflow_table_names: set[str] | None = None
+
+
+def _get_langflow_table_names() -> set[str]:
+    """Lazily compute the set of table names owned by Langflow."""
+    global _langflow_table_names  # noqa: PLW0603
+    if _langflow_table_names is None:
+        _langflow_table_names = {t.name for t in target_metadata.sorted_tables}
+    return _langflow_table_names
+
+
+def _include_object(object_, name, type_, reflected, compare_to) -> bool:  # noqa: ARG001
+    """Alembic ``include_object`` hook.
+
+    Ensures that autogenerate only considers tables registered in
+    ``LangflowBaseModel.metadata``.  Tables created by third-party libraries
+    (e.g. ``alembic_version``, or any tables registered on the global
+    ``SQLModel.metadata``) are silently skipped.
+    """
+    # Always let non-table objects through (columns, indexes, constraints, etc.)
+    if type_ != "table":
+        return True
+
+    # For tables: only include if they belong to the Langflow registry
+    return name in _get_langflow_table_names()
+
+
+# ---------------------------------------------------------------------------
+# Migration-time sanity check
+# ---------------------------------------------------------------------------
+def _validate_model_hierarchy() -> None:
+    """Abort migration if any ``table=True`` model bypasses ``LangflowBaseModel``.
+
+    Scans the ``langflow.services.database.models`` package for every class
+    that:
+    * has ``table=True`` (i.e. has a ``__tablename__``)
+    * is a subclass of ``SQLModel``
+
+    If such a class is **not** also a subclass of ``LangflowBaseModel``, the
+    migration is aborted with a descriptive ``RuntimeError``.
+
+    This acts as a guardrail: developers who forget to use
+    ``LangflowBaseModel`` will get an immediate, actionable error during
+    ``alembic upgrade`` or ``alembic check``, long before a PR is merged.
+    """
+    # Import the models package — this triggers all model registrations.
+    from langflow.services.database import models
+
+    violations: list[str] = []
+
+    # Walk all members of the models package
+    for attr_name in dir(models):
+        obj = getattr(models, attr_name, None)
+        if obj is None:
+            continue
+        if not python_inspect.isclass(obj):
+            continue
+        if not issubclass(obj, SQLModel):
+            continue
+        # Only care about classes that actually declare a table
+        if not getattr(obj, "__tablename__", None):
+            continue
+        # SQLModel itself has __tablename__ as a class variable — skip it
+        if obj is SQLModel or obj is LangflowBaseModel:
+            continue
+        # The check: every table model must inherit from LangflowBaseModel
+        if not issubclass(obj, LangflowBaseModel):
+            violations.append(
+                f"  • {obj.__module__}.{obj.__qualname__} "
+                f"(table={obj.__tablename__!r}) inherits SQLModel but NOT LangflowBaseModel"
+            )
+
+    if violations:
+        sep = "\n"
+        msg = (
+            f"\n{'=' * 72}\n"
+            f"MIGRATION ABORTED — Model hierarchy violation detected!\n"
+            f"{'=' * 72}\n"
+            f"The following table model(s) inherit from SQLModel but do NOT\n"
+            f"inherit from LangflowBaseModel.  This breaks metadata isolation\n"
+            f"and will cause Alembic autogenerate to include foreign tables.\n\n"
+            f"{sep.join(violations)}\n\n"
+            f"Fix: change the base class to LangflowBaseModel (or a subclass\n"
+            f"of LangflowBaseModel) for each model listed above.\n"
+            f"{'=' * 72}\n"
+        )
+        raise RuntimeError(msg)
+
+    logger.info("Model hierarchy validation passed — all table models use LangflowBaseModel.")
+
+
+# Run the validation immediately when env.py is loaded (i.e., at migration time).
+_validate_model_hierarchy()
+
+
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
@@ -63,6 +161,7 @@ def run_migrations_offline() -> None:
         "literal_binds": True,
         "dialect_opts": {"paramstyle": "named"},
         "render_as_batch": True,
+        "include_object": _include_object,
     }
 
     # Only add prepare_threshold for PostgreSQL
@@ -95,6 +194,7 @@ def _do_run_migrations(connection):
         "connection": connection,
         "target_metadata": target_metadata,
         "render_as_batch": True,
+        "include_object": _include_object,
     }
 
     # Only add prepare_threshold for PostgreSQL
@@ -116,6 +216,7 @@ def _do_run_migrations(connection):
             connection.execute(text("SET LOCAL lock_timeout = '180s';"))
             connection.execute(text(f"SELECT pg_advisory_xact_lock({lock_key});"))
         context.run_migrations()
+
 
 async def _run_async_migrations() -> None:
     # Disable prepared statements for PostgreSQL (required for PgBouncer compatibility)

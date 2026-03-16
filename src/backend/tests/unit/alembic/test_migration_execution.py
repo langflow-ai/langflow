@@ -6,7 +6,7 @@ from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
-from langflow.services.database.service import SQLModel
+from langflow.services.database.models.base import LangflowBaseModel
 from sqlalchemy import create_engine, inspect
 
 
@@ -104,7 +104,7 @@ def test_no_phantom_migrations():
         try:
             with engine.connect() as connection:
                 migration_context = MigrationContext.configure(connection)
-                diffs = compare_metadata(migration_context, SQLModel.metadata)
+                diffs = compare_metadata(migration_context, LangflowBaseModel.metadata)
         finally:
             engine.dispose()
 

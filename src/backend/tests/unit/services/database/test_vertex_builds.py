@@ -279,9 +279,9 @@ async def test_concurrent_log_vertex_build(vertex_build_data, mock_settings):
 
         import asyncio
 
+        from langflow.services.database.models.base import LangflowBaseModel
         from sqlalchemy.ext.asyncio import create_async_engine
         from sqlalchemy.pool import StaticPool
-        from sqlmodel import SQLModel
         from sqlmodel.ext.asyncio.session import AsyncSession
 
         # Create a new engine for each session to avoid concurrency issues
@@ -293,7 +293,7 @@ async def test_concurrent_log_vertex_build(vertex_build_data, mock_settings):
 
         # Create tables
         async with engine.begin() as conn:
-            await conn.run_sync(SQLModel.metadata.create_all)
+            await conn.run_sync(LangflowBaseModel.metadata.create_all)
 
         # Create multiple builds concurrently
         async def create_build():

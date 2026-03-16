@@ -3,14 +3,31 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
+from langflow.services.database.models.base import LangflowBaseModel
 from langflow.services.database.models.variable.model import VariableUpdate
 from langflow.services.deps import get_settings_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
 from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from sqlalchemy.ext.asyncio import create_async_engine
-from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
+
+
+@pytest.fixture(autouse=True)
+def mock_auth_encryption():
+    # Patch encryption/decryption to actually do something for testing
+    # This prevents using the no-op lfx AuthService during tests
+    def encrypt(x, *args, **kwargs):  # noqa: ARG001
+        return f"enc_{x}"
+
+    def decrypt(x, *args, **kwargs):  # noqa: ARG001
+        return x.replace("enc_", "")
+
+    with (
+        patch("langflow.services.auth.utils.encrypt_api_key", side_effect=encrypt),
+        patch("langflow.services.auth.utils.decrypt_api_key", side_effect=decrypt),
+    ):
+        yield
 
 
 @pytest.fixture
@@ -23,7 +40,7 @@ def service():
 async def session():
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+        await conn.run_sync(LangflowBaseModel.metadata.create_all)
     async with AsyncSession(engine, expire_on_commit=False) as session:
         yield session
 

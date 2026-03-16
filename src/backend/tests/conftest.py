@@ -20,6 +20,7 @@ from httpx import ASGITransport, AsyncClient
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.main import create_app
 from langflow.services.database.models.api_key.model import ApiKey, UnmaskedApiKeyRead
+from langflow.services.database.models.base import LangflowBaseModel
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.transactions.model import TransactionTable
@@ -31,7 +32,7 @@ from lfx.graph import Graph
 from lfx.log.logger import logger
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import selectinload
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import Session, create_engine, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
@@ -233,11 +234,11 @@ def session_fixture():
         cursor.close()
 
     try:
-        SQLModel.metadata.create_all(engine)
+        LangflowBaseModel.metadata.create_all(engine)
         with Session(engine) as session:
             yield session
     finally:
-        SQLModel.metadata.drop_all(engine)
+        LangflowBaseModel.metadata.drop_all(engine)
         engine.dispose()
 
 
@@ -246,11 +247,11 @@ async def async_session():
     engine = create_async_engine("sqlite+aiosqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     try:
         async with engine.begin() as conn:
-            await conn.run_sync(SQLModel.metadata.create_all)
+            await conn.run_sync(LangflowBaseModel.metadata.create_all)
         async with AsyncSession(engine, expire_on_commit=False) as session:
             yield session
         async with engine.begin() as conn:
-            await conn.run_sync(SQLModel.metadata.drop_all)
+            await conn.run_sync(LangflowBaseModel.metadata.drop_all)
     finally:
         await engine.dispose()
 
