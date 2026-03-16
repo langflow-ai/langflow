@@ -313,9 +313,7 @@ def get_provider_config(provider: str) -> dict:
 
 def get_model_providers() -> list[str]:
     """Return a sorted list of unique provider names."""
-    return sorted(
-        {md.get("provider", "Unknown") for group in MODELS_DETAILED for md in group}
-    )
+    return sorted({md.get("provider", "Unknown") for group in MODELS_DETAILED for md in group})
 
 
 def get_provider_for_model_name(model_name: str) -> str:
@@ -408,9 +406,7 @@ def get_unified_models_detailed(
         provider_map.setdefault(prov, []).append(
             {
                 "model_name": metadata.get("name"),
-                "metadata": {
-                    k: v for k, v in metadata.items() if k not in ("provider", "name")
-                },
+                "metadata": {k: v for k, v in metadata.items() if k not in ("provider", "name")},
             }
         )
 
@@ -427,9 +423,7 @@ def get_unified_models_detailed(
 
         # If only_defaults is True, filter to only default models
         if only_defaults:
-            provider_map[prov] = [
-                m for m in models if m["metadata"].get("default", False)
-            ]
+            provider_map[prov] = [m for m in models if m["metadata"].get("default", False)]
 
     # Format as requested
     return [
@@ -443,9 +437,7 @@ def get_unified_models_detailed(
     ]
 
 
-def get_api_key_for_provider(
-    user_id: UUID | str | None, provider: str, api_key: str | None = None
-) -> str | None:
+def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: str | None = None) -> str | None:
     """Get API key from self.api_key or global variables.
 
     When api_key is set to an environment variable name (e.g. ANTHROPIC_API_KEY),
@@ -475,9 +467,7 @@ def get_api_key_for_provider(
                         return None
                     try:
                         return await variable_service.get_variable(
-                            user_id=(
-                                UUID(user_id) if isinstance(user_id, str) else user_id
-                            ),
+                            user_id=(UUID(user_id) if isinstance(user_id, str) else user_id),
                             name=var_name,
                             field="",
                             session=session,
@@ -529,9 +519,7 @@ def get_api_key_for_provider(
     return run_until_complete(_get_variable())
 
 
-def get_all_variables_for_provider(
-    user_id: UUID | str | None, provider: str
-) -> dict[str, str]:
+def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) -> dict[str, str]:
     """Get all configured variables for a provider from database or environment.
 
     Args:
@@ -655,9 +643,7 @@ def _validate_and_get_enabled_providers(
                 variable = all_variables[var_key]
                 if variable.value is not None:
                     try:
-                        decrypted_value = auth_utils.decrypt_api_key(
-                            variable.value, settings_service=settings_service
-                        )
+                        decrypted_value = auth_utils.decrypt_api_key(variable.value, settings_service=settings_service)
                         if decrypted_value and decrypted_value.strip():
                             value = decrypted_value
                     except Exception as e:  # noqa: BLE001
@@ -719,9 +705,7 @@ def get_provider_from_variable_key(variable_key: str) -> str | None:
     return None
 
 
-def validate_model_provider_key(
-    provider: str, variables: dict[str, str], model_name: str | None = None
-) -> None:
+def validate_model_provider_key(provider: str, variables: dict[str, str], model_name: str | None = None) -> None:
     """Validate a model provider by making a minimal test call.
 
     Args:
@@ -769,9 +753,7 @@ def validate_model_provider_key(
             api_key = variables.get("ANTHROPIC_API_KEY")
             if not api_key:
                 return
-            llm = ChatAnthropic(
-                anthropic_api_key=api_key, model=first_model, max_tokens=1
-            )
+            llm = ChatAnthropic(anthropic_api_key=api_key, model=first_model, max_tokens=1)
             llm.invoke("test")
 
         elif provider == "Google Generative AI":
@@ -780,9 +762,7 @@ def validate_model_provider_key(
             api_key = variables.get("GOOGLE_API_KEY")
             if not api_key:
                 return
-            llm = ChatGoogleGenerativeAI(
-                google_api_key=api_key, model=first_model, max_tokens=1
-            )
+            llm = ChatGoogleGenerativeAI(google_api_key=api_key, model=first_model, max_tokens=1)
             llm.invoke("test")
 
         elif provider == "IBM WatsonX":
@@ -824,15 +804,10 @@ def validate_model_provider_key(
             if model_name:
                 available_models = [m.get("name") for m in data["models"]]
                 # Exact match or match with :latest
-                if (
-                    model_name not in available_models
-                    and f"{model_name}:latest" not in available_models
-                ):
+                if model_name not in available_models and f"{model_name}:latest" not in available_models:
                     # Lenient check for missing tag
                     if ":" not in model_name:
-                        if not any(
-                            m.startswith(f"{model_name}:") for m in available_models
-                        ):
+                        if not any(m.startswith(f"{model_name}:") for m in available_models):
                             available_str = ", ".join(available_models[:3])
                             msg = f"Model '{model_name}' not found on Ollama server. Available: {available_str}"
                             logger.error(msg)
@@ -926,9 +901,7 @@ def get_language_model_options(
                                 enabled = set(json.loads(var.value))
                     return disabled, enabled
 
-            disabled_models, explicitly_enabled_models = run_until_complete(
-                _get_model_status()
-            )
+            disabled_models, explicitly_enabled_models = run_until_complete(_get_model_status())
         except Exception:  # noqa: BLE001, S110
             # If we can't get model status, continue without filtering
             pass
@@ -968,9 +941,7 @@ def get_language_model_options(
                     # Build dict with raw Variable values (encrypted for secrets, plaintext for others)
                     # We need to fetch raw Variable objects because VariableRead has value=None for credentials
                     all_provider_variables = {}
-                    user_id_uuid = (
-                        UUID(user_id) if isinstance(user_id, str) else user_id
-                    )
+                    user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
 
                     for provider in provider_variable_map:
                         # Get ALL variables for this provider (not just the primary one)
@@ -988,28 +959,20 @@ def get_language_model_options(
 
                             try:
                                 # Get the raw Variable object to access the actual value
-                                variable_obj = (
-                                    await variable_service.get_variable_object(
-                                        user_id=user_id_uuid,
-                                        name=var_name,
-                                        session=session,
-                                    )
+                                variable_obj = await variable_service.get_variable_object(
+                                    user_id=user_id_uuid,
+                                    name=var_name,
+                                    session=session,
                                 )
                                 if variable_obj and variable_obj.value:
-                                    all_provider_variables[var_name] = VarWithValue(
-                                        variable_obj.value
-                                    )
+                                    all_provider_variables[var_name] = VarWithValue(variable_obj.value)
                             except Exception as e:  # noqa: BLE001
                                 # Variable not found or error accessing it - skip
-                                logger.error(
-                                    f"Error accessing variable {var_name} for provider {provider}: {e}"
-                                )
+                                logger.error(f"Error accessing variable {var_name} for provider {provider}: {e}")
                                 continue
 
                     # Use shared helper to validate and get enabled providers
-                    return _validate_and_get_enabled_providers(
-                        all_provider_variables, provider_variable_map
-                    )
+                    return _validate_and_get_enabled_providers(all_provider_variables, provider_variable_map)
 
             enabled_providers = run_until_complete(_get_enabled_providers())
         except Exception:  # noqa: BLE001, S110
@@ -1018,9 +981,7 @@ def get_language_model_options(
 
     # Replace static defaults with actual available models from configured instances
     if enabled_providers:
-        replace_with_live_models(
-            all_models, user_id, enabled_providers, "llm", model_provider_metadata
-        )
+        replace_with_live_models(all_models, user_id, enabled_providers, "llm", model_provider_metadata)
 
     options = []
 
@@ -1033,9 +994,7 @@ def get_language_model_options(
         icon = provider_data.get("icon", "Bot")
 
         # Check if provider is enabled
-        is_provider_enabled = (
-            not user_id or not enabled_providers or provider in enabled_providers
-        )
+        is_provider_enabled = not user_id or not enabled_providers or provider in enabled_providers
 
         # Track this provider
         if is_provider_enabled:
@@ -1072,9 +1031,7 @@ def get_language_model_options(
                 "api_key_param": param_mapping.get("api_key_param", "api_key"),
             }
             if "max_tokens_field_name" in provider_meta:
-                option_metadata["max_tokens_field_name"] = provider_meta[
-                    "max_tokens_field_name"
-                ]
+                option_metadata["max_tokens_field_name"] = provider_meta["max_tokens_field_name"]
 
             option = {
                 "name": model_name,
@@ -1096,9 +1053,7 @@ def get_language_model_options(
             if "url_param" in param_mapping:
                 option["metadata"]["url_param"] = param_mapping["url_param"]
             if "project_id_param" in param_mapping:
-                option["metadata"]["project_id_param"] = param_mapping[
-                    "project_id_param"
-                ]
+                option["metadata"]["project_id_param"] = param_mapping["project_id_param"]
 
             options.append(option)
 
@@ -1175,9 +1130,7 @@ def get_embedding_model_options(
                                 enabled = set(json.loads(var.value))
                     return disabled, enabled
 
-            disabled_models, explicitly_enabled_models = run_until_complete(
-                _get_model_status()
-            )
+            disabled_models, explicitly_enabled_models = run_until_complete(_get_model_status())
         except Exception:  # noqa: BLE001, S110
             # If we can't get model status, continue without filtering
             pass
@@ -1217,9 +1170,7 @@ def get_embedding_model_options(
                     # Build dict with raw Variable values (encrypted for secrets, plaintext for others)
                     # We need to fetch raw Variable objects because VariableRead has value=None for credentials
                     all_provider_variables = {}
-                    user_id_uuid = (
-                        UUID(user_id) if isinstance(user_id, str) else user_id
-                    )
+                    user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
 
                     for provider in provider_variable_map:
                         # Get ALL variables for this provider (not just the primary one)
@@ -1237,28 +1188,20 @@ def get_embedding_model_options(
 
                             try:
                                 # Get the raw Variable object to access the actual value
-                                variable_obj = (
-                                    await variable_service.get_variable_object(
-                                        user_id=user_id_uuid,
-                                        name=var_name,
-                                        session=session,
-                                    )
+                                variable_obj = await variable_service.get_variable_object(
+                                    user_id=user_id_uuid,
+                                    name=var_name,
+                                    session=session,
                                 )
                                 if variable_obj and variable_obj.value:
-                                    all_provider_variables[var_name] = VarWithValue(
-                                        variable_obj.value
-                                    )
+                                    all_provider_variables[var_name] = VarWithValue(variable_obj.value)
                             except Exception as e:  # noqa: BLE001
                                 # Variable not found or error accessing it - skip
-                                logger.error(
-                                    f"Error accessing variable {var_name} for provider {provider}: {e}"
-                                )
+                                logger.error(f"Error accessing variable {var_name} for provider {provider}: {e}")
                                 continue
 
                     # Use shared helper to validate and get enabled providers
-                    return _validate_and_get_enabled_providers(
-                        all_provider_variables, provider_variable_map
-                    )
+                    return _validate_and_get_enabled_providers(all_provider_variables, provider_variable_map)
 
             enabled_providers = run_until_complete(_get_enabled_providers())
         except Exception:  # noqa: BLE001, S110
@@ -1322,9 +1265,7 @@ def get_embedding_model_options(
         icon = provider_data.get("icon", "Bot")
 
         # Check if provider is enabled
-        is_provider_enabled = (
-            not user_id or not enabled_providers or provider in enabled_providers
-        )
+        is_provider_enabled = not user_id or not enabled_providers or provider in enabled_providers
 
         # Track this provider
         if is_provider_enabled:
@@ -1355,12 +1296,8 @@ def get_embedding_model_options(
                 "category": provider,
                 "provider": provider,
                 "metadata": {
-                    "embedding_class": EMBEDDING_PROVIDER_CLASS_MAPPING.get(
-                        provider, "OpenAIEmbeddings"
-                    ),
-                    "param_mapping": param_mappings.get(
-                        provider, param_mappings["OpenAI"]
-                    ),
+                    "embedding_class": EMBEDDING_PROVIDER_CLASS_MAPPING.get(provider, "OpenAIEmbeddings"),
+                    "param_mapping": param_mappings.get(provider, param_mappings["OpenAI"]),
                     "model_type": "embeddings",  # Mark as embedding model
                 },
             }
@@ -1370,10 +1307,7 @@ def get_embedding_model_options(
     # Add disabled providers (providers that exist in metadata but have no enabled models)
     if user_id:
         for provider, metadata in model_provider_metadata.items():
-            if (
-                provider not in providers_with_models
-                and provider in EMBEDDING_PROVIDER_CLASS_MAPPING
-            ):
+            if provider not in providers_with_models and provider in EMBEDDING_PROVIDER_CLASS_MAPPING:
                 # This provider has no enabled models and supports embeddings, add it as a disabled provider entry
                 options.append(
                     {
@@ -1440,9 +1374,7 @@ def normalize_model_names_to_dicts(
             # Add max_tokens_field_name from provider metadata
             provider_meta = model_provider_metadata.get(provider, {})
             if "max_tokens_field_name" in provider_meta:
-                runtime_metadata["max_tokens_field_name"] = provider_meta[
-                    "max_tokens_field_name"
-                ]
+                runtime_metadata["max_tokens_field_name"] = provider_meta["max_tokens_field_name"]
 
             # Add reasoning models list for OpenAI
             if provider == "OpenAI" and base_metadata.get("reasoning"):
@@ -1539,9 +1471,7 @@ def get_llm(
     if not api_key and provider != "Ollama":
         # Get the correct variable name from the provider variable mapping
         provider_variable_map = get_model_provider_variable_mapping()
-        variable_name = provider_variable_map.get(
-            provider, f"{provider.upper().replace(' ', '_')}_API_KEY"
-        )
+        variable_name = provider_variable_map.get(provider, f"{provider.upper().replace(' ', '_')}_API_KEY")
         msg = (
             f"{provider} API key is required when using {provider} provider. "
             f"Please provide it in the component or configure it globally as {variable_name}."
@@ -1581,9 +1511,7 @@ def get_llm(
                 max_tokens_param = metadata.get("max_tokens_field_name")
                 if not max_tokens_param:
                     provider_meta = model_provider_metadata.get(provider, {})
-                    max_tokens_param = provider_meta.get(
-                        "max_tokens_field_name", "max_tokens"
-                    )
+                    max_tokens_param = provider_meta.get("max_tokens_field_name", "max_tokens")
                 kwargs[max_tokens_param] = max_tokens_int
         except (TypeError, ValueError):
             pass  # Skip invalid max_tokens (e.g. empty string from form input)
@@ -1604,15 +1532,12 @@ def get_llm(
 
         # Priority: component value > database value > env var
         watsonx_url_value = (
-            watsonx_url
-            if watsonx_url
-            else provider_vars.get("WATSONX_URL") or os.environ.get("WATSONX_URL")
+            watsonx_url if watsonx_url else provider_vars.get("WATSONX_URL") or os.environ.get("WATSONX_URL")
         )
         watsonx_project_id_value = (
             watsonx_project_id
             if watsonx_project_id
-            else provider_vars.get("WATSONX_PROJECT_ID")
-            or os.environ.get("WATSONX_PROJECT_ID")
+            else provider_vars.get("WATSONX_PROJECT_ID") or os.environ.get("WATSONX_PROJECT_ID")
         )
 
         has_url = bool(watsonx_url_value)
@@ -1624,9 +1549,7 @@ def get_llm(
             kwargs[project_id_param] = watsonx_project_id_value
         elif has_url or has_project_id:
             # Only one provided - this is a misconfiguration
-            missing = (
-                "project ID (WATSONX_PROJECT_ID)" if has_url else "URL (WATSONX_URL)"
-            )
+            missing = "project ID (WATSONX_PROJECT_ID)" if has_url else "URL (WATSONX_URL)"
             provided = "URL" if has_url else "project ID"
             msg = (
                 f"IBM WatsonX requires both a URL and project ID. "
@@ -1646,8 +1569,7 @@ def get_llm(
         ollama_base_url_value = (
             ollama_base_url
             if ollama_base_url
-            else provider_vars.get("OLLAMA_BASE_URL")
-            or os.environ.get("OLLAMA_BASE_URL")
+            else provider_vars.get("OLLAMA_BASE_URL") or os.environ.get("OLLAMA_BASE_URL")
         )
         if ollama_base_url_value:
             kwargs[base_url_param] = ollama_base_url_value
@@ -1656,9 +1578,7 @@ def get_llm(
         return model_class(**kwargs)
     except Exception as e:
         # If instantiation fails and it's WatsonX, provide additional context
-        if provider == "IBM WatsonX" and (
-            "url" in str(e).lower() or "project" in str(e).lower()
-        ):
+        if provider == "IBM WatsonX" and ("url" in str(e).lower() or "project" in str(e).lower()):
             msg = (
                 f"Failed to initialize IBM WatsonX model: {e}\n\n"
                 "IBM WatsonX requires additional configuration parameters (API endpoint URL and project ID). "
@@ -1776,11 +1696,7 @@ def update_model_options_in_build_config(
         options = cached.get("options", [])
         if options:
             # Determine model type based on cache_key_prefix
-            model_type = (
-                "embeddings"
-                if cache_key_prefix == "embedding_model_options"
-                else "language"
-            )
+            model_type = "embeddings" if cache_key_prefix == "embedding_model_options" else "language"
 
             # Try to get user's default model from the variable service
             default_model_name = None
@@ -1809,9 +1725,7 @@ def update_model_options_in_build_config(
                         try:
                             var = await variable_service.get_variable_object(
                                 user_id=(
-                                    UUID(component.user_id)
-                                    if isinstance(component.user_id, str)
-                                    else component.user_id
+                                    UUID(component.user_id) if isinstance(component.user_id, str) else component.user_id
                                 ),
                                 name=var_name,
                                 session=session,
@@ -1819,9 +1733,7 @@ def update_model_options_in_build_config(
                             if var and var.value:
                                 parsed_value = json.loads(var.value)
                                 if isinstance(parsed_value, dict):
-                                    return parsed_value.get(
-                                        "model_name"
-                                    ), parsed_value.get("provider")
+                                    return parsed_value.get("model_name"), parsed_value.get("provider")
                         except (ValueError, json.JSONDecodeError, TypeError):
                             # Variable not found or invalid format
                             logger.info(
@@ -1833,24 +1745,17 @@ def update_model_options_in_build_config(
                             )
                         return None, None
 
-                default_model_name, default_model_provider = run_until_complete(
-                    _get_default_model()
-                )
+                default_model_name, default_model_provider = run_until_complete(_get_default_model())
             except Exception:  # noqa: BLE001
                 # If we can't get default model, continue without it
-                logger.info(
-                    "Failed to get default model, continue without it", exc_info=True
-                )
+                logger.info("Failed to get default model, continue without it", exc_info=True)
 
             # Find the default model in options
             default_model = None
             if default_model_name and default_model_provider:
                 # Look for the user's preferred default model
                 for opt in options:
-                    if (
-                        opt.get("name") == default_model_name
-                        and opt.get("provider") == default_model_provider
-                    ):
+                    if opt.get("name") == default_model_name and opt.get("provider") == default_model_provider:
                         default_model = opt
                         break
 
