@@ -67,14 +67,22 @@ jobs:
 
       - name: Validate migration patterns
         if: steps.changed-files.outputs.files != ''
+        env:
+          MIGRATION_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
-          python src/backend/base/langflow/alembic/migration_validator.py ${{ steps.changed-files.outputs.files }}
+          python src/backend/base/langflow/alembic/migration_validator.py $MIGRATION_FILES
 
       - name: Generate validation report
         if: always() && steps.changed-files.outputs.files != ''
+        env:
+          MIGRATION_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
           python src/backend/base/langflow/alembic/migration_validator.py \
-            --json ${{ steps.changed-files.outputs.files }} > validation-report.json || true
+            --json $MIGRATION_FILES > validation-report.json 2> validation-stderr.txt || true
+          if [ ! -s validation-report.json ]; then
+            echo "::error::Validator produced no output. Stderr:"
+            cat validation-stderr.txt
+          fi
 
       - name: Post PR comment with results
         if: always() && steps.changed-files.outputs.files != ''

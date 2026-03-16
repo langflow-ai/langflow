@@ -1,3 +1,4 @@
+import errno
 import os
 import shutil
 import subprocess
@@ -60,8 +61,12 @@ def _get_main_branch_head() -> str | None:
             check=True,
             cwd=_WORKSPACE_ROOT,
         )
-    except (subprocess.CalledProcessError, OSError):
-        return None  # git diff failed
+    except subprocess.CalledProcessError:
+        return None  # git diff failed (e.g. origin/main doesn't exist)
+    except OSError as exc:
+        if exc.errno == errno.ENOENT:
+            return None  # git binary not found at resolved path
+        raise  # unexpected OS error (disk full, permissions, etc.)
 
     new_files = [f for f in result.stdout.strip().splitlines() if f.endswith(".py")]
 
@@ -105,7 +110,12 @@ def _get_main_branch_head() -> str | None:
             f"New migrations descend from {len(main_revisions)} different base revisions — "
             f"they must share a single parent on main: {main_revisions}"
         )
-    return main_revisions.pop() if len(main_revisions) == 1 else None
+    if not main_revisions:
+        pytest.fail(
+            f"New migrations {new_rev_ids} form a disconnected chain — "
+            f"none of their down_revisions point to an existing migration on main"
+        )
+    return main_revisions.pop()
 
 
 def _filter_sqlite_noise(diffs: list) -> list:
@@ -246,5 +256,17 @@ def test_upgrade_from_main_branch():
 
         # Step 4: Downgrade back to main's head to verify rollback works
         command.downgrade(alembic_cfg, main_head)
+
+        # Step 5: Verify the DB is actually at main's revision after downgrade
+        engine = create_engine(f"sqlite:///{db_path}")
+        try:
+            with engine.connect() as connection:
+                ctx = MigrationContext.configure(connection)
+                current_rev = ctx.get_current_revision()
+                assert current_rev == main_head, (
+                    f"After downgrade, expected revision {main_head} but got {current_rev}"
+                )
+        finally:
+            engine.dispose()
     finally:
         Path(db_path).unlink(missing_ok=True)
