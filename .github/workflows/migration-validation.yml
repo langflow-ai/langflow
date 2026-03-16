@@ -5,6 +5,8 @@ on:
     paths:
       - 'src/backend/base/langflow/alembic/versions/*.py'
       - 'src/backend/base/langflow/services/database/models/**/*.py'
+      - 'src/backend/tests/unit/alembic/test_migration_execution.py'
+      - '.github/workflows/migration-validation.yml'
 
 jobs:
   model-migration-consistency:

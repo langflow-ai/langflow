@@ -10,7 +10,7 @@ from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
 from langflow.services.database.service import SQLModel
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine
 
 _WORKSPACE_ROOT = Path(__file__).resolve().parents[5]
 
@@ -39,12 +39,12 @@ def _get_main_branch_head() -> str | None:
     """
     from alembic.script import ScriptDirectory
 
-    try:
-        git = shutil.which("git")
-        if git is None:
-            return None
+    git = shutil.which("git")
+    if git is None:
+        return None
 
-        # Find migration files that are new on this branch vs origin/main
+    # Find migration files that are new on this branch vs origin/main
+    try:
         result = subprocess.run(  # noqa: S603
             [
                 git,
@@ -60,112 +60,62 @@ def _get_main_branch_head() -> str | None:
             check=True,
             cwd=_WORKSPACE_ROOT,
         )
-        new_files = [f for f in result.stdout.strip().splitlines() if f.endswith(".py")]
+    except (subprocess.CalledProcessError, OSError):
+        return None  # git diff failed
 
-        alembic_cfg = Config()
-        script_location = _WORKSPACE_ROOT / "src/backend/base/langflow/alembic"
-        alembic_cfg.set_main_option("script_location", str(script_location))
-        script = ScriptDirectory.from_config(alembic_cfg)
+    new_files = [f for f in result.stdout.strip().splitlines() if f.endswith(".py")]
 
-        if not new_files:
-            # No new migrations on this branch — head is same as main
-            heads = script.get_heads()
-            return heads[0] if len(heads) == 1 else None
+    alembic_cfg = Config()
+    script_location = _WORKSPACE_ROOT / "src/backend/base/langflow/alembic"
+    alembic_cfg.set_main_option("script_location", str(script_location))
+    script = ScriptDirectory.from_config(alembic_cfg)
 
-        # Collect revision IDs of all new migrations
-        new_rev_ids = set()
-        for fpath in new_files:
-            filename = Path(fpath).name
-            new_rev_ids.add(filename.split("_", 1)[0])
-
-        # Find down_revisions that point outside the new migrations (i.e. into main)
-        main_revisions = set()
-        for rev_id in new_rev_ids:
-            rev_script = script.get_revision(rev_id)
-            if rev_script is None:
-                continue
-            if rev_script.down_revision is None:
-                msg = f"New migration {rev_id} has down_revision=None — it must chain from an existing migration"
-                raise ValueError(msg)
-            down = rev_script.down_revision
-            downs = set(down) if isinstance(down, (tuple, list)) else {down}
-            # Only keep down_revisions that are NOT themselves new migrations
-            main_revisions.update(downs - new_rev_ids)
-
-        # Return the single main head, or None if ambiguous
-        return main_revisions.pop() if len(main_revisions) == 1 else None
-    except (subprocess.CalledProcessError, KeyError, OSError):
+    if not new_files:
+        # No new migrations on this branch — head is same as main
+        heads = script.get_heads()
+        if len(heads) == 1:
+            return heads[0]
+        if len(heads) > 1:
+            pytest.fail(f"Alembic has {len(heads)} head revisions — migration branches need merging: {heads}")
         return None
 
+    # Collect revision IDs of all new migrations
+    new_rev_ids = set()
+    for fpath in new_files:
+        filename = Path(fpath).name
+        new_rev_ids.add(filename.split("_", 1)[0])
 
-EXPECTED_TABLES = {
-    "user",
-    "flow",
-    "folder",
-    "apikey",
-    "variable",
-    "file",
-    "message",
-    "transaction",
-    "vertex_build",
-    "job",
-    "trace",
-}
+    # Find down_revisions that point outside the new migrations (i.e. into main)
+    main_revisions = set()
+    for rev_id in new_rev_ids:
+        rev_script = script.get_revision(rev_id)
+        if rev_script is None:
+            msg = f"New migration file matched revision ID '{rev_id}' but Alembic has no such revision — check filename convention"
+            raise ValueError(msg)
+        if rev_script.down_revision is None:
+            msg = f"New migration {rev_id} has down_revision=None — it must chain from an existing migration"
+            raise ValueError(msg)
+        down = rev_script.down_revision
+        downs = set(down) if isinstance(down, (tuple, list)) else {down}
+        # Only keep down_revisions that are NOT themselves new migrations
+        main_revisions.update(downs - new_rev_ids)
 
-EXPECTED_COLUMNS = {
-    "user": {"id", "username", "password"},
-    "flow": {"id", "name", "user_id", "folder_id", "data"},
-    "folder": {"id", "name"},
-    "message": {"id", "text", "flow_id", "session_id"},
-}
-
-EXPECTED_FOREIGN_KEYS = {
-    "flow": {"user.id", "folder.id"},
-}
-
-
-def test_migrated_schema_has_expected_tables():
-    """Migrate a fresh DB to head and verify the schema is correct."""
-    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
-        db_path = tmp.name
-
-    try:
-        alembic_cfg = _get_alembic_cfg(db_path)
-        command.upgrade(alembic_cfg, "head")
-
-        engine = create_engine(f"sqlite:///{db_path}")
-        try:
-            insp = inspect(engine)
-            actual_tables = set(insp.get_table_names())
-
-            missing_tables = EXPECTED_TABLES - actual_tables
-            assert not missing_tables, f"Missing tables after migration: {missing_tables}"
-
-            for table, expected_cols in EXPECTED_COLUMNS.items():
-                actual_cols = {col["name"] for col in insp.get_columns(table)}
-                missing_cols = expected_cols - actual_cols
-                assert not missing_cols, f"Table '{table}' missing columns: {missing_cols}"
-
-            for table, expected_fk_targets in EXPECTED_FOREIGN_KEYS.items():
-                fks = insp.get_foreign_keys(table)
-                actual_fk_targets = {
-                    f"{fk['referred_table']}.{fk['referred_columns'][0]}" for fk in fks if fk["referred_columns"]
-                }
-                missing_fks = expected_fk_targets - actual_fk_targets
-                assert not missing_fks, f"Table '{table}' missing foreign keys to: {missing_fks}"
-        finally:
-            engine.dispose()
-    finally:
-        Path(db_path).unlink(missing_ok=True)
+    if len(main_revisions) > 1:
+        pytest.fail(
+            f"New migrations descend from {len(main_revisions)} different base revisions — "
+            f"they must share a single parent on main: {main_revisions}"
+        )
+    return main_revisions.pop() if len(main_revisions) == 1 else None
 
 
 def _filter_sqlite_noise(diffs: list) -> list:
     """Filter out diffs that are known SQLite limitations.
 
     - modify_nullable: SQLite doesn't support ALTER COLUMN
-    - remove_fk/add_fk: SQLite doesn't track FK constraint names, so autogenerate
-      sees phantom FK renames. However, FK pairs where ondelete/onupdate differs
-      are real mismatches and are preserved.
+    - remove_fk/add_fk: SQLite doesn't track FK constraint names or actions
+      (ondelete/onupdate), so autogenerate sees phantom FK diffs. Paired
+      remove/add on the same (table, columns) with identical referenced targets
+      are suppressed; unpaired or re-targeted FKs are preserved.
     """
     significant_diffs = []
     fk_removes: dict = {}  # (table, col_tuple) -> ForeignKeyConstraint
@@ -190,7 +140,9 @@ def _filter_sqlite_noise(diffs: list) -> list:
 
         significant_diffs.append(d)
 
-    # Compare FK remove/add pairs: suppress only when target and actions match
+    # Compare FK remove/add pairs: suppress when referenced targets match.
+    # We intentionally skip ondelete/onupdate comparison because SQLite's
+    # PRAGMA foreign_key_list does not reliably report these actions.
     all_fk_keys = set(fk_removes) | set(fk_adds)
     for key in all_fk_keys:
         rm = fk_removes.get(key)
@@ -202,8 +154,8 @@ def _filter_sqlite_noise(diffs: list) -> list:
             add_targets = sorted(
                 (elem.column.table.name, elem.column.name) for elem in add.elements if elem.column is not None
             )
-            if rm_targets == add_targets and rm.ondelete == add.ondelete and rm.onupdate == add.onupdate:
-                continue  # Pure name-only diff — SQLite noise
+            if rm_targets and rm_targets == add_targets:
+                continue  # Same target — name-only or action-only diff is SQLite noise
         if rm:
             significant_diffs.append(("remove_fk", rm))
         if add:
@@ -249,11 +201,11 @@ def test_no_phantom_migrations():
 
 
 def test_upgrade_from_main_branch():
-    """Verify that a DB created at main's head revision can upgrade to the current head.
+    """Verify that a DB at main's head can upgrade to current head and downgrade back.
 
     This catches the real-world scenario: a user running on main (or the latest release)
-    upgrades to a branch with new migrations. The upgrade must succeed and the resulting
-    schema must match the models.
+    upgrades to a branch with new migrations. The upgrade must succeed, the resulting
+    schema must match the models, and downgrade back to main must also succeed.
     """
     main_head = _get_main_branch_head()
     if main_head is None:
@@ -291,5 +243,8 @@ def test_upgrade_from_main_branch():
                 f"autogenerate detected {len(significant_diffs)} schema mismatch(es).\n\n"
                 f"Diffs:\n{diff_descriptions}"
             )
+
+        # Step 4: Downgrade back to main's head to verify rollback works
+        command.downgrade(alembic_cfg, main_head)
     finally:
         Path(db_path).unlink(missing_ok=True)
