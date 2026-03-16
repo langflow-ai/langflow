@@ -4,10 +4,41 @@ on:
   pull_request:
     paths:
       - 'src/backend/base/langflow/alembic/versions/*.py'
-      - 'alembic/versions/*.py'
+      - 'src/backend/base/langflow/services/database/models/**/*.py'
+      - 'src/backend/tests/unit/alembic/test_migration_execution.py'
+      - '.github/workflows/migration-validation.yml'
 
 jobs:
+  model-migration-consistency:
+    name: Model/Migration Consistency
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          uv sync
+
+      - name: Check model/migration consistency
+        env:
+          MIGRATION_VALIDATION_CI: "true"
+        run: |
+          uv run pytest src/backend/tests/unit/alembic/test_migration_execution.py -x -v
+
   validate-migration:
+    name: Migration Pattern Validation
     runs-on: ubuntu-latest
 
     steps:
@@ -19,47 +50,41 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          pip install sqlalchemy alembic
+          python-version: '3.12'
 
       - name: Get changed migration files
         id: changed-files
         run: |
-          # Get all changed Python files in alembic/versions directories
-
-          # CHANGED_FILES=$(git diff --name-only origin/main...HEAD | grep -E '(alembic|migrations)/versions/.*\.py$' || echo "")
-
-          # Exclude test migrations, as they are not part of the main codebase
-          CHANGED_FILES=$(git diff --name-only origin/main...HEAD | grep -E '(alembic|migrations)/versions/.*\.py$' | grep -v 'test_migrations/' || echo "")
+          set -euo pipefail
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD | grep -E 'src/backend/base/langflow/alembic/versions/.*\.py$' | grep -v 'test_migrations/' || echo "")
 
           if [ -z "$CHANGED_FILES" ]; then
             echo "No migration files changed"
-            echo "files=" >> $GITHUB_OUTPUT
+            echo "files=" >> "$GITHUB_OUTPUT"
           else
             echo "Changed migration files:"
             echo "$CHANGED_FILES"
-            # Convert newlines to spaces for passing as arguments
-            echo "files=$(echo $CHANGED_FILES | tr '\n' ' ')" >> $GITHUB_OUTPUT
+            echo "files=$(printf '%s' "$CHANGED_FILES" | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Validate migrations
+      - name: Validate migration patterns
         if: steps.changed-files.outputs.files != ''
+        env:
+          MIGRATION_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
-          python src/backend/base/langflow/alembic/migration_validator.py ${{ steps.changed-files.outputs.files }}
-
-#       - name: Check migration phase sequence
-#         if: steps.changed-files.outputs.files != ''
-#         run: |
-#           python scripts/check_phase_sequence.py ${{ steps.changed-files.outputs.files }}
+          python src/backend/base/langflow/alembic/migration_validator.py $MIGRATION_FILES
 
       - name: Generate validation report
         if: always() && steps.changed-files.outputs.files != ''
+        env:
+          MIGRATION_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
           python src/backend/base/langflow/alembic/migration_validator.py \
-            --json ${{ steps.changed-files.outputs.files }} > validation-report.json || true
+            --json $MIGRATION_FILES > validation-report.json 2> validation-stderr.txt || true
+          if [ ! -s validation-report.json ]; then
+            echo "::error::Validator produced no output. Stderr:"
+            cat validation-stderr.txt
+          fi
 
       - name: Post PR comment with results
         if: always() && steps.changed-files.outputs.files != ''
@@ -110,7 +135,7 @@ jobs:
                   }
                 }
 
-                message += `### 📚 Resources\n`;
+                message += `### Resources\n`;
                 message += `- Review the [DB Migration Guide](./src/backend/base/langflow/alembic/DB-MIGRATION-GUIDE.MD)\n`;
                 message += `- Use \`python scripts/generate_migration.py --help\` to generate compliant migrations\n\n`;
 
@@ -123,34 +148,39 @@ jobs:
             } catch (error) {
               message = `⚠️ **Migration validation check failed to run properly**\n`;
               message += `Error: ${error.message}\n`;
+              validationPassed = false;
             }
 
-            // Post or update comment
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-
-            const botComment = comments.find(comment =>
-              comment.user.type === 'Bot' &&
-              comment.body.includes('Migration Validation')
-            );
-
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: botComment.id,
-                body: message
-              });
-            } else {
-              await github.rest.issues.createComment({
+            // Post or update comment (non-critical — don't let API errors mask validation results)
+            try {
+              const { data: comments } = await github.rest.issues.listComments({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body: message
               });
+
+              const botComment = comments.find(comment =>
+                comment.user.type === 'Bot' &&
+                comment.body.includes('Migration Validation')
+              );
+
+              if (botComment) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id,
+                  body: message
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: message
+                });
+              }
+            } catch (apiError) {
+              core.warning(`Failed to post PR comment: ${apiError.message}`);
             }
 
             // Fail the workflow if validation didn't pass
