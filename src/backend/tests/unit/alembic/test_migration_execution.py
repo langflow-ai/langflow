@@ -263,9 +263,7 @@ def test_upgrade_from_main_branch():
             with engine.connect() as connection:
                 ctx = MigrationContext.configure(connection)
                 current_rev = ctx.get_current_revision()
-                assert current_rev == main_head, (
-                    f"After downgrade, expected revision {main_head} but got {current_rev}"
-                )
+                assert current_rev == main_head, f"After downgrade, expected revision {main_head} but got {current_rev}"
         finally:
             engine.dispose()
     finally:
