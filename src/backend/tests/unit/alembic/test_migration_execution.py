@@ -11,22 +11,97 @@ from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
 from langflow.services.database.service import SQLModel
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 _WORKSPACE_ROOT = Path(__file__).resolve().parents[5]
+_SCRIPT_LOCATION = _WORKSPACE_ROOT / "src/backend/base/langflow/alembic"
 
 
-def _get_alembic_cfg(db_path: str) -> Config:
+def _make_alembic_cfg(db_url: str) -> Config:
     """Create an Alembic Config pointing at the project's migration scripts."""
     alembic_cfg = Config()
-    script_location = _WORKSPACE_ROOT / "src/backend/base/langflow/alembic"
 
-    if not script_location.exists():
-        pytest.fail(f"Alembic script location not found at {script_location}")
+    if not _SCRIPT_LOCATION.exists():
+        pytest.fail(f"Alembic script location not found at {_SCRIPT_LOCATION}")
 
-    alembic_cfg.set_main_option("script_location", str(script_location))
-    alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite+aiosqlite:///{db_path}")
+    alembic_cfg.set_main_option("script_location", str(_SCRIPT_LOCATION))
+    alembic_cfg.set_main_option("sqlalchemy.url", db_url)
     return alembic_cfg
+
+
+# ---------------------------------------------------------------------------
+# Database fixtures
+# ---------------------------------------------------------------------------
+
+def _normalize_pg_url(url: str) -> str:
+    """Ensure a Postgres URL uses the psycopg (v3) async-capable driver.
+
+    Alembic's env.py uses async_engine_from_config, which requires an
+    async-capable dialect. The psycopg driver supports both sync and async.
+    """
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+psycopg://", 1)
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql+psycopg://", 1)
+    return url
+
+
+def _pg_url() -> str | None:
+    """Return a PostgreSQL URL from the environment, or None."""
+    url = os.environ.get("LANGFLOW_TEST_DATABASE_URI")
+    if url is not None:
+        return _normalize_pg_url(url)
+    return None
+
+
+def _create_pg_test_database(base_url: str, db_name: str) -> str:
+    """Create an isolated test database and return its URL."""
+    engine = create_engine(base_url, isolation_level="AUTOCOMMIT")
+    try:
+        with engine.connect() as conn:
+            conn.execute(text(
+                f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                f"WHERE datname = '{db_name}' AND pid <> pg_backend_pid()"
+            ))
+            conn.execute(text(f"DROP DATABASE IF EXISTS {db_name}"))
+            conn.execute(text(f"CREATE DATABASE {db_name}"))
+    finally:
+        engine.dispose()
+    return base_url.rsplit("/", 1)[0] + f"/{db_name}"
+
+
+def _drop_pg_test_database(base_url: str, db_name: str) -> None:
+    """Drop the test database."""
+    engine = create_engine(base_url, isolation_level="AUTOCOMMIT")
+    try:
+        with engine.connect() as conn:
+            conn.execute(text(
+                f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                f"WHERE datname = '{db_name}' AND pid <> pg_backend_pid()"
+            ))
+            conn.execute(text(f"DROP DATABASE IF EXISTS {db_name}"))
+    finally:
+        engine.dispose()
+
+
+@pytest.fixture(params=["sqlite", "postgres"])
+def db_url(request):
+    """Parametrized fixture that yields a database URL for each backend."""
+    if request.param == "sqlite":
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+            db_path = tmp.name
+        yield f"sqlite+aiosqlite:///{db_path}"
+        for suffix in ("", "-wal", "-shm", "-journal"):
+            Path(db_path + suffix).unlink(missing_ok=True)
+    else:
+        base_url = _pg_url()
+        if base_url is None:
+            pytest.skip("LANGFLOW_TEST_DATABASE_URI not set")
+        # Use a unique DB name per test to allow parallel execution
+        db_name = f"lf_migration_test_{request.node.name.replace('[', '_').replace(']', '_').replace('-', '_')[:40]}"
+        test_url = _create_pg_test_database(base_url, db_name)
+        yield test_url
+        _drop_pg_test_database(base_url, db_name)
 
 
 def _get_main_branch_head() -> str | None:
@@ -74,8 +149,7 @@ def _get_main_branch_head() -> str | None:
     new_files = [f for f in result.stdout.strip().splitlines() if f.endswith(".py")]
 
     alembic_cfg = Config()
-    script_location = _WORKSPACE_ROOT / "src/backend/base/langflow/alembic"
-    alembic_cfg.set_main_option("script_location", str(script_location))
+    alembic_cfg.set_main_option("script_location", str(_SCRIPT_LOCATION))
     script = ScriptDirectory.from_config(alembic_cfg)
 
     if not new_files:
@@ -254,7 +328,21 @@ class TestFilterSqliteNoise:
         assert result == diffs
 
 
-def test_no_phantom_migrations():
+def _engine_url(db_url: str) -> str:
+    """Convert an async DB URL to a sync one for SQLAlchemy create_engine."""
+    if db_url.startswith("sqlite+aiosqlite"):
+        return db_url.replace("sqlite+aiosqlite", "sqlite", 1)
+    return db_url
+
+
+def _filter_diffs(diffs: list, db_url: str) -> list:
+    """Apply backend-appropriate diff filtering."""
+    if "sqlite" in db_url:
+        return _filter_sqlite_noise(diffs)
+    return list(diffs)
+
+
+def test_no_phantom_migrations(db_url):
     """Verify that models and migrations are in sync.
 
     After migrating a fresh database to head, autogenerate should detect
@@ -262,36 +350,29 @@ def test_no_phantom_migrations():
     (e.g. pydantic, sqlmodel) change how column metadata is emitted,
     which would produce unintended migration diffs.
     """
-    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
-        db_path = tmp.name
+    alembic_cfg = _make_alembic_cfg(db_url)
+    command.upgrade(alembic_cfg, "head")
 
+    engine = create_engine(_engine_url(db_url))
     try:
-        alembic_cfg = _get_alembic_cfg(db_path)
-        command.upgrade(alembic_cfg, "head")
-
-        engine = create_engine(f"sqlite:///{db_path}")
-        try:
-            with engine.connect() as connection:
-                migration_context = MigrationContext.configure(connection)
-                diffs = compare_metadata(migration_context, SQLModel.metadata)
-        finally:
-            engine.dispose()
-
-        significant_diffs = _filter_sqlite_noise(diffs)
-
-        if significant_diffs:
-            diff_descriptions = "\n".join(str(d) for d in significant_diffs)
-            pytest.fail(
-                f"Autogenerate detected {len(significant_diffs)} unexpected change(s) "
-                f"after migrating to head. This likely means a dependency upgrade changed "
-                f"how column metadata is generated.\n\nDiffs:\n{diff_descriptions}"
-            )
+        with engine.connect() as connection:
+            migration_context = MigrationContext.configure(connection)
+            diffs = compare_metadata(migration_context, SQLModel.metadata)
     finally:
-        for suffix in ("", "-wal", "-shm", "-journal"):
-            Path(db_path + suffix).unlink(missing_ok=True)
+        engine.dispose()
+
+    significant_diffs = _filter_diffs(diffs, db_url)
+
+    if significant_diffs:
+        diff_descriptions = "\n".join(str(d) for d in significant_diffs)
+        pytest.fail(
+            f"Autogenerate detected {len(significant_diffs)} unexpected change(s) "
+            f"after migrating to head. This likely means a dependency upgrade changed "
+            f"how column metadata is generated.\n\nDiffs:\n{diff_descriptions}"
+        )
 
 
-def test_upgrade_from_main_branch():
+def test_upgrade_from_main_branch(db_url):
     """Verify that a DB at main's head can upgrade to current head and downgrade back.
 
     This catches the real-world scenario: a user running on main (or the latest release)
@@ -304,49 +385,42 @@ def test_upgrade_from_main_branch():
             pytest.fail("Could not determine main branch head revision — ensure fetch-depth: 0 and origin/main exists")
         pytest.skip("Could not determine main branch head revision (shallow clone or no origin/main)")
 
-    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
-        db_path = tmp.name
+    alembic_cfg = _make_alembic_cfg(db_url)
 
+    # Step 1: Create DB at main's head revision (simulates existing user DB)
+    command.upgrade(alembic_cfg, main_head)
+
+    # Step 2: Upgrade to the current branch head
+    command.upgrade(alembic_cfg, "head")
+
+    # Step 3: Verify models match the migrated DB
+    engine = create_engine(_engine_url(db_url))
     try:
-        alembic_cfg = _get_alembic_cfg(db_path)
-
-        # Step 1: Create DB at main's head revision (simulates existing user DB)
-        command.upgrade(alembic_cfg, main_head)
-
-        # Step 2: Upgrade to the current branch head
-        command.upgrade(alembic_cfg, "head")
-
-        # Step 3: Verify models match the migrated DB
-        engine = create_engine(f"sqlite:///{db_path}")
-        try:
-            with engine.connect() as connection:
-                migration_context = MigrationContext.configure(connection)
-                diffs = compare_metadata(migration_context, SQLModel.metadata)
-        finally:
-            engine.dispose()
-
-        significant_diffs = _filter_sqlite_noise(diffs)
-
-        if significant_diffs:
-            diff_descriptions = "\n".join(str(d) for d in significant_diffs)
-            pytest.fail(
-                f"After upgrading from main ({main_head}) to head, "
-                f"autogenerate detected {len(significant_diffs)} schema mismatch(es).\n\n"
-                f"Diffs:\n{diff_descriptions}"
-            )
-
-        # Step 4: Downgrade back to main's head to verify rollback works
-        command.downgrade(alembic_cfg, main_head)
-
-        # Step 5: Verify the DB is actually at main's revision after downgrade
-        engine = create_engine(f"sqlite:///{db_path}")
-        try:
-            with engine.connect() as connection:
-                ctx = MigrationContext.configure(connection)
-                current_rev = ctx.get_current_revision()
-                assert current_rev == main_head, f"After downgrade, expected revision {main_head} but got {current_rev}"
-        finally:
-            engine.dispose()
+        with engine.connect() as connection:
+            migration_context = MigrationContext.configure(connection)
+            diffs = compare_metadata(migration_context, SQLModel.metadata)
     finally:
-        for suffix in ("", "-wal", "-shm", "-journal"):
-            Path(db_path + suffix).unlink(missing_ok=True)
+        engine.dispose()
+
+    significant_diffs = _filter_diffs(diffs, db_url)
+
+    if significant_diffs:
+        diff_descriptions = "\n".join(str(d) for d in significant_diffs)
+        pytest.fail(
+            f"After upgrading from main ({main_head}) to head, "
+            f"autogenerate detected {len(significant_diffs)} schema mismatch(es).\n\n"
+            f"Diffs:\n{diff_descriptions}"
+        )
+
+    # Step 4: Downgrade back to main's head to verify rollback works
+    command.downgrade(alembic_cfg, main_head)
+
+    # Step 5: Verify the DB is actually at main's revision after downgrade
+    engine = create_engine(_engine_url(db_url))
+    try:
+        with engine.connect() as connection:
+            ctx = MigrationContext.configure(connection)
+            current_rev = ctx.get_current_revision()
+            assert current_rev == main_head, f"After downgrade, expected revision {main_head} but got {current_rev}"
+    finally:
+        engine.dispose()
