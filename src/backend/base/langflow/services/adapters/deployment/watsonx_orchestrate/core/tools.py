@@ -8,6 +8,7 @@ import importlib.metadata as md
 import io
 import json
 import zipfile
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from cachetools import func
@@ -40,6 +41,22 @@ _WRITABLE_TOOL_FIELDS = (
     "restrictions",
     "bundled_agent_id",
 )
+
+
+@dataclass(slots=True)
+class FlowToolBindingSpec:
+    flow_payload: BaseFlowArtifact
+    connections: dict[str, str]
+    app_id_for_prefix: str | None = None
+
+
+class ToolUploadBatchError(RuntimeError):
+    """Raised when a concurrent tool-upload batch partially succeeds."""
+
+    def __init__(self, *, created_tool_ids: list[str], errors: list[Exception]) -> None:
+        self.created_tool_ids = created_tool_ids
+        self.errors = errors
+        super().__init__("One or more tool uploads failed.")
 
 
 def to_writable_tool_payload(tool: dict[str, Any]) -> dict[str, Any]:
@@ -277,25 +294,67 @@ async def create_and_upload_wxo_flow_tools(
     app_id: str | None = None,
     tool_name_prefix: str,
 ) -> list[str]:
-    specs = [
-        create_wxo_flow_tool(
+    tool_bindings = [
+        FlowToolBindingSpec(
             flow_payload=flow_payload,
             connections=connections,
-            app_id=app_id,
-            tool_name_prefix=tool_name_prefix,
+            app_id_for_prefix=app_id,
         )
         for flow_payload in flow_payloads
     ]
-    return await asyncio.gather(
+    return await create_and_upload_wxo_flow_tools_with_bindings(
+        clients=clients,
+        tool_bindings=tool_bindings,
+        tool_name_prefix=tool_name_prefix,
+    )
+
+
+async def create_and_upload_wxo_flow_tools_with_bindings(
+    *,
+    clients: WxOClient,
+    tool_bindings: list[FlowToolBindingSpec],
+    tool_name_prefix: str,
+) -> list[str]:
+    def _resolve_app_id_for_prefix(*, tool_binding: FlowToolBindingSpec) -> str | None:
+        if tool_binding.app_id_for_prefix is not None:
+            normalized = tool_binding.app_id_for_prefix.strip()
+            return normalized or None
+        if not tool_binding.connections:
+            return None
+        return sorted(tool_binding.connections.keys())[0]
+
+    specs = [
+        create_wxo_flow_tool(
+            flow_payload=tool_binding.flow_payload,
+            connections=tool_binding.connections,
+            app_id=_resolve_app_id_for_prefix(tool_binding=tool_binding),
+            tool_name_prefix=tool_name_prefix,
+        )
+        for tool_binding in tool_bindings
+    ]
+    created_tool_ids_journal: list[str] = []
+    results = await asyncio.gather(
         *(
             upload_wxo_flow_tool(
                 clients=clients,
                 tool_payload=tool_payload,
                 artifact_bytes=artifact_bytes,
+                created_tool_ids_journal=created_tool_ids_journal,
             )
             for tool_payload, artifact_bytes in specs
-        )
+        ),
+        return_exceptions=True,
     )
+    errors: list[Exception] = []
+    created_tool_ids: list[str] = []
+    for result in results:
+        if isinstance(result, Exception):
+            errors.append(result)
+            continue
+        created_tool_ids.append(result)
+    if errors:
+        raise ToolUploadBatchError(created_tool_ids=dedupe_list(created_tool_ids_journal), errors=errors)
+    return created_tool_ids
 
 
 async def upload_wxo_flow_tool(
@@ -303,15 +362,20 @@ async def upload_wxo_flow_tool(
     clients: WxOClient,
     tool_payload: dict[str, Any],
     artifact_bytes: bytes,
+    created_tool_ids_journal: list[str] | None = None,
 ) -> str:
-    tool_response = await asyncio.to_thread(clients.tool.create, tool_payload)
+    tool_response = await retry_create(lambda: asyncio.to_thread(clients.tool.create, tool_payload))
     tool_id = require_tool_id(tool_response)
+    if created_tool_ids_journal is not None:
+        created_tool_ids_journal.append(tool_id)
 
-    await asyncio.to_thread(
-        upload_tool_artifact_bytes,
-        clients,
-        tool_id=tool_id,
-        artifact_bytes=artifact_bytes,
+    await retry_create(
+        lambda: asyncio.to_thread(
+            upload_tool_artifact_bytes,
+            clients,
+            tool_id=tool_id,
+            artifact_bytes=artifact_bytes,
+        )
     )
     return tool_id
 

@@ -25,7 +25,6 @@ from lfx.services.adapters.deployment.exceptions import (
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadSchemas
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
-    ConfigDeploymentBindingUpdate,
     ConfigListItem,
     ConfigListParams,
     ConfigListResult,
@@ -46,7 +45,6 @@ from lfx.services.adapters.deployment.schema import (
     ExecutionStatusResult,
     IdLike,
     RedeployResult,
-    SnapshotDeploymentBindingUpdate,
     SnapshotItem,
     SnapshotListParams,
     SnapshotListResult,
@@ -61,11 +59,9 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
     ErrorPrefix,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import (
-    create_config,
     process_config,
     resolve_create_app_id,
     validate_config_create_input,
-    validate_connection,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import (
     create_agent_run,
@@ -74,7 +70,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution im
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import (
     retry_create,
     rollback_created_resources,
-    rollback_update_resources,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.status import (
     derive_agent_environment,
@@ -83,20 +78,17 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.status impor
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
     build_snapshot_tool_names,
-    create_and_upload_wxo_flow_tools,
     process_raw_flows_with_app_id,
-    update_existing_tool_connection_bindings,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxDeploymentUpdatePayload,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.update_helpers import (
-    SnapshotUpdateOps,
-    apply_update_mutations_with_rollback,
+    apply_provider_update_plan_with_rollback,
+    build_provider_update_plan,
     build_update_payload_from_spec,
-    compute_target_tool_sets,
-    extract_snapshot_ops,
-    validate_update_guards,
+    parse_provider_update_payload,
+    validate_provider_update_request_sections,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     _require_single_deployment_id,
@@ -451,7 +443,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         payload: DeploymentUpdate,
         db: AsyncSession,
     ) -> DeploymentUpdateResult:
-        """Update deployment metadata, snapshot bindings, and/or connection binding."""
+        """Update deployment metadata and provider-driven tool/config operations."""
         try:
             clients = await self._get_provider_clients(user_id=user_id, db=db)
             agent_id = _normalize_and_validate_id(str(deployment_id), field_name="deployment_id")
@@ -465,46 +457,29 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             # base agent payload to build for final update call
             update_payload: dict[str, Any] = build_update_payload_from_spec(payload.spec)
 
-            # config update operations to apply
-            config: ConfigDeploymentBindingUpdate | None = payload.config
+            validate_provider_update_request_sections(payload)
+            if payload.provider_data is None:
+                if not update_payload:
+                    msg = "provider_data is required when update operations do not include spec changes."
+                    raise InvalidContentError(message=msg)
+                await retry_create(lambda: asyncio.to_thread(clients.agent.update, agent_id, update_payload))
+                return DeploymentUpdateResult(id=deployment_id, snapshot_ids=[])
 
-            # snapshot update operations to apply
-            snapshot_update: SnapshotDeploymentBindingUpdate | None = payload.snapshot
-            snapshot_ops: SnapshotUpdateOps = extract_snapshot_ops(snapshot_update)
-
-            # early validation for patch policies
-            validate_update_guards(
-                config=config,
-                has_snapshot_adds=snapshot_ops.has_snapshot_adds,
-            )
-
-            # base_tool_ids: tools already bound to the agent
-            # existing_target_tool_ids: base_tool_ids + snapshot_update.add_ids
-            base_tool_ids, existing_target_tool_ids = compute_target_tool_sets(
+            provider_update = parse_provider_update_payload(payload.provider_data)
+            provider_plan = build_provider_update_plan(
                 agent=agent,
-                snapshot_ops=snapshot_ops,
-                config=config,
+                provider_update=provider_update,
             )
 
-            added_snapshot_ids: list[str] = await apply_update_mutations_with_rollback(
+            added_snapshot_ids: list[str] = await apply_provider_update_plan_with_rollback(
                 clients=clients,
                 user_id=user_id,
                 db=db,
                 client_cache=self._client_managers,
                 agent_id=agent_id,
-                config=config,
-                payload_provider_data=payload.provider_data,
-                snapshot_update=snapshot_update,
-                snapshot_ops=snapshot_ops,
-                base_tool_ids=base_tool_ids,
-                existing_target_tool_ids=existing_target_tool_ids,
+                agent=agent,
                 update_payload=update_payload,
-                validate_connection_fn=validate_connection,
-                create_config_fn=create_config,
-                retry_create_fn=retry_create,
-                create_and_upload_wxo_flow_tools_fn=create_and_upload_wxo_flow_tools,
-                update_existing_tool_connection_bindings_fn=update_existing_tool_connection_bindings,
-                rollback_update_resources_fn=rollback_update_resources,
+                plan=provider_plan,
             )
 
             return DeploymentUpdateResult(

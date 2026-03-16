@@ -65,6 +65,15 @@ async def retry_create(operation: Operation[T]) -> T:
     )
 
 
+async def retry_update(operation: Operation[T]) -> T:
+    """Retry write/update operations with the standard provider retry policy."""
+    return await retry_with_backoff(
+        operation,
+        max_attempts=CREATE_MAX_RETRIES,
+        should_retry=is_retryable_create_exception,
+    )
+
+
 async def retry_rollback(operation: Operation[T]) -> T:
     return await retry_with_backoff(
         operation,

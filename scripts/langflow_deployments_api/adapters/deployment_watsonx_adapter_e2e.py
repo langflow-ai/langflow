@@ -41,25 +41,30 @@ Live negative scenarios:
 - `live_negative_delete_seed`: cleans up negative-path seed deployment (expects Success).
 
 Live update-matrix scenarios:
+- Contract note: in provider_data operations, `app_ids` are unprefixed operation ids.
+  `resource_name_prefix` is applied only when raw resources are created in the provider.
 - `upd_spec_only_name_desc`: updates deployment metadata only (expects Success).
-- `upd_snapshot_remove_only_no_config`: removes an attached snapshot without config update (expects Success).
+- `upd_snapshot_remove_only_no_config`: removes an attached snapshot via provider_data operation
+  (expects Success).
 - `upd_config_only_existing_tools_with_config_id`: rebinds existing attached snapshots
-  to an explicit config id (expects Success).
-- `upd_snapshot_add_ids_with_config_id`: binds existing snapshot ids to deployment with
-  explicit config (expects Success).
-- `upd_snapshot_add_raw_with_config_id`: creates and binds snapshot raw payloads using
-  explicit config (expects Success).
-- `upd_mixed_add_remove_raw_with_config`: mixed add/remove/raw snapshot update with explicit config (expects Success).
-- `upd_reject_add_ids_without_config`: rejects add_ids update with missing config
-  (expects InvalidDeploymentOperationError).
-- `upd_reject_add_raw_without_config`: rejects add_raw_payloads update with missing config
-  (expects InvalidDeploymentOperationError).
-- `upd_reject_config_unbind`: rejects config unbind operation (expects InvalidDeploymentOperationError).
-- `upd_reject_empty_target_set_before_config_create`: rejects config update when target
-  set is empty after removals (expects InvalidDeploymentOperationError).
-- `upd_missing_add_id_fails`: rejects unknown add_ids snapshot reference (expects InvalidContentError).
-- `upd_config_raw_payload_conflict`: detects conflict when creating duplicate raw config
-  app id (expects DeploymentConflictError).
+  to an explicit existing app id via provider_data (expects Success).
+- `upd_snapshot_add_ids_with_config_id`: binds existing snapshot ids using provider_data
+  operations (expects Success).
+- `upd_snapshot_add_raw_with_config_id`: creates and binds raw snapshot payloads using
+  provider_data tools/connections/operations (expects Success).
+- `upd_mixed_add_remove_raw_with_config`: mixed add/remove/raw snapshot update with provider_data
+  operations (expects Success).
+- `upd_reject_bind_with_undeclared_app_id`: rejects bind operation with undeclared app id
+  in provider_data (expects InvalidContentError).
+- `upd_reject_raw_bind_with_undeclared_app_id`: rejects raw-tool bind operation with undeclared app id
+  in provider_data (expects InvalidContentError).
+- `upd_reject_unbind_with_undeclared_app_id`: rejects unbind operation with undeclared app id
+  in provider_data (expects InvalidContentError).
+- `upd_reject_unbind_unknown_tool_id`: rejects unbind on unknown tool id
+  in provider_data (expects InvalidContentError).
+- `upd_missing_add_id_fails`: rejects unknown bind.tool.reference_id in provider_data (expects InvalidContentError).
+- `upd_config_raw_payload_conflict`: detects conflict when creating duplicate provider_data
+  raw connection app id (expects DeploymentConflictError).
 - `upd_not_found_deployment`: update unknown deployment id returns not found (expects DeploymentNotFoundError).
 
 Failpoint scenarios:
@@ -91,6 +96,7 @@ from uuid import UUID, uuid4
 
 import langflow.services.adapters.deployment.watsonx_orchestrate.core.retry as retry_module
 import langflow.services.adapters.deployment.watsonx_orchestrate.service as service_module
+import langflow.services.adapters.deployment.watsonx_orchestrate.update_helpers as update_helpers_module
 from dotenv import load_dotenv
 from fastapi import HTTPException
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
@@ -110,7 +116,6 @@ from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
     BaseDeploymentDataUpdate,
     BaseFlowArtifact,
-    ConfigDeploymentBindingUpdate,
     ConfigItem,
     ConfigListParams,
     DeploymentConfig,
@@ -119,7 +124,6 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentType,
     DeploymentUpdate,
     ExecutionCreate,
-    SnapshotDeploymentBindingUpdate,
     SnapshotItems,
     SnapshotListParams,
 )
@@ -955,7 +959,12 @@ class WatsonxAdapterDirectE2E:
         print("[upd/2] upd_snapshot_remove_only_no_config")
         status_code, detail, remove_result = await self._run_update(
             primary_deployment_id,
-            DeploymentUpdate(snapshot=SnapshotDeploymentBindingUpdate(remove_ids=[removable_snapshot_id])),
+            DeploymentUpdate(
+                provider_data={
+                    "tools": {"existing_ids": [removable_snapshot_id]},
+                    "operations": [{"op": "remove_tool", "tool_id": removable_snapshot_id}],
+                }
+            ),
         )
         list_status, _list_detail, list_after_remove = await self._run_list_snapshots(primary_deployment_id)
         attached_after_remove = self._extract_snapshot_ids(list_after_remove)
@@ -977,13 +986,30 @@ class WatsonxAdapterDirectE2E:
         )
 
         print("[upd/3] upd_config_only_existing_tools_with_config_id")
+        retained_snapshot_ids_sorted = sorted(retained_snapshot_ids)
         status_code, detail, config_only_result = await self._run_update(
             primary_deployment_id,
-            DeploymentUpdate(config=ConfigDeploymentBindingUpdate(config_id=str(donor_config_id))),
+            DeploymentUpdate(
+                provider_data={
+                    "tools": {"existing_ids": retained_snapshot_ids_sorted},
+                    "connections": {"existing_app_ids": [str(donor_config_id)]},
+                    "operations": [
+                        {
+                            "op": "bind",
+                            "tool": {"reference_id": tool_id},
+                            "app_ids": [str(donor_config_id)],
+                        }
+                        for tool_id in retained_snapshot_ids_sorted
+                    ],
+                }
+            ),
         )
         list_status, _list_detail, list_after_config_only = await self._run_list_snapshots(primary_deployment_id)
         attached_after_config_only = self._extract_snapshot_ids(list_after_config_only)
-        config_only_snapshot_ids_ok = bool(config_only_result and not getattr(config_only_result, "snapshot_ids", []))
+        config_only_snapshot_ids = (
+            {str(item) for item in getattr(config_only_result, "snapshot_ids", [])} if config_only_result else set()
+        )
+        config_only_snapshot_ids_ok = retained_snapshot_ids.issubset(config_only_snapshot_ids)
         results.append(
             self._build_result(
                 name="upd_config_only_existing_tools_with_config_id",
@@ -1003,8 +1029,17 @@ class WatsonxAdapterDirectE2E:
         status_code, detail, add_id_result = await self._run_update(
             primary_deployment_id,
             DeploymentUpdate(
-                snapshot=SnapshotDeploymentBindingUpdate(add_ids=[donor_snapshot_id]),
-                config=ConfigDeploymentBindingUpdate(config_id=str(donor_config_id)),
+                provider_data={
+                    "tools": {"existing_ids": [donor_snapshot_id]},
+                    "connections": {"existing_app_ids": [str(donor_config_id)]},
+                    "operations": [
+                        {
+                            "op": "bind",
+                            "tool": {"reference_id": donor_snapshot_id},
+                            "app_ids": [str(donor_config_id)],
+                        }
+                    ],
+                }
             ),
         )
         list_status, _list_detail, list_after_add_id = await self._run_list_snapshots(primary_deployment_id)
@@ -1032,9 +1067,18 @@ class WatsonxAdapterDirectE2E:
         status_code, detail, add_raw_result = await self._run_update(
             primary_deployment_id,
             DeploymentUpdate(
-                snapshot=SnapshotDeploymentBindingUpdate(add_raw_payloads=[raw_payload]),
-                config=ConfigDeploymentBindingUpdate(config_id=str(donor_config_id)),
-                provider_data={"resource_name_prefix": f"e2e_upd_{uuid4().hex[:6]}_"},
+                provider_data={
+                    "resource_name_prefix": f"e2e_upd_{uuid4().hex[:6]}_",
+                    "tools": {"raw_payloads": [raw_payload.model_dump(mode="json")]},
+                    "connections": {"existing_app_ids": [str(donor_config_id)]},
+                    "operations": [
+                        {
+                            "op": "bind",
+                            "tool": {"name_of_raw": raw_payload.name},
+                            "app_ids": [str(donor_config_id)],
+                        }
+                    ],
+                }
             ),
         )
         add_raw_snapshot_ids = (
@@ -1043,7 +1087,7 @@ class WatsonxAdapterDirectE2E:
         self.created_snapshot_ids.update(add_raw_snapshot_ids)
         list_status, _list_detail, list_after_add_raw = await self._run_list_snapshots(primary_deployment_id)
         attached_after_add_raw = self._extract_snapshot_ids(list_after_add_raw)
-        add_raw_created_ids = add_raw_snapshot_ids - {donor_snapshot_id}
+        add_raw_created_ids = add_raw_snapshot_ids
         results.append(
             self._build_result(
                 name="upd_snapshot_add_raw_with_config_id",
@@ -1065,13 +1109,27 @@ class WatsonxAdapterDirectE2E:
         status_code, detail, mixed_result = await self._run_update(
             primary_deployment_id,
             DeploymentUpdate(
-                snapshot=SnapshotDeploymentBindingUpdate(
-                    add_ids=[mixed_donor_snapshot_id],
-                    add_raw_payloads=[mixed_raw_payload],
-                    remove_ids=[mixed_remove_id],
-                ),
-                config=ConfigDeploymentBindingUpdate(config_id=str(donor_config_id)),
-                provider_data={"resource_name_prefix": f"e2e_upd_mix_{uuid4().hex[:6]}_"},
+                provider_data={
+                    "resource_name_prefix": f"e2e_upd_mix_{uuid4().hex[:6]}_",
+                    "tools": {
+                        "existing_ids": [mixed_donor_snapshot_id, mixed_remove_id],
+                        "raw_payloads": [mixed_raw_payload.model_dump(mode="json")],
+                    },
+                    "connections": {"existing_app_ids": [str(donor_config_id)]},
+                    "operations": [
+                        {
+                            "op": "bind",
+                            "tool": {"reference_id": mixed_donor_snapshot_id},
+                            "app_ids": [str(donor_config_id)],
+                        },
+                        {"op": "remove_tool", "tool_id": mixed_remove_id},
+                        {
+                            "op": "bind",
+                            "tool": {"name_of_raw": mixed_raw_payload.name},
+                            "app_ids": [str(donor_config_id)],
+                        },
+                    ],
+                }
             ),
         )
         mixed_snapshot_ids = (
@@ -1097,78 +1155,108 @@ class WatsonxAdapterDirectE2E:
             )
         )
 
-        print("[upd/7] upd_reject_add_ids_without_config")
-        status_code, detail, _ = await self._run_update(
-            primary_deployment_id,
-            DeploymentUpdate(snapshot=SnapshotDeploymentBindingUpdate(add_ids=[str(uuid4())])),
-        )
-        results.append(
-            self._build_result(
-                name="upd_reject_add_ids_without_config",
-                expected={OUTCOME_INVALID_OPERATION},
-                actual_outcome=status_code,
-                detail=detail,
-                ok=status_code == OUTCOME_INVALID_OPERATION,
-            )
-        )
-
-        print("[upd/8] upd_reject_add_raw_without_config")
+        print("[upd/7] upd_reject_bind_with_undeclared_app_id")
         status_code, detail, _ = await self._run_update(
             primary_deployment_id,
             DeploymentUpdate(
-                snapshot=SnapshotDeploymentBindingUpdate(
-                    add_raw_payloads=[self._build_flow_payload(label="upd_no_cfg_raw")]
-                )
+                provider_data={
+                    "tools": {"existing_ids": [donor_snapshot_id]},
+                    "operations": [
+                        {
+                            "op": "bind",
+                            "tool": {"reference_id": donor_snapshot_id},
+                            "app_ids": ["undeclared_app_for_bind"],
+                        }
+                    ],
+                }
             ),
         )
         results.append(
             self._build_result(
-                name="upd_reject_add_raw_without_config",
-                expected={OUTCOME_INVALID_OPERATION},
+                name="upd_reject_bind_with_undeclared_app_id",
+                expected={OUTCOME_INVALID_CONTENT},
                 actual_outcome=status_code,
                 detail=detail,
-                ok=status_code == OUTCOME_INVALID_OPERATION,
+                ok=status_code == OUTCOME_INVALID_CONTENT,
             )
         )
 
-        print("[upd/9] upd_reject_config_unbind")
-        status_code, detail, _ = await self._run_update(
-            primary_deployment_id,
-            DeploymentUpdate(config=ConfigDeploymentBindingUpdate(unbind=True)),
-        )
-        results.append(
-            self._build_result(
-                name="upd_reject_config_unbind",
-                expected={OUTCOME_INVALID_OPERATION},
-                actual_outcome=status_code,
-                detail=detail,
-                ok=status_code == OUTCOME_INVALID_OPERATION,
-            )
-        )
-
-        print("[upd/10] upd_reject_empty_target_set_before_config_create")
-        target_removal_ids = sorted(self._extract_snapshot_ids(list_after_mixed))
+        print("[upd/8] upd_reject_raw_bind_with_undeclared_app_id")
+        missing_cfg_raw_payload = self._build_flow_payload(label="upd_no_cfg_raw")
         status_code, detail, _ = await self._run_update(
             primary_deployment_id,
             DeploymentUpdate(
-                snapshot=SnapshotDeploymentBindingUpdate(remove_ids=target_removal_ids),
-                config=ConfigDeploymentBindingUpdate(
-                    raw_payload=DeploymentConfig(
-                        name=self._mk_name("upd_empty_target_cfg"),
-                        description="cfg for empty-target guard",
-                        environment_variables={},
-                    )
-                ),
-                provider_data={"resource_name_prefix": f"e2e_upd_empty_{uuid4().hex[:6]}_"},
+                provider_data={
+                    "tools": {"raw_payloads": [missing_cfg_raw_payload.model_dump(mode="json")]},
+                    "operations": [
+                        {
+                            "op": "bind",
+                            "tool": {"name_of_raw": missing_cfg_raw_payload.name},
+                            "app_ids": ["undeclared_app_for_raw_bind"],
+                        }
+                    ],
+                }
             ),
         )
         results.append(
             self._build_result(
-                name="upd_reject_empty_target_set_before_config_create",
-                expected={OUTCOME_INVALID_OPERATION},
+                name="upd_reject_raw_bind_with_undeclared_app_id",
+                expected={OUTCOME_INVALID_CONTENT},
                 actual_outcome=status_code,
                 detail=detail,
-                ok=status_code == OUTCOME_INVALID_OPERATION,
+                ok=status_code == OUTCOME_INVALID_CONTENT,
+            )
+        )
+
+        print("[upd/9] upd_reject_unbind_with_undeclared_app_id")
+        status_code, detail, _ = await self._run_update(
+            primary_deployment_id,
+            DeploymentUpdate(
+                provider_data={
+                    "tools": {"existing_ids": [donor_snapshot_id]},
+                    "operations": [
+                        {
+                            "op": "unbind",
+                            "tool_id": donor_snapshot_id,
+                            "app_ids": ["undeclared_app_for_unbind"],
+                        }
+                    ],
+                }
+            ),
+        )
+        results.append(
+            self._build_result(
+                name="upd_reject_unbind_with_undeclared_app_id",
+                expected={OUTCOME_INVALID_CONTENT},
+                actual_outcome=status_code,
+                detail=detail,
+                ok=status_code == OUTCOME_INVALID_CONTENT,
+            )
+        )
+
+        print("[upd/10] upd_reject_unbind_unknown_tool_id")
+        status_code, detail, _ = await self._run_update(
+            primary_deployment_id,
+            DeploymentUpdate(
+                provider_data={
+                    "connections": {"existing_app_ids": [str(donor_config_id)]},
+                    "operations": [
+                        {
+                            "op": "unbind",
+                            "tool_id": str(uuid4()),
+                            "app_ids": [str(donor_config_id)],
+                        }
+                    ],
+                }
+            ),
+        )
+        results.append(
+            self._build_result(
+                name="upd_reject_unbind_unknown_tool_id",
+                expected={OUTCOME_INVALID_CONTENT},
+                actual_outcome=status_code,
+                detail=detail,
+                ok=status_code == OUTCOME_INVALID_CONTENT,
             )
         )
 
@@ -1176,8 +1264,17 @@ class WatsonxAdapterDirectE2E:
         status_code, detail, _ = await self._run_update(
             primary_deployment_id,
             DeploymentUpdate(
-                snapshot=SnapshotDeploymentBindingUpdate(add_ids=[str(uuid4())]),
-                config=ConfigDeploymentBindingUpdate(config_id=str(donor_config_id)),
+                provider_data={
+                    "tools": {"existing_ids": [donor_snapshot_id]},
+                    "connections": {"existing_app_ids": [str(donor_config_id)]},
+                    "operations": [
+                        {
+                            "op": "bind",
+                            "tool": {"reference_id": str(uuid4())},
+                            "app_ids": [str(donor_config_id)],
+                        }
+                    ],
+                }
             ),
         )
         results.append(
@@ -1197,19 +1294,35 @@ class WatsonxAdapterDirectE2E:
         )
         conflict_prefix = "e2e_upd_conflict_"
         conflict_name = "dup_cfg"
-        conflict_payload = DeploymentUpdate(
-            config=ConfigDeploymentBindingUpdate(
-                raw_payload=DeploymentConfig(
-                    name=conflict_name,
-                    description="raw conflict scenario",
-                    environment_variables={},
+        conflict_tool_id = next(iter(_conflict_snapshot_ids), "")
+        if not conflict_tool_id:
+            results.append(
+                self._build_result(
+                    name="upd_config_raw_payload_conflict",
+                    expected={OUTCOME_CONFLICT},
+                    actual_outcome=OUTCOME_FAILURE,
+                    detail="conflict seed snapshot id is missing",
+                    ok=False,
                 )
-            ),
-            provider_data={"resource_name_prefix": conflict_prefix},
+            )
+            return results
+        conflict_payload = DeploymentUpdate(
+            provider_data={
+                "resource_name_prefix": conflict_prefix,
+                "tools": {"existing_ids": [conflict_tool_id]},
+                "connections": {"raw_payloads": [{"app_id": conflict_name, "environment_variables": {}}]},
+                "operations": [
+                    {
+                        "op": "bind",
+                        "tool": {"reference_id": conflict_tool_id},
+                        "app_ids": [conflict_name],
+                    }
+                ],
+            }
         )
         setup_status, _setup_detail, _ = await self._run_update(conflict_seed_deployment_id, conflict_payload)
         if setup_status == OUTCOME_SUCCESS:
-            self.created_config_ids.add(f"{conflict_prefix}{conflict_name}_app_id")
+            self.created_config_ids.add(f"{conflict_prefix}{conflict_name}")
         status_code, detail, _ = await self._run_update(conflict_seed_deployment_id, conflict_payload)
         results.append(
             self._build_result(
@@ -1320,8 +1433,17 @@ class WatsonxAdapterDirectE2E:
                 "snapshot": lambda: self._run_update(
                     primary_id,
                     DeploymentUpdate(
-                        snapshot=SnapshotDeploymentBindingUpdate(add_ids=[donor_snapshot_id]),
-                        config=ConfigDeploymentBindingUpdate(config_id=str(donor_cfg_id)),
+                        provider_data={
+                            "tools": {"existing_ids": [donor_snapshot_id]},
+                            "connections": {"existing_app_ids": [str(donor_cfg_id)]},
+                            "operations": [
+                                {
+                                    "op": "bind",
+                                    "tool": {"reference_id": donor_snapshot_id},
+                                    "app_ids": [str(donor_cfg_id)],
+                                }
+                            ],
+                        }
                     ),
                 ),
             }
@@ -1428,7 +1550,8 @@ class WatsonxAdapterDirectE2E:
 
         async def _delete_target_before_bind(*args: Any, **kwargs: Any) -> None:  # noqa: ARG001
             clients = kwargs.get("clients")
-            target_ids = kwargs.get("existing_target_tool_ids") or []
+            existing_tool_deltas = kwargs.get("existing_tool_deltas") or {}
+            target_ids = list(existing_tool_deltas.keys())
             tool_id = str(target_ids[0]) if target_ids else delete_target_snapshot_id
             if clients and tool_id:
                 await self._safe_delete_snapshot(clients=clients, snapshot_id=tool_id)
@@ -1437,7 +1560,20 @@ class WatsonxAdapterDirectE2E:
             stage="update_bindings",
             operation=lambda: self._run_update(
                 delete_bind_id,
-                DeploymentUpdate(config=ConfigDeploymentBindingUpdate(config_id=str(bind_cfg_id))),
+                DeploymentUpdate(
+                    provider_data={
+                        "tools": {"existing_ids": sorted(bind_snapshot_ids)},
+                        "connections": {"existing_app_ids": [str(bind_cfg_id)]},
+                        "operations": [
+                            {
+                                "op": "unbind",
+                                "tool_id": tool_id,
+                                "app_ids": [str(bind_cfg_id)],
+                            }
+                            for tool_id in sorted(bind_snapshot_ids)
+                        ],
+                    }
+                ),
             ),
             hook_before=_delete_target_before_bind,
         )
@@ -1452,14 +1588,28 @@ class WatsonxAdapterDirectE2E:
         )
 
         print(f"[cc/{iteration}.6] cc_delete_config_after_update_raw_create")
-        delete_cfg_id, _delete_cfg_base_id, _delete_cfg_snapshots, _ = await self._create_update_seed(
+        delete_cfg_id, _delete_cfg_base_id, delete_cfg_snapshots, _ = await self._create_update_seed(
             label=f"cc_del_cfg_{iteration}",
             snapshot_count=1,
         )
+        target_tool_id = next(iter(delete_cfg_snapshots), "")
+        if not target_tool_id:
+            results.append(
+                self._build_result(
+                    name="cc_delete_config_after_update_raw_create",
+                    expected={OUTCOME_INVALID_OPERATION, OUTCOME_INVALID_CONTENT, OUTCOME_CONFLICT, OUTCOME_FAILURE},
+                    actual_outcome=OUTCOME_FAILURE,
+                    detail="seed snapshot id missing for update raw config stage",
+                    ok=False,
+                )
+            )
+            return results
         cfg_prefix = f"e2e_cc_del_cfg_{uuid4().hex[:6]}_"
         raw_cfg_name = self._mk_name("cc_raw_cfg")
 
-        async def _delete_created_app_after_config_create(created_app_id: Any) -> None:
+        async def _delete_created_app_after_config_create(created_app_id: Any, **kwargs: Any) -> None:
+            if not created_app_id:
+                created_app_id = kwargs.get("app_id")
             app_id = str(created_app_id or "").strip()
             clients = await self.service._get_provider_clients(user_id=self.user_id, db=self.db)  # noqa: SLF001
             if app_id:
@@ -1470,14 +1620,18 @@ class WatsonxAdapterDirectE2E:
             operation=lambda: self._run_update(
                 delete_cfg_id,
                 DeploymentUpdate(
-                    config=ConfigDeploymentBindingUpdate(
-                        raw_payload=DeploymentConfig(
-                            name=raw_cfg_name,
-                            description="cc delete created raw config",
-                            environment_variables={},
-                        )
-                    ),
-                    provider_data={"resource_name_prefix": cfg_prefix},
+                    provider_data={
+                        "resource_name_prefix": cfg_prefix,
+                        "tools": {"existing_ids": [target_tool_id]},
+                        "connections": {"raw_payloads": [{"app_id": raw_cfg_name, "environment_variables": {}}]},
+                        "operations": [
+                            {
+                                "op": "bind",
+                                "tool": {"reference_id": target_tool_id},
+                                "app_ids": [raw_cfg_name],
+                            }
+                        ],
+                    }
                 ),
             ),
             hook_after=_delete_created_app_after_config_create,
@@ -1552,23 +1706,39 @@ class WatsonxAdapterDirectE2E:
         )
 
         print(f"[cc/{iteration}.8] cc_create_during_update_raw_config_stage")
-        update_create_id, _update_create_cfg, _update_create_snaps, _ = await self._create_update_seed(
+        update_create_id, _update_create_cfg, update_create_snaps, _ = await self._create_update_seed(
             label=f"cc_create_update_cfg_{iteration}",
             snapshot_count=1,
         )
+        update_target_tool_id = next(iter(update_create_snaps), "")
+        if not update_target_tool_id:
+            results.append(
+                self._build_result(
+                    name="cc_create_during_update_raw_config_stage",
+                    expected={OUTCOME_SUCCESS, OUTCOME_CONFLICT},
+                    actual_outcome=OUTCOME_FAILURE,
+                    detail="seed snapshot id missing for competing update",
+                    ok=False,
+                )
+            )
+            return results
         update_cfg_prefix = f"e2e_cc_upd_cfg_create_{uuid4().hex[:6]}_"
         update_cfg_name = self._mk_name("cc_upd_cfg_create")
         competing_update_task: asyncio.Task[tuple[str, str, Any | None]] | None = None
 
         competing_update_payload = DeploymentUpdate(
-            config=ConfigDeploymentBindingUpdate(
-                raw_payload=DeploymentConfig(
-                    name=update_cfg_name,
-                    description="cc competing update create config",
-                    environment_variables={},
-                )
-            ),
-            provider_data={"resource_name_prefix": update_cfg_prefix},
+            provider_data={
+                "resource_name_prefix": update_cfg_prefix,
+                "tools": {"existing_ids": [update_target_tool_id]},
+                "connections": {"raw_payloads": [{"app_id": update_cfg_name, "environment_variables": {}}]},
+                "operations": [
+                    {
+                        "op": "bind",
+                        "tool": {"reference_id": update_target_tool_id},
+                        "app_ids": [update_cfg_name],
+                    }
+                ],
+            },
         )
 
         async def _launch_competing_update_create(*args: Any, **kwargs: Any) -> None:  # noqa: ARG001
@@ -1602,7 +1772,7 @@ class WatsonxAdapterDirectE2E:
         )
 
         print(f"[cc/{iteration}.9] cc_delete_resources_during_update_rollback")
-        rollback_id, rollback_cfg_id, _rollback_seed_snapshots, _ = await self._create_update_seed(
+        rollback_id, rollback_cfg_id, rollback_seed_snapshots, _ = await self._create_update_seed(
             label=f"cc_rollback_delete_{iteration}",
             snapshot_count=1,
         )
@@ -1617,24 +1787,50 @@ class WatsonxAdapterDirectE2E:
                 )
             )
             return results
+        rollback_seed_tool_id = next(iter(rollback_seed_snapshots), "")
+        if not rollback_seed_tool_id:
+            results.append(
+                self._build_result(
+                    name="cc_delete_resources_during_update_rollback",
+                    expected={OUTCOME_FAILURE},
+                    actual_outcome=OUTCOME_FAILURE,
+                    detail="seed snapshot id missing for rollback race",
+                    ok=False,
+                )
+            )
+            return results
         rollback_prefix = f"e2e_cc_rollback_{uuid4().hex[:6]}_"
+        rollback_raw_flow = self._build_flow_payload(label=f"cc_rb_raw_{iteration}")
+        rollback_raw_cfg_name = self._mk_name("cc_rb_cfg")
         rollback_status, rollback_detail, _ = await self._run_with_stage_hook(
             stage="update_rollback_resources",
             operation=lambda: self._run_update(
                 rollback_id,
                 DeploymentUpdate(
                     spec=BaseDeploymentDataUpdate(description="cc rollback delete race"),
-                    snapshot=SnapshotDeploymentBindingUpdate(
-                        add_raw_payloads=[self._build_flow_payload(label=f"cc_rb_raw_{iteration}")]
-                    ),
-                    config=ConfigDeploymentBindingUpdate(
-                        raw_payload=DeploymentConfig(
-                            name=self._mk_name("cc_rb_cfg"),
-                            description="cc rollback cfg",
-                            environment_variables={},
-                        )
-                    ),
-                    provider_data={"resource_name_prefix": rollback_prefix},
+                    provider_data={
+                        "resource_name_prefix": rollback_prefix,
+                        "tools": {
+                            "existing_ids": [rollback_seed_tool_id],
+                            "raw_payloads": [rollback_raw_flow.model_dump(mode="json")],
+                        },
+                        "connections": {
+                            "existing_app_ids": [str(rollback_cfg_id)],
+                            "raw_payloads": [{"app_id": rollback_raw_cfg_name, "environment_variables": {}}],
+                        },
+                        "operations": [
+                            {
+                                "op": "unbind",
+                                "tool_id": rollback_seed_tool_id,
+                                "app_ids": [str(rollback_cfg_id)],
+                            },
+                            {
+                                "op": "bind",
+                                "tool": {"name_of_raw": rollback_raw_flow.name},
+                                "app_ids": [rollback_raw_cfg_name],
+                            },
+                        ],
+                    },
                 ),
                 inject={
                     "update_bindings": {
@@ -1657,7 +1853,7 @@ class WatsonxAdapterDirectE2E:
         )
 
         print(f"[cc/{iteration}.10] cc_create_during_update_rollback")
-        rollback_create_id, rollback_create_cfg_id, _rollback_create_snaps, _ = await self._create_update_seed(
+        rollback_create_id, rollback_create_cfg_id, rollback_create_snaps, _ = await self._create_update_seed(
             label=f"cc_rollback_create_{iteration}",
             snapshot_count=1,
         )
@@ -1668,6 +1864,18 @@ class WatsonxAdapterDirectE2E:
                     expected={OUTCOME_SUCCESS},
                     actual_outcome=OUTCOME_FAILURE,
                     detail="seed rollback-create config id missing",
+                    ok=False,
+                )
+            )
+            return results
+        rollback_create_seed_tool_id = next(iter(rollback_create_snaps), "")
+        if not rollback_create_seed_tool_id:
+            results.append(
+                self._build_result(
+                    name="cc_create_during_update_rollback",
+                    expected={OUTCOME_FAILURE, OUTCOME_SUCCESS, OUTCOME_CONFLICT},
+                    actual_outcome=OUTCOME_FAILURE,
+                    detail="seed snapshot id missing for rollback create race",
                     ok=False,
                 )
             )
@@ -1684,36 +1892,55 @@ class WatsonxAdapterDirectE2E:
                 self._run_update(
                     rollback_create_id,
                     DeploymentUpdate(
-                        config=ConfigDeploymentBindingUpdate(
-                            raw_payload=DeploymentConfig(
-                                name=rollback_create_cfg_name,
-                                description="cc create during rollback",
-                                environment_variables={},
-                            )
-                        ),
-                        provider_data={"resource_name_prefix": rollback_create_prefix},
+                        provider_data={
+                            "resource_name_prefix": rollback_create_prefix,
+                            "tools": {"existing_ids": [rollback_create_seed_tool_id]},
+                            "connections": {
+                                "raw_payloads": [{"app_id": rollback_create_cfg_name, "environment_variables": {}}]
+                            },
+                            "operations": [
+                                {
+                                    "op": "bind",
+                                    "tool": {"reference_id": rollback_create_seed_tool_id},
+                                    "app_ids": [rollback_create_cfg_name],
+                                }
+                            ],
+                        },
                     ),
                 )
             )
             await asyncio.sleep(0)
 
+        rollback_create_raw_flow = self._build_flow_payload(label=f"cc_rb_create_raw_{iteration}")
         rollback_create_status, rollback_create_detail, _ = await self._run_with_stage_hook(
             stage="update_rollback_resources",
             operation=lambda: self._run_update(
                 rollback_create_id,
                 DeploymentUpdate(
                     spec=BaseDeploymentDataUpdate(description="cc rollback create race"),
-                    snapshot=SnapshotDeploymentBindingUpdate(
-                        add_raw_payloads=[self._build_flow_payload(label=f"cc_rb_create_raw_{iteration}")]
-                    ),
-                    config=ConfigDeploymentBindingUpdate(
-                        raw_payload=DeploymentConfig(
-                            name=rollback_create_cfg_name,
-                            description="cc rollback create primary",
-                            environment_variables={},
-                        )
-                    ),
-                    provider_data={"resource_name_prefix": rollback_create_prefix},
+                    provider_data={
+                        "resource_name_prefix": rollback_create_prefix,
+                        "tools": {
+                            "existing_ids": [rollback_create_seed_tool_id],
+                            "raw_payloads": [rollback_create_raw_flow.model_dump(mode="json")],
+                        },
+                        "connections": {
+                            "existing_app_ids": [str(rollback_create_cfg_id)],
+                            "raw_payloads": [{"app_id": rollback_create_cfg_name, "environment_variables": {}}],
+                        },
+                        "operations": [
+                            {
+                                "op": "unbind",
+                                "tool_id": rollback_create_seed_tool_id,
+                                "app_ids": [str(rollback_create_cfg_id)],
+                            },
+                            {
+                                "op": "bind",
+                                "tool": {"name_of_raw": rollback_create_raw_flow.name},
+                                "app_ids": [rollback_create_cfg_name],
+                            },
+                        ],
+                    },
                 ),
                 inject={
                     "update_bindings": {
@@ -1821,10 +2048,10 @@ class WatsonxAdapterDirectE2E:
             "create_config": (service_module, "process_config"),
             "create_snapshots": (service_module, "process_raw_flows_with_app_id"),
             "create_agent": (self.service, "_create_agent_deployment"),
-            "update_create_config": (service_module, "create_config"),
-            "update_create_tools": (service_module, "create_and_upload_wxo_flow_tools"),
-            "update_bindings": (service_module, "update_existing_tool_connection_bindings"),
-            "update_rollback_resources": (service_module, "rollback_update_resources"),
+            "update_create_config": (update_helpers_module, "_create_update_connection_with_conflict_mapping"),
+            "update_create_tools": (update_helpers_module, "create_and_upload_wxo_flow_tools_with_bindings"),
+            "update_bindings": (update_helpers_module, "_update_existing_tool_connection_deltas"),
+            "update_rollback_resources": (update_helpers_module, "rollback_update_resources"),
         }
 
     async def _run_with_stage_hook(
@@ -1927,11 +2154,13 @@ class WatsonxAdapterDirectE2E:
         app_id = kwargs.get("created_app_id")
         if app_id:
             await self._safe_delete_config(clients=clients, config_id=str(app_id))
+        for created_app_id in kwargs.get("created_app_ids") or []:
+            await self._safe_delete_config(clients=clients, config_id=str(created_app_id))
 
     async def _run_update_failpoint_scenarios(self) -> list[ScenarioResult]:
         results: list[ScenarioResult] = []
         print("\n[fp-upd] creating seed deployment")
-        deployment_id, config_id, _snapshot_ids, _ = await self._create_update_seed(
+        deployment_id, config_id, snapshot_ids, _ = await self._create_update_seed(
             label="fp_upd_seed",
             snapshot_count=1,
         )
@@ -1946,10 +2175,35 @@ class WatsonxAdapterDirectE2E:
                 )
             )
             return results
+        seed_tool_id = next(iter(snapshot_ids), "")
+        if not seed_tool_id:
+            results.append(
+                self._build_result(
+                    name="fp_update_seed_missing_snapshot",
+                    expected={OUTCOME_SUCCESS},
+                    actual_outcome=OUTCOME_FAILURE,
+                    detail="seed deployment snapshot id is missing",
+                    ok=False,
+                )
+            )
+            return results
+        failpoint_prefix = f"e2e_fp_upd_{uuid4().hex[:6]}_"
+        failpoint_raw_app_id = self._mk_name("fp_upd_cfg")
 
         update_payload = DeploymentUpdate(
             spec=BaseDeploymentDataUpdate(description="trigger update failpoint"),
-            config=ConfigDeploymentBindingUpdate(config_id=str(config_id)),
+            provider_data={
+                "resource_name_prefix": failpoint_prefix,
+                "tools": {"existing_ids": [seed_tool_id]},
+                "connections": {"raw_payloads": [{"app_id": failpoint_raw_app_id, "environment_variables": {}}]},
+                "operations": [
+                    {
+                        "op": "bind",
+                        "tool": {"reference_id": seed_tool_id},
+                        "app_ids": [failpoint_raw_app_id],
+                    }
+                ],
+            },
         )
 
         print("[fp-upd/1] fp_update_bindings_failure_triggers_rollback")
@@ -2011,8 +2265,8 @@ class WatsonxAdapterDirectE2E:
             "rollback_delete_agent": (retry_module, "delete_agent_if_exists"),
             "rollback_delete_tool": (retry_module, "delete_tool_if_exists"),
             "rollback_delete_config": (retry_module, "delete_config_if_exists"),
-            "update_bindings": (service_module, "update_existing_tool_connection_bindings"),
-            "update_rollback_resources": (service_module, "rollback_update_resources"),
+            "update_bindings": (update_helpers_module, "_update_existing_tool_connection_deltas"),
+            "update_rollback_resources": (update_helpers_module, "rollback_update_resources"),
         }
 
         for stage, config in inject.items():
