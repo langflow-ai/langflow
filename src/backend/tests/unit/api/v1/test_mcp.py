@@ -18,7 +18,7 @@ def mock_user():
         username="testuser",
         password="fake-hashed-password",
         is_active=True,
-        is_superuser=False,  # noqa: S106
+        is_superuser=False,
     )
 
 
