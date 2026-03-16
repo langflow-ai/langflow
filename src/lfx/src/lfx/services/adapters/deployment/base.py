@@ -11,6 +11,8 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from lfx.services.adapters.deployment.schema import (
+        ConfigListParams,
+        ConfigListResult,
         DeploymentCreate,
         DeploymentCreateResult,
         DeploymentDeleteResult,
@@ -20,6 +22,7 @@ if TYPE_CHECKING:
         DeploymentListResult,
         DeploymentListTypesResult,
         DeploymentStatusResult,
+        DeploymentType,
         DeploymentUpdate,
         DeploymentUpdateResult,
         ExecutionCreate,
@@ -27,6 +30,8 @@ if TYPE_CHECKING:
         ExecutionStatusResult,
         IdLike,
         RedeployResult,
+        SnapshotListParams,
+        SnapshotListResult,
     )
     from lfx.services.interfaces import DeploymentServiceProtocol
 
@@ -77,6 +82,7 @@ class BaseDeploymentService(Service, ABC):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: AsyncSession,
     ) -> DeploymentGetResult:
         """Return deployment metadata by provider ID."""
@@ -87,6 +93,7 @@ class BaseDeploymentService(Service, ABC):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         payload: DeploymentUpdate,
         db: AsyncSession,
     ) -> DeploymentUpdateResult:
@@ -98,6 +105,7 @@ class BaseDeploymentService(Service, ABC):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: AsyncSession,
     ) -> RedeployResult:
         """Re-apply current deployment inputs without changing them."""
@@ -108,6 +116,7 @@ class BaseDeploymentService(Service, ABC):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: AsyncSession,
     ) -> DeploymentDuplicateResult:
         """Create a new deployment using the same inputs as the source."""
@@ -118,6 +127,7 @@ class BaseDeploymentService(Service, ABC):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: AsyncSession,
     ) -> DeploymentDeleteResult:
         """Delete the deployment from the provider."""
@@ -128,6 +138,7 @@ class BaseDeploymentService(Service, ABC):
         *,
         user_id: IdLike,
         deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: AsyncSession,
     ) -> DeploymentStatusResult:
         """Return provider-reported health/status for the deployment."""
@@ -137,6 +148,7 @@ class BaseDeploymentService(Service, ABC):
         self,
         *,
         user_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         payload: ExecutionCreate,
         db: AsyncSession,
     ) -> ExecutionCreateResult:
@@ -148,9 +160,30 @@ class BaseDeploymentService(Service, ABC):
         *,
         user_id: IdLike,
         execution_id: IdLike,
+        deployment_type: DeploymentType | None = None,
         db: AsyncSession,
     ) -> ExecutionStatusResult:
         """Get provider-agnostic deployment execution state/output."""
+
+    @abstractmethod
+    async def list_configs(
+        self,
+        *,
+        user_id: IdLike,
+        params: ConfigListParams | None = None,
+        db: AsyncSession,
+    ) -> ConfigListResult:
+        """List configs visible to this adapter."""
+
+    @abstractmethod
+    async def list_snapshots(
+        self,
+        *,
+        user_id: IdLike,
+        params: SnapshotListParams | None = None,
+        db: AsyncSession,
+    ) -> SnapshotListResult:
+        """List snapshots visible to this adapter."""
 
 
 if TYPE_CHECKING:

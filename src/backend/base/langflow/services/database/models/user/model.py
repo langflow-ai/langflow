@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from langflow.services.database.models.api_key.model import ApiKey
     from langflow.services.database.models.deployment.model import Deployment
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+    from langflow.services.database.models.file.model import File
     from langflow.services.database.models.flow.model import Flow
     from langflow.services.database.models.folder.model import Folder
     from langflow.services.database.models.variable.model import Variable
@@ -52,6 +53,10 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
         sa_relationship_kwargs={"cascade": "delete"},
     )
     variables: list["Variable"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "delete"},
+    )
+    files: list["File"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
     )

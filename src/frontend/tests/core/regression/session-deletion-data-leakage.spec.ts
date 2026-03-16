@@ -1,7 +1,7 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import type { Page } from "@playwright/test";
 
 test.describe("Session Deletion Data Leakage Fix", () => {
   // Helper to send a message in the playground
@@ -36,19 +36,26 @@ test.describe("Session Deletion Data Leakage Fix", () => {
 
   // Helper to delete a session via the more menu
   async function deleteSession(page: Page, sessionName: string) {
+    // Find all session selectors
     const sessionSelectors = await page.getByTestId("session-selector").all();
 
+    // Find the one with exact matching text
     for (const selector of sessionSelectors) {
       const text = await selector.textContent();
+      // Use exact match to avoid matching "Default Session" when looking for "New Session 0"
       if (text?.trim() === sessionName) {
+        // Hover to make the more button visible
         await selector.hover();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(500); // Wait for hover effects
 
+        // Click the more options button
         const moreButton = selector.locator('[aria-label="More options"]');
         await moreButton.click({ timeout: 5000 });
 
+        // Wait for the menu to open
         await page.waitForTimeout(500);
 
+        // Wait for delete option to be visible and click it
         await page
           .getByTestId("delete-session-option")
           .waitFor({ state: "visible", timeout: 5000 });
@@ -183,6 +190,7 @@ test.describe("Session Deletion Data Leakage Fix", () => {
       const responseText = await lastMessage.textContent();
 
       // Verify the AI does NOT remember "Victor" from the deleted session
+      // The response should indicate it doesn't know the name
       expect(responseText?.toLowerCase()).not.toContain("victor");
     },
   );

@@ -1,8 +1,10 @@
 from typing import Any
 
 from lfx.base.models.unified_models import (
+    apply_provider_variable_config_to_build_config,
     get_language_model_options,
     get_llm,
+    get_provider_for_model_name,
     update_model_options_in_build_config,
 )
 from lfx.custom import Component
@@ -136,7 +138,7 @@ class SmartRouterComponent(Component):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
-        return update_model_options_in_build_config(
+        build_config = update_model_options_in_build_config(
             component=self,
             build_config=build_config,
             cache_key_prefix="language_model_options",
@@ -144,6 +146,19 @@ class SmartRouterComponent(Component):
             field_name=field_name,
             field_value=field_value,
         )
+
+        current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
+        provider = ""
+        if isinstance(current_model_value, list) and current_model_value:
+            selected_model = current_model_value[0]
+            provider = (selected_model.get("provider") or "").strip()
+            if not provider and selected_model.get("name"):
+                provider = get_provider_for_model_name(str(selected_model["name"]))
+
+        if provider:
+            build_config = apply_provider_variable_config_to_build_config(build_config, provider)
+
+        return build_config
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Create a dynamic output for each category in the categories table."""

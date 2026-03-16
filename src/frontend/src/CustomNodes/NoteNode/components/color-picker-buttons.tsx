@@ -57,7 +57,8 @@ export const ColorPickerButtons = memo(
             <div
               className={cn(
                 "h-4 w-4 rounded-full hover:border hover:border-ring",
-                bgColor === colorKey && "border-2 border-blue-500",
+                bgColor === colorKey &&
+                  "border-2 border-accent-indigo-foreground",
                 colorValue === null && "border",
               )}
               style={{ backgroundColor: colorValue ?? "#00000000" }}
@@ -74,7 +75,7 @@ export const ColorPickerButtons = memo(
           <div
             className={cn(
               "relative flex h-4 w-4 items-center justify-center overflow-hidden rounded-full border hover:border-ring",
-              isCustomColor && "border-2 border-blue-500",
+              isCustomColor && "border-2 border-accent-indigo-foreground",
             )}
           >
             <div
