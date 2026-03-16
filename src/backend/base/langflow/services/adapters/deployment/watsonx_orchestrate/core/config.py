@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from lfx.services.adapters.deployment.exceptions import (
     InvalidContentError,
@@ -11,19 +11,19 @@ from lfx.services.adapters.deployment.exceptions import (
 )
 from lfx.services.adapters.deployment.schema import ConfigItem, DeploymentConfig, IdLike
 
-from langflow.services.adapters.deployment.watsonx_orchestrate.client import (
-    get_provider_clients,
-    resolve_runtime_credentials,
-)
+from langflow.services.adapters.deployment.watsonx_orchestrate.client import resolve_runtime_credentials
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import validate_wxo_name
+
+if TYPE_CHECKING:
+    from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 
 
 async def create_config(
     *,
+    clients: WxOClient,
     config: DeploymentConfig,
     user_id: IdLike,
     db: Any,
-    client_cache: dict[str, Any],
 ) -> str:
     """Create/update a wxO draft key-value connection config plus runtime credentials."""
     from ibm_watsonx_orchestrate_core.types.connections import (
@@ -31,12 +31,6 @@ async def create_config(
         ConnectionEnvironment,
         ConnectionPreference,
         ConnectionSecurityScheme,
-    )
-
-    clients = await get_provider_clients(
-        user_id=user_id,
-        db=db,
-        client_cache=client_cache,
     )
 
     app_id = validate_wxo_name(config.name)
@@ -73,12 +67,12 @@ async def create_config(
 
 
 async def process_config(
-    user_id: Any,
+    user_id: IdLike,
     db: Any,
     deployment_name: str,
     config: ConfigItem | None,
     *,
-    client_cache: dict[str, Any],
+    clients: WxOClient,
 ) -> str:
     """Create and bind deployment config using deployment name as app_id."""
     validate_config_create_input(config)
@@ -96,10 +90,10 @@ async def process_config(
         environment_variables=environment_variables,
     )
     app_id: str = await create_config(
+        clients=clients,
         config=config_payload,
         user_id=user_id,
         db=db,
-        client_cache=client_cache,
     )
 
     return app_id

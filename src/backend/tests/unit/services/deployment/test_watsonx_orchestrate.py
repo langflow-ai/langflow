@@ -254,7 +254,7 @@ async def test_process_config_uses_raw_payload_but_overrides_name(monkeypatch):
 
     captured = {}
 
-    async def mock_create_config(*, config, user_id, db, client_cache):  # noqa: ARG001
+    async def mock_create_config(*, clients, config, user_id, db):  # noqa: ARG001
         captured["name"] = config.name
         captured["env_vars"] = config.environment_variables
         return config.name
@@ -265,6 +265,7 @@ async def test_process_config_uses_raw_payload_but_overrides_name(monkeypatch):
     )
 
     app_id = await process_config(
+        clients=SimpleNamespace(),
         user_id="user-1",
         db=object(),
         deployment_name="my_deployment",
@@ -275,7 +276,6 @@ async def test_process_config_uses_raw_payload_but_overrides_name(monkeypatch):
                 environment_variables=None,
             )
         ),
-        client_cache={},
     )
 
     assert app_id == "my_deployment"
@@ -289,11 +289,11 @@ async def test_process_config_rejects_reference_id():
 
     with pytest.raises(InvalidDeploymentOperationError, match="Config reference binding is not supported"):
         await process_config(
+            clients=SimpleNamespace(),
             user_id="user-1",
             db=object(),
             deployment_name="my_deployment",
             config=ConfigItem(reference_id="existing-config"),
-            client_cache={},
         )
 
 
@@ -462,7 +462,7 @@ async def test_update_provider_data_creates_raw_connection_and_raw_tool(monkeypa
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
         return fake_clients
 
-    async def mock_create_config(*, config, user_id, db, client_cache):  # noqa: ARG001
+    async def mock_create_config(*, clients, config, user_id, db):  # noqa: ARG001
         captured["created_app_id"] = config.name
         fake_connections._connections_by_app_id[config.name] = f"conn-{config.name}"
         return config.name
@@ -729,7 +729,7 @@ async def test_update_provider_data_maps_raw_connection_conflict_to_deployment_c
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
         return fake_clients
 
-    async def mock_create_config(*, config, user_id, db, client_cache):  # noqa: ARG001
+    async def mock_create_config(*, clients, config, user_id, db):  # noqa: ARG001
         response = SimpleNamespace(status_code=409, text='{"detail":"already exists"}')
         raise ClientAPIException(response=response)
 
@@ -791,7 +791,8 @@ async def test_update_provider_data_maps_raw_connection_conflict_to_deployment_c
                     }
                 ],
             },
-            "operation app_ids not found in declared connection pools",
+            "operation app_ids must be declared in connections\\.existing_app_ids or "
+            "connections\\.raw_payloads\\[\\*\\]\\.app_id",
         ),
         (
             {
@@ -916,7 +917,7 @@ async def test_update_provider_data_rolls_back_partially_created_raw_tools(monke
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
         return fake_clients
 
-    async def mock_create_config(*, config, user_id, db, client_cache):  # noqa: ARG001
+    async def mock_create_config(*, clients, config, user_id, db):  # noqa: ARG001
         fake_connections._connections_by_app_id[config.name] = f"conn-{config.name}"
         return config.name
 
@@ -992,9 +993,6 @@ async def test_process_raw_flows_with_app_id_awaits_connection_validation(monkey
     )
     captured: dict[str, object] = {}
 
-    async def mock_get_provider_clients(*, user_id, db, client_cache):  # noqa: ARG001
-        return fake_clients
-
     async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
         return SimpleNamespace(connection_id="conn-123")
 
@@ -1014,10 +1012,6 @@ async def test_process_raw_flows_with_app_id_awaits_connection_validation(monkey
         return ["tool-1"]
 
     monkeypatch.setattr(
-        "langflow.services.adapters.deployment.watsonx_orchestrate.client.get_provider_clients",
-        mock_get_provider_clients,
-    )
-    monkeypatch.setattr(
         "langflow.services.adapters.deployment.watsonx_orchestrate.core.config.validate_connection",
         mock_validate_connection,
     )
@@ -1028,12 +1022,10 @@ async def test_process_raw_flows_with_app_id_awaits_connection_validation(monkey
     )
 
     result = await tools_core_module.process_raw_flows_with_app_id(
-        user_id="user-1",
+        clients=fake_clients,
         app_id="app-1",
         flows=[],
-        db=object(),
         tool_name_prefix="lf_test_",
-        client_cache={},
     )
 
     assert result == ["tool-1"]
@@ -1158,7 +1150,7 @@ async def test_create_wires_snapshot_ids_to_agent_and_prefixed_names(monkeypatch
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    async def mock_process_config(user_id, db, deployment_name, config, *, client_cache):  # noqa: ARG001
+    async def mock_process_config(user_id, db, deployment_name, config, *, clients):  # noqa: ARG001
         captured["config_deployment_name"] = deployment_name
         return deployment_name
 
@@ -1169,13 +1161,10 @@ async def test_create_wires_snapshot_ids_to_agent_and_prefixed_names(monkeypatch
     )
 
     async def mock_process_raw_flows_with_app_id(
-        user_id,  # noqa: ARG001
+        clients,  # noqa: ARG001
         app_id,
         flows,
-        db,  # noqa: ARG001
         tool_name_prefix,
-        *,
-        client_cache,  # noqa: ARG001
     ):
         captured["snapshot_app_id"] = app_id
         captured["snapshot_flows"] = flows
@@ -1251,7 +1240,7 @@ async def test_create_uses_caller_provided_resource_name_prefix(monkeypatch):
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    async def mock_process_config(user_id, db, deployment_name, config, *, client_cache):  # noqa: ARG001
+    async def mock_process_config(user_id, db, deployment_name, config, *, clients):  # noqa: ARG001
         captured["config_deployment_name"] = deployment_name
         return deployment_name
 
@@ -1262,13 +1251,10 @@ async def test_create_uses_caller_provided_resource_name_prefix(monkeypatch):
     )
 
     async def mock_process_raw_flows_with_app_id(
-        user_id,  # noqa: ARG001
+        clients,  # noqa: ARG001
         app_id,
         flows,
-        db,  # noqa: ARG001
         tool_name_prefix,
-        *,
-        client_cache,  # noqa: ARG001
     ):
         captured["snapshot_app_id"] = app_id
         captured["snapshot_flows"] = flows
@@ -1339,7 +1325,7 @@ async def test_create_rolls_back_and_preserves_original_error_when_cleanup_fails
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    async def mock_process_config(user_id, db, deployment_name, config, *, client_cache):  # noqa: ARG001
+    async def mock_process_config(user_id, db, deployment_name, config, *, clients):  # noqa: ARG001
         return deployment_name
 
     monkeypatch.setattr(
@@ -1349,13 +1335,10 @@ async def test_create_rolls_back_and_preserves_original_error_when_cleanup_fails
     )
 
     async def mock_process_raw_flows_with_app_id(
-        user_id,  # noqa: ARG001
+        clients,  # noqa: ARG001
         app_id,  # noqa: ARG001
         flows,  # noqa: ARG001
-        db,  # noqa: ARG001
         tool_name_prefix,  # noqa: ARG001
-        *,
-        client_cache,  # noqa: ARG001
     ):
         msg = "boom"
         raise RuntimeError(msg)

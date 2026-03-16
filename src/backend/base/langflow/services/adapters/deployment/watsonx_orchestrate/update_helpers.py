@@ -225,11 +225,11 @@ def build_provider_update_plan(
 
 async def _create_update_connection_with_conflict_mapping(
     *,
+    clients: WxOClient,
     app_id: str,
     payload: WatsonxConnectionRawPayload,
     user_id: IdLike,
     db: Any,
-    client_cache: Any,
 ) -> str:
     from lfx.services.adapters.deployment.schema import DeploymentConfig
 
@@ -242,10 +242,10 @@ async def _create_update_connection_with_conflict_mapping(
     try:
         return await retry_create(
             lambda: create_config(
+                clients=clients,
                 config=config_payload,
                 user_id=user_id,
                 db=db,
-                client_cache=client_cache,
             )
         )
     except (ClientAPIException, HTTPException) as exc:
@@ -371,7 +371,6 @@ async def apply_provider_update_plan_with_rollback(
     clients: WxOClient,
     user_id: IdLike,
     db: Any,
-    client_cache: Any,
     agent_id: str,
     agent: dict[str, Any],
     update_payload: dict[str, Any],
@@ -411,11 +410,11 @@ async def apply_provider_update_plan_with_rollback(
             created_connections = await asyncio.gather(
                 *(
                     _create_update_connection_with_conflict_mapping(
+                        clients=clients,
                         app_id=create_plan.provider_app_id,
                         payload=create_plan.payload,
                         user_id=user_id,
                         db=db,
-                        client_cache=client_cache,
                     )
                     for create_plan in plan.raw_connections_to_create
                 )

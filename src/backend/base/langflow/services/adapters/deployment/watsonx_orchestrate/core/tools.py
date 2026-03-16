@@ -430,27 +430,17 @@ def build_snapshot_tool_names(
 
 
 async def process_raw_flows_with_app_id(
-    user_id: Any,
+    clients: WxOClient,
     app_id: str,
     flows: list[BaseFlowArtifact],
-    db: Any,
     tool_name_prefix: str,
-    *,
-    client_cache: dict[str, Any],
 ) -> list[str]:
     """Create langflow tools in wxO and connect them to the given app_id."""
-    from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_provider_clients
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
 
     if not tool_name_prefix.strip():
         msg = "Snapshot creation requires a non-empty tool_name_prefix."
         raise InvalidDeploymentOperationError(message=msg)
-
-    clients = await get_provider_clients(
-        user_id=user_id,
-        db=db,
-        client_cache=client_cache,
-    )
 
     connection = await validate_connection(clients.connections, app_id=app_id)
 

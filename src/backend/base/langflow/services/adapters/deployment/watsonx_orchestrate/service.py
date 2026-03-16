@@ -220,23 +220,21 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             try:
                 created_app_id = await retry_create(
                     lambda: process_config(
+                        clients=clients,
                         user_id=user_id,
                         db=db,
                         deployment_name=prefixed_app_id,
                         config=payload.config,
-                        client_cache=self._client_managers,
                     )
                 )
 
                 if payload.snapshot and (flow_payloads := payload.snapshot.raw_payloads):
                     created_tool_ids = await retry_create(
                         lambda: process_raw_flows_with_app_id(
-                            user_id=user_id,
+                            clients=clients,
                             app_id=prefixed_app_id,
                             flows=flow_payloads,
-                            db=db,
                             tool_name_prefix=resource_prefix,
-                            client_cache=self._client_managers,
                         )
                     )
 
@@ -475,7 +473,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 clients=clients,
                 user_id=user_id,
                 db=db,
-                client_cache=self._client_managers,
                 agent_id=agent_id,
                 agent=agent,
                 update_payload=update_payload,
