@@ -272,7 +272,7 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
 
 This approach keeps the persistent volumes separate from the Langflow container, so you can upgrade the Langflow application without losing data.
 
-If you need to upgrade to a custom image based on a Langflow release, such as to add `uv` in `1.8.x`, first build a derived image from the official image, and then follow the same steps above.
+If you need to upgrade to a custom image based on a Langflow release, such as to add `uv` in `1.8.0`, first build a derived image from the official image, and then follow the same steps above.
 Set the custom image in your compose file or `docker run`, and then pull and restart.
 
-For a minimal Dockerfile that adds `uv` to the 1.8.x image, see the [release notes](/release-notes) (“Docker image no longer includes uv or uvx”).
+For a minimal Dockerfile that adds `uv` to the 1.8.0 image, see the [release notes](/release-notes) (“Docker image no longer includes uv or uvx”).
