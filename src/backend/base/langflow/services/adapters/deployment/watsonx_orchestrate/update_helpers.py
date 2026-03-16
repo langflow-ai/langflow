@@ -62,8 +62,13 @@ logger = logging.getLogger(__name__)
 
 
 class OrderedUniqueStrs:
+    """Ordered, de-duplicating string collection used for deterministic update plans.
+
+    Values keep insertion order while repeated adds are ignored, so bind/unbind and
+    tool-id aggregation remain stable and idempotent across merge-style operations.
+    """
+
     def __init__(self, items: dict[str, None] | None = None) -> None:
-        # Use a fresh dict by default to avoid shared mutable state.
         self._items: dict[str, None] = items or {}
 
     @classmethod
