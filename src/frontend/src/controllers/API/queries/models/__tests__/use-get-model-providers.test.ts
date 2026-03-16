@@ -1,3 +1,7 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react";
+import React from "react";
+
 // Mock API before imports
 const mockApiGet = jest.fn();
 
@@ -11,22 +15,22 @@ jest.mock("@/controllers/API/helpers/constants", () => ({
   getURL: jest.fn((key) => `/api/v1/${key.toLowerCase()}`),
 }));
 
-jest.mock("@/controllers/API/services/request-processor", () => ({
-  UseRequestProcessor: jest.fn(() => ({
-    query: jest.fn((_key, fn, _options) => {
-      const result = { data: null, isLoading: false, error: null };
-      fn().then((data: any) => {
-        result.data = data;
-      });
-      return result;
-    }),
-  })),
-}));
-
 import {
   ModelProviderInfo,
   useGetModelProviders,
 } from "../use-get-model-providers";
+
+// Helper to render hooks with QueryClientProvider
+const createWrapper = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+  return ({ children }: { children: React.ReactNode }) =>
+    React.createElement(QueryClientProvider, { client: queryClient }, children);
+};
 
 describe("useGetModelProviders", () => {
   beforeEach(() => {
@@ -44,42 +48,58 @@ describe("useGetModelProviders", () => {
       ];
       mockApiGet.mockResolvedValue({ data: mockResponse });
 
-      useGetModelProviders({});
+      renderHook(() => useGetModelProviders({}), { wrapper: createWrapper() });
 
-      expect(mockApiGet).toHaveBeenCalledWith("/api/v1/models");
+      await waitFor(() => {
+        expect(mockApiGet).toHaveBeenCalledWith("/api/v1/models");
+      });
     });
 
     it("should include deprecated param when includeDeprecated is true", async () => {
       mockApiGet.mockResolvedValue({ data: [] });
 
-      useGetModelProviders({ includeDeprecated: true });
+      renderHook(() => useGetModelProviders({ includeDeprecated: true }), {
+        wrapper: createWrapper(),
+      });
 
-      expect(mockApiGet).toHaveBeenCalledWith(
-        "/api/v1/models?include_deprecated=true",
-      );
+      await waitFor(() => {
+        expect(mockApiGet).toHaveBeenCalledWith(
+          "/api/v1/models?include_deprecated=true",
+        );
+      });
     });
 
     it("should include unsupported param when includeUnsupported is true", async () => {
       mockApiGet.mockResolvedValue({ data: [] });
 
-      useGetModelProviders({ includeUnsupported: true });
+      renderHook(() => useGetModelProviders({ includeUnsupported: true }), {
+        wrapper: createWrapper(),
+      });
 
-      expect(mockApiGet).toHaveBeenCalledWith(
-        "/api/v1/models?include_unsupported=true",
-      );
+      await waitFor(() => {
+        expect(mockApiGet).toHaveBeenCalledWith(
+          "/api/v1/models?include_unsupported=true",
+        );
+      });
     });
 
     it("should include both params when both are true", async () => {
       mockApiGet.mockResolvedValue({ data: [] });
 
-      useGetModelProviders({
-        includeDeprecated: true,
-        includeUnsupported: true,
-      });
-
-      expect(mockApiGet).toHaveBeenCalledWith(
-        "/api/v1/models?include_deprecated=true&include_unsupported=true",
+      renderHook(
+        () =>
+          useGetModelProviders({
+            includeDeprecated: true,
+            includeUnsupported: true,
+          }),
+        { wrapper: createWrapper() },
       );
+
+      await waitFor(() => {
+        expect(mockApiGet).toHaveBeenCalledWith(
+          "/api/v1/models?include_deprecated=true&include_unsupported=true",
+        );
+      });
     });
   });
 
@@ -99,8 +119,12 @@ describe("useGetModelProviders", () => {
       ];
       mockApiGet.mockResolvedValue({ data: mockResponse });
 
-      const result = useGetModelProviders({});
-      expect(result).toBeDefined();
+      const { result } = renderHook(() => useGetModelProviders({}), {
+        wrapper: createWrapper(),
+      });
+      await waitFor(() => {
+        expect(result.current).toBeDefined();
+      });
     });
 
     it("should use Bot as default icon for unknown providers", async () => {
@@ -113,8 +137,12 @@ describe("useGetModelProviders", () => {
       ];
       mockApiGet.mockResolvedValue({ data: mockResponse });
 
-      const result = useGetModelProviders({});
-      expect(result).toBeDefined();
+      const { result } = renderHook(() => useGetModelProviders({}), {
+        wrapper: createWrapper(),
+      });
+      await waitFor(() => {
+        expect(result.current).toBeDefined();
+      });
     });
   });
 
@@ -139,8 +167,12 @@ describe("useGetModelProviders", () => {
         ];
         mockApiGet.mockResolvedValue({ data: mockResponse });
 
-        const result = useGetModelProviders({});
-        expect(result).toBeDefined();
+        const { result } = renderHook(() => useGetModelProviders({}), {
+          wrapper: createWrapper(),
+        });
+        await waitFor(() => {
+          expect(result).toBeDefined();
+        });
       }
     });
   });
@@ -150,7 +182,11 @@ describe("useGetModelProviders", () => {
       mockApiGet.mockRejectedValue(new Error("Network error"));
 
       // Should not throw, returns empty array
-      expect(() => useGetModelProviders({})).not.toThrow();
+      expect(() =>
+        renderHook(() => useGetModelProviders({}), {
+          wrapper: createWrapper(),
+        }),
+      ).not.toThrow();
     });
   });
 
@@ -172,15 +208,19 @@ describe("useGetModelProviders", () => {
       ];
       mockApiGet.mockResolvedValue({ data: mockResponse });
 
-      const result = useGetModelProviders({});
-      expect(result).toBeDefined();
+      const { result } = renderHook(() => useGetModelProviders({}), {
+        wrapper: createWrapper(),
+      });
+      expect(result.current).toBeDefined();
     });
 
     it("should handle empty providers list", async () => {
       mockApiGet.mockResolvedValue({ data: [] });
 
-      const result = useGetModelProviders({});
-      expect(result).toBeDefined();
+      const { result } = renderHook(() => useGetModelProviders({}), {
+        wrapper: createWrapper(),
+      });
+      expect(result.current).toBeDefined();
     });
   });
 });

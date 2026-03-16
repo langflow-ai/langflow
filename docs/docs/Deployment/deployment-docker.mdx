@@ -18,6 +18,7 @@ This guide demonstrates several ways to deploy Langflow with [Docker](https://do
 This option provides more control over the configuration, including a persistent PostgreSQL database service, while still using the base Langflow Docker image.
 * [Create a custom flow image](#package-your-flow-as-a-docker-image): Use a Dockerfile to package a flow as a Docker image.
 * [Create a custom Langflow image](#customize-the-langflow-docker-image): Use a Dockerfile to package a custom Langflow Docker image that includes your own code, custom dependencies, or other modifications.
+* [Upgrade the Langflow Docker image](#upgrade-the-langflow-docker-image): Upgrade to a newer image without losing your database or flows by using persistent volumes and replacing only the container.
 
 ## Quickstart: Start a Langflow container with default values {#quickstart}
 
@@ -213,3 +214,65 @@ In this example, Langflow expects `memory.py` to exist in the `/helpers` directo
     ```
 
 This approach can be adapted for any other components or custom code you want to add to Langflow by modifying the file paths and component names.
+
+## Upgrade the Langflow Docker image {#upgrade-the-langflow-docker-image}
+
+To upgrade a Langflow Docker deployment without losing your database or flows, do the following:
+
+1. Keep data on persistent volumes, so when you upgrade Langflow, you will replace only the container image.
+Use Docker volumes or bind mounts for Langflow data and the database so they persist outside of the container.
+For example, this Docker Compose file uses a bind mount for Langflow data (`./langflow-data` on the host) and a named volume for the PostgreSQL database (`langflow-postgres`):
+
+    ```yaml
+    services:
+      langflow:
+        image: langflowai/langflow:1.8.0
+        environment:
+          - LANGFLOW_CONFIG_DIR=/app/langflow
+        volumes:
+          - ./langflow-data:/app/langflow
+      postgres:
+        image: postgres:16
+        volumes:
+          - langflow-postgres:/var/lib/postgresql/data
+
+    volumes:
+      langflow-postgres:
+    ```
+
+   For additional examples, see the [Docker Compose configuration](#clone) and the [docker_example compose file](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml).
+
+2. Pull the new image and update the image tag in your `docker-compose.yml` or `docker run` command.
+
+    With Docker Compose, set the image in your compose file, such as `image: langflowai/langflow:1.8.0`, and then pull:
+
+    ```bash
+    docker compose pull
+    ```
+
+    With `docker run`, pull the image:
+
+    ```bash
+    docker pull langflowai/langflow:1.8.0
+    ```
+
+3. Restart the container. The same volumes will be reattached, so your database and flows are preserved.
+
+    With Docker Compose:
+
+    ```bash
+    docker compose up -d
+    ```
+
+    With `docker run`, use the same volume mount and the new image tag:
+
+    ```bash
+    docker run -p 7860:7860 -v langflow-data:/app/langflow langflowai/langflow:1.8.0
+    ```
+
+This approach keeps the persistent volumes separate from the Langflow container, so you can upgrade the Langflow application without losing data.
+
+If you need to upgrade to a custom image based on a Langflow release, such as to add `uv` in `1.8.0`, first build a derived image from the official image, and then follow the same steps above.
+Set the custom image in your compose file or `docker run`, and then pull and restart.
+
+For a minimal Dockerfile that adds `uv` to the 1.8.0 image, see the [release notes](/release-notes) (“Docker image no longer includes uv or uvx”).

@@ -1,12 +1,12 @@
+import { useMemo } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
-import { Badge } from "@/components/ui/badge";
+import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
 import {
   formatTokens,
   formatTotalLatency,
   getSpanIcon,
   getStatusIconProps,
-  getStatusVariant,
 } from "./traceViewHelpers";
 import { SpanNodeProps } from "./types";
 
@@ -22,6 +22,23 @@ export function SpanNode({
   onToggle,
   onSelect,
 }: SpanNodeProps) {
+  const nodes = useFlowStore((state) => state.nodes);
+  const componentIconMap = useMemo(() => {
+    const map = new Map<string, string>();
+    nodes.forEach((node) => {
+      const nodeData = node.data?.node;
+      const displayName = nodeData?.display_name;
+      const icon = nodeData && "icon" in nodeData ? nodeData.icon : undefined;
+      if (displayName && icon) {
+        map.set(displayName.toLowerCase(), icon);
+      }
+    });
+    return map;
+  }, [nodes]);
+
+  const spanIconName = span.name
+    ? (componentIconMap.get(span.name.toLowerCase()) ?? getSpanIcon(span.type))
+    : getSpanIcon(span.type);
   const hasChildren = span.children.length > 0;
   const tokenStr = formatTokens(span.tokenUsage?.totalTokens);
 
@@ -70,7 +87,7 @@ export function SpanNode({
           span.status === "unset" && "text-muted-foreground",
         )}
       >
-        <IconComponent name={getSpanIcon(span.type)} className="h-4 w-4" />
+        <IconComponent name={spanIconName} className="h-4 w-4" />
       </div>
 
       {/* Span name */}
@@ -97,19 +114,14 @@ export function SpanNode({
       </span>
 
       {/* Status badge */}
-      <Badge
-        variant={getStatusVariant(span.status)}
-        size="xq"
-        className="min-w-[16px]"
-      >
-        <IconComponent
-          name={iconName}
-          className={`h-4 w-4 ${colorClass} ${shouldSpin ? "animate-spin" : ""}`}
-          aria-label={span.status}
-          dataTestId={`flow-log-status-${span.status}`}
-          skipFallback
-        />
-      </Badge>
+
+      <IconComponent
+        name={iconName}
+        className={`h-4 w-4 ${colorClass} ${shouldSpin ? "animate-spin" : ""}`}
+        aria-label={span.status}
+        dataTestId={`flow-log-status-${span.status}`}
+        skipFallback
+      />
     </div>
   );
 }

@@ -366,7 +366,7 @@
     @apply border-none ring ring-[#751C1C];
   }
   .building-status {
-    @apply border-blue-400;
+    @apply border-accent-indigo-foreground;
   }
   .status-build-animation {
     @apply opacity-0;
@@ -926,7 +926,7 @@
     @apply bg-input text-primary;
   }
   .form-modal-no-input {
-    @apply bg-input text-center text-primary dark:bg-gray-700 dark:text-gray-300;
+    @apply bg-input text-center text-primary;
   }
   .form-modal-lock-false {
     @apply text-primary;
@@ -1097,7 +1097,7 @@
   }
 
   .chat-message-highlight {
-    @apply rounded-md bg-indigo-100 px-0 font-semibold dark:bg-indigo-900;
+    @apply rounded-md bg-accent-indigo px-0 font-semibold;
   }
 
   .field-invalid {

@@ -373,11 +373,18 @@ class NativeTracer(BaseTracer):
             return None
 
         from langflow.services.tracing.native_callback import NativeCallbackHandler
+        from langflow.services.tracing.service import component_context_var
 
-        # LangChain spans must be linked to the component that triggered them so the
-        # trace tree reflects the actual execution hierarchy.
+        # Component context is set before add_trace() is called,
+        # so it's available when components call get_langchain_callbacks() during flow execution.
+        # We need to check component_context in case _current_component_id was still None when callbacks were created.
         parent_span_id = None
-        if self._current_component_id:
+        component_context = component_context_var.get(None)
+        if component_context:
+            component_id = component_context.trace_id
+            parent_span_id = uuid5(LANGFLOW_SPAN_NAMESPACE, f"{self.trace_id}-{component_id}")
+        elif self._current_component_id:
+            # Fallback for edge cases where component context might not be set
             parent_span_id = uuid5(LANGFLOW_SPAN_NAMESPACE, f"{self.trace_id}-{self._current_component_id}")
 
         return NativeCallbackHandler(self, parent_span_id=parent_span_id)

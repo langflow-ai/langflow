@@ -1,22 +1,23 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   PROVIDER_VARIABLE_MAPPING,
   ProviderVariable,
   VARIABLE_CATEGORY,
 } from "@/constants/providerConstants";
+import { EnabledModelsResponse } from "@/controllers/API/queries/models/use-get-enabled-models";
+import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import { useGetProviderVariables } from "@/controllers/API/queries/models/use-get-provider-variables";
+import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
+import { useValidateProvider } from "@/controllers/API/queries/models/use-validate-provider";
 import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
   usePatchGlobalVariables,
   usePostGlobalVariables,
 } from "@/controllers/API/queries/variables";
-import { useValidateProvider } from "@/controllers/API/queries/models/use-validate-provider";
-import { useGetProviderVariables } from "@/controllers/API/queries/models/use-get-provider-variables";
-import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
-import { EnabledModelsResponse } from "@/controllers/API/queries/models/use-get-enabled-models";
-import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import useAlertStore from "@/stores/alertStore";
 import { Provider } from "../components/types";
 
@@ -48,6 +49,7 @@ interface UseProviderConfigurationReturn {
   handleActivateProvider: () => void;
   validateCredentials: () => Promise<boolean>;
   handleModelToggle: (modelName: string, enabled: boolean) => void;
+  flushPendingChanges: () => Promise<void>;
 
   // Helpers
   isVariableConfigured: (key: string) => boolean;
@@ -98,7 +100,9 @@ export const useProviderConfiguration = ({
   const { data: globalVariables = [] } = useGetGlobalVariables();
   const { mutateAsync: validateProvider } = useValidateProvider();
   const { data: providerVariablesMapping = {} } = useGetProviderVariables();
-  const { mutate: updateEnabledModels } = useUpdateEnabledModels({ retry: 0 });
+  const { mutate: updateEnabledModels, mutateAsync: updateEnabledModelsAsync } =
+    useUpdateEnabledModels({ retry: 0 });
+  const { refreshAllModelInputs } = useRefreshModelInputs();
   const { data: modelProviders = [], isFetching: isFetchingModels } =
     useGetModelProviders(
       {},
@@ -144,12 +148,21 @@ export const useProviderConfiguration = ({
           setSuccessData({ title: pendingSuccessTitleRef.current });
           pendingSuccessTitleRef.current = null;
         }
+        // Refresh all model nodes on the canvas so they pick up new models
+        refreshAllModelInputs({ silent: true });
       }
       if (isFetchingAfterDisconnect) {
         setIsFetchingAfterDisconnect(false);
+        // Refresh all model nodes on the canvas so they reflect the disconnect
+        refreshAllModelInputs({ silent: true });
       }
     }
-  }, [isFetchingModels, isFetchingAfterSave, isFetchingAfterDisconnect]);
+  }, [
+    isFetchingModels,
+    isFetchingAfterSave,
+    isFetchingAfterDisconnect,
+    refreshAllModelInputs,
+  ]);
 
   // Keep syncedSelectedProvider in sync with prop and reset state on provider change
   useEffect(() => {
@@ -201,7 +214,7 @@ export const useProviderConfiguration = ({
 
     const providerName = syncedSelectedProvider.provider;
     const apiVariables = providerVariablesMapping[providerName];
-    if (apiVariables && apiVariables.length > 0) {
+    if (Array.isArray(apiVariables) && apiVariables.length > 0) {
       return apiVariables;
     }
 
@@ -583,10 +596,59 @@ export const useProviderConfiguration = ({
           queryClient.invalidateQueries({
             queryKey: ["useGetModelProviders"],
           });
+          refreshAllModelInputs({ silent: true });
         },
       },
     );
   }, 1000);
+
+  const flushPendingChanges = useCallback(async () => {
+    // Cancel the pending debounce timer — we'll send the toggles directly
+    flushModelToggles.cancel();
+
+    if (!syncedSelectedProvider?.provider) return;
+    const providerName = syncedSelectedProvider.provider;
+
+    const toggles = { ...pendingModelToggles.current };
+    if (Object.keys(toggles).length === 0) return;
+
+    const updates = Object.entries(toggles).map(([modelName, enabled]) => ({
+      provider: providerName,
+      model_id: modelName,
+      enabled,
+    }));
+
+    const previousData = fallbackModelData.current;
+
+    // Clear buffer
+    pendingModelToggles.current = {};
+    fallbackModelData.current = undefined;
+
+    try {
+      await updateEnabledModelsAsync({ updates });
+      // Mutation succeeded — query invalidation is handled by
+      // refreshAllModelInputs which runs after this promise resolves.
+    } catch (error: any) {
+      // Revert optimistic update on failure
+      if (previousData) {
+        queryClient.setQueryData(["useGetEnabledModels"], previousData);
+      }
+      const errorMessage =
+        error?.response?.data?.detail ||
+        error?.message ||
+        "Failed to update model status";
+      setErrorData({
+        title: "Error updating model status",
+        list: [errorMessage],
+      });
+    }
+  }, [
+    flushModelToggles,
+    syncedSelectedProvider,
+    queryClient,
+    updateEnabledModelsAsync,
+    setErrorData,
+  ]);
 
   const handleModelToggle = useCallback(
     (modelName: string, enabled: boolean) => {
@@ -642,6 +704,7 @@ export const useProviderConfiguration = ({
     handleActivateProvider,
     validateCredentials,
     handleModelToggle,
+    flushPendingChanges,
 
     // Helpers
     isVariableConfigured,

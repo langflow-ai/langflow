@@ -1,9 +1,9 @@
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
+import type { MCPTransport } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import { toSpaceCase } from "@/utils/stringManipulation";
 import { cn } from "@/utils/utils";
-import type { MCPTransport } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import { autoInstallers } from "../utils/mcpServerUtils";
 
 interface McpAutoInstallContentProps {
@@ -27,7 +27,7 @@ export const McpAutoInstallContent = ({
 }: McpAutoInstallContentProps) => (
   <div className="flex flex-col gap-1 mt-4">
     {!isLocalConnection && (
-      <div className="mb-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+      <div className="mb-2 rounded-md bg-accent-amber px-3 py-2 text-sm text-accent-amber-foreground">
         <div className="flex items-center gap-3">
           <ForwardedIconComponent
             name="AlertTriangle"

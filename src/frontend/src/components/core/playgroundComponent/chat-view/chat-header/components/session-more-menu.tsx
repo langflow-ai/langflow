@@ -31,6 +31,7 @@ export interface SessionMoreMenuProps {
   // Controlled state props
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  isDefaultSession?: boolean;
 }
 
 const DEFAULT_SIDE_OFFSET = 4;
@@ -43,6 +44,7 @@ export function SessionMoreMenu({
   showMessageLogs = true,
   showRename = true,
   showDelete = true,
+  isDefaultSession = false,
   showClearChat = false,
   side = "bottom",
   align = "end",
@@ -176,7 +178,7 @@ export function SessionMoreMenu({
                   name="Trash2"
                   className="mr-2 h-4 w-4"
                 />
-                Delete
+                {isDefaultSession ? "Clear session" : "Delete session"}
               </div>
             </SelectItem>
           )}

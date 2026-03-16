@@ -47,6 +47,153 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
     If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
 
+## 1.8.x
+
+Highlights of this release include the following changes.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
+
+### Breaking changes
+
+-   `langflow-base` dependency structure refactored
+
+    The `langflow-base` package now uses granular optional dependency groups. As a result, many dependencies that were previously included in the `langflow-base` installation were moved to optional extras.
+
+    If you installed Langflow with `uv pip install langflow`, this isn't a breaking change. Installing `langflow` automatically installs `langflow-base[complete]`, which includes all optional dependencies and maintains the same functionality as before.
+
+    However, if you installed Langflow with `uv pip install langflow-base` without specifying extra dependencies, this _is_ a breaking change.
+    Some dependencies that were previously included by default are now available only through optional extras.
+    Therefore, installing `langflow-base` directly only installs the [core base dependencies](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/pyproject.toml).
+
+    If you installed `langflow-base`, there are two ways to resolve dependency errors that result from this breaking change:
+
+    * If you need the full set of dependencies, you must install `langflow-base` with the `complete` extra:
+
+        ```bash
+        uv pip install "langflow-base[complete]"
+        ```
+
+    * If you need specific dependencies, you must install `langflow-base` with those optional dependency groups. For example:
+
+       ```bash
+       uv pip install "langflow-base[postgresql,openai,chroma]"
+       ```
+
+    For more information about available optional dependency groups, see [Install optional dependency groups for `langflow-base`](/install-custom-dependencies#install-optional-dependency-groups-for-langflow-base).
+
+-   Docker image does not include `uv` or `uvx`
+
+    :::tip
+    Starting with Langflow 1.8.1, the official Docker images include `uv` and `uvx` again.
+    If you're using Langflow 1.8.0, follow the steps in this release note to add `uv` and `uvx` in a derived image.
+    :::
+
+    In Langflow 1.8.0, the Langflow Docker image does not include `uv` or `uvx` in the runtime image.
+    This means that MCP server configurations, including the default Langflow MCP server, that rely on commands like `uvx mcp-proxy` will fail inside the container with a `command not found` error.
+
+    If you use MCP from within a Langflow 1.8.0 Docker image, you must install `uv` in an image derived from the official `langflowai/langflow` image.
+
+    To install `uv` and `uvx` in a derived image based on the official `langflowai/langflow` image, do the following:
+
+    1. Create a `Dockerfile` in your project.
+    2. Use the official Langflow image as the base and install `uv` into the existing virtual environment:
+        ```dockerfile
+        FROM langflowai/langflow:1.8.0
+
+        USER root
+        RUN /app/.venv/bin/pip install uv
+        USER user
+        ```
+    3. Build the image.
+
+        ```bash
+        docker build -t YOUR_IMAGE_NAME .
+        ```
+
+        Replace `YOUR_IMAGE_NAME` with your Docker image name.
+
+    4. Run the new image:
+
+        ```bash
+        docker run -p 7860:7860 YOUR_IMAGE_NAME
+        ```
+
+    For more information, see [Upgrade the Langflow Docker image](/deployment-docker#upgrade-the-langflow-docker-image).
+
+### New features and enhancements
+
+- Global model provider configuration
+
+    Model providers for language models, embedding models, and agents are now configured globally in the **Model providers** pane, instead of within individual components.
+    For more information, see the [Language Model component](/components-models).
+
+- Component inspection panel
+
+    The component inspection panel replaces the component header menu for managing component parameters and settings.
+    For more information, see [Component inspection panel](/concepts-components#component-inspection-panel).
+
+- Developer API: `/workflow` synchronous endpoints (Beta)
+
+    The Developer API is part of a larger effort to improve Langflow's APIs with enhanced capabilities and better developer experience.
+    The Developer API now includes `/v2/workflow` endpoints for executing flows with enhanced error handling, timeout protection, and structured responses.
+    The synchronous execution endpoint is available at `POST /api/v2/workflows`.
+    For more information, see [Workflow API (Beta)](/workflow-api).
+
+- Traces and trace view
+
+    Langflow now records execution traces for flows and components.
+    View your traces in the **Trace Details** pane, and inspect span trees, latencies, and errors.
+    For more information, see [Traces](/traces).
+
+- Knowledge bases
+
+    Knowledge bases let you organize documents and other reference data into reusable vector databases that can be attached to multiple flows.
+    This makes it easier to centralize domain knowledge and reuse the same data across agents and retrieval workflows.
+    For more information, see [Manage vector data](/knowledge).
+
+- Mustache templating support for Prompt Template component
+
+    The **Prompt Template** component now supports Mustache templating syntax.
+    Mustache templating eliminates the need to escape curly braces when including JSON structures in your prompts. For more information, see [Prompt Template](/components-prompts#use-mustache-templating-in-prompt-templates).
+
+- More configuration options for JWT-based session authentication
+
+    Langflow 1.8 offers additional configuration options for JWT algorithms, including support for RS256/RS512 algorithms, configurable keys, and token lifetimes. For more information, see [JWT authentication](/jwt-authentication).
+
+- Global variables in MCP server headers
+
+    You can now use [global variables](/configuration-global-variables) in MCP server header values to securely store and reference sensitive values. For more information, see [Use global variables in MCP server headers](/mcp-client#use-global-variables-in-mcp-server-headers).
+
+- Pass environment variables to flows in API headers and CLI
+
+    The ability to pass environment variables in HTTP headers (previously available for the [`/responses` endpoint](/api-openai-responses#global-var)) is now also available for the [`/run` endpoint](/api-flows-run#pass-global-variables-in-headers).
+
+- Guardrails component
+
+    The **Guardrails** component validates input text against security and safety guardrails by using a connected language model to check for content such as PII, tokens/passwords, or offensive content. For more information, see [Guardrails](/guardrails).
+
+- Token usage tracking for OpenAI Responses API
+
+    The OpenAI Responses API endpoint now tracks and returns token usage statistics when your flow uses language model APIs that provide token usage information.
+    For more information, see [Token usage tracking](/api-openai-responses#token-usage-tracking).
+
+- Docker AMD vs ARM image sizes
+
+    Langflow 1.8.0 addresses the AMD vs ARM Docker image size gap.
+    We reconfigured our Python dependencies to use CPU-only PyTorch wheels through `uv` sources, which removes large CUDA-related dependencies from the AMD64 images.
+    With this change, both AMD64 and ARM64 images are now smaller than 2 GB.
+
+- New [**Agentics** bundle](/bundles-agentics)
+
+    Uses LLMs to transform tabular data, including mapping, reducing, and generating DataFrame rows based on a defined schema.
+
+- New [**LiteLLM** bundle](/bundles-lite-llm)
+
+    Connects to models through a LiteLLM proxy so you can route requests to multiple LLM providers and switch providers without changing flow credentials.
+
+- New [**Openlayer** observability integration](/integrations-openlayer)
+
+    Configures Langflow to send tracing data to Openlayer for analysis, monitoring, and evaluation of your flow executions.
+
 ## 1.7.x
 
 :::warning Version yanked

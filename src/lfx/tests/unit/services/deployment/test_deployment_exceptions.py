@@ -1,14 +1,14 @@
 """Tests for deployment exception hierarchy, metadata, and service instantiation."""
 
 import pytest
-from lfx.services.deployment import (
+from lfx.services.adapters.deployment import (
     BaseDeploymentService,
     DeploymentError,
     DeploymentNotConfiguredError,
     DeploymentService,
     DeploymentServiceError,
 )
-from lfx.services.deployment.exceptions import (
+from lfx.services.adapters.deployment.exceptions import (
     AuthenticationError,
     AuthSchemeError,
     CredentialResolutionError,
@@ -109,6 +109,8 @@ def test_deployment_service_is_base_deployment_service() -> None:
         ("create", {"user_id": "u1", "payload": None, "db": None}),
         ("list_types", {"user_id": "u1", "db": None}),
         ("list", {"user_id": "u1", "db": None}),
+        ("list_configs", {"user_id": "u1", "db": None}),
+        ("list_snapshots", {"user_id": "u1", "db": None}),
         ("get", {"user_id": "u1", "deployment_id": "d1", "db": None}),
         ("update", {"user_id": "u1", "deployment_id": "d1", "payload": None, "db": None}),
         ("redeploy", {"user_id": "u1", "deployment_id": "d1", "db": None}),
@@ -143,11 +145,15 @@ def test_deployment_not_configured_default_message() -> None:
 
 def test_auth_errors_not_caught_by_deployment_error() -> None:
     """Ensure except DeploymentError does NOT catch auth failures."""
-    with pytest.raises(AuthenticationError):  # noqa: PT012
+
+    def raise_auth_error() -> None:
         try:
             raise CredentialResolutionError
         except DeploymentError:
             pytest.fail("DeploymentError should not catch AuthenticationError")
+
+    with pytest.raises(AuthenticationError):
+        raise_auth_error()
 
 
 def test_deployment_service_error_catches_both_hierarchies() -> None:
@@ -159,7 +165,7 @@ def test_deployment_service_error_catches_both_hierarchies() -> None:
 
 
 def test_package_exports_base_and_error() -> None:
-    from lfx.services.deployment import BaseDeploymentService, DeploymentError, DeploymentService
+    from lfx.services.adapters.deployment import BaseDeploymentService, DeploymentError, DeploymentService
 
     assert BaseDeploymentService is not None
     assert DeploymentError is not None

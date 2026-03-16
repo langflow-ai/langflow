@@ -3,8 +3,8 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 import { disableInspectPanel } from "../../utils/open-advanced-options";
+import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 // Add this line to declare Node.js global variables
 declare const process: any;
