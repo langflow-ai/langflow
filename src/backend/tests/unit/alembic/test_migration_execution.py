@@ -98,7 +98,10 @@ def _get_main_branch_head() -> str | None:
     for rev_id in new_rev_ids:
         rev_script = script.get_revision(rev_id)
         if rev_script is None:
-            msg = f"New migration file matched revision ID '{rev_id}' but Alembic has no such revision — check filename convention"
+            msg = (
+                f"New migration file matched revision ID '{rev_id}' "
+                f"but Alembic has no such revision — check filename convention"
+            )
             raise ValueError(msg)
         if rev_script.down_revision is None:
             msg = f"New migration {rev_id} has down_revision=None — it must chain from an existing migration"
