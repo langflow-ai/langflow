@@ -58,9 +58,7 @@ const ExportModal = forwardRef(
         setOpen={setOpen}
         onSubmit={async () => {
           try {
-            // TODO: Full-version export (embedding all versions) is planned as a follow-up feature.
-            // For now, export only the current working version of the flow.
-            const flowToExport: FlowType = {
+            let flowToExport: FlowType = {
               id: currentFlow!.id,
               data: currentFlow!.data!,
               description,
