@@ -146,34 +146,39 @@ jobs:
             } catch (error) {
               message = `⚠️ **Migration validation check failed to run properly**\n`;
               message += `Error: ${error.message}\n`;
+              validationPassed = false;
             }
 
-            // Post or update comment
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-
-            const botComment = comments.find(comment =>
-              comment.user.type === 'Bot' &&
-              comment.body.includes('Migration Validation')
-            );
-
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: botComment.id,
-                body: message
-              });
-            } else {
-              await github.rest.issues.createComment({
+            // Post or update comment (non-critical — don't let API errors mask validation results)
+            try {
+              const { data: comments } = await github.rest.issues.listComments({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body: message
               });
+
+              const botComment = comments.find(comment =>
+                comment.user.type === 'Bot' &&
+                comment.body.includes('Migration Validation')
+              );
+
+              if (botComment) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id,
+                  body: message
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: message
+                });
+              }
+            } catch (apiError) {
+              core.warning(`Failed to post PR comment: ${apiError.message}`);
             }
 
             // Fail the workflow if validation didn't pass

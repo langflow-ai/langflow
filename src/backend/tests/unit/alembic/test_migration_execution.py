@@ -61,8 +61,11 @@ def _get_main_branch_head() -> str | None:
             check=True,
             cwd=_WORKSPACE_ROOT,
         )
-    except subprocess.CalledProcessError:
-        return None  # git diff failed (e.g. origin/main doesn't exist)
+    except subprocess.CalledProcessError as exc:
+        import warnings
+
+        warnings.warn(f"git diff failed (rc={exc.returncode}): {exc.stderr.strip()}", stacklevel=2)
+        return None
     except OSError as exc:
         if exc.errno == errno.ENOENT:
             return None  # git binary not found at resolved path
@@ -141,7 +144,11 @@ def _filter_sqlite_noise(diffs: list) -> list:
             continue
         if op_type in ("remove_fk", "add_fk"):
             fk = d[1]
-            key = (fk.parent.name, tuple(sorted(c.name for c in fk.columns)))
+            try:
+                key = (fk.parent.name, tuple(sorted(c.name for c in fk.columns)))
+            except (AttributeError, TypeError):
+                significant_diffs.append(d)
+                continue
             if op_type == "remove_fk":
                 fk_removes[key] = fk
             else:
@@ -207,7 +214,8 @@ def test_no_phantom_migrations():
                 f"how column metadata is generated.\n\nDiffs:\n{diff_descriptions}"
             )
     finally:
-        Path(db_path).unlink(missing_ok=True)
+        for suffix in ("", "-wal", "-shm", "-journal"):
+            Path(db_path + suffix).unlink(missing_ok=True)
 
 
 def test_upgrade_from_main_branch():
@@ -267,4 +275,5 @@ def test_upgrade_from_main_branch():
         finally:
             engine.dispose()
     finally:
-        Path(db_path).unlink(missing_ok=True)
+        for suffix in ("", "-wal", "-shm", "-journal"):
+            Path(db_path + suffix).unlink(missing_ok=True)
