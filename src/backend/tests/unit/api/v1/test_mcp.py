@@ -5,7 +5,6 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException, status
 from httpx import AsyncClient
-from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.user import User
 
 # Mark all tests in this module as asyncio
@@ -15,7 +14,7 @@ pytestmark = pytest.mark.asyncio
 @pytest.fixture
 def mock_user():
     return User(
-        id=uuid4(), username="testuser", password=get_password_hash("testpassword"), is_active=True, is_superuser=False
+        id=uuid4(), username="testuser", password="fake-hashed-password", is_active=True, is_superuser=False  # noqa: S106
     )
 
 
