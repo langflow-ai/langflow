@@ -609,10 +609,9 @@ class DataOperationsComponent(Component):
             if not getattr(self, "json_file", None):
                 msg = "No JSON file provided. Please upload a .json file."
                 raise ValueError(msg)
-        else:
-            if not getattr(self, "data", None):
-                msg = "No JSON connected. Please connect a JSON object to the handle."
-                raise ValueError(msg)
+        elif not getattr(self, "data", None):
+            msg = "No JSON connected. Please connect a JSON object to the handle."
+            raise ValueError(msg)
 
         if not hasattr(self, "operations") or not self.operations:
             msg = "No operation selected. Please select an operation from the Operations list."
