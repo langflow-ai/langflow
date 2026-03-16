@@ -164,14 +164,16 @@ class DataFrameOperationsComponent(Component):
         DataFrameInput(
             name="left_dataframe",
             display_name="Left Table",
-            info="The left (primary) DataFrame for merge operations. In a left merge, all rows from this table are preserved.",
+            info="The left (primary) DataFrame for merge operations. "
+            "In a left merge, all rows from this table are preserved.",
             dynamic=True,
             show=False,
         ),
         DataFrameInput(
             name="right_dataframe",
             display_name="Right Table",
-            info="The right (secondary) DataFrame for merge operations. In a right merge, all rows from this table are preserved.",
+            info="The right (secondary) DataFrame for merge operations. "
+            "In a right merge, all rows from this table are preserved.",
             dynamic=True,
             show=False,
         ),
