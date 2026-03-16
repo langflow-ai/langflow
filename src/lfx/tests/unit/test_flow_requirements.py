@@ -706,11 +706,15 @@ class TestStarterProjects:
         assert "lfx" in result
         assert "langchain-anthropic" in result
 
-    def test_simple_agent_has_community(self, simple_agent_flow):
-        """Simple Agent should require langchain-community for its tools."""
+    def test_simple_agent_requirements(self, simple_agent_flow):
+        """Simple Agent (Anthropic pre-selected) should require lfx + anthropic deps.
+
+        langchain-community is now a transitive dependency of lfx and is therefore
+        filtered out as already-provided, so it is NOT expected in the output.
+        """
         result = generate_requirements_from_flow(simple_agent_flow, pin_versions=False)
         assert "lfx" in result
-        assert "langchain-community" in result
+        assert "langchain-anthropic" in result
 
     def test_basic_prompting_from_file(self):
         """Test the file-based API."""
