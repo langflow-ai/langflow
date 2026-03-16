@@ -6,7 +6,6 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING
 
-from cachetools import TTLCache
 from fastapi import HTTPException, status
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 from lfx.services.adapters.deployment.base import BaseDeploymentService
@@ -105,7 +104,6 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from typing import Any
-    from uuid import UUID
 
     from ibm_watsonx_orchestrate_clients.agents.agent_client import AgentUpsertResponse
     from lfx.services.settings.service import SettingsService
@@ -130,15 +128,15 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             msg = "Settings service is not available."
             raise RuntimeError(msg)
         self.settings_service = settings_service
-        self._client_managers: TTLCache = TTLCache(maxsize=128, ttl=3600)
         self.set_ready()
 
-    async def _get_provider_clients(self, *, user_id: UUID | str, db: AsyncSession) -> WxOClient:
-        return await get_provider_clients(
-            user_id=user_id,
-            db=db,
-            client_cache=self._client_managers,
-        )
+    async def _get_provider_clients(self, *, user_id: IdLike, db: AsyncSession) -> WxOClient:
+        """Resolve provider clients through a service-level seam.
+
+        A dedicated method keeps call sites patchable in unit/e2e tests and
+        centralizes provider-client resolution behavior for this service.
+        """
+        return await get_provider_clients(user_id=user_id, db=db)
 
     async def create(
         self,
@@ -792,4 +790,3 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
     async def teardown(self) -> None:
         """Teardown provider-specific resources."""
-        self._client_managers.clear()

@@ -10,6 +10,7 @@ import pytest
 from fastapi import HTTPException, status
 from lfx.services.adapters.deployment.exceptions import (
     AuthorizationError,
+    CredentialResolutionError,
     DeploymentConflictError,
     DeploymentError,
     DeploymentNotFoundError,
@@ -48,6 +49,9 @@ update_helpers_module = importlib.import_module(
     "langflow.services.adapters.deployment.watsonx_orchestrate.update_helpers"
 )
 payloads_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.payloads")
+client_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.client")
+types_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.types")
+deployment_context_module = importlib.import_module("langflow.services.adapters.deployment.context")
 WatsonxOrchestrateDeploymentService = importlib.import_module(
     "langflow.services.adapters.deployment.watsonx_orchestrate"
 ).WatsonxOrchestrateDeploymentService
@@ -2181,7 +2185,7 @@ async def test_update_spec_only_description_sends_update(monkeypatch):
 def test_get_authenticator_ibm_cloud():
     from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_authenticator
 
-    auth = get_authenticator("https://api.us-south.cloud.ibm.com", "test-key")
+    auth = get_authenticator("https://api.region-foobar.cloud.ibm.com", "test-key")
     from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 
     assert isinstance(auth, IAMAuthenticator)
@@ -2202,6 +2206,95 @@ def test_get_authenticator_unknown_url():
 
     with pytest.raises(AuthSchemeError, match="Could not determine"):
         get_authenticator("https://example.com", "test-key")
+
+
+@pytest.mark.anyio
+async def test_get_provider_clients_uses_request_scoped_context_memoization(monkeypatch):
+    resolve_calls = 0
+
+    async def mock_resolve_wxo_client_credentials(*, user_id, db, provider_id):  # noqa: ARG001
+        nonlocal resolve_calls
+        resolve_calls += 1
+        return WxOCredentials(
+            instance_url="https://api.region-foobar.cloud.ibm.com/",
+            authenticator=object(),
+        )
+
+    monkeypatch.setattr(client_module, "resolve_wxo_client_credentials", mock_resolve_wxo_client_credentials)
+    client_module.clear_provider_clients_request_context()
+
+    provider_context = deployment_context_module.DeploymentAdapterContext(provider_id=UUID(int=1))
+    with deployment_context_module.DeploymentContext.scope(provider_context):
+        first = await client_module.get_provider_clients(user_id="user-1", db=object())
+        second = await client_module.get_provider_clients(user_id="user-1", db=object())
+
+    assert first is second
+    assert resolve_calls == 1
+
+
+@pytest.mark.anyio
+async def test_get_provider_clients_rejects_mixed_provider_contexts(monkeypatch):
+    resolve_calls = 0
+
+    async def mock_resolve_wxo_client_credentials(*, user_id, db, provider_id):  # noqa: ARG001
+        nonlocal resolve_calls
+        resolve_calls += 1
+        return WxOCredentials(
+            instance_url="https://api.region-foobar.cloud.ibm.com/",
+            authenticator=object(),
+        )
+
+    monkeypatch.setattr(client_module, "resolve_wxo_client_credentials", mock_resolve_wxo_client_credentials)
+    client_module.clear_provider_clients_request_context()
+
+    with deployment_context_module.DeploymentContext.scope(
+        deployment_context_module.DeploymentAdapterContext(provider_id=UUID(int=1))
+    ):
+        await client_module.get_provider_clients(user_id="user-1", db=object())
+    with (
+        deployment_context_module.DeploymentContext.scope(
+            deployment_context_module.DeploymentAdapterContext(provider_id=UUID(int=2))
+        ),
+        pytest.raises(CredentialResolutionError, match="different deployment provider context"),
+    ):
+        await client_module.get_provider_clients(user_id="user-1", db=object())
+
+    assert resolve_calls == 1
+
+
+def test_wxo_client_initializes_subclients_lazily(monkeypatch):
+    init_counts = {"tool": 0, "connections": 0, "agent": 0}
+
+    class FakeToolClient:
+        def __init__(self, base_url: str, authenticator):  # noqa: ARG002
+            init_counts["tool"] += 1
+            self.base_url = base_url
+
+    class FakeConnectionsClient:
+        def __init__(self, base_url: str, authenticator):  # noqa: ARG002
+            init_counts["connections"] += 1
+            self.base_url = base_url
+
+    class FakeAgentClient:
+        def __init__(self, base_url: str, authenticator):  # noqa: ARG002
+            init_counts["agent"] += 1
+            self.base_url = base_url
+
+    monkeypatch.setattr(types_module, "ToolClient", FakeToolClient)
+    monkeypatch.setattr(types_module, "ConnectionsClient", FakeConnectionsClient)
+    monkeypatch.setattr(types_module, "AgentClient", FakeAgentClient)
+
+    wxo_client = types_module.WxOClient(
+        instance_url="https://api.region-foobar.cloud.ibm.com",
+        authenticator=object(),
+    )
+    assert init_counts == {"tool": 0, "connections": 0, "agent": 0}
+
+    _ = wxo_client.agent
+    assert init_counts == {"tool": 0, "connections": 0, "agent": 1}
+
+    _ = wxo_client.agent
+    assert init_counts == {"tool": 0, "connections": 0, "agent": 1}
 
 
 # ---------------------------------------------------------------------------
@@ -2357,6 +2450,19 @@ def test_extract_error_detail_non_json():
     from langflow.services.adapters.deployment.watsonx_orchestrate.utils import extract_error_detail
 
     assert extract_error_detail("plain text error") == "plain text error"
+
+
+def test_extract_error_detail_with_null_detail_falls_back_to_body():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import extract_error_detail
+
+    assert extract_error_detail('{"detail": null}') == '{"detail": null}'
+
+
+def test_extract_error_detail_uses_message_field_when_detail_missing():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import extract_error_detail
+
+    payload = '{"statusCode":409,"message":"The connection ID already exists.","details":"duplicate"}'
+    assert extract_error_detail(payload) == "The connection ID already exists."
 
 
 def test_dedupe_list():
@@ -2648,12 +2754,13 @@ def test_build_langflow_artifact_bytes_structure():
 # ---------------------------------------------------------------------------
 
 
-def test_wxo_credentials_repr_masks_api_key():
-    creds = WxOCredentials(instance_url="https://example.com", api_key="sk-abcdef12345")
+def test_wxo_credentials_repr_does_not_expose_authenticator_data():
+    class _FakeAuthenticator:
+        pass
+
+    creds = WxOCredentials(instance_url="https://example.com", authenticator=_FakeAuthenticator())
     repr_str = repr(creds)
-    assert "****" in repr_str
-    assert "sk-abcdef12345" not in repr_str
-    assert "abcdef" not in repr_str
+    assert repr_str == "WxOCredentials(instance_url='https://example.com', authenticator=_FakeAuthenticator)"
 
 
 # ---------------------------------------------------------------------------
@@ -2676,8 +2783,6 @@ async def test_duplicate_raises_operation_not_supported():
 
 
 @pytest.mark.anyio
-async def test_teardown_clears_client_cache():
+async def test_teardown_succeeds():
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    service._client_managers["test"] = SimpleNamespace()
     await service.teardown()
-    assert len(service._client_managers) == 0

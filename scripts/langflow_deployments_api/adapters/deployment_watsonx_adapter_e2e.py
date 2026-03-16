@@ -100,6 +100,7 @@ import langflow.services.adapters.deployment.watsonx_orchestrate.update_helpers 
 from dotenv import load_dotenv
 from fastapi import HTTPException
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+from langflow.services.adapters.deployment.context import DeploymentAdapterContext, DeploymentContext
 from langflow.services.adapters.deployment.watsonx_orchestrate import (
     WatsonxOrchestrateDeploymentService,
     WxOCredentials,
@@ -183,12 +184,19 @@ class WatsonxAdapterDirectE2E:
 
         import langflow.services.adapters.deployment.watsonx_orchestrate.client as _client_mod
 
-        _client_mod.get_current_provider_id = lambda: self.provider_id  # type: ignore[assignment]
+        self._client_mod = _client_mod
 
-        _original_resolve = _client_mod.resolve_wxo_client_credentials
+        deployment_context = DeploymentAdapterContext(provider_id=self.provider_id)
+        self._deployment_context_token = DeploymentContext.set_current(deployment_context)
+
+        self._original_resolve_wxo_client_credentials = _client_mod.resolve_wxo_client_credentials
 
         async def _resolve_credentials(*, user_id, db, provider_id):  # noqa: ARG001
-            return WxOCredentials(instance_url=self.provider_backend_url, api_key=self.provider_api_key)
+            authenticator = _client_mod.get_authenticator(
+                instance_url=self.provider_backend_url,
+                api_key=self.provider_api_key,
+            )
+            return WxOCredentials(instance_url=self.provider_backend_url, authenticator=authenticator)
 
         _client_mod.resolve_wxo_client_credentials = _resolve_credentials  # type: ignore[assignment]
 
@@ -199,17 +207,21 @@ class WatsonxAdapterDirectE2E:
     async def run(self) -> int:
         print("Starting watsonx direct adapter runner...")
         print(f"mode={self.mode} project_id={self.project_id} keep_resources={self.keep_resources}")
+        try:
+            results: list[ScenarioResult] = []
+            if self.mode in {"live", "both"}:
+                results.extend(await self._run_live_scenarios())
+            if self.mode in {"failpoint", "both"}:
+                results.extend(await self._run_failpoint_scenarios())
 
-        results: list[ScenarioResult] = []
-        if self.mode in {"live", "both"}:
-            results.extend(await self._run_live_scenarios())
-        if self.mode in {"failpoint", "both"}:
-            results.extend(await self._run_failpoint_scenarios())
-
-        self._print_summary(results)
-        if not self.keep_resources:
-            await self._cleanup_resources()
-        return 1 if any(not result.ok for result in results) else 0
+            self._print_summary(results)
+            if not self.keep_resources:
+                await self._cleanup_resources()
+            return 1 if any(not result.ok for result in results) else 0
+        finally:
+            self._client_mod.resolve_wxo_client_credentials = self._original_resolve_wxo_client_credentials
+            self._client_mod.clear_provider_clients_request_context()
+            DeploymentContext.reset_current(self._deployment_context_token)
 
     async def _run_live_scenarios(self) -> list[ScenarioResult]:
         duplicate_name = self._mk_name("dup_snapshot")
@@ -1292,8 +1304,9 @@ class WatsonxAdapterDirectE2E:
             label="upd_conflict_seed",
             snapshot_count=1,
         )
-        conflict_prefix = "e2e_upd_conflict_"
-        conflict_name = "dup_cfg"
+        conflict_suffix = uuid4().hex[:8]
+        conflict_prefix = f"e2e_upd_conflict_{conflict_suffix}_"
+        conflict_name = f"dup_cfg_{conflict_suffix}"
         conflict_tool_id = next(iter(_conflict_snapshot_ids), "")
         if not conflict_tool_id:
             results.append(
@@ -1329,7 +1342,7 @@ class WatsonxAdapterDirectE2E:
                 name="upd_config_raw_payload_conflict",
                 expected={OUTCOME_CONFLICT},
                 actual_outcome=status_code,
-                detail=detail,
+                detail=(f"setup={setup_status}:{_setup_detail} conflict={status_code}:{detail}"),
                 ok=setup_status == OUTCOME_SUCCESS and status_code == OUTCOME_CONFLICT,
             )
         )

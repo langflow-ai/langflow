@@ -2,25 +2,42 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
+    from contextvars import Token
     from uuid import UUID
 
-_current_deployment_provider_id: ContextVar[UUID | None] = ContextVar(
-    "langflow_current_deployment_provider_id",
-    default=None,
-)
+
+@dataclass(frozen=True, slots=True)
+class DeploymentAdapterContext:
+    provider_id: UUID
 
 
-@contextmanager
-def deployment_provider_scope(provider_id: UUID):
-    token = _current_deployment_provider_id.set(provider_id)
-    try:
-        yield
-    finally:
-        _current_deployment_provider_id.reset(token)
+class DeploymentContext:
+    _current: ClassVar[ContextVar[DeploymentAdapterContext | None]] = ContextVar(
+        "langflow_current_deployment_context",
+        default=None,
+    )
 
+    @classmethod
+    def get_current(cls) -> DeploymentAdapterContext | None:
+        return cls._current.get()
 
-def get_current_deployment_provider_id() -> UUID | None:
-    return _current_deployment_provider_id.get()
+    @classmethod
+    def set_current(cls, context: DeploymentAdapterContext) -> Token[DeploymentAdapterContext | None]:
+        return cls._current.set(context)
+
+    @classmethod
+    def reset_current(cls, token: Token[DeploymentAdapterContext | None]) -> None:
+        cls._current.reset(token)
+
+    @classmethod
+    @contextmanager
+    def scope(cls, context: DeploymentAdapterContext):
+        token: Token[DeploymentAdapterContext | None] = cls.set_current(context)
+        try:
+            yield
+        finally:
+            cls.reset_current(token)
