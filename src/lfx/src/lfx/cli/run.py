@@ -14,14 +14,6 @@ VERBOSITY_DETAILED = 2
 VERBOSITY_FULL = 3
 
 
-def _check_langchain_version_compatibility(error_message: str) -> str | None:
-    """Check if error is due to langchain-core version incompatibility.
-
-    Returns a helpful error message if incompatibility is detected, None otherwise.
-    """
-    return None
-
-
 @partial(syncify, raise_sync_error=False)
 async def run(
     script_path: Path | None = typer.Argument(  # noqa: B008
