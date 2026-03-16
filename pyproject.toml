@@ -101,7 +101,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 docling = [
-    "langchain-docling>=1.1.0",
+    "langchain-docling>=2.0.0,<3.0.0",
     "tesserocr>=2.8.0",
     "rapidocr-onnxruntime>=1.4.4",
     "ocrmac>=1.0.0; sys_platform == 'darwin'",
@@ -136,8 +136,8 @@ nv-ingest = [
     # due to incompatibility with <3.12 and how uv handles lockfile creation.
     # If upgrading, ensure `uv lock` and `uv sync` are run after upgrade with these,
     # and that afterward, the lockfile contains nv-ingest.
-    "nv-ingest-api==25.6.2,<26.0.0 ; python_version >= '3.12'",
-    "nv-ingest-client==25.6.3,<26.0.0 ; python_version >= '3.12'",
+    "nv-ingest-api==25.9.0 ; python_version >= '3.12'",
+    "nv-ingest-client==25.9.0 ; python_version >= '3.12'",
 ]
 
 postgresql = [

@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, cast
 
 from altk.core.llm import get_llm
-from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
+from langchain_classic.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain_anthropic.chat_models import ChatAnthropic
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage

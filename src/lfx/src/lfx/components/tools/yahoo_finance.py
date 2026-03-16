@@ -2,7 +2,7 @@ import ast
 import pprint
 from enum import Enum
 
-from langchain.tools import StructuredTool
+from langchain_core.tools import StructuredTool
 from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field
 

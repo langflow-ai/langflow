@@ -1,6 +1,6 @@
 from typing import Any
 
-from langchain.tools import StructuredTool
+from langchain_core.tools import StructuredTool
 from langchain_community.utilities.google_serper import GoogleSerperAPIWrapper
 from pydantic import BaseModel, Field
 

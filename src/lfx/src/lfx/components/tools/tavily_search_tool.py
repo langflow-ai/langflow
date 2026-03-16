@@ -1,7 +1,7 @@
 from enum import Enum
 
 import httpx
-from langchain.tools import StructuredTool
+from langchain_core.tools import StructuredTool
 from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field
 

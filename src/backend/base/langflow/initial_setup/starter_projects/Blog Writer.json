@@ -1045,7 +1045,7 @@
                   },
                   {
                     "name": "langchain_community",
-                    "version": "0.3.31"
+                    "version": "0.4.1"
                   },
                   {
                     "name": "markitdown",
