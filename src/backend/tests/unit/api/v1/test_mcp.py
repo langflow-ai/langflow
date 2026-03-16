@@ -105,9 +105,7 @@ class _FailingRunContext:
 def mock_current_user_ctx(mock_user):
     with patch("langflow.api.v1.mcp.current_user_ctx") as mock:
         mock.get.return_value = mock_user
-        mock.set = MagicMock(
-            return_value="dummy_token"
-        )  # Return a dummy token for reset
+        mock.set = MagicMock(return_value="dummy_token")  # Return a dummy token for reset
         mock.reset = MagicMock()
         yield mock
 
@@ -141,14 +139,10 @@ async def test_mcp_sse_post_endpoint(client: AsyncClient, mock_sse_transport):
     mock_sse_transport.handle_post_message.assert_called_once()
 
 
-async def test_mcp_post_endpoint_success(
-    client: AsyncClient, logged_in_headers, mock_sse_transport
-):
+async def test_mcp_post_endpoint_success(client: AsyncClient, logged_in_headers, mock_sse_transport):
     """Test POST / endpoint successfully handles MCP messages with auth."""
     test_message = {"type": "test", "content": "message"}
-    response = await client.post(
-        "api/v1/mcp/", headers=logged_in_headers, json=test_message
-    )
+    response = await client.post("api/v1/mcp/", headers=logged_in_headers, json=test_message)
 
     assert response.status_code == status.HTTP_200_OK
     mock_sse_transport.handle_post_message.assert_called_once()
@@ -162,19 +156,13 @@ async def test_mcp_post_endpoint_no_auth(client: AsyncClient):
 
 async def test_mcp_post_endpoint_invalid_json(client: AsyncClient, logged_in_headers):
     """Test POST / endpoint with invalid JSON returns 400."""
-    response = await client.post(
-        "api/v1/mcp/", headers=logged_in_headers, content="invalid json"
-    )
+    response = await client.post("api/v1/mcp/", headers=logged_in_headers, content="invalid json")
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
-async def test_mcp_sse_post_endpoint_disconnect_error(
-    client: AsyncClient, mock_sse_transport
-):
+async def test_mcp_sse_post_endpoint_disconnect_error(client: AsyncClient, mock_sse_transport):
     """Test POST / endpoint handles disconnection errors correctly for SSE."""
-    mock_sse_transport.handle_post_message.side_effect = BrokenPipeError(
-        "Simulated disconnect"
-    )
+    mock_sse_transport.handle_post_message.side_effect = BrokenPipeError("Simulated disconnect")
 
     response = await client.post("api/v1/mcp/", json={"type": "test"})
 
@@ -182,47 +170,31 @@ async def test_mcp_sse_post_endpoint_disconnect_error(
     mock_sse_transport.handle_post_message.assert_called_once()
 
 
-async def test_mcp_post_endpoint_disconnect_error(
-    client: AsyncClient, logged_in_headers, mock_sse_transport
-):
+async def test_mcp_post_endpoint_disconnect_error(client: AsyncClient, logged_in_headers, mock_sse_transport):
     """Test POST / endpoint handles disconnection errors correctly with auth."""
-    mock_sse_transport.handle_post_message.side_effect = BrokenPipeError(
-        "Simulated disconnect"
-    )
+    mock_sse_transport.handle_post_message.side_effect = BrokenPipeError("Simulated disconnect")
 
-    response = await client.post(
-        "api/v1/mcp/", headers=logged_in_headers, json={"type": "test"}
-    )
+    response = await client.post("api/v1/mcp/", headers=logged_in_headers, json={"type": "test"})
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert "MCP Server disconnected" in response.json()["detail"]
     mock_sse_transport.handle_post_message.assert_called_once()
 
 
-async def test_mcp_sse_post_endpoint_server_error(
-    client: AsyncClient, mock_sse_transport
-):
+async def test_mcp_sse_post_endpoint_server_error(client: AsyncClient, mock_sse_transport):
     """Test POST / endpoint handles server errors correctly for SSE."""
-    mock_sse_transport.handle_post_message.side_effect = Exception(
-        "Internal server error"
-    )
+    mock_sse_transport.handle_post_message.side_effect = Exception("Internal server error")
 
     response = await client.post("api/v1/mcp/", json={"type": "test"})
 
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
-async def test_mcp_post_endpoint_server_error(
-    client: AsyncClient, logged_in_headers, mock_sse_transport
-):
+async def test_mcp_post_endpoint_server_error(client: AsyncClient, logged_in_headers, mock_sse_transport):
     """Test POST / endpoint handles server errors correctly with auth."""
-    mock_sse_transport.handle_post_message.side_effect = Exception(
-        "Internal server error"
-    )
+    mock_sse_transport.handle_post_message.side_effect = Exception("Internal server error")
 
-    response = await client.post(
-        "api/v1/mcp/", headers=logged_in_headers, json={"type": "test"}
-    )
+    response = await client.post("api/v1/mcp/", headers=logged_in_headers, json={"type": "test"})
 
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     assert "Internal server error" in response.json()["detail"]
@@ -236,9 +208,7 @@ async def test_mcp_streamable_post_endpoint(
 ):
     """Test POST /streamable endpoint successfully handles MCP messages."""
     test_message = {"type": "test", "content": "message"}
-    response = await client.post(
-        "api/v1/mcp/streamable", headers=logged_in_headers, json=test_message
-    )
+    response = await client.post("api/v1/mcp/streamable", headers=logged_in_headers, json=test_message)
 
     assert response.status_code == status.HTTP_200_OK
     mock_streamable_http_manager.handle_request.assert_called_once()
@@ -254,13 +224,9 @@ async def test_mcp_streamable_post_endpoint_disconnect_error(
     client: AsyncClient, logged_in_headers, mock_streamable_http_manager
 ):
     """Test POST /streamable endpoint handles disconnection errors correctly."""
-    mock_streamable_http_manager.handle_request.side_effect = BrokenPipeError(
-        "Simulated disconnect"
-    )
+    mock_streamable_http_manager.handle_request.side_effect = BrokenPipeError("Simulated disconnect")
 
-    response = await client.post(
-        "api/v1/mcp/streamable", headers=logged_in_headers, json={"type": "test"}
-    )
+    response = await client.post("api/v1/mcp/streamable", headers=logged_in_headers, json={"type": "test"})
 
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     mock_streamable_http_manager.handle_request.assert_called_once()
@@ -270,13 +236,9 @@ async def test_mcp_streamable_post_endpoint_server_error(
     client: AsyncClient, logged_in_headers, mock_streamable_http_manager
 ):
     """Test POST /streamable endpoint handles server errors correctly."""
-    mock_streamable_http_manager.handle_request.side_effect = Exception(
-        "Internal server error"
-    )
+    mock_streamable_http_manager.handle_request.side_effect = Exception("Internal server error")
 
-    response = await client.post(
-        "api/v1/mcp/streamable", headers=logged_in_headers, json={"type": "test"}
-    )
+    response = await client.post("api/v1/mcp/streamable", headers=logged_in_headers, json={"type": "test"})
 
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
@@ -385,10 +347,7 @@ async def test_streamable_http_start_failure_surfaces_exception_once():
         with pytest.raises(RuntimeError) as exc_info:
             await streamable_http.start()
 
-    assert (
-        str(exc_info.value)
-        == "Error in Streamable HTTP session manager: failed to run session manager"
-    )
+    assert str(exc_info.value) == "Error in Streamable HTTP session manager: failed to run session manager"
     assert exc_info.value.__cause__ is failure
     assert async_logger.await_count == 1
     expected_message = (
