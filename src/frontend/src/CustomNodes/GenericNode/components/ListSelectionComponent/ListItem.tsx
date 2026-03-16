@@ -87,7 +87,7 @@ const ListItem = ({
             )}
           </div>
           {"metaData" in item && item.metaData && (
-            <div className="flex w-full truncate text-mmd text-gray-500">
+            <div className="flex w-full truncate text-mmd text-muted-foreground">
               <span className="truncate">{item.metaData}</span>
             </div>
           )}
@@ -112,7 +112,7 @@ const ListItem = ({
               name="check"
               className={cn(
                 "ml-auto flex h-4 w-4",
-                item.link === "validated" && "text-green-500",
+                item.link === "validated" && "text-accent-emerald-foreground",
               )}
             />
           )

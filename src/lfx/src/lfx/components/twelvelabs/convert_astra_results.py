@@ -19,7 +19,7 @@ class ConvertAstraToTwelveLabs(Component):
         HandleInput(
             name="astra_results",
             display_name="Astra DB Results",
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
             info="Search results from Astra DB component",
             required=True,
             is_list=True,

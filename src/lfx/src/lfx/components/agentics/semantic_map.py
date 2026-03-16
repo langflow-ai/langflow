@@ -49,7 +49,7 @@ class SemanticMap(BaseAgenticComponent):
         *get_model_provider_inputs(),
         DataFrameInput(
             name="source",
-            display_name="Input DataFrame",
+            display_name="Input Table",
             info=("Input DataFrame to transform. The schema is automatically inferred from column names and types."),
         ),
         get_generated_fields_input(),
@@ -84,7 +84,7 @@ class SemanticMap(BaseAgenticComponent):
     outputs = [
         Output(
             name="states",
-            display_name="Output DataFrame",
+            display_name="Output Table",
             info="Transformed DataFrame resulting from semantic mapping.",
             method="aMap",
             tool_mode=True,

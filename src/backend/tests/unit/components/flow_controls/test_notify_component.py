@@ -62,7 +62,8 @@ class TestNotifyComponent(ComponentTestBaseWithoutClient):
         assert input_value_input is not None
         assert input_value_input.display_name == "Input Data"
         assert input_value_input.required is False
-        assert input_value_input.input_types == ["Data", "Message", "DataFrame"]
+        # JSON is the new name for Data, Table is the new name for DataFrame (backward compatible)
+        assert input_value_input.input_types == ["Data", "JSON", "Message", "DataFrame", "Table"]
 
     async def test_append_input_configuration(self, component_class, default_kwargs):
         """Test append input configuration."""
