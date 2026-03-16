@@ -149,6 +149,24 @@ class TestResolveFlowPath:
             assert result_type == "json"
             assert result_path == json_file.resolve()
 
+    def test_should_reject_filename_with_path_traversal_sequences(self, tmp_path):
+        """Should reject filenames containing '..' before any path construction."""
+        with patch("langflow.agentic.services.helpers.flow_loader.FLOWS_BASE_PATH", tmp_path):
+            with pytest.raises(HTTPException) as exc_info:
+                resolve_flow_path("../../etc/passwd")
+
+            assert exc_info.value.status_code == 400
+            assert "Invalid flow filename" in exc_info.value.detail
+
+    def test_should_reject_filename_with_backslash_traversal(self, tmp_path):
+        """Should reject filenames containing backslash path separators."""
+        with patch("langflow.agentic.services.helpers.flow_loader.FLOWS_BASE_PATH", tmp_path):
+            with pytest.raises(HTTPException) as exc_info:
+                resolve_flow_path("..\\..\\etc\\passwd")
+
+            assert exc_info.value.status_code == 400
+            assert "Invalid flow filename" in exc_info.value.detail
+
     def test_should_raise_404_when_flow_not_found(self, tmp_path):
         """Should raise HTTPException 404 when flow file doesn't exist."""
         with patch("langflow.agentic.services.helpers.flow_loader.FLOWS_BASE_PATH", tmp_path):
