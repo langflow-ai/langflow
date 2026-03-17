@@ -8,7 +8,8 @@
     "start": "docusaurus start",
     "build": "docusaurus build",
     "deploy": "docusaurus deploy",
-    "serve": "docusaurus serve"
+    "serve": "docusaurus serve",
+    "docs:version": "docusaurus docs:version"
   },
   "dependencies": {
     "@code-hike/mdx": "^0.9.0",
