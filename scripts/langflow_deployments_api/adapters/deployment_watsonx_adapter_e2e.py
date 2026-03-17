@@ -100,7 +100,10 @@ import langflow.services.adapters.deployment.watsonx_orchestrate.update_helpers 
 from dotenv import load_dotenv
 from fastapi import HTTPException
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
-from langflow.services.adapters.deployment.context import DeploymentAdapterContext, DeploymentContext
+from langflow.services.adapters.deployment.context import (
+    DeploymentAdapterContext,
+    DeploymentProviderIDContext,
+)
 from langflow.services.adapters.deployment.watsonx_orchestrate import (
     WatsonxOrchestrateDeploymentService,
     WxOCredentials,
@@ -187,7 +190,7 @@ class WatsonxAdapterDirectE2E:
         self._client_mod = _client_mod
 
         deployment_context = DeploymentAdapterContext(provider_id=self.provider_id)
-        self._deployment_context_token = DeploymentContext.set_current(deployment_context)
+        self._deployment_context_token = DeploymentProviderIDContext.set_current(deployment_context)
 
         self._original_resolve_wxo_client_credentials = _client_mod.resolve_wxo_client_credentials
 
@@ -221,7 +224,7 @@ class WatsonxAdapterDirectE2E:
         finally:
             self._client_mod.resolve_wxo_client_credentials = self._original_resolve_wxo_client_credentials
             self._client_mod.clear_provider_clients_request_context()
-            DeploymentContext.reset_current(self._deployment_context_token)
+            DeploymentProviderIDContext.reset_current(self._deployment_context_token)
 
     async def _run_live_scenarios(self) -> list[ScenarioResult]:
         duplicate_name = self._mk_name("dup_snapshot")

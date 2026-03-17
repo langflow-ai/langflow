@@ -2224,7 +2224,7 @@ async def test_get_provider_clients_uses_request_scoped_context_memoization(monk
     client_module.clear_provider_clients_request_context()
 
     provider_context = deployment_context_module.DeploymentAdapterContext(provider_id=UUID(int=1))
-    with deployment_context_module.DeploymentContext.scope(provider_context):
+    with deployment_context_module.DeploymentProviderIDContext.scope(provider_context):
         first = await client_module.get_provider_clients(user_id="user-1", db=object())
         second = await client_module.get_provider_clients(user_id="user-1", db=object())
 
@@ -2247,12 +2247,12 @@ async def test_get_provider_clients_rejects_mixed_provider_contexts(monkeypatch)
     monkeypatch.setattr(client_module, "resolve_wxo_client_credentials", mock_resolve_wxo_client_credentials)
     client_module.clear_provider_clients_request_context()
 
-    with deployment_context_module.DeploymentContext.scope(
+    with deployment_context_module.DeploymentProviderIDContext.scope(
         deployment_context_module.DeploymentAdapterContext(provider_id=UUID(int=1))
     ):
         await client_module.get_provider_clients(user_id="user-1", db=object())
     with (
-        deployment_context_module.DeploymentContext.scope(
+        deployment_context_module.DeploymentProviderIDContext.scope(
             deployment_context_module.DeploymentAdapterContext(provider_id=UUID(int=2))
         ),
         pytest.raises(CredentialResolutionError, match="different deployment provider context"),

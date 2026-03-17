@@ -25,7 +25,7 @@ from ibm_watsonx_orchestrate_core.types.connections import KeyValueConnectionCre
 from lfx.services.adapters.deployment.exceptions import AuthSchemeError, CredentialResolutionError
 from lfx.services.adapters.deployment.schema import EnvVarSource, EnvVarValueSpec, IdLike
 
-from langflow.services.adapters.deployment.context import DeploymentContext
+from langflow.services.adapters.deployment.context import DeploymentProviderIDContext
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import WxOAuthURL
 from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient, WxOCredentials
 from langflow.services.auth import utils as auth_utils
@@ -183,7 +183,7 @@ async def get_provider_clients(
     Fast-path: return execution-context memoized clients when `(provider_id, user_id)` matches.
     Slow-path: resolve credentials from DB, build authenticator, construct `WxOClient`, then memoize.
     """
-    request_context = DeploymentContext.get_current()
+    request_context = DeploymentProviderIDContext.get_current()
     if request_context is None:
         msg = "Deployment account context is not available for adapter resolution."
         raise CredentialResolutionError(message=msg)

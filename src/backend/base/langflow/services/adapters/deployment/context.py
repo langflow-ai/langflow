@@ -15,7 +15,7 @@ class DeploymentAdapterContext:
     provider_id: UUID
 
 
-class DeploymentContext:
+class DeploymentProviderIDContext:
     _current: ClassVar[ContextVar[DeploymentAdapterContext | None]] = ContextVar(
         "langflow_current_deployment_context",
         default=None,
