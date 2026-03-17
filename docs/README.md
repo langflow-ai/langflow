@@ -47,32 +47,25 @@ import customComponent from "!!raw-loader!@langflow/src/lfx/src/lfx/custom/custo
 
 The versioning configuration is found in `docusaurus.config.js`.
 
-The version key `'current'` is a special Docusaurus keyword that refers to the work-in-progress docs. You can't change this key, but you can customize the `label`.
+Versioning example for release version `1.9.x` on top of `1.8.x`:
 
-Versioning example for release version 1.8.x:
-
-1. Before release, the `current` version contains work-in-progress docs that are ahead of version `1.7.x`. The `current` label should already be set to `1.8.x` (updated when you began working on the 1.8.x docset).
-2. When ready to release 1.8.x, create a branch and run `npm run docs:version -- 1.8.0` to snapshot the current docs. Use the full version number like `1.8.0` for the command, even though the label displays `1.8.x`.
-3. After creating a new version, update `docusaurus.config.js`:
+1. Before release, the docs in the active release branch should already be set to `1.8.x`, the current version.
+2. When ready to release `1.9.x`, create a branch and run `npm run docs:version -- 1.9.0` to snapshot the current docs.
+3. After creating a new version, update `docusaurus.config.js` to include the 1.9.0 release:
 
 ```javascript
 docs: {
-  lastVersion: '1.8.0', // Make 1.8.0 the latest version (use full version number)
+  lastVersion: '1.9.0',
   versions: {
-    current: {
-      label: '1.9.x', // Work-in-progress version (will become next release)
-      path: 'next',
+    '1.9.0': {
+      label: '1.9.x',
+      path: '1.9.0',
     },
     '1.8.0': {
-      label: '1.8.x', // Label shows .x notation
+      label: '1.8.x',
       path: '1.8.0',
     },
-    '1.7.0': {
-      label: '1.7.x', // Label shows .x notation
-      path: '1.7.0',
-    },
   },
-  onlyIncludeVersions: ['current', '1.8.0', '1.7.0'], // Include all versions
 },
 ```
 
@@ -84,10 +77,8 @@ npm run serve
 ```
 
 5. Create a pull request to main, and merge to create your new release.
-6. To create version 1.9.x, repeat the process: update the `current` label to `1.9.x` when you begin working on it, then when ready to release, run `npm run docs:version -- 1.9.0`, update `docusaurus.config.js` with labels using `.x` notation, and merge to main.
+6. To create version 2.0.x, repeat the process: update the active release branch docs to `2.0.x` when you begin working on it, then when ready to release, run `npm run docs:version -- 2.0.0`, update `docusaurus.config.js` with labels using `.x` notation, and merge to main.
 
-- `current` = always the work-in-progress docs from `main` branch (ahead of all releases)
-  - The version key must be `'current'` (Docusaurus keyword), but you can customize the displayed `label`
 - `lastVersion` = the most recent released version (shown as "latest" in the UI).
 
 See the [Docusaurus docs](https://docusaurus.io/docs/versioning) for more info.
