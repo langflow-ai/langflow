@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
 from pydantic import Field as PydanticField
 from pydantic.alias_generators import to_camel
+from sqlalchemy import Enum as SQLEnum
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, Text
 
 from langflow.serialization.serialization import serialize
@@ -60,7 +61,14 @@ class TraceBase(SQLModel):
     """Base model for traces."""
 
     name: str = Field(nullable=False, description="Name of the trace (usually flow name)")
-    status: SpanStatus = Field(default=SpanStatus.UNSET, description="Overall trace status")
+    status: SpanStatus = Field(
+        default=SpanStatus.UNSET,
+        description="Overall trace status",
+        sa_column=Column(
+            SQLEnum(SpanStatus, name="spanstatus", values_callable=lambda obj: [item.value for item in obj]),
+            nullable=False,
+        ),
+    )
     start_time: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="When the trace started",
@@ -203,8 +211,22 @@ class SpanBase(SQLModel):
     """Base model for spans (individual execution steps)."""
 
     name: str = Field(nullable=False, description="Name of the span following OTel convention: '{operation} {model}'")
-    span_type: SpanType = Field(default=SpanType.CHAIN, description="Type of operation")
-    status: SpanStatus = Field(default=SpanStatus.UNSET, description="Execution status")
+    span_type: SpanType = Field(
+        default=SpanType.CHAIN,
+        description="Type of operation",
+        sa_column=Column(
+            SQLEnum(SpanType, name="spantype", values_callable=lambda obj: [item.value for item in obj]),
+            nullable=False,
+        ),
+    )
+    status: SpanStatus = Field(
+        default=SpanStatus.UNSET,
+        description="Execution status",
+        sa_column=Column(
+            SQLEnum(SpanStatus, name="spanstatus", values_callable=lambda obj: [item.value for item in obj]),
+            nullable=False,
+        ),
+    )
     start_time: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="When the span started",
@@ -217,6 +239,10 @@ class SpanBase(SQLModel):
     span_kind: SpanKind = Field(
         default=SpanKind.INTERNAL,
         description="OpenTelemetry SpanKind",
+        sa_column=Column(
+            SQLEnum(SpanKind, name="spankind", values_callable=lambda obj: [item.value for item in obj]),
+            nullable=False,
+        ),
     )
     # OTel-compliant extensible attributes
     attributes: dict[str, Any] = Field(
