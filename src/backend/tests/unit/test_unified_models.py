@@ -242,11 +242,12 @@ def test_apply_provider_config_preserves_user_selected_value():
         assert result["openai_api_key"]["load_from_db"] is True
 
 
-def test_apply_provider_config_overwrites_hardcoded_value():
-    """Test that hardcoded values (not from db) are overwritten with env var.
+def test_apply_provider_config_replaces_hardcoded_with_env_var():
+    """Test that hardcoded values are replaced with env var key for global variable usage.
 
-    This is the expected behavior: if a value is hardcoded (load_from_db=False),
-    it will be replaced with the environment variable key to enable global variable usage.
+    Expected behavior: When load_from_db=False (hardcoded value), the function
+    replaces it with the env var key and sets load_from_db=True to enable
+    global variable functionality.
     """
     mock_provider_vars = [
         {
@@ -349,3 +350,42 @@ def test_apply_provider_config_applies_component_metadata():
         assert result["openai_api_key"]["advanced"] is False
         assert result["openai_api_key"]["info"] == "OpenAI API Key"
         assert result["openai_api_key"]["show"] is True
+
+
+def test_apply_provider_config_idempotent_when_already_set():
+    """Test idempotent behavior when value already matches env var key.
+
+    When a field already has the env var key as its value and load_from_db=True,
+    the function should be a no-op (no changes made). This documents the
+    idempotent behavior of the function.
+    """
+    mock_provider_vars = [
+        {
+            "variable_key": "OPENAI_API_KEY",
+            "component_metadata": {
+                "mapping_field": "openai_api_key",
+                "required": True,
+            },
+        }
+    ]
+
+    # Field already configured with env var key
+    build_config = {
+        "openai_api_key": {
+            "value": "OPENAI_API_KEY",
+            "load_from_db": True,
+            "show": False,
+            "required": False,
+        }
+    }
+
+    with (
+        patch("lfx.base.models.unified_models.get_provider_all_variables", return_value=mock_provider_vars),
+        patch("lfx.base.models.unified_models._get_all_provider_specific_field_names", return_value=["openai_api_key"]),
+        patch.dict(os.environ, {"OPENAI_API_KEY": "test-key-123"}),  # pragma: allowlist secret
+    ):
+        result = apply_provider_variable_config_to_build_config(build_config, "OpenAI")
+
+        # Should remain unchanged (idempotent)
+        assert result["openai_api_key"]["value"] == "OPENAI_API_KEY"
+        assert result["openai_api_key"]["load_from_db"] is True

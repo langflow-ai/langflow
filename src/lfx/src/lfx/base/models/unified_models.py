@@ -297,9 +297,8 @@ def apply_provider_variable_config_to_build_config(
                     )
                 else:
                     logger.debug(
-                        "Skipping auto-set for field %s - user has already selected a value: %s",
+                        "Skipping auto-set for field %s - user has already selected a value (load_from_db=True)",
                         field_name,
-                        current_value,
                     )
 
     return build_config
