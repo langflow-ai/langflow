@@ -7,8 +7,8 @@ import copy
 import importlib.metadata as md
 import io
 import json
-import zipfile
 import logging
+import zipfile
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 

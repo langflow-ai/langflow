@@ -43,18 +43,10 @@ class WxOClient:
             raise ValueError(msg)
         # Use object.__setattr__ because the dataclass is frozen.
         object.__setattr__(self, "instance_url", url)
-        object.__setattr__(
-            self, "base", BaseWXOClient(base_url=url, authenticator=self.authenticator)
-        )
-        object.__setattr__(
-            self, "tool", ToolClient(base_url=url, authenticator=self.authenticator)
-        )
-        object.__setattr__(
-            self, "connections", ConnectionsClient(base_url=url, authenticator=self.authenticator)
-        )
-        object.__setattr__(
-            self, "agent", AgentClient(base_url=url, authenticator=self.authenticator)
-        )
+        object.__setattr__(self, "base", BaseWXOClient(base_url=url, authenticator=self.authenticator))
+        object.__setattr__(self, "tool", ToolClient(base_url=url, authenticator=self.authenticator))
+        object.__setattr__(self, "connections", ConnectionsClient(base_url=url, authenticator=self.authenticator))
+        object.__setattr__(self, "agent", AgentClient(base_url=url, authenticator=self.authenticator))
 
     # -- SDK private-method wrappers ------------------------------------------
     # Centralise access to SDK-internal _get/_post so breakage from SDK

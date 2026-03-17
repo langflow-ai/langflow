@@ -2875,9 +2875,7 @@ async def test_credential_resolution_catches_arbitrary_exceptions(monkeypatch):
 
 def test_wxo_client_eagerly_constructs_sub_clients():
     """WxOClient eagerly builds tool/connections/agent from instance_url and authenticator."""
-    WxOClient = importlib.import_module(
-        "langflow.services.adapters.deployment.watsonx_orchestrate.types"
-    ).WxOClient
+    WxOClient = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.types").WxOClient
     from ibm_cloud_sdk_core.authenticators import NoAuthAuthenticator
 
     client = WxOClient(instance_url="https://test.example.com", authenticator=NoAuthAuthenticator())
@@ -2891,9 +2889,7 @@ def test_wxo_client_eagerly_constructs_sub_clients():
 
 def test_wxo_client_is_frozen():
     """WxOClient is frozen and rejects post-construction mutation."""
-    WxOClient = importlib.import_module(
-        "langflow.services.adapters.deployment.watsonx_orchestrate.types"
-    ).WxOClient
+    WxOClient = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.types").WxOClient
     from ibm_cloud_sdk_core.authenticators import NoAuthAuthenticator
 
     client = WxOClient(instance_url="https://test.example.com", authenticator=NoAuthAuthenticator())
@@ -2903,9 +2899,7 @@ def test_wxo_client_is_frozen():
 
 def test_wxo_client_strips_trailing_slash():
     """WxOClient normalizes instance_url by stripping trailing slashes."""
-    WxOClient = importlib.import_module(
-        "langflow.services.adapters.deployment.watsonx_orchestrate.types"
-    ).WxOClient
+    WxOClient = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.types").WxOClient
     from ibm_cloud_sdk_core.authenticators import NoAuthAuthenticator
 
     client = WxOClient(instance_url="https://test.example.com/", authenticator=NoAuthAuthenticator())
@@ -2914,9 +2908,7 @@ def test_wxo_client_strips_trailing_slash():
 
 def test_wxo_client_rejects_empty_url():
     """WxOClient rejects empty instance_url at construction."""
-    WxOClient = importlib.import_module(
-        "langflow.services.adapters.deployment.watsonx_orchestrate.types"
-    ).WxOClient
+    WxOClient = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.types").WxOClient
     from ibm_cloud_sdk_core.authenticators import NoAuthAuthenticator
 
     with pytest.raises(ValueError, match="non-empty"):
@@ -2972,7 +2964,7 @@ def test_raise_for_status_separates_status_codes_from_string_heuristics():
 
 @pytest.mark.anyio
 async def test_create_maps_409_conflict_to_deployment_conflict_error(monkeypatch):
-    """create raises DeploymentConflictError when retry_create gets a 409 from the provider."""
+    """Create raises DeploymentConflictError when retry_create gets a 409 from the provider."""
     from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
@@ -3011,7 +3003,7 @@ async def test_create_maps_409_conflict_to_deployment_conflict_error(monkeypatch
 
 @pytest.mark.anyio
 async def test_create_maps_422_to_invalid_content_error(monkeypatch):
-    """create raises InvalidContentError when retry_create gets a 422 from the provider."""
+    """Create raises InvalidContentError when retry_create gets a 422 from the provider."""
     from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
@@ -3055,7 +3047,7 @@ async def test_create_maps_422_to_invalid_content_error(monkeypatch):
 
 @pytest.mark.anyio
 async def test_create_rejects_unsupported_deployment_type(monkeypatch):
-    """create raises DeploymentSupportError for non-AGENT deployment types."""
+    """Create raises DeploymentSupportError for non-AGENT deployment types."""
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
 
     # Simulate a deployment type that is not in SUPPORTED_ADAPTER_DEPLOYMENT_TYPES
@@ -3084,7 +3076,7 @@ async def test_create_rejects_unsupported_deployment_type(monkeypatch):
 
 @pytest.mark.anyio
 async def test_update_rejects_empty_provider_data_with_no_spec_changes(monkeypatch):
-    """update raises InvalidContentError when provider_data is None and spec produces no update fields."""
+    """Update raises InvalidContentError when provider_data is None and spec produces no update fields."""
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]}),
@@ -3235,8 +3227,8 @@ async def test_validate_connection_wrong_security_scheme(monkeypatch):
 @pytest.mark.anyio
 async def test_validate_connection_missing_credentials(monkeypatch):
     """validate_connection raises InvalidContentError when credentials are missing."""
-    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
     from ibm_watsonx_orchestrate_core.types.connections import ConnectionSecurityScheme
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
 
     connections_client = FakeConnectionsClient(existing_app_id="my_app")
 
@@ -3304,7 +3296,7 @@ def test_require_single_deployment_id_rejects_multiple_ids():
 
 @pytest.mark.anyio
 async def test_create_preserves_exception_chain_on_unexpected_error(monkeypatch):
-    """create preserves exception chain with 'from exc' instead of 'from None'."""
+    """Create preserves exception chain with 'from exc' instead of 'from None'."""
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
 
     original_error = RuntimeError("unexpected db error")
@@ -3333,7 +3325,7 @@ async def test_create_preserves_exception_chain_on_unexpected_error(monkeypatch)
 
 @pytest.mark.anyio
 async def test_delete_preserves_exception_chain_on_unexpected_error(monkeypatch):
-    """delete preserves exception chain with 'from exc' instead of 'from None'."""
+    """Delete preserves exception chain with 'from exc' instead of 'from None'."""
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
 
     original_error = RuntimeError("unexpected error")
