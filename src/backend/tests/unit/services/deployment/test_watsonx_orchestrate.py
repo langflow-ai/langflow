@@ -2845,9 +2845,8 @@ def test_retry_rollback_uses_retryable_filter():
 @pytest.mark.anyio
 async def test_credential_resolution_catches_arbitrary_exceptions(monkeypatch):
     """resolve_wxo_client_credentials wraps unexpected exceptions as CredentialResolutionError."""
-    from lfx.services.adapters.deployment.exceptions import CredentialResolutionError
-
     from langflow.services.adapters.deployment.watsonx_orchestrate.client import resolve_wxo_client_credentials
+    from lfx.services.adapters.deployment.exceptions import CredentialResolutionError
 
     class FakeSQLAlchemyError(Exception):
         pass
@@ -2870,9 +2869,7 @@ async def test_credential_resolution_catches_arbitrary_exceptions(monkeypatch):
 
 def test_wxo_client_lazy_properties_construct_sub_clients():
     """WxOClient lazily builds tool/connections/agent from instance_url and authenticator."""
-    WxOClient = importlib.import_module(
-        "langflow.services.adapters.deployment.watsonx_orchestrate.types"
-    ).WxOClient
+    WxOClient = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.types").WxOClient
     from ibm_cloud_sdk_core.authenticators import NoAuthAuthenticator
 
     client = WxOClient(instance_url="https://test.example.com", authenticator=NoAuthAuthenticator())

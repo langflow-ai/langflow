@@ -320,7 +320,7 @@ async def _rollback_created_app_ids(
     for app_id in reversed(created_app_ids):
         try:
             await retry_rollback(lambda app_id=app_id: delete_config_if_exists(clients, app_id=app_id))
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.error("Rollback failed for created app_id=%s — resource may be orphaned", app_id, exc_info=True)
 
 
@@ -350,7 +350,7 @@ async def _rollback_agent_update(
                 rollback_agent_payload,
             )
         )
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.error("Rollback failed for agent_id=%s — resource may be orphaned", agent_id, exc_info=True)
 
 
