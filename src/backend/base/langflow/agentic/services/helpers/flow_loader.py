@@ -77,6 +77,11 @@ def resolve_flow_path(flow_filename: str) -> tuple[Path, str]:
     Raises:
         HTTPException: If flow file not found or path traversal detected.
     """
+    # Early rejection of path traversal sequences before any path construction.
+    # This complements _validate_path_within_base as defense-in-depth.
+    if ".." in flow_filename or "\\" in flow_filename:
+        raise HTTPException(status_code=400, detail=f"Invalid flow filename: '{flow_filename}'")
+
     if flow_filename.endswith(".json"):
         flow_path = _validate_path_within_base(FLOWS_BASE_PATH / flow_filename, flow_filename)
         if flow_path.exists():
