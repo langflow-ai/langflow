@@ -321,7 +321,7 @@ async def _rollback_created_app_ids(
         try:
             await retry_rollback(lambda app_id=app_id: delete_config_if_exists(clients, app_id=app_id))
         except Exception:
-            logger.error("Rollback failed for created app_id=%s — resource may be orphaned", app_id, exc_info=True)
+            logger.exception("Rollback failed for created app_id=%s — resource may be orphaned", app_id)
 
 
 def _build_agent_rollback_payload(*, agent: dict[str, Any], final_update_payload: dict[str, Any]) -> dict[str, Any]:
@@ -351,7 +351,7 @@ async def _rollback_agent_update(
             )
         )
     except Exception:
-        logger.error("Rollback failed for agent_id=%s — resource may be orphaned", agent_id, exc_info=True)
+        logger.exception("Rollback failed for agent_id=%s — resource may be orphaned", agent_id)
 
 
 async def apply_provider_update_plan_with_rollback(
@@ -442,7 +442,7 @@ async def apply_provider_update_plan_with_rollback(
                 created_tool_ids.extend(exc.created_tool_ids)
                 added_snapshot_ids.extend(exc.created_tool_ids)
                 for i, err in enumerate(exc.errors):
-                    logger.error("Tool upload batch error [%d/%d]: %s", i + 1, len(exc.errors), err, exc_info=err)
+                    logger.exception("Tool upload batch error [%d/%d]: %s", i + 1, len(exc.errors), err)
                 raise exc.errors[0] from exc
             for raw_plan, created_tool_id in zip(plan.raw_tools_to_create, raw_create_results, strict=True):
                 tool_id = str(created_tool_id).strip()

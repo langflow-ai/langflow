@@ -2813,7 +2813,7 @@ async def test_get_agent_run_empty_response_raises(monkeypatch):
 
     monkeypatch.setattr(asyncio, "to_thread", fake_to_thread)
 
-    fake_client = SimpleNamespace(get_run=lambda run_id: None)
+    fake_client = SimpleNamespace(get_run=lambda _run_id: None)
     with pytest.raises(DeploymentError, match="empty response"):
         await get_agent_run(fake_client, run_id="run-123")
 
@@ -2858,7 +2858,8 @@ async def test_credential_resolution_catches_arbitrary_exceptions(monkeypatch):
         pass
 
     async def mock_get_provider(*args, **kwargs):  # noqa: ARG001
-        raise FakeSQLAlchemyError("connection refused")
+        error_message = "connection refused"
+        raise FakeSQLAlchemyError(error_message)
 
     monkeypatch.setattr(
         "langflow.services.adapters.deployment.watsonx_orchestrate.client.get_provider_account_by_id",
@@ -2875,10 +2876,11 @@ async def test_credential_resolution_catches_arbitrary_exceptions(monkeypatch):
 
 def test_wxo_client_eagerly_constructs_sub_clients():
     """WxOClient eagerly builds tool/connections/agent from instance_url and authenticator."""
-    WxOClient = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.types").WxOClient
+    types_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.types")
+    wxo_client_cls = types_module.WxOClient
     from ibm_cloud_sdk_core.authenticators import NoAuthAuthenticator
 
-    client = WxOClient(instance_url="https://test.example.com", authenticator=NoAuthAuthenticator())
+    client = wxo_client_cls(instance_url="https://test.example.com", authenticator=NoAuthAuthenticator())
 
     # Sub-clients should be eagerly created at construction
     assert client.tool is not None
@@ -2889,30 +2891,33 @@ def test_wxo_client_eagerly_constructs_sub_clients():
 
 def test_wxo_client_is_frozen():
     """WxOClient is frozen and rejects post-construction mutation."""
-    WxOClient = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.types").WxOClient
+    types_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.types")
+    wxo_client_cls = types_module.WxOClient
     from ibm_cloud_sdk_core.authenticators import NoAuthAuthenticator
 
-    client = WxOClient(instance_url="https://test.example.com", authenticator=NoAuthAuthenticator())
+    client = wxo_client_cls(instance_url="https://test.example.com", authenticator=NoAuthAuthenticator())
     with pytest.raises(AttributeError):
         client.instance_url = "https://evil.example.com"
 
 
 def test_wxo_client_strips_trailing_slash():
     """WxOClient normalizes instance_url by stripping trailing slashes."""
-    WxOClient = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.types").WxOClient
+    types_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.types")
+    wxo_client_cls = types_module.WxOClient
     from ibm_cloud_sdk_core.authenticators import NoAuthAuthenticator
 
-    client = WxOClient(instance_url="https://test.example.com/", authenticator=NoAuthAuthenticator())
+    client = wxo_client_cls(instance_url="https://test.example.com/", authenticator=NoAuthAuthenticator())
     assert client.instance_url == "https://test.example.com"
 
 
 def test_wxo_client_rejects_empty_url():
     """WxOClient rejects empty instance_url at construction."""
-    WxOClient = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.types").WxOClient
+    types_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.types")
+    wxo_client_cls = types_module.WxOClient
     from ibm_cloud_sdk_core.authenticators import NoAuthAuthenticator
 
     with pytest.raises(ValueError, match="non-empty"):
-        WxOClient(instance_url="", authenticator=NoAuthAuthenticator())
+        wxo_client_cls(instance_url="", authenticator=NoAuthAuthenticator())
 
 
 def test_wxo_credentials_is_frozen():
@@ -3331,7 +3336,7 @@ async def test_delete_preserves_exception_chain_on_unexpected_error(monkeypatch)
     original_error = RuntimeError("unexpected error")
 
     fake_agent = FakeAgentClient({"id": "dep-1", "tools": []})
-    fake_agent.delete = lambda deployment_id: (_ for _ in ()).throw(original_error)
+    fake_agent.delete = lambda _deployment_id: (_ for _ in ()).throw(original_error)
 
     fake_clients = SimpleNamespace(
         agent=fake_agent,

@@ -560,6 +560,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         return DeploymentDeleteResult(id=agent_id)
 
+    # TODO: get status normally if its a live agent
+    # if its draft, use the current 'exists' or raise not found logic
     async def get_status(
         self,
         *,
