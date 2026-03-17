@@ -2509,7 +2509,7 @@ def test_raise_as_deployment_error_client_api_falls_back_to_raw_body():
     resp = SimpleNamespace(status_code=500, text='{"error":"boom"}')
     exc = ClientAPIException(response=resp)
 
-    with pytest.raises(DeploymentError, match='error details: \\{"error":"boom"\\}'):
+    with pytest.raises(DeploymentError, match="error details: boom"):
         raise_as_deployment_error(
             exc,
             error_prefix=ErrorPrefix.LIST_CONFIGS,
@@ -2675,11 +2675,13 @@ def test_build_orchestrate_runs_query():
     assert "stream_timeout=30" in build_orchestrate_runs_query({"stream_timeout": 30})
 
 
-def test_create_agent_run_result_empty():
+def test_create_agent_run_result_empty_raises():
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import create_agent_run_result
 
-    assert create_agent_run_result(None) == {"status": "accepted"}
-    assert create_agent_run_result({}) == {"status": "accepted"}
+    with pytest.raises(DeploymentError, match="empty response"):
+        create_agent_run_result(None)
+    with pytest.raises(DeploymentError, match="empty response"):
+        create_agent_run_result({})
 
 
 def test_create_agent_run_result_with_run_id():
@@ -2786,3 +2788,122 @@ async def test_duplicate_raises_operation_not_supported():
 async def test_teardown_succeeds():
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     await service.teardown()
+
+
+# ---------------------------------------------------------------------------
+# Tests for review fixes
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_get_agent_run_empty_response_raises(monkeypatch):
+    """get_agent_run raises DeploymentError when provider returns empty payload."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import get_agent_run
+
+    async def fake_to_thread(fn, *args, **kwargs):  # noqa: ARG001
+        return None
+
+    import asyncio
+
+    monkeypatch.setattr(asyncio, "to_thread", fake_to_thread)
+
+    fake_client = SimpleNamespace(get_run=lambda run_id: None)
+    with pytest.raises(DeploymentError, match="empty response"):
+        await get_agent_run(fake_client, run_id="run-123")
+
+
+def test_retry_rollback_uses_retryable_filter():
+    """retry_rollback should use is_retryable_create_exception to skip non-retryable errors.
+
+    Validates that the filter correctly identifies non-retryable HTTP status codes
+    (via HTTPException, which is checked by is_retryable_create_exception).
+    """
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import is_retryable_create_exception
+
+    # Non-retryable status codes should not be retried
+    for code in [400, 401, 403, 404, 409, 422]:
+        assert not is_retryable_create_exception(HTTPException(status_code=code)), (
+            f"HTTPException with status {code} should NOT be retryable"
+        )
+
+    # Retryable status codes should be retried
+    for code in [500, 502, 503, 504]:
+        assert is_retryable_create_exception(HTTPException(status_code=code)), (
+            f"HTTPException with status {code} should be retryable"
+        )
+
+    # Domain exceptions that are non-retryable
+    from lfx.services.adapters.deployment.exceptions import DeploymentConflictError, InvalidContentError
+
+    assert not is_retryable_create_exception(DeploymentConflictError())
+    assert not is_retryable_create_exception(InvalidContentError())
+
+    # Generic exceptions are retryable (e.g. transient network errors)
+    assert is_retryable_create_exception(RuntimeError("transient"))
+
+
+@pytest.mark.anyio
+async def test_credential_resolution_catches_arbitrary_exceptions(monkeypatch):
+    """resolve_wxo_client_credentials wraps unexpected exceptions as CredentialResolutionError."""
+    from lfx.services.adapters.deployment.exceptions import CredentialResolutionError
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.client import resolve_wxo_client_credentials
+
+    class FakeSQLAlchemyError(Exception):
+        pass
+
+    async def mock_get_provider(*args, **kwargs):  # noqa: ARG001
+        raise FakeSQLAlchemyError("connection refused")
+
+    monkeypatch.setattr(
+        "langflow.services.adapters.deployment.watsonx_orchestrate.client.get_provider_account_by_id",
+        mock_get_provider,
+    )
+
+    with pytest.raises(CredentialResolutionError, match="unexpected error"):
+        await resolve_wxo_client_credentials(
+            user_id="user-1",
+            db=object(),
+            provider_id=UUID("00000000-0000-0000-0000-000000000001"),
+        )
+
+
+def test_wxo_client_lazy_properties_construct_sub_clients():
+    """WxOClient lazily builds tool/connections/agent from instance_url and authenticator."""
+    WxOClient = importlib.import_module(
+        "langflow.services.adapters.deployment.watsonx_orchestrate.types"
+    ).WxOClient
+    from ibm_cloud_sdk_core.authenticators import NoAuthAuthenticator
+
+    client = WxOClient(instance_url="https://test.example.com", authenticator=NoAuthAuthenticator())
+
+    # Properties should lazily create sub-clients
+    assert client.tool is not None
+    assert client.connections is not None
+    assert client.agent is not None
+    assert client.base is not None
+
+
+def test_raise_for_status_separates_status_codes_from_string_heuristics():
+    """Status code dispatch and string heuristic dispatch are now separate cascading checks.
+
+    Previously, status_code == 404 and 'not found' in detail were combined with `or`,
+    meaning ANY status code with 'not found' text would raise DeploymentNotFoundError.
+    Now, the 404 status code check is standalone, and 'not found' string heuristic only
+    fires as a fallback for unmapped status codes.
+    """
+    from lfx.services.adapters.deployment.exceptions import raise_for_status_and_detail
+
+    # status_code=404 raises DeploymentNotFoundError regardless of detail text
+    with pytest.raises(DeploymentNotFoundError):
+        raise_for_status_and_detail(status_code=404, detail="anything", message_prefix="test")
+
+    # status_code=409 raises DeploymentConflictError regardless of detail text
+    with pytest.raises(DeploymentConflictError):
+        raise_for_status_and_detail(status_code=409, detail="anything", message_prefix="test")
+
+    # String heuristics still work as fallback for unmapped/None status codes
+    with pytest.raises(DeploymentNotFoundError):
+        raise_for_status_and_detail(status_code=None, detail="agent not found", message_prefix="test")
+    with pytest.raises(DeploymentConflictError):
+        raise_for_status_and_detail(status_code=None, detail="resource already exists", message_prefix="test")

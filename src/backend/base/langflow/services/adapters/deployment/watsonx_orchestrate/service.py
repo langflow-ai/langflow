@@ -285,7 +285,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     "(3) The deployment snapshot. "
                     f"error details: {error_detail}"
                 )
-                raise DeploymentConflictError(message=msg) from None
+                raise DeploymentConflictError(message=msg) from exc
             if status_code == status.HTTP_422_UNPROCESSABLE_CONTENT:
                 msg = (
                     f"{ErrorPrefix.CREATE.value} "
@@ -293,9 +293,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     "Please ensure the request entity is valid and complete. "
                     f"error details: {error_detail}"
                 )
-                raise InvalidContentError(message=msg) from None
+                raise InvalidContentError(message=msg) from exc
             msg = f"{ErrorPrefix.CREATE.value} error details: {error_detail}"
-            raise DeploymentError(message=msg, error_code="deployment_error") from None
+            raise DeploymentError(message=msg, error_code="deployment_error") from exc
         except (
             AuthenticationError,
             DeploymentConflictError,

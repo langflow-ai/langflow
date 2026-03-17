@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import status
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
-from lfx.services.adapters.deployment.exceptions import DeploymentNotFoundError, InvalidContentError
+from lfx.services.adapters.deployment.exceptions import DeploymentError, DeploymentNotFoundError, InvalidContentError
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import extract_error_detail
 
@@ -86,13 +86,13 @@ async def create_agent_run(
     except ClientAPIException as exc:
         if exc.response.status_code == status.HTTP_404_NOT_FOUND:
             msg = f"Agent Deployment '{deployment_id}' was not found in Watsonx Orchestrate."
-            raise DeploymentNotFoundError(message=msg) from None
+            raise DeploymentNotFoundError(message=msg) from exc
         if exc.response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT:
             msg = (
                 "Deployment execution request is unprocessable by Watsonx Orchestrate. "
                 f"{extract_error_detail(exc.response.text)}"
             )
-            raise InvalidContentError(message=msg) from None
+            raise InvalidContentError(message=msg) from exc
         raise
     return create_agent_run_result(response or {})
 
@@ -124,7 +124,8 @@ def resolve_execution_message(execution_input: str | dict[str, Any] | None) -> d
 
 def create_agent_run_result(payload: dict[str, Any] | None) -> dict[str, Any]:
     if not payload:
-        return {"status": "accepted"}
+        msg = "Watsonx Orchestrate returned an empty response for the execution request."
+        raise DeploymentError(message=msg, error_code="empty_provider_response")
 
     result: dict[str, Any] = {"status": payload.get("status") or "accepted"}
     run_id = str(payload.get("run_id") or payload.get("id") or "").strip()
@@ -137,7 +138,8 @@ async def get_agent_run(client: WxOClient, *, run_id: str) -> dict[str, Any]:
     payload = await asyncio.to_thread(client.get_run, run_id)
 
     if not payload:
-        return {"status": "unknown"}
+        msg = f"Watsonx Orchestrate returned an empty response when fetching execution '{run_id}'."
+        raise DeploymentError(message=msg, error_code="empty_provider_response")
 
     status_value = str(payload.get("status") or "unknown")
     result: dict[str, Any] = {"status": status_value}

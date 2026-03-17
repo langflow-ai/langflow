@@ -79,6 +79,7 @@ async def retry_rollback(operation: Operation[T]) -> T:
     return await retry_with_backoff(
         operation,
         max_attempts=ROLLBACK_MAX_RETRIES,
+        should_retry=is_retryable_create_exception,
     )
 
 
@@ -118,18 +119,18 @@ async def rollback_created_resources(
         try:
             await retry_rollback(lambda: delete_agent_if_exists(clients, agent_id=agent_id))
         except Exception:  # noqa: BLE001
-            logger.warning("Rollback failed for agent_id=%s", agent_id, exc_info=True)
+            logger.error("Rollback failed for agent_id=%s — resource may be orphaned", agent_id, exc_info=True)
     if tool_ids:
         for tool_id in reversed(tool_ids):
             try:
                 await retry_rollback(lambda tool_id=tool_id: delete_tool_if_exists(clients, tool_id=tool_id))
             except Exception:  # noqa: BLE001
-                logger.warning("Rollback failed for tool_id=%s", tool_id, exc_info=True)
+                logger.error("Rollback failed for tool_id=%s — resource may be orphaned", tool_id, exc_info=True)
     if app_id:
         try:
             await retry_rollback(lambda: delete_config_if_exists(clients, app_id=app_id))
         except Exception:  # noqa: BLE001
-            logger.warning("Rollback failed for app_id=%s", app_id, exc_info=True)
+            logger.error("Rollback failed for app_id=%s — resource may be orphaned", app_id, exc_info=True)
 
 
 async def rollback_update_resources(
@@ -161,19 +162,19 @@ async def rollback_update_resources(
                 )
             )
         except Exception:  # noqa: BLE001
-            logger.warning("Rollback failed: could not restore tool payload for tool_id=%s", tool_id, exc_info=True)
+            logger.error("Rollback failed: could not restore tool payload for tool_id=%s — resource may be orphaned", tool_id, exc_info=True)
 
     for tool_id in reversed(created_tool_ids):
         try:
             await retry_rollback(lambda tid=tool_id: delete_tool_if_exists(clients, tool_id=tid))
         except Exception:  # noqa: BLE001
-            logger.warning("Rollback failed for created tool_id=%s", tool_id, exc_info=True)
+            logger.error("Rollback failed for created tool_id=%s — resource may be orphaned", tool_id, exc_info=True)
 
     if created_app_id:
         try:
             await retry_rollback(lambda: delete_config_if_exists(clients, app_id=created_app_id))
         except Exception:  # noqa: BLE001
-            logger.warning("Rollback failed for created app_id=%s", created_app_id, exc_info=True)
+            logger.error("Rollback failed for created app_id=%s — resource may be orphaned", created_app_id, exc_info=True)
 
 
 async def delete_agent_if_exists(clients: WxOClient, *, agent_id: str) -> None:

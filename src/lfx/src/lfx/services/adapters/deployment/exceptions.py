@@ -245,11 +245,11 @@ def raise_for_status_and_detail(
         raise InvalidContentError(message=message) from None
     if status_code == status.HTTP_415_UNSUPPORTED_MEDIA_TYPE:
         raise InvalidContentError(message=message) from None
-    if status_code == status.HTTP_404_NOT_FOUND or "not found" in detail_lower:
+    if status_code == status.HTTP_404_NOT_FOUND:
         raise DeploymentNotFoundError(message) from None
     if status_code == status.HTTP_410_GONE:
         raise DeploymentNotFoundError(message) from None
-    if status_code == status.HTTP_409_CONFLICT or "already exists" in detail_lower or "conflict" in detail_lower:
+    if status_code == status.HTTP_409_CONFLICT:
         raise DeploymentConflictError(message=message) from None
     if status_code == status.HTTP_429_TOO_MANY_REQUESTS:
         raise RateLimitError(message=message) from None
@@ -257,6 +257,10 @@ def raise_for_status_and_detail(
         raise DeploymentTimeoutError(message=message) from None
     if status_code in {status.HTTP_502_BAD_GATEWAY, status.HTTP_503_SERVICE_UNAVAILABLE}:
         raise ServiceUnavailableError(message=message) from None
+    if "not found" in detail_lower:
+        raise DeploymentNotFoundError(message) from None
+    if "already exists" in detail_lower or "conflict" in detail_lower:
+        raise DeploymentConflictError(message=message) from None
     if "unprocessable" in detail_lower:
         raise InvalidContentError(message=message) from None
     if "too many requests" in detail_lower or "rate limit" in detail_lower:

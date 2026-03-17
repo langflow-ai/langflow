@@ -165,7 +165,7 @@ async def resolve_wxo_client_credentials(
 
     except CredentialResolutionError:
         raise
-    except (OSError, ValueError, TypeError, LookupError) as exc:
+    except Exception as exc:  # noqa: BLE001
         msg = "An unexpected error occurred while resolving Watsonx Orchestrate client credentials."
         raise CredentialResolutionError(message=msg) from exc
 
@@ -263,7 +263,7 @@ async def resolve_variable_value(
             return value
     except CredentialResolutionError:
         raise
-    except (OSError, ValueError, TypeError, LookupError) as exc:
+    except Exception as exc:  # noqa: BLE001
         if not optional:
             msg = "Failed to resolve a credential variable for the watsonx Orchestrate deployment provider."
             raise CredentialResolutionError(message=msg) from exc

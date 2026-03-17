@@ -25,6 +25,10 @@ class WxOClient:
     The adapter accesses this object through stable attributes/properties:
     - `agent`, `tool`, `connections`: created only when first accessed
     - `base`: shared low-level client used by wrapper methods in this class
+
+    All sub-clients are constructed internally from ``instance_url`` and
+    ``authenticator`` so that they are guaranteed to share the same
+    URL and authentication context.
     """
 
     instance_url: str

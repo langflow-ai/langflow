@@ -257,7 +257,7 @@ async def _create_update_connection_with_conflict_mapping(
         is_conflict = status_code == status.HTTP_409_CONFLICT or "already exists" in error_detail.lower()
         if is_conflict:
             msg = f"{ErrorPrefix.UPDATE.value} error details: {error_detail}"
-            raise DeploymentConflictError(message=msg) from None
+            raise DeploymentConflictError(message=msg) from exc
         raise
 
 
@@ -321,7 +321,7 @@ async def _rollback_created_app_ids(
         try:
             await retry_rollback(lambda app_id=app_id: delete_config_if_exists(clients, app_id=app_id))
         except Exception:  # noqa: BLE001
-            logger.warning("Rollback failed for created app_id=%s", app_id, exc_info=True)
+            logger.error("Rollback failed for created app_id=%s — resource may be orphaned", app_id, exc_info=True)
 
 
 def _build_agent_rollback_payload(*, agent: dict[str, Any], final_update_payload: dict[str, Any]) -> dict[str, Any]:
@@ -351,7 +351,7 @@ async def _rollback_agent_update(
             )
         )
     except Exception:  # noqa: BLE001
-        logger.warning("Rollback failed for agent_id=%s", agent_id, exc_info=True)
+        logger.error("Rollback failed for agent_id=%s — resource may be orphaned", agent_id, exc_info=True)
 
 
 async def apply_provider_update_plan_with_rollback(

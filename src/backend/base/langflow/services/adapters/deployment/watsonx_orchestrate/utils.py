@@ -161,7 +161,7 @@ def raise_as_deployment_error(
     if isinstance(exc, DeploymentServiceError):
         logger.exception(log_msg)
         msg = f"{error_prefix.value} Please check server logs for details."
-        raise DeploymentError(message=msg, error_code="deployment_error") from None
+        raise DeploymentError(message=msg, error_code="deployment_error") from exc
     if isinstance(exc, (ClientAPIException, HTTPException)):
         status_code = _resolve_exc_status_code(exc)
         detail = _resolve_exc_detail(exc)
@@ -172,7 +172,7 @@ def raise_as_deployment_error(
         )
     logger.exception(log_msg)
     msg = f"{error_prefix.value} Please check server logs for details."
-    raise DeploymentError(message=msg, error_code="deployment_error") from None
+    raise DeploymentError(message=msg, error_code="deployment_error") from exc
 
 
 def build_agent_payload(
