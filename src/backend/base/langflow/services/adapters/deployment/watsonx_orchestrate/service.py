@@ -103,6 +103,7 @@ from langflow.services.deps import get_settings_service
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from typing import Any
 
     from ibm_watsonx_orchestrate_clients.agents.agent_client import AgentUpsertResponse
@@ -217,20 +218,21 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
             try:
                 created_app_id = await retry_create(
-                    lambda c=clients, u=user_id, d=db, dn=prefixed_app_id, cfg=payload.config: process_config(
-                        clients=c,
-                        user_id=u,
-                        db=d,
-                        deployment_name=dn,
-                        config=cfg,
-                    )
+                    process_config,
+                    clients=clients,
+                    user_id=user_id,
+                    db=db,
+                    deployment_name=prefixed_app_id,
+                    config=payload.config,
                 )
 
                 if payload.snapshot and (flow_payloads := payload.snapshot.raw_payloads):
                     created_tool_ids = await retry_create(
-                        lambda c=clients, ai=prefixed_app_id, fl=flow_payloads, tp=resource_prefix: (
-                            process_raw_flows_with_app_id(clients=c, app_id=ai, flows=fl, tool_name_prefix=tp)
-                        )
+                        process_raw_flows_with_app_id,
+                        clients=clients,
+                        app_id=prefixed_app_id,
+                        flows=flow_payloads,
+                        tool_name_prefix=resource_prefix,
                     )
 
                 derived_spec = deployment_spec.model_copy(deep=True)
@@ -246,11 +248,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 )
 
                 agent_create_response = await retry_create(
-                    lambda c=clients, d=derived_spec, t=created_tool_ids: self._create_agent_deployment(
-                        clients=c,
-                        data=d,
-                        tool_ids=t,
-                    )
+                    self._create_agent_deployment,
+                    clients=clients,
+                    data=derived_spec,
+                    tool_ids=created_tool_ids,
                 )
             except Exception:
                 logger.warning(
@@ -455,7 +456,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     msg = "provider_data is required when update operations do not include spec changes."
                     raise InvalidContentError(message=msg)
                 await retry_create(
-                    lambda c=clients, aid=agent_id, p=update_payload: asyncio.to_thread(c.agent.update, aid, p)
+                    asyncio.to_thread,
+                    clients.agent.update,
+                    agent_id,
+                    update_payload,
                 )
                 return DeploymentUpdateResult(id=deployment_id, snapshot_ids=[])
 
@@ -781,7 +785,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         self,
         *,
         clients: WxOClient,
-        tool_ids: list[str],
+        tool_ids: Sequence[str],
         data: BaseDeploymentData,
     ) -> AgentUpsertResponse:
         """Create an agent deployment."""

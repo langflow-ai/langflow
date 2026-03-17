@@ -240,12 +240,11 @@ async def _create_update_connection_with_conflict_mapping(
     )
     try:
         return await retry_create(
-            lambda: create_config(
-                clients=clients,
-                config=config_payload,
-                user_id=user_id,
-                db=db,
-            )
+            create_config,
+            clients=clients,
+            config=config_payload,
+            user_id=user_id,
+            db=db,
         )
     except (ClientAPIException, HTTPException) as exc:
         if isinstance(exc, ClientAPIException):
@@ -300,13 +299,7 @@ async def _update_existing_tool_connection_deltas(
 
     await asyncio.gather(
         *(
-            retry_update(
-                lambda tid=tool_id, tool_payload=writable_tool: asyncio.to_thread(
-                    clients.tool.update,
-                    tid,
-                    tool_payload,
-                )
-            )
+            retry_update(asyncio.to_thread, clients.tool.update, tool_id, writable_tool)
             for tool_id, writable_tool in tool_updates
         )
     )
@@ -319,7 +312,7 @@ async def _rollback_created_app_ids(
 ) -> None:
     for app_id in reversed(created_app_ids):
         try:
-            await retry_rollback(lambda app_id=app_id: delete_config_if_exists(clients, app_id=app_id))
+            await retry_rollback(delete_config_if_exists, clients, app_id=app_id)
         except Exception:
             logger.exception("Rollback failed for created app_id=%s — resource may be orphaned", app_id)
 
@@ -343,13 +336,7 @@ async def _rollback_agent_update(
     if not rollback_agent_payload:
         return
     try:
-        await retry_rollback(
-            lambda: asyncio.to_thread(
-                clients.agent.update,
-                agent_id,
-                rollback_agent_payload,
-            )
-        )
+        await retry_rollback(asyncio.to_thread, clients.agent.update, agent_id, rollback_agent_payload)
     except Exception:
         logger.exception("Rollback failed for agent_id=%s — resource may be orphaned", agent_id)
 
@@ -387,7 +374,7 @@ async def apply_provider_update_plan_with_rollback(
         if plan.existing_app_ids:
             existing_connections = await asyncio.gather(
                 *(
-                    retry_create(lambda app_id=app_id: validate_connection(clients.connections, app_id=app_id))
+                    retry_create(validate_connection, clients.connections, app_id=app_id)
                     for app_id in plan.existing_app_ids
                 )
             )
@@ -411,10 +398,9 @@ async def apply_provider_update_plan_with_rollback(
             validated_created_connections = await asyncio.gather(
                 *(
                     retry_create(
-                        lambda app_id=create_plan.provider_app_id: validate_connection(
-                            clients.connections,
-                            app_id=app_id,
-                        )
+                        validate_connection,
+                        clients.connections,
+                        app_id=create_plan.provider_app_id,
                     )
                     for create_plan in plan.raw_connections_to_create
                 )
@@ -468,7 +454,7 @@ async def apply_provider_update_plan_with_rollback(
             final_update_payload=final_update_payload,
         )
         if final_update_payload:
-            await retry_update(lambda: asyncio.to_thread(clients.agent.update, agent_id, final_update_payload))
+            await retry_update(asyncio.to_thread, clients.agent.update, agent_id, final_update_payload)
     except Exception:
         await _rollback_agent_update(
             clients=clients,

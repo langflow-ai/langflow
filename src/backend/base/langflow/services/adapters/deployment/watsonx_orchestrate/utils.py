@@ -25,7 +25,13 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
 )
 
 if TYPE_CHECKING:
-    from lfx.services.adapters.deployment.schema import BaseDeploymentData, ConfigListParams, SnapshotListParams
+    from collections.abc import Sequence
+
+    from lfx.services.adapters.deployment.schema import (
+        BaseDeploymentData,
+        ConfigListParams,
+        SnapshotListParams,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -178,7 +184,7 @@ def raise_as_deployment_error(
 def build_agent_payload(
     *,
     data: BaseDeploymentData,
-    tool_ids: list[str],
+    tool_ids: Sequence[str],
 ) -> dict[str, Any]:
     if data.provider_spec is None:
         msg = "Deployment data must include provider_spec with a non-empty name and display_name."
@@ -187,7 +193,7 @@ def build_agent_payload(
         "name": data.provider_spec["name"],
         "display_name": data.provider_spec["display_name"],
         "description": str(data.description or "").strip() or f"Langflow deployment {data.name}",
-        "tools": tool_ids,
+        "tools": list(tool_ids),
         "style": "default",
         # TODO: make configurable; the llm field is required by the wxO api
         # but retrieving available llms requires an extra api request.

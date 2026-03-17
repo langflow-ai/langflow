@@ -134,13 +134,7 @@ async def update_existing_tool_connection_bindings(
 
     await asyncio.gather(
         *(
-            retry_create(
-                lambda tid=tool_id, tool_payload=writable_tool: asyncio.to_thread(
-                    clients.tool.update,
-                    tid,
-                    tool_payload,
-                )
-            )
+            retry_create(asyncio.to_thread, clients.tool.update, tool_id, writable_tool)
             for tool_id, writable_tool in tool_updates
         )
     )
@@ -357,8 +351,11 @@ async def create_and_upload_wxo_flow_tools_with_bindings(
     errors: list[Exception] = []
     created_tool_ids: list[str] = []
     for result in results:
-        if isinstance(result, Exception):
-            errors.append(result)
+        if isinstance(result, BaseException):
+            if isinstance(result, Exception):
+                errors.append(result)
+            else:
+                errors.append(RuntimeError(f"Tool upload failed with non-standard exception: {type(result).__name__}"))
             continue
         created_tool_ids.append(result)
     if errors:
@@ -373,18 +370,17 @@ async def upload_wxo_flow_tool(
     artifact_bytes: bytes,
     created_tool_ids_journal: list[str] | None = None,
 ) -> str:
-    tool_response = await retry_create(lambda: asyncio.to_thread(clients.tool.create, tool_payload))
+    tool_response = await retry_create(asyncio.to_thread, clients.tool.create, tool_payload)
     tool_id = require_tool_id(tool_response)
     if created_tool_ids_journal is not None:
         created_tool_ids_journal.append(tool_id)
 
     await retry_create(
-        lambda: asyncio.to_thread(
-            upload_tool_artifact_bytes,
-            clients,
-            tool_id=tool_id,
-            artifact_bytes=artifact_bytes,
-        )
+        asyncio.to_thread,
+        upload_tool_artifact_bytes,
+        clients,
+        tool_id=tool_id,
+        artifact_bytes=artifact_bytes,
     )
     return tool_id
 

@@ -6,7 +6,7 @@ import asyncio
 import logging
 import random
 from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from fastapi import HTTPException, status
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
@@ -30,20 +30,21 @@ if TYPE_CHECKING:
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 
 T = TypeVar("T")
-Operation = Callable[[], Awaitable[T]]
+Operation = Callable[..., Awaitable[T]]
 ShouldRetry = Callable[[Exception], bool]
 
 
 async def retry_with_backoff(
     operation: Operation[T],
-    *,
     max_attempts: int,
+    *args: Any,
     should_retry: ShouldRetry | None = None,
+    **kwargs: Any,
 ) -> T:
     delay_seconds = RETRY_INITIAL_DELAY_SECONDS
     for attempt in range(1, max_attempts + 1):
         try:
-            return await operation()
+            return await operation(*args, **kwargs)
         except Exception as exc:
             retryable = True if should_retry is None else should_retry(exc)
             if not retryable or attempt == max_attempts:
@@ -58,28 +59,34 @@ async def retry_with_backoff(
     raise RuntimeError(msg)
 
 
-async def retry_create(operation: Operation[T]) -> T:
+async def retry_create(operation: Operation[T], *args: Any, **kwargs: Any) -> T:
     return await retry_with_backoff(
         operation,
-        max_attempts=CREATE_MAX_RETRIES,
+        CREATE_MAX_RETRIES,
+        *args,
         should_retry=is_retryable_create_exception,
+        **kwargs,
     )
 
 
-async def retry_update(operation: Operation[T]) -> T:
+async def retry_update(operation: Operation[T], *args: Any, **kwargs: Any) -> T:
     """Retry write/update operations with the standard provider retry policy."""
     return await retry_with_backoff(
         operation,
-        max_attempts=UPDATE_MAX_RETRIES,
+        UPDATE_MAX_RETRIES,
+        *args,
         should_retry=is_retryable_create_exception,
+        **kwargs,
     )
 
 
-async def retry_rollback(operation: Operation[T]) -> T:
+async def retry_rollback(operation: Operation[T], *args: Any, **kwargs: Any) -> T:
     return await retry_with_backoff(
         operation,
-        max_attempts=ROLLBACK_MAX_RETRIES,
+        ROLLBACK_MAX_RETRIES,
+        *args,
         should_retry=is_retryable_create_exception,
+        **kwargs,
     )
 
 
@@ -117,18 +124,18 @@ async def rollback_created_resources(
     logger.info("Rolling back resources: agent_id=%s, tool_ids=%s, app_id=%s", agent_id, tool_ids, app_id)
     if agent_id:
         try:
-            await retry_rollback(lambda: delete_agent_if_exists(clients, agent_id=agent_id))
+            await retry_rollback(delete_agent_if_exists, clients, agent_id=agent_id)
         except Exception:
             logger.exception("Rollback failed for agent_id=%s — resource may be orphaned", agent_id)
     if tool_ids:
         for tool_id in reversed(tool_ids):
             try:
-                await retry_rollback(lambda tool_id=tool_id: delete_tool_if_exists(clients, tool_id=tool_id))
+                await retry_rollback(delete_tool_if_exists, clients, tool_id=tool_id)
             except Exception:
                 logger.exception("Rollback failed for tool_id=%s — resource may be orphaned", tool_id)
     if app_id:
         try:
-            await retry_rollback(lambda: delete_config_if_exists(clients, app_id=app_id))
+            await retry_rollback(delete_config_if_exists, clients, app_id=app_id)
         except Exception:
             logger.exception("Rollback failed for app_id=%s — resource may be orphaned", app_id)
 
@@ -154,13 +161,7 @@ async def rollback_update_resources(
     )
     for tool_id, original_tool in reversed(list(original_tools.items())):
         try:
-            await retry_rollback(
-                lambda tid=tool_id, payload=original_tool: asyncio.to_thread(
-                    clients.tool.update,
-                    tid,
-                    payload,
-                )
-            )
+            await retry_rollback(asyncio.to_thread, clients.tool.update, tool_id, original_tool)
         except Exception:
             logger.exception(
                 "Rollback failed: could not restore tool payload for tool_id=%s — resource may be orphaned",
@@ -169,13 +170,13 @@ async def rollback_update_resources(
 
     for tool_id in reversed(created_tool_ids):
         try:
-            await retry_rollback(lambda tid=tool_id: delete_tool_if_exists(clients, tool_id=tid))
+            await retry_rollback(delete_tool_if_exists, clients, tool_id=tool_id)
         except Exception:
             logger.exception("Rollback failed for created tool_id=%s — resource may be orphaned", tool_id)
 
     if created_app_id:
         try:
-            await retry_rollback(lambda: delete_config_if_exists(clients, app_id=created_app_id))
+            await retry_rollback(delete_config_if_exists, clients, app_id=created_app_id)
         except Exception:
             logger.exception("Rollback failed for created app_id=%s — resource may be orphaned", created_app_id)
 

@@ -1707,6 +1707,34 @@ async def test_retry_with_backoff_succeeds_on_first_try():
 
 
 @pytest.mark.anyio
+async def test_retry_with_backoff_forwards_args_and_kwargs():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import retry_with_backoff
+
+    received: list[tuple[str, str]] = []
+
+    async def op(prefix: str, *, suffix: str) -> str:
+        received.append((prefix, suffix))
+        return f"{prefix}-{suffix}"
+
+    result = await retry_with_backoff(op, 3, "left", suffix="right")
+    assert result == "left-right"
+    assert received == [("left", "right")]
+
+
+@pytest.mark.anyio
+async def test_retry_create_with_to_thread_forwards_kwargs():
+    import asyncio
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import retry_create
+
+    def sync_add(a: int, *, b: int) -> int:
+        return a + b
+
+    result = await retry_create(asyncio.to_thread, sync_add, 2, b=5)
+    assert result == 7
+
+
+@pytest.mark.anyio
 async def test_retry_with_backoff_retries_then_succeeds():
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import retry_with_backoff
 
