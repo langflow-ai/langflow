@@ -111,17 +111,17 @@ const config = {
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
           sidebarCollapsed: true,
           // Versioning configuration
-          lastVersion: '1.8.0',
+          lastVersion: "1.8",
           versions: {
             current: {
-              label: '1.9.x', // Work-in-progress version (will become next release)
-              path: 'next',
+              label: "1.9.x (Next)", // Work-in-progress / Next
+              path: "next",
             },
-            '1.8.0': {
-              label: '1.8.x',
+            "1.8": {
+              label: "1.8.x",
             },
           },
-          onlyIncludeVersions: ['current', '1.8.0'], // Include both versions
+          onlyIncludeVersions: ["current", "1.8"],
           beforeDefaultRemarkPlugins: [
             [
               remarkCodeHike,
