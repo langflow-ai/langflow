@@ -8,6 +8,7 @@ import importlib.metadata as md
 import io
 import json
 import zipfile
+import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -24,6 +25,8 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     require_tool_id,
 )
 from langflow.utils.version import get_version_info
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from lfx.services.adapters.deployment.schema import BaseFlowArtifact, SnapshotItems
@@ -72,6 +75,11 @@ def _ensure_dict(parent: dict[str, Any], key: str) -> dict[str, Any]:
     """Return ``parent[key]`` as a dict, replacing non-dict values with ``{}``."""
     value = parent.setdefault(key, {})
     if not isinstance(value, dict):
+        logger.warning(
+            "Expected dict at key '%s' but found %s; replacing with empty dict",
+            key,
+            type(value).__name__,
+        )
         value = {}
         parent[key] = value
     return value
@@ -436,4 +444,8 @@ def _resolve_lfx_requirement() -> str:
     try:
         return _pin_requirement_name("lfx")
     except (md.PackageNotFoundError, ValueError):
+        logger.warning(
+            "Could not determine installed lfx version; falling back to minimum requirement '%s'",
+            _LFX_MINIMUM_REQUIREMENT,
+        )
         return _LFX_MINIMUM_REQUIREMENT

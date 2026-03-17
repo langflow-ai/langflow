@@ -441,6 +441,8 @@ async def apply_provider_update_plan_with_rollback(
             except ToolUploadBatchError as exc:
                 created_tool_ids.extend(exc.created_tool_ids)
                 added_snapshot_ids.extend(exc.created_tool_ids)
+                for i, err in enumerate(exc.errors):
+                    logger.error("Tool upload batch error [%d/%d]: %s", i + 1, len(exc.errors), err, exc_info=err)
                 raise exc.errors[0] from exc
             for raw_plan, created_tool_id in zip(plan.raw_tools_to_create, raw_create_results, strict=True):
                 tool_id = str(created_tool_id).strip()

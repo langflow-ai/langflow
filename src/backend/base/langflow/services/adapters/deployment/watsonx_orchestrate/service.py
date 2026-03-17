@@ -170,6 +170,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         created_tool_ids: list[str] = []
         created_app_id: str | None = None
         clients: WxOClient | None = None
+        derived_spec: BaseDeploymentData | None = None
         try:
             deployment_spec: BaseDeploymentData = payload.spec
             normalized_deployment_name = validate_wxo_name(deployment_spec.name)
@@ -232,7 +233,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                         )
                     )
 
-                derived_spec: BaseDeploymentData = deployment_spec.model_copy(deep=True)
+                derived_spec = deployment_spec.model_copy(deep=True)
 
                 if derived_spec.provider_spec is None:
                     derived_spec.provider_spec = {}
@@ -305,12 +306,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             DeploymentSupportError,
         ):
             raise
-        except Exception:
+        except Exception as exc:
             logger.exception("Unexpected error during wxO deployment creation")
             msg = f"{ErrorPrefix.CREATE.value} Please check server logs for details."
-            raise DeploymentError(message=msg, error_code="deployment_error") from None
+            raise DeploymentError(message=msg, error_code="deployment_error") from exc
 
-        if agent_create_response is None:
+        if agent_create_response is None or derived_spec is None:
             msg = f"{ErrorPrefix.CREATE.value} Deployment response was empty."
             raise DeploymentError(message=msg, error_code="deployment_error")
 
@@ -500,10 +501,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             DeploymentConflictError,
         ):
             raise
-        except Exception:
+        except Exception as exc:
             logger.exception("Unexpected error during wxO deployment update")
             msg = f"{ErrorPrefix.UPDATE.value} Please check server logs for details."
-            raise DeploymentError(message=msg, error_code="deployment_error") from None
+            raise DeploymentError(message=msg, error_code="deployment_error") from exc
 
     async def redeploy(
         self,
@@ -547,15 +548,15 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             status_code = e.response.status_code
             if status_code == status.HTTP_404_NOT_FOUND:
                 msg = f"{ErrorPrefix.DELETE.value} deployment id '{agent_id}' not found."
-                raise DeploymentNotFoundError(msg) from None
+                raise DeploymentNotFoundError(msg) from e
             msg = f"{ErrorPrefix.DELETE.value} error details: {extract_error_detail(e.response.text)}"
-            raise DeploymentError(msg, error_code="deployment_error") from None
+            raise DeploymentError(msg, error_code="deployment_error") from e
         except (AuthenticationError, AuthorizationError, DeploymentNotFoundError):
             raise
-        except Exception:
+        except Exception as exc:
             logger.exception("Unexpected error while deleting wxO deployment %s", agent_id)
             msg = f"{ErrorPrefix.DELETE.value} Please check server logs for details."
-            raise DeploymentError(msg, error_code="deployment_error") from None
+            raise DeploymentError(msg, error_code="deployment_error") from exc
 
         return DeploymentDeleteResult(id=agent_id)
 

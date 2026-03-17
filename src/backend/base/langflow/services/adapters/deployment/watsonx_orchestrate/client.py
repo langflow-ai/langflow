@@ -198,10 +198,8 @@ async def get_provider_clients(
         provider_id=provider_id,
     )
 
-    instance_url: str = credentials.instance_url.rstrip("/")
-
     clients = WxOClient(
-        instance_url=instance_url,
+        instance_url=credentials.instance_url,
         authenticator=credentials.authenticator,
     )
     set_request_context_provider_clients(provider_id=provider_id, user_id=user_id, clients=clients)

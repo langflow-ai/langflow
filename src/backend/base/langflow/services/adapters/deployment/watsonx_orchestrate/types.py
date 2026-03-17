@@ -1,7 +1,8 @@
 """Dataclasses for the Watsonx Orchestrate adapter.
 
-`WxOClient` lazily creates SDK clients (`AgentClient`, `ToolClient`,
-`ConnectionsClient`, and `BaseWXOClient`) on first use.
+`WxOClient` eagerly creates SDK clients (`AgentClient`, `ToolClient`,
+`ConnectionsClient`, and `BaseWXOClient`) at construction time to
+guarantee thread safety when accessed from ``asyncio.to_thread`` workers.
 """
 
 from __future__ import annotations
@@ -18,49 +19,42 @@ if TYPE_CHECKING:
     from ibm_cloud_sdk_core.authenticators import Authenticator
 
 
-@dataclass(slots=True)
+@dataclass(frozen=True, slots=True)
 class WxOClient:
-    """Provider client facade with lazy SDK client initialization.
+    """Provider client facade with eager SDK client initialization.
 
-    The adapter accesses this object through stable attributes/properties:
-    - `agent`, `tool`, `connections`: created only when first accessed
-    - `base`: shared low-level client used by wrapper methods in this class
-
-    All sub-clients are constructed internally from ``instance_url`` and
-    ``authenticator`` so that they are guaranteed to share the same
-    URL and authentication context.
+    All sub-clients are constructed in ``__post_init__`` from ``instance_url``
+    and ``authenticator`` so that they are guaranteed to share the same
+    URL and authentication context. The dataclass is frozen to prevent
+    post-construction mutation of credentials.
     """
 
     instance_url: str
     authenticator: Authenticator
-    _base: BaseWXOClient | None = field(init=False, default=None, repr=False)
-    _tool: ToolClient | None = field(init=False, default=None, repr=False)
-    _connections: ConnectionsClient | None = field(init=False, default=None, repr=False)
-    _agent: AgentClient | None = field(init=False, default=None, repr=False)
+    base: BaseWXOClient = field(init=False, repr=False)
+    tool: ToolClient = field(init=False, repr=False)
+    connections: ConnectionsClient = field(init=False, repr=False)
+    agent: AgentClient = field(init=False, repr=False)
 
-    @property
-    def base(self) -> BaseWXOClient:
-        if self._base is None:
-            self._base = BaseWXOClient(base_url=self.instance_url, authenticator=self.authenticator)
-        return self._base
-
-    @property
-    def tool(self) -> ToolClient:
-        if self._tool is None:
-            self._tool = ToolClient(base_url=self.instance_url, authenticator=self.authenticator)
-        return self._tool
-
-    @property
-    def connections(self) -> ConnectionsClient:
-        if self._connections is None:
-            self._connections = ConnectionsClient(base_url=self.instance_url, authenticator=self.authenticator)
-        return self._connections
-
-    @property
-    def agent(self) -> AgentClient:
-        if self._agent is None:
-            self._agent = AgentClient(base_url=self.instance_url, authenticator=self.authenticator)
-        return self._agent
+    def __post_init__(self) -> None:
+        url = self.instance_url.rstrip("/")
+        if not url:
+            msg = "instance_url must be a non-empty string."
+            raise ValueError(msg)
+        # Use object.__setattr__ because the dataclass is frozen.
+        object.__setattr__(self, "instance_url", url)
+        object.__setattr__(
+            self, "base", BaseWXOClient(base_url=url, authenticator=self.authenticator)
+        )
+        object.__setattr__(
+            self, "tool", ToolClient(base_url=url, authenticator=self.authenticator)
+        )
+        object.__setattr__(
+            self, "connections", ConnectionsClient(base_url=url, authenticator=self.authenticator)
+        )
+        object.__setattr__(
+            self, "agent", AgentClient(base_url=url, authenticator=self.authenticator)
+        )
 
     # -- SDK private-method wrappers ------------------------------------------
     # Centralise access to SDK-internal _get/_post so breakage from SDK
@@ -79,10 +73,15 @@ class WxOClient:
         return self.base._post(f"/tools/{tool_id}/upload", files=files)  # noqa: SLF001
 
 
-@dataclass(slots=True)
+@dataclass(frozen=True, slots=True)
 class WxOCredentials:
     instance_url: str
     authenticator: Authenticator = field(repr=False)
+
+    def __post_init__(self) -> None:
+        if not self.instance_url or not self.instance_url.strip():
+            msg = "instance_url must be a non-empty string."
+            raise ValueError(msg)
 
     def __repr__(self) -> str:
         return (

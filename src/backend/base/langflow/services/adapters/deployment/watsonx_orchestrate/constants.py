@@ -7,7 +7,7 @@ from enum import Enum
 
 from lfx.services.adapters.deployment.schema import DeploymentType
 
-SUPPORTED_ADAPTER_DEPLOYMENT_TYPES: set[DeploymentType] = {DeploymentType.AGENT}
+SUPPORTED_ADAPTER_DEPLOYMENT_TYPES: frozenset[DeploymentType] = frozenset({DeploymentType.AGENT})
 CREATE_MAX_RETRIES = 3
 UPDATE_MAX_RETRIES = 3
 ROLLBACK_MAX_RETRIES = 5

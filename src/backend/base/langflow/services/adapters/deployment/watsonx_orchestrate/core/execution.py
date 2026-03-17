@@ -129,8 +129,10 @@ def create_agent_run_result(payload: dict[str, Any] | None) -> dict[str, Any]:
 
     result: dict[str, Any] = {"status": payload.get("status") or "accepted"}
     run_id = str(payload.get("run_id") or payload.get("id") or "").strip()
-    if run_id:
-        result["run_id"] = run_id
+    if not run_id:
+        msg = "Watsonx Orchestrate accepted the execution but did not return a run_id."
+        raise DeploymentError(message=msg, error_code="missing_run_id")
+    result["run_id"] = run_id
     return result
 
 

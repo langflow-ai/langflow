@@ -14,6 +14,7 @@ from lfx.services.adapters.deployment.exceptions import (
     DeploymentConflictError,
     DeploymentError,
     DeploymentNotFoundError,
+    DeploymentSupportError,
     InvalidContentError,
     InvalidDeploymentOperationError,
     OperationNotSupportedError,
@@ -2262,8 +2263,8 @@ async def test_get_provider_clients_rejects_mixed_provider_contexts(monkeypatch)
     assert resolve_calls == 1
 
 
-def test_wxo_client_initializes_subclients_lazily(monkeypatch):
-    init_counts = {"tool": 0, "connections": 0, "agent": 0}
+def test_wxo_client_initializes_subclients_eagerly(monkeypatch):
+    init_counts = {"tool": 0, "connections": 0, "agent": 0, "base": 0}
 
     class FakeToolClient:
         def __init__(self, base_url: str, authenticator):  # noqa: ARG002
@@ -2280,21 +2281,26 @@ def test_wxo_client_initializes_subclients_lazily(monkeypatch):
             init_counts["agent"] += 1
             self.base_url = base_url
 
+    class FakeBaseWXOClient:
+        def __init__(self, base_url: str, authenticator):  # noqa: ARG002
+            init_counts["base"] += 1
+            self.base_url = base_url
+
     monkeypatch.setattr(types_module, "ToolClient", FakeToolClient)
     monkeypatch.setattr(types_module, "ConnectionsClient", FakeConnectionsClient)
     monkeypatch.setattr(types_module, "AgentClient", FakeAgentClient)
+    monkeypatch.setattr(types_module, "BaseWXOClient", FakeBaseWXOClient)
 
     wxo_client = types_module.WxOClient(
         instance_url="https://api.region-foobar.cloud.ibm.com",
         authenticator=object(),
     )
-    assert init_counts == {"tool": 0, "connections": 0, "agent": 0}
+    # All sub-clients should be created eagerly at construction
+    assert init_counts == {"tool": 1, "connections": 1, "agent": 1, "base": 1}
 
+    # Subsequent access does not re-create
     _ = wxo_client.agent
-    assert init_counts == {"tool": 0, "connections": 0, "agent": 1}
-
-    _ = wxo_client.agent
-    assert init_counts == {"tool": 0, "connections": 0, "agent": 1}
+    assert init_counts["agent"] == 1
 
 
 # ---------------------------------------------------------------------------
@@ -2867,18 +2873,71 @@ async def test_credential_resolution_catches_arbitrary_exceptions(monkeypatch):
         )
 
 
-def test_wxo_client_lazy_properties_construct_sub_clients():
-    """WxOClient lazily builds tool/connections/agent from instance_url and authenticator."""
-    WxOClient = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.types").WxOClient
+def test_wxo_client_eagerly_constructs_sub_clients():
+    """WxOClient eagerly builds tool/connections/agent from instance_url and authenticator."""
+    WxOClient = importlib.import_module(
+        "langflow.services.adapters.deployment.watsonx_orchestrate.types"
+    ).WxOClient
     from ibm_cloud_sdk_core.authenticators import NoAuthAuthenticator
 
     client = WxOClient(instance_url="https://test.example.com", authenticator=NoAuthAuthenticator())
 
-    # Properties should lazily create sub-clients
+    # Sub-clients should be eagerly created at construction
     assert client.tool is not None
     assert client.connections is not None
     assert client.agent is not None
     assert client.base is not None
+
+
+def test_wxo_client_is_frozen():
+    """WxOClient is frozen and rejects post-construction mutation."""
+    WxOClient = importlib.import_module(
+        "langflow.services.adapters.deployment.watsonx_orchestrate.types"
+    ).WxOClient
+    from ibm_cloud_sdk_core.authenticators import NoAuthAuthenticator
+
+    client = WxOClient(instance_url="https://test.example.com", authenticator=NoAuthAuthenticator())
+    with pytest.raises(AttributeError):
+        client.instance_url = "https://evil.example.com"
+
+
+def test_wxo_client_strips_trailing_slash():
+    """WxOClient normalizes instance_url by stripping trailing slashes."""
+    WxOClient = importlib.import_module(
+        "langflow.services.adapters.deployment.watsonx_orchestrate.types"
+    ).WxOClient
+    from ibm_cloud_sdk_core.authenticators import NoAuthAuthenticator
+
+    client = WxOClient(instance_url="https://test.example.com/", authenticator=NoAuthAuthenticator())
+    assert client.instance_url == "https://test.example.com"
+
+
+def test_wxo_client_rejects_empty_url():
+    """WxOClient rejects empty instance_url at construction."""
+    WxOClient = importlib.import_module(
+        "langflow.services.adapters.deployment.watsonx_orchestrate.types"
+    ).WxOClient
+    from ibm_cloud_sdk_core.authenticators import NoAuthAuthenticator
+
+    with pytest.raises(ValueError, match="non-empty"):
+        WxOClient(instance_url="", authenticator=NoAuthAuthenticator())
+
+
+def test_wxo_credentials_is_frozen():
+    """WxOCredentials is frozen and rejects post-construction mutation."""
+    from ibm_cloud_sdk_core.authenticators import NoAuthAuthenticator
+
+    creds = WxOCredentials(instance_url="https://test.example.com", authenticator=NoAuthAuthenticator())
+    with pytest.raises(AttributeError):
+        creds.instance_url = "https://evil.example.com"
+
+
+def test_wxo_credentials_rejects_empty_url():
+    """WxOCredentials rejects empty instance_url at construction."""
+    from ibm_cloud_sdk_core.authenticators import NoAuthAuthenticator
+
+    with pytest.raises(ValueError, match="non-empty"):
+        WxOCredentials(instance_url="", authenticator=NoAuthAuthenticator())
 
 
 def test_raise_for_status_separates_status_codes_from_string_heuristics():
@@ -2904,3 +2963,420 @@ def test_raise_for_status_separates_status_codes_from_string_heuristics():
         raise_for_status_and_detail(status_code=None, detail="agent not found", message_prefix="test")
     with pytest.raises(DeploymentConflictError):
         raise_for_status_and_detail(status_code=None, detail="resource already exists", message_prefix="test")
+
+
+# ---------------------------------------------------------------------------
+# Test Coverage Gap #1: create — 409 conflict via ClientAPIException
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_create_maps_409_conflict_to_deployment_conflict_error(monkeypatch):
+    """create raises DeploymentConflictError when retry_create gets a 409 from the provider."""
+    from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return SimpleNamespace(
+            agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+            tool=FakeToolClient([]),
+            connections=FakeConnectionsClient(),
+        )
+
+    async def mock_process_config(*args, **kwargs):  # noqa: ARG001
+        response = SimpleNamespace(status_code=409, text='{"detail":"already exists"}')
+        raise ClientAPIException(response=response)
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+    monkeypatch.setattr(
+        "langflow.services.adapters.deployment.watsonx_orchestrate.service.process_config",
+        mock_process_config,
+    )
+
+    with pytest.raises(DeploymentConflictError, match="already exist"):
+        await service.create(
+            user_id="user-1",
+            db=object(),
+            payload=DeploymentCreate(
+                spec=BaseDeploymentData(
+                    name="my_deployment",
+                    description="desc",
+                    type=DeploymentType.AGENT,
+                    provider_spec={"resource_name_prefix": "lf_test_"},
+                ),
+            ),
+        )
+
+
+@pytest.mark.anyio
+async def test_create_maps_422_to_invalid_content_error(monkeypatch):
+    """create raises InvalidContentError when retry_create gets a 422 from the provider."""
+    from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return SimpleNamespace(
+            agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+            tool=FakeToolClient([]),
+            connections=FakeConnectionsClient(),
+        )
+
+    async def mock_process_config(*args, **kwargs):  # noqa: ARG001
+        response = SimpleNamespace(status_code=422, text='{"detail":"validation error"}')
+        raise ClientAPIException(response=response)
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+    monkeypatch.setattr(
+        "langflow.services.adapters.deployment.watsonx_orchestrate.service.process_config",
+        mock_process_config,
+    )
+
+    with pytest.raises(InvalidContentError, match="unprocessable"):
+        await service.create(
+            user_id="user-1",
+            db=object(),
+            payload=DeploymentCreate(
+                spec=BaseDeploymentData(
+                    name="my_deployment",
+                    description="desc",
+                    type=DeploymentType.AGENT,
+                    provider_spec={"resource_name_prefix": "lf_test_"},
+                ),
+            ),
+        )
+
+
+# ---------------------------------------------------------------------------
+# Test Coverage Gap #2: create — unsupported deployment type rejection
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_create_rejects_unsupported_deployment_type(monkeypatch):
+    """create raises DeploymentSupportError for non-AGENT deployment types."""
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+
+    # Simulate a deployment type that is not in SUPPORTED_ADAPTER_DEPLOYMENT_TYPES
+    # by creating a spec with AGENT type but monkeypatching the check.
+    spec = BaseDeploymentData(
+        name="my_deployment",
+        description="desc",
+        type=DeploymentType.AGENT,
+        provider_spec={"resource_name_prefix": "lf_test_"},
+    )
+    # Override the type to a fake unsupported value after construction
+    monkeypatch.setattr(spec, "type", SimpleNamespace(value="unsupported_type"))
+
+    with pytest.raises(DeploymentSupportError, match="not supported"):
+        await service.create(
+            user_id="user-1",
+            db=object(),
+            payload=DeploymentCreate(spec=spec),
+        )
+
+
+# ---------------------------------------------------------------------------
+# Test Coverage Gap #3: update — empty provider_data + no spec → InvalidContentError
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_update_rejects_empty_provider_data_with_no_spec_changes(monkeypatch):
+    """update raises InvalidContentError when provider_data is None and spec produces no update fields."""
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]}),
+        tool=FakeToolClient([{"id": "tool-1", "binding": {}}]),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    # Construct a payload that bypasses Pydantic validation to reach the guard
+    payload = DeploymentUpdate.model_construct(
+        spec=None,
+        snapshot=None,
+        config=None,
+        provider_data=None,
+    )
+
+    with pytest.raises(InvalidContentError, match="provider_data is required"):
+        await service.update(
+            user_id="user-1",
+            deployment_id="dep-1",
+            payload=payload,
+            db=object(),
+        )
+
+
+# ---------------------------------------------------------------------------
+# Test Coverage Gap #4: extract_langflow_artifact_from_zip — all error paths
+# ---------------------------------------------------------------------------
+
+
+def test_extract_langflow_artifact_from_zip_success():
+    """extract_langflow_artifact_from_zip returns parsed JSON from a valid zip."""
+    import json
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
+        extract_langflow_artifact_from_zip,
+    )
+
+    flow_data = {"name": "test_flow", "nodes": []}
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("flow.json", json.dumps(flow_data))
+    result = extract_langflow_artifact_from_zip(buf.getvalue(), snapshot_id="snap-1")
+    assert result == flow_data
+
+
+def test_extract_langflow_artifact_from_zip_no_json():
+    """extract_langflow_artifact_from_zip raises InvalidContentError when no JSON in zip."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
+        extract_langflow_artifact_from_zip,
+    )
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("readme.txt", "hello")
+    with pytest.raises(InvalidContentError, match="does not include a flow JSON"):
+        extract_langflow_artifact_from_zip(buf.getvalue(), snapshot_id="snap-1")
+
+
+def test_extract_langflow_artifact_from_zip_bad_zip():
+    """extract_langflow_artifact_from_zip raises InvalidContentError for invalid zip data."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
+        extract_langflow_artifact_from_zip,
+    )
+
+    with pytest.raises(InvalidContentError, match="not a valid zip"):
+        extract_langflow_artifact_from_zip(b"not a zip file", snapshot_id="snap-1")
+
+
+def test_extract_langflow_artifact_from_zip_invalid_utf8():
+    """extract_langflow_artifact_from_zip raises InvalidContentError for non-UTF-8 content."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
+        extract_langflow_artifact_from_zip,
+    )
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("flow.json", b"\xff\xfe invalid utf-8")
+    with pytest.raises(InvalidContentError, match="not valid UTF-8"):
+        extract_langflow_artifact_from_zip(buf.getvalue(), snapshot_id="snap-1")
+
+
+def test_extract_langflow_artifact_from_zip_invalid_json():
+    """extract_langflow_artifact_from_zip raises InvalidContentError for malformed JSON."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
+        extract_langflow_artifact_from_zip,
+    )
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("flow.json", "not valid json {{{")
+    with pytest.raises(InvalidContentError, match="invalid JSON"):
+        extract_langflow_artifact_from_zip(buf.getvalue(), snapshot_id="snap-1")
+
+
+# ---------------------------------------------------------------------------
+# Test Coverage Gap #5: validate_connection — all negative paths
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_validate_connection_missing_connection():
+    """validate_connection raises InvalidContentError when connection not found."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
+
+    connections_client = FakeConnectionsClient()  # no existing connections
+
+    with pytest.raises(InvalidContentError, match="not found"):
+        await validate_connection(connections_client, app_id="missing_app")
+
+
+@pytest.mark.anyio
+async def test_validate_connection_missing_config(monkeypatch):
+    """validate_connection raises InvalidContentError when config not found."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
+
+    connections_client = FakeConnectionsClient(existing_app_id="my_app")
+
+    def get_config_none(app_id, env):  # noqa: ARG001
+        return None
+
+    monkeypatch.setattr(connections_client, "get_config", get_config_none)
+
+    with pytest.raises(InvalidContentError, match="missing draft config"):
+        await validate_connection(connections_client, app_id="my_app")
+
+
+@pytest.mark.anyio
+async def test_validate_connection_wrong_security_scheme(monkeypatch):
+    """validate_connection raises InvalidContentError for non-key-value security scheme."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
+
+    connections_client = FakeConnectionsClient(existing_app_id="my_app")
+
+    def get_config_wrong_scheme(app_id, env):  # noqa: ARG001
+        return SimpleNamespace(security_scheme="oauth2")
+
+    monkeypatch.setattr(connections_client, "get_config", get_config_wrong_scheme)
+
+    with pytest.raises(InvalidContentError, match="key-value credentials"):
+        await validate_connection(connections_client, app_id="my_app")
+
+
+@pytest.mark.anyio
+async def test_validate_connection_missing_credentials(monkeypatch):
+    """validate_connection raises InvalidContentError when credentials are missing."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
+    from ibm_watsonx_orchestrate_core.types.connections import ConnectionSecurityScheme
+
+    connections_client = FakeConnectionsClient(existing_app_id="my_app")
+
+    def get_config_ok(app_id, env):  # noqa: ARG001
+        return SimpleNamespace(security_scheme=ConnectionSecurityScheme.KEY_VALUE)
+
+    def get_credentials_none(app_id, env, *, use_app_credentials):  # noqa: ARG001
+        return None
+
+    monkeypatch.setattr(connections_client, "get_config", get_config_ok)
+    monkeypatch.setattr(connections_client, "get_credentials", get_credentials_none)
+
+    with pytest.raises(InvalidContentError, match="missing draft runtime credentials"):
+        await validate_connection(connections_client, app_id="my_app")
+
+
+# ---------------------------------------------------------------------------
+# Additional coverage: create_agent_run_result raises on missing run_id
+# ---------------------------------------------------------------------------
+
+
+def test_create_agent_run_result_raises_on_missing_run_id():
+    """create_agent_run_result raises DeploymentError when response has no run_id."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import create_agent_run_result
+
+    with pytest.raises(DeploymentError, match="did not return a run_id"):
+        create_agent_run_result({"status": "accepted"})
+
+
+def test_create_agent_run_result_extracts_run_id():
+    """create_agent_run_result successfully extracts run_id from response."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import create_agent_run_result
+
+    result = create_agent_run_result({"status": "accepted", "run_id": "run-123"})
+    assert result["run_id"] == "run-123"
+    assert result["status"] == "accepted"
+
+
+def test_create_agent_run_result_falls_back_to_id_field():
+    """create_agent_run_result uses 'id' field when 'run_id' is absent."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import create_agent_run_result
+
+    result = create_agent_run_result({"status": "running", "id": "id-456"})
+    assert result["run_id"] == "id-456"
+
+
+# ---------------------------------------------------------------------------
+# Additional coverage: _require_single_deployment_id — multiple IDs
+# ---------------------------------------------------------------------------
+
+
+def test_require_single_deployment_id_rejects_multiple_ids():
+    """_require_single_deployment_id raises InvalidContentError for multiple IDs."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import _require_single_deployment_id
+
+    params = ConfigListParams(deployment_ids=["id-1", "id-2"])
+    with pytest.raises(InvalidContentError, match="exactly one deployment_id"):
+        _require_single_deployment_id(params, resource_label="config")
+
+
+# ---------------------------------------------------------------------------
+# Additional coverage: exception chain preserved (from exc, not from None)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_create_preserves_exception_chain_on_unexpected_error(monkeypatch):
+    """create preserves exception chain with 'from exc' instead of 'from None'."""
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+
+    original_error = RuntimeError("unexpected db error")
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        raise original_error
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(DeploymentError) as exc_info:
+        await service.create(
+            user_id="user-1",
+            db=object(),
+            payload=DeploymentCreate(
+                spec=BaseDeploymentData(
+                    name="my_deployment",
+                    description="desc",
+                    type=DeploymentType.AGENT,
+                    provider_spec={"resource_name_prefix": "lf_test_"},
+                ),
+            ),
+        )
+
+    assert exc_info.value.__cause__ is original_error
+
+
+@pytest.mark.anyio
+async def test_delete_preserves_exception_chain_on_unexpected_error(monkeypatch):
+    """delete preserves exception chain with 'from exc' instead of 'from None'."""
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+
+    original_error = RuntimeError("unexpected error")
+
+    fake_agent = FakeAgentClient({"id": "dep-1", "tools": []})
+    fake_agent.delete = lambda deployment_id: (_ for _ in ()).throw(original_error)
+
+    fake_clients = SimpleNamespace(
+        agent=fake_agent,
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(DeploymentError) as exc_info:
+        await service.delete(
+            user_id="user-1",
+            deployment_id="dep-1",
+            db=object(),
+        )
+
+    assert exc_info.value.__cause__ is original_error
+
+
+# ---------------------------------------------------------------------------
+# Additional coverage: _ensure_dict logs warning on non-dict replacement
+# ---------------------------------------------------------------------------
+
+
+def test_ensure_dict_logs_warning_on_non_dict(caplog):
+    """_ensure_dict logs a warning when replacing a non-dict value."""
+    import logging
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import _ensure_dict
+
+    parent = {"binding": "not a dict"}
+    with caplog.at_level(logging.WARNING):
+        result = _ensure_dict(parent, "binding")
+    assert result == {}
+    assert parent["binding"] == {}
+    assert "Expected dict" in caplog.text
+    assert "str" in caplog.text
