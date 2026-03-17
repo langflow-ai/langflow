@@ -60,6 +60,7 @@ jobs:
           git ls-remote --heads https://github.com/${{ github.repository }} 'refs/heads/release-*' \
           | awk '{print $2}' \
           | sed 's|refs/heads/||' \
+          | grep -E '^release-[0-9]+\.[0-9]+\.[0-9]+$' \
           | sort -V \
           | tail -n 1 > branch.txt
 
@@ -105,7 +106,6 @@ jobs:
         run: |
           echo "PWD: $(pwd)"
           find . -name "pypi_nightly_tag.py"
-
       - name: Generate main nightly tag
         id: generate_release_tag
         run: |
