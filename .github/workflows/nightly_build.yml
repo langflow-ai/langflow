@@ -60,7 +60,6 @@ jobs:
           git ls-remote --heads https://github.com/${{ github.repository }} 'refs/heads/release-*' \
           | awk '{print $2}' \
           | sed 's|refs/heads/||' \
-          | grep -E '^release-[0-9]+\.[0-9]+\.[0-9]+$' \
           | sort -V \
           | tail -n 1 > branch.txt
 
