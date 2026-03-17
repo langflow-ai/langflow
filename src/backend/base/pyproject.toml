@@ -1,6 +1,6 @@
 [project]
 name = "langflow-base"
-version = "0.8.1"
+version = "0.9.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 
 dependencies = [
-    "lfx~=0.3.1",
+    "lfx~=0.4.0",
     "fastapi>=0.135.0,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
     "aiofile>=3.9.0,<4.0.0",
@@ -163,7 +163,16 @@ ignore_missing_imports = true
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+# TODO(WXO): Remove testpypi index and uv.sources once the ibm-watsonx-orchestrate
+# packages publish their official release to PyPI (expected late March 2026).
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple"
+explicit = true
 
+[tool.uv.sources]
+ibm-watsonx-orchestrate-core = [{ index = "testpypi" }]
+ibm-watsonx-orchestrate-clients = [{ index = "testpypi" }]
 
 [project.urls]
 Repository = "https://github.com/langflow-ai/langflow"
@@ -353,6 +362,16 @@ astrapy = ["astrapy>=2.1.0,<3.0.0"]
 # Windows-specific
 gassist = ["gassist>=0.0.1; sys_platform == 'win32'"]
 
+# SDKs for IBM watsonx Orchestrate deployment adapter.
+# TODO(WXO): Pin to stable versions once official PyPI releases land (late March 2026).
+ibm-watsonx = [
+    "ibm-cloud-sdk-core~=3.24.4",
+    "ibm-watsonx-orchestrate-clients==2.3.2.dev5117; python_version >= '3.11'",
+    "ibm-watsonx-orchestrate-core==2.3.2.dev5117; python_version >= '3.11'",
+    "rich",
+    "PyYAML"
+]
+
 # Complete installation
 complete = [
     "langflow-base[couchbase]",
@@ -466,6 +485,8 @@ complete = [
     "langflow-base[astrapy]",
     # Windows-specific
     "langflow-base[gassist]",
+    # wxO deployment adapter
+    "langflow-base[ibm-watsonx]",
 ]
 
 all = [
