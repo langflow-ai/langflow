@@ -31,7 +31,6 @@ if TYPE_CHECKING:
         ExecutionCreateResult,
         ExecutionStatusResult,
         IdLike,
-        MaterializeSnapshotsResult,
         RedeployResult,
         SnapshotListParams,
         SnapshotListResult,
