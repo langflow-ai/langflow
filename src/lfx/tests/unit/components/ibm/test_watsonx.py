@@ -66,8 +66,15 @@ class TestWatsonxAIComponent:
         """Test that API URLs are defined."""
         from lfx.components.ibm.watsonx import WatsonxAIComponent
 
-        expected_urls = ["https://us-south.ml.cloud.ibm.com", "https://eu-de.ml.cloud.ibm.com"]
-
+        expected_urls = [
+            "https://us-south.ml.cloud.ibm.com",
+            "https://eu-de.ml.cloud.ibm.com",
+            "https://eu-gb.ml.cloud.ibm.com",
+            "https://au-syd.ml.cloud.ibm.com",
+            "https://jp-tok.ml.cloud.ibm.com",
+            "https://ca-tor.ml.cloud.ibm.com",
+            "https://ap-south-1.aws.wxai.ibm.com",
+        ]
         assert len(WatsonxAIComponent._urls) > 0
 
         for url in expected_urls:
