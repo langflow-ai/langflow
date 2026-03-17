@@ -267,6 +267,27 @@ def register_all_service_factories() -> None:
     service_manager.set_factory_registered()
 
 
+def register_builtin_adapters() -> None:
+    """Import built-in adapter modules so ``@register_adapter`` decorators fire.
+
+    Mirrors ``register_all_service_factories()`` for the adapter registry system.
+    Each import triggers the ``@register_adapter`` decorator at module scope,
+    registering the adapter class on the AdapterRegistry singleton.
+
+    TODO: Watsonx risks are documented here because registration is runtime-optional:
+    missing ``ibm_*`` modules should skip adapter registration, but broad
+    ``ModuleNotFoundError`` handling can also hide internal import regressions.
+    Future deployment API routing must treat "provider exists but adapter is not
+    registered in this runtime" as an explicit, deterministic error path.
+    Keep direct adapter imports limited to guarded paths and maintain CI
+    coverage that confirms Watsonx tests run (not skip) in eligible environments.
+    """
+    try:
+        import langflow.services.adapters.deployment.watsonx_orchestrate  # noqa: F401
+    except ModuleNotFoundError as exc:
+        logger.info("Skipping Watsonx Orchestrate adapter registration: %s", exc)
+
+
 async def initialize_services(*, fix_migration: bool = False) -> None:
     """Initialize all the services needed."""
     from langflow.helpers.windows_postgres_helper import configure_windows_postgres_event_loop
@@ -275,6 +296,7 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
 
     # Register all service factories first
     register_all_service_factories()
+    register_builtin_adapters()
 
     cache_service = get_service(ServiceType.CACHE_SERVICE, default=CacheServiceFactory())
     # Test external cache connection
