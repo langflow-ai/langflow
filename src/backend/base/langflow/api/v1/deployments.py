@@ -33,7 +33,7 @@ from langflow.api.v1.schemas.deployments import (
     FlowVersionIdsQuery,
 )
 
-router = APIRouter(prefix="/deployments", tags=["Deployments"])
+router = APIRouter(prefix="/deployments", tags=["Deployments"], include_in_schema=False)
 
 
 DeploymentProviderAccountIdQuery = Annotated[
