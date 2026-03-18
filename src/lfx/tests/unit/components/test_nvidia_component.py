@@ -8,8 +8,6 @@ import contextlib
 from unittest.mock import MagicMock, patch
 
 
-
-
 class TestNVIDIAModelComponentLazyLoading:
     """Ensure NVIDIA model list is fetched lazily, not at import time."""
 
