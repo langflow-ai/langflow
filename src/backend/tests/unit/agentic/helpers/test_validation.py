@@ -5,7 +5,6 @@ validate_component_code, and static validation helpers.
 """
 
 import os
-
 from unittest.mock import patch
 
 from langflow.agentic.helpers.validation import (
@@ -82,7 +81,7 @@ class TestExtractIONamesFromAST:
 
     def test_should_extract_input_names(self):
         """Should extract input names from inputs list."""
-        code = '''
+        code = """
 class MyComponent(Component):
     inputs = [
         StrInput(name="query", display_name="Query"),
@@ -91,7 +90,7 @@ class MyComponent(Component):
     outputs = [
         Output(name="result", display_name="Result", method="build"),
     ]
-'''
+"""
         input_names, output_names = _extract_io_names_from_ast(code, "MyComponent")
         assert input_names == {"query", "count"}
         assert output_names == {"result"}
@@ -105,7 +104,7 @@ class MyComponent(Component):
 
     def test_should_detect_overlapping_names(self):
         """Should extract names that allow overlap detection."""
-        code = '''
+        code = """
 class BadComponent(Component):
     inputs = [
         StrInput(name="data", display_name="Data"),
@@ -113,7 +112,7 @@ class BadComponent(Component):
     outputs = [
         Output(name="data", display_name="Data", method="build"),
     ]
-'''
+"""
         input_names, output_names = _extract_io_names_from_ast(code, "BadComponent")
         assert input_names & output_names == {"data"}
 
@@ -132,7 +131,7 @@ class TestValidateComponentCode:
         # Ensure clean state
         os.environ.pop(env_key, None)
 
-        malicious_code = f'''
+        malicious_code = f"""
 import os
 os.environ["{env_key}"] = "EXPLOITED"
 
@@ -147,7 +146,7 @@ class MaliciousComponent(Component):
 
     def build_result(self):
         return "test"
-'''
+"""
         # Run validation — it should NOT execute the os.environ line
         validate_component_code(malicious_code)
 
@@ -162,7 +161,7 @@ class MaliciousComponent(Component):
 
     def test_should_return_valid_for_well_formed_component(self):
         """Should return is_valid=True for syntactically correct component code."""
-        code = '''
+        code = """
 class GoodComponent(Component):
     display_name = "Good"
     description = "A good component"
@@ -176,7 +175,7 @@ class GoodComponent(Component):
 
     def build_result(self):
         return self.query
-'''
+"""
         result = validate_component_code(code)
 
         assert result.is_valid is True
@@ -193,7 +192,7 @@ class GoodComponent(Component):
 
     def test_should_return_invalid_when_output_method_has_no_return(self):
         """Should detect output methods that don't return a value."""
-        code = '''
+        code = """
 class NoReturnComponent(Component):
     display_name = "NoReturn"
 
@@ -204,7 +203,7 @@ class NoReturnComponent(Component):
 
     def build_result(self):
         pass
-'''
+"""
         result = validate_component_code(code)
 
         assert result.is_valid is False
@@ -213,7 +212,7 @@ class NoReturnComponent(Component):
 
     def test_should_return_invalid_when_overlapping_io_names(self):
         """Should detect overlapping input/output names."""
-        code = '''
+        code = """
 class OverlapComponent(Component):
     display_name = "Overlap"
 
@@ -226,7 +225,7 @@ class OverlapComponent(Component):
 
     def build_data(self):
         return self.data
-'''
+"""
         result = validate_component_code(code)
 
         assert result.is_valid is False
