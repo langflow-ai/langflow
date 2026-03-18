@@ -7,8 +7,7 @@ and that model options are populated dynamically via update_build_config.
 import contextlib
 from unittest.mock import MagicMock, patch
 
-from lfx.components.nvidia.nvidia import NVIDIAModelComponent
-from lfx.schema.dotdict import dotdict
+
 
 
 class TestNVIDIAModelComponentLazyLoading:
@@ -16,6 +15,8 @@ class TestNVIDIAModelComponentLazyLoading:
 
     def test_model_options_empty_on_import(self):
         """The model_name dropdown should have no options at class definition time."""
+        from lfx.components.nvidia.nvidia import NVIDIAModelComponent
+
         model_name_input = next(
             inp for inp in NVIDIAModelComponent.inputs if getattr(inp, "name", None) == "model_name"
         )
@@ -44,6 +45,9 @@ class TestNVIDIAModelComponentLazyLoading:
 
     def test_update_build_config_populates_models(self):
         """update_build_config should fetch models and populate the dropdown options."""
+        from lfx.components.nvidia.nvidia import NVIDIAModelComponent
+        from lfx.schema.dotdict import dotdict
+
         fake_model_a = MagicMock()
         fake_model_a.id = "model-a"
         fake_model_a.supports_tools = False
@@ -80,6 +84,9 @@ class TestNVIDIAModelComponentLazyLoading:
 
     def test_update_build_config_handles_api_failure(self):
         """update_build_config should clear options and raise on API failure."""
+        from lfx.components.nvidia.nvidia import NVIDIAModelComponent
+        from lfx.schema.dotdict import dotdict
+
         component = NVIDIAModelComponent()
         component._attributes = {
             "base_url": "https://integrate.api.nvidia.com/v1",
