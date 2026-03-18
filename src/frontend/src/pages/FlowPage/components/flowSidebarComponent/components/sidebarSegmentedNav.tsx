@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Separator } from "@/components/ui/separator";
@@ -26,48 +27,49 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: "search",
     icon: "search",
-    label: "Search",
-    tooltip: "Search",
+    label: "sidebar.nav.search",
+    tooltip: "sidebar.nav.search",
   },
   {
     id: "components",
     icon: "component",
-    label: "Components",
-    tooltip: "Components",
+    label: "sidebar.nav.components",
+    tooltip: "sidebar.nav.components",
   },
   {
     id: "mcp",
     icon: "Mcp",
-    label: "MCP",
-    tooltip: "MCP",
+    label: "sidebar.nav.mcp",
+    tooltip: "sidebar.nav.mcp",
   },
   {
     id: "bundles",
     icon: "blocks",
-    label: "Bundles",
-    tooltip: "Bundles",
+    label: "sidebar.nav.bundles",
+    tooltip: "sidebar.nav.bundles",
   },
   {
     id: "add_note",
     icon: "sticky-note",
-    label: "Sticky Notes",
-    tooltip: "Add Sticky Notes",
+    label: "sidebar.nav.stickyNotes",
+    tooltip: "sidebar.nav.addStickyNotes",
   },
   {
     id: "versions",
     icon: "History",
-    label: "Versions",
-    tooltip: "Version History",
+    label: "sidebar.nav.versions",
+    tooltip: "sidebar.nav.versionHistory",
   },
   {
     id: "traces",
     icon: "Activity",
-    label: "Traces",
-    tooltip: "Traces",
+    label: "sidebar.nav.traces",
+    tooltip: "sidebar.nav.traces",
   },
 ];
 
 const SidebarSegmentedNav = () => {
+  const { t } = useTranslation();
   const { activeSection, setActiveSection, toggleSidebar, open } = useSidebar();
   const { focusSearch, setSearch } = useSearchContext();
   const setPlaygroundOpen = usePlaygroundStore((state) => state.setIsOpen);
@@ -96,7 +98,7 @@ const SidebarSegmentedNav = () => {
           <div key={item.id}>
             {item.id === "add_note" && <Separator className="w-full" />}
             <SidebarMenuItem className="px-1 pt-1">
-              <ShadTooltip content={item.tooltip} side="right">
+              <ShadTooltip content={t(item.tooltip)} side="right">
                 <SidebarMenuButton
                   size="md"
                   onClick={(e) => {
@@ -153,7 +155,7 @@ const SidebarSegmentedNav = () => {
                     name={item.icon}
                     className="h-5 w-5"
                   />
-                  <span className="sr-only">{item.label}</span>
+                  <span className="sr-only">{t(item.label)}</span>
                 </SidebarMenuButton>
               </ShadTooltip>
             </SidebarMenuItem>

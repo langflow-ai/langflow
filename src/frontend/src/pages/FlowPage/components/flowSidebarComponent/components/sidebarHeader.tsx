@@ -1,5 +1,5 @@
 import { memo } from "react";
-
+import { useTranslation } from "react-i18next";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ export const SidebarHeaderComponent = memo(function SidebarHeaderComponent({
   filterDescription,
   resetFilters,
 }: SidebarHeaderComponentProps) {
+  const { t } = useTranslation();
   return (
     <SidebarHeader className="flex w-full flex-col gap-2 group-data-[collapsible=icon]:hidden border-b">
       {!ENABLE_NEW_SIDEBAR && (
@@ -41,11 +42,11 @@ export const SidebarHeaderComponent = memo(function SidebarHeaderComponent({
               <ForwardedIconComponent name="PanelLeftClose" />
             </SidebarTrigger>
             <h3 className="flex-1 cursor-default text-sm font-semibold">
-              Components
+              {t("sidebar.components")}
             </h3>
             <DisclosureTrigger>
               <div>
-                <ShadTooltip content="Component settings" styleClasses="z-50">
+                <ShadTooltip content={t("sidebar.componentSettings")} styleClasses="z-50">
                   <Button
                     variant={showConfig ? "ghostActive" : "ghost"}
                     size="iconMd"
