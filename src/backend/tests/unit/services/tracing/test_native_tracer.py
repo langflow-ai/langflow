@@ -674,6 +674,31 @@ class TestTopologicalSortSpans:
         uuids = [r[1] for r in result]
         assert uuids.index(root_a) < uuids.index(child_a)
 
+    def test_cycle_two_node(self):
+        """Spans forming a 2-node cycle should not cause errors or drop spans."""
+        a = uuid4()
+        b = uuid4()
+        items = [
+            self._make_span(a, b),
+            self._make_span(b, a),
+        ]
+        result = NativeTracer._topological_sort_spans(items)
+        # Ensure all spans are present and no infinite loop / exception occurs.
+        uuids = [r[1] for r in result]
+        assert len(uuids) == 2
+        assert set(uuids) == {a, b}
+
+    def test_self_parent_span(self):
+        """A span that lists itself as its own parent should still be returned."""
+        span_id = uuid4()
+        items = [
+            self._make_span(span_id, span_id),
+        ]
+        result = NativeTracer._topological_sort_spans(items)
+        uuids = [r[1] for r in result]
+        assert len(uuids) == 1
+        assert uuids[0] == span_id
+
     def test_empty_input(self):
         result = NativeTracer._topological_sort_spans([])
         assert result == []
