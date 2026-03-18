@@ -1520,9 +1520,8 @@ def get_llm(
                     max_tokens_param = provider_meta.get("max_tokens_field_name", "max_tokens")
         except (TypeError, ValueError):
             pass  # Skip invalid max_tokens (e.g. empty string from form input)
-    if max_tokens_int is None:
-        max_tokens_int = DEFAULT_MAX_TOKENS
-    kwargs[max_tokens_param] = max_tokens_int
+    if max_tokens_int is not None and max_tokens_int >= 1:
+        kwargs[max_tokens_param] = max_tokens_int
 
     # Enable streaming usage for providers that support it
     if provider in ["OpenAI", "Anthropic"]:
