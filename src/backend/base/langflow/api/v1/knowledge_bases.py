@@ -628,7 +628,10 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
         not_found_kbs = []
 
         for kb_name in request.kb_names:
-            kb_path = kb_user_path / kb_name
+            kb_path = (kb_user_path / kb_name).resolve()
+
+            if not str(kb_path).startswith(str(kb_user_path.resolve())):
+                raise HTTPException(status_code=403, detail=f"Access denied for knowledge base '{kb_name}'.")
 
             if not kb_path.exists() or not kb_path.is_dir():
                 not_found_kbs.append(kb_name)

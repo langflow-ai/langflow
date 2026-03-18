@@ -295,6 +295,43 @@ class TestKnowledgeBaseAPI:
         assert mock_delete.called
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_bulk_delete_path_traversal(
+        self, mock_root, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        """Validate path traversal vulnerability in bulk delete.
+
+        An attacker can pass '../victim_user/victim_kb' as kb_name to delete
+        a knowledge base belonging to another user.
+        """
+        mock_root.return_value = tmp_path
+
+        # Setup: attacker user dir must exist so OS can resolve ".."
+        attacker_dir = tmp_path / "activeuser"
+        attacker_dir.mkdir(parents=True)
+
+        # Setup: victim user has a KB
+        victim_kb = tmp_path / "victim_user" / "secret_kb"
+        victim_kb.mkdir(parents=True)
+
+        # Attacker sends path traversal payload
+        traversal_name = "../victim_user/secret_kb"
+        response = await client.request(
+            "DELETE",
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={"kb_names": [traversal_name]},
+        )
+
+        # If vulnerable: returns 200 and victim's KB is deleted
+        # If fixed: should return 403/400 or victim's KB must still exist
+        assert not victim_kb.exists() is False, (
+            "VULNERABILITY CONFIRMED: path traversal deleted another user's KB"
+        )
+        assert response.status_code in (400, 403, 422), (
+            f"VULNERABILITY CONFIRMED: server accepted traversal payload with status {response.status_code}"
+        )
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
     @patch("langflow.api.v1.knowledge_bases.get_job_service")
     @patch("langflow.api.v1.knowledge_bases.get_task_service")
