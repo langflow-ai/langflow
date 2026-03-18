@@ -4,8 +4,8 @@ Tests the _extract_class_name_regex, _safe_extract_class_name,
 validate_component_code, and static validation helpers.
 """
 
+import ast
 import os
-
 from unittest.mock import patch
 
 from langflow.agentic.helpers.validation import (
@@ -17,6 +17,10 @@ from langflow.agentic.helpers.validation import (
 )
 
 MODULE = "langflow.agentic.helpers.validation"
+
+
+def _parse(code: str) -> ast.Module:
+    return ast.parse(code)
 
 
 class TestExtractClassNameRegex:
@@ -81,13 +85,9 @@ class TestSafeExtractClassName:
 class TestExtractIONames:
     """Tests for static extraction of input/output names from AST."""
 
-    def _parse(self, code: str):
-        import ast
-        return ast.parse(code)
-
     def test_should_extract_input_and_output_names(self):
         """Should extract input and output names from well-formed component."""
-        code = '''
+        code = """
 class MyComponent(Component):
     inputs = [
         StrInput(name="query", display_name="Query"),
@@ -96,21 +96,21 @@ class MyComponent(Component):
     outputs = [
         Output(name="result", display_name="Result", method="build"),
     ]
-'''
-        input_names, output_names = _extract_io_names(self._parse(code), "MyComponent")
+"""
+        input_names, output_names = _extract_io_names(_parse(code), "MyComponent")
         assert input_names == {"query", "count"}
         assert output_names == {"result"}
 
     def test_should_return_empty_sets_when_no_io(self):
         """Should return empty sets when class has no inputs/outputs."""
         code = "class MyComponent(Component):\n    pass"
-        input_names, output_names = _extract_io_names(self._parse(code), "MyComponent")
+        input_names, output_names = _extract_io_names(_parse(code), "MyComponent")
         assert input_names == set()
         assert output_names == set()
 
     def test_should_detect_overlapping_names(self):
         """Should extract names that allow overlap detection."""
-        code = '''
+        code = """
 class BadComponent(Component):
     inputs = [
         StrInput(name="data", display_name="Data"),
@@ -118,28 +118,28 @@ class BadComponent(Component):
     outputs = [
         Output(name="data", display_name="Data", method="build"),
     ]
-'''
-        input_names, output_names = _extract_io_names(self._parse(code), "BadComponent")
+"""
+        input_names, output_names = _extract_io_names(_parse(code), "BadComponent")
         assert input_names & output_names == {"data"}
 
     def test_should_return_empty_sets_when_class_not_found(self):
         """Should return empty sets when class_name doesn't match any class."""
         code = "class OtherComponent(Component):\n    pass"
-        input_names, output_names = _extract_io_names(self._parse(code), "NonExistent")
+        input_names, output_names = _extract_io_names(_parse(code), "NonExistent")
         assert input_names == set()
         assert output_names == set()
 
     def test_should_ignore_starred_elements_in_inputs(self):
         """Should gracefully skip *ParentClass.inputs unpacking."""
-        code = '''
+        code = """
 class MyComponent(Component):
     inputs = [
         *SomeParent.inputs,
         StrInput(name="extra", display_name="Extra"),
     ]
     outputs = []
-'''
-        input_names, output_names = _extract_io_names(self._parse(code), "MyComponent")
+"""
+        input_names, output_names = _extract_io_names(_parse(code), "MyComponent")
         assert input_names == {"extra"}
         assert output_names == set()
 
@@ -147,32 +147,28 @@ class MyComponent(Component):
 class TestExtractOutputMethods:
     """Tests for static extraction of output method names from AST."""
 
-    def _parse(self, code: str):
-        import ast
-        return ast.parse(code)
-
     def test_should_extract_method_names(self):
         """Should extract method names from Output definitions."""
-        code = '''
+        code = """
 class MyComponent(Component):
     outputs = [
         Output(name="a", method="build_a"),
         Output(name="b", method="build_b"),
     ]
-'''
-        methods = _extract_output_methods(self._parse(code), "MyComponent")
+"""
+        methods = _extract_output_methods(_parse(code), "MyComponent")
         assert methods == ["build_a", "build_b"]
 
     def test_should_return_empty_list_when_no_outputs(self):
         """Should return empty list when class has no outputs."""
         code = "class MyComponent(Component):\n    pass"
-        methods = _extract_output_methods(self._parse(code), "MyComponent")
+        methods = _extract_output_methods(_parse(code), "MyComponent")
         assert methods == []
 
     def test_should_return_empty_list_when_class_not_found(self):
         """Should return empty list when class_name doesn't match."""
         code = "class Other(Component):\n    pass"
-        methods = _extract_output_methods(self._parse(code), "NonExistent")
+        methods = _extract_output_methods(_parse(code), "NonExistent")
         assert methods == []
 
 
@@ -189,7 +185,7 @@ class TestValidateComponentCode:
         env_key = "_LANGFLOW_SECURITY_VALIDATION_TEST"
         os.environ.pop(env_key, None)
 
-        malicious_code = f'''
+        malicious_code = f"""
 import os
 os.environ["{env_key}"] = "EXPLOITED"
 
@@ -204,7 +200,7 @@ class MaliciousComponent(Component):
 
     def build_result(self):
         return "test"
-'''
+"""
         validate_component_code(malicious_code)
 
         assert os.environ.get(env_key) is None, (
@@ -216,7 +212,7 @@ class MaliciousComponent(Component):
 
     def test_should_return_valid_for_well_formed_component(self):
         """Should return is_valid=True for syntactically correct component code."""
-        code = '''
+        code = """
 class GoodComponent(Component):
     display_name = "Good"
     description = "A good component"
@@ -230,7 +226,7 @@ class GoodComponent(Component):
 
     def build_result(self):
         return self.query
-'''
+"""
         result = validate_component_code(code)
 
         assert result.is_valid is True
@@ -247,7 +243,7 @@ class GoodComponent(Component):
 
     def test_should_return_invalid_when_output_method_has_no_return(self):
         """Should detect output methods that don't return a value."""
-        code = '''
+        code = """
 class NoReturnComponent(Component):
     display_name = "NoReturn"
 
@@ -258,7 +254,7 @@ class NoReturnComponent(Component):
 
     def build_result(self):
         pass
-'''
+"""
         result = validate_component_code(code)
 
         assert result.is_valid is False
@@ -267,7 +263,7 @@ class NoReturnComponent(Component):
 
     def test_should_return_invalid_when_overlapping_io_names(self):
         """Should detect overlapping input/output names."""
-        code = '''
+        code = """
 class OverlapComponent(Component):
     display_name = "Overlap"
 
@@ -280,7 +276,7 @@ class OverlapComponent(Component):
 
     def build_data(self):
         return self.data
-'''
+"""
         result = validate_component_code(code)
 
         assert result.is_valid is False
@@ -303,7 +299,7 @@ class OverlapComponent(Component):
 
     def test_should_handle_component_with_no_outputs(self):
         """Should return valid for component with inputs but no outputs."""
-        code = '''
+        code = """
 class InputOnlyComponent(Component):
     display_name = "InputOnly"
 
@@ -314,6 +310,6 @@ class InputOnlyComponent(Component):
 
     def run(self):
         pass
-'''
+"""
         result = validate_component_code(code)
         assert result.is_valid is True
