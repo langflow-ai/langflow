@@ -58,10 +58,12 @@ class TestNVIDIAModelComponentLazyLoading:
             "tool_model_enabled": False,
         }
 
-        build_config = dotdict({
-            "model_name": {"options": [], "value": None},
-            "detailed_thinking": {"value": False, "show": False},
-        })
+        build_config = dotdict(
+            {
+                "model_name": {"options": [], "value": None},
+                "detailed_thinking": {"value": False, "show": False},
+            }
+        )
 
         with patch("lfx.components.nvidia.nvidia.ChatNVIDIA", create=True) as mock_cls:
             mock_instance = MagicMock()
@@ -85,16 +87,21 @@ class TestNVIDIAModelComponentLazyLoading:
             "tool_model_enabled": False,
         }
 
-        build_config = dotdict({
-            "model_name": {"options": ["stale-model"], "value": "stale-model"},
-            "detailed_thinking": {"value": False, "show": False},
-        })
+        build_config = dotdict(
+            {
+                "model_name": {"options": ["stale-model"], "value": "stale-model"},
+                "detailed_thinking": {"value": False, "show": False},
+            }
+        )
 
-        with patch.object(
-            component,
-            "get_models",
-            side_effect=ConnectionError("network unreachable"),
-        ), contextlib.suppress(ValueError):
+        with (
+            patch.object(
+                component,
+                "get_models",
+                side_effect=ConnectionError("network unreachable"),
+            ),
+            contextlib.suppress(ValueError),
+        ):
             component.update_build_config(build_config, None, field_name="model_name")
 
         assert build_config["model_name"]["options"] == []
