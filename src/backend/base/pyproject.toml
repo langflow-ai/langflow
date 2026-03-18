@@ -372,7 +372,7 @@ ibm-watsonx = [
     "PyYAML"
 ]
 
-# Complete installation
+# Complete installation (excluding ibm-watsonx for now)
 complete = [
     "langflow-base[couchbase]",
     "langflow-base[cassandra]",
@@ -485,8 +485,9 @@ complete = [
     "langflow-base[astrapy]",
     # Windows-specific
     "langflow-base[gassist]",
-    # wxO deployment adapter
-    "langflow-base[ibm-watsonx]",
+    # wxO deployment adapter intentionally excluded from `complete` for now:
+    # its dependencies are currently distributed outside stable public indexes.
+    # Install explicitly with `langflow-base[ibm-watsonx]` when available.
 ]
 
 all = [
