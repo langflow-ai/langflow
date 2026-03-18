@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useGenerateToken } from "@/customization/hooks/use-custom-generate-token";
-import { COPIED_NOTICE_ALERT } from "../../constants/alerts_constants";
 import { createApiKey } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import type { ApiKeyType } from "../../types/components";
@@ -33,6 +33,7 @@ export default function SecretKeyModal({
   onCloseModal,
   modalProps,
 }: ApiKeyType & { modalProps: SecretKeyModalProps }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [apiKeyName, setApiKeyName] = useState(data?.apikeyname ?? "");
   const [apiKeyValue, setApiKeyValue] = useState("");
@@ -63,7 +64,7 @@ export default function SecretKeyModal({
       inputRef?.current?.focus();
       inputRef?.current?.select();
       setSuccessData({
-        title: COPIED_NOTICE_ALERT,
+        title: t("alerts.apiKeyCopied"),
       });
       setTextCopied(false);
 
@@ -155,7 +156,7 @@ export default function SecretKeyModal({
       </BaseModal.Content>
       <BaseModal.Footer
         submit={{
-          label: renderKey ? "Done" : (modalConfigProps?.buttonText ?? ""),
+          label: renderKey ? t("modal.secretKey.doneButton") : (modalConfigProps?.buttonText ?? ""),
           dataTestId: "secret_key_modal_submit_button",
         }}
       />

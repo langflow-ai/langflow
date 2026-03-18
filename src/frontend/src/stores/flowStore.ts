@@ -9,8 +9,7 @@ import {
 import { cloneDeep, zip } from "lodash";
 import { create } from "zustand";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
-import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
-import { BROKEN_EDGES_WARNING } from "@/constants/constants";
+import i18n from "../i18n";
 import {
   ENABLE_DATASTAX_LANGFLOW,
   ENABLE_INSPECTION_PANEL,
@@ -225,7 +224,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
     if (brokenEdges.length > 0) {
       useAlertStore.getState().setErrorData({
-        title: BROKEN_EDGES_WARNING,
+        title: i18n.t("flow.brokenEdgesWarning"),
         list: brokenEdges.map((edge) => brokenEdgeMessage(edge)),
       });
     }
@@ -759,7 +758,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     errors = errors.concat(errorsObjs.flatMap((obj) => obj.errors));
     if (errors.length > 0) {
       setErrorData({
-        title: MISSED_ERROR_ALERT,
+        title: i18n.t("errors.missedFields"),
         list: errors,
       });
       const ids = errorsObjs.flatMap((obj) => obj.id);

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { AssistantButton } from "@/components/common/assistant";
@@ -16,7 +17,6 @@ import { cn } from "@/utils/utils";
 import { default as IconComponent } from "../../../../components/common/genericIconComponent";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
-  DEFAULT_TOOLSET_PLACEHOLDER,
   FLEX_VIEW_TYPES,
   ICON_STROKE_WIDTH,
 } from "../../../../constants/constants";
@@ -47,6 +47,7 @@ export default function NodeInputField({
   isPrimaryInput = false,
   displayHandle = false,
 }: NodeInputFieldComponentType): JSX.Element {
+  const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isAutoLogin = useIsAutoLogin();
@@ -210,7 +211,7 @@ export default function NodeInputField({
             nodeClass={data.node!}
             placeholder={
               isToolMode
-                ? DEFAULT_TOOLSET_PLACEHOLDER
+                ? t("input.toolsetPlaceholder")
                 : data.node?.template[name].placeholder
             }
             isToolMode={isToolMode}

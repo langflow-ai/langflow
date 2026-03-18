@@ -27,7 +27,7 @@ import {
   getLeftHandleId,
   getRightHandleId,
 } from "@/CustomNodes/utils/get-handle-id";
-import { INCOMPLETE_LOOP_ERROR_ALERT } from "@/constants/alerts_constants";
+import i18n from "../i18n";
 import { customDownloadNodeJson } from "@/customization/utils/custom-download-json";
 import { customDownloadFlow } from "@/customization/utils/custom-reactFlowUtils";
 import useFlowStore from "@/stores/flowStore";
@@ -37,7 +37,6 @@ import {
   IS_MAC,
   LANGFLOW_SUPPORTED_TYPES,
   OUTPUT_TYPES,
-  SUCCESS_BUILD,
   specialCharsRegex,
 } from "../constants/constants";
 import { DESCRIPTIONS } from "../flow_constants";
@@ -732,7 +731,7 @@ export function validateEdge(
 
   const loop = hasLoop(e, nodes, edges);
   if (targetHandleObject.output_types && !loop) {
-    return [INCOMPLETE_LOOP_ERROR_ALERT];
+    return [i18n.t("errors.incompleteLoop")];
   }
   return [];
 }
@@ -1976,7 +1975,7 @@ export function getGroupStatus(
   flow: FlowType,
   ssData: { [key: string]: { valid: boolean; params: string } },
 ) {
-  let status = { valid: true, params: SUCCESS_BUILD };
+  let status = { valid: true, params: i18n.t("flow.buildSuccess") };
   const { nodes } = flow.data!;
   const ids = nodes.map((n: AllNodeType) => n.data.id);
   ids.forEach((id) => {

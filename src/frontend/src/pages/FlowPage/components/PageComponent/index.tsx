@@ -34,12 +34,7 @@ import { useAddComponent } from "@/hooks/use-add-component";
 import InspectionPanel from "@/pages/FlowPage/components/InspectionPanel";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { isSupportedNodeTypes } from "@/utils/utils";
-import {
-  INVALID_SELECTION_ERROR_ALERT,
-  UPLOAD_ALERT_LIST,
-  UPLOAD_ERROR_ALERT,
-  WRONG_FILE_ERROR_ALERT,
-} from "../../../../constants/alerts_constants";
+import { useTranslation } from "react-i18next";
 import ExportModal from "../../../../modals/exportModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
@@ -89,6 +84,7 @@ export default function Page({
   view?: boolean;
   setIsLoading: (isLoading: boolean) => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   const uploadFlow = useUploadFlow();
   const autoSaveFlow = useAutoSaveFlow();
   const types = useTypesStore((state) => state.types);
@@ -187,7 +183,7 @@ export default function Page({
       ]);
     } else {
       setErrorData({
-        title: INVALID_SELECTION_ERROR_ALERT,
+        title: t("errors.invalidSelection"),
         list: validateSelection(lastSelection!, edgesState),
       });
     }
@@ -540,14 +536,14 @@ export default function Page({
           position: position,
         }).catch((error) => {
           setErrorData({
-            title: UPLOAD_ERROR_ALERT,
+            title: t("errors.upload"),
             list: [(error as Error).message],
           });
         });
       } else {
         setErrorData({
-          title: WRONG_FILE_ERROR_ALERT,
-          list: [UPLOAD_ALERT_LIST],
+          title: t("errors.wrongFileType"),
+          list: [t("errors.uploadJsonOnly")],
         });
       }
     },

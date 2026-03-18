@@ -1,8 +1,8 @@
 import { RefObject } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { PopoverTrigger } from "@/components/ui/popover";
-import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
 import { cn } from "@/utils/utils";
 import { ModelOption, SelectedModel } from "../types";
 
@@ -31,6 +31,7 @@ const ModelTrigger = ({
   refButton,
   showEmptyState = false,
 }: ModelTriggerProps) => {
+  const { t } = useTranslation();
   const renderSelectedIcon = () => {
     if (disabled || options.length === 0) {
       return null;
@@ -84,7 +85,7 @@ const ModelTrigger = ({
             {renderSelectedIcon()}
             <span className="truncate">
               {disabled ? (
-                RECEIVING_INPUT_VALUE
+                t("component.receivingInput")
               ) : isEmptyStateMode ? (
                 <div className="truncate text-muted-foreground">
                   No models enabled

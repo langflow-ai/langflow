@@ -5,7 +5,7 @@ import {
   findLastBotMessage,
   updateMessageProperties,
 } from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
-import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
+import i18n from "../i18n";
 import { POLLING_MESSAGES } from "@/constants/constants";
 import { api, performStreamingRequest } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
@@ -120,7 +120,7 @@ export async function updateVerticesOrder(
     } catch (error: any) {
       logFlowLoad("Error getting vertices order:", error);
       setErrorData({
-        title: MISSED_ERROR_ALERT,
+        title: i18n.t("errors.missedFields"),
         list: [error.response?.data?.detail ?? "Unknown Error"],
       });
       useFlowStore.getState().setIsBuilding(false);

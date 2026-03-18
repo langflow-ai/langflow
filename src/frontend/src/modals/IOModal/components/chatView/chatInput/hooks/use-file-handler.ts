@@ -1,9 +1,8 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ShortUniqueId from "short-unique-id";
-import { INVALID_FILE_SIZE_ALERT } from "@/constants/alerts_constants";
 import {
   ALLOWED_IMAGE_INPUT_EXTENSIONS,
-  FS_ERROR_TEXT,
   SN_ERROR_TEXT,
 } from "@/constants/constants";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
@@ -13,6 +12,7 @@ import type { FilePreviewType } from "@/types/components";
 import { formatFileSize } from "@/utils/stringManipulation";
 
 export const useFileHandler = (currentFlowId: string) => {
+  const { t } = useTranslation();
   const [files, setFiles] = useState<FilePreviewType[]>([]);
   const { mutate } = usePostUploadFile();
   const { setErrorData } = useAlertStore();
@@ -24,7 +24,7 @@ export const useFileHandler = (currentFlowId: string) => {
       const fileExtension = file.name.split(".").pop()?.toLowerCase();
       if (file.size > maxFileSizeUpload) {
         setErrorData({
-          title: INVALID_FILE_SIZE_ALERT(formatFileSize(maxFileSizeUpload)),
+          title: t("errors.fileTooLarge", { maxSizeMB: formatFileSize(maxFileSizeUpload) }),
         });
         return;
       }
@@ -36,7 +36,7 @@ export const useFileHandler = (currentFlowId: string) => {
         console.error("Error uploading file");
         setErrorData({
           title: "Error uploading file",
-          list: [FS_ERROR_TEXT, SN_ERROR_TEXT],
+          list: [t("misc.fsErrorText"), SN_ERROR_TEXT],
         });
         return;
       }

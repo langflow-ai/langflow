@@ -1,6 +1,7 @@
 import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { clearHandlesFromAdvancedFields } from "@/utils/reactflowUtils";
+import { useTranslation } from "react-i18next";
 import "ace-builds/src-noconflict/ace";
 import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/ext-searchbox";
@@ -14,17 +15,6 @@ import type ReactAce from "react-ace/lib/ace";
 import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import {
-  BUG_ALERT,
-  CODE_ERROR_ALERT,
-  CODE_SUCCESS_ALERT,
-  FUNC_ERROR_ALERT,
-  IMPORT_ERROR_ALERT,
-} from "../../constants/alerts_constants";
-import {
-  CODE_PROMPT_DIALOG_SUBTITLE,
-  EDIT_CODE_TITLE,
-} from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import type { CodeErrorDataTypeAPI } from "../../types/api";
@@ -44,6 +34,7 @@ export default function CodeAreaModal({
   setOpen: mySetOpen,
   componentId,
 }: codeAreaModalPropsType): JSX.Element {
+  const { t } = useTranslation();
   const [code, setCode] = useState(value);
   const [open, setOpen] =
     mySetOpen !== undefined && myOpen !== undefined
@@ -80,33 +71,33 @@ export default function CodeAreaModal({
             const funcErrors = apiReturn.function.errors;
             if (funcErrors.length === 0 && importsErrors.length === 0) {
               setSuccessData({
-                title: CODE_SUCCESS_ALERT,
+                title: t("success.codeReady"),
               });
               setOpen(false);
               setValue(code);
             } else {
               if (funcErrors.length !== 0) {
                 setErrorData({
-                  title: FUNC_ERROR_ALERT,
+                  title: t("errors.function"),
                   list: funcErrors,
                 });
               }
               if (importsErrors.length !== 0) {
                 setErrorData({
-                  title: IMPORT_ERROR_ALERT,
+                  title: t("errors.imports"),
                   list: importsErrors,
                 });
               }
             }
           } else {
             setErrorData({
-              title: BUG_ALERT,
+              title: t("errors.generic"),
             });
           }
         },
         onError: (error) => {
           setErrorData({
-            title: CODE_ERROR_ALERT,
+            title: t("errors.code"),
             list: [error.response.data.detail],
           });
         },
@@ -209,8 +200,8 @@ export default function CodeAreaModal({
       size="x-large"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
-      <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
-        <span className="pr-2"> {EDIT_CODE_TITLE} </span>
+      <BaseModal.Header description={t("dialog.codePrompt")}>
+        <span className="pr-2"> {t("input.editCodeTitle")} </span>
         <IconComponent
           name="prompts"
           className="h-6 w-6 pl-1 text-primary"

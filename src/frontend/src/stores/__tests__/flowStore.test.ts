@@ -16,13 +16,10 @@ jest.mock("@/CustomNodes/helpers/check-code-validity", () => ({
   checkCodeValidity: jest.fn(),
 }));
 
-jest.mock("@/constants/alerts_constants", () => ({
-  MISSED_ERROR_ALERT: "MISSED_ERROR_ALERT",
+jest.mock("../../i18n", () => ({
+  default: { t: jest.fn((key: string) => key) },
 }));
 
-jest.mock("@/constants/constants", () => ({
-  BROKEN_EDGES_WARNING: "BROKEN_EDGES_WARNING",
-}));
 
 jest.mock("@/customization/feature-flags", () => ({
   ENABLE_DATASTAX_LANGFLOW: false,

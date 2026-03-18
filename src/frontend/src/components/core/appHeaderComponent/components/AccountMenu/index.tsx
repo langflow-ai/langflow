@@ -1,4 +1,5 @@
 import { FaDiscord, FaGithub } from "react-icons/fa";
+import { useTranslation } from "react-i18next";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import {
   DATASTAX_DOCS_URL,
@@ -24,6 +25,7 @@ import {
 import ThemeButtons from "../ThemeButtons";
 
 export const AccountMenu = () => {
+  const { t } = useTranslation();
   const version = useDarkStore((state) => state.version);
   const latestVersion = useDarkStore((state) => state.latestVersion);
   const navigate = useCustomNavigate();
@@ -67,7 +69,7 @@ export const AccountMenu = () => {
                   id="menu_version_button"
                   className="text-sm"
                 >
-                  Version
+                  {t("account.version")}
                 </span>
                 <div
                   className={cn(
@@ -77,7 +79,7 @@ export const AccountMenu = () => {
                   )}
                 >
                   {version}{" "}
-                  {isLatestVersion ? "(latest)" : "(update available)"}
+                  {isLatestVersion ? t("account.latest") : t("account.updateAvailable")}
                 </div>
               </div>
             </div>
@@ -93,7 +95,7 @@ export const AccountMenu = () => {
                 data-testid="menu_settings_button"
                 id="menu_settings_button"
               >
-                Settings
+                {t("account.settings")}
               </span>
             </HeaderMenuItemButton>
 
@@ -108,7 +110,7 @@ export const AccountMenu = () => {
                     data-testid="menu_admin_page_button"
                     id="menu_admin_page_button"
                   >
-                    Admin Page
+                    {t("account.adminPage")}
                   </span>
                 </HeaderMenuItemButton>
               </div>
@@ -118,7 +120,7 @@ export const AccountMenu = () => {
               href={ENABLE_DATASTAX_LANGFLOW ? DATASTAX_DOCS_URL : DOCS_URL}
             >
               <span data-testid="menu_docs_button" id="menu_docs_button">
-                Docs
+                {t("account.docs")}
               </span>
             </HeaderMenuItemLink>
           </div>
@@ -131,7 +133,7 @@ export const AccountMenu = () => {
                 className="flex items-center gap-2"
               >
                 <FaGithub className="h-4 w-4" />
-                GitHub
+                {t("account.github")}
               </span>
             </HeaderMenuItemLink>
             <HeaderMenuItemLink newPage href={DISCORD_URL}>
@@ -141,7 +143,7 @@ export const AccountMenu = () => {
                 className="flex items-center gap-2"
               >
                 <FaDiscord className="h-4 w-4 text-[#5865F2]" />
-                Discord
+                {t("account.discord")}
               </span>
             </HeaderMenuItemLink>
             <HeaderMenuItemLink newPage href={TWITTER_URL}>
@@ -155,13 +157,13 @@ export const AccountMenu = () => {
                   name="TwitterX"
                   className="h-4 w-4"
                 />
-                X
+                {t("account.twitter")}
               </span>
             </HeaderMenuItemLink>
           </div>
 
           <div className="flex items-center justify-between px-4 py-[6.5px] text-sm">
-            <span className="">Theme</span>
+            <span className="">{t("account.theme")}</span>
             <div className="relative top-[1px] float-right">
               <ThemeButtons />
             </div>
@@ -170,7 +172,7 @@ export const AccountMenu = () => {
           {!autoLogin && (
             <div>
               <HeaderMenuItemButton onClick={handleLogout} icon="log-out">
-                Logout
+                {t("account.logout")}
               </HeaderMenuItemButton>
             </div>
           )}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import PaginatorComponent from "@/components/common/paginatorComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import { IS_MAC } from "@/constants/constants";
@@ -22,6 +23,7 @@ import useFileDrop from "../../hooks/use-on-file-drop";
 import EmptyFolder from "../emptyFolder";
 
 const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
+  const { t } = useTranslation();
   const [view, setView] = useState<"grid" | "list">(() => {
     const savedView = localStorage.getItem("view");
     return savedView === "grid" || savedView === "list" ? savedView : "list";
@@ -248,7 +250,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   return (
     <CardsWrapComponent
       onFileDrop={flowType === "mcp" ? undefined : handleFileDrop}
-      dragMessage={`Drop your ${isEmptyFolder ? "flows or components" : flowType} here`}
+      dragMessage={isEmptyFolder ? t("home.dragFlowsOrComponents") : t("home.dragFlowType", { flowType })}
     >
       <div
         className="flex h-full w-full flex-col overflow-y-auto"
@@ -321,7 +323,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                     )
                   ) : (
                     <div className="pt-24 text-center text-sm text-secondary-foreground">
-                      {flowType} not supported
+                      {t("home.flowTypeNotSupported", { flowType })}
                     </div>
                   )}
                 </div>

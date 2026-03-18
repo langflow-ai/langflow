@@ -5,6 +5,7 @@ import type {
   ValueFormatterParams,
 } from "ag-grid-community";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import Dropdown from "@/components/core/dropdownComponent";
 import GlobalVariableModal from "@/components/core/GlobalVariableModal/GlobalVariableModal";
@@ -23,6 +24,7 @@ import { Button } from "../../../../components/ui/button";
 import useAlertStore from "../../../../stores/alertStore";
 
 export default function GlobalVariablesPage() {
+  const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [openModal, setOpenModal] = useState(false);
   const initialData = useRef<GlobalVariable | undefined>(undefined);
@@ -48,12 +50,12 @@ export default function GlobalVariablesPage() {
   // Column Definitions: Defines the columns to be displayed.
   const colDefs: ColDef[] = [
     {
-      headerName: "Variable Name",
+      headerName: t("globalVars.columnVariableName"),
       field: "name",
       flex: 2,
     }, //This column will be twice as wide as the others
     {
-      headerName: "Type",
+      headerName: t("globalVars.columnType"),
       field: "type",
       cellRenderer: BadgeRenderer,
       cellEditor: DropdownEditor,
@@ -74,7 +76,7 @@ export default function GlobalVariablesPage() {
       },
     },
     {
-      headerName: "Apply To Fields",
+      headerName: t("globalVars.columnApplyToFields"),
       field: "default_fields",
       valueFormatter: (params) => {
         return params.value?.join(", ") ?? "";
@@ -133,9 +135,9 @@ export default function GlobalVariablesPage() {
           `${variable.name}: ${variable.validation_error || "Invalid API key"}`,
       );
       setErrorData({
-        title: "Invalid Provider Credentials Detected",
+        title: t("globalVars.invalidCredentialsTitle"),
         list: [
-          `${invalidProviderVars.length} provider credential(s) with invalid keys have been hidden from the list.`,
+          t("globalVars.invalidCredentialsHidden", { count: invalidProviderVars.length }),
           ...errorMessages,
         ],
       });
@@ -150,8 +152,8 @@ export default function GlobalVariablesPage() {
         {
           onError: () => {
             setErrorData({
-              title: `Error deleting variable`,
-              list: [`ID not found for variable: ${row}`],
+              title: t("globalVars.errorDeletingVariable"),
+              list: [t("globalVars.errorIdNotFound", { name: row })],
             });
           },
         },
@@ -172,21 +174,21 @@ export default function GlobalVariablesPage() {
             className="flex items-center text-lg font-semibold tracking-tight"
             data-testid="settings_menu_header"
           >
-            Global Variables
+            {t("globalVars.pageTitle")}
             <ForwardedIconComponent
               name="Globe"
               className="ml-2 h-5 w-5 text-primary"
             />
           </h2>
           <p className="text-sm text-muted-foreground">
-            Manage global variables and assign them to fields.
+            {t("globalVars.pageDescription")}
           </p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
           <GlobalVariableModal asChild>
             <Button data-testid="api-key-button-store" variant="primary">
               <IconComponent name="Plus" className="w-4" />
-              Add New
+              {t("globalVars.addNew")}
             </Button>
           </GlobalVariableModal>
         </div>
@@ -195,7 +197,7 @@ export default function GlobalVariablesPage() {
       <div className="flex h-full w-full flex-col justify-between">
         <TableComponent
           key={"globalVariables"}
-          overlayNoRowsTemplate="No data available"
+          overlayNoRowsTemplate={t("globalVars.noDataAvailable")}
           onSelectionChanged={(event: SelectionChangedEvent) => {
             setSelectedRows(event.api.getSelectedRows().map((row) => row.name));
           }}

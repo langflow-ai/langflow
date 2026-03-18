@@ -3,9 +3,9 @@ import { useCallback, useEffect, useRef } from "react";
 import ShortUniqueId from "short-unique-id";
 import {
   ALLOWED_IMAGE_INPUT_EXTENSIONS,
-  FS_ERROR_TEXT,
   SN_ERROR_TEXT,
 } from "@/constants/constants";
+import i18n from "@/i18n";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
@@ -124,7 +124,7 @@ export default function ChatInput({
       ) {
         setErrorData({
           title: "Error uploading file",
-          list: [FS_ERROR_TEXT, SN_ERROR_TEXT],
+          list: [i18n.t("misc.fsErrorText"), SN_ERROR_TEXT],
         });
         return;
       }

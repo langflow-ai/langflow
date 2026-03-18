@@ -16,6 +16,7 @@ import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import { cloneDeep } from "lodash";
 import { type ChangeEvent, type ReactNode, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import IconComponent from "../../components/common/genericIconComponent";
 import { useTweaksStore } from "../../stores/tweaksStore";
@@ -34,6 +35,7 @@ export default function ApiModal({
   open?: boolean;
   setOpen?: (a: boolean | ((o?: boolean) => boolean)) => void;
 }) {
+  const { t } = useTranslation();
   const _autoLogin = useAuthStore((state) => state.autoLogin);
   const nodes = useFlowStore((state) => state.nodes);
   const [openTweaks, setOpenTweaks] = useState(false);
@@ -112,15 +114,15 @@ export default function ApiModal({
         <BaseModal.Header
           description={
             <span className="pr-2">
-              API access requires an API key. You can{" "}
+              {t("modal.api.description")}{" "}
               <CustomLink
                 to="/settings/api-keys"
                 className="text-accent-pink-foreground"
               >
                 {" "}
-                create an API key
+                {t("modal.api.createApiKey")}
               </CustomLink>{" "}
-              in settings.
+              {t("modal.api.descriptionSuffix")}
             </span>
           }
         >
@@ -129,7 +131,7 @@ export default function ApiModal({
             className="h-6 w-6 text-foreground"
             aria-hidden="true"
           />
-          <span className="pl-2">API access</span>
+          <span className="pl-2">{t("modal.api.title")}</span>
           {nodes.length > 0 && (
             <div className="border-r-1 absolute right-12 flex items-center text-mmd font-medium leading-[16px]">
               <Button
@@ -143,7 +145,7 @@ export default function ApiModal({
                   name="SlidersHorizontal"
                   className="h-3.5 w-3.5"
                 />
-                <span>Input Schema ({Object.keys(tweaks)?.length}) </span>
+                <span>{t("modal.api.inputSchema")} ({Object.keys(tweaks)?.length}) </span>
               </Button>
               <Separator orientation="vertical" className="ml-2 h-8" />
             </div>
@@ -166,19 +168,18 @@ export default function ApiModal({
       >
         <BaseModal.Header>
           <IconComponent name="SlidersHorizontal" className="text-f h-6 w-6" />
-          <span className="pl-2">Input Schema</span>
+          <span className="pl-2">{t("modal.api.inputSchema")}</span>
         </BaseModal.Header>
         <BaseModal.Content overflowHidden className="flex flex-col gap-4">
           {true && (
             <Label>
               <div className="edit-flow-arrangement mt-2">
                 <span className="shrink-0 text-mmd font-medium">
-                  Endpoint Name
+                  {t("modal.api.endpointName")}
                 </span>
                 {!validEndpointName && (
                   <span className="edit-flow-span">
-                    Use only letters, numbers, hyphens, and underscores (
-                    {MAX_LENGTH} characters max).
+                    {t("modal.api.endpointValidation", { maxLength: MAX_LENGTH })}
                   </span>
                 )}
               </div>
@@ -188,7 +189,7 @@ export default function ApiModal({
                 type="text"
                 name="endpoint_name"
                 value={endpointName ?? ""}
-                placeholder="An alternative name to run the endpoint"
+                placeholder={t("modal.api.endpointPlaceholder")}
                 maxLength={MAX_LENGTH}
                 minLength={MIN_LENGTH}
                 id="endpoint_name"
@@ -197,10 +198,9 @@ export default function ApiModal({
           )}
           <div className="flex flex-1 flex-col gap-2 overflow-hidden">
             <div className="flex flex-col gap-1">
-              <span className="shrink-0 text-sm font-medium">Expose API</span>
+              <span className="shrink-0 text-sm font-medium">{t("modal.api.exposeApi")}</span>
               <span className="text-mmd text-muted-foreground">
-                Select which component fields to expose as inputs in this flow's
-                API schema.
+                {t("modal.api.exposeApiDescription")}
               </span>
             </div>
             <div className="min-h-0 w-full flex-1 flex-col overflow-y-auto overflow-x-hidden rounded-lg bg-muted custom-scroll">

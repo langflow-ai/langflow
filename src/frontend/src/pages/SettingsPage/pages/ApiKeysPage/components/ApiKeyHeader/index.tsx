@@ -1,6 +1,6 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "../../../../../../components/common/genericIconComponent";
 import { Button } from "../../../../../../components/ui/button";
-import { API_PAGE_PARAGRAPH } from "../../../../../../constants/constants";
 import SecretKeyModal from "../../../../../../modals/secretKeyModal";
 import { getModalPropsApiKey } from "../../helpers/get-modal-props";
 
@@ -14,6 +14,7 @@ const ApiKeyHeaderComponent = ({
   fetchApiKeys,
   userId,
 }: ApiKeyHeaderComponentProps) => {
+  const { t } = useTranslation();
   const modalProps = getModalPropsApiKey();
   return (
     <>
@@ -23,13 +24,13 @@ const ApiKeyHeaderComponent = ({
             className="flex items-center text-lg font-semibold tracking-tight"
             data-testid="settings_menu_header"
           >
-            Langflow API Keys
+            {t("settings.apiKeysTitle")}
             <ForwardedIconComponent
               name="Key"
               className="ml-2 h-5 w-5 text-primary"
             />
           </h2>
-          <p className="text-sm text-muted-foreground">{API_PAGE_PARAGRAPH}</p>
+          <p className="text-sm text-muted-foreground">{t("settings.apiPageParagraph")}</p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
           <SecretKeyModal
@@ -39,7 +40,7 @@ const ApiKeyHeaderComponent = ({
           >
             <Button data-testid="api-key-button-store" variant="primary">
               <ForwardedIconComponent name="Plus" className="w-4" />
-              Add New
+              {t("settings.addNewKey")}
             </Button>
           </SecretKeyModal>
         </div>

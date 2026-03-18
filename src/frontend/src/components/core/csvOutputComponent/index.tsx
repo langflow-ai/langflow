@@ -2,11 +2,7 @@ import type { AllNodeType } from "@/types/flow";
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-balham.css"; // Optional Theme applied to the grid
 import { useEffect, useMemo, useState } from "react";
-import {
-  CSVError,
-  CSVNoDataError,
-  CSVViewErrorTitle,
-} from "../../../constants/constants";
+import { useTranslation } from "react-i18next";
 import { useDarkStore } from "../../../stores/darkStore";
 import type { VertexBuildTypeAPI } from "../../../types/api";
 import ForwardedIconComponent from "../../common/genericIconComponent";
@@ -21,6 +17,7 @@ function CsvOutputComponent({
   csvNode: AllNodeType;
   flowPool: VertexBuildTypeAPI;
 }) {
+  const { t } = useTranslation();
   const csvNodeArtifacts = flowPool?.data?.artifacts?.repr;
   const jsonString = csvNodeArtifacts?.replace(/'/g, '"');
   let file = null;
@@ -35,11 +32,11 @@ function CsvOutputComponent({
       <div className="align-center flex h-full w-full flex-col items-center justify-center gap-5">
         <div className="align-center flex w-full justify-center gap-2">
           <ForwardedIconComponent name="Table" />
-          {CSVViewErrorTitle}
+          {t("output.csvTitle")}
         </div>
         <div className="align-center flex w-full justify-center">
           <div className="langflow-chat-desc align-center flex justify-center px-6 py-8">
-            <div className="langflow-chat-desc-span">{CSVError}</div>
+            <div className="langflow-chat-desc-span">{t("output.csvError")}</div>
           </div>
         </div>
       </div>
@@ -86,11 +83,11 @@ function CsvOutputComponent({
         <div className="align-center flex h-full w-full flex-col items-center justify-center gap-5">
           <div className="align-center flex w-full justify-center gap-2">
             <ForwardedIconComponent name="Table" />
-            {CSVViewErrorTitle}
+            {t("output.csvTitle")}
           </div>
           <div className="align-center flex w-full justify-center">
             <div className="langflow-chat-desc align-center flex justify-center px-6 py-8">
-              <div className="langflow-chat-desc-span">{CSVNoDataError}</div>
+              <div className="langflow-chat-desc-span">{t("output.csvNoData")}</div>
             </div>
           </div>
         </div>
@@ -99,11 +96,11 @@ function CsvOutputComponent({
         <div className="align-center flex h-full w-full flex-col items-center justify-center gap-5">
           <div className="align-center flex w-full justify-center gap-2">
             <ForwardedIconComponent name="Table" />
-            {CSVViewErrorTitle}
+            {t("output.csvTitle")}
           </div>
           <div className="align-center flex w-full justify-center">
             <div className="langflow-chat-desc align-center flex justify-center px-6 py-8">
-              <div className="langflow-chat-desc-span">{CSVError}</div>
+              <div className="langflow-chat-desc-span">{t("output.csvError")}</div>
             </div>
           </div>
         </div>
