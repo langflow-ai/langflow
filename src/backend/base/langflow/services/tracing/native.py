@@ -20,6 +20,11 @@ from typing_extensions import override
 from langflow.serialization.serialization import serialize
 from langflow.services.database.models.traces.model import SpanStatus, SpanType
 from langflow.services.tracing.base import BaseTracer
+from langflow.services.tracing.span_sorting import (
+    LANGFLOW_SPAN_NAMESPACE,
+    resolve_span_uuids,
+    topological_sort_spans,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -28,8 +33,6 @@ if TYPE_CHECKING:
     from lfx.graph.vertex.base import Vertex
 
     from langflow.services.tracing.schema import Log
-
-LANGFLOW_SPAN_NAMESPACE = UUID("a3e1c2d4-5b6f-7890-abcd-ef1234567890")
 
 TYPE_MAP = {
     "chain": SpanType.CHAIN,
@@ -268,14 +271,12 @@ class NativeTracer(BaseTracer):
     async def _flush_to_database(self, error: Exception | None = None) -> None:
         """Persist the completed trace and all its spans in a single DB session to minimise round-trips."""
         try:
-            from uuid import UUID as UUID_
-
             from lfx.services.deps import session_scope
 
             from langflow.services.database.models.traces.model import SpanTable, TraceTable
 
             try:
-                flow_uuid = UUID_(self.flow_id)
+                flow_uuid = UUID(self.flow_id)
             except (ValueError, TypeError):
                 # Deterministic fallback so malformed flow_ids don't silently discard trace data.
                 flow_uuid = uuid5(LANGFLOW_SPAN_NAMESPACE, f"invalid-flow-id:{self.flow_id}")
@@ -323,8 +324,8 @@ class NativeTracer(BaseTracer):
                 # Pre-compute UUIDs and topologically sort so parents are inserted
                 # before children — required by PostgreSQL's immediate FK enforcement
                 # on span.parent_span_id → span.id.
-                resolved = self._resolve_span_uuids(self.completed_spans)
-                resolved = self._topological_sort_spans(resolved)
+                resolved = resolve_span_uuids(self.completed_spans, self.trace_id)
+                resolved = topological_sort_spans(resolved)
 
                 for span_data, span_uuid, parent_uuid in resolved:
                     span = SpanTable(
@@ -540,92 +541,6 @@ class NativeTracer(BaseTracer):
         if parent_span_id is not None:
             span["parent_span_id"] = parent_span_id
         return span
-
-    def _resolve_span_uuids(
-        self,
-        completed_spans: list[dict[str, Any]],
-    ) -> list[tuple[dict[str, Any], UUID, UUID | None]]:
-        """Pre-compute DB UUIDs for each span and its parent.
-
-        Returns a list of (span_data, span_uuid, parent_uuid) tuples that can
-        be topologically sorted before insertion.
-        """
-        from uuid import UUID as UUID_
-
-        resolved: list[tuple[dict[str, Any], UUID, UUID | None]] = []
-        for span_data in completed_spans:
-            try:
-                span_uuid = UUID_(span_data["id"])
-            except (ValueError, TypeError):
-                span_uuid = uuid5(LANGFLOW_SPAN_NAMESPACE, f"{self.trace_id}-{span_data['id']}")
-
-            parent_uuid: UUID | None = None
-            if span_data.get("parent_span_id"):
-                parent_id = span_data["parent_span_id"]
-                if isinstance(parent_id, UUID_):
-                    parent_uuid = parent_id
-                else:
-                    try:
-                        parent_uuid = UUID_(str(parent_id))
-                    except (ValueError, TypeError):
-                        parent_uuid = uuid5(LANGFLOW_SPAN_NAMESPACE, f"{self.trace_id}-{parent_id}")
-
-            resolved.append((span_data, span_uuid, parent_uuid))
-        return resolved
-
-    @staticmethod
-    def _topological_sort_spans(
-        resolved: list[tuple[dict[str, Any], UUID, UUID | None]],
-    ) -> list[tuple[dict[str, Any], UUID, UUID | None]]:
-        """Sort spans so parents appear before children.
-
-        PostgreSQL enforces foreign-key constraints at INSERT time, so a child
-        span referencing ``parent_span_id`` will fail if the parent row hasn't
-        been written yet.  This performs a Kahn's-algorithm-style topological
-        sort over the batch so that every parent is inserted first.
-
-        Spans whose ``parent_span_id`` points outside the current batch are
-        treated as roots (the parent already exists in the DB from a prior
-        flush).
-        """
-        batch_ids = {span_uuid for _, span_uuid, _ in resolved}
-
-        sorted_spans: list[tuple[dict[str, Any], UUID, UUID | None]] = []
-        inserted: set[UUID] = set()
-        remaining = list(resolved)
-
-        while remaining:
-            next_round: list[tuple[dict[str, Any], UUID, UUID | None]] = []
-            progress = False
-            for item in remaining:
-                _, span_uuid, parent_uuid = item
-                # Insert if: no parent, parent outside batch, or parent already inserted
-                if parent_uuid is None or parent_uuid not in batch_ids or parent_uuid in inserted:
-                    sorted_spans.append(item)
-                    inserted.add(span_uuid)
-                    progress = True
-                else:
-                    next_round.append(item)
-
-            if not progress:
-                # Cycle or unresolvable dependency detected.
-                # To avoid reintroducing foreign-key violations, break the cycle by
-                # nulling out parent_span_id for the remaining spans before inserting.
-                if next_round:
-                    logger.warning(
-                        "Detected cycle or unresolvable span dependencies in tracing batch; "
-                        "breaking parent relationships for %d spans to preserve DB integrity.",
-                        len(next_round),
-                    )
-                for span_data, span_uuid, _parent_uuid in next_round:
-                    # Ensure the payload reflects the broken parent relationship.
-                    if isinstance(span_data, dict):
-                        span_data["parent_span_id"] = None
-                    sorted_spans.append((span_data, span_uuid, None))
-                break
-            remaining = next_round
-
-        return sorted_spans
 
     @staticmethod
     def _map_trace_type(trace_type: str) -> SpanType:

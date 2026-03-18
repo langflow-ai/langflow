@@ -11,6 +11,7 @@ from uuid import UUID, uuid4
 import pytest
 from langflow.services.database.models.traces.model import SpanStatus, SpanType
 from langflow.services.tracing.native import NativeTracer
+from langflow.services.tracing.span_sorting import resolve_span_uuids, topological_sort_spans
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -626,7 +627,7 @@ class TestTopologicalSortSpans:
     def test_no_parents(self):
         a, b, c = uuid4(), uuid4(), uuid4()
         items = [self._make_span(a), self._make_span(b), self._make_span(c)]
-        result = NativeTracer._topological_sort_spans(items)
+        result = topological_sort_spans(items)
         assert [r[1] for r in result] == [a, b, c]
 
     def test_child_after_parent(self):
@@ -634,7 +635,7 @@ class TestTopologicalSortSpans:
         child_id = uuid4()
         # Child comes first in the input list
         items = [self._make_span(child_id, parent_id), self._make_span(parent_id)]
-        result = NativeTracer._topological_sort_spans(items)
+        result = topological_sort_spans(items)
         uuids = [r[1] for r in result]
         assert uuids.index(parent_id) < uuids.index(child_id)
 
@@ -648,7 +649,7 @@ class TestTopologicalSortSpans:
             self._make_span(mid, root),
             self._make_span(root),
         ]
-        result = NativeTracer._topological_sort_spans(items)
+        result = topological_sort_spans(items)
         uuids = [r[1] for r in result]
         assert uuids.index(root) < uuids.index(mid) < uuids.index(leaf)
 
@@ -657,7 +658,7 @@ class TestTopologicalSortSpans:
         external_parent = uuid4()
         child_id = uuid4()
         items = [self._make_span(child_id, external_parent)]
-        result = NativeTracer._topological_sort_spans(items)
+        result = topological_sort_spans(items)
         assert len(result) == 1
         assert result[0][1] == child_id
 
@@ -670,7 +671,7 @@ class TestTopologicalSortSpans:
             self._make_span(root_b),
             self._make_span(root_a),
         ]
-        result = NativeTracer._topological_sort_spans(items)
+        result = topological_sort_spans(items)
         uuids = [r[1] for r in result]
         assert uuids.index(root_a) < uuids.index(child_a)
 
@@ -682,7 +683,7 @@ class TestTopologicalSortSpans:
             self._make_span(a, b),
             self._make_span(b, a),
         ]
-        result = NativeTracer._topological_sort_spans(items)
+        result = topological_sort_spans(items)
         # Ensure all spans are present and no infinite loop / exception occurs.
         uuids = [r[1] for r in result]
         assert len(uuids) == 2
@@ -694,13 +695,93 @@ class TestTopologicalSortSpans:
         items = [
             self._make_span(span_id, span_id),
         ]
-        result = NativeTracer._topological_sort_spans(items)
+        result = topological_sort_spans(items)
         uuids = [r[1] for r in result]
         assert len(uuids) == 1
         assert uuids[0] == span_id
 
     def test_empty_input(self):
-        result = NativeTracer._topological_sort_spans([])
+        result = topological_sort_spans([])
+        assert result == []
+
+    def test_cycle_does_not_mutate_original_span_data(self):
+        """Verify cycle resolution doesn't mutate the original span dicts."""
+        a = uuid4()
+        b = uuid4()
+        span_a = {"id": str(a), "name": "span-a", "parent_span_id": b}
+        span_b = {"id": str(b), "name": "span-b", "parent_span_id": a}
+        items = [(span_a, a, b), (span_b, b, a)]
+        topological_sort_spans(items)
+        # Original dicts should retain their parent_span_id values
+        assert span_a["parent_span_id"] == b
+        assert span_b["parent_span_id"] == a
+
+
+# ---------------------------------------------------------------------------
+# resolve_span_uuids
+# ---------------------------------------------------------------------------
+
+
+class TestResolveSpanUuids:
+    """Verify UUID resolution for span IDs and parent IDs."""
+
+    def test_valid_uuid_string_id(self):
+        trace_id = uuid4()
+        span_id = uuid4()
+        spans = [{"id": str(span_id), "name": "span"}]
+        result = resolve_span_uuids(spans, trace_id)
+        assert len(result) == 1
+        assert result[0][1] == span_id
+        assert result[0][2] is None
+
+    def test_non_uuid_string_id_uses_uuid5(self):
+        from uuid import uuid5 as _uuid5
+
+        from langflow.services.tracing.span_sorting import LANGFLOW_SPAN_NAMESPACE
+
+        trace_id = uuid4()
+        spans = [{"id": "not-a-uuid", "name": "span"}]
+        result = resolve_span_uuids(spans, trace_id)
+        expected = _uuid5(LANGFLOW_SPAN_NAMESPACE, f"{trace_id}-not-a-uuid")
+        assert result[0][1] == expected
+
+    def test_parent_as_uuid_instance(self):
+        trace_id = uuid4()
+        span_id = uuid4()
+        parent_id = uuid4()
+        spans = [{"id": str(span_id), "name": "span", "parent_span_id": parent_id}]
+        result = resolve_span_uuids(spans, trace_id)
+        assert result[0][2] == parent_id
+
+    def test_parent_as_valid_uuid_string(self):
+        trace_id = uuid4()
+        span_id = uuid4()
+        parent_id = uuid4()
+        spans = [{"id": str(span_id), "name": "span", "parent_span_id": str(parent_id)}]
+        result = resolve_span_uuids(spans, trace_id)
+        assert result[0][2] == parent_id
+
+    def test_parent_as_non_uuid_string(self):
+        from uuid import uuid5 as _uuid5
+
+        from langflow.services.tracing.span_sorting import LANGFLOW_SPAN_NAMESPACE
+
+        trace_id = uuid4()
+        span_id = uuid4()
+        spans = [{"id": str(span_id), "name": "span", "parent_span_id": "invalid-parent"}]
+        result = resolve_span_uuids(spans, trace_id)
+        expected_parent = _uuid5(LANGFLOW_SPAN_NAMESPACE, f"{trace_id}-invalid-parent")
+        assert result[0][2] == expected_parent
+
+    def test_no_parent_span_id_key(self):
+        trace_id = uuid4()
+        span_id = uuid4()
+        spans = [{"id": str(span_id), "name": "span"}]
+        result = resolve_span_uuids(spans, trace_id)
+        assert result[0][2] is None
+
+    def test_empty_input(self):
+        result = resolve_span_uuids([], uuid4())
         assert result == []
 
 
