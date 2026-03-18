@@ -138,12 +138,12 @@ async def download_file(
 @router.get("/images/{flow_id}/{file_name}")
 async def download_image(
     file_name: ValidatedFileName,
-    flow_id: UUID,
+    flow: Annotated[Flow, Depends(get_flow)],
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     """Download image from storage for browser rendering."""
-    storage_service = get_storage_service()
     extension = file_name.split(".")[-1]
-    flow_id_str = str(flow_id)
+    flow_id_str = str(flow.id)
 
     if not extension:
         raise HTTPException(status_code=500, detail=f"Extension not found for file {file_name}")
