@@ -1,52 +1,76 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
-import { BrowserRouter } from "react-router-dom";
+import KnowledgeBaseEmptyState from "../KnowledgeBaseEmptyState";
 
-// Mock all the dependencies to avoid complex imports
-jest.mock("@/stores/flowsManagerStore", () => ({
+// Mock dependencies
+jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
-  default: jest.fn(),
+  default: jest.fn((selector) =>
+    selector({
+      setSuccessData: jest.fn(),
+      setErrorData: jest.fn(),
+    }),
+  ),
 }));
 
-jest.mock("@/hooks/flows/use-add-flow", () => ({
-  __esModule: true,
-  default: jest.fn(),
+const mockCaptureSubmit = jest.fn();
+const mockApplyOptimisticUpdate = jest.fn().mockReturnValue(true);
+
+jest.mock("../../hooks/useOptimisticKnowledgeBase", () => ({
+  useOptimisticKnowledgeBase: () => ({
+    captureSubmit: mockCaptureSubmit,
+    applyOptimisticUpdate: mockApplyOptimisticUpdate,
+  }),
 }));
 
-jest.mock("@/customization/hooks/use-custom-navigate", () => ({
-  useCustomNavigate: jest.fn(),
-}));
-
-jest.mock("@/stores/foldersStore", () => ({
-  useFolderStore: jest.fn(),
-}));
-
-jest.mock("@/customization/utils/analytics", () => ({
-  track: jest.fn(),
-}));
-
-jest.mock("@/utils/reactflowUtils", () => ({
-  updateIds: jest.fn(),
-}));
-
-// Mock the component itself to test in isolation
-jest.mock("../KnowledgeBaseEmptyState", () => {
-  const MockKnowledgeBaseEmptyState = () => (
-    <div data-testid="knowledge-base-empty-state">
-      <h3>No knowledge bases</h3>
-      <p>Create your first knowledge base to get started.</p>
-      <button data-testid="create-knowledge-btn">Create Knowledge</button>
-    </div>
-  );
-  MockKnowledgeBaseEmptyState.displayName = "KnowledgeBaseEmptyState";
-  return {
-    __esModule: true,
-    default: MockKnowledgeBaseEmptyState,
+// Mock the modal component
+jest.mock("@/modals/knowledgeBaseUploadModal/KnowledgeBaseUploadModal", () => {
+  return function MockKnowledgeBaseUploadModal({
+    open,
+    setOpen,
+    onSubmit,
+  }: {
+    open: boolean;
+    setOpen: (open: boolean) => void;
+    onSubmit: (data: any) => void;
+  }) {
+    return open ? (
+      <div data-testid="upload-modal">
+        <button data-testid="modal-close" onClick={() => setOpen(false)}>
+          Close
+        </button>
+        <button
+          data-testid="modal-submit"
+          onClick={() => {
+            onSubmit({
+              sourceName: "TestKB",
+              files: [new File(["content"], "test.txt")],
+              embeddingModel: null,
+            });
+            setOpen(false);
+          }}
+        >
+          Submit
+        </button>
+      </div>
+    ) : null;
   };
 });
 
-const KnowledgeBaseEmptyState = require("../KnowledgeBaseEmptyState").default;
+jest.mock("@/components/common/genericIconComponent", () => {
+  return function MockIcon() {
+    return <span data-testid="mock-icon" />;
+  };
+});
+
+jest.mock("@/components/ui/button", () => ({
+  Button: ({ children, onClick, ...props }: any) => (
+    <button onClick={onClick} {...props}>
+      {children}
+    </button>
+  ),
+}));
 
 const createTestWrapper = () => {
   const queryClient = new QueryClient({
@@ -57,49 +81,114 @@ const createTestWrapper = () => {
   });
 
   return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>{children}</BrowserRouter>
-    </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 };
 
 describe("KnowledgeBaseEmptyState", () => {
+  const mockHandleCreateKnowledge = jest.fn();
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it("renders empty state message correctly", () => {
-    render(<KnowledgeBaseEmptyState />, { wrapper: createTestWrapper() });
+    render(
+      <KnowledgeBaseEmptyState
+        handleCreateKnowledge={mockHandleCreateKnowledge}
+      />,
+      { wrapper: createTestWrapper() },
+    );
 
     expect(screen.getByText("No knowledge bases")).toBeInTheDocument();
     expect(
-      screen.getByText("Create your first knowledge base to get started."),
+      screen.getByText(/Create powerful AI experiences/),
     ).toBeInTheDocument();
   });
 
-  it("renders create knowledge button", () => {
-    render(<KnowledgeBaseEmptyState />, { wrapper: createTestWrapper() });
+  it("renders Add Knowledge button", () => {
+    render(
+      <KnowledgeBaseEmptyState
+        handleCreateKnowledge={mockHandleCreateKnowledge}
+      />,
+      { wrapper: createTestWrapper() },
+    );
 
-    const createButton = screen.getByTestId("create-knowledge-btn");
-    expect(createButton).toBeInTheDocument();
-    expect(createButton).toHaveTextContent("Create Knowledge");
+    const addButton = screen.getByText("Add Knowledge");
+    expect(addButton).toBeInTheDocument();
   });
 
-  it("handles create knowledge button click", () => {
-    render(<KnowledgeBaseEmptyState />, { wrapper: createTestWrapper() });
+  it("opens modal when Add Knowledge button is clicked", () => {
+    render(
+      <KnowledgeBaseEmptyState
+        handleCreateKnowledge={mockHandleCreateKnowledge}
+      />,
+      { wrapper: createTestWrapper() },
+    );
 
-    const createButton = screen.getByTestId("create-knowledge-btn");
-    fireEvent.click(createButton);
+    const addButton = screen.getByText("Add Knowledge");
+    fireEvent.click(addButton);
 
-    // Since we're using a mock, we just verify the button is clickable
-    expect(createButton).toBeInTheDocument();
+    expect(screen.getByTestId("upload-modal")).toBeInTheDocument();
   });
 
-  it("renders with correct test id", () => {
-    render(<KnowledgeBaseEmptyState />, { wrapper: createTestWrapper() });
+  it("calls captureSubmit when form is submitted", () => {
+    render(
+      <KnowledgeBaseEmptyState
+        handleCreateKnowledge={mockHandleCreateKnowledge}
+      />,
+      { wrapper: createTestWrapper() },
+    );
 
-    expect(
-      screen.getByTestId("knowledge-base-empty-state"),
-    ).toBeInTheDocument();
+    const addButton = screen.getByText("Add Knowledge");
+    fireEvent.click(addButton);
+
+    const submitButton = screen.getByTestId("modal-submit");
+    fireEvent.click(submitButton);
+
+    expect(mockCaptureSubmit).toHaveBeenCalledWith({
+      sourceName: "TestKB",
+      files: expect.any(Array),
+      embeddingModel: null,
+    });
+  });
+
+  it("calls applyOptimisticUpdate when modal closes after submission", () => {
+    render(
+      <KnowledgeBaseEmptyState
+        handleCreateKnowledge={mockHandleCreateKnowledge}
+      />,
+      { wrapper: createTestWrapper() },
+    );
+
+    const addButton = screen.getByText("Add Knowledge");
+    fireEvent.click(addButton);
+
+    const submitButton = screen.getByTestId("modal-submit");
+    fireEvent.click(submitButton);
+
+    expect(mockApplyOptimisticUpdate).toHaveBeenCalled();
+  });
+
+  it("closes modal without calling applyOptimisticUpdate when closed without submission", () => {
+    mockApplyOptimisticUpdate.mockClear();
+
+    render(
+      <KnowledgeBaseEmptyState
+        handleCreateKnowledge={mockHandleCreateKnowledge}
+      />,
+      { wrapper: createTestWrapper() },
+    );
+
+    const addButton = screen.getByText("Add Knowledge");
+    fireEvent.click(addButton);
+
+    expect(screen.getByTestId("upload-modal")).toBeInTheDocument();
+
+    const closeButton = screen.getByTestId("modal-close");
+    fireEvent.click(closeButton);
+
+    // Modal should call applyOptimisticUpdate even on close (it returns false if no submission)
+    expect(mockApplyOptimisticUpdate).toHaveBeenCalled();
   });
 });

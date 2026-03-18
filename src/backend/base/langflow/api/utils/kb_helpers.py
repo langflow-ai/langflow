@@ -2,6 +2,8 @@ import asyncio
 import contextlib
 import gc
 import json
+import shutil
+import time
 import uuid
 from datetime import datetime, timezone
 from functools import lru_cache
@@ -15,6 +17,7 @@ from chromadb.config import Settings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from lfx.base.data.utils import extract_text_from_bytes
 from lfx.base.models.unified_models import get_embedding_model_options
 from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
 from lfx.log import logger
@@ -24,8 +27,10 @@ from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.deps import get_settings_service
 from langflow.services.jobs.service import JobService
 from langflow.utils.kb_constants import (
+    DELETE_BACKOFF_SECONDS,
     EXPONENTIAL_BACKOFF_MULTIPLIER,
     INGESTION_BATCH_SIZE,
+    MAX_DELETE_RETRIES,
     MAX_RETRY_ATTEMPTS,
 )
 
@@ -80,8 +85,31 @@ class KBStorageHelper:
         )
 
     @staticmethod
-    def teardown_storage(kb_path: Path, kb_name: str) -> None:
-        """Explicitly flush and invalidate Chroma clients before directory deletion."""
+    def release_chroma_resources(kb_path: Path) -> None:
+        """Release ChromaDB resources by clearing the registry entry and forcing GC."""
+        path_key = str(kb_path)
+        try:
+            if path_key in SharedSystemClient._identifier_to_system:  # noqa: SLF001
+                del SharedSystemClient._identifier_to_system[path_key]  # noqa: SLF001
+        except KeyError:
+            pass
+        gc.collect()
+
+    @staticmethod
+    def delete_storage(kb_path: Path, kb_name: str) -> bool:
+        """Teardown ChromaDB connections and delete KB directory with retry logic.
+
+        Handles ChromaDB SQLite file locks that can prevent deletion, particularly
+        on Windows where mandatory file locks block deletion of open files.
+        Uses retry with exponential backoff and rename-as-fallback strategy.
+
+        Returns:
+            True if deletion succeeded (or path already gone), False otherwise.
+        """
+        if not kb_path.exists():
+            return True
+
+        # Teardown ChromaDB collection to release handles
         try:
             has_data = any((kb_path / m).exists() for m in ["chroma", "chroma.sqlite3", "index"])
             if has_data:
@@ -90,9 +118,70 @@ class KBStorageHelper:
                 with contextlib.suppress(Exception):
                     chroma.delete_collection()
                 chroma = None
-                gc.collect()
+                client = None
         except (OSError, ValueError, TypeError, chromadb.errors.ChromaError) as e:
-            logger.debug(f"Storage teardown failed for {kb_path.name} (ignoring): {e}")
+            logger.debug("Collection teardown failed for %s: %s", kb_path.name, e)
+
+        gc.collect()
+
+        for attempt in range(MAX_DELETE_RETRIES):
+            try:
+                if attempt > 0:
+                    time.sleep(DELETE_BACKOFF_SECONDS * (2**attempt))
+
+                _remove_sqlite_lock_files(kb_path)
+                _truncate_sqlite_files(kb_path)
+                gc.collect()
+
+                shutil.rmtree(kb_path, ignore_errors=False)
+
+                if not kb_path.exists():
+                    logger.info("Deleted knowledge base %s on attempt %d", kb_name, attempt + 1)
+                    return True
+
+            except OSError as e:
+                if attempt < MAX_DELETE_RETRIES - 1:
+                    logger.debug("KB deletion attempt %d failed for %s: %s", attempt + 1, kb_name, e)
+                else:
+                    logger.warning(
+                        "KB deletion failed for %s after %d attempts: %s",
+                        kb_name,
+                        MAX_DELETE_RETRIES,
+                        e,
+                    )
+
+        # Last resort: rename for deferred cleanup
+        if kb_path.exists():
+            try:
+                deferred = kb_path.with_name(f".deleted_{kb_name}_{int(time.time())}")
+                kb_path.rename(deferred)
+            except OSError as e:
+                logger.warning("Deferred rename failed for %s: %s", kb_name, e)
+            else:
+                logger.info("Renamed %s for deferred cleanup", kb_name)
+                return True
+
+        return False
+
+
+def _remove_sqlite_lock_files(kb_path: Path) -> None:
+    """Remove SQLite auxiliary files (WAL, SHM, journal) that hold locks."""
+    for pattern in ["*.sqlite3-wal", "*.sqlite3-shm", "*.sqlite3-journal"]:
+        for lock_file in kb_path.glob(pattern):
+            try:
+                lock_file.unlink()
+            except OSError as e:
+                logger.debug("Could not remove lock file %s: %s", lock_file.name, e)
+
+
+def _truncate_sqlite_files(kb_path: Path) -> None:
+    """Truncate SQLite database files to release locks."""
+    for sqlite_file in kb_path.glob("*.sqlite3"):
+        try:
+            with sqlite_file.open("r+b") as f:
+                f.truncate(0)
+        except OSError as e:
+            logger.debug("Could not truncate %s: %s", sqlite_file.name, e)
 
 
 class KBAnalysisHelper:
@@ -153,27 +242,51 @@ class KBAnalysisHelper:
     @staticmethod
     def update_text_metrics(kb_path: Path, metadata: dict, chroma: Chroma | None = None) -> None:
         """Update text metrics (chunks, words, characters) for a knowledge base."""
+        created_locally = chroma is None
+        client = None
         try:
-            if chroma is None:
+            if created_locally:
                 client = KBStorageHelper.get_fresh_chroma_client(kb_path)
                 chroma = Chroma(client=client, collection_name=kb_path.name)
 
+            if chroma is None:
+                return
             collection = chroma._collection  # noqa: SLF001
             metadata["chunks"] = collection.count()
 
             if metadata["chunks"] > 0:
-                results = collection.get(include=["documents", "metadatas"])
-                source_chunks = pd.DataFrame({"document": results["documents"], "metadata": results["metadatas"]})
+                total_words = 0
+                total_characters = 0
+                # Use a robust batch size to avoid SQLite limits and memory pressure
+                batch_size = 5000
 
-                # Chroma collections always return the text content within the 'documents' field
-                words, characters = KBAnalysisHelper._calculate_text_metrics(source_chunks, ["document"])
-                metadata["words"] = words
-                metadata["characters"] = characters
+                for offset in range(0, metadata["chunks"], batch_size):
+                    results = collection.get(
+                        include=["documents"],
+                        limit=batch_size,
+                        offset=offset,
+                    )
+                    if not results["documents"]:
+                        break
+
+                    # Chroma collections always return the text content within the 'documents' field
+                    source_chunks = pd.DataFrame({"document": results["documents"]})
+                    words, characters = KBAnalysisHelper._calculate_text_metrics(source_chunks, ["document"])
+                    total_words += words
+                    total_characters += characters
+
+                metadata["words"] = total_words
+                metadata["characters"] = total_characters
                 metadata["avg_chunk_size"] = (
-                    round(characters / metadata["chunks"], 1) if metadata["chunks"] > 0 else 0.0
+                    round(total_characters / metadata["chunks"], 1) if metadata["chunks"] > 0 else 0.0
                 )
         except (OSError, ValueError, TypeError, json.JSONDecodeError, chromadb.errors.ChromaError) as e:
             logger.debug(f"Metrics update failed for {kb_path.name}: {e}")
+        finally:
+            if created_locally:
+                client = None
+                chroma = None
+                KBStorageHelper.release_chroma_resources(kb_path)
 
     @staticmethod
     def _detect_embedding_provider(kb_path: Path) -> str:
@@ -330,7 +443,7 @@ class KBIngestionHelper:
             job_id_str = str(task_job_id)
             for file_name, file_content in files_data:
                 await logger.ainfo("Starting ingestion of %s for %s", file_name, kb_name)
-                content = file_content.decode("utf-8", errors="ignore")
+                content = extract_text_from_bytes(file_name, file_content)
                 if not content.strip():
                     continue
 
@@ -401,8 +514,9 @@ class KBIngestionHelper:
             await KBIngestionHelper.cleanup_chroma_chunks_by_job(task_job_id, kb_path, kb_name)
             raise
         finally:
+            client = None
             chroma = None
-            gc.collect()
+            KBStorageHelper.release_chroma_resources(kb_path)
 
     @staticmethod
     async def cleanup_chroma_chunks_by_job(
@@ -422,8 +536,9 @@ class KBIngestionHelper:
         except (OSError, ValueError, TypeError, chromadb.errors.ChromaError) as cleanup_error:
             await logger.aerror(f"Failed to clean up chunks for job {job_id}: {cleanup_error}")
         finally:
+            client = None
             chroma = None
-            gc.collect()
+            KBStorageHelper.release_chroma_resources(kb_path)
 
     @staticmethod
     async def _is_job_cancelled(job_service: JobService, job_id: uuid.UUID) -> bool:

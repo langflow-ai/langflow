@@ -97,13 +97,30 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             return str
 
         t = s.get("type", "any")  # Use string "any" as default instead of Any type
+        if isinstance(t, list):
+            # JSON Schema: "type": ["string", "null"] for nullable
+            non_null = [x for x in t if x != "null" and isinstance(x, str)]
+            if non_null:
+                prim = {
+                    "string": str,
+                    "integer": int,
+                    "number": float,
+                    "boolean": bool,
+                    "object": dict,
+                    "array": list,
+                }.get(non_null[0], Any)
+                return prim | None if "null" in t else prim
+            return Any
         if t == "array":
             item_schema = s.get("items", {})
             schema_type: Any = parse_type(item_schema)
             return list[schema_type]
 
         if t == "object":
-            # inline object not in $defs ⇒ anonymous nested model
+            # Generic object (no properties) ⇒ dict for free-form key-value pairs
+            if not s.get("properties"):
+                return dict
+            # Inline object with defined properties ⇒ nested model
             return _build_model(f"AnonModel{len(model_cache)}", s)
 
         # primitive fallback
@@ -136,7 +153,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             return model_cache[name]
 
         props = subschema.get("properties", {})
-        reqs = set(subschema.get("required", []))
+        reqs = {r for r in (subschema.get("required") or []) if isinstance(r, str)}
         fields: dict[str, Any] = {}
 
         for prop_name, prop_schema in props.items():
@@ -163,7 +180,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
     # build the top - level "InputSchema" from the root properties
     top_props = schema.get("properties", {})
-    top_reqs = set(schema.get("required", []))
+    top_reqs = {r for r in (schema.get("required") or []) if isinstance(r, str)}
     top_fields: dict[str, Any] = {}
 
     for fname, fdef in top_props.items():

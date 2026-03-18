@@ -26,16 +26,16 @@ const DisconnectWarning = ({
       className,
     )}
   >
-    <div className="flex flex-col gap-2">
-      <div className="text-destructive flex items-center gap-1 text-sm">
+    <div className="flex flex-col gap-3 h-full">
+      <div className="text-destructive flex items-center gap-1 text-md">
         <ForwardedIconComponent
           name="Circle"
-          className="text-destructive w-2 h-2 fill-destructive mr-1"
+          className="text-destructive w-3 h-3 fill-destructive mr-2 animate-pulse"
         />
         Warning
       </div>
 
-      <p className="flex flex-col text-sm ">{message}</p>
+      <p className="flex flex-col text-sm h-full">{message}</p>
 
       <div className="flex gap-2 justify-end ">
         <Button size="sm" variant="ghost" onClick={onCancel}>

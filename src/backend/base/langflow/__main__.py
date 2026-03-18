@@ -34,6 +34,7 @@ from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.main import setup_app
 from langflow.services.auth.utils import get_current_user_from_access_token
 from langflow.services.database.models.api_key.crud import check_key
+from langflow.services.database.service import UnsupportedPostgreSQLVersionError, check_postgresql_version_sync
 from langflow.services.deps import get_db_service, get_settings_service, is_settings_service_initialized, session_scope
 from langflow.services.utils import initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
@@ -168,6 +169,9 @@ def wait_for_server_ready(host, port, protocol) -> None:
 
     status_code = 0
     while status_code != httpx.codes.OK:
+        # If the server process died (e.g. database version check failed), stop waiting.
+        if process_manager.webapp_process and not process_manager.webapp_process.is_alive():
+            sys.exit(process_manager.webapp_process.exitcode or 1)
         try:
             status_code = httpx.get(
                 f"{protocol}://{health_check_host}:{port}/health",
@@ -339,6 +343,15 @@ def run(
 
     # Step 3: Connecting Database (this happens inside setup_app via dependencies)
     with progress.step(3):
+        # Pre-flight: fail fast if PostgreSQL version is too old, before
+        # spawning any server process (avoids messy lifespan / worker errors).
+        database_url = settings_service.settings.database_url
+        if database_url:
+            try:
+                check_postgresql_version_sync(database_url)
+            except UnsupportedPostgreSQLVersionError:
+                sys.exit(1)
+
         # check if port is being used
         if is_port_in_use(port, host):
             port = get_free_port(port)

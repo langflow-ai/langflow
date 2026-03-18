@@ -1,5 +1,7 @@
 from .api_key import ApiKey
 from .auth import SSOConfig, SSOUserProfile
+from .deployment import Deployment
+from .deployment_provider_account import DeploymentProviderAccount
 from .file import File
 from .flow import Flow
 from .flow_version import FlowVersion
@@ -13,6 +15,8 @@ from .variable import Variable
 
 __all__ = [
     "ApiKey",
+    "Deployment",
+    "DeploymentProviderAccount",
     "File",
     "Flow",
     "FlowVersion",

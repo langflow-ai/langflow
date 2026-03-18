@@ -166,12 +166,12 @@ export const UserMessage = memo(
                     </>
                   )}
                   {chat.files && chat.files.length > 0 && (
-                    <div className="mt-2 flex w-full items-center gap-4 overflow-auto">
+                    <div className="mt-2 flex w-full items-start gap-4 overflow-auto">
                       {chat.files.map((file, index) => (
                         <FilePreviewDisplay
                           key={index}
                           file={file}
-                          variant="compact"
+                          variant="expanded"
                           showDelete={false}
                         />
                       ))}

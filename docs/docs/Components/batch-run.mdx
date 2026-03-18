@@ -34,7 +34,7 @@ For example, if you want to extract text from a `name` column in a CSV file, ent
 
 4. Connect the **Batch Run** component's **Batch Results** output to a **Parser** component's **DataFrame** input.
 
-5. Optional: In the **Batch Run** [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, enable the **System Message** parameter, click **Close**, and then enter an instruction for how you want the LLM to process each cell extracted from the file.
+5. Optional: In the **Batch Run** [component menu](/concepts-components#component-menus), enable the **System Message** parameter, click **Close**, and then enter an instruction for how you want the LLM to process each cell extracted from the file.
 For example, `Create a business card for each name.`
 
 6. In the **Parser** component's **Template** field, enter a template for processing the **Batch Run** component's new `DataFrame` columns (`text_input`, `model_response`, and `batch_index`):

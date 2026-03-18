@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, computed_field, field_serializer
 from pydantic import Field as PydanticField
-from sqlalchemy import CheckConstraint, Column, ForeignKey, UniqueConstraint
+from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, UniqueConstraint, func
 from sqlmodel import JSON, Field, SQLModel
 
 
@@ -17,11 +17,15 @@ class FlowVersion(SQLModel, table=True):  # type: ignore[call-arg]
     flow_id: UUID = Field(
         sa_column=Column(ForeignKey("flow.id", ondelete="CASCADE"), index=True, nullable=False),
     )
-    user_id: UUID = Field(index=True, foreign_key="user.id")
+    user_id: UUID | None = Field(
+        sa_column=Column(ForeignKey("user.id", ondelete="SET NULL"), index=True, nullable=True),
+    )
     data: dict | None = Field(default=None, sa_column=Column(JSON))
     version_number: int = Field(nullable=False, ge=1)
     description: str | None = Field(default=None, nullable=True, max_length=500)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+    created_at: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True),
+    )
 
     # The UniqueConstraint on (flow_id, version_number) creates an implicit composite
     # btree index that also covers ORDER BY version_number DESC queries filtered by
@@ -37,7 +41,7 @@ class FlowVersionRead(BaseModel):
 
     id: UUID
     flow_id: UUID
-    user_id: UUID
+    user_id: UUID | None
     version_number: int = PydanticField(ge=1)
     description: str | None
     created_at: datetime

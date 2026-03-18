@@ -364,10 +364,6 @@ uv run lfx run --flow-json '{"data": {"nodes": [...], "edges": [...]}}' \
 | `-vv` | Show detailed progress and debug information. |
 | `-vvv` | Show full debugging output including component logs. |
 
-### Use LFX run to create an application
-
-> **Note:** This feature is a work in progress.
-
 In addition to running flows from JSON files, you can use `lfx run` with Python scripts that define flows programmatically. This approach allows you to create flows directly in Python code without the visual builder.
 
 For a complete example of creating an agent flow programmatically using LFX components, see the [Complete Agent Example on PyPI](https://pypi.org/project/lfx) or the **Complete Agent Example** below.

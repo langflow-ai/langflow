@@ -6,8 +6,10 @@ from collections.abc import Callable  # noqa: TC003 - required at runtime for dy
 from typing import Any
 
 from lfx.base.models.unified_models import (
+    apply_provider_variable_config_to_build_config,
     get_language_model_options,
     get_llm,
+    get_provider_for_model_name,
     update_model_options_in_build_config,
 )
 from lfx.custom.custom_component.component import Component
@@ -49,9 +51,9 @@ class LambdaFilterComponent(Component):
     inputs = [
         DataInput(
             name="data",
-            display_name="Data",
+            display_name="JSON",
             info="The structured data or text messages to filter or transform using a lambda function.",
-            input_types=["Data", "DataFrame", "Message"],
+            input_types=["Data", "JSON", "DataFrame", "Table", "Message"],
             is_list=True,
             required=True,
         ),
@@ -116,7 +118,7 @@ class LambdaFilterComponent(Component):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
-        return update_model_options_in_build_config(
+        build_config = update_model_options_in_build_config(
             component=self,
             build_config=build_config,
             cache_key_prefix="language_model_options",
@@ -124,6 +126,19 @@ class LambdaFilterComponent(Component):
             field_name=field_name,
             field_value=field_value,
         )
+
+        current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
+        provider = ""
+        if isinstance(current_model_value, list) and current_model_value:
+            selected_model = current_model_value[0]
+            provider = (selected_model.get("provider") or "").strip()
+            if not provider and selected_model.get("name"):
+                provider = get_provider_for_model_name(str(selected_model["name"]))
+
+        if provider:
+            build_config = apply_provider_variable_config_to_build_config(build_config, provider)
+
+        return build_config
 
     def get_data_structure(self, data):
         """Extract the structure of data, replacing values with their types."""

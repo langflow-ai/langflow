@@ -94,7 +94,7 @@ export function getCustomParameterTitle({
       >
         {title}
       </span>
-      {required && <span className="text-red-500">*</span>}
+      {required && <span className="text-destructive">*</span>}
     </div>
   );
 }

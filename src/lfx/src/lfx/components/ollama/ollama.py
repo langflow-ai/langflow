@@ -231,8 +231,8 @@ class ChatOllamaComponent(LCModelComponent):
     outputs = [
         Output(display_name="Text", name="text_output", method="text_response"),
         Output(display_name="Language Model", name="model_output", method="build_model"),
-        Output(display_name="Data", name="data_output", method="build_data_output"),
-        Output(display_name="DataFrame", name="dataframe_output", method="build_dataframe_output"),
+        Output(display_name="JSON", name="data_output", method="build_data_output"),
+        Output(display_name="Table", name="dataframe_output", method="build_dataframe_output"),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
