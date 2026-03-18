@@ -155,9 +155,7 @@ class LocalStorageService(StorageService):
             resolved_folder_str = str(await folder_path.resolve())
             resolved_file_str = str(await file_path.resolve())
             if not resolved_file_str.startswith(resolved_folder_str):
-                await logger.aerror(
-                    f"Path traversal attempt detected for flow_id='{flow_id}' (fallback check)"
-                )
+                await logger.aerror(f"Path traversal attempt detected for flow_id='{flow_id}' (fallback check)")
                 msg = "Invalid file path: path traversal detected"
                 raise ValueError(msg) from None
         except Exception as e:

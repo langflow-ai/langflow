@@ -205,6 +205,7 @@ async def test_storage_layer_path_containment_check(client: AsyncClient, logged_
 
     # Verify no file was created in /tmp (S108: this is intentional for security testing)
     import tempfile
+
     tmp_dir = tempfile.gettempdir()
     pwned_path = Path(tmp_dir) / "pwned.txt"
     if pwned_path.exists():
@@ -245,5 +246,3 @@ async def test_upload_file_preserves_extension(client: AsyncClient, logged_in_he
     assert response.status_code == 201
     data = response.json()
     assert data["path"].endswith(".pdf")
-
-

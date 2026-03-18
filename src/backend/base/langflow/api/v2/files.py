@@ -196,9 +196,28 @@ async def upload_user_file(
         # Reject reserved filenames on Windows (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
         # This prevents issues when code runs on Windows systems
         reserved_names = {
-            "CON", "PRN", "AUX", "NUL",
-            "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
-            "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+            "CON",
+            "PRN",
+            "AUX",
+            "NUL",
+            "COM1",
+            "COM2",
+            "COM3",
+            "COM4",
+            "COM5",
+            "COM6",
+            "COM7",
+            "COM8",
+            "COM9",
+            "LPT1",
+            "LPT2",
+            "LPT3",
+            "LPT4",
+            "LPT5",
+            "LPT6",
+            "LPT7",
+            "LPT8",
+            "LPT9",
         }
         name_without_ext = new_filename.rsplit(".", 1)[0].upper()
         if name_without_ext in reserved_names:
