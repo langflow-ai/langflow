@@ -43,6 +43,9 @@ T_DeploymentCreateResultModel = TypeVar("T_DeploymentCreateResultModel", bound=B
 T_DeploymentOperationResult = TypeVar("T_DeploymentOperationResult", default=AdapterPayload)
 T_DeploymentOperationResultModel = TypeVar("T_DeploymentOperationResultModel", bound=BaseModel, default=BaseModel)
 
+T_DeploymentUpdateResult = TypeVar("T_DeploymentUpdateResult", default=AdapterPayload)
+T_DeploymentUpdateResultModel = TypeVar("T_DeploymentUpdateResultModel", bound=BaseModel, default=BaseModel)
+
 T_DeploymentListResult = TypeVar("T_DeploymentListResult", default=AdapterPayload)
 T_DeploymentListResultModel = TypeVar("T_DeploymentListResultModel", bound=BaseModel, default=BaseModel)
 
@@ -95,6 +98,7 @@ class DeploymentPayloadFields(ProviderPayloadSchemas):
     # Outbound (adapter -> response)
     deployment_create_result: PayloadSlot[T_DeploymentCreateResultModel] | None = None
     deployment_operation_result: PayloadSlot[T_DeploymentOperationResultModel] | None = None
+    deployment_update_result: PayloadSlot[T_DeploymentUpdateResultModel] | None = None
     deployment_list_result: PayloadSlot[T_DeploymentListResultModel] | None = None
     config_list_result: PayloadSlot[T_ConfigListResultModel] | None = None
     snapshot_list_result: PayloadSlot[T_SnapshotListResultModel] | None = None

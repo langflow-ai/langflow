@@ -3,15 +3,22 @@
 from __future__ import annotations
 
 from dataclasses import fields
+from datetime import UTC, datetime
+from types import SimpleNamespace
+from uuid import uuid4
 
 import pytest
+from langflow.api.v1.mappers.deployments import get_mapper_registry
 from langflow.api.v1.mappers.deployments.base import (
     BaseDeploymentMapper,
     DeploymentApiPayloads,
     DeploymentMapperRegistry,
 )
+from langflow.api.v1.schemas.deployments import DeploymentUpdateRequest
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadSchemas
+from lfx.services.adapters.deployment.schema import DeploymentType, DeploymentUpdateResult
 from lfx.services.adapters.payload import AdapterPayloadValidationError, PayloadSlot, PayloadSlotPolicy
+from lfx.services.adapters.schema import AdapterType
 from pydantic import BaseModel
 
 
@@ -64,7 +71,6 @@ class _NormalizingMapper(BaseDeploymentMapper):
 INBOUND_METHOD_CASES = [
     ("resolve_deployment_spec", {"region": "us-east-1"}),
     ("resolve_deployment_config", {"retries": 3}),
-    ("resolve_deployment_update", {"patch": "replace"}),
     ("resolve_execution_input", {"invocation_id": "inv-1"}),
     ("resolve_deployment_list_params", {"env": "prod"}),
     ("resolve_config_list_params", {"config_tag": "release"}),
@@ -83,6 +89,7 @@ INBOUND_SLOT_NAMES = [
 
 OUTBOUND_SLOT_NAMES = [
     "deployment_create_result",
+    "deployment_update_result",
     "deployment_operation_result",
     "deployment_list_result",
     "config_list_result",
@@ -151,6 +158,52 @@ async def test_base_mapper_resolvers_passthrough_none_payload_when_slot_configur
     assert resolved is None
 
 
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_deployment_update_passthrough_when_slot_not_configured() -> None:
+    mapper = BaseDeploymentMapper()
+    payload = DeploymentUpdateRequest(provider_data={"patch": "replace"})
+
+    resolved = await mapper.resolve_deployment_update(  # type: ignore[arg-type]
+        user_id=uuid4(),
+        deployment_db_id=uuid4(),
+        db=None,
+        payload=payload,
+    )
+
+    assert resolved.spec is None
+    assert resolved.config is None
+    assert resolved.provider_data == {"patch": "replace"}
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_deployment_update_validates_provider_data_when_slot_configured() -> None:
+    mapper = _TypedMapper()
+    payload = DeploymentUpdateRequest(provider_data={"patch": "replace"})
+
+    resolved = await mapper.resolve_deployment_update(  # type: ignore[arg-type]
+        user_id=uuid4(),
+        deployment_db_id=uuid4(),
+        db=None,
+        payload=payload,
+    )
+
+    assert resolved.provider_data == {"patch": "replace"}
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_deployment_update_rejects_invalid_provider_data_when_slot_configured() -> None:
+    mapper = _TypedMapper()
+    payload = DeploymentUpdateRequest(provider_data={"invalid": "value"})
+
+    with pytest.raises(AdapterPayloadValidationError, match="Invalid payload"):
+        await mapper.resolve_deployment_update(  # type: ignore[arg-type]
+            user_id=uuid4(),
+            deployment_db_id=uuid4(),
+            db=None,
+            payload=payload,
+        )
+
+
 def test_mapper_has_resolve_method_for_all_inbound_slots() -> None:
     for slot_name in INBOUND_SLOT_NAMES:
         assert hasattr(BaseDeploymentMapper, f"resolve_{slot_name}")
@@ -182,6 +235,48 @@ def test_base_mapper_shapers_passthrough_provider_payload(method_name: str) -> N
     assert shaped is payload
 
 
+def test_base_mapper_shapes_deployment_update_result() -> None:
+    mapper = BaseDeploymentMapper()
+    deployment_id = uuid4()
+    timestamp = datetime.now(tz=UTC)
+    result = DeploymentUpdateResult(id="provider-id", provider_result={"ok": True})
+    deployment_row = SimpleNamespace(
+        id=deployment_id,
+        name="Deployment Name",
+        deployment_type=DeploymentType.AGENT.value,
+        created_at=timestamp,
+        updated_at=timestamp,
+    )
+
+    shaped = mapper.shape_deployment_update_result(
+        result,
+        deployment_row,
+        description="desc",
+    )
+
+    assert shaped.id == deployment_id
+    assert shaped.name == "Deployment Name"
+    assert shaped.type == DeploymentType.AGENT
+    assert shaped.provider_data == {"ok": True}
+
+
+def test_base_mapper_resolves_flow_version_patch_from_top_level_field() -> None:
+    mapper = BaseDeploymentMapper()
+    add_id = uuid4()
+    remove_id = uuid4()
+    payload = DeploymentUpdateRequest(
+        flow_version_ids={
+            "add": [add_id],
+            "remove": [remove_id],
+        }
+    )
+
+    add_ids, remove_ids = mapper.resolve_flow_version_patch(payload)
+
+    assert add_ids == [add_id]
+    assert remove_ids == [remove_id]
+
+
 def test_mapper_registry_returns_default_when_unregistered() -> None:
     registry = DeploymentMapperRegistry()
     assert isinstance(registry.get("missing-provider"), BaseDeploymentMapper)
@@ -189,21 +284,35 @@ def test_mapper_registry_returns_default_when_unregistered() -> None:
 
 def test_mapper_registry_returns_registered_mapper() -> None:
     registry = DeploymentMapperRegistry()
-    mapper = _TypedMapper()
-    registry.register("acme", mapper)
-    assert registry.get("acme") is mapper
+    registry.register("acme", _TypedMapper)
+    resolved = registry.get("acme")
+    assert isinstance(resolved, _TypedMapper)
 
 
 def test_mapper_registry_re_register_same_key_replaces_mapper() -> None:
     registry = DeploymentMapperRegistry()
-    mapper1 = _TypedMapper()
-    mapper2 = BaseDeploymentMapper()
-    registry.register("acme", mapper1)
-    registry.register("acme", mapper2)
-    assert registry.get("acme") is mapper2
+    registry.register("acme", _TypedMapper)
+    registry.register("acme", BaseDeploymentMapper)
+    resolved = registry.get("acme")
+    assert isinstance(resolved, BaseDeploymentMapper)
+    assert not isinstance(resolved, _TypedMapper)
 
 
-def test_mapper_registry_rejects_non_mapper_instances() -> None:
+def test_mapper_registry_rejects_non_mapper_classes() -> None:
     registry = DeploymentMapperRegistry()
     with pytest.raises(TypeError, match="BaseDeploymentMapper"):
-        registry.register("bad", object())  # type: ignore[arg-type]
+        registry.register("bad", object)  # type: ignore[arg-type]
+
+
+def test_mapper_registry_accessor_returns_singleton() -> None:
+    registry1 = get_mapper_registry(AdapterType.DEPLOYMENT)
+    registry2 = get_mapper_registry(AdapterType.DEPLOYMENT)
+    assert registry1 is registry2
+
+
+def test_mapper_registry_get_returns_cached_instance_for_key() -> None:
+    registry = DeploymentMapperRegistry()
+    registry.register("acme", _TypedMapper)
+    first = registry.get("acme")
+    second = registry.get("acme")
+    assert first is second

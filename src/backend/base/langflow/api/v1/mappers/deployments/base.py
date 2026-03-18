@@ -5,12 +5,25 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar
+from uuid import UUID
 
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadFields
+from lfx.services.adapters.deployment.schema import (
+    ConfigDeploymentBindingUpdate,
+    DeploymentType,
+    DeploymentUpdateResult,
+)
+from lfx.services.adapters.deployment.schema import (
+    DeploymentUpdate as AdapterDeploymentUpdate,
+)
 from lfx.services.adapters.payload import PayloadSlot
+
+from langflow.api.v1.schemas.deployments import DeploymentUpdateRequest, DeploymentUpdateResponse
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
+
+    from langflow.services.database.models.deployment.model import Deployment
 
 
 @dataclass(frozen=True)
@@ -26,6 +39,15 @@ class DeploymentApiPayloads(DeploymentPayloadFields):
 
 class BaseDeploymentMapper:
     """Per-provider mapper for deployment API payloads.
+
+    Mapper vs adapter responsibilities:
+    - Mapper: API-boundary translation/validation (Langflow schemas <-> adapter payloads).
+    - Adapter: provider execution (network calls, provider semantics, side effects).
+
+    Selection contract:
+    The mapper is resolved using the same ``(AdapterType, provider_key)``
+    coordinates used for adapter resolution, so both layers stay aligned for
+    a request.
 
     The base implementation is intentionally passthrough-first:
     inbound ``resolve_*`` methods return the original dict unless an
@@ -49,8 +71,26 @@ class BaseDeploymentMapper:
     async def resolve_deployment_config(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
         return self._validate_slot(self.api_payloads.deployment_config, raw)
 
-    async def resolve_deployment_update(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
-        return self._validate_slot(self.api_payloads.deployment_update, raw)
+    async def resolve_deployment_update(
+        self,
+        *,
+        user_id: UUID,
+        deployment_db_id: UUID,
+        db: AsyncSession,
+        payload: DeploymentUpdateRequest,
+    ) -> AdapterDeploymentUpdate:
+        _ = (user_id, deployment_db_id)
+        adapter_config = (
+            ConfigDeploymentBindingUpdate(**payload.config.model_dump(exclude_unset=True))
+            if payload.config is not None
+            else None
+        )
+        provider_data = self._validate_slot(self.api_payloads.deployment_update, payload.provider_data)
+        return AdapterDeploymentUpdate(
+            spec=payload.spec,
+            config=adapter_config,
+            provider_data=provider_data,
+        )
 
     async def resolve_execution_input(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
         return self._validate_slot(self.api_payloads.execution_input, raw)
@@ -68,6 +108,43 @@ class BaseDeploymentMapper:
 
     def shape_deployment_create_result(self, provider_result: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_result
+
+    def shape_deployment_update_result(
+        self,
+        result: DeploymentUpdateResult,
+        deployment_row: Deployment,
+        *,
+        description: str | None = None,
+    ) -> DeploymentUpdateResponse:
+        provider_data = result.provider_result if isinstance(result.provider_result, dict) else None
+        return DeploymentUpdateResponse(
+            id=deployment_row.id,
+            name=deployment_row.name,
+            description=description,
+            # TODO: Make deployment.deployment_type
+            # a DeploymentType enum column in the
+            # DB model, and remove this fallback.
+            type=DeploymentType(deployment_row.deployment_type or DeploymentType.AGENT.value),
+            created_at=deployment_row.created_at,
+            updated_at=deployment_row.updated_at,
+            provider_data=provider_data,
+        )
+
+    def resolve_created_snapshot_ids(self, result: DeploymentUpdateResult) -> list[str]:
+        """Return snapshot ids created during this update.
+
+        Base behavior treats ``result.snapshot_ids`` as created ids.
+        Provider-specific mappers may override this when the adapter uses
+        ``snapshot_ids`` for finalized bindings and exposes created ids in
+        provider-specific result payloads.
+        """
+        return [str(snapshot_id).strip() for snapshot_id in result.snapshot_ids if str(snapshot_id).strip()]
+
+    def resolve_flow_version_patch(self, payload: DeploymentUpdateRequest) -> tuple[list[UUID], list[UUID]]:
+        """Resolve flow-version attachment adds/removes represented by this update request."""
+        if payload.flow_version_ids is None:
+            return [], []
+        return list(payload.flow_version_ids.add or []), list(payload.flow_version_ids.remove or [])
 
     def shape_deployment_operation_result(self, provider_result: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_result
@@ -105,17 +182,25 @@ class DeploymentMapperRegistry:
     """Registry of per-provider deployment mappers."""
 
     _default: BaseDeploymentMapper
-    _mappers: dict[str, BaseDeploymentMapper]
+    _mapper_classes: dict[str, type[BaseDeploymentMapper]]
+    _mapper_instances: dict[str, BaseDeploymentMapper]
 
     def __init__(self) -> None:
         self._default = BaseDeploymentMapper()
-        self._mappers = {}
+        self._mapper_classes = {}
+        self._mapper_instances = {}
 
-    def register(self, provider_key: str, mapper: BaseDeploymentMapper) -> None:
-        if not isinstance(mapper, BaseDeploymentMapper):
-            msg = "mapper must be an instance of BaseDeploymentMapper"
+    def register(self, provider_key: str, mapper_class: type[BaseDeploymentMapper]) -> None:
+        if not issubclass(mapper_class, BaseDeploymentMapper):
+            msg = "mapper_class must inherit from BaseDeploymentMapper"
             raise TypeError(msg)
-        self._mappers[provider_key] = mapper
+        self._mapper_classes[provider_key] = mapper_class
+        self._mapper_instances.pop(provider_key, None)
 
     def get(self, provider_key: str) -> BaseDeploymentMapper:
-        return self._mappers.get(provider_key, self._default)
+        mapper_class = self._mapper_classes.get(provider_key)
+        if mapper_class is None:
+            return self._default
+        if provider_key not in self._mapper_instances:
+            self._mapper_instances[provider_key] = mapper_class()
+        return self._mapper_instances[provider_key]

@@ -301,6 +301,8 @@ class DeploymentServiceProtocol(Protocol):
         db: AsyncSession,
     ) -> DeploymentUpdateResult:
         """Update deployment inputs and apply changes in the provider."""
+        # TODO: Add a rollback-update interface contract for adapters so callers
+        # can compensate provider-side updates when downstream local sync fails.
         ...
 
     @abstractmethod
