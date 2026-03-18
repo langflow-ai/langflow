@@ -13,7 +13,6 @@ from lfx.custom.validate import extract_class_name
 
 from langflow.agentic.api.schemas import ValidationResult
 
-# Regex pattern to extract class name that inherits from Component
 CLASS_NAME_PATTERN = re.compile(r"class\s+(\w+)\s*\([^)]*Component[^)]*\)")
 
 
@@ -45,96 +44,80 @@ def _safe_extract_class_name(code: str) -> str | None:
         return _extract_class_name_regex(code)
 
 
-def _extract_io_names_from_ast(code: str, class_name: str) -> tuple[set[str], set[str]]:
-    """Extract input and output names from component code using AST only.
+def _find_class_node(tree: ast.Module, class_name: str) -> ast.ClassDef | None:
+    """Find the ClassDef node matching class_name in the AST."""
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef) and node.name == class_name:
+            return node
+    return None
 
-    Parses the class body looking for `inputs = [...]` and `outputs = [...]`
-    assignments, then extracts `name` keyword arguments from the Call nodes.
+
+def _find_list_assign(class_node: ast.ClassDef, attr_name: str) -> ast.List | None:
+    """Find a class-level `attr_name = [...]` assignment and return the List node."""
+    for node in class_node.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        for target in node.targets:
+            if isinstance(target, ast.Name) and target.id == attr_name and isinstance(node.value, ast.List):
+                return node.value
+    return None
+
+
+def _extract_str_kwarg(call_node: ast.Call, kwarg_name: str) -> str | None:
+    """Extract a string keyword argument value from a Call node."""
+    for kw in call_node.keywords:
+        if kw.arg == kwarg_name and isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, str):
+            return kw.value.value
+    return None
+
+
+def _extract_io_names(tree: ast.Module, class_name: str) -> tuple[set[str], set[str]]:
+    """Extract input and output names from component code using AST.
 
     Returns:
         Tuple of (input_names, output_names) as sets of strings.
     """
-    input_names: set[str] = set()
-    output_names: set[str] = set()
-
-    try:
-        tree = ast.parse(code)
-    except SyntaxError:
-        return input_names, output_names
-
-    # Find the target class
-    class_node = None
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ClassDef) and node.name == class_name:
-            class_node = node
-            break
-
+    class_node = _find_class_node(tree, class_name)
     if class_node is None:
-        return input_names, output_names
+        return set(), set()
 
-    for node in class_node.body:
-        if not isinstance(node, ast.Assign):
-            continue
-        for target in node.targets:
-            if not isinstance(target, ast.Name):
-                continue
-            if target.id == "inputs" and isinstance(node.value, ast.List):
-                input_names = _extract_names_from_call_list(node.value)
-            elif target.id == "outputs" and isinstance(node.value, ast.List):
-                output_names = _extract_names_from_call_list(node.value)
+    input_names: set[str] = set()
+    inputs_list = _find_list_assign(class_node, "inputs")
+    if inputs_list is not None:
+        for elt in inputs_list.elts:
+            if isinstance(elt, ast.Call):
+                name = _extract_str_kwarg(elt, "name")
+                if name is not None:
+                    input_names.add(name)
+
+    output_names: set[str] = set()
+    outputs_list = _find_list_assign(class_node, "outputs")
+    if outputs_list is not None:
+        for elt in outputs_list.elts:
+            if isinstance(elt, ast.Call):
+                name = _extract_str_kwarg(elt, "name")
+                if name is not None:
+                    output_names.add(name)
 
     return input_names, output_names
 
 
-def _extract_names_from_call_list(list_node: ast.List) -> set[str]:
-    """Extract 'name' keyword argument values from a list of Call nodes."""
-    names: set[str] = set()
-    for elt in list_node.elts:
-        if not isinstance(elt, ast.Call):
-            continue
-        for kw in elt.keywords:
-            if kw.arg == "name" and isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, str):
-                names.add(kw.value.value)
-    return names
-
-
-def _extract_output_methods_from_ast(code: str, class_name: str) -> list[str]:
-    """Extract output method names from the outputs list via AST.
-
-    Returns list of method name strings from Output(method="...") calls.
-    """
-    methods: list[str] = []
-
-    try:
-        tree = ast.parse(code)
-    except SyntaxError:
-        return methods
-
-    class_node = None
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ClassDef) and node.name == class_name:
-            class_node = node
-            break
-
+def _extract_output_methods(tree: ast.Module, class_name: str) -> list[str]:
+    """Extract output method names from Output(method="...") calls via AST."""
+    class_node = _find_class_node(tree, class_name)
     if class_node is None:
-        return methods
+        return []
 
-    for node in class_node.body:
-        if not isinstance(node, ast.Assign):
-            continue
-        for target in node.targets:
-            if isinstance(target, ast.Name) and target.id == "outputs" and isinstance(node.value, ast.List):
-                for elt in node.value.elts:
-                    if not isinstance(elt, ast.Call):
-                        continue
-                    for kw in elt.keywords:
-                        if (
-                            kw.arg == "method"
-                            and isinstance(kw.value, ast.Constant)
-                            and isinstance(kw.value.value, str)
-                        ):
-                            methods.append(kw.value.value)
+    outputs_list = _find_list_assign(class_node, "outputs")
+    if outputs_list is None:
+        return []
 
+    methods: list[str] = []
+    for elt in outputs_list.elts:
+        if isinstance(elt, ast.Call):
+            method = _extract_str_kwarg(elt, "method")
+            if method is not None:
+                methods.append(method)
     return methods
 
 
@@ -158,19 +141,16 @@ def validate_component_code(code: str) -> ValidationResult:
             msg = "Could not extract class name from code"
             raise ValueError(msg)
 
-        # Static check: parse and compile without executing
         tree = ast.parse(code)
         compile(ast.Module(body=tree.body, type_ignores=[]), "<string>", "exec")
 
-        # Check for overlapping input/output names (AST-only)
-        input_names, output_names = _extract_io_names_from_ast(code, class_name)
+        input_names, output_names = _extract_io_names(tree, class_name)
         overlap = input_names & output_names
         if overlap:
             msg = f"Inputs and outputs have overlapping names: {overlap}"
             raise ValueError(msg)
 
-        # Check that output methods have return statements with values
-        output_methods = _extract_output_methods_from_ast(code, class_name)
+        output_methods = _extract_output_methods(tree, class_name)
         if output_methods:
             checker = _ReturnChecker()
             checker.visit(tree)
