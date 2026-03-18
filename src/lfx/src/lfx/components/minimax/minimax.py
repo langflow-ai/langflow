@@ -7,7 +7,7 @@ from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
 
-MINIMAX_MODELS = ["MiniMax-M2.5", "MiniMax-M2.5-highspeed"]
+MINIMAX_MODELS = ["MiniMax-M2.7", "MiniMax-M2.7-highspeed", "MiniMax-M2.5", "MiniMax-M2.5-highspeed"]
 
 
 class MiniMaxModelComponent(LCModelComponent):
@@ -41,7 +41,7 @@ class MiniMaxModelComponent(LCModelComponent):
             display_name="Model Name",
             info="MiniMax model to use.",
             options=MINIMAX_MODELS,
-            value="MiniMax-M2.5",
+            value="MiniMax-M2.7",
             refresh_button=True,
         ),
         StrInput(
