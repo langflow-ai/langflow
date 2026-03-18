@@ -40,10 +40,7 @@ class LobsterMailComponent(Component):
         SecretStrInput(
             name="api_key",
             display_name="API Key",
-            info=(
-                "LobsterMail API key (lm_sk_test_... or lm_sk_live_...). "
-                "Get one free at https://lobstermail.ai"
-            ),
+            info=("LobsterMail API key (lm_sk_test_... or lm_sk_live_...). Get one free at https://lobstermail.ai"),
             required=True,
         ),
         DropdownInput(
@@ -178,9 +175,7 @@ class LobsterMailComponent(Component):
             resp = await client.get(f"/v1/inboxes/{self.inbox_id}/emails")
 
         elif operation == "Get Email":
-            resp = await client.get(
-                f"/v1/inboxes/{self.inbox_id}/emails/{self.email_id}"
-            )
+            resp = await client.get(f"/v1/inboxes/{self.inbox_id}/emails/{self.email_id}")
 
         elif operation == "Search Emails":
             params: dict[str, str] = {"q": self.search_query}
