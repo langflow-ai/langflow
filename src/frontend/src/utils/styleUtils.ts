@@ -424,6 +424,7 @@ export const SIDEBAR_BUNDLES = [
   },
   { display_name: "xAI", name: "xai", icon: "xAI" },
   { display_name: "Yahoo! Finance", name: "yahoosearch", icon: "trending-up" },
+  { display_name: "You.com", name: "youdotcom", icon: "YouDotCom" },
   { display_name: "YouTube", name: "youtube", icon: "YouTube" },
   { display_name: "Zep", name: "zep", icon: "ZepMemory" },
 ];
@@ -560,6 +561,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   SpiderTool: "Spider",
   SupabaseVectorStore: "Supabase",
   TavilyIcon: "Tavily",
+  YouDotCom: "YouDotCom",
   VertexAIEmbeddings: "VertexAI",
   WikipediaAPIWrapper: "WikipediaAPI",
   WikipediaQueryRun: "WikipediaAPI",
