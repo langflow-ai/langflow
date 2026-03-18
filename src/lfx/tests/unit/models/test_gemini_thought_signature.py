@@ -14,12 +14,12 @@ import pytest
 pytest.importorskip("google.ai.generativelanguage_v1beta", reason="google-ai-generativelanguage not installed")
 pytest.importorskip("langchain_google_genai", reason="langchain-google-genai not installed")
 
-from google.ai.generativelanguage_v1beta.types import Content, FunctionCall, FunctionResponse, GenerateContentRequest, Part
-
-from lfx.base.models.google_generative_ai_model import (
-    _DUMMY_THOUGHT_SIGNATURE,
-    _THOUGHT_SIG_PROTO_BYTES,
-    _is_gemini_3_model,
+from google.ai.generativelanguage_v1beta.types import (
+    Content,
+    FunctionCall,
+    FunctionResponse,
+    GenerateContentRequest,
+    Part,
 )
 from lfx.base.models.google_generative_ai_model import (
     _DUMMY_THOUGHT_SIGNATURE,
@@ -95,11 +95,7 @@ class TestInjectThoughtSignatures:
                 Content(
                     role="user",
                     parts=[
-                        Part(
-                            function_response=FunctionResponse(
-                                name="get_weather", response={"temperature": "20C"}
-                            )
-                        )
+                        Part(function_response=FunctionResponse(name="get_weather", response={"temperature": "20C"}))
                     ],
                 ),
             ],
@@ -211,11 +207,7 @@ class TestInjectThoughtSignatures:
                 Content(
                     role="user",
                     parts=[
-                        Part(
-                            function_response=FunctionResponse(
-                                name="check_flight", response={"status": "delayed"}
-                            )
-                        )
+                        Part(function_response=FunctionResponse(name="check_flight", response={"status": "delayed"}))
                     ],
                 ),
                 # Step 2: model calls book_taxi
@@ -226,11 +218,7 @@ class TestInjectThoughtSignatures:
                 Content(
                     role="user",
                     parts=[
-                        Part(
-                            function_response=FunctionResponse(
-                                name="book_taxi", response={"status": "confirmed"}
-                            )
-                        )
+                        Part(function_response=FunctionResponse(name="book_taxi", response={"status": "confirmed"}))
                     ],
                 ),
             ],
