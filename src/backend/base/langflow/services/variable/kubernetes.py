@@ -52,7 +52,7 @@ class KubernetesSecretService(VariableService, Service):
                     data=variables,
                 )
             except Exception:  # noqa: BLE001
-                logger.exception(f"Error creating {var} variable")
+                logger.exception("Error creating Kubernetes secret for user variables")
 
         else:
             logger.info("Skipping environment variable storage.")
