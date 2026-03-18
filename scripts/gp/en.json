@@ -1,0 +1,12 @@
+{
+  "save_button": "Save",
+  "cancel_button": "Cancel",
+  "delete_button": "Delete",
+  "edit_button": "Edit",
+  "submit_button": "Submit",
+  "loading": "Loading...",
+  "error_message": "Something went wrong. Please try again.",
+  "success_message": "Operation completed successfully.",
+  "confirm_delete": "Are you sure you want to delete this?",
+  "welcome": "Welcome to Langflow"
+}

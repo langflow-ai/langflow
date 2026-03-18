@@ -1,0 +1,41 @@
+name: GP Download Translations
+
+on:
+  schedule:
+    - cron: "0 6 * * *"  # Daily at 6am UTC
+  workflow_dispatch:
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    name: Download translations from Globalization Pipeline
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r scripts/gp/requirements.txt
+
+      - name: Download translations from GP
+        working-directory: scripts/gp
+        env:
+          GP_ADMIN_USER_ID: ${{ secrets.GP_ADMIN_USER_ID }}
+          GP_ADMIN_PASSWORD: ${{ secrets.GP_ADMIN_PASSWORD }}
+          GP_INSTANCE: ${{ secrets.GP_INSTANCE }}
+          GP_BUNDLE: ${{ secrets.GP_BUNDLE }}
+        run: |
+          python download_translations.py --output ../../src/frontend/src/locales/
+
+      - name: Commit and push translated files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/frontend/src/locales/*.json
+          git diff --staged --quiet || git commit -m "chore: update translations from Globalization Pipeline [skip ci]"
+          git push
