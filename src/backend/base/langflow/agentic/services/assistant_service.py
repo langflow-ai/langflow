@@ -1,8 +1,9 @@
 """Assistant service with validation and retry logic."""
 
+from __future__ import annotations
+
 import asyncio
-from collections.abc import AsyncGenerator, Callable, Coroutine
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
 from lfx.log.logger import logger
@@ -28,6 +29,11 @@ from langflow.agentic.services.flow_types import (
     VALIDATION_UI_DELAY_SECONDS,
 )
 from langflow.agentic.services.helpers.intent_classification import classify_intent
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Callable, Coroutine
+
+    from langflow.agentic.api.schemas import StepType
 
 
 async def execute_flow_with_validation(
@@ -180,7 +186,7 @@ async def execute_flow_with_validation_streaming(
             logger.debug(f"Starting attempt {attempt}, is_disconnected provided: {is_disconnected is not None}")
 
             # Step 1: Generating (different step name based on intent)
-            step_name = "generating_component" if is_component_request else "generating"
+            step_name: StepType = "generating_component" if is_component_request else "generating"
             yield format_progress_event(
                 step_name,
                 attempt,  # 0 for first try, 1+ for retries
@@ -263,7 +269,7 @@ async def execute_flow_with_validation_streaming(
             # Only proceed with validation if the code looks like a Langflow component
             has_component_code = code and "class " in code and "Component" in code
 
-            if not has_component_code:
+            if not has_component_code or code is None:
                 # No component code found — return as plain text response
                 yield format_complete_event(result)
                 return
