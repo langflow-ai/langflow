@@ -1,13 +1,16 @@
 """Tests for component code validation.
 
 Tests the _extract_class_name_regex, _safe_extract_class_name,
-and validate_component_code functions.
+validate_component_code, and static validation helpers.
 """
 
-from unittest.mock import MagicMock, patch
+import os
+
+from unittest.mock import patch
 
 from langflow.agentic.helpers.validation import (
     _extract_class_name_regex,
+    _extract_io_names_from_ast,
     _safe_extract_class_name,
     validate_component_code,
 )
@@ -74,49 +77,160 @@ class TestSafeExtractClassName:
             assert result == "TypeErr"
 
 
+class TestExtractIONamesFromAST:
+    """Tests for static extraction of input/output names from AST."""
+
+    def test_should_extract_input_names(self):
+        """Should extract input names from inputs list."""
+        code = '''
+class MyComponent(Component):
+    inputs = [
+        StrInput(name="query", display_name="Query"),
+        IntInput(name="count", display_name="Count"),
+    ]
+    outputs = [
+        Output(name="result", display_name="Result", method="build"),
+    ]
+'''
+        input_names, output_names = _extract_io_names_from_ast(code, "MyComponent")
+        assert input_names == {"query", "count"}
+        assert output_names == {"result"}
+
+    def test_should_return_empty_sets_when_no_io(self):
+        """Should return empty sets when class has no inputs/outputs."""
+        code = "class MyComponent(Component):\n    pass"
+        input_names, output_names = _extract_io_names_from_ast(code, "MyComponent")
+        assert input_names == set()
+        assert output_names == set()
+
+    def test_should_detect_overlapping_names(self):
+        """Should extract names that allow overlap detection."""
+        code = '''
+class BadComponent(Component):
+    inputs = [
+        StrInput(name="data", display_name="Data"),
+    ]
+    outputs = [
+        Output(name="data", display_name="Data", method="build"),
+    ]
+'''
+        input_names, output_names = _extract_io_names_from_ast(code, "BadComponent")
+        assert input_names & output_names == {"data"}
+
+
 class TestValidateComponentCode:
     """Tests for full component code validation."""
 
-    def test_should_return_valid_result_on_success(self):
-        """Should return is_valid=True with class_name when validation succeeds."""
-        mock_class = MagicMock()
-        mock_class.return_value = MagicMock()  # instance
+    def test_should_not_execute_code_during_validation(self):
+        """Validation must NOT execute arbitrary code — static analysis only.
 
-        with (
-            patch(f"{MODULE}._safe_extract_class_name", return_value="GoodComp"),
-            patch(f"{MODULE}.create_class", return_value=mock_class),
-        ):
-            result = validate_component_code("class GoodComp(Component): pass")
+        This is the primary security test: if validation calls exec() on the
+        generated code, an attacker who can influence LLM output can achieve
+        arbitrary server-side code execution.
+        """
+        env_key = "_LANGFLOW_SECURITY_VALIDATION_TEST"
+        # Ensure clean state
+        os.environ.pop(env_key, None)
 
-            assert result.is_valid is True
-            assert result.class_name == "GoodComp"
-            assert result.error is None
+        malicious_code = f'''
+import os
+os.environ["{env_key}"] = "EXPLOITED"
 
-    def test_should_return_invalid_on_create_class_error(self):
-        """Should return is_valid=False when create_class raises."""
-        with (
-            patch(f"{MODULE}._safe_extract_class_name", return_value="BadComp"),
-            patch(f"{MODULE}.create_class", side_effect=SyntaxError("invalid syntax")),
-        ):
-            result = validate_component_code("class BadComp(Component): pass")
+class MaliciousComponent(Component):
+    display_name = "Malicious"
+    description = "Test"
 
-            assert result.is_valid is False
-            assert "SyntaxError" in result.error
-            assert "invalid syntax" in result.error
+    inputs = []
+    outputs = [
+        Output(name="result", display_name="Result", method="build_result"),
+    ]
 
-    def test_should_return_invalid_on_instantiation_error(self):
-        """Should return is_valid=False when class instantiation fails."""
-        mock_class = MagicMock()
-        mock_class.side_effect = RuntimeError("overlapping names")
+    def build_result(self):
+        return "test"
+'''
+        # Run validation — it should NOT execute the os.environ line
+        validate_component_code(malicious_code)
 
-        with (
-            patch(f"{MODULE}._safe_extract_class_name", return_value="InitFail"),
-            patch(f"{MODULE}.create_class", return_value=mock_class),
-        ):
-            result = validate_component_code("class InitFail(Component): pass")
+        # The env var must NOT have been set
+        assert os.environ.get(env_key) is None, (
+            "validate_component_code executed arbitrary code! "
+            "The os.environ assignment in the LLM-generated code was executed server-side."
+        )
 
-            assert result.is_valid is False
-            assert "RuntimeError" in result.error
+        # Clean up just in case
+        os.environ.pop(env_key, None)
+
+    def test_should_return_valid_for_well_formed_component(self):
+        """Should return is_valid=True for syntactically correct component code."""
+        code = '''
+class GoodComponent(Component):
+    display_name = "Good"
+    description = "A good component"
+
+    inputs = [
+        StrInput(name="query", display_name="Query"),
+    ]
+    outputs = [
+        Output(name="result", display_name="Result", method="build_result"),
+    ]
+
+    def build_result(self):
+        return self.query
+'''
+        result = validate_component_code(code)
+
+        assert result.is_valid is True
+        assert result.class_name == "GoodComponent"
+        assert result.error is None
+
+    def test_should_return_invalid_on_syntax_error(self):
+        """Should return is_valid=False for code with syntax errors."""
+        code = "class BadComp(Component):\n    def broken(self\n"
+        result = validate_component_code(code)
+
+        assert result.is_valid is False
+        assert "SyntaxError" in result.error
+
+    def test_should_return_invalid_when_output_method_has_no_return(self):
+        """Should detect output methods that don't return a value."""
+        code = '''
+class NoReturnComponent(Component):
+    display_name = "NoReturn"
+
+    inputs = []
+    outputs = [
+        Output(name="result", display_name="Result", method="build_result"),
+    ]
+
+    def build_result(self):
+        pass
+'''
+        result = validate_component_code(code)
+
+        assert result.is_valid is False
+        assert "build_result" in result.error
+        assert "return" in result.error.lower()
+
+    def test_should_return_invalid_when_overlapping_io_names(self):
+        """Should detect overlapping input/output names."""
+        code = '''
+class OverlapComponent(Component):
+    display_name = "Overlap"
+
+    inputs = [
+        StrInput(name="data", display_name="Data"),
+    ]
+    outputs = [
+        Output(name="data", display_name="Data", method="build_data"),
+    ]
+
+    def build_data(self):
+        return self.data
+'''
+        result = validate_component_code(code)
+
+        assert result.is_valid is False
+        assert "data" in result.error.lower()
 
     def test_should_return_invalid_when_no_class_name(self):
         """Should return is_valid=False when class name cannot be extracted."""
@@ -127,23 +241,8 @@ class TestValidateComponentCode:
             assert result.class_name is None
             assert "Could not extract class name" in result.error
 
-    def test_should_capture_error_type_and_message(self):
-        """Error string should contain '{ErrorType}: {message}' format."""
-        with (
-            patch(f"{MODULE}._safe_extract_class_name", return_value="Comp"),
-            patch(f"{MODULE}.create_class", side_effect=NameError("undefined var")),
-        ):
-            result = validate_component_code("class Comp(Component): pass")
-
-            assert result.error == "NameError: undefined var"
-
     def test_should_preserve_code_in_result(self):
         """Result should contain the original code."""
-        code = "class Comp(Component): pass"
-        with (
-            patch(f"{MODULE}._safe_extract_class_name", return_value="Comp"),
-            patch(f"{MODULE}.create_class", side_effect=ValueError("bad")),
-        ):
-            result = validate_component_code(code)
-
-            assert result.code == code
+        code = "class Comp(Component):\n    pass"
+        result = validate_component_code(code)
+        assert result.code == code
