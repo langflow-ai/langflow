@@ -608,8 +608,20 @@ class NativeTracer(BaseTracer):
                     next_round.append(item)
 
             if not progress:
-                # Cycle or unresolvable dependency — append remainder to avoid infinite loop
-                sorted_spans.extend(next_round)
+                # Cycle or unresolvable dependency detected.
+                # To avoid reintroducing foreign-key violations, break the cycle by
+                # nulling out parent_span_id for the remaining spans before inserting.
+                if next_round:
+                    logger.warning(
+                        "Detected cycle or unresolvable span dependencies in tracing batch; "
+                        "breaking parent relationships for %d spans to preserve DB integrity.",
+                        len(next_round),
+                    )
+                for span_data, span_uuid, _parent_uuid in next_round:
+                    # Ensure the payload reflects the broken parent relationship.
+                    if isinstance(span_data, dict):
+                        span_data["parent_span_id"] = None
+                    sorted_spans.append((span_data, span_uuid, None))
                 break
             remaining = next_round
 
