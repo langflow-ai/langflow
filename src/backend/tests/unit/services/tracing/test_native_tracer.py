@@ -703,6 +703,7 @@ class TestTopologicalSortSpans:
         result = NativeTracer._topological_sort_spans([])
         assert result == []
 
+
 # ---------------------------------------------------------------------------
 # _flush_to_database with parent/child spans
 # ---------------------------------------------------------------------------
