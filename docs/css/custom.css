@@ -481,3 +481,12 @@ body {
   color: var(--ifm-color-emphasis-500) !important;
   size: 16px !important;
 }
+
+/* Inline Icons */
+.markdown svg,
+.markdown .icon {
+  width: 16px !important;
+  height: 16px !important;
+  stroke-width: 2.5 !important;
+  display: inline-block;
+}

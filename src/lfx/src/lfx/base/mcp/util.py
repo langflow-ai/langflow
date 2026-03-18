@@ -10,7 +10,8 @@ import shutil
 import subprocess
 import unicodedata
 from collections.abc import Awaitable, Callable
-from typing import Any
+from types import UnionType
+from typing import Any, Union, get_args, get_origin
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -22,6 +23,7 @@ from mcp import ClientSession
 from mcp.shared.exceptions import McpError
 from pydantic import BaseModel
 
+from lfx.base.agents.utils import maybe_unflatten_dict
 from lfx.log.logger import logger
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
@@ -288,6 +290,169 @@ def _convert_camel_case_to_snake_case(provided_args: dict[str, Any], arg_schema:
     return converted_args
 
 
+def _resolve_expected_type(annotation: Any) -> type | None:
+    """Resolve the effective expected type from a Pydantic field annotation.
+
+    Handles Union, UnionType (X | None), list, list[X]. Returns the primary
+    type (dict, list, int, float, bool, str) or None if not one we normalize.
+    """
+    ann = annotation
+    origin = get_origin(ann)
+    if origin is UnionType or origin is Union:
+        args = get_args(ann)
+        non_none = [a for a in args if a is not type(None)]
+        if non_none:
+            ann = non_none[0]
+            origin = get_origin(ann)
+    if origin is list or ann is list:
+        return list
+    if origin is dict or ann is dict:
+        return dict
+    if ann in (int, float, bool, str):
+        return ann
+    return None
+
+
+def _annotation_accepts_none(annotation: Any) -> bool:
+    """Check if annotation accepts None (e.g. Union[X, None], X | None)."""
+    origin = get_origin(annotation)
+    if origin is UnionType or origin is Union:
+        args = get_args(annotation)
+        return type(None) in args
+    return False
+
+
+def _is_pydantic_model_type(annotation: Any) -> bool:
+    """Check if annotation refers to a Pydantic BaseModel (possibly in Union with None)."""
+    ann = annotation
+    origin = get_origin(ann)
+    if origin is UnionType or origin is Union:
+        args = get_args(ann)
+        non_none = [a for a in args if a is not type(None)]
+        if non_none:
+            ann = non_none[0]
+    return isinstance(ann, type) and issubclass(ann, BaseModel)
+
+
+def _try_convert_value(value: Any, expected_type: type, field_name: str, tool_name: str) -> Any:
+    """Try to convert value to expected type. Raise ValueError with clear message on failure."""
+
+    def _err(type_desc: str, detail: str) -> ValueError:
+        msg = f"Tool '{tool_name}': Parameter '{field_name}' expects {type_desc} {detail}"
+        return ValueError(msg)
+
+    expected_type_desc = expected_type.__name__
+
+    if value is None and expected_type in (int, float, bool, dict, list):
+        raise _err(expected_type_desc, "but received None.")
+
+    # return correctly typed value, but handle the
+    # special case of bool as this is a subclass of int
+    # we'll NOT return but raise an error
+    if isinstance(value, expected_type) and not (expected_type is int and isinstance(value, bool)):
+        return value
+
+    # return custom classes as is
+    if expected_type not in (dict, list, int, float, bool):
+        return value
+
+    if expected_type in (dict, list):
+        expected_type_desc = "object (dict)" if expected_type is dict else "array (list)"
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+            except json.JSONDecodeError as e:
+                raise _err(expected_type_desc, f"but received invalid JSON string {value!r}; {e}") from e
+            if not isinstance(parsed, expected_type):
+                raise _err(expected_type_desc, f"but JSON parsed to {type(parsed).__name__}.")
+            return parsed
+
+    elif expected_type is int:
+        expected_type_desc = "integer (int)"
+        if isinstance(value, float) and value.is_integer():
+            return int(value)
+        if isinstance(value, str):
+            try:
+                return int(value)
+            except ValueError as e:
+                raise _err(expected_type_desc, f"but received string: {value!r}; could not convert.") from e
+
+    elif expected_type is float:
+        expected_type_desc = "number (float)"
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            try:
+                return float(value)
+            except ValueError as e:
+                raise _err(expected_type_desc, f"but received string: {value!r}; could not convert.") from e
+
+    elif expected_type is bool and isinstance(value, str):
+        expected_type_desc = "boolean (bool)"
+        lower = value.strip().lower()
+        if lower in ("true", "1", "yes"):
+            return True
+        if lower in ("false", "0", "no"):
+            return False
+
+    detail = f"but received {type(value).__name__}: {value!r}; could not convert."
+    raise _err(expected_type_desc, detail)
+
+
+def _normalize_arguments_for_mcp(
+    arguments: dict[str, Any], arg_schema: type[BaseModel], tool_name: str
+) -> dict[str, Any]:
+    """Normalize tool arguments for MCP: try-convert when value type != schema expected type.
+
+    Uses schema from MCP server (no guessing). On conversion failure, raises
+    ValueError with clear user-facing message.
+    """
+    result: dict[str, Any] = {}
+    schema_field_names = set(arg_schema.model_fields.keys())
+    for field_name, model_field in arg_schema.model_fields.items():
+        value = arguments.get(field_name)
+        if value is None:
+            if not (model_field.is_required() or field_name in arguments):
+                continue
+            expected = _resolve_expected_type(model_field.annotation)
+            if expected in (list, dict, str) and model_field.is_required():
+                result[field_name] = [] if expected is list else ({} if expected is dict else "")
+            elif expected in (list, dict, str) and _annotation_accepts_none(model_field.annotation):
+                result[field_name] = None
+            else:
+                result[field_name] = value
+            continue
+        expected = _resolve_expected_type(model_field.annotation)
+        if expected is None:
+            # Nested Pydantic model (object with properties): UI/API often sends as JSON string
+            if _is_pydantic_model_type(model_field.annotation) and isinstance(value, str):
+                try:
+                    parsed = json.loads(value)
+                except json.JSONDecodeError as e:
+                    msg = (
+                        f"Tool '{tool_name}': Parameter '{field_name}' expects object "
+                        f"but received invalid JSON string {value!r}; {e}"
+                    )
+                    raise ValueError(msg) from e
+                if not isinstance(parsed, dict):
+                    msg = (
+                        f"Tool '{tool_name}': Parameter '{field_name}' expects object "
+                        f"but JSON parsed to {type(parsed).__name__}."
+                    )
+                    raise ValueError(msg)
+                result[field_name] = parsed
+            else:
+                result[field_name] = value
+            continue
+        if expected is str:
+            result[field_name] = value
+            continue
+        result[field_name] = _try_convert_value(value, expected, field_name, tool_name)
+    # Preserve extra keys so Pydantic validation can report them
+    result.update({k: v for k, v in arguments.items() if k not in schema_field_names})
+    return result
+
+
 def _handle_tool_validation_error(
     e: Exception, tool_name: str, provided_args: dict[str, Any], arg_schema: type[BaseModel]
 ) -> None:
@@ -320,14 +485,16 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
         # Merge in keyword arguments
         provided_args.update(kwargs)
         provided_args = _convert_camel_case_to_snake_case(provided_args, arg_schema)
+        original_args = provided_args
+        provided_args = _normalize_arguments_for_mcp(provided_args, arg_schema, tool_name)
         # Validate input and fill defaults for missing optional fields
         try:
             validated = arg_schema.model_validate(provided_args)
         except Exception as e:  # noqa: BLE001
-            _handle_tool_validation_error(e, tool_name, provided_args, arg_schema)
+            _handle_tool_validation_error(e, tool_name, original_args, arg_schema)
 
         try:
-            return await client.run_tool(tool_name, arguments=validated.model_dump())
+            return await client.run_tool(tool_name, arguments=validated.model_dump(exclude_none=True))
         except Exception as e:
             await logger.aerror(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
@@ -348,13 +515,15 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
             provided_args[field_names[i]] = arg
         provided_args.update(kwargs)
         provided_args = _convert_camel_case_to_snake_case(provided_args, arg_schema)
+        original_args = provided_args
+        provided_args = _normalize_arguments_for_mcp(provided_args, arg_schema, tool_name)
         try:
             validated = arg_schema.model_validate(provided_args)
         except Exception as e:  # noqa: BLE001
-            _handle_tool_validation_error(e, tool_name, provided_args, arg_schema)
+            _handle_tool_validation_error(e, tool_name, original_args, arg_schema)
 
         try:
-            return run_until_complete(client.run_tool(tool_name, arguments=validated.model_dump()))
+            return run_until_complete(client.run_tool(tool_name, arguments=validated.model_dump(exclude_none=True)))
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
@@ -1713,10 +1882,18 @@ async def update_tools(
                             if snake_key in original_fields:
                                 converted_dict[snake_key] = value
                             else:
-                                # Keep original key
+                                # Keep original key (may be flattened e.g. params.search)
                                 converted_dict[key] = value
 
-                    return converted_dict
+                    unflattened = maybe_unflatten_dict(converted_dict)
+                    # Normalize: convert JSON strings to dict for nested model params
+                    normalized = _normalize_arguments_for_mcp(unflattened, self.args_schema, self.name)
+                    # Preserve extra keys not in schema (e.g. flattened keys)
+                    schema_fields = set(self.args_schema.model_fields.keys())
+                    for key, value in unflattened.items():
+                        if key not in schema_fields and key not in normalized:
+                            normalized[key] = value
+                    return normalized
 
             tool_obj = MCPStructuredTool(
                 name=tool.name,

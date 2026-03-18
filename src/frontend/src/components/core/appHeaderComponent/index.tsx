@@ -126,7 +126,7 @@ export default function AppHeader(): JSX.Element {
         </AlertDropdown>
         <Separator
           orientation="vertical"
-          className="my-auto h-7 dark:border-zinc-700"
+          className="my-auto h-7 dark:border-border"
         />
 
         <div className="flex">

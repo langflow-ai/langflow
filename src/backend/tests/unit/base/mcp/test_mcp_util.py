@@ -1108,6 +1108,78 @@ class TestMCPUtilityFunctions:
         with pytest.raises(Exception):  # noqa: B017, PT011
             model_class(bar=1)  # missing required field
 
+    def test_create_input_schema_type_array_string_null(self):
+        """Test schema with type array ['string', 'null'] produces optional string field."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "optional_str": {"type": ["string", "null"], "description": "Optional string"},
+            },
+        }
+        model_class = util.create_input_schema_from_json_schema(schema)
+        # Optional: None and string both valid
+        instance_none = model_class(optional_str=None)
+        assert instance_none.optional_str is None
+        instance_str = model_class(optional_str="hello")
+        assert instance_str.optional_str == "hello"
+
+    def test_create_input_schema_type_array_integer_null(self):
+        """Test schema with type array ['integer', 'null'] produces optional int field."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "optional_int": {"type": ["integer", "null"], "description": "Optional integer"},
+            },
+        }
+        model_class = util.create_input_schema_from_json_schema(schema)
+        instance_none = model_class(optional_int=None)
+        assert instance_none.optional_int is None
+        instance_int = model_class(optional_int=42)
+        assert instance_int.optional_int == 42
+
+    def test_create_input_schema_required_filters_non_strings(self):
+        """Test schema with required containing non-strings does not raise unhashable."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "valid": {"type": "string", "description": "Valid field"},
+            },
+            "required": [["bad"], "valid"],
+        }
+        model_class = util.create_input_schema_from_json_schema(schema)
+        # Only "valid" is required (non-strings filtered out)
+        instance = model_class(valid="ok")
+        assert instance.valid == "ok"
+
+    def test_create_input_schema_empty_properties_no_params(self):
+        """Test schema with empty properties (tool with no params) accepts empty dict."""
+        schema = {"type": "object", "properties": {}}
+        model_class = util.create_input_schema_from_json_schema(schema)
+        instance = model_class()
+        assert instance.model_dump() == {}
+        # Also validate with explicit empty dict
+        instance2 = model_class.model_validate({})
+        assert instance2.model_dump() == {}
+
+    def test_create_input_schema_generic_object_maps_to_dict(self):
+        """Test schema with type object and no properties maps to dict for free-form params."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "params": {"type": "object", "description": "Free-form parameters"},
+            },
+        }
+        model_class = util.create_input_schema_from_json_schema(schema)
+        # Should accept arbitrary key-value dict (not just empty)
+        instance = model_class(params={"search": "test", "per_page": 20})
+        assert instance.params == {"search": "test", "per_page": 20}
+        # Empty dict also valid
+        instance_empty = model_class(params={})
+        assert instance_empty.params == {}
+        # None valid for optional field
+        instance_none = model_class(params=None)
+        assert instance_none.params is None
+
     @pytest.mark.asyncio
     async def test_validate_connection_params(self):
         """Test connection parameter validation."""
@@ -1657,6 +1729,7 @@ class TestMCPStructuredTool:
                 if not input_dict or not isinstance(input_dict, dict):
                     return input_dict
 
+                from lfx.base.agents.utils import maybe_unflatten_dict
                 from lfx.base.mcp.util import _camel_to_snake
 
                 converted_dict = {}
@@ -1675,7 +1748,7 @@ class TestMCPStructuredTool:
                             # Keep original key
                             converted_dict[key] = value
 
-                return converted_dict
+                return maybe_unflatten_dict(converted_dict)
 
         return MCPStructuredTool(
             name="test_tool",
@@ -1729,6 +1802,48 @@ class TestMCPStructuredTool:
         assert mcp_tool._convert_parameters({}) == {}
         assert mcp_tool._convert_parameters(None) is None
         assert mcp_tool._convert_parameters("not_a_dict") == "not_a_dict"
+
+    def test_convert_parameters_flattened_input_produces_nested(self):
+        """Test flattened keys (params.search, params.per_page) become nested structure."""
+        from lfx.base.agents.utils import maybe_unflatten_dict
+        from lfx.base.mcp.util import _camel_to_snake
+        from pydantic import Field, create_model
+
+        schema = create_model(
+            "ForemanSchema",
+            resource=(str, Field(..., description="Resource")),
+            action=(str, Field(..., description="Action")),
+            params=(dict, Field(default_factory=dict, description="Params")),
+        )
+
+        def _convert_parameters(input_dict, args_schema):
+            if not input_dict or not isinstance(input_dict, dict):
+                return input_dict
+            converted_dict = {}
+            original_fields = set(args_schema.model_fields.keys())
+            for key, value in input_dict.items():
+                if key in original_fields:
+                    converted_dict[key] = value
+                else:
+                    snake_key = _camel_to_snake(key)
+                    if snake_key in original_fields:
+                        converted_dict[snake_key] = value
+                    else:
+                        converted_dict[key] = value
+            return maybe_unflatten_dict(converted_dict)
+
+        input_dict = {
+            "resource": "hosts",
+            "action": "index",
+            "params.search": "name ~ test",
+            "params.per_page": 20,
+        }
+        result = _convert_parameters(input_dict, schema)
+        assert result == {
+            "resource": "hosts",
+            "action": "index",
+            "params": {"search": "name ~ test", "per_page": 20},
+        }
 
     def test_convert_parameters_preserves_value_types(self, mcp_tool):
         """Test _convert_parameters preserves all value types correctly."""
@@ -1874,6 +1989,421 @@ class TestMCPStructuredTool:
 
         with pytest.raises(Exception):  # noqa: B017, PT011
             await mcp_tool.arun(input_data)
+
+
+class TestNormalizeArgumentsForMcp:
+    """Test _normalize_arguments_for_mcp try-convert on type mismatch."""
+
+    def test_str_to_int_when_int_expected(self):
+        """Test str '42' when int expected -> 42."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+
+        result = util._normalize_arguments_for_mcp({"count": "42"}, Schema, "test_tool")
+        assert result == {"count": 42}
+        assert isinstance(result["count"], int)
+
+    def test_float_to_int_when_int_expected(self):
+        """Test float 3.0 when int expected -> 3."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            id: int = Field(..., description="ID")
+
+        result = util._normalize_arguments_for_mcp({"id": 3.0}, Schema, "test_tool")
+        assert result == {"id": 3}
+        assert isinstance(result["id"], int)
+
+    def test_str_to_dict_when_dict_expected(self):
+        r"""Test str '{"x":1}' when dict expected -> {"x":1}."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        result = util._normalize_arguments_for_mcp({"params": '{"x": 1}'}, Schema, "test_tool")
+        assert result == {"params": {"x": 1}}
+        assert isinstance(result["params"], dict)
+
+    def test_str_to_bool_when_bool_expected(self):
+        """Test str 'true' when bool expected -> True."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            flag: bool = Field(..., description="Flag")
+
+        result = util._normalize_arguments_for_mcp({"flag": "true"}, Schema, "test_tool")
+        assert result == {"flag": True}
+
+    def test_already_correct_types_unchanged(self):
+        """Test value type matches schema -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+            params: dict = Field(..., description="Params")
+
+        result = util._normalize_arguments_for_mcp({"count": 42, "params": {"search": "x"}}, Schema, "test_tool")
+        assert result == {"count": 42, "params": {"search": "x"}}
+
+    def test_conversion_failure_propagates_error(self):
+        """Test str 'abc' when int expected -> clear error propagated."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            id: int = Field(..., description="ID")
+
+        with pytest.raises(ValueError, match="expects integer") as exc_info:
+            util._normalize_arguments_for_mcp({"id": "abc"}, Schema, "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'id'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_optional_field_none_unchanged(self):
+        """Test optional field with None -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+            optional: int | None = Field(default=None, description="Optional")
+
+        result = util._normalize_arguments_for_mcp({"count": 1, "optional": None}, Schema, "test_tool")
+        assert result == {"count": 1, "optional": None}
+
+    def test_required_list_none_maps_to_empty(self):
+        """Test required list field with None -> maps to []."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list = Field(..., description="Items")
+
+        result = util._normalize_arguments_for_mcp({"items": None}, Schema, "test_tool")
+        assert result == {"items": []}
+        assert isinstance(result["items"], list)
+
+    def test_required_dict_none_maps_to_empty(self):
+        """Test required dict field with None -> maps to {}."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        result = util._normalize_arguments_for_mcp({"params": None}, Schema, "test_tool")
+        assert result == {"params": {}}
+        assert isinstance(result["params"], dict)
+
+    def test_required_str_none_maps_to_empty(self):
+        """Test required str field with None -> maps to ""."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            name: str = Field(..., description="Name")
+
+        result = util._normalize_arguments_for_mcp({"name": None}, Schema, "test_tool")
+        assert result == {"name": ""}
+        assert result["name"] == ""
+
+    def test_optional_list_none_unchanged(self):
+        """Test optional list field with None -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list[str] | None = Field(default=None, description="Items")
+
+        result = util._normalize_arguments_for_mcp({"items": None}, Schema, "test_tool")
+        assert result == {"items": None}
+
+    def test_optional_dict_none_unchanged(self):
+        """Test optional dict field with None -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict | None = Field(default=None, description="Params")
+
+        result = util._normalize_arguments_for_mcp({"params": None}, Schema, "test_tool")
+        assert result == {"params": None}
+
+    def test_optional_str_none_unchanged(self):
+        """Test optional str field with None -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            name: str | None = Field(default=None, description="Name")
+
+        result = util._normalize_arguments_for_mcp({"name": None}, Schema, "test_tool")
+        assert result == {"name": None}
+
+    def test_str_to_list_when_optional_list_expected(self):
+        r"""Test str '["a"]' when list[str] | None expected -> ["a"]."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list[str] | None = Field(default=None, description="Items")
+
+        result = util._normalize_arguments_for_mcp({"items": '["a", "b"]'}, Schema, "test_tool")
+        assert result == {"items": ["a", "b"]}
+        assert isinstance(result["items"], list)
+
+    def test_str_to_dict_when_optional_dict_expected(self):
+        r"""Test str '{"x":1}' when dict | None expected -> {"x":1}."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict | None = Field(default=None, description="Params")
+
+        result = util._normalize_arguments_for_mcp({"params": '{"x": 1}'}, Schema, "test_tool")
+        assert result == {"params": {"x": 1}}
+        assert isinstance(result["params"], dict)
+
+    def test_bool_rejected_when_int_expected(self):
+        """Test bool True/False when int expected -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+
+        with pytest.raises(ValueError, match=r"expects integer.*bool"):
+            util._normalize_arguments_for_mcp({"count": True}, Schema, "test_tool")
+
+        with pytest.raises(ValueError, match=r"expects integer.*bool"):
+            util._normalize_arguments_for_mcp({"count": False}, Schema, "test_tool")
+
+    def test_extra_keys_preserved_for_pydantic_validation(self):
+        """Test extra keys not in schema are preserved so Pydantic can report them."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            valid_field: int = Field(..., description="Valid")
+
+        result = util._normalize_arguments_for_mcp({"valid_field": 1, "typo_field": 2}, Schema, "test_tool")
+        assert result["valid_field"] == 1
+        assert result["typo_field"] == 2
+
+    def test_str_to_float_when_float_expected(self):
+        """Test str '3.14' when float expected -> 3.14."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            value: float = Field(..., description="Value")
+
+        result = util._normalize_arguments_for_mcp({"value": "3.14"}, Schema, "test_tool")
+        assert result == {"value": 3.14}
+        assert isinstance(result["value"], float)
+
+    def test_invalid_json_for_dict_raises_clear_error(self):
+        """Test invalid JSON string when dict expected raises ValueError with tool and param name."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        with pytest.raises(ValueError, match=r"expects object \(dict\)") as exc_info:
+            util._normalize_arguments_for_mcp({"params": "not valid json"}, Schema, "my_tool")
+
+        assert "my_tool" in str(exc_info.value)
+        assert "Parameter 'params'" in str(exc_info.value)
+        assert "invalid JSON" in str(exc_info.value)
+
+    def test_invalid_json_for_list_raises_clear_error(self):
+        """Test invalid JSON string when list expected raises ValueError with tool and param name."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list = Field(..., description="Items")
+
+        with pytest.raises(ValueError, match=r"expects array \(list\)") as exc_info:
+            util._normalize_arguments_for_mcp({"items": "{invalid"}, Schema, "list_tool")
+
+        assert "list_tool" in str(exc_info.value)
+        assert "Parameter 'items'" in str(exc_info.value)
+        assert "invalid JSON" in str(exc_info.value)
+
+    def test_str_to_dict_when_nested_model_expected(self):
+        """Test str JSON when nested Pydantic model expected -> parsed dict (foreman-mcp params case)."""
+        from pydantic import BaseModel, Field
+
+        class ParamsModel(BaseModel):
+            search: str | None = None
+            per_page: int | None = None
+            page: int | None = None
+
+        class Schema(BaseModel):
+            params: ParamsModel = Field(..., description="Params")
+
+        json_str = '{"search":"installed_packages","per_page":50}'
+        result = util._normalize_arguments_for_mcp({"params": json_str}, Schema, "test_tool")
+        assert result["params"] == {"search": "installed_packages", "per_page": 50}
+        assert isinstance(result["params"], dict)
+
+    def test_nested_model_already_dict_unchanged(self):
+        """Test nested model field with dict value -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class ParamsModel(BaseModel):
+            search: str | None = None
+
+        class Schema(BaseModel):
+            params: ParamsModel = Field(..., description="Params")
+
+        result = util._normalize_arguments_for_mcp({"params": {"search": "test"}}, Schema, "test_tool")
+        assert result == {"params": {"search": "test"}}
+
+    def test_str_to_bool_false_variants(self):
+        """Test str 'false'/'0'/'no' when bool expected -> False."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            flag: bool = Field(..., description="Flag")
+
+        for val in ("false", "0", "no"):
+            result = util._normalize_arguments_for_mcp({"flag": val}, Schema, "test_tool")
+            assert result == {"flag": False}
+            assert result["flag"] is False
+
+    def test_dict_expected_json_parses_to_list_raises(self):
+        """Test dict expected but JSON string parses to list -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        with pytest.raises(ValueError, match=r"expects object \(dict\)") as exc_info:
+            util._normalize_arguments_for_mcp({"params": '["a", "b"]'}, Schema, "my_tool")
+
+        assert "my_tool" in str(exc_info.value)
+        assert "Parameter 'params'" in str(exc_info.value)
+        assert "JSON parsed to list" in str(exc_info.value)
+
+    def test_list_expected_json_parses_to_dict_raises(self):
+        """Test list expected but JSON string parses to dict -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list = Field(..., description="Items")
+
+        with pytest.raises(ValueError, match=r"expects array \(list\)") as exc_info:
+            util._normalize_arguments_for_mcp({"items": '{"x": 1}'}, Schema, "list_tool")
+
+        assert "list_tool" in str(exc_info.value)
+        assert "Parameter 'items'" in str(exc_info.value)
+        assert "JSON parsed to dict" in str(exc_info.value)
+
+    def test_int_expected_non_integer_float_raises(self):
+        """Test int expected but float 3.14 (non-integer) -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+
+        with pytest.raises(ValueError, match=r"expects integer") as exc_info:
+            util._normalize_arguments_for_mcp({"count": 3.14}, Schema, "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'count'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_int_expected_list_or_dict_raises(self):
+        """Test int expected but list/dict value -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+
+        for val in ([], {}):
+            with pytest.raises(ValueError, match=r"expects integer"):
+                util._normalize_arguments_for_mcp({"count": val}, Schema, "test_tool")
+
+    def test_float_expected_invalid_str_raises(self):
+        """Test float expected but str 'abc' -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            value: float = Field(..., description="Value")
+
+        with pytest.raises(ValueError, match=r"expects number") as exc_info:
+            util._normalize_arguments_for_mcp({"value": "abc"}, Schema, "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'value'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_float_expected_list_or_dict_raises(self):
+        """Test float expected but list/dict value -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            value: float = Field(..., description="Value")
+
+        for val in ([], {}):
+            with pytest.raises(ValueError, match=r"expects number"):
+                util._normalize_arguments_for_mcp({"value": val}, Schema, "test_tool")
+
+    def test_bool_expected_invalid_str_raises(self):
+        """Test bool expected but str 'maybe' -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            flag: bool = Field(..., description="Flag")
+
+        with pytest.raises(ValueError, match=r"expects.*bool") as exc_info:
+            util._normalize_arguments_for_mcp({"flag": "maybe"}, Schema, "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'flag'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_bool_expected_int_raises(self):
+        """Test bool expected but int 1 -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            flag: bool = Field(..., description="Flag")
+
+        with pytest.raises(ValueError, match=r"expects.*bool") as exc_info:
+            util._normalize_arguments_for_mcp({"flag": 1}, Schema, "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'flag'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_dict_expected_non_str_value_raises(self):
+        """Test dict expected but list value (not str) -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        with pytest.raises(ValueError, match=r"expects object \(dict\)") as exc_info:
+            util._normalize_arguments_for_mcp({"params": ["a", "b"]}, Schema, "my_tool")
+
+        assert "my_tool" in str(exc_info.value)
+        assert "Parameter 'params'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_list_expected_non_str_value_raises(self):
+        """Test list expected but dict value (not str) -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list = Field(..., description="Items")
+
+        with pytest.raises(ValueError, match=r"expects array \(list\)") as exc_info:
+            util._normalize_arguments_for_mcp({"items": {"x": 1}}, Schema, "list_tool")
+
+        assert "list_tool" in str(exc_info.value)
+        assert "Parameter 'items'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_try_convert_value_none_raises(self):
+        """Test _try_convert_value with None when scalar type expected -> raises ValueError (direct caller)."""
+        with pytest.raises(ValueError, match=r"expects.*but received None") as exc_info:
+            util._try_convert_value(None, int, "count", "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'count'" in str(exc_info.value)
 
 
 class TestSnakeToCamelConversion:

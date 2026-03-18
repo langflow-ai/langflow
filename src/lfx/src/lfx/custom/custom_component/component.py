@@ -378,16 +378,18 @@ class Component(CustomComponent):
     def __deepcopy__(self, memo: dict) -> Component:
         if id(self) in memo:
             return memo[id(self)]
-        kwargs = deepcopy(self.__config, memo)
-        kwargs["inputs"] = deepcopy(self.__inputs, memo)
+        # Shallow-copy config/inputs: they may contain non-picklable services
+        # (e.g. _tracing_service holds ServiceManager with threading.RLock).
+        kwargs = dict(self.__config)
+        kwargs["inputs"] = dict(self.__inputs)
         new_component = type(self)(**kwargs)
         new_component._code = self._code
         new_component._outputs_map = self._outputs_map
-        new_component._inputs = self._inputs
+        new_component._inputs = deepcopy(self._inputs, memo)
         new_component._edges = self._edges
         new_component._components = self._components
-        new_component._parameters = self._parameters
-        new_component._attributes = self._attributes
+        new_component._parameters = dict(self._parameters)
+        new_component._attributes = dict(self._attributes)
         new_component._output_logs = self._output_logs
         new_component._logs = self._logs  # type: ignore[attr-defined]
         memo[id(self)] = new_component
@@ -841,7 +843,8 @@ class Component(CustomComponent):
         # if value is a list of components, we need to process each component
         # Note this update make sure it is not a list str | int | float | bool | type(None)
         if isinstance(value, list) and not any(
-            isinstance(val, str | int | float | bool | type(None) | Message | Data | StructuredTool) for val in value
+            isinstance(val, str | int | float | bool | type(None) | Message | Data | StructuredTool | dict)
+            for val in value
         ):
             for val in value:
                 self._process_connection_or_parameter(key, val)

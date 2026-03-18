@@ -135,7 +135,7 @@ test(
 
     await expect(page.getByTestId("flow_controlsSub Flow")).toBeVisible();
 
-    await expect(page.getByTestId("processingData Operations")).toBeVisible();
+    await expect(page.getByTestId("processingJSON Operations")).toBeVisible();
 
     await page.getByTestId("icon-X").first().click();
 
