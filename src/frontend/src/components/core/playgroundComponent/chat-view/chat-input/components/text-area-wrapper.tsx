@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import {
-  CHAT_INPUT_MIN_HEIGHT,
   CHAT_INPUT_MAX_HEIGHT,
+  CHAT_INPUT_MIN_HEIGHT,
 } from "@/constants/constants";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { FilePreviewType } from "@/types/components";

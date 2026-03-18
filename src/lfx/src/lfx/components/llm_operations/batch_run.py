@@ -47,7 +47,7 @@ class BatchRunComponent(Component):
         ),
         DataFrameInput(
             name="df",
-            display_name="DataFrame",
+            display_name="Table",
             info="The DataFrame whose column (specified by 'column_name') we'll treat as text messages.",
             required=True,
         ),

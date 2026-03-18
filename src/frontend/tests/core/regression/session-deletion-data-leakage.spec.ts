@@ -1,7 +1,7 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import type { Page } from "@playwright/test";
 
 test.describe("Session Deletion Data Leakage Fix", () => {
   // Helper to send a message in the playground
@@ -11,13 +11,27 @@ test.describe("Session Deletion Data Leakage Fix", () => {
     });
     await page.getByTestId("input-chat-playground").last().fill(message);
     await page.getByTestId("button-send").last().click();
-    await page.waitForTimeout(2000); // Wait for message to be processed
   }
 
-  // Helper to create a new session
-  async function createNewSession(page: Page) {
-    await page.getByTestId("new-chat").click();
-    await page.waitForTimeout(1000); // Wait for session to be created
+  // Helper to wait for the flow build to complete after sending a message
+  async function waitForBuildComplete(
+    page: Page,
+    expectedBotMessageCount: number,
+  ) {
+    // Wait until the expected number of bot messages appear
+    await page.waitForFunction(
+      (count) =>
+        document.querySelectorAll('[data-testid="div-chat-message"]').length >=
+        count,
+      expectedBotMessageCount,
+      { timeout: 60000 },
+    );
+    // Wait for the build to actually finish by checking the button title
+    // The button title changes from "Cancel" to "Send" when isBuilding becomes false
+    // Note: button-send is never disabled during builds (disabled is for file uploads only)
+    await page.waitForSelector('[data-testid="button-send"][title="Send"]', {
+      timeout: 60000,
+    });
   }
 
   // Helper to delete a session via the more menu
@@ -46,7 +60,7 @@ test.describe("Session Deletion Data Leakage Fix", () => {
           .getByTestId("delete-session-option")
           .waitFor({ state: "visible", timeout: 5000 });
         await page.getByTestId("delete-session-option").click();
-        await page.waitForTimeout(1000); // Wait for deletion to complete
+        await page.waitForTimeout(1000);
         break;
       }
     }
@@ -58,12 +72,6 @@ test.describe("Session Deletion Data Leakage Fix", () => {
       .locator('[data-testid="div-chat-message"]')
       .all();
     return messages.length;
-  }
-
-  // Helper to check if a message exists
-  async function messageExists(page: Page, text: string): Promise<boolean> {
-    const message = page.getByText(text, { exact: false });
-    return await message.isVisible().catch(() => false);
   }
 
   test(
@@ -88,29 +96,44 @@ test.describe("Session Deletion Data Leakage Fix", () => {
         .click();
       await page.waitForTimeout(2000);
 
-      // Send message in default session
+      // Send message in default session and wait for build to complete
       const originalMessage = `Original message ${Date.now()}`;
       await sendMessage(page, originalMessage);
-      await page.waitForTimeout(2000);
+      await waitForBuildComplete(page, 1);
 
-      // Verify message appears
-      expect(await messageExists(page, originalMessage)).toBeTruthy();
+      // Verify message appears (auto-retry until visible)
+      await expect(
+        page.getByText(originalMessage, { exact: false }).first(),
+      ).toBeVisible({ timeout: 10000 });
 
       // Delete the default session
       await deleteSession(page, "Default Session");
-      await page.waitForTimeout(1000);
+
+      // Wait for old messages to be cleared from the DOM
+      await page.waitForFunction(
+        () =>
+          document.querySelectorAll('[data-testid="div-chat-message"]')
+            .length === 0,
+        { timeout: 10000 },
+      );
 
       // Verify the old message does NOT appear after deletion
-      expect(await messageExists(page, originalMessage)).toBeFalsy();
+      await expect(
+        page.getByText(originalMessage, { exact: false }).first(),
+      ).not.toBeVisible({ timeout: 10000 });
 
       // Send a different message (this will be in a new/recreated default session)
       const newMessage = `New message ${Date.now()}`;
       await sendMessage(page, newMessage);
-      await page.waitForTimeout(2000);
+      await waitForBuildComplete(page, 1);
 
       // Verify only the new message appears
-      expect(await messageExists(page, newMessage)).toBeTruthy();
-      expect(await messageExists(page, originalMessage)).toBeFalsy();
+      await expect(
+        page.getByText(newMessage, { exact: false }).first(),
+      ).toBeVisible({ timeout: 10000 });
+      await expect(
+        page.getByText(originalMessage, { exact: false }).first(),
+      ).not.toBeVisible({ timeout: 10000 });
 
       // Verify message count is correct (should only have the new message)
       const messageCount = await getMessageCount(page);
@@ -142,18 +165,24 @@ test.describe("Session Deletion Data Leakage Fix", () => {
 
       // Send a message with specific information in default session
       await sendMessage(page, "My name is Victor");
-      await page.waitForTimeout(3000); // Wait for AI response
+      await waitForBuildComplete(page, 1);
 
       // Delete the default session to clear context
       await deleteSession(page, "Default Session");
-      await page.waitForTimeout(1000);
 
-      // The playground should now show an empty state or create a new default session
+      // Wait for old messages to be cleared
+      await page.waitForFunction(
+        () =>
+          document.querySelectorAll('[data-testid="div-chat-message"]')
+            .length === 0,
+        { timeout: 10000 },
+      );
+
       // Ask a question that would require the deleted context
       await sendMessage(page, "What is my name?");
-      await page.waitForTimeout(3000); // Wait for AI response
+      await waitForBuildComplete(page, 1);
 
-      // Get the response text
+      // Get the response text from the last bot message
       const messages = await page
         .locator('[data-testid="div-chat-message"]')
         .all();

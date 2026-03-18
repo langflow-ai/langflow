@@ -20,7 +20,7 @@ class SplitTextComponent(Component):
             name="data_inputs",
             display_name="Input",
             info="The data with texts to split in chunks.",
-            input_types=["Data", "DataFrame", "Message"],
+            input_types=["Data", "JSON", "DataFrame", "Table", "Message"],
             required=True,
         ),
         IntInput(

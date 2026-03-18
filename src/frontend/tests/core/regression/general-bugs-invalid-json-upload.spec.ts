@@ -1,6 +1,6 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import type { Page } from "@playwright/test";
 
 test.describe("Invalid JSON Upload Error Handling", () => {
   // Helper function to verify error appears

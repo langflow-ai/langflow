@@ -1,5 +1,5 @@
-import { getDisabledTooltip } from "../get-disabled-tooltip";
 import type { UniqueInputsComponents } from "../../types";
+import { getDisabledTooltip } from "../get-disabled-tooltip";
 
 describe("getDisabledTooltip", () => {
   describe("ChatInput component", () => {

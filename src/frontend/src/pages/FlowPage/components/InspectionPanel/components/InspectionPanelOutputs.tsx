@@ -1,7 +1,7 @@
 import { useMemo } from "react";
-import type { NodeDataType } from "@/types/flow";
-import useFlowStore from "@/stores/flowStore";
 import SwitchOutputView from "@/CustomNodes/GenericNode/components/outputModal/components/switchOutputView";
+import useFlowStore from "@/stores/flowStore";
+import type { NodeDataType } from "@/types/flow";
 import { getGroupOutputNodeId } from "@/utils/reactflowUtils";
 
 interface InspectionPanelOutputsProps {

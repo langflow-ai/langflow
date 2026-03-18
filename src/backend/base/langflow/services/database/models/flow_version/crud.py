@@ -55,6 +55,7 @@ async def create_flow_version_entry(
             async with session.begin_nested():
                 session.add(entry)
                 await session.flush()
+                await session.refresh(entry)
             break
         except IntegrityError as exc:
             if "unique_flow_version_number" not in str(exc).lower():
