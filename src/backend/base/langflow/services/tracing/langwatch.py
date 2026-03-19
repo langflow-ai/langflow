@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+import threading
 from typing import TYPE_CHECKING, Any, cast
 
 import nanoid
@@ -25,6 +26,45 @@ if TYPE_CHECKING:
     from langflow.services.tracing.schema import Log
 
 
+# ---------------------------------------------------------------------------
+# Module-level shared provider singleton
+# ---------------------------------------------------------------------------
+
+_langwatch_lock = threading.Lock()
+_shared_provider: TracerProvider | None = None
+
+
+def shutdown_langwatch_provider() -> None:
+    """Shutdown the shared LangWatch TracerProvider, flushing pending spans.
+
+    Safe to call multiple times or when no provider has been created.
+    Should be called at process/service shutdown.
+    """
+    global _shared_provider  # noqa: PLW0603
+
+    with _langwatch_lock:
+        if _shared_provider is not None:
+            try:
+                _shared_provider.shutdown()
+            except (ValueError, RuntimeError, OSError) as e:
+                logger.warning(f"Error shutting down LangWatch tracer provider: {e}")
+            finally:
+                _shared_provider = None
+
+
+def _reset_langwatch_provider() -> None:
+    """Reset the shared provider without calling shutdown. For tests only."""
+    global _shared_provider  # noqa: PLW0603
+
+    with _langwatch_lock:
+        _shared_provider = None
+
+
+# ---------------------------------------------------------------------------
+# Per-run tracer
+# ---------------------------------------------------------------------------
+
+
 class LangWatchTracer(OTLPTracerBase):
     flow_id: str
     tracer_provider = None
@@ -41,12 +81,12 @@ class LangWatchTracer(OTLPTracerBase):
         self.flow_id = trace_name.split(" - ")[-1]
 
         try:
-            self._ready = self.setup_langwatch()
+            self._ready = self._setup_langwatch()
             if not self._ready:
                 return
 
             # Pass the dedicated tracer_provider here
-            self.trace = self._client.trace(trace_id=str(self.trace_id), tracer_provider=self.tracer_provider)
+            self.trace = self._client.trace(trace_id=str(self.trace_id), tracer_provider=_shared_provider)
             self.trace.__enter__()
             self.spans: dict[str, ContextSpan] = {}
 
@@ -62,33 +102,38 @@ class LangWatchTracer(OTLPTracerBase):
             logger.debug("Error setting up LangWatch tracer")
             self._ready = False
 
-    def setup_langwatch(self) -> bool:
+    def _setup_langwatch(self) -> bool:
+        global _shared_provider  # noqa: PLW0603
+
         if "LANGWATCH_API_KEY" not in os.environ:
             return False
         try:
             import langwatch
             from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
-            # Initialize the shared provider if it doesn't exist
-            if self.tracer_provider is None:
-                api_key = os.environ["LANGWATCH_API_KEY"]
-                endpoint = os.environ.get("LANGWATCH_ENDPOINT", "https://app.langwatch.ai")
+            # Initialize the shared provider if it doesn't exist (thread-safe)
+            if _shared_provider is None:
+                with _langwatch_lock:
+                    if _shared_provider is None:
+                        api_key = os.environ["LANGWATCH_API_KEY"]
+                        endpoint = os.environ.get("LANGWATCH_ENDPOINT", "https://app.langwatch.ai")
 
-                resource = Resource.create(attributes={"service.name": "langflow"})
-                exporter = OTLPSpanExporter(
-                    endpoint=f"{endpoint}/api/otel/v1/traces", headers={"Authorization": f"Bearer {api_key}"}
-                )
-                provider = TracerProvider(resource=resource)
-                provider.add_span_processor(BatchSpanProcessor(exporter))
-                LangWatchTracer.tracer_provider = provider
+                        resource = Resource.create(attributes={"service.name": "langflow"})
+                        exporter = OTLPSpanExporter(
+                            endpoint=f"{endpoint}/api/otel/v1/traces",
+                            headers={"Authorization": f"Bearer {api_key}"},
+                        )
+                        provider = TracerProvider(resource=resource)
+                        provider.add_span_processor(BatchSpanProcessor(exporter))
+                        _shared_provider = provider
 
-                # Initialize LangWatch client but skip OTEL setup to avoid touching the global provider
-                # causing it to not receive traces from FastAPIInstrumentor
-                langwatch.setup(
-                    api_key=api_key,
-                    endpoint_url=endpoint,
-                    skip_open_telemetry_setup=True,
-                )
+                        # Initialize LangWatch client but skip OTEL setup to avoid touching the global provider
+                        # causing it to not receive traces from FastAPIInstrumentor
+                        langwatch.setup(
+                            api_key=api_key,
+                            endpoint_url=endpoint,
+                            skip_open_telemetry_setup=True,
+                        )
 
             self._client = langwatch
 

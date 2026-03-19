@@ -158,10 +158,12 @@ class TracingService(Service):
     async def teardown(self) -> None:
         """Shutdown shared tracer providers at service teardown."""
         from langflow.services.tracing.arize_phoenix import shutdown_arize_provider
+        from langflow.services.tracing.langwatch import shutdown_langwatch_provider
         from langflow.services.tracing.otlp import shutdown_otlp_provider
 
         shutdown_otlp_provider()
         shutdown_arize_provider()
+        shutdown_langwatch_provider()
 
     async def _trace_worker(self, trace_context: TraceContext) -> None:
         while trace_context.running or not trace_context.traces_queue.empty():
