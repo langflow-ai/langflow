@@ -108,6 +108,17 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
     ],
   );
 
+  const deleteSessionLocalOnly = useCallback(
+    (sessionId: string) => {
+      if (!flowId) return;
+      // Local cleanup only - no API call (used after bulk delete)
+      clearSessionMessages(sessionId, flowId);
+      deleteSessionFromMessagesStore(sessionId);
+      removeSession(sessionId);
+    },
+    [flowId, deleteSessionFromMessagesStore, removeSession],
+  );
+
   const renameSession = useCallback(
     async (oldId: string, newId: string) => {
       try {
@@ -149,6 +160,7 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
     fetchedSessions,
     createSession,
     deleteSession,
+    deleteSessionLocalOnly,
     renameSession,
     selectSession,
     clearDefaultSession,

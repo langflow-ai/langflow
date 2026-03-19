@@ -35,8 +35,10 @@ export function FlowPageSlidingContainerContent({
   const {
     activeSessionId,
     sessions,
+    fetchedSessions,
     createSession,
     deleteSession,
+    deleteSessionLocalOnly,
     renameSession,
     selectSession,
     clearDefaultSession,
@@ -123,14 +125,11 @@ export function FlowPageSlidingContainerContent({
 
   // Local cleanup without API call (for bulk delete)
   const handleLocalCleanupAfterDelete = (sessionIds: string[]) => {
-    // For each deleted session, call deleteSession which handles all cleanup
+    // For each deleted session, perform local-only cleanup (no API calls)
     sessionIds.forEach((sessionId) => {
-      deleteSession(sessionId);
+      deleteSessionLocalOnly(sessionId);
     });
-    // If current session was deleted, switch to default
-    if (activeSessionId && sessionIds.includes(activeSessionId)) {
-      selectSession(currentFlowId);
-    }
+    // Session switching is handled by the store's removeSession
   };
 
   const handleOpenLogs = (sessionId: string) => {
@@ -152,6 +151,7 @@ export function FlowPageSlidingContainerContent({
             <div className="p-4">
               <ChatSidebar
                 sessions={sessions}
+                fetchedSessions={fetchedSessions}
                 onNewChat={createSession}
                 onSessionSelect={selectSession}
                 currentSessionId={activeSessionId}
@@ -220,5 +220,3 @@ export function FlowPageSlidingContainerContent({
     </div>
   );
 }
-
-// Made with Bob

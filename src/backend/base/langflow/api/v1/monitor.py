@@ -241,18 +241,28 @@ async def delete_messages_sessions(
         return {"message": "No sessions to delete", "deleted_count": 0}
 
     try:
-        # First, get message IDs that belong to the user's flows for these sessions
-        stmt = select(MessageTable.id)
-        stmt = stmt.join(Flow, MessageTable.flow_id == Flow.id)
-        stmt = stmt.where(Flow.user_id == current_user.id)
-        stmt = stmt.where(col(MessageTable.session_id).in_(session_ids))
+        # First, get distinct session IDs that have messages belonging to the user's flows
+        session_stmt = select(MessageTable.session_id).distinct()
+        session_stmt = session_stmt.join(Flow, MessageTable.flow_id == Flow.id)
+        session_stmt = session_stmt.where(Flow.user_id == current_user.id)
+        session_stmt = session_stmt.where(col(MessageTable.session_id).in_(session_ids))
 
-        result = await session.exec(stmt)
-        message_ids = list(result)
+        result = await session.exec(session_stmt)
+        affected_session_ids = list(result)
+        affected_count = len(affected_session_ids)
 
-        if not message_ids:
+        if not affected_session_ids:
             # No messages found for this user's flows with these session_ids
             return {"message": "No sessions to delete", "deleted_count": 0}
+
+        # Get message IDs to delete
+        msg_stmt = select(MessageTable.id)
+        msg_stmt = msg_stmt.join(Flow, MessageTable.flow_id == Flow.id)
+        msg_stmt = msg_stmt.where(Flow.user_id == current_user.id)
+        msg_stmt = msg_stmt.where(col(MessageTable.session_id).in_(affected_session_ids))
+
+        msg_result = await session.exec(msg_stmt)
+        message_ids = list(msg_result)
 
         # Delete only the messages that belong to the user
         await session.exec(
@@ -266,8 +276,8 @@ async def delete_messages_sessions(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return {
-        "message": f"Messages deleted successfully for {len(session_ids)} sessions",
-        "deleted_count": len(session_ids),
+        "message": f"Messages deleted successfully for {affected_count} session{'s' if affected_count != 1 else ''}",
+        "deleted_count": affected_count,
     }
 
 

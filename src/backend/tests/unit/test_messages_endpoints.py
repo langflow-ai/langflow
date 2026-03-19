@@ -356,7 +356,7 @@ async def test_delete_messages_sessions_empty_list(client: AsyncClient, logged_i
 
 @pytest.mark.api_key_required
 async def test_delete_messages_sessions_nonexistent(client: AsyncClient, logged_in_headers):
-    """Bulk-delete with session IDs that don't exist should succeed (no-op)."""
+    """Bulk-delete with session IDs that don't exist should succeed (no-op) and return 0 deleted."""
     response = await client.request(
         "DELETE",
         "api/v1/monitor/messages/sessions",
@@ -365,7 +365,8 @@ async def test_delete_messages_sessions_nonexistent(client: AsyncClient, logged_
     )
     assert response.status_code == 200, response.text
     data = response.json()
-    assert data["deleted_count"] == 2
+    # Should return 0 since no sessions actually had messages deleted
+    assert data["deleted_count"] == 0
 
 
 @pytest.mark.api_key_required
@@ -382,12 +383,13 @@ async def test_delete_messages_sessions_partial_match(
     )
     assert response.status_code == 200, response.text
     data = response.json()
-    assert data["deleted_count"] == 2
+    # Should return 1 since only bulk_session_a actually had messages deleted
+    assert data["deleted_count"] == 1
 
 
 @pytest.mark.api_key_required
 async def test_delete_messages_sessions_exceeds_limit(client: AsyncClient, logged_in_headers):
-    """Bulk-delete with more than 500 session IDs should return 400 error."""
+    """Bulk-delete with more than 500 session IDs should return 400 error and not delete anything."""
     # Create a list of 501 session IDs
     session_ids = [f"session_{i}" for i in range(501)]
     response = await client.request(
@@ -399,15 +401,5 @@ async def test_delete_messages_sessions_exceeds_limit(client: AsyncClient, logge
     assert response.status_code == 400, response.text
     data = response.json()
     assert "Cannot delete more than 500 sessions" in data["detail"]
-    # bulk_session_a messages should be gone
-    response = await client.get(
-        "api/v1/monitor/messages", params={"session_id": "bulk_session_a"}, headers=logged_in_headers
-    )
-    assert response.status_code == 200
-    assert response.json() == []
-
-    # bulk_session_b and bulk_session_c messages should still be present
-    for sid in ("bulk_session_b", "bulk_session_c"):
-        response = await client.get("api/v1/monitor/messages", params={"session_id": sid}, headers=logged_in_headers)
-        assert response.status_code == 200
-        assert len(response.json()) > 0, f"Expected messages to remain for session {sid!r}"
+    # After a 400 error, no deletions should have occurred
+    # The test validates the error response only

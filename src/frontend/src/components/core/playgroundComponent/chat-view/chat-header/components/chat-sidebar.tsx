@@ -3,6 +3,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import useFlowStore from "@/stores/flowStore";
+import useAlertStore from "@/stores/alertStore";
 import { useBulkDeleteSessions } from "@/controllers/API/queries/messages/use-bulk-delete-sessions";
 import { cn } from "@/utils/utils";
 import { useGetFlowId } from "../../../hooks/use-get-flow-id";
@@ -17,6 +18,7 @@ interface ChatSidebarProps {
   onOpenLogs?: (sessionId: string) => void;
   onRenameSession?: (oldId: string, newId: string) => Promise<void>;
   onLocalCleanupAfterDelete?: (sessionIds: string[]) => void;
+  fetchedSessions?: string[]; // Sessions from the server (non-local)
 }
 
 export function ChatSidebar({
@@ -28,6 +30,7 @@ export function ChatSidebar({
   onOpenLogs,
   onRenameSession,
   onLocalCleanupAfterDelete,
+  fetchedSessions = [],
 }: ChatSidebarProps) {
   const [openMenuSession, setOpenMenuSession] = useState<string | null>(null);
   const [selectedSessions, setSelectedSessions] = useState<Set<string>>(
@@ -35,15 +38,14 @@ export function ChatSidebar({
   );
   const currentFlowId = useGetFlowId();
   const isShareablePlayground = useFlowStore((state) => state.playgroundPage);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const { mutate: bulkDeleteSessions, isPending: isDeletingSessions } =
     useBulkDeleteSessions();
 
-  const sessionIds = useMemo(() => sessions, [sessions]);
-
   // Filter out the default session (currentFlowId) from selectable sessions
   const selectableSessions = useMemo(
-    () => sessionIds.filter((session) => session !== currentFlowId),
-    [sessionIds, currentFlowId],
+    () => sessions.filter((session) => session !== currentFlowId),
+    [sessions, currentFlowId],
   );
 
   const visibleSession = currentSessionId;
@@ -61,10 +63,7 @@ export function ChatSidebar({
       newSet.delete(session);
       return newSet;
     });
-    // If deleted session was the current one, switch to default
-    if (session === currentSessionId) {
-      onSessionSelect?.(currentFlowId);
-    }
+    // Session switching is handled by the store's removeSession
   };
 
   const handleSessionClick = (session: string) => {
@@ -101,17 +100,38 @@ export function ChatSidebar({
     if (selectedSessions.size === 0) return;
 
     const sessionsToDelete = Array.from(selectedSessions);
-    bulkDeleteSessions(
-      { sessionIds: sessionsToDelete },
-      {
-        onSuccess: () => {
-          // Clear selection after successful deletion
-          setSelectedSessions(new Set());
-          // Perform local cleanup without making additional API calls
-          onLocalCleanupAfterDelete?.(sessionsToDelete);
-        },
-      },
+    const count = sessionsToDelete.length;
+    
+    // Separate local-only sessions from server sessions
+    const serverSessions = sessionsToDelete.filter(sessionId =>
+      fetchedSessions.includes(sessionId)
     );
+    
+    // If there are server sessions, call the API
+    if (serverSessions.length > 0) {
+      bulkDeleteSessions(
+        { sessionIds: serverSessions },
+        {
+          onSuccess: () => {
+            // Clear selection after successful deletion
+            setSelectedSessions(new Set());
+            // Perform local cleanup for ALL sessions (both local and server)
+            onLocalCleanupAfterDelete?.(sessionsToDelete);
+            // Show user-friendly success message
+            setSuccessData({
+              title: `${count} session${count > 1 ? "s" : ""} deleted successfully`,
+            });
+          },
+        },
+      );
+    } else {
+      // All sessions are local-only, skip API call
+      setSelectedSessions(new Set());
+      onLocalCleanupAfterDelete?.(sessionsToDelete);
+      setSuccessData({
+        title: `${count} session${count > 1 ? "s" : ""} deleted successfully`,
+      });
+    }
   };
 
   return (
@@ -146,10 +166,10 @@ export function ChatSidebar({
         </div>
       ) : (
         <div className="flex flex-col gap-1">
-          {sessionIds.map((session, index) => {
+          {sessions.map((session, index) => {
             const isDefaultSession = session === currentFlowId;
             const isFirstNonDefaultSession =
-              index > 0 && sessionIds[index - 1] === currentFlowId;
+              index > 0 && sessions[index - 1] === currentFlowId;
 
             return (
               <div key={session}>
@@ -228,5 +248,3 @@ export function ChatSidebar({
     </div>
   );
 }
-
-// Made with Bob
