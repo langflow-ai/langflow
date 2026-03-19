@@ -139,6 +139,7 @@ OPENAI_EMBEDDING_MODELS_DETAILED = [
         name=name,
         icon="OpenAI",
         model_type="embeddings",
+        default=True,
     )
     for name in OPENAI_EMBEDDING_MODEL_NAMES
 ]
