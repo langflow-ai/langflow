@@ -41,9 +41,7 @@ def collect_strings() -> dict[str, str]:
     flat: dict[str, str] = {}
     seen_names: set[str] = set()
 
-    for _finder, modname, _ispkg in pkgutil.walk_packages(
-        components_pkg.__path__, components_pkg.__name__ + "."
-    ):
+    for _finder, modname, _ispkg in pkgutil.walk_packages(components_pkg.__path__, components_pkg.__name__ + "."):
         if "deactivated" in modname:
             continue
 
@@ -110,7 +108,9 @@ def main() -> None:
 
     print("Scanning lfx.components for translatable strings...")
     strings = collect_strings()
-    print(f"Found {len(strings)} translatable keys across {sum(1 for k in strings if k.endswith('.display_name') and '.inputs.' not in k and '.outputs.' not in k)} components.")
+    print(
+        f"Found {len(strings)} translatable keys across {sum(1 for k in strings if k.endswith('.display_name') and '.inputs.' not in k and '.outputs.' not in k)} components."
+    )
 
     new_content = json.dumps(strings, ensure_ascii=False, indent=2) + "\n"
 
