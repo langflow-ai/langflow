@@ -105,8 +105,6 @@ class OTLPTracerBase(BaseTracer):
         else:
             return value
 
-        return value
-
     def _convert_to_otlp_dict(self, io_dict: dict[str, Any] | Any) -> dict[str, Any]:
         """Converts a dict to OTLP-compatible format.
 
