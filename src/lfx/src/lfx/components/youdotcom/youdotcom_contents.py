@@ -23,7 +23,7 @@ class YouDotComContentsComponent(Component):
             name="api_key",
             display_name="You.com API Key",
             required=True,
-            info="Your You.com API key. Get one at https://docs.you.com",
+            info="Your You.com API key. Get one at https://you.com/platform/api-keys",
         ),
         MessageTextInput(
             name="urls",
