@@ -292,7 +292,7 @@ async def test_get_messages_empty_result_with_encoded_nonexistent_session(client
 async def test_delete_messages_sessions_bulk(
     client: AsyncClient,
     created_messages_multiple_sessions,
-    logged_in_headers,  # noqa: ARG001
+    logged_in_headers,
 ):
     """Bulk-delete messages for multiple sessions in a single request."""
     session_ids = ["bulk_session_a", "bulk_session_b"]
@@ -325,7 +325,7 @@ async def test_delete_messages_sessions_bulk(
 async def test_delete_messages_sessions_all(
     client: AsyncClient,
     created_messages_multiple_sessions,
-    logged_in_headers,  # noqa: ARG001
+    logged_in_headers,
 ):
     """Bulk-delete messages for ALL sessions at once."""
     session_ids = ["bulk_session_a", "bulk_session_b", "bulk_session_c"]
@@ -379,7 +379,7 @@ async def test_delete_messages_sessions_nonexistent(client: AsyncClient, logged_
 async def test_delete_messages_sessions_partial_match(
     client: AsyncClient,
     created_messages_multiple_sessions,
-    logged_in_headers,  # noqa: ARG001
+    logged_in_headers,
 ):
     """Bulk-delete where some session IDs exist and some don't — only existing ones are removed."""
     session_ids = ["bulk_session_a", "does_not_exist"]
