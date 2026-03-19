@@ -323,12 +323,24 @@ export default function AdminPage() {
                     }
                   >
                     <TableRow>
-                      <TableHead className="h-10">{t("admin.columnId")}</TableHead>
-                      <TableHead className="h-10">{t("admin.columnUsername")}</TableHead>
-                      <TableHead className="h-10">{t("admin.columnActive")}</TableHead>
-                      <TableHead className="h-10">{t("admin.columnSuperuser")}</TableHead>
-                      <TableHead className="h-10">{t("admin.columnCreatedAt")}</TableHead>
-                      <TableHead className="h-10">{t("admin.columnUpdatedAt")}</TableHead>
+                      <TableHead className="h-10">
+                        {t("admin.columnId")}
+                      </TableHead>
+                      <TableHead className="h-10">
+                        {t("admin.columnUsername")}
+                      </TableHead>
+                      <TableHead className="h-10">
+                        {t("admin.columnActive")}
+                      </TableHead>
+                      <TableHead className="h-10">
+                        {t("admin.columnSuperuser")}
+                      </TableHead>
+                      <TableHead className="h-10">
+                        {t("admin.columnCreatedAt")}
+                      </TableHead>
+                      <TableHead className="h-10">
+                        {t("admin.columnUpdatedAt")}
+                      </TableHead>
                       <TableHead className="h-10 w-[100px] text-right"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -350,7 +362,9 @@ export default function AdminPage() {
                           </TableCell>
                           <TableCell className="relative left-1 truncate py-2 text-align-last-left">
                             {user.id === userData?.id ? (
-                              <ShadTooltip content={t("admin.cannotDeactivateSelf")}>
+                              <ShadTooltip
+                                content={t("admin.cannotDeactivateSelf")}
+                              >
                                 <div className="flex w-fit cursor-not-allowed opacity-50">
                                   <CheckBoxDiv checked={user.is_active} />
                                 </div>
@@ -407,9 +421,7 @@ export default function AdminPage() {
                               }}
                             >
                               <ConfirmationModal.Content>
-                                <span>
-                                  {t("admin.editUserConfirmContent")}
-                                </span>
+                                <span>{t("admin.editUserConfirmContent")}</span>
                               </ConfirmationModal.Content>
                               <ConfirmationModal.Trigger>
                                 <div className="flex w-fit">
@@ -446,7 +458,10 @@ export default function AdminPage() {
                                   handleEditUser(user.id, editUser);
                                 }}
                               >
-                                <ShadTooltip content={t("admin.editTitle")} side="top">
+                                <ShadTooltip
+                                  content={t("admin.editTitle")}
+                                  side="top"
+                                >
                                   <IconComponent
                                     name="Pencil"
                                     className="h-4 w-4 cursor-pointer"

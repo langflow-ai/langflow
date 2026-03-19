@@ -137,7 +137,9 @@ export default function GlobalVariablesPage() {
       setErrorData({
         title: t("globalVars.invalidCredentialsTitle"),
         list: [
-          t("globalVars.invalidCredentialsHidden", { count: invalidProviderVars.length }),
+          t("globalVars.invalidCredentialsHidden", {
+            count: invalidProviderVars.length,
+          }),
           ...errorMessages,
         ],
       });

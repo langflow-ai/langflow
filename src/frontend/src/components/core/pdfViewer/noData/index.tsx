@@ -10,7 +10,9 @@ export default function NoDataPdf(): JSX.Element {
         </span>
         <br />
         <div className="langflow-chat-desc">
-          <span className="langflow-chat-desc-span">{t("output.pdfLoadError")} </span>
+          <span className="langflow-chat-desc-span">
+            {t("output.pdfLoadError")}{" "}
+          </span>
         </div>
       </div>
     </div>

@@ -20,7 +20,6 @@ jest.mock("../../i18n", () => ({
   default: { t: jest.fn((key: string) => key) },
 }));
 
-
 jest.mock("@/customization/feature-flags", () => ({
   ENABLE_DATASTAX_LANGFLOW: false,
 }));

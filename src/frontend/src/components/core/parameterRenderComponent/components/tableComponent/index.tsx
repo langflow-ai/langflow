@@ -41,17 +41,13 @@ const TableComponent = forwardRef<
   TableComponentProps
 >(
   (
-    {
-      alertTitle,
-      alertDescription,
-      displayEmptyAlert = true,
-      ...props
-    },
+    { alertTitle, alertDescription, displayEmptyAlert = true, ...props },
     ref,
   ) => {
     const { t } = useTranslation();
     const resolvedAlertTitle = alertTitle ?? t("table.noDataTitle");
-    const resolvedAlertDescription = alertDescription ?? t("table.noDataMessage");
+    const resolvedAlertDescription =
+      alertDescription ?? t("table.noDataMessage");
     const isSingleToggleRowEditable = (
       colField: string,
       rowData: any,

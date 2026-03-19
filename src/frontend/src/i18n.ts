@@ -18,7 +18,10 @@ i18n.use(initReactI18next).init({
     pt: { translation: pt },
     "zh-Hans": { translation: zhHans },
   },
-  lng: localStorage.getItem("languagePreference") || navigator.language.split("-")[0] || "en",
+  lng:
+    localStorage.getItem("languagePreference") ||
+    navigator.language.split("-")[0] ||
+    "en",
   fallbackLng: "en",
   interpolation: {
     escapeValue: false,

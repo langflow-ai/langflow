@@ -9,9 +9,7 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import {
-  CONTROL_INPUT_STATE,
-} from "../../constants/constants";
+import { CONTROL_INPUT_STATE } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import type {
   inputHandlerEventType,
@@ -100,7 +98,8 @@ export default function SignUp(): JSX.Element {
           <div className="mb-3 w-full">
             <Form.Field name="username">
               <Form.Label className="data-[invalid]:label-invalid">
-                {t("auth.usernameLabel")} <span className="font-medium text-destructive">*</span>
+                {t("auth.usernameLabel")}{" "}
+                <span className="font-medium text-destructive">*</span>
               </Form.Label>
 
               <Form.Control asChild>
@@ -124,7 +123,8 @@ export default function SignUp(): JSX.Element {
           <div className="mb-3 w-full">
             <Form.Field name="password" serverInvalid={password != cnfPassword}>
               <Form.Label className="data-[invalid]:label-invalid">
-                {t("auth.passwordLabel")} <span className="font-medium text-destructive">*</span>
+                {t("auth.passwordLabel")}{" "}
+                <span className="font-medium text-destructive">*</span>
               </Form.Label>
               <InputComponent
                 onChange={(value) => {

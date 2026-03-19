@@ -431,7 +431,9 @@ export default function IOModal({
                       className="w-full !rounded-xl shadow-lg"
                     >
                       <LangflowLogoColor />
-                      <div className="text-sm">{t("modal.io.builtWithLangflow")}</div>
+                      <div className="text-sm">
+                        {t("modal.io.builtWithLangflow")}
+                      </div>
                     </Button>
                   </div>
                 )}

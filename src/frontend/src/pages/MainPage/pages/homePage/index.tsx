@@ -250,7 +250,11 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   return (
     <CardsWrapComponent
       onFileDrop={flowType === "mcp" ? undefined : handleFileDrop}
-      dragMessage={isEmptyFolder ? t("home.dragFlowsOrComponents") : t("home.dragFlowType", { flowType })}
+      dragMessage={
+        isEmptyFolder
+          ? t("home.dragFlowsOrComponents")
+          : t("home.dragFlowType", { flowType })
+      }
     >
       <div
         className="flex h-full w-full flex-col overflow-y-auto"
