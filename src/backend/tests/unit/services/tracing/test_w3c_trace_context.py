@@ -21,6 +21,7 @@ import httpx
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from langflow.services.tracing.otlp import _reset_shared_provider
 from opentelemetry import context as otel_context
 from opentelemetry import trace
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -28,6 +29,14 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor, SpanExporter, SpanExportResult
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
+
+
+@pytest.fixture(autouse=True)
+def _reset_otlp_provider():
+    """Reset the shared OTLP TracerProvider before and after each test."""
+    _reset_shared_provider()
+    yield
+    _reset_shared_provider()
 
 
 class CollectingExporter(SpanExporter):

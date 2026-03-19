@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langflow.services.tracing.base import BaseTracer
+from langflow.services.tracing.otlp import _reset_shared_provider
 from langflow.services.tracing.service import (
     TracingService,
     component_context_var,
@@ -12,6 +13,17 @@ from langflow.services.tracing.service import (
 )
 from lfx.services.settings.base import Settings
 from lfx.services.settings.service import SettingsService
+
+
+@pytest.fixture(autouse=True)
+def _reset_otlp_provider():
+    """Reset the shared OTLP TracerProvider before and after each test.
+
+    Ensures test isolation since the singleton persists across test runs.
+    """
+    _reset_shared_provider()
+    yield
+    _reset_shared_provider()
 
 
 class MockTracer(BaseTracer):
@@ -803,8 +815,10 @@ async def test_otlp_tracer_service_name():
             trace_id=uuid.uuid4(),
         )
         assert tracer.ready is True
-        # Verify service name in resource attributes
-        assert tracer.tracer_provider.resource.attributes["service.name"] == "custom-service"
+        # Verify service name in resource attributes via the shared provider
+        from langflow.services.tracing import otlp as otlp_mod
+
+        assert otlp_mod._shared_provider.resource.attributes["service.name"] == "custom-service"
 
 
 @pytest.mark.asyncio
@@ -828,7 +842,9 @@ async def test_otlp_tracer_resource_attributes():
         )
         assert tracer.ready is True
         # Verify resource attributes were parsed and included
-        resource_attrs = tracer.tracer_provider.resource.attributes
+        from langflow.services.tracing import otlp as otlp_mod
+
+        resource_attrs = otlp_mod._shared_provider.resource.attributes
         assert resource_attrs["environment"] == "production"
         assert resource_attrs["version"] == "1.0"
         assert resource_attrs["langflow.project_name"] == "test_project"
@@ -959,8 +975,8 @@ async def test_otlp_tracer_child_trace_with_error():
 
 
 @pytest.mark.asyncio
-async def test_otlp_tracer_close():
-    """Test OTLP tracer close method flushes spans."""
+async def test_otlp_tracer_close_is_noop():
+    """Test OTLP tracer close() is a no-op (provider lifecycle is module-level)."""
     from langflow.services.tracing.otlp import OTLPTracer
 
     with patch.dict(
@@ -975,13 +991,34 @@ async def test_otlp_tracer_close():
             trace_id=uuid.uuid4(),
         )
 
-        # Mock the tracer_provider force_flush
-        tracer.tracer_provider.force_flush = MagicMock()
-
+        # close() should not raise and should be a no-op
         tracer.close()
+        assert tracer.ready is True
 
-        # Verify force_flush was called
-        tracer.tracer_provider.force_flush.assert_called_once_with(timeout_millis=3000)
+
+@pytest.mark.asyncio
+async def test_otlp_shutdown_provider():
+    """Test shutdown_otlp_provider flushes and clears the shared provider."""
+    from langflow.services.tracing import otlp as otlp_mod
+    from langflow.services.tracing.otlp import OTLPTracer, shutdown_otlp_provider
+
+    with patch.dict(
+        "os.environ",
+        {"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://localhost:4318/v1/traces"},
+        clear=True,
+    ):
+        OTLPTracer(
+            trace_name="test_trace",
+            trace_type="chain",
+            project_name="test_project",
+            trace_id=uuid.uuid4(),
+        )
+        assert otlp_mod._shared_provider is not None
+
+        shutdown_otlp_provider()
+
+        assert otlp_mod._shared_provider is None
+        assert otlp_mod._shared_tracer is None
 
 
 @pytest.mark.asyncio
@@ -1136,7 +1173,9 @@ async def test_otlp_tracer_span_attributes():
             )
 
             # Force flush to export spans
-            tracer.tracer_provider.force_flush()
+            from langflow.services.tracing import otlp as otlp_mod
+
+            otlp_mod._shared_provider.force_flush()
 
             # Verify spans were exported
             assert len(span_exporter.exported_spans) == 2  # root + child
@@ -1403,7 +1442,9 @@ async def test_otlp_tracer_nested_metadata_stringified():
                 metadata=nested_metadata,
             )
 
-            tracer.tracer_provider.force_flush()
+            from langflow.services.tracing import otlp as otlp_mod
+
+            otlp_mod._shared_provider.force_flush()
 
             import json
 
