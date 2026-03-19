@@ -205,6 +205,37 @@
         "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-dINDRœ, œnameœ: œdataframeœ, œoutput_typesœ: [œTableœ]}",
         "target": "AstraDB-mGHwS",
         "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-mGHwSœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "AstraDB",
+            "id": "AstraDB-hIUdP",
+            "name": "search_results",
+            "output_types": [
+              "JSON"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_data",
+            "id": "parser-w1MvR",
+            "inputTypes": [
+              "DataFrame",
+              "Table",
+              "Data",
+              "JSON"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-AstraDB-hIUdP{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-hIUdPœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œJSONœ]}-parser-w1MvR{œfieldNameœ:œinput_dataœ,œidœ:œparser-w1MvRœ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "AstraDB-hIUdP",
+        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-hIUdPœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œJSONœ]}",
+        "target": "parser-w1MvR",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-w1MvRœ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œJSONœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
