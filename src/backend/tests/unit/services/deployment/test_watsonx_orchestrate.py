@@ -434,7 +434,8 @@ async def test_update_provider_data_binds_existing_tool_and_updates_agent_tools(
         db=object(),
     )
 
-    assert result.snapshot_ids == ["tool-3"]
+    assert result.provider_result is not None
+    assert result.provider_result["created_snapshot_ids"] == ["tool-3"]
     assert [tool_id for tool_id, _payload in fake_tool.update_calls] == ["tool-3"]
     _, updated_tool_payload = fake_tool.update_calls[0]
     assert updated_tool_payload["binding"]["langflow"]["connections"]["cfg-new"] == "conn-new"
@@ -496,7 +497,7 @@ async def test_update_provider_data_creates_raw_connection_and_raw_tool(monkeypa
                             "description": "desc",
                             "data": {"nodes": [], "edges": []},
                             "tags": [],
-                            "provider_data": {"project_id": "project-1"},
+                            "provider_data": {"project_id": "project-1", "source_ref": "fv-update-1"},
                         }
                     ]
                 },
@@ -523,7 +524,8 @@ async def test_update_provider_data_creates_raw_connection_and_raw_tool(monkeypa
     assert captured["created_app_id"] == "lf_cfg"
     assert captured["connections"] == {"cfg": "conn-lf_cfg"}
     assert captured["tool_name_prefix"] == "lf_"
-    assert result.snapshot_ids == ["new-tool-1"]
+    assert result.provider_result is not None
+    assert result.provider_result["created_snapshot_ids"] == ["new-tool-1"]
     _, agent_payload = fake_agent.update_calls[0]
     assert agent_payload["tools"] == ["tool-1", "new-tool-1"]
 
@@ -578,7 +580,8 @@ async def test_update_provider_data_mixed_operations_preserve_encounter_order(mo
     )
 
     assert validate_calls == ["cfg-1", "cfg-2"]
-    assert result.snapshot_ids == ["tool-3"]
+    assert result.provider_result is not None
+    assert result.provider_result["created_snapshot_ids"] == ["tool-3"]
 
     # Existing tool updates should follow first encounter order: bind(tool-3) then unbind(tool-1).
     assert [tool_id for tool_id, _payload in fake_tool.update_calls] == ["tool-3", "tool-1"]
@@ -618,7 +621,7 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
                         "description": "desc",
                         "data": {"nodes": [], "edges": []},
                         "tags": [],
-                        "provider_data": {"project_id": "project-1"},
+                        "provider_data": {"project_id": "project-1", "source_ref": "fv-plan-1"},
                     }
                 ],
             },
@@ -745,7 +748,7 @@ async def test_update_provider_data_maps_raw_connection_conflict_to_deployment_c
                                 "description": "desc",
                                 "data": {"nodes": [], "edges": []},
                                 "tags": [],
-                                "provider_data": {"project_id": "project-1"},
+                                "provider_data": {"project_id": "project-1", "source_ref": "fv-conflict-1"},
                             }
                         ]
                     },
@@ -949,7 +952,7 @@ async def test_update_provider_data_rolls_back_partially_created_raw_tools(monke
                                 "description": "desc",
                                 "data": {"nodes": [], "edges": []},
                                 "tags": [],
-                                "provider_data": {"project_id": "project-1"},
+                                "provider_data": {"project_id": "project-1", "source_ref": "fv-rollback-1"},
                             }
                         ]
                     },
@@ -2538,7 +2541,7 @@ async def test_create_and_upload_wxo_flow_tools_with_bindings_journals_created_i
                 description="desc",
                 data={"nodes": [], "edges": []},
                 tags=[],
-                provider_data={"project_id": "project-1"},
+                provider_data={"project_id": "project-1", "source_ref": "fv-binding-1"},
             ),
             connections={"cfg-1": "conn-1"},
         ),
@@ -2549,7 +2552,7 @@ async def test_create_and_upload_wxo_flow_tools_with_bindings_journals_created_i
                 description="desc",
                 data={"nodes": [], "edges": []},
                 tags=[],
-                provider_data={"project_id": "project-1"},
+                provider_data={"project_id": "project-1", "source_ref": "fv-binding-2"},
             ),
             connections={"cfg-1": "conn-1"},
         ),

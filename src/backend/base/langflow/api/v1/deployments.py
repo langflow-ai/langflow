@@ -24,7 +24,6 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentListTypesResult,
     DeploymentType,
     DeploymentUpdateResult,
-    ExecutionCreate,
     SnapshotItems,
 )
 from lfx.services.adapters.deployment.schema import (
@@ -994,12 +993,14 @@ async def create_deployment_execution(
         user_id=current_user.id,
         db=session,
     )
+    adapter_execution_payload = await deployment_mapper.resolve_execution_create(
+        deployment_resource_key=deployment_row.resource_key,
+        db=session,
+        payload=payload,
+    )
     with _handle_adapter_errors(), deployment_provider_scope(payload.provider_id):
         execution_result = await deployment_adapter.create_execution(
-            payload=ExecutionCreate(
-                deployment_id=deployment_row.resource_key,
-                provider_data=payload.provider_data,
-            ),
+            payload=adapter_execution_payload,
             user_id=current_user.id,
             db=session,
         )

@@ -11,11 +11,19 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentCreateResult,
     DeploymentType,
     DeploymentUpdateResult,
+    ExecutionCreateResult,
+    ExecutionStatusResult,
 )
 from lfx.services.adapters.deployment.schema import (
     DeploymentUpdate as AdapterDeploymentUpdate,
 )
-from lfx.services.adapters.payload import PayloadSlot, PayloadSlotPolicy
+from lfx.services.adapters.payload import (
+    AdapterPayload,
+    AdapterPayloadMissingError,
+    AdapterPayloadValidationError,
+    PayloadSlot,
+    PayloadSlotPolicy,
+)
 from lfx.services.adapters.schema import AdapterType
 
 from langflow.api.v1.mappers.deployments.base import (
@@ -40,24 +48,20 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiExecutionResultData,
     WatsonxApiFlowArtifactProviderData,
     WatsonxApiRemoveToolOperation,
+    WatsonxApiToolAppBinding,
     WatsonxApiUnbindOperation,
 )
-from langflow.api.v1.schemas.deployments import DeploymentUpdateRequest, DeploymentUpdateResponse
+from langflow.api.v1.schemas.deployments import (
+    DeploymentUpdateRequest,
+    DeploymentUpdateResponse,
+    ExecutionCreateResponse,
+    ExecutionStatusResponse,
+)
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
     WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
-    PAYLOAD_SCHEMAS,
-    WatsonxBindOperation,
-    WatsonxConnectionRawPayload,
-    WatsonxDeploymentCreateResultData,
-    WatsonxDeploymentUpdatePayload,
-    WatsonxDeploymentUpdateResultData,
-    WatsonxRemoveToolOperation,
-    WatsonxToolReference,
-    WatsonxUnbindOperation,
-    WatsonxUpdateConnections,
-    WatsonxUpdateTools,
+    PAYLOAD_SCHEMAS as WXO_ADAPTER_PAYLOAD_SCHEMAS,
 )
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
     list_deployment_attachments_for_flow_version_ids,
@@ -82,7 +86,11 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             adapter_model=WatsonxApiDeploymentUpdateResultData,
             policy=PayloadSlotPolicy.VALIDATE_ONLY,
         ),
-        execution_result=PayloadSlot(
+        execution_create_result=PayloadSlot(
+            adapter_model=WatsonxApiExecutionResultData,
+            policy=PayloadSlotPolicy.VALIDATE_ONLY,
+        ),
+        execution_status_result=PayloadSlot(
             adapter_model=WatsonxApiExecutionResultData,
             policy=PayloadSlotPolicy.VALIDATE_ONLY,
         ),
@@ -125,7 +133,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             msg = "Watsonx update does not support top-level 'config'. Use provider_data.operations instead."
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
 
-        if payload.provider_data is None:
+        if payload.provider_data is None:  # pure metadata update, e.g., name, description
             return AdapterDeploymentUpdate(spec=payload.spec, provider_data=None)
 
         slot = self.api_payloads.deployment_update
@@ -162,7 +170,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             for flow_version_id, _version_number, project_id, artifact in flow_artifacts
         ]
 
-        provider_operations: list[WatsonxBindOperation | WatsonxUnbindOperation | WatsonxRemoveToolOperation] = []
+        provider_operations: list[AdapterPayload] = []
         existing_tool_flow_version_ids = [
             operation.tool.flow_version_id
             for operation in api_provider_payload.operations
@@ -181,50 +189,56 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                     msg = f"bind.tool.flow_version_id not found: [{flow_version_id}]"
                     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
                 provider_operations.append(
-                    WatsonxBindOperation(
-                        op="bind",
-                        tool=WatsonxToolReference(name_of_raw=raw_name_by_flow_version_id[flow_version_id]),
-                        app_ids=operation.app_ids,
-                    )
+                    {
+                        "op": "bind",
+                        "tool": {"name_of_raw": raw_name_by_flow_version_id[flow_version_id]},
+                        "app_ids": operation.app_ids,
+                    }
                 )
                 continue
             if isinstance(operation, WatsonxApiUnbindOperation):
                 flow_version_id = operation.tool.flow_version_id
                 provider_operations.append(
-                    WatsonxUnbindOperation(
-                        op="unbind",
-                        tool_id=flow_version_snapshot_id_map[flow_version_id],
-                        app_ids=operation.app_ids,
-                    )
+                    {
+                        "op": "unbind",
+                        "tool_id": flow_version_snapshot_id_map[flow_version_id],
+                        "app_ids": operation.app_ids,
+                    }
                 )
                 continue
             if isinstance(operation, WatsonxApiRemoveToolOperation):
                 flow_version_id = operation.tool.flow_version_id
                 provider_operations.append(
-                    WatsonxRemoveToolOperation(
-                        op="remove_tool",
-                        tool_id=flow_version_snapshot_id_map[flow_version_id],
-                    )
+                    {
+                        "op": "remove_tool",
+                        "tool_id": flow_version_snapshot_id_map[flow_version_id],
+                    }
                 )
 
-        provider_payload = WatsonxDeploymentUpdatePayload(
-            resource_name_prefix=api_provider_payload.resource_name_prefix,
-            tools=WatsonxUpdateTools(
-                raw_payloads=raw_payloads or None,
-            ),
-            connections=WatsonxUpdateConnections(
-                existing_app_ids=api_provider_payload.connections.existing_app_ids,
-                raw_payloads=[
-                    WatsonxConnectionRawPayload(**raw_payload.model_dump(exclude_none=True))
-                    for raw_payload in (api_provider_payload.connections.raw_payloads or [])
-                ]
-                or None,
-            ),
-            operations=provider_operations,
+        update_slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_update
+        if update_slot is None:
+            msg = "Watsonx deployment_update payload slot is not configured."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+        provider_payload: AdapterPayload = update_slot.apply(
+            {
+                "resource_name_prefix": api_provider_payload.resource_name_prefix,
+                "tools": {
+                    "raw_payloads": [artifact.model_dump(exclude_none=True) for artifact in raw_payloads] or None,
+                },
+                "connections": {
+                    "existing_app_ids": api_provider_payload.connections.existing_app_ids,
+                    "raw_payloads": [
+                        raw_payload.model_dump(exclude_none=True)
+                        for raw_payload in (api_provider_payload.connections.raw_payloads or [])
+                    ]
+                    or None,
+                },
+                "operations": provider_operations,
+            }
         )
         return AdapterDeploymentUpdate(
             spec=payload.spec,
-            provider_data=provider_payload.model_dump(exclude_none=True),
+            provider_data=provider_payload,
         )
 
     def shape_deployment_update_result(
@@ -234,7 +248,35 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         *,
         description: str | None = None,
     ) -> DeploymentUpdateResponse:
-        provider_result = self._parse_update_result(result.provider_result)
+        adapter_provider_result = self._parse_required_payload_slot(
+            slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_update_result,
+            slot_name="deployment_update_result",
+            raw=result.provider_result,
+            missing_payload_detail="Deployment provider update result is missing provider_result payload.",
+            malformed_payload_detail="Deployment provider update result contains invalid provider_result payload.",
+        )
+        tool_app_bindings = (
+            [
+                WatsonxApiToolAppBinding(
+                    tool_id=binding.tool_id,
+                    app_ids=list(binding.app_ids),
+                )
+                for binding in adapter_provider_result.tool_app_bindings
+            ]
+            if adapter_provider_result.tool_app_bindings is not None
+            else None
+        )
+        provider_api_result = WatsonxApiDeploymentUpdateResultData(
+            created_snapshot_ids=list(adapter_provider_result.created_snapshot_ids),
+            added_snapshot_bindings=[  # TODO: Create a schema for this
+                {
+                    "source_ref": binding.source_ref,
+                    "snapshot_id": binding.snapshot_id,
+                }
+                for binding in adapter_provider_result.added_snapshot_bindings
+            ],
+            tool_app_bindings=tool_app_bindings,
+        )
         return DeploymentUpdateResponse(
             id=deployment_row.id,
             name=deployment_row.name,
@@ -242,7 +284,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             type=DeploymentType(deployment_row.deployment_type or DeploymentType.AGENT.value),
             created_at=deployment_row.created_at,
             updated_at=deployment_row.updated_at,
-            provider_data=provider_result.to_api_provider_data(),
+            provider_data=provider_api_result.model_dump(exclude_none=True),
         )
 
     def util_create_snapshot_bindings(
@@ -250,15 +292,14 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         *,
         result: DeploymentCreateResult,
     ) -> CreateSnapshotBindings:
-        provider_result = result.provider_result
-        if not isinstance(provider_result, dict):
-            msg = "Deployment provider create result is missing provider_result payload."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        slot = PAYLOAD_SCHEMAS.deployment_create_result
-        if slot is None:
-            msg = "Watsonx deployment_create_result payload slot is not configured."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        parsed: WatsonxDeploymentCreateResultData = slot.parse(provider_result)
+        slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_create_result
+        parsed = self._parse_required_payload_slot(
+            slot=slot,
+            slot_name="deployment_create_result",
+            raw=result.provider_result,
+            missing_payload_detail="Deployment provider create result is missing provider_result payload.",
+            malformed_payload_detail="Deployment provider create result contains invalid provider_result payload.",
+        )
         return CreateSnapshotBindings(
             snapshot_bindings=[
                 CreateSnapshotBinding(
@@ -274,15 +315,14 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         *,
         result: DeploymentUpdateResult,
     ) -> CreatedSnapshotIds:
-        provider_result = result.provider_result
-        if not isinstance(provider_result, dict):
-            msg = "Deployment provider update result is missing provider_result payload."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        slot = PAYLOAD_SCHEMAS.deployment_update_result
-        if slot is None:
-            msg = "Watsonx deployment_update_result payload slot is not configured."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        parsed: WatsonxDeploymentUpdateResultData = slot.parse(provider_result)
+        slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_update_result
+        parsed = self._parse_required_payload_slot(
+            slot=slot,
+            slot_name="deployment_update_result",
+            raw=result.provider_result,
+            missing_payload_detail="Deployment provider update result is missing provider_result payload.",
+            malformed_payload_detail="Deployment provider update result contains invalid provider_result payload.",
+        )
         if not parsed.created_snapshot_ids and not parsed.added_snapshot_bindings:
             msg = "Deployment provider update result is missing required snapshot reconciliation bindings."
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
@@ -293,15 +333,14 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         *,
         result: DeploymentUpdateResult,
     ) -> UpdateSnapshotBindings:
-        provider_result = result.provider_result
-        if not isinstance(provider_result, dict):
-            msg = "Deployment provider update result is missing provider_result payload."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        slot = PAYLOAD_SCHEMAS.deployment_update_result
-        if slot is None:
-            msg = "Watsonx deployment_update_result payload slot is not configured."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        parsed: WatsonxDeploymentUpdateResultData = slot.parse(provider_result)
+        slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_update_result
+        parsed = self._parse_required_payload_slot(
+            slot=slot,
+            slot_name="deployment_update_result",
+            raw=result.provider_result,
+            missing_payload_detail="Deployment provider update result is missing provider_result payload.",
+            malformed_payload_detail="Deployment provider update result contains invalid provider_result payload.",
+        )
         if not parsed.created_snapshot_ids and not parsed.added_snapshot_bindings:
             msg = "Deployment provider update result is missing required snapshot reconciliation bindings."
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
@@ -348,38 +387,64 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             remove_flow_version_ids=remove_ids,
         )
 
-    def _parse_update_result(self, provider_result: Any) -> WatsonxApiDeploymentUpdateResultData:
-        if not isinstance(provider_result, dict):
-            return WatsonxApiDeploymentUpdateResultData()
-        slot = self.api_payloads.deployment_update_result
-        if slot is None:
-            msg = "Watsonx deployment_update_result payload slot is not configured."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        return slot.parse(provider_result)
+    def shape_execution_create_result(
+        self,
+        result: ExecutionCreateResult,
+        *,
+        deployment_id: UUID,
+    ) -> ExecutionCreateResponse:
+        adapter_provider_result = self._parse_required_payload_slot(
+            slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.execution_create_result,
+            slot_name="execution_create_result",
+            raw=result.provider_result,
+            missing_payload_detail="Deployment provider execution result is missing provider_result payload.",
+            malformed_payload_detail="Deployment provider execution result contains invalid provider_result payload.",
+        )
+        api_provider_result = WatsonxApiExecutionResultData(
+            run_id=adapter_provider_result.run_id,
+            execution_id=adapter_provider_result.execution_id,
+            agent_id=adapter_provider_result.agent_id,
+            deployment_id=adapter_provider_result.deployment_id,
+        )
+        provider_result = api_provider_result.model_dump(exclude_none=True) or None
+        return ExecutionCreateResponse(
+            execution_id=self.util_execution_id(
+                execution_id=result.execution_id,
+                provider_result=provider_result,
+            ),
+            deployment_id=deployment_id,
+            provider_data=provider_result,
+        )
 
-    def shape_execution_create_provider_data(self, provider_result: dict[str, Any] | None) -> dict[str, Any] | None:
-        if not isinstance(provider_result, dict):
-            msg = "Deployment provider execution result is missing provider_result payload."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        slot = self.api_payloads.execution_result
-        if slot is None:
-            msg = "Watsonx execution_result payload slot is not configured."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        parsed = slot.parse(provider_result)
-        payload = parsed.model_dump(exclude_none=True)
-        return payload or None
-
-    def shape_execution_status_provider_data(self, provider_result: dict[str, Any] | None) -> dict[str, Any] | None:
-        if not isinstance(provider_result, dict):
-            msg = "Deployment provider execution result is missing provider_result payload."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        slot = self.api_payloads.execution_result
-        if slot is None:
-            msg = "Watsonx execution_result payload slot is not configured."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        parsed = slot.parse(provider_result)
-        payload = parsed.model_dump(exclude_none=True)
-        return payload or None
+    def shape_execution_status_result(
+        self,
+        result: ExecutionStatusResult,
+        *,
+        deployment_id: UUID,
+        fallback_execution_id: str | None = None,
+    ) -> ExecutionStatusResponse:
+        adapter_provider_result = self._parse_required_payload_slot(
+            slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.execution_status_result,
+            slot_name="execution_status_result",
+            raw=result.provider_result,
+            missing_payload_detail="Deployment provider execution result is missing provider_result payload.",
+            malformed_payload_detail="Deployment provider execution result contains invalid provider_result payload.",
+        )
+        api_provider_result = WatsonxApiExecutionResultData(
+            run_id=adapter_provider_result.run_id,
+            execution_id=adapter_provider_result.execution_id,
+            agent_id=adapter_provider_result.agent_id,
+            deployment_id=adapter_provider_result.deployment_id,
+        )
+        provider_result = api_provider_result.model_dump(exclude_none=True) or None
+        return ExecutionStatusResponse(
+            execution_id=self.util_execution_id(
+                execution_id=result.execution_id or fallback_execution_id,
+                provider_result=provider_result,
+            ),
+            deployment_id=deployment_id,
+            provider_data=provider_result,
+        )
 
     def util_execution_id(
         self,
@@ -387,14 +452,14 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         execution_id: str | None,
         provider_result: dict[str, Any] | None,
     ) -> str | None:
-        if not isinstance(provider_result, dict):
-            msg = "Deployment provider execution result is missing provider_result payload."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        slot = self.api_payloads.execution_result
-        if slot is None:
-            msg = "Watsonx execution_result payload slot is not configured."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        parsed = slot.parse(provider_result)
+        execution_slot = self.api_payloads.execution_status_result or self.api_payloads.execution_create_result
+        parsed: WatsonxApiExecutionResultData = self._parse_required_payload_slot(
+            slot=execution_slot,
+            slot_name="execution_status_result/execution_create_result",
+            raw=provider_result,
+            missing_payload_detail="Deployment provider execution result is missing provider_result payload.",
+            malformed_payload_detail="Deployment provider execution result contains invalid provider_result payload.",
+        )
         return execution_id or parsed.resolved_execution_id()
 
     def util_execution_deployment_resource_key(
@@ -403,15 +468,42 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         deployment_id: str | None,
         provider_result: dict[str, Any] | None,
     ) -> str | None:
-        if not isinstance(provider_result, dict):
-            msg = "Deployment provider execution result is missing provider_result payload."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        slot = self.api_payloads.execution_result
-        if slot is None:
-            msg = "Watsonx execution_result payload slot is not configured."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        parsed = slot.parse(provider_result)
+        execution_slot = self.api_payloads.execution_status_result or self.api_payloads.execution_create_result
+        parsed: WatsonxApiExecutionResultData = self._parse_required_payload_slot(
+            slot=execution_slot,
+            slot_name="execution_status_result/execution_create_result",
+            raw=provider_result,
+            missing_payload_detail="Deployment provider execution result is missing provider_result payload.",
+            malformed_payload_detail="Deployment provider execution result contains invalid provider_result payload.",
+        )
         return (deployment_id or parsed.resolved_deployment_id() or "").strip() or None
+
+    def _parse_required_payload_slot(
+        self,
+        *,
+        slot: PayloadSlot | None,
+        slot_name: str,
+        raw: Any,
+        missing_payload_detail: str,
+        malformed_payload_detail: str,
+    ) -> Any:
+        if slot is None:
+            msg = f"Watsonx {slot_name} payload slot is not configured."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+        try:
+            return slot.parse(raw)
+        except AdapterPayloadMissingError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=missing_payload_detail,
+            ) from exc
+        except AdapterPayloadValidationError as exc:
+            first_error = exc.error.errors()[0] if exc.error.errors() else {}
+            detail = str(first_error.get("msg") or exc)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"{malformed_payload_detail} {detail}",
+            ) from exc
 
     async def _resolve_existing_tool_snapshot_ids(
         self,

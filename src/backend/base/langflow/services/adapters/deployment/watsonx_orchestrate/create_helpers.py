@@ -36,7 +36,10 @@ def validate_create_flow_provider_data(
         try:
             provider_data = slot.apply(provider_data_raw)
         except AdapterPayloadValidationError as exc:
-            msg = "Flow payload must include provider_data with a non-empty project_id for Watsonx deployment."
+            msg = (
+                "Flow payload must include provider_data with non-empty "
+                "'project_id' and 'source_ref' for Watsonx deployment."
+            )
             raise InvalidContentError(message=msg) from exc
         validated_payloads.append(flow_payload.model_copy(update={"provider_data": provider_data}))
     return validated_payloads

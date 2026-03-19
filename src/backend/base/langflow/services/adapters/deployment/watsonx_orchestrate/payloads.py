@@ -19,9 +19,8 @@ class WatsonxFlowArtifactProviderData(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     project_id: NormalizedId = Field(description="Langflow project id carried for watsonx snapshot creation.")
-    source_ref: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)] | None = Field(
-        default=None,
-        description="Optional adapter-neutral source reference used for create-time snapshot correlation.",
+    source_ref: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)] = Field(
+        description="Adapter-neutral source reference used for create/update snapshot correlation.",
     )
 
 
@@ -348,5 +347,6 @@ PAYLOAD_SCHEMAS = DeploymentPayloadSchemas(
     deployment_create_result=PayloadSlot(WatsonxDeploymentCreateResultData),
     deployment_update=PayloadSlot(WatsonxDeploymentUpdatePayload),
     deployment_update_result=PayloadSlot(WatsonxDeploymentUpdateResultData),
-    execution_result=PayloadSlot(WatsonxExecutionResultData),
+    execution_create_result=PayloadSlot(WatsonxExecutionResultData),
+    execution_status_result=PayloadSlot(WatsonxExecutionResultData),
 )

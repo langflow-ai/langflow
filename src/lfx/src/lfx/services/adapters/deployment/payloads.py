@@ -61,6 +61,10 @@ T_SnapshotListResultModel = TypeVar("T_SnapshotListResultModel", bound=BaseModel
 
 T_ExecutionResult = TypeVar("T_ExecutionResult", default=AdapterPayload)
 T_ExecutionResultModel = TypeVar("T_ExecutionResultModel", bound=BaseModel, default=BaseModel)
+T_ExecutionCreateResult = TypeVar("T_ExecutionCreateResult", default=AdapterPayload)
+T_ExecutionCreateResultModel = TypeVar("T_ExecutionCreateResultModel", bound=BaseModel, default=BaseModel)
+T_ExecutionStatusResult = TypeVar("T_ExecutionStatusResult", default=AdapterPayload)
+T_ExecutionStatusResultModel = TypeVar("T_ExecutionStatusResultModel", bound=BaseModel, default=BaseModel)
 
 T_DeploymentItemData = TypeVar("T_DeploymentItemData", default=AdapterPayload)
 T_DeploymentItemDataModel = TypeVar("T_DeploymentItemDataModel", bound=BaseModel, default=BaseModel)
@@ -107,7 +111,8 @@ class DeploymentPayloadFields(ProviderPayloadSchemas):
     deployment_list_result: PayloadSlot[T_DeploymentListResultModel] | None = None
     config_list_result: PayloadSlot[T_ConfigListResultModel] | None = None
     snapshot_list_result: PayloadSlot[T_SnapshotListResultModel] | None = None
-    execution_result: PayloadSlot[T_ExecutionResultModel] | None = None
+    execution_create_result: PayloadSlot[T_ExecutionCreateResultModel] | None = None
+    execution_status_result: PayloadSlot[T_ExecutionStatusResultModel] | None = None
     deployment_item_data: PayloadSlot[T_DeploymentItemDataModel] | None = None
     deployment_status_data: PayloadSlot[T_DeploymentStatusDataModel] | None = None
 

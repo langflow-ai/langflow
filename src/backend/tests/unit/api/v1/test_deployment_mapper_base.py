@@ -17,7 +17,7 @@ from langflow.api.v1.mappers.deployments.contracts import (
     UpdateSnapshotBindings,
 )
 from langflow.api.v1.mappers.deployments.registry import DeploymentMapperRegistry
-from langflow.api.v1.schemas.deployments import DeploymentUpdateRequest
+from langflow.api.v1.schemas.deployments import DeploymentUpdateRequest, ExecutionCreateRequest
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadSchemas
 from lfx.services.adapters.deployment.schema import (
     DeploymentCreateResult,
@@ -212,6 +212,61 @@ async def test_base_mapper_resolve_deployment_update_rejects_invalid_provider_da
         )
 
 
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_execution_create_passthrough_when_slot_not_configured() -> None:
+    mapper = BaseDeploymentMapper()
+    payload = ExecutionCreateRequest(
+        provider_id=uuid4(),
+        deployment_id=uuid4(),
+        provider_data={"invocation_id": "inv-1"},
+    )
+
+    resolved = await mapper.resolve_execution_create(
+        deployment_resource_key="provider-deployment-id",
+        db=None,  # type: ignore[arg-type]
+        payload=payload,
+    )
+
+    assert resolved.deployment_id == "provider-deployment-id"
+    assert resolved.provider_data == {"invocation_id": "inv-1"}
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_execution_create_validates_provider_data_when_slot_configured() -> None:
+    mapper = _TypedMapper()
+    payload = ExecutionCreateRequest(
+        provider_id=uuid4(),
+        deployment_id=uuid4(),
+        provider_data={"invocation_id": "inv-1"},
+    )
+
+    resolved = await mapper.resolve_execution_create(
+        deployment_resource_key="provider-deployment-id",
+        db=None,  # type: ignore[arg-type]
+        payload=payload,
+    )
+
+    assert resolved.deployment_id == "provider-deployment-id"
+    assert resolved.provider_data == {"invocation_id": "inv-1"}
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_execution_create_rejects_invalid_provider_data_when_slot_configured() -> None:
+    mapper = _TypedMapper()
+    payload = ExecutionCreateRequest(
+        provider_id=uuid4(),
+        deployment_id=uuid4(),
+        provider_data={"invalid": "value"},
+    )
+
+    with pytest.raises(AdapterPayloadValidationError, match="Invalid payload"):
+        await mapper.resolve_execution_create(
+            deployment_resource_key="provider-deployment-id",
+            db=None,  # type: ignore[arg-type]
+            payload=payload,
+        )
+
+
 def test_mapper_has_resolve_method_for_all_inbound_slots() -> None:
     for slot_name in INBOUND_SLOT_NAMES:
         assert hasattr(BaseDeploymentMapper, f"resolve_{slot_name}")
@@ -338,12 +393,12 @@ def test_base_mapper_exposes_reconciliation_resolvers() -> None:
     assert isinstance(bindings, CreateSnapshotBindings)
     assert bindings.snapshot_bindings == []
 
-    update_result = DeploymentUpdateResult(id="provider-id", snapshot_ids=["snap-1"])
+    update_result = DeploymentUpdateResult(id="provider-id")
     created_ids = mapper.util_created_snapshot_ids(
         result=update_result,
     )
     assert isinstance(created_ids, CreatedSnapshotIds)
-    assert created_ids.ids == ["snap-1"]
+    assert created_ids.ids == []
     update_bindings = mapper.util_update_snapshot_bindings(
         result=update_result,
     )

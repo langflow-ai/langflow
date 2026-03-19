@@ -47,6 +47,14 @@ class AdapterPayloadValidationError(ValueError):
         super().__init__(f"Invalid payload for '{model_name}'.")
 
 
+class AdapterPayloadMissingError(ValueError):
+    """Raised when a required payload is missing."""
+
+    def __init__(self, *, model_name: str) -> None:
+        self.model_name = model_name
+        super().__init__(f"Missing payload for '{model_name}'.")
+
+
 @dataclass(frozen=True)
 class PayloadSlot(Generic[T_Model]):
     """Layer-agnostic contract between raw payload dicts and typed models."""
@@ -54,8 +62,10 @@ class PayloadSlot(Generic[T_Model]):
     adapter_model: type[T_Model]
     policy: PayloadSlotPolicy = PayloadSlotPolicy.VALIDATE_AND_DUMP
 
-    def parse(self, raw: AdapterPayload) -> T_Model:
+    def parse(self, raw: AdapterPayload | BaseModel | None) -> T_Model:
         """Validate and parse raw provider payload into the typed model."""
+        if raw is None:
+            raise AdapterPayloadMissingError(model_name=self.adapter_model.__name__)
         try:
             return self.adapter_model.model_validate(raw)
         except ValidationError as exc:
@@ -73,6 +83,8 @@ class PayloadSlot(Generic[T_Model]):
         return self.dump(validated)
 
 
+# TODO: make these methods properties
+# and such that repeated calls dont generate new dicts
 @dataclass(frozen=True)
 class ProviderPayloadSchemas:
     """Structural base class for named slot registries.

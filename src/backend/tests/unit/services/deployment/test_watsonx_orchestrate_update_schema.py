@@ -32,7 +32,7 @@ def _raw_tool(name: str, suffix: int) -> dict:
         "description": "desc",
         "data": {"nodes": [], "edges": []},
         "tags": [],
-        "provider_data": {"project_id": "project-1"},
+        "provider_data": {"project_id": "project-1", "source_ref": f"fv-{suffix}"},
     }
 
 
@@ -56,8 +56,10 @@ def test_payload_schema_slot_registered_for_deployment_update() -> None:
     assert slot.deployment_update.adapter_model is WatsonxDeploymentUpdatePayload
     assert slot.deployment_update_result is not None
     assert slot.deployment_update_result.adapter_model is WatsonxDeploymentUpdateResultData
-    assert slot.execution_result is not None
-    assert slot.execution_result.adapter_model is WatsonxExecutionResultData
+    assert slot.execution_create_result is not None
+    assert slot.execution_create_result.adapter_model is WatsonxExecutionResultData
+    assert slot.execution_status_result is not None
+    assert slot.execution_status_result.adapter_model is WatsonxExecutionResultData
 
 
 def test_update_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> None:

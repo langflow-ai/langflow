@@ -171,6 +171,14 @@ For required provider reconciliation/result payloads:
 - Missing or malformed payloads must fail fast with explicit boundary errors.
 - Do not silently substitute empty/default model instances for required provider result contracts.
 
+### 4.7 No silent compatibility fallback on boundary contract violations
+
+When a mapper/adapter boundary payload is required by the active contract:
+
+- Do not add silent compatibility fallbacks that fabricate/derive substitute values when required fields are missing.
+- Do not silently coerce missing/invalid payloads into permissive defaults to "keep the flow moving".
+- If compatibility mode is necessary, it must be explicit, narrowly scoped, documented, and still preserve fail-fast behavior for malformed required contracts.
+
 ### 4.6 Canonical payload-schema registry naming and consumption
 
 When a provider defines a canonical `DeploymentPayloadSchemas` registry object shared by adapter + mapper:
@@ -180,6 +188,34 @@ When a provider defines a canonical `DeploymentPayloadSchemas` registry object s
 - In cross-module imports (service/mapper), import and reference the registry as `PAYLOAD_SCHEMAS` (no aliasing).
 - Do not instantiate duplicate registry objects in consumers; import and reuse the single canonical provider registry.
 - Do not scatter free-standing slot constants that can drift from the canonical registry.
+
+### 4.8 PayloadSlot parse contract (hard requirements)
+
+`PayloadSlot.parse` is the canonical boundary for provider payload/result parsing.
+
+Rules:
+
+- `raw=None` must fail fast via `AdapterPayloadMissingError` (no silent defaults).
+- For non-`None` input, use direct `adapter_model.model_validate(raw)` as the parse path.
+- Do not add ad-hoc pre-parse type branching that bypasses or replaces `model_validate`.
+- Treat accepted runtime inputs as whatever `model_validate` supports for the model contract (for example dict or model-like input), while keeping missing-payload behavior explicit.
+
+### 4.9 Mapper imports at adapter boundary
+
+Provider mappers sit at the API boundary and must avoid coupling to adapter-owned model symbols when slot contracts already exist.
+
+Rules:
+
+- Mapper may import and use API-layer provider schemas (for example `WatsonxApi*`) for API input shaping/branching/output.
+- Mapper should not import adapter-owned payload/result model classes (for example adapter `Watsonx*ResultData`).
+- For adapter boundary parsing, mapper should consume the provider `PAYLOAD_SCHEMAS` slots directly.
+
+### 4.10 Mapper boundary typing
+
+Rules:
+
+- Prefer `DeploymentUpdateResult`, `ExecutionCreateResult`, `ExecutionStatusResult` (or similarly broad contract types) at mapper boundaries.
+- Avoid narrowing these to `...[AdapterPayload]` in mapper signatures unless the boundary truly guarantees dict-only inputs.
 
 ---
 
@@ -335,9 +371,12 @@ Use this checklist before merge:
 - [ ] Reconciliation outputs use explicit schema models
 - [ ] Mapper-defined schemas contain no provider escape hatches/backdoors
 - [ ] Validation path uses direct slot/model parse (no redundant wrapper parse helpers)
+- [ ] `PayloadSlot.parse` keeps `None` fail-fast + direct `model_validate` path (no ad-hoc pre-parse bypass)
 - [ ] Required reconciliation payloads fail fast (no silent default model fallback)
 - [ ] Provider defines `payloads.py` as canonical owner of provider payload/result contracts and payload-schema registry
 - [ ] Mapper and adapter reuse one canonical provider payload-schema registry (no duplicate slot registries/constants)
+- [ ] Mapper must not import adapter-owned payload/result model classes when slot parsing is sufficient, and when not, a slot should be defined.
+- [ ] Mapper boundary result signatures are not over-narrowed to dict-only generics without contract guarantees
 - [ ] Method names follow semantic families (`resolve_*`, `shape_*`, `util_*`)
 - [ ] Registry/contracts/base files remain separated by purpose
 - [ ] Tests cover both base mapper defaults and provider overrides

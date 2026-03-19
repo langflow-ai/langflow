@@ -446,14 +446,10 @@ def test_execution_create_and_status_results_have_same_shape() -> None:
     assert create_result.model_dump() == status_result.model_dump()
 
 
-def test_deployment_update_result_snapshot_ids_defaults_empty() -> None:
+def test_deployment_update_result_uses_base_operation_shape() -> None:
     result = DeploymentUpdateResult(id="dep_1")
-    assert result.snapshot_ids == []
-
-
-def test_deployment_update_result_carries_snapshot_ids() -> None:
-    result = DeploymentUpdateResult(id="dep_1", snapshot_ids=["snap_1", "snap_2"])
-    assert result.snapshot_ids == ["snap_1", "snap_2"]
+    assert result.id == "dep_1"
+    assert result.provider_result is None
 
 
 def test_operation_results_share_provider_result_contract() -> None:

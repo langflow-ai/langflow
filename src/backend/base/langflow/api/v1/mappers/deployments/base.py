@@ -13,6 +13,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentCreateResult,
     DeploymentType,
     DeploymentUpdateResult,
+    ExecutionCreate,
     ExecutionCreateResult,
     ExecutionStatusResult,
 )
@@ -25,6 +26,7 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentProviderAccountGetResponse,
     DeploymentUpdateRequest,
     DeploymentUpdateResponse,
+    ExecutionCreateRequest,
     ExecutionCreateResponse,
     ExecutionStatusResponse,
 )
@@ -68,14 +70,12 @@ class BaseDeploymentMapper:
     a request.
 
     The base implementation is intentionally passthrough-first:
-    inbound ``resolve_*`` methods return the original dict unless an
-    API payload slot is configured for that field, in which case the
-    slot ``apply`` policy is used.
-    Outbound ``shape_*`` methods return provider payloads unchanged, including
-    the operation-specific result shapers:
-    ``shape_deployment_create_result``, ``shape_deployment_operation_result``,
-    ``shape_deployment_list_result``, ``shape_config_list_result``, and
-    ``shape_snapshot_list_result``.
+    - inbound ``resolve_*`` methods normalize API requests into adapter input
+      contracts. Dict payloads are returned unchanged unless an API payload
+      slot is configured for that field, in which case slot ``apply`` is used.
+    - outbound ``shape_*`` methods normalize adapter results into API response
+      contracts where applicable (for example deployment update and execution
+      responses), while payload-only shapers return provider dicts unchanged.
 
     Provider-specific mappers override only the methods that need
     Langflow-aware resolution or payload reshaping.
@@ -112,6 +112,18 @@ class BaseDeploymentMapper:
 
     async def resolve_execution_input(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
         return self._validate_slot(self.api_payloads.execution_input, raw)
+
+    async def resolve_execution_create(
+        self,
+        *,
+        deployment_resource_key: str,
+        db: AsyncSession,
+        payload: ExecutionCreateRequest,
+    ) -> ExecutionCreate:
+        return ExecutionCreate(
+            deployment_id=deployment_resource_key,
+            provider_data=await self.resolve_execution_input(payload.provider_data, db),
+        )
 
     async def resolve_deployment_list_params(
         self, raw: dict[str, Any] | None, db: AsyncSession
@@ -202,7 +214,8 @@ class BaseDeploymentMapper:
 
         Contract schema: ``CreatedSnapshotIds``.
         """
-        return CreatedSnapshotIds(ids=[str(snapshot_id) for snapshot_id in result.snapshot_ids])
+        _ = result
+        return CreatedSnapshotIds()
 
     def util_update_snapshot_bindings(
         self,

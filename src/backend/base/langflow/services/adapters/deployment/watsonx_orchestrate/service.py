@@ -48,7 +48,7 @@ from lfx.services.adapters.deployment.schema import (
     SnapshotListResult,
     _normalize_and_validate_id,
 )
-from lfx.services.adapters.payload import AdapterPayloadValidationError
+from lfx.services.adapters.payload import AdapterPayloadMissingError, AdapterPayloadValidationError
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_provider_clients
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
@@ -327,7 +327,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         derived_spec.name = deployment_spec.name  # restore the original name
 
-        return DeploymentCreateResult(
+        return DeploymentCreateResult[ExecutionCreateResult](
             id=agent_create_response.id,
             config_id=created_app_id,
             snapshot_ids=created_tool_ids,
@@ -474,13 +474,16 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     agent_id,
                     update_payload,
                 )
-                return DeploymentUpdateResult(id=deployment_id, snapshot_ids=[])
+                return DeploymentUpdateResult(id=deployment_id)
 
             try:
                 provider_update = self.payload_schemas.deployment_update.parse(payload.provider_data)
-            except AdapterPayloadValidationError as exc:
-                first_error = exc.error.errors()[0] if exc.error.errors() else {}
-                msg = str(first_error.get("msg") or exc)
+            except (AdapterPayloadMissingError, AdapterPayloadValidationError) as exc:
+                if isinstance(exc, AdapterPayloadValidationError):
+                    first_error = exc.error.errors()[0] if exc.error.errors() else {}
+                    msg = str(first_error.get("msg") or exc)
+                else:
+                    msg = str(exc)
                 raise InvalidContentError(message=msg) from None
 
             provider_plan = build_provider_update_plan(
@@ -500,7 +503,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
             return DeploymentUpdateResult(
                 id=deployment_id,
-                snapshot_ids=apply_result.added_snapshot_ids,
                 provider_result=self.payload_schemas.deployment_update_result.apply(
                     WatsonxDeploymentUpdateResultData(
                         created_snapshot_ids=apply_result.added_snapshot_ids,
@@ -655,7 +657,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         return ExecutionCreateResult(
             execution_id=agent_run_result.get("run_id"),
             deployment_id=agent_id,
-            provider_result=self.payload_schemas.execution_result.parse(agent_run_result).model_dump(exclude_none=True),
+            provider_result=self.payload_schemas.execution_create_result.parse(agent_run_result).model_dump(
+                exclude_none=True
+            ),
         )
 
     async def get_execution(
@@ -687,7 +691,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         return ExecutionStatusResult(
             execution_id=run_id,
             deployment_id=agent_run_result.get("agent_id"),
-            provider_result=self.payload_schemas.execution_result.parse(agent_run_result).model_dump(exclude_none=True),
+            provider_result=self.payload_schemas.execution_status_result.parse(agent_run_result).model_dump(
+                exclude_none=True
+            ),
         )
 
     async def list_configs(

@@ -37,6 +37,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxConnectionRawPayload,
     WatsonxCreateSnapshotBinding,
     WatsonxDeploymentUpdatePayload,
+    WatsonxFlowArtifactProviderData,
     WatsonxProviderUpdateApplyResult,
     WatsonxRemoveToolOperation,
     WatsonxUnbindOperation,
@@ -131,7 +132,7 @@ class RawConnectionCreatePlan:
 @dataclass(slots=True)
 class RawToolCreatePlan:
     raw_name: str
-    payload: BaseFlowArtifact
+    payload: BaseFlowArtifact[WatsonxFlowArtifactProviderData]
     app_ids: list[str]
 
 
@@ -147,7 +148,7 @@ class ProviderUpdatePlan:
 
 
 def validate_provider_update_request_sections(payload: DeploymentUpdate) -> None:
-    """Reject legacy top-level update sections in watsonx clean-break mode."""
+    """Reject top-level update sections in watsonx."""
     if payload.snapshot is not None or payload.config is not None:
         msg = (
             "Top-level 'snapshot' and 'config' update sections are no longer supported for "
@@ -442,7 +443,7 @@ async def apply_provider_update_plan_with_rollback(
                 added_snapshot_ids.append(tool_id)
                 added_snapshot_bindings.append(
                     WatsonxCreateSnapshotBinding(
-                        source_ref=_resolve_flow_source_ref(raw_plan.payload),
+                        source_ref=raw_plan.payload.provider_data.source_ref,
                         snapshot_id=tool_id,
                         source_name=str(raw_plan.payload.name).strip() or None,
                         provider_name=f"{plan.resource_prefix}{raw_plan.raw_name}",
@@ -507,16 +508,3 @@ def build_update_payload_from_spec(spec: BaseDeploymentDataUpdate | None) -> dic
     if "description" in spec_updates:
         update_payload["description"] = spec_updates["description"]
     return update_payload
-
-
-def _resolve_flow_source_ref(flow_payload: BaseFlowArtifact) -> str:
-    provider_data = flow_payload.provider_data
-    if isinstance(provider_data, dict):
-        source_ref = str(provider_data.get("source_ref") or "").strip()
-    else:
-        source_ref = str(getattr(provider_data, "source_ref", "") or "").strip()
-    if source_ref:
-        return source_ref
-    # Fallback keeps direct adapter-call compatibility when source_ref was not
-    # provided by older callers; mapper-driven API paths set source_ref explicitly.
-    return str(flow_payload.id)

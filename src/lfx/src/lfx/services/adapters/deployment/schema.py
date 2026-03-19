@@ -19,8 +19,11 @@ from lfx.services.adapters.deployment.payloads import (
     T_DeploymentSpec,
     T_DeploymentStatusData,
     T_DeploymentUpdate,
+    T_DeploymentUpdateResult,
+    T_ExecutionCreateResult,
     T_ExecutionInput,
     T_ExecutionResult,
+    T_ExecutionStatusResult,
     T_FlowProviderData,
     T_ListParamsPayload,
     T_ProviderData,
@@ -528,13 +531,8 @@ class DeploymentUpdate(BaseModel):
         return self
 
 
-class DeploymentUpdateResult(DeploymentOperationResult):
+class DeploymentUpdateResult(DeploymentOperationResult[T_DeploymentUpdateResult]):
     """Model representing a result for a deployment update operation."""
-
-    snapshot_ids: list[IdLike] = Field(
-        default_factory=list,
-        description="Snapshot ids produced or bound during the update.",
-    )
 
 
 class RedeployResult(DeploymentOperationResult):
@@ -583,7 +581,7 @@ class ExecutionResultBase(ProviderResultModel[T_ExecutionResult]):
     deployment_id: IdLike = Field(description="The id of the deployment that was executed.")
 
 
-class ExecutionCreateResult(ExecutionResultBase):
+class ExecutionCreateResult(ExecutionResultBase[T_ExecutionCreateResult]):
     """Result returned when an execution is created.
 
     This model intentionally remains distinct from ``ExecutionStatusResult`` even
@@ -593,7 +591,7 @@ class ExecutionCreateResult(ExecutionResultBase):
     """
 
 
-class ExecutionStatusResult(ExecutionResultBase):
+class ExecutionStatusResult(ExecutionResultBase[T_ExecutionStatusResult]):
     """Result returned when querying an execution status.
 
     This model intentionally remains distinct from ``ExecutionCreateResult`` even
