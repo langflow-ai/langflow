@@ -1755,7 +1755,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.83"
+                    "version": "1.2.20"
                   },
                   {
                     "name": "lfx",
@@ -1763,7 +1763,7 @@
                   },
                   {
                     "name": "langchain_astradb",
-                    "version": "0.6.1"
+                    "version": "1.0.0"
                   }
                 ],
                 "total_dependencies": 4
