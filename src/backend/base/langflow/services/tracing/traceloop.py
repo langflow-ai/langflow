@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import types
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
@@ -143,7 +144,7 @@ class TraceloopTracer(OTLPTracerBase):
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
     ) -> None:
-        if not self.ready:
+        if not self.ready or self.tracer is None:
             return
 
         span_context = self.propagator.extract(carrier=self.carrier)
@@ -198,7 +199,7 @@ class TraceloopTracer(OTLPTracerBase):
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> None:
-        if not self.ready:
+        if not self.ready or self.root_span is None:
             return
 
         safe_outputs = self._convert_to_otlp_dict(outputs)

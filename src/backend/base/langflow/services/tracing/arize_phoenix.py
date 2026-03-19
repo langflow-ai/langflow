@@ -288,7 +288,7 @@ class ArizePhoenixTracer(OTLPTracerBase):
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
     ) -> None:
-        if not self._ready:
+        if not self._ready or self.tracer is None:
             return
 
         span_context = self.propagator.extract(carrier=self.carrier)
