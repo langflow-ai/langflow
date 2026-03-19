@@ -1,4 +1,4 @@
-from langchain.docstore.document import Document
+from langchain_core.documents import Document
 from langchain_experimental.text_splitter import SemanticChunker
 
 from lfx.base.textsplitters.model import LCTextSplitterComponent
