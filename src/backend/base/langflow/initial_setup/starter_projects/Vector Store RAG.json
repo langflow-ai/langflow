@@ -2328,7 +2328,7 @@
                 "advanced": true,
                 "display_name": "API Key",
                 "dynamic": false,
-                "info": "Falls back to GOOGLE_API_KEY environment variable",
+                "info": "Falls back to environment variable",
                 "input_types": [],
                 "load_from_db": true,
                 "name": "api_key",
@@ -2341,7 +2341,7 @@
                 "title_case": false,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": "GOOGLE_API_KEY"
+                "value": ""
               },
               "base_url_ibm_watsonx": {
                 "_input_type": "DropdownInput",
@@ -2443,73 +2443,7 @@
                 "list_add_label": "Add More",
                 "model_type": "language",
                 "name": "model",
-                "options": [
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 128000,
-                      "max_tokens_field_name": "max_output_tokens",
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-2.5-flash",
-                    "provider": "Google Generative AI"
-                  },
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 128000,
-                      "max_tokens_field_name": "max_output_tokens",
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-2.5-pro",
-                    "provider": "Google Generative AI"
-                  },
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 128000,
-                      "max_tokens_field_name": "max_output_tokens",
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-2.5-flash-lite",
-                    "provider": "Google Generative AI"
-                  },
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 128000,
-                      "max_tokens_field_name": "max_output_tokens",
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-2.5-flash-preview-09-2025",
-                    "provider": "Google Generative AI"
-                  },
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 128000,
-                      "max_tokens_field_name": "max_output_tokens",
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-2.5-flash-lite-preview-09-2025",
-                    "provider": "Google Generative AI"
-                  }
-                ],
+                "options": [],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -2521,21 +2455,7 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": [
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "api_key_param": "google_api_key",
-                      "context_length": 128000,
-                      "max_tokens_field_name": "max_output_tokens",
-                      "model_class": "ChatGoogleGenerativeAIFixed",
-                      "model_name_param": "model"
-                    },
-                    "name": "gemini-2.5-flash",
-                    "provider": "Google Generative AI"
-                  }
-                ]
+                "value": []
               },
               "ollama_base_url": {
                 "_input_type": "MessageInput",
@@ -3244,56 +3164,7 @@
                 "list_add_label": "Add More",
                 "model_type": "embedding",
                 "name": "embedding_model",
-                "options": [
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "embedding_class": "GoogleGenerativeAIEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "api_key": "google_api_key",
-                        "model": "model",
-                        "model_kwargs": "client_options",
-                        "request_timeout": "request_options"
-                      }
-                    },
-                    "name": "models/gemini-embedding-001",
-                    "provider": "Google Generative AI"
-                  },
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "embedding_class": "GoogleGenerativeAIEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "api_key": "google_api_key",
-                        "model": "model",
-                        "model_kwargs": "client_options",
-                        "request_timeout": "request_options"
-                      }
-                    },
-                    "name": "models/text-embedding-004",
-                    "provider": "Google Generative AI"
-                  },
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "embedding_class": "GoogleGenerativeAIEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "api_key": "google_api_key",
-                        "model": "model",
-                        "model_kwargs": "client_options",
-                        "request_timeout": "request_options"
-                      }
-                    },
-                    "name": "models/embedding-001",
-                    "provider": "Google Generative AI"
-                  }
-                ],
+                "options": [],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -3305,24 +3176,7 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": [
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "embedding_class": "GoogleGenerativeAIEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "api_key": "google_api_key",
-                        "model": "model",
-                        "model_kwargs": "client_options",
-                        "request_timeout": "request_options"
-                      }
-                    },
-                    "name": "models/gemini-embedding-001",
-                    "provider": "Google Generative AI"
-                  }
-                ]
+                "value": []
               },
               "environment": {
                 "_input_type": "DropdownInput",
@@ -4221,56 +4075,7 @@
                 "list_add_label": "Add More",
                 "model_type": "embedding",
                 "name": "embedding_model",
-                "options": [
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "embedding_class": "GoogleGenerativeAIEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "api_key": "google_api_key",
-                        "model": "model",
-                        "model_kwargs": "client_options",
-                        "request_timeout": "request_options"
-                      }
-                    },
-                    "name": "models/gemini-embedding-001",
-                    "provider": "Google Generative AI"
-                  },
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "embedding_class": "GoogleGenerativeAIEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "api_key": "google_api_key",
-                        "model": "model",
-                        "model_kwargs": "client_options",
-                        "request_timeout": "request_options"
-                      }
-                    },
-                    "name": "models/text-embedding-004",
-                    "provider": "Google Generative AI"
-                  },
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "embedding_class": "GoogleGenerativeAIEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "api_key": "google_api_key",
-                        "model": "model",
-                        "model_kwargs": "client_options",
-                        "request_timeout": "request_options"
-                      }
-                    },
-                    "name": "models/embedding-001",
-                    "provider": "Google Generative AI"
-                  }
-                ],
+                "options": [],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -4282,24 +4087,7 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": [
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "embedding_class": "GoogleGenerativeAIEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "api_key": "google_api_key",
-                        "model": "model",
-                        "model_kwargs": "client_options",
-                        "request_timeout": "request_options"
-                      }
-                    },
-                    "name": "models/gemini-embedding-001",
-                    "provider": "Google Generative AI"
-                  }
-                ]
+                "value": []
               },
               "environment": {
                 "_input_type": "DropdownInput",
