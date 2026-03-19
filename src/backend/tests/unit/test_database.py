@@ -1,4 +1,6 @@
+import io
 import json
+import zipfile
 from datetime import datetime, timezone
 from typing import NamedTuple
 from uuid import UUID, uuid4
@@ -561,6 +563,138 @@ async def test_download_file(
     # Since the endpoint now returns a zip file, we need to check the content type and the filename in the headers
     assert response.headers["Content-Type"] == "application/x-zip-compressed"
     assert "attachment; filename=" in response.headers["Content-Disposition"]
+
+
+@pytest.mark.usefixtures("session")
+async def test_upload_zip_file_to_flows(client: AsyncClient, json_flow: str, logged_in_headers):
+    """Test uploading a ZIP file containing flow JSONs to the flows upload endpoint."""
+    flow = orjson.loads(json_flow)
+    data = flow["data"]
+
+    flow_1_name = str(uuid4())
+    flow_2_name = str(uuid4())
+    flow_1 = {"name": flow_1_name, "description": "desc1", "data": data}
+    flow_2 = {"name": flow_2_name, "description": "desc2", "data": data}
+
+    # Create a ZIP file in memory with individual flow JSONs
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w") as zf:
+        zf.writestr(f"{flow_1_name}.json", json.dumps(flow_1))
+        zf.writestr(f"{flow_2_name}.json", json.dumps(flow_2))
+    zip_buffer.seek(0)
+
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("flows.zip", zip_buffer.getvalue(), "application/zip")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 201
+    response_data = response.json()
+    assert len(response_data) == 2
+    names = {r["name"] for r in response_data}
+    assert flow_1_name in names
+    assert flow_2_name in names
+
+
+@pytest.mark.usefixtures("session")
+async def test_upload_zip_file_to_projects(client: AsyncClient, json_flow: str, logged_in_headers):
+    """Test uploading a ZIP file containing flow JSONs to the projects upload endpoint."""
+    flow = orjson.loads(json_flow)
+    data = flow["data"]
+
+    flow_1_name = str(uuid4())
+    flow_2_name = str(uuid4())
+    flow_1 = {"name": flow_1_name, "description": "desc1", "data": data}
+    flow_2 = {"name": flow_2_name, "description": "desc2", "data": data}
+
+    # Create a ZIP file in memory
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w") as zf:
+        zf.writestr(f"{flow_1_name}.json", json.dumps(flow_1))
+        zf.writestr(f"{flow_2_name}.json", json.dumps(flow_2))
+    zip_buffer.seek(0)
+
+    response = await client.post(
+        "api/v1/projects/upload/",
+        files={"file": ("My Project.zip", zip_buffer.getvalue(), "application/zip")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 201
+    response_data = response.json()
+    assert len(response_data) == 2
+    # All flows should belong to the same folder
+    folder_ids = {r["folder_id"] for r in response_data}
+    assert len(folder_ids) == 1
+
+    # Verify the project name was derived from the ZIP filename
+    folder_id = folder_ids.pop()
+    project_response = await client.get(f"api/v1/projects/{folder_id}", headers=logged_in_headers)
+    assert project_response.status_code == 200
+    assert project_response.json()["name"].startswith("My Project")
+
+
+@pytest.mark.usefixtures("session")
+async def test_upload_empty_zip_returns_400(client: AsyncClient, logged_in_headers):
+    """Test that uploading a ZIP with no JSON files returns 400."""
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w") as zf:
+        zf.writestr("readme.txt", "not a flow")
+    zip_buffer.seek(0)
+
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("empty.zip", zip_buffer.getvalue(), "application/zip")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 400
+    assert "No valid flow JSON files" in response.json()["detail"]
+
+
+@pytest.mark.usefixtures("session")
+async def test_download_then_upload_roundtrip(client: AsyncClient, json_flow: str, active_user, logged_in_headers):
+    """Test that downloading flows as ZIP and re-uploading works end-to-end."""
+    flow = orjson.loads(json_flow)
+    data = flow["data"]
+
+    flow_1_name = str(uuid4())
+    flow_2_name = str(uuid4())
+    flow_list = FlowListCreate(
+        flows=[
+            FlowCreate(name=flow_1_name, description="description", data=data),
+            FlowCreate(name=flow_2_name, description="description", data=data),
+        ]
+    )
+
+    # Create flows in DB
+    db_manager = get_db_service()
+    async with session_getter(db_manager) as _session:
+        saved_flows = []
+        for f in flow_list.flows:
+            f.user_id = active_user.id
+            db_flow = Flow.model_validate(f, from_attributes=True)
+            _session.add(db_flow)
+            saved_flows.append(db_flow)
+        await _session.commit()
+        flow_ids = [str(db_flow.id) for db_flow in saved_flows]
+
+    # Download as ZIP
+    download_response = await client.post(
+        "api/v1/flows/download/",
+        data=json.dumps(flow_ids),
+        headers={**logged_in_headers, "Content-Type": "application/json"},
+    )
+    assert download_response.status_code == 200
+    assert download_response.headers["Content-Type"] == "application/x-zip-compressed"
+
+    # Re-upload the ZIP
+    upload_response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("flows.zip", download_response.content, "application/zip")},
+        headers=logged_in_headers,
+    )
+    assert upload_response.status_code == 201
+    uploaded = upload_response.json()
+    assert len(uploaded) == 2
 
 
 @pytest.mark.usefixtures("active_user")
