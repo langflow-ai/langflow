@@ -13,15 +13,27 @@ get_language_model_options(). This caused:
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA
 from lfx.base.models.unified_models import get_language_model_options, get_llm
+from lfx.base.models.unified_models.provider_queries import get_model_providers
+
+# All known provider names — used to mock enabled providers in tests
+_ALL_PROVIDERS = set(get_model_providers())
 
 # ---------------------------------------------------------------------------
 # 1. get_language_model_options must include max_tokens_field_name
 # ---------------------------------------------------------------------------
+
+
+def _patch_all_providers_enabled():
+    """Context manager that makes get_language_model_options see every provider as enabled."""
+    return patch(
+        "lfx.base.models.unified_models.model_catalog._fetch_enabled_providers_for_user",
+        new=AsyncMock(return_value=_ALL_PROVIDERS),
+    )
 
 
 class TestModelOptionsIncludeMaxTokensFieldName:
@@ -34,7 +46,8 @@ class TestModelOptionsIncludeMaxTokensFieldName:
 
     def test_all_provider_options_have_max_tokens_field_name(self):
         """Each model option must include max_tokens_field_name in metadata."""
-        options = get_language_model_options(user_id=None)
+        with _patch_all_providers_enabled():
+            options = get_language_model_options(user_id="test-user")
 
         # Group by provider to give a clear failure message
         providers_seen: set[str] = set()
@@ -67,7 +80,8 @@ class TestModelOptionsIncludeMaxTokensFieldName:
     )
     def test_provider_max_tokens_field_name_matches_metadata(self, provider: str, expected_field: str):
         """The max_tokens_field_name in options must match MODEL_PROVIDER_METADATA."""
-        options = get_language_model_options(user_id=None)
+        with _patch_all_providers_enabled():
+            options = get_language_model_options(user_id="test-user")
         provider_options = [
             o
             for o in options

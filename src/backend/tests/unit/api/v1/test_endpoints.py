@@ -77,7 +77,7 @@ async def test_update_component_model_name_options(client: AsyncClient, logged_i
         code=code,
         frontend_node=component_node,
         field="model",
-        field_value={"provider": "Anthropic"},  # Change provider
+        field_value=[{"provider": "Anthropic", "name": "claude-3-opus-20240229"}],  # Change provider
         template=template,
     )
 
