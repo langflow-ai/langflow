@@ -16,6 +16,7 @@ from langflow.api.utils.core import (
     DbSessionReadOnly,
     EventDeliveryType,
     ValidatedFileName,
+    ValidatedFolderName,
     build_and_cache_graph_from_data,
     build_graph_from_data,
     build_graph_from_db,
@@ -55,6 +56,7 @@ __all__ = [
     # Enums
     "EventDeliveryType",
     "ValidatedFileName",
+    "ValidatedFolderName",
     "build_and_cache_graph_from_data",
     "build_graph_from_data",
     "build_graph_from_db",
