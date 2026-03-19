@@ -1,7 +1,7 @@
 """LobsterMail component for Langflow.
 
 Email infrastructure for AI agents — create inboxes, send/receive email,
-search messages, and manage webhooks via the LobsterMail API.
+and search messages via the LobsterMail API.
 
 API docs: https://lobstermail.ai/docs
 OpenAPI spec: https://api.lobstermail.ai/v1/docs/openapi
@@ -30,7 +30,7 @@ class LobsterMailComponent(Component):
     display_name = "LobsterMail"
     description = (
         "Email infrastructure for AI agents — create inboxes, send and receive email, "
-        "search messages, and configure webhooks."
+        "and search messages."
     )
     documentation = "https://lobstermail.ai/docs"
     icon = "Mail"
@@ -135,11 +135,11 @@ class LobsterMailComponent(Component):
         """Execute the selected LobsterMail operation."""
         operation = self.operation
         headers = {
-            "Authorization": f"Bearer {self.api_key}",
+            "Authorization": f"Bearer {str(self.api_key)}",
             "Content-Type": "application/json",
         }
 
-        async with httpx.AsyncClient(base_url=BASE_URL, headers=headers) as client:
+        async with httpx.AsyncClient(base_url=BASE_URL, headers=headers, timeout=30.0) as client:
             result = await self._dispatch(client, operation)
 
         return Data(data=result)
@@ -157,6 +157,15 @@ class LobsterMailComponent(Component):
             resp = await client.get("/v1/inboxes")
 
         elif operation == "Send Email":
+            if not self.from_address:
+                msg = "Send Email requires a 'From' address."
+                raise ValueError(msg)
+            if not self.to_addresses:
+                msg = "Send Email requires at least one 'To' address."
+                raise ValueError(msg)
+            if not self.subject:
+                msg = "Send Email requires a 'Subject'."
+                raise ValueError(msg)
             to_list = [a.strip() for a in self.to_addresses.split(",") if a.strip()]
             body_inner: dict[str, str] = {}
             if self.body_text:
@@ -172,12 +181,24 @@ class LobsterMailComponent(Component):
             resp = await client.post("/v1/emails/send", json=payload)
 
         elif operation == "List Emails":
+            if not self.inbox_id:
+                msg = "List Emails requires an 'Inbox ID'."
+                raise ValueError(msg)
             resp = await client.get(f"/v1/inboxes/{self.inbox_id}/emails")
 
         elif operation == "Get Email":
+            if not self.inbox_id:
+                msg = "Get Email requires an 'Inbox ID'."
+                raise ValueError(msg)
+            if not self.email_id:
+                msg = "Get Email requires an 'Email ID'."
+                raise ValueError(msg)
             resp = await client.get(f"/v1/inboxes/{self.inbox_id}/emails/{self.email_id}")
 
         elif operation == "Search Emails":
+            if not self.search_query:
+                msg = "Search Emails requires a 'Search Query'."
+                raise ValueError(msg)
             params: dict[str, str] = {"q": self.search_query}
             if self.inbox_id:
                 params["inboxId"] = self.inbox_id
