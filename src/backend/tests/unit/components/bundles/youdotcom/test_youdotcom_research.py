@@ -83,6 +83,23 @@ class TestYouDotComResearchComponent(ComponentTestBaseWithoutClient):
         assert "query" not in payload
 
     @patch("lfx.components.youdotcom.youdotcom_research.httpx.Client")
+    def test_research_combined_success(self, mock_client_class, component_class, default_kwargs):
+        mock_response = MagicMock()
+        mock_response.json.return_value = MOCK_RESEARCH_RESPONSE
+        mock_response.raise_for_status = MagicMock()
+        _mock_httpx_client(mock_client_class, mock_response)
+
+        component = component_class()
+        component.set_attributes(default_kwargs)
+        result = component.research_combined()
+
+        assert "Quantum Computing Advances" in result.text
+        assert "Sources:" in result.text
+        assert "Quantum Computing Research" in result.text
+        assert "https://example.com/quantum" in result.text
+        assert "Physics Today" in result.text
+
+    @patch("lfx.components.youdotcom.youdotcom_research.httpx.Client")
     def test_research_sources_success(self, mock_client_class, component_class, default_kwargs):
         mock_response = MagicMock()
         mock_response.json.return_value = MOCK_RESEARCH_RESPONSE

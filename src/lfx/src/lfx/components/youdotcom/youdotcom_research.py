@@ -43,6 +43,7 @@ class YouDotComResearchComponent(Component):
     ]
 
     outputs = [
+        Output(display_name="Combined", name="combined", method="research_combined"),
         Output(display_name="Answer", name="answer", method="research_answer"),
         Output(display_name="Sources", name="sources_dataframe", method="research_sources"),
     ]
@@ -72,6 +73,43 @@ class YouDotComResearchComponent(Component):
         response.raise_for_status()
         self._cached_response = response.json()
         return self._cached_response
+
+    def _format_sources_markdown(self, sources: list[dict]) -> str:
+        """Format sources as a markdown list."""
+        if not sources:
+            return ""
+        lines = ["\n\n---\n\n**Sources:**"]
+        for i, source in enumerate(sources, 1):
+            title = source.get("title", "Untitled")
+            url = source.get("url", "")
+            lines.append(f"{i}. [{title}]({url})")
+        return "\n".join(lines)
+
+    def research_combined(self) -> Message:
+        try:
+            research_results = self._call_research_api()
+            output = research_results.get("output", {})
+            content = output.get("content", "")
+            sources = output.get("sources", [])
+            content += self._format_sources_markdown(sources)
+        except httpx.TimeoutException:
+            content = (
+                "Request timed out (300s). Research queries can take several minutes "
+                "with higher effort levels. Try using 'lite' or 'standard' effort."
+            )
+            logger.error(content)
+        except httpx.HTTPStatusError as exc:
+            content = f"HTTP error occurred: {exc.response.status_code} - {exc.response.text}"
+            logger.error(content)
+        except httpx.RequestError as exc:
+            content = f"Request error occurred: {exc}"
+            logger.error(content)
+        except ValueError as exc:
+            content = f"Invalid response format: {exc}"
+            logger.error(content)
+
+        self.status = content
+        return Message(text=content)
 
     def research_answer(self) -> Message:
         try:
