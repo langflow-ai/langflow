@@ -48,13 +48,8 @@ class YouDotComResearchComponent(Component):
         Output(display_name="Sources", name="sources_dataframe", method="research_sources"),
     ]
 
-    _cached_response: dict | None = None
-
     def _call_research_api(self) -> dict:
-        """Call the Research API and return the raw response. Caches the result for reuse."""
-        if self._cached_response is not None:
-            return self._cached_response
-
+        """Call the Research API and return the raw response."""
         url = "https://api.you.com/v1/research"
         headers = {
             "X-API-Key": self.api_key,
@@ -71,8 +66,7 @@ class YouDotComResearchComponent(Component):
             response = client.post(url, json=payload, headers=headers)
 
         response.raise_for_status()
-        self._cached_response = response.json()
-        return self._cached_response
+        return response.json()
 
     def _format_sources_markdown(self, sources: list[dict]) -> str:
         """Format sources as a markdown list."""
