@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { NEW_SESSION_NAME } from "@/constants/constants";
 import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
+import { useBulkDeleteSessions } from "@/controllers/API/queries/messages/use-bulk-delete-sessions";
 import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
 import useAlertStore from "@/stores/alertStore";
@@ -41,6 +42,7 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
   const fetchedSessions = dbSessionsResponse?.sessions ?? [];
 
   const { mutate: deleteSessionApi } = useDeleteSession({});
+  const { mutate: bulkDeleteSessionsApi } = useBulkDeleteSessions();
   const { mutateAsync: updateSessionName } = useUpdateSessionName();
 
   const notifyDeleteSessionError = useCallback(() => {
@@ -154,6 +156,46 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
     );
   }, [flowId, deleteSessionApi, notifyDeleteSessionError]);
 
+  const bulkDeleteSessions = useCallback(
+    (sessionIds: string[], onSuccess?: () => void) => {
+      if (!flowId || sessionIds.length === 0) return;
+
+      // Separate local-only sessions from server sessions
+      const serverSessions = sessionIds.filter((sessionId) =>
+        fetchedSessions.includes(sessionId),
+      );
+
+      // Perform local cleanup for all sessions
+      sessionIds.forEach((sessionId) => {
+        clearSessionMessages(sessionId, flowId);
+        deleteSessionFromMessagesStore(sessionId);
+        removeSession(sessionId);
+      });
+
+      // Only call API if there are server sessions
+      if (serverSessions.length > 0) {
+        bulkDeleteSessionsApi(
+          { sessionIds: serverSessions },
+          {
+            onSuccess: () => onSuccess?.(),
+            onError: notifyDeleteSessionError,
+          },
+        );
+      } else {
+        // All sessions are local-only, call success immediately
+        onSuccess?.();
+      }
+    },
+    [
+      flowId,
+      fetchedSessions,
+      bulkDeleteSessionsApi,
+      deleteSessionFromMessagesStore,
+      notifyDeleteSessionError,
+      removeSession,
+    ],
+  );
+
   return {
     activeSessionId,
     sessions,
@@ -161,6 +203,7 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
     createSession,
     deleteSession,
     deleteSessionLocalOnly,
+    bulkDeleteSessions,
     renameSession,
     selectSession,
     clearDefaultSession,

@@ -39,6 +39,7 @@ export function FlowPageSlidingContainerContent({
     createSession,
     deleteSession,
     deleteSessionLocalOnly,
+    bulkDeleteSessions,
     renameSession,
     selectSession,
     clearDefaultSession,
@@ -123,14 +124,6 @@ export function FlowPageSlidingContainerContent({
     setIsFullscreen(true);
   };
 
-  // Local cleanup without API call (for bulk delete)
-  const handleLocalCleanupAfterDelete = (sessionIds: string[]) => {
-    // For each deleted session, perform local-only cleanup (no API calls)
-    sessionIds.forEach((sessionId) => {
-      deleteSessionLocalOnly(sessionId);
-    });
-    // Session switching is handled by the store's removeSession
-  };
 
   const handleOpenLogs = (sessionId: string) => {
     selectSession(sessionId);
@@ -151,14 +144,13 @@ export function FlowPageSlidingContainerContent({
             <div className="p-4">
               <ChatSidebar
                 sessions={sessions}
-                fetchedSessions={fetchedSessions}
                 onNewChat={createSession}
                 onSessionSelect={selectSession}
                 currentSessionId={activeSessionId}
                 onDeleteSession={deleteSession}
                 onOpenLogs={handleOpenLogs}
                 onRenameSession={renameSession}
-                onLocalCleanupAfterDelete={handleLocalCleanupAfterDelete}
+                onBulkDeleteSessions={bulkDeleteSessions}
               />
             </div>
           </div>
