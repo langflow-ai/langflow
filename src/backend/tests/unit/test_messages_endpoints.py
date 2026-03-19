@@ -291,7 +291,7 @@ async def test_get_messages_empty_result_with_encoded_nonexistent_session(client
 @pytest.mark.api_key_required
 async def test_delete_messages_sessions_bulk(
     client: AsyncClient,
-    created_messages_multiple_sessions,
+    created_messages_multiple_sessions,  # noqa: ARG001
     logged_in_headers,
 ):
     """Bulk-delete messages for multiple sessions in a single request."""
@@ -324,7 +324,7 @@ async def test_delete_messages_sessions_bulk(
 @pytest.mark.api_key_required
 async def test_delete_messages_sessions_all(
     client: AsyncClient,
-    created_messages_multiple_sessions,
+    created_messages_multiple_sessions,  # noqa: ARG001
     logged_in_headers,
 ):
     """Bulk-delete messages for ALL sessions at once."""
@@ -378,7 +378,7 @@ async def test_delete_messages_sessions_nonexistent(client: AsyncClient, logged_
 @pytest.mark.api_key_required
 async def test_delete_messages_sessions_partial_match(
     client: AsyncClient,
-    created_messages_multiple_sessions,
+    created_messages_multiple_sessions,  # noqa: ARG001
     logged_in_headers,
 ):
     """Bulk-delete where some session IDs exist and some don't — only existing ones are removed."""
