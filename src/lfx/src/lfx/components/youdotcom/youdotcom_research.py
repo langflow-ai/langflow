@@ -47,8 +47,13 @@ class YouDotComResearchComponent(Component):
         Output(display_name="Sources", name="sources_dataframe", method="research_sources"),
     ]
 
+    _cached_response: dict | None = None
+
     def _call_research_api(self) -> dict:
-        """Call the Research API and return the raw response, or raise on error."""
+        """Call the Research API and return the raw response. Caches the result for reuse."""
+        if self._cached_response is not None:
+            return self._cached_response
+
         url = "https://api.you.com/v1/research"
         headers = {
             "X-API-Key": self.api_key,
@@ -65,7 +70,8 @@ class YouDotComResearchComponent(Component):
             response = client.post(url, json=payload, headers=headers)
 
         response.raise_for_status()
-        return response.json()
+        self._cached_response = response.json()
+        return self._cached_response
 
     def research_answer(self) -> Message:
         try:
