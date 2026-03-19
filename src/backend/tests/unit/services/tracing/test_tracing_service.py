@@ -597,9 +597,8 @@ async def test_concurrent_tracing(tracing_service, mock_component):
                 ts.set_outputs(trace_name, outputs)
 
         task1 = asyncio.create_task(run_component_task(mock_component, f"{run_id} trace_name1", f"{run_id} component1"))
-        await task1
         task2 = asyncio.create_task(run_component_task(mock_component, f"{run_id} trace_name2", f"{run_id} component2"))
-        await task2
+        await asyncio.gather(task1, task2)
 
         await tracing_service.end_tracers({"final_output": f"{task_prefix}_final_output"})
         trace_context = trace_context_var.get()
