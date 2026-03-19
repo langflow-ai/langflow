@@ -124,7 +124,6 @@ export function FlowPageSlidingContainerContent({
     setIsFullscreen(true);
   };
 
-
   const handleOpenLogs = (sessionId: string) => {
     selectSession(sessionId);
     setOpenLogsModal(true);

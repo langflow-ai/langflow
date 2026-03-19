@@ -96,7 +96,7 @@ export function ChatSidebar({
 
     const sessionsToDelete = Array.from(selectedSessions);
     const count = sessionsToDelete.length;
-    
+
     onBulkDeleteSessions(sessionsToDelete, () => {
       // Clear selection after successful deletion
       setSelectedSessions(new Set());
