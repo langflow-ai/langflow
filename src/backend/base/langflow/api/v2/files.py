@@ -158,8 +158,75 @@ async def upload_user_file(
 
     # Create a new database record for the uploaded file.
     try:
+        # SECURITY FIX: Validate and sanitize multipart upload filename to prevent path traversal attacks
+        # First, validate the original filename to reject obvious malicious attempts
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="No filename provided")
+
+        # Reject filenames containing directory traversal sequences or path separators
+        # This prevents attackers from using directory traversal in the Content-Disposition header
+        # Check for: path separators (/, \), traversal (..), null bytes, and other dangerous chars
+        dangerous_chars = ["..", "/", "\\", "\x00", "\n", "\r"]
+        if any(char in file.filename for char in dangerous_chars):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Invalid file name. Filename must not contain directory paths, "
+                    "'..' sequences, or control characters."
+                ),
+            )
+
+        # Additional check: reject filenames that are too long (prevent DoS)
+        # Most filesystems have a 255 byte limit for filenames
+        MAX_FILENAME_BYTES = 255  # noqa: N806
+        if len(file.filename.encode("utf-8")) > MAX_FILENAME_BYTES:
+            raise HTTPException(
+                status_code=400,
+                detail="File name is too long. Maximum 255 bytes allowed.",
+            )
+
+        # Extract only the basename as an additional safety measure
+        # This provides defense-in-depth in case the above checks are bypassed
+        new_filename = Path(file.filename).name
+
+        # Final validation: ensure the sanitized filename is valid and not empty
+        if not new_filename or new_filename in (".", ".."):
+            raise HTTPException(status_code=400, detail="Invalid file name after sanitization")
+
+        # Reject reserved filenames on Windows (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
+        # This prevents issues when code runs on Windows systems
+        reserved_names = {
+            "CON",
+            "PRN",
+            "AUX",
+            "NUL",
+            "COM1",
+            "COM2",
+            "COM3",
+            "COM4",
+            "COM5",
+            "COM6",
+            "COM7",
+            "COM8",
+            "COM9",
+            "LPT1",
+            "LPT2",
+            "LPT3",
+            "LPT4",
+            "LPT5",
+            "LPT6",
+            "LPT7",
+            "LPT8",
+            "LPT9",
+        }
+        name_without_ext = new_filename.rsplit(".", 1)[0].upper()
+        if name_without_ext in reserved_names:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid file name. '{name_without_ext}' is a reserved system name.",
+            )
+
         # Enforce unique constraint on name, except for the special _mcp_servers file
-        new_filename = file.filename
         try:
             root_filename, file_extension = new_filename.rsplit(".", 1)
         except ValueError:
