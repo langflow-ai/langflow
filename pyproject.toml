@@ -133,12 +133,8 @@ clickhouse-connect = [
 ]
 
 nv-ingest = [
-    # NOTE: These must be removed in order to run `uv lock --upgrade` or `uv sync --upgrade`
-    # due to incompatibility with <3.12 and how uv handles lockfile creation.
-    # If upgrading, ensure `uv lock` and `uv sync` are run after upgrade with these,
-    # and that afterward, the lockfile contains nv-ingest.
-    "nv-ingest-api==25.6.2,<26.0.0 ; python_version >= '3.12'",
-    "nv-ingest-client==25.6.3,<26.0.0 ; python_version >= '3.12'",
+    "nv-ingest-api>=26.1.0,<27.0.0 ; python_version >= '3.12'",
+    "nv-ingest-client>=26.1.0,<27.0.0 ; python_version >= '3.12'",
 ]
 
 postgresql = [
@@ -150,6 +146,8 @@ postgresql = [
 override-dependencies = [
     # temporary force a newer python-pptx
     "python-pptx>=1.0.2",
+    # z3-solver 4.15.7 dropped Linux wheels, pin until codeflash is removed
+    "z3-solver<4.15.7",
 ]
 
 [project.scripts]
