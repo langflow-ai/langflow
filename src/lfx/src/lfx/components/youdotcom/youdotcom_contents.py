@@ -8,6 +8,7 @@ from lfx.schema.dataframe import DataFrame
 from lfx.template.field.base import Output
 
 USER_AGENT = "langflow-youdotcom/1.0"
+MAX_CRAWL_TIMEOUT = 60
 
 
 class YouDotComContentsComponent(Component):
@@ -54,6 +55,10 @@ class YouDotComContentsComponent(Component):
 
     def fetch_content(self) -> list[Data]:
         try:
+            if self.crawl_timeout and not (1 <= self.crawl_timeout <= MAX_CRAWL_TIMEOUT):
+                msg = f"crawl_timeout must be between 1 and {MAX_CRAWL_TIMEOUT} seconds"
+                raise ValueError(msg)
+
             url = "https://ydc-index.io/v1/contents"
             headers = {
                 "X-API-Key": self.api_key,
