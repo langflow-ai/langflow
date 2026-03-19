@@ -232,9 +232,11 @@ async def delete_messages_sessions(
         HTTPException: 500 if database operation fails
     """
     # Validate input size to prevent massive SQL IN clauses
-    if len(session_ids) > 500:
+    max_sessions_per_request = 500
+    if len(session_ids) > max_sessions_per_request:
         raise HTTPException(
-            status_code=400, detail="Cannot delete more than 500 sessions at once. Please batch your requests."
+            status_code=400,
+            detail=f"Cannot delete more than {max_sessions_per_request} sessions at once. Please batch your requests.",
         )
 
     if not session_ids:
