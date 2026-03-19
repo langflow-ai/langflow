@@ -508,6 +508,23 @@ def create_app():
 
         return await call_next(request)
 
+    @app.middleware("http")
+    async def set_locale(request: Request, call_next):
+        """Parse Accept-Language header and store normalised locale in request.state.
+
+        Handles quality values ("fr-FR,fr;q=0.9,en;q=0.8" → "fr") and preserves
+        zh-Hans as a full tag. All other locales are reduced to the language code.
+        Result is available as request.state.locale in any endpoint.
+        """
+        accept_lang = request.headers.get("Accept-Language", "en")
+        primary = accept_lang.split(",")[0].strip()
+        if primary.lower().startswith("zh-hans"):
+            locale = "zh-Hans"
+        else:
+            locale = primary.split("-")[0] or "en"
+        request.state.locale = locale
+        return await call_next(request)
+
     if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
         # set here for create_app() entry point
         prome_port = int(prome_port_str)
