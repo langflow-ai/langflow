@@ -28,10 +28,7 @@ BASE_URL = "https://api.lobstermail.ai"
 
 class LobsterMailComponent(Component):
     display_name = "LobsterMail"
-    description = (
-        "Email infrastructure for AI agents — create inboxes, send and receive email, "
-        "and search messages."
-    )
+    description = "Email infrastructure for AI agents — create inboxes, send and receive email, and search messages."
     documentation = "https://lobstermail.ai/docs"
     icon = "Mail"
     name = "LobsterMail"
@@ -135,7 +132,7 @@ class LobsterMailComponent(Component):
         """Execute the selected LobsterMail operation."""
         operation = self.operation
         headers = {
-            "Authorization": f"Bearer {str(self.api_key)}",
+            "Authorization": f"Bearer {self.api_key!s}",
             "Content-Type": "application/json",
         }
 
