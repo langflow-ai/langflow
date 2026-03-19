@@ -120,7 +120,6 @@ class LangWatchTracer(OTLPTracerBase):
                         )
                         provider = TracerProvider(resource=resource)
                         provider.add_span_processor(BatchSpanProcessor(exporter))
-                        _shared_provider = provider
 
                         # Initialize LangWatch client but skip OTEL setup to avoid touching the global provider
                         # causing it to not receive traces from FastAPIInstrumentor
@@ -129,6 +128,9 @@ class LangWatchTracer(OTLPTracerBase):
                             endpoint_url=endpoint,
                             skip_open_telemetry_setup=True,
                         )
+
+                        # Assign only after setup succeeds
+                        _shared_provider = provider
 
             self._client = langwatch
 

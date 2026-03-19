@@ -100,7 +100,7 @@ class OTLPTracerBase(BaseTracer):
             if isinstance(value, float) and not math.isfinite(value):
                 return "NaN"
         except (TypeError, ValueError) as e:
-            logger.warning(f"Failed to convert langflow value {value!r} to otel type: {e}")
+            logger.warning(f"Failed to convert langflow value of type {type(value).__name__} to otel type: {e}")
             return str(value)
         else:
             return value
