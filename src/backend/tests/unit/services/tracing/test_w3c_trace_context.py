@@ -450,26 +450,13 @@ def test_concurrent_otlp_tracers_have_isolated_contexts():
             # Wait until both threads have attached their context
             barrier.wait(timeout=5)
 
-            with (
-                patch.dict(
-                    os.environ,
-                    {
-                        "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4318",
-                    },
-                    clear=True,
-                ),
-                patch(
-                    "opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter",
-                    return_value=CollectingExporter(),
-                ),
-            ):
-                tracer = OTLPTracer(
-                    trace_name=f"flow-{label}",
-                    trace_type="chain",
-                    project_name="test",
-                    trace_id=uuid.uuid4(),
-                )
-                assert tracer.ready
+            tracer = OTLPTracer(
+                trace_name=f"flow-{label}",
+                trace_type="chain",
+                project_name="test",
+                trace_id=uuid.uuid4(),
+            )
+            assert tracer.ready
 
             results[label] = {
                 "trace_id": format(tracer.root_span.context.trace_id, "032x"),
@@ -487,12 +474,25 @@ def test_concurrent_otlp_tracers_have_isolated_contexts():
     expected_b_trace = format(span_b.get_span_context().trace_id, "032x")
     expected_b_span = format(span_b.get_span_context().span_id, "016x")
 
-    t1 = threading.Thread(target=_create_tracer, args=("A", span_a))
-    t2 = threading.Thread(target=_create_tracer, args=("B", span_b))
-    t1.start()
-    t2.start()
-    t1.join(timeout=10)
-    t2.join(timeout=10)
+    with (
+        patch.dict(
+            os.environ,
+            {"OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4318"},
+            clear=True,
+        ),
+        patch(
+            "opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter",
+            side_effect=lambda *_args, **_kwargs: CollectingExporter(),
+        ),
+    ):
+        t1 = threading.Thread(target=_create_tracer, args=("A", span_a))
+        t2 = threading.Thread(target=_create_tracer, args=("B", span_b))
+        t1.start()
+        t2.start()
+        t1.join(timeout=10)
+        t2.join(timeout=10)
+    assert not t1.is_alive()
+    assert not t2.is_alive()
 
     span_a.end()
     span_b.end()
