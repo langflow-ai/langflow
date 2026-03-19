@@ -208,12 +208,13 @@ jobs:
   frontend-tests-linux:
     if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
     name: Run Frontend Tests - Linux
-    needs: create-nightly-tag
+    needs: [create-nightly-tag, resolve-release-branch]
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: "tests"
       release: true
       runs-on: ubuntu-latest
+      ref: ${{ needs.resolve-release-branch.outputs.branch }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
@@ -223,7 +224,7 @@ jobs:
   frontend-tests-windows:
     if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
     name: Run Frontend Tests - Windows
-    needs: create-nightly-tag
+    needs: [create-nightly-tag, resolve-release-branch]
     # Allow Windows tests to fail without blocking the nightly build
     # This gives us visibility into Windows-specific issues while we stabilize the tests
     # Remove this once Windows tests are consistently passing
@@ -233,6 +234,7 @@ jobs:
       tests_folder: "tests"
       release: true
       runs-on: windows-latest
+      ref: ${{ needs.resolve-release-branch.outputs.branch }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
@@ -242,11 +244,12 @@ jobs:
   backend-unit-tests:
     if: github.repository == 'langflow-ai/langflow' && !inputs.skip_backend_tests
     name: Run Backend Unit Tests
-    needs: create-nightly-tag
+    needs: [create-nightly-tag, resolve-release-branch]
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: '["3.10", "3.11", "3.12", "3.13"]'
       runs-on: ${{ inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
+      ref: ${{ needs.resolve-release-branch.outputs.branch }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -266,7 +269,13 @@ jobs:
     if: github.repository == 'langflow-ai/langflow' && always() && needs.frontend-tests-linux.result != 'failure' && needs.backend-unit-tests.result != 'failure'
     name: Run Nightly Langflow Build
     needs:
-      [validate-inputs, create-nightly-tag, frontend-tests-linux, frontend-tests-windows, backend-unit-tests]
+      [
+        validate-inputs,
+        create-nightly-tag,
+        frontend-tests-linux,
+        frontend-tests-windows,
+        backend-unit-tests,
+      ]
     uses: ./.github/workflows/release_nightly.yml
     with:
       build_docker_base: true
@@ -283,7 +292,13 @@ jobs:
 
   slack-notification:
     name: Send Slack Notification
-    needs: [frontend-tests-linux, frontend-tests-windows, backend-unit-tests, release-nightly-build]
+    needs:
+      [
+        frontend-tests-linux,
+        frontend-tests-windows,
+        backend-unit-tests,
+        release-nightly-build,
+      ]
     if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests-linux.result == 'failure' || needs.frontend-tests-windows.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.release-nightly-build.result == 'success') }}
     runs-on: ubuntu-latest
     steps:
