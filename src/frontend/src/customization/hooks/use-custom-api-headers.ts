@@ -1,5 +1,7 @@
-export function useCustomApiHeaders() {
-  const customHeaders = {};
+import i18n from "@/i18n";
 
-  return customHeaders;
+export function useCustomApiHeaders() {
+  return {
+    "Accept-Language": i18n.language || "en",
+  };
 }
