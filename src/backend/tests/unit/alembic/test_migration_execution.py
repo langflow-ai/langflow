@@ -104,6 +104,7 @@ def db_url(request):
             pytest.skip("LANGFLOW_TEST_DATABASE_URI not set")
         # Use a unique DB name per test to allow parallel execution
         import hashlib
+
         short_hash = hashlib.md5(request.node.name.encode()).hexdigest()[:10]  # noqa: S324
         db_name = f"lf_mig_test_{short_hash}"
         test_url = _create_pg_test_database(base_url, db_name)
