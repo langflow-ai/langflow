@@ -33,6 +33,7 @@ def _make_alembic_cfg(db_url: str) -> Config:
 # Database fixtures
 # ---------------------------------------------------------------------------
 
+
 def _normalize_pg_url(url: str) -> str:
     """Ensure a Postgres URL uses the psycopg (v3) async-capable driver.
 
@@ -59,10 +60,12 @@ def _create_pg_test_database(base_url: str, db_name: str) -> str:
     engine = create_engine(base_url, isolation_level="AUTOCOMMIT")
     try:
         with engine.connect() as conn:
-            conn.execute(text(
-                f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
-                f"WHERE datname = '{db_name}' AND pid <> pg_backend_pid()"
-            ))
+            conn.execute(
+                text(
+                    f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                    f"WHERE datname = '{db_name}' AND pid <> pg_backend_pid()"
+                )
+            )
             conn.execute(text(f"DROP DATABASE IF EXISTS {db_name}"))
             conn.execute(text(f"CREATE DATABASE {db_name}"))
     finally:
@@ -75,10 +78,12 @@ def _drop_pg_test_database(base_url: str, db_name: str) -> None:
     engine = create_engine(base_url, isolation_level="AUTOCOMMIT")
     try:
         with engine.connect() as conn:
-            conn.execute(text(
-                f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
-                f"WHERE datname = '{db_name}' AND pid <> pg_backend_pid()"
-            ))
+            conn.execute(
+                text(
+                    f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                    f"WHERE datname = '{db_name}' AND pid <> pg_backend_pid()"
+                )
+            )
             conn.execute(text(f"DROP DATABASE IF EXISTS {db_name}"))
     finally:
         engine.dispose()
