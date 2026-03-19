@@ -90,9 +90,7 @@ def translate_component_dict(all_types: dict[str, Any], locale: str) -> dict[str
             translated["display_name"] = translate(
                 f"components.{name}.display_name", locale, data.get("display_name", "")
             )
-            translated["description"] = translate(
-                f"components.{name}.description", locale, data.get("description", "")
-            )
+            translated["description"] = translate(f"components.{name}.description", locale, data.get("description", ""))
 
             # Tier 2 — template field display_names (inputs serialised as dicts)
             if "template" in data and isinstance(data["template"], dict):

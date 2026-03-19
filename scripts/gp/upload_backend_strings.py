@@ -16,7 +16,7 @@ import os
 from pathlib import Path
 
 import requests
-from gp_client import BASE_URL, GP_INSTANCE, TARGET_LANGS, create_bundle, get_headers, list_bundles
+from gp_client import BASE_URL, GP_INSTANCE, TARGET_LANGS, get_headers, list_bundles
 
 DEFAULT_SOURCE = Path(__file__).parent.parent.parent / "src/backend/base/langflow/locales/en.json"
 GP_BACKEND_BUNDLE = os.getenv("GP_BACKEND_BUNDLE", "langflow-backend")
