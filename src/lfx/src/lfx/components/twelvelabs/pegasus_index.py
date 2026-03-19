@@ -72,7 +72,7 @@ class PegasusIndexVideo(Component):
 
     outputs = [
         Output(
-            display_name="Indexed Data", name="indexed_data", method="index_videos", output_types=["Data"], is_list=True
+            display_name="Indexed Data", name="indexed_data", method="index_videos", output_types=["JSON"], is_list=True
         ),
     ]
 

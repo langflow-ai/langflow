@@ -1,10 +1,13 @@
 """LFX services module - pluggable service architecture for dependency injection."""
 
+from .adapters.registry import register_adapter, teardown_all_adapter_registries
+from .deps import get_deployment_adapter
 from .interfaces import (
     AuthServiceProtocol,
     CacheServiceProtocol,
     ChatServiceProtocol,
     DatabaseServiceProtocol,
+    DeploymentServiceProtocol,
     SettingsServiceProtocol,
     StorageServiceProtocol,
     TracingServiceProtocol,
@@ -20,6 +23,7 @@ __all__ = [
     "CacheServiceProtocol",
     "ChatServiceProtocol",
     "DatabaseServiceProtocol",
+    "DeploymentServiceProtocol",
     "MCPComposerService",
     "MCPComposerServiceFactory",
     "NoopSession",
@@ -28,5 +32,8 @@ __all__ = [
     "StorageServiceProtocol",
     "TracingServiceProtocol",
     "VariableServiceProtocol",
+    "get_deployment_adapter",
+    "register_adapter",
     "register_service",
+    "teardown_all_adapter_registries",
 ]

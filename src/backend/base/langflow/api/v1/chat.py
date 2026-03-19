@@ -583,7 +583,6 @@ async def build_public_tmp(
     background_tasks: LimitVertexBuildBackgroundTasks,
     flow_id: uuid.UUID,
     inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
-    data: Annotated[FlowDataRequest | None, Body(embed=True)] = None,
     files: list[str] | None = None,
     stop_component_id: str | None = None,
     start_component_id: str | None = None,
@@ -598,10 +597,16 @@ async def build_public_tmp(
     This endpoint is specifically for public flows that don't require authentication.
     It uses a client_id cookie to create a deterministic flow ID for tracking purposes.
 
+    Security Note:
+    - The 'data' parameter is NOT accepted to prevent flow definition tampering
+    - Public flows must execute the stored flow definition only
+    - The flow definition is always loaded from the database
+
     The endpoint:
     1. Verifies the requested flow is marked as public in the database
     2. Creates a deterministic UUID based on client_id and flow_id
     3. Uses the flow owner's permissions to build the flow
+    4. Always loads the flow definition from the database
 
     Requirements:
     - The flow must be marked as PUBLIC in the database
@@ -611,7 +616,6 @@ async def build_public_tmp(
         flow_id: UUID of the public flow to build
         background_tasks: Background tasks manager
         inputs: Optional input values for the flow
-        data: Optional flow data
         files: Optional files to include
         stop_component_id: Optional ID of component to stop at
         start_component_id: Optional ID of component to start from
@@ -630,11 +634,12 @@ async def build_public_tmp(
         owner_user, new_flow_id = await verify_public_flow_and_get_user(flow_id=flow_id, client_id=client_id)
 
         # Start the flow build using the new flow ID
+        # data is always None for public flows - they load from database only
         job_id = await start_flow_build(
             flow_id=new_flow_id,
             background_tasks=background_tasks,
             inputs=inputs,
-            data=data,
+            data=None,  # Always None - public flows load from database only
             files=files,
             stop_component_id=stop_component_id,
             start_component_id=start_component_id,

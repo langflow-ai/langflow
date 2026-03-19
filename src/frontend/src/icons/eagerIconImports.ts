@@ -58,6 +58,7 @@ import { IFixIcon } from "@/icons/IFixIt";
 import { JSIcon } from "@/icons/JSicon";
 import { LangChainIcon } from "@/icons/LangChain";
 import { LangwatchIcon } from "@/icons/Langwatch";
+import { LiteLLMIcon } from "@/icons/LiteLLM";
 import { LMStudioIcon } from "@/icons/LMStudio";
 import { MaritalkIcon } from "@/icons/Maritalk";
 import { Mem0 } from "@/icons/Mem0";
@@ -114,12 +115,14 @@ import { WolframIcon } from "@/icons/Wolfram";
 import { XAIIcon } from "@/icons/xAI";
 import { YoutubeIcon as YouTubeIcon } from "@/icons/Youtube";
 import { ZepMemoryIcon } from "@/icons/ZepMemory";
+import { AgenticsIcon } from "./Agentics";
 import { JigsawStackIcon } from "./JigsawStack";
 import { WindsurfIcon } from "./Windsurf";
 
 // Export the eagerly loaded icons map
 export const eagerIconsMapping = {
   AIML: AIMLIcon,
+  Agentics: AgenticsIcon,
   AgentQL: AgentQLIcon,
   Airbyte: AirbyteIcon,
   Anthropic: AnthropicIcon,
@@ -179,6 +182,7 @@ export const eagerIconsMapping = {
   JigsawStack: JigsawStackIcon,
   LangChain: LangChainIcon,
   Langwatch: LangwatchIcon,
+  LiteLLM: LiteLLMIcon,
   LMStudio: LMStudioIcon,
   Maritalk: MaritalkIcon,
   Mem0: Mem0,

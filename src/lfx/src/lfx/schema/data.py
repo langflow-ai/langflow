@@ -1,4 +1,8 @@
-"""Lightweight Data class for lfx package - contains only methods with no langflow dependencies."""
+"""Lightweight JSON class for lfx package - contains only methods with no langflow dependencies.
+
+This module provides the JSON class (formerly Data) as the base type for Langflow data structures.
+Data is maintained as an alias for backwards compatibility.
+"""
 
 from __future__ import annotations
 
@@ -19,12 +23,36 @@ from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 from lfx.utils.image import create_image_content_dict
 
 if TYPE_CHECKING:
-    from lfx.schema.dataframe import DataFrame
+    from lfx.schema.dataframe import Table
     from lfx.schema.message import Message
 
 
-class Data(CrossModuleModel):
+def custom_serializer(obj):
+    if isinstance(obj, datetime):
+        utc_date = obj.replace(tzinfo=timezone.utc)
+        return utc_date.strftime("%Y-%m-%d %H:%M:%S %Z")
+    if isinstance(obj, Decimal):
+        return float(obj)
+    if isinstance(obj, UUID):
+        return str(obj)
+    if isinstance(obj, BaseModel):
+        return obj.model_dump()
+    if isinstance(obj, bytes):
+        return obj.decode("utf-8", errors="replace")
+    # Add more custom serialization rules as needed
+    msg = f"Type {type(obj)} not serializable"
+    raise TypeError(msg)
+
+
+def serialize_data(data):
+    return json.dumps(data, indent=4, default=custom_serializer)
+
+
+class JSON(CrossModuleModel):
     """Represents a record with text and optional data.
+
+    This is the base type for Langflow data structures, replacing the legacy Data class.
+    Data is maintained as an alias for backwards compatibility.
 
     Attributes:
         data (dict, optional): Additional data associated with the record.
@@ -90,39 +118,39 @@ class Data(CrossModuleModel):
         return new_text
 
     @classmethod
-    def from_document(cls, document: Document) -> Data:
-        """Converts a Document to a Data.
+    def from_document(cls, document: Document) -> JSON:
+        """Converts a Document to a JSON.
 
         Args:
             document (Document): The Document to convert.
 
         Returns:
-            Data: The converted Data.
+            JSON: The converted JSON.
         """
         data = document.metadata
         data["text"] = document.page_content
         return cls(data=data, text_key="text")
 
     @classmethod
-    def from_lc_message(cls, message: BaseMessage) -> Data:
-        """Converts a BaseMessage to a Data.
+    def from_lc_message(cls, message: BaseMessage) -> JSON:
+        """Converts a BaseMessage to a JSON.
 
         Args:
             message (BaseMessage): The BaseMessage to convert.
 
         Returns:
-            Data: The converted Data.
+            JSON: The converted JSON.
         """
         data: dict = {"text": message.content}
         data["metadata"] = cast("dict", message.to_json())
         return cls(data=data, text_key="text")
 
-    def __add__(self, other: Data) -> Data:
-        """Combines the data of two data by attempting to add values for overlapping keys.
+    def __add__(self, other: JSON) -> JSON:
+        """Combines the data of two JSON objects by attempting to add values for overlapping keys.
 
-        Combines the data of two data by attempting to add values for overlapping keys
+        Combines the data of two JSON objects by attempting to add values for overlapping keys
         for all types that support the addition operation. Falls back to the value from 'other'
-        record when addition is not supported.
+        when addition is not supported.
         """
         combined_data = self.data.copy()
         for key, value in other.data.items():
@@ -131,13 +159,13 @@ class Data(CrossModuleModel):
                 try:
                     combined_data[key] += value
                 except TypeError:
-                    # Fallback: Use the value from 'other' record if addition is not supported
+                    # Fallback: Use the value from 'other' if addition is not supported
                     combined_data[key] = value
             else:
-                # If the key is not in the first record, simply add it
+                # If the key is not in the first object, simply add it
                 combined_data[key] = value
 
-        return Data(data=combined_data)
+        return JSON(data=combined_data)
 
     def to_lc_document(self) -> Document:
         """Converts the Data to a Document.
@@ -154,18 +182,18 @@ class Data(CrossModuleModel):
     def to_lc_message(
         self,
     ) -> BaseMessage:
-        """Converts the Data to a BaseMessage.
+        """Converts the JSON to a BaseMessage.
 
         Returns:
             BaseMessage: The converted BaseMessage.
         """
-        # The idea of this function is to be a helper to convert a Data to a BaseMessage
+        # The idea of this function is to be a helper to convert a JSON to a BaseMessage
         # It will use the "sender" key to determine if the message is Human or AI
         # If the key is not present, it will default to AI
         # But first we check if all required keys are present in the data dictionary
         # they are: "text", "sender"
         if not all(key in self.data for key in ["text", "sender"]):
-            msg = f"Missing required keys ('text', 'sender') in Data: {self.data}"
+            msg = f"Missing required keys ('text', 'sender') in JSON: {self.data}"
             raise ValueError(msg)
         sender = self.data.get("sender", MESSAGE_SENDER_AI)
         text = self.data.get("text", "")
@@ -223,37 +251,37 @@ class Data(CrossModuleModel):
             del self.data[key]
 
     def __deepcopy__(self, memo):
-        """Custom deepcopy implementation to handle copying of the Data object."""
-        # Create a new Data object with a deep copy of the data dictionary
-        return Data(data=copy.deepcopy(self.data, memo), text_key=self.text_key, default_value=self.default_value)
+        """Custom deepcopy implementation to handle copying of the JSON object."""
+        # Create a new JSON object with a deep copy of the data dictionary
+        return JSON(data=copy.deepcopy(self.data, memo), text_key=self.text_key, default_value=self.default_value)
 
-    # check which attributes the Data has by checking the keys in the data dictionary
+    # check which attributes the JSON has by checking the keys in the data dictionary
     def __dir__(self):
         return super().__dir__() + list(self.data.keys())
 
     def __str__(self) -> str:
-        # return a JSON string representation of the Data atributes
+        # return a JSON string representation of the JSON attributes
         try:
             data = {k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()}
             return serialize_data(data)  # use the custom serializer
         except Exception:  # noqa: BLE001
-            logger.debug("Error converting Data to JSON", exc_info=True)
+            logger.debug("Error converting JSON to string", exc_info=True)
             return str(self.data)
 
     def __contains__(self, key) -> bool:
         return key in self.data
 
     def __eq__(self, /, other):
-        return isinstance(other, Data) and self.data == other.data
+        return isinstance(other, JSON) and self.data == other.data
 
-    def filter_data(self, filter_str: str) -> Data:
+    def filter_data(self, filter_str: str) -> JSON:
         """Filters the data dictionary based on the filter string.
 
         Args:
             filter_str (str): The filter string to apply to the data dictionary.
 
         Returns:
-            Data: The filtered Data.
+            JSON: The filtered JSON.
         """
         from lfx.template.utils import apply_json_filter
 
@@ -266,7 +294,7 @@ class Data(CrossModuleModel):
             return Message(text=self.get_text())
         return Message(text=str(self.data))
 
-    def to_dataframe(self) -> DataFrame:
+    def to_dataframe(self) -> Table:
         from lfx.schema.dataframe import DataFrame  # Local import to avoid circular import
 
         data_dict = self.data
@@ -280,30 +308,14 @@ class Data(CrossModuleModel):
         return DataFrame(data=[self])
 
     def __repr__(self) -> str:
-        """Return string representation of the Data object."""
-        return f"Data(text_key={self.text_key!r}, data={self.data!r}, default_value={self.default_value!r})"
+        """Return string representation of the JSON object."""
+        return f"JSON(text_key={self.text_key!r}, data={self.data!r}, default_value={self.default_value!r})"
 
     def __hash__(self) -> int:
-        """Return hash of the Data object based on its string representation."""
+        """Return hash of the JSON object based on its string representation."""
         return hash(self.__repr__())
 
 
-def custom_serializer(obj):
-    if isinstance(obj, datetime):
-        utc_date = obj.replace(tzinfo=timezone.utc)
-        return utc_date.strftime("%Y-%m-%d %H:%M:%S %Z")
-    if isinstance(obj, Decimal):
-        return float(obj)
-    if isinstance(obj, UUID):
-        return str(obj)
-    if isinstance(obj, BaseModel):
-        return obj.model_dump()
-    if isinstance(obj, bytes):
-        return obj.decode("utf-8", errors="replace")
-    # Add more custom serialization rules as needed
-    msg = f"Type {type(obj)} not serializable"
-    raise TypeError(msg)
-
-
-def serialize_data(data):
-    return json.dumps(data, indent=4, default=custom_serializer)
+# Data class is maintained for backwards compatibility - it is now an alias to JSON
+# All new code should use JSON instead of Data
+Data = JSON

@@ -34,6 +34,7 @@ import pytest
 from httpx import AsyncClient
 from langflow.exceptions.api import WorkflowValidationError
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.jobs.model import JobType
 from lfx.schema.workflow import JobStatus
 from lfx.services.deps import session_scope
 from sqlalchemy.exc import OperationalError
@@ -1337,6 +1338,7 @@ class TestWorkflowStatus:
         mock_job.job_id = job_id
         mock_job.flow_id = flow_id
         mock_job.status = JobStatus.QUEUED
+        mock_job.type = JobType.WORKFLOW
         mock_job.created_timestamp = datetime.now(timezone.utc)
 
         with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
@@ -1386,6 +1388,7 @@ class TestWorkflowStatus:
         mock_job = MagicMock()
         mock_job.job_id = job_id
         mock_job.status = JobStatus.FAILED
+        mock_job.type = JobType.WORKFLOW
 
         with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
             mock_service = MagicMock()
@@ -1414,6 +1417,7 @@ class TestWorkflowStatus:
         mock_job.job_id = job_id
         mock_job.flow_id = flow_id
         mock_job.status = JobStatus.COMPLETED
+        mock_job.type = JobType.WORKFLOW
 
         with (
             patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service,
@@ -1452,6 +1456,7 @@ class TestWorkflowStatus:
         mock_job.job_id = job_id
         mock_job.flow_id = flow_id
         mock_job.status = JobStatus.TIMED_OUT
+        mock_job.type = JobType.WORKFLOW
 
         with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
             mock_service = MagicMock()

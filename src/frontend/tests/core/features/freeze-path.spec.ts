@@ -98,16 +98,14 @@ test(
 
     await page.getByText("Close").last().click();
 
-    await page.waitForSelector("text=OpenAI", {
-      timeout: 3000,
-    });
-
-    await page
+    const languageModelNode = page
       .locator(".react-flow__node", {
         has: page.getByText("Language Model", { exact: true }),
       })
-      .last()
-      .click();
+      .last();
+
+    await languageModelNode.waitFor({ timeout: 3000 });
+    await languageModelNode.click();
 
     await page.waitForSelector('[data-testid="more-options-modal"]', {
       timeout: 3000,

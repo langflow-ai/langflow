@@ -113,7 +113,7 @@ export default function ContentDisplay({
 
     case "error":
       contentData = (
-        <div className="text-red-500">
+        <div className="text-destructive">
           {content.reason && <div>Reason: {content.reason}</div>}
           {content.solution && <div>Solution: {content.solution}</div>}
           {content.traceback && (
@@ -209,7 +209,7 @@ export default function ContentDisplay({
             </>
           )}
           {content.error != null && (
-            <div className="text-red-500">
+            <div className="text-destructive">
               <Markdown
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeMathjax]}

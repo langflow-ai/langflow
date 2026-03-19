@@ -13,7 +13,7 @@ class LiteLLMProxyComponent(LCModelComponent):
 
     display_name = "LiteLLM Proxy"
     description = "Generate text using any LLM provider via a LiteLLM proxy with virtual key authentication."
-    icon = "GitBranch"
+    icon = "LiteLLM"
     name = "LiteLLMProxyModel"
 
     inputs = [

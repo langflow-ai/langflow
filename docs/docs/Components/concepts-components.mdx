@@ -36,7 +36,13 @@ After adding a component to a flow, configure the component's parameters and con
 
 Each component has inputs, outputs, parameters, and controls related to the component's purpose.
 By default, components show only required and common options.
-To access additional settings and controls, including meta settings, use the [component's header menu](#component-header-menus).
+To access additional settings and controls, including meta settings, use the [component inspection panel](#component-inspection-panel).
+
+### Component inspection panel {#component-inspection-panel}
+
+When you select a component in the workspace, a component inspection panel appears on the right side of the screen.
+
+The inspection panel displays all of a component's parameters, including hidden or advanced parameters.
 
 ### Component header menus
 
@@ -44,11 +50,10 @@ To access a component's header menu, click the component in your workspace.
 
 ![Agent component](/img/agent-component.png)
 
-A few options are available directly on the header menu.
-For example:
+The following options are available directly on the header menu:
 
 - **Code**: Modify component settings by directly editing the component's Python code.
-- **Controls**: Adjust all component parameters, including optional settings that are hidden by default.
+- **Freeze**: Freeze a component and all upstream components to prevent re-running. For more information, see [Freeze a component](#freeze-a-component).
 - **Tool Mode**: Enable this option when combining a component with an **Agent** component.
 
 For all other options, including **Delete** and **Duplicate** controls, click <Icon name="Ellipsis" aria-hidden="true" /> **Show More**.
@@ -80,7 +85,7 @@ Use the freeze option if you expect consistent output from a component _and all 
 Freezing a component prevents that component and all upstream components from re-running, and it preserves the last output state for those components.
 Any future flow runs use the preserved output.
 
-To freeze a component, click the component in the workspace to expose the component's header menu, click <Icon name="Ellipsis" aria-hidden="true" /> **Show More**, and then select **Freeze**.
+To freeze a component, click the component in the workspace to expose the component's header menu, and then click **Freeze**.
 
 ## Component ports
 
