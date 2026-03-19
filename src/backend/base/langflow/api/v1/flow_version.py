@@ -33,7 +33,7 @@ from langflow.services.database.models.flow_version.model import (
 )
 from langflow.services.deps import get_settings_service
 
-router = APIRouter(prefix="/flows/{flow_id}/versions", tags=["Flow Versions"])
+router = APIRouter(prefix="/flows/{flow_id}/versions", tags=["Flow Versions"], include_in_schema=False)
 
 
 def strip_version_data(data: dict | None) -> dict | None:
