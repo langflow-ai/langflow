@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
@@ -18,9 +19,167 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from langchain.callbacks.base import BaseCallbackHandler
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.trace import Tracer
 
     from langflow.graph.vertex.base import Vertex
     from langflow.services.tracing.schema import Log
+
+
+# ---------------------------------------------------------------------------
+# Module-level shared provider singleton
+# ---------------------------------------------------------------------------
+
+_provider_lock = threading.Lock()
+_shared_provider: TracerProvider | None = None
+_shared_tracer: Tracer | None = None
+
+
+def _validate_otlp_env() -> bool:
+    """Check whether OTLP tracing is configured via environment variables.
+
+    Returns:
+        True if at least one endpoint env var is set and the SDK is not disabled.
+    """
+    if os.getenv("OTEL_SDK_DISABLED", "").strip().lower() == "true":
+        logger.debug("OTLP tracer disabled via OTEL_SDK_DISABLED=true")
+        return False
+
+    traces_endpoint = os.getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")
+    generic_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+    if not traces_endpoint and not generic_endpoint:
+        logger.debug(
+            "OTLP tracer not configured: neither OTEL_EXPORTER_OTLP_TRACES_ENDPOINT "
+            "nor OTEL_EXPORTER_OTLP_ENDPOINT is set"
+        )
+        return False
+
+    return True
+
+
+def _create_exporter():
+    """Resolve the OTLP span exporter from installed entry points.
+
+    Reads ``OTEL_EXPORTER_OTLP_TRACES_PROTOCOL`` first (trace-specific
+    override), falling back to ``OTEL_EXPORTER_OTLP_PROTOCOL`` (generic),
+    then defaulting to ``http/protobuf``.  Only ``grpc`` and
+    ``http/protobuf`` are supported trace protocols in the OpenTelemetry
+    Python SDK.
+
+    Falls back to the HTTP/protobuf exporter when no matching entry point
+    is found (e.g. only one transport package is installed).
+    """
+    import importlib.metadata
+
+    protocol = os.getenv(
+        "OTEL_EXPORTER_OTLP_TRACES_PROTOCOL",
+        os.getenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf"),
+    )
+    ep_name_map = {
+        "grpc": "otlp_proto_grpc",
+        "http/protobuf": "otlp_proto_http",
+    }
+    entry_point_name = ep_name_map.get(protocol, "otlp_proto_http")
+
+    eps = importlib.metadata.entry_points()
+    if hasattr(eps, "select"):
+        matches = list(eps.select(group="opentelemetry_traces_exporter", name=entry_point_name))
+    else:
+        matches = [ep for ep in eps.get("opentelemetry_traces_exporter", []) if ep.name == entry_point_name]
+
+    if matches:
+        exporter_class = matches[0].load()
+    else:
+        logger.warning(
+            "No entry point '%s' found for opentelemetry_traces_exporter, falling back to http/protobuf exporter",
+            entry_point_name,
+        )
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+            OTLPSpanExporter as FallbackExporter,
+        )
+
+        exporter_class = FallbackExporter
+
+    # OTLPSpanExporter() auto-reads OTEL_EXPORTER_OTLP_* env vars
+    return exporter_class()
+
+
+def _get_shared_provider(project_name: str) -> tuple[TracerProvider, Tracer]:
+    """Return the shared TracerProvider and Tracer, creating them on first call.
+
+    Thread-safe via module-level lock.  The provider is created once and
+    reused across all graph runs, avoiding per-run ``BatchSpanProcessor``
+    thread allocation.
+
+    Args:
+        project_name: Langflow project name added as a resource attribute.
+
+    Returns:
+        Tuple of (TracerProvider, Tracer).
+    """
+    global _shared_provider, _shared_tracer  # noqa: PLW0603
+
+    if _shared_tracer is not None:
+        return _shared_provider, _shared_tracer
+
+    with _provider_lock:
+        # Double-checked locking
+        if _shared_tracer is not None:
+            return _shared_provider, _shared_tracer
+
+        from opentelemetry.sdk.resources import Resource
+        from opentelemetry.sdk.trace import TracerProvider as _TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+        span_exporter = _create_exporter()
+
+        # Resource.create() auto-merges OTEL_SERVICE_NAME, OTEL_RESOURCE_ATTRIBUTES,
+        # and SDK metadata with any explicit attributes we pass.
+        resource = Resource.create({"langflow.project_name": project_name})
+
+        provider = _TracerProvider(resource=resource)
+        provider.add_span_processor(BatchSpanProcessor(span_exporter))
+
+        _shared_provider = provider
+        _shared_tracer = provider.get_tracer(__name__)
+
+        return _shared_provider, _shared_tracer
+
+
+def shutdown_otlp_provider() -> None:
+    """Shutdown the shared OTLP TracerProvider, flushing pending spans.
+
+    Safe to call multiple times or when no provider has been created.
+    Should be called at process/service shutdown.
+    """
+    global _shared_provider, _shared_tracer  # noqa: PLW0603
+
+    with _provider_lock:
+        if _shared_provider is not None:
+            try:
+                _shared_provider.shutdown()
+            except (ValueError, RuntimeError, OSError) as e:
+                logger.warning(f"Error shutting down OTLP tracer provider: {e}")
+            finally:
+                _shared_provider = None
+                _shared_tracer = None
+
+
+def _reset_shared_provider() -> None:
+    """Reset the shared provider without calling shutdown.
+
+    Intended for tests only — allows re-creation with different env vars.
+    """
+    global _shared_provider, _shared_tracer  # noqa: PLW0603
+
+    with _provider_lock:
+        _shared_provider = None
+        _shared_tracer = None
+
+
+# ---------------------------------------------------------------------------
+# Per-run tracer
+# ---------------------------------------------------------------------------
 
 
 class OTLPTracer(OTLPTracerBase):
@@ -31,12 +190,13 @@ class OTLPTracer(OTLPTracerBase):
 
     - OTEL_EXPORTER_OTLP_ENDPOINT or OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
     - OTEL_EXPORTER_OTLP_HEADERS or OTEL_EXPORTER_OTLP_TRACES_HEADERS
-    - OTEL_EXPORTER_OTLP_PROTOCOL (http/protobuf, grpc, or http/json)
+    - OTEL_EXPORTER_OTLP_PROTOCOL (http/protobuf or grpc)
     - OTEL_SERVICE_NAME
     - OTEL_RESOURCE_ATTRIBUTES
 
-    No explicit configuration is needed in code - the OpenTelemetry SDK
-    automatically reads these standard environment variables.
+    The TracerProvider and BatchSpanProcessor are shared across all graph
+    runs to avoid per-run thread allocation.  Each OTLPTracer instance
+    creates only its own root span and child spans.
     """
 
     def __init__(
@@ -48,7 +208,7 @@ class OTLPTracer(OTLPTracerBase):
         user_id: str | None = None,
         session_id: str | None = None,
     ):
-        """Initialize the OTLP tracer with standard OpenTelemetry configuration.
+        """Initialize the OTLP tracer for a single graph run.
 
         Args:
             trace_name: Name of the trace
@@ -66,105 +226,20 @@ class OTLPTracer(OTLPTracerBase):
         self.user_id = user_id
         self.session_id = session_id
 
-        if not self._validate_configuration():
+        if not _validate_otlp_env():
             self._ready = False
             return
 
         try:
-            self._setup_otlp()
+            self._setup_spans()
         except Exception:  # noqa: BLE001
             logger.debug("Error setting up OTLP tracer", exc_info=True)
             self._ready = False
 
-    def _validate_configuration(self) -> bool:
-        """Validate that required OpenTelemetry environment variables are set.
-
-        Returns:
-            bool: True if configuration is valid, False otherwise
-        """
-        # Check for traces endpoint (specific) or generic endpoint
-        traces_endpoint = os.getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")
-        generic_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-
-        if not traces_endpoint and not generic_endpoint:
-            logger.debug(
-                "OTLP tracer not configured: neither OTEL_EXPORTER_OTLP_TRACES_ENDPOINT "
-                "nor OTEL_EXPORTER_OTLP_ENDPOINT is set"
-            )
-            return False
-
-        return True
-
-    @staticmethod
-    def _create_exporter():
-        """Resolve the OTLP span exporter from installed entry points.
-
-        Reads ``OTEL_EXPORTER_OTLP_TRACES_PROTOCOL`` first (trace-specific
-        override), falling back to ``OTEL_EXPORTER_OTLP_PROTOCOL`` (generic),
-        then defaulting to ``http/protobuf``.  Only ``grpc`` and
-        ``http/protobuf`` are supported trace protocols in the OpenTelemetry
-        Python SDK.
-
-        Falls back to the HTTP/protobuf exporter when no matching entry point
-        is found (e.g. only one transport package is installed).
-        """
-        import importlib.metadata
-
-        protocol = os.getenv(
-            "OTEL_EXPORTER_OTLP_TRACES_PROTOCOL",
-            os.getenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf"),
-        )
-        ep_name_map = {
-            "grpc": "otlp_proto_grpc",
-            "http/protobuf": "otlp_proto_http",
-        }
-        entry_point_name = ep_name_map.get(protocol, "otlp_proto_http")
-
-        eps = importlib.metadata.entry_points()
-        if hasattr(eps, "select"):
-            matches = list(eps.select(group="opentelemetry_traces_exporter", name=entry_point_name))
-        else:
-            matches = [ep for ep in eps.get("opentelemetry_traces_exporter", []) if ep.name == entry_point_name]
-
-        if matches:
-            exporter_class = matches[0].load()
-        else:
-            logger.warning(
-                "No entry point '%s' found for opentelemetry_traces_exporter, falling back to http/protobuf exporter",
-                entry_point_name,
-            )
-            from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-                OTLPSpanExporter as FallbackExporter,
-            )
-
-            exporter_class = FallbackExporter
-
-        # OTLPSpanExporter() auto-reads OTEL_EXPORTER_OTLP_* env vars
-        return exporter_class()
-
-    def _setup_otlp(self) -> None:
-        """Set up OpenTelemetry tracer provider with OTLP exporter.
-
-        Uses standard OpenTelemetry SDK which automatically discovers
-        configuration from environment variables. Resource.create() reads
-        OTEL_SERVICE_NAME and OTEL_RESOURCE_ATTRIBUTES; OTLPSpanExporter()
-        reads endpoint, headers, and timeout settings.
-        """
-        from opentelemetry.sdk.resources import Resource
-        from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export import BatchSpanProcessor
-
-        span_exporter = self._create_exporter()
-
-        # Resource.create() auto-merges OTEL_SERVICE_NAME, OTEL_RESOURCE_ATTRIBUTES,
-        # and SDK metadata with any explicit attributes we pass.
-        resource = Resource.create({"langflow.project_name": self.project_name})
-
-        tracer_provider = TracerProvider(resource=resource)
-        tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
-
-        self.tracer_provider = tracer_provider
-        self.tracer = tracer_provider.get_tracer(__name__)
+    def _setup_spans(self) -> None:
+        """Create root span and propagation carrier using the shared provider."""
+        _provider, tracer = _get_shared_provider(self.project_name)
+        self.tracer = tracer
         self.propagator = TraceContextTextMapPropagator()
         self.carrier = {}
 
@@ -309,11 +384,3 @@ class OTLPTracer(OTLPTracerBase):
             None: This tracer does not provide a LangChain callback
         """
         return None
-
-    def close(self):
-        """Flush tracer provider spans safely before shutdown."""
-        try:
-            if hasattr(self, "tracer_provider") and hasattr(self.tracer_provider, "force_flush"):
-                self.tracer_provider.force_flush(timeout_millis=3000)
-        except (ValueError, RuntimeError, OSError) as e:
-            logger.warning(f"Error flushing OTLP spans: {e}")
