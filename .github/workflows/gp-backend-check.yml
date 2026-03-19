@@ -1,0 +1,30 @@
+name: GP Backend Strings Check
+
+on:
+  pull_request:
+    paths:
+      - "src/lfx/src/lfx/components/**"
+      - "src/backend/base/langflow/locales/en.json"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    name: Verify locales/en.json is in sync with component code
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.12"
+
+      - name: Install workspace (lfx + langflow-base)
+        run: uv sync --no-dev
+
+      - name: Check en.json is up to date
+        run: uv run python scripts/gp/extract_backend_strings.py --check
