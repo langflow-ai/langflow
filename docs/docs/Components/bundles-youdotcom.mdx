@@ -55,7 +55,10 @@ It returns extracted content as a [`DataFrame`](/data-types#dataframe) with URLs
 
 This component calls the You.com Research API to perform multi-step reasoning with comprehensive web research. It takes a complex question and returns a detailed markdown answer with inline citations and sources.
 
-It returns research results as a [`DataFrame`](/data-types#dataframe).
+It has two outputs:
+
+* **Answer**: The research answer as a [`Message`](/data-types#message), suitable for piping into chat outputs or other LLMs.
+* **Sources**: The cited sources as a [`DataFrame`](/data-types#dataframe) with URLs, titles, and snippets.
 
 ### You.com Research parameters
 
