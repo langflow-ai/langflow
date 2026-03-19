@@ -189,7 +189,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                                     "new_value": field_dict[attr],
                                 }
                             )
-                            node_data["template"][field_name][attr] = field_dict[attr]
+                            node_data["template"][field_name][attr] = deepcopy(field_dict[attr])
             # Remove fields that are not in the latest template
             if node_type != "Prompt":
                 for field_name in list(node_data["template"].keys()):

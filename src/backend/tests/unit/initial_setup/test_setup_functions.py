@@ -185,3 +185,65 @@ def test_update_components_does_not_mutate_when_type_changes():
     assert all_types_dict == snapshot, (
         "all_types_dict must not be mutated when _type differs and full template is replaced"
     )
+
+
+def test_update_components_does_not_mutate_field_format_attributes():
+    """Verify that mutable FIELD_FORMAT_ATTRIBUTES (e.g. input_types) are deepcopied, not shared."""
+    all_types_dict = {
+        "test_category": {
+            "TestComponent": {
+                "template": {
+                    "_type": "Component",
+                    "code": {"type": "code", "value": "original_code", "advanced": True},
+                    "field_a": {
+                        "type": "str",
+                        "value": "original_value",
+                        "display_name": "Field A",
+                        "input_types": ["Message"],
+                    },
+                },
+                "outputs": [{"name": "out", "types": ["Message"], "selected": "Message"}],
+                "description": "Test",
+                "display_name": "Test",
+                "beta": False,
+            }
+        }
+    }
+    snapshot = deepcopy(all_types_dict)
+
+    # Project has a different input_types so the FIELD_FORMAT_ATTRIBUTES path is triggered
+    project_data = {
+        "nodes": [
+            {
+                "id": "TestComponent-abc",
+                "data": {
+                    "type": "TestComponent",
+                    "node": {
+                        "template": {
+                            "_type": "Component",
+                            "code": {"type": "code", "value": "original_code", "advanced": True},
+                            "field_a": {
+                                "type": "str",
+                                "value": "my_custom_value",
+                                "display_name": "Field A",
+                                "input_types": ["Data"],  # differs → triggers attr update at line 192
+                            },
+                        },
+                        "outputs": [{"name": "out", "types": ["Message"], "selected": "Message"}],
+                        "tool_mode": False,
+                    },
+                },
+            }
+        ],
+        "edges": [],
+    }
+
+    result = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+
+    # Mutate the returned mutable field attribute
+    for node in result["nodes"]:
+        node["data"]["node"]["template"]["field_a"]["input_types"].append("MUTATED!")
+
+    assert all_types_dict == snapshot, (
+        "all_types_dict must not be mutated via mutable FIELD_FORMAT_ATTRIBUTES (e.g. input_types)"
+    )
