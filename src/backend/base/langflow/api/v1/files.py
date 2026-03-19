@@ -138,6 +138,7 @@ async def download_file(
 @router.get("/images/{flow_id}/{file_name}")
 async def download_image(
     file_name: ValidatedFileName,
+    # Security: resolve flow through get_flow so image access requires authentication and owner match.
     flow: Annotated[Flow, Depends(get_flow)],
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):

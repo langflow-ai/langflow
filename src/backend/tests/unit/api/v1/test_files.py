@@ -53,6 +53,7 @@ async def files_created_api_key(files_client, files_active_user):  # noqa: ARG00
 
 @pytest.fixture(name="files_other_created_api_key")
 async def files_other_created_api_key(files_client, files_other_active_user):  # noqa: ARG001
+    # Separate API key to emulate requests from a second tenant.
     hashed = get_password_hash("other_random_key")
     api_key = ApiKey(
         name="files_other_created_api_key",
@@ -60,6 +61,7 @@ async def files_other_created_api_key(files_client, files_other_active_user):  #
         api_key="other_random_key",
         hashed_api_key=hashed,
     )
+    # Reuse an existing key when present, otherwise create one, then clean it up after the test.
     async with session_scope() as session:
         stmt = select(ApiKey).where(ApiKey.api_key == api_key.api_key)
         if existing_api_key := (await session.exec(stmt)).first():
@@ -103,6 +105,7 @@ async def files_active_user(files_client):  # noqa: ARG001
 
 @pytest.fixture(name="files_other_active_user")
 async def files_other_active_user(files_client):  # noqa: ARG001
+    # Secondary user used to validate cross-user access restrictions.
     async with session_scope() as session:
         user = User(
             username="files_other_active_user",
@@ -912,6 +915,7 @@ async def test_download_image_requires_authentication(files_client, files_create
     file_path = response.json()["file_path"]
     file_name = file_path.split("/")[-1]
 
+    # No auth header: browser-like unauthenticated request must be rejected.
     response = await files_client.get(f"api/v1/files/images/{files_flow.id}/{file_name}")
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -952,6 +956,7 @@ async def test_download_image_returns_404_for_other_users_flow(
     file_path = upload_response.json()["file_path"]
     file_name = file_path.split("/")[-1]
 
+    # Hide resource existence across tenants by returning 404 for non-owners.
     download_response = await files_client.get(
         f"api/v1/files/images/{files_flow.id}/{file_name}",
         headers=other_headers,
