@@ -1,0 +1,36 @@
+name: GP Backend Upload Strings
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/backend/base/langflow/locales/en.json"
+  workflow_dispatch:
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    name: Upload backend component strings to Globalization Pipeline
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install GP dependencies
+        run: pip install -r scripts/gp/requirements.txt
+
+      - name: Upload strings to GP
+        working-directory: scripts/gp
+        env:
+          GP_ADMIN_USER_ID: ${{ secrets.GP_ADMIN_USER_ID }}
+          GP_ADMIN_PASSWORD: ${{ secrets.GP_ADMIN_PASSWORD }}
+          GP_INSTANCE: ${{ secrets.GP_INSTANCE }}
+          GP_BACKEND_BUNDLE: ${{ secrets.GP_BACKEND_BUNDLE }}
+        run: |
+          python upload_backend_strings.py
