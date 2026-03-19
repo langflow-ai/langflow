@@ -167,9 +167,7 @@ export function useSessionManager({ flowId }: UseSessionManagerProps) {
 
       // Perform local cleanup for all sessions
       sessionIds.forEach((sessionId) => {
-        clearSessionMessages(sessionId, flowId);
-        deleteSessionFromMessagesStore(sessionId);
-        removeSession(sessionId);
+        deleteSessionLocalOnly(sessionId);
       });
 
       // Only call API if there are server sessions
