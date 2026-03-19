@@ -1,23 +1,61 @@
-name: GP Backend Upload Strings
+name: GP Backend Strings Sync
 
 on:
   push:
     branches:
       - main
     paths:
+      - "src/lfx/src/lfx/components/**"
       - "src/backend/base/langflow/locales/en.json"
   workflow_dispatch:
 
+permissions:
+  contents: write  # required for auto-commit back to main
+
 jobs:
-  upload:
+  sync:
     runs-on: ubuntu-latest
-    name: Upload backend component strings to Globalization Pipeline
+    name: Generate, commit, and upload backend component strings
+    if: github.actor != 'github-actions[bot]'  # prevent infinite loop from bot commits
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Python
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.12"
+
+      - name: Install workspace (lfx + langflow-base)
+        run: uv sync --no-dev
+
+      - name: Generate en.json
+        run: uv run python scripts/gp/extract_backend_strings.py
+
+      - name: Check if en.json changed
+        id: diff
+        run: |
+          if git diff --quiet src/backend/base/langflow/locales/en.json; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit updated en.json back to main
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/backend/base/langflow/locales/en.json
+          git commit -m "chore: auto-regenerate backend locales/en.json"
+          git push
+
+      - name: Set up Python for GP upload
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -32,5 +70,4 @@ jobs:
           GP_ADMIN_PASSWORD: ${{ secrets.GP_ADMIN_PASSWORD }}
           GP_INSTANCE: ${{ secrets.GP_INSTANCE }}
           GP_BACKEND_BUNDLE: ${{ secrets.GP_BACKEND_BUNDLE }}
-        run: |
-          python upload_backend_strings.py
+        run: python upload_backend_strings.py
