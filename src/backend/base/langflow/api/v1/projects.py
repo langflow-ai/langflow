@@ -663,7 +663,7 @@ async def upload_file(
         # Use the uploaded filename (without extension) as the project name
         project_name_base = file.filename.rsplit(".", 1)[0] if file.filename else "Imported Project"
         project_name_base = project_name_base or "Imported Project"
-        data = {
+        data: dict = {
             "folder_name": project_name_base,
             "folder_description": "",
             "flows": flows_data,
