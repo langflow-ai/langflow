@@ -1,0 +1,135 @@
+---
+title: Build flows
+slug: /concepts-flows
+---
+
+import Icon from "@site/src/components/icon";
+
+A _flow_ is a functional representation of an application workflow.
+Flows receive input, process it, and produce output.
+
+Flows consist of _components_ that represent individual steps in your application's workflow.
+
+![Basic Prompting flow in the workspace](/img/workspace-basic-prompting.png)
+
+Langflow flows are fully serializable and can be saved and loaded from the file system where Langflow is installed.
+
+:::tip
+To try building and running a flow in a few minutes, see the [Langflow quickstart](/get-started-quickstart).
+:::
+
+## Create a flow
+
+From the [**Projects** page](#projects), there are four ways to create a flow:
+
+* **Create a blank flow**: Select a project, click **New Flow**, and then click **Blank Flow**.
+
+* **Create a flow from a template**: Select a project, click **New Flow**, and then click the template that you want to use.
+
+    <details>
+    <summary>What are templates?</summary>
+
+    Templates are pre-built flows that you can use as a starting point for your own flow.
+    They range from basic flows with a few components to complex flows with many components and sub-flows.
+
+    For example, the **Basic Prompting** template demonstrates a small flow that passes both chat input and pre-defined instructions (as a prompt) to an LLM.
+    In contrast, the **Vector Store RAG** template consists of two sub-flows that demonstrate how to create a Retrieval Augmented Generation (RAG) chatbot. One sub-flow populates the vector store with contextually relevant data and embeddings, and the other sub-flow queries the vector store for similar data to answer user questions.
+
+    You can also [contribute templates](/contributing-templates) to the Langflow codebase.
+
+    </details>
+
+* **Duplicate an existing flow**: Locate the flow you want to copy, click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Duplicate**.
+
+* **Import a flow**: See [Import and export flows](/concepts-flows-import).
+
+You can also create a flow with the [Langflow API](/api-flows), but the Langflow team recommends using the [visual editor](/concepts-overview) until you are familiar with flow creation.
+
+### Add components
+
+Flows consist of [components](/concepts-components), which are nodes that you configure and connect in the [workspace](/concepts-overview#workspace).
+Each component performs a specific task, like serving an AI model or connecting a data source.
+
+Drag and drop components from the <Icon name="Component" aria-hidden="true" /> **Core components** and <Icon name="Blocks" aria-hidden="true" /> **Bundles** menus to add them to your flow.
+Then, configure the component settings and connect the components together.
+
+![Chat Input and Output connected to a Language Model component](/img/connect-component.png)
+
+Each component has configuration settings and options. Some of these are common to all components, and some are unique to specific components.
+
+To form a cohesive flow, you connect components by _edges_ or _ports_, which have a specific data type they receive or send.
+For example, message ports send text strings between components.
+
+For more information about component configuration, including port types and underlying component code, see [Components overview](/concepts-components).
+
+### Run a flow
+
+After you build a prototype flow, you can test it in the [**Playground**](/concepts-playground).
+When you're ready to use Langflow for application development, learn how to [trigger flows with the Langflow API](/concepts-publish), explore more advanced configuration options like [custom dependencies](/install-custom-dependencies), and, eventually, [containerize your Langflow application](/develop-application).
+
+When you're ready to go to production or deploy a Langflow MCP server for access over the public internet, see [Langflow deployment overview](/deployment-overview).
+
+#### Flow graphs
+
+When a flow runs, Langflow builds a Directed Acyclic Graph (DAG) object from the nodes (components) and edges (connections), and the nodes are sorted to determine the order of execution.
+
+The graph build calls each component's `def_build` function to validate and prepare the nodes.
+This graph is then processed in dependency order.
+Each node is built and executed sequentially, with results from each built node being passed to nodes that are dependent on that node's results.
+
+## Manage flows in projects {#projects}
+
+The **Projects** page is where you arrive when you launch Langflow.
+From here, you can manage flows and your projects' [MCP servers](/mcp-server).
+
+Langflow projects are like folders that you can use to organize related flows.
+The default project is **Starter Project**, and your flows are stored here unless you create another project.
+To create a project, click <Icon name="Plus" aria-hidden="true"/> **Create new project**.
+
+![Projects page with multiple flows in a project](/img/my-projects.png)
+
+:::tip
+To get back to the **Projects** page after editing a flow, click the project name or Langflow icon in the Langflow header.
+:::
+
+### Edit flow details
+
+1. On the **Projects** page, locate the flow you want to edit.
+2. Click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Edit details**.
+3. Edit the **Name** and **Description**, and then click **Save**.
+
+### Lock a flow
+
+To prevent changes to a flow, you can lock it:
+
+1. On the **Projects** page, locate the flow you want to lock.
+2. Click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Edit details**.
+3. Enable **Lock Flow**, and then click **Save**.
+
+Repeat these steps to unlock the flow by disabling **Lock Flow**.
+
+When editing a flow, the **Lock Status** indicates whether the flow is <Icon name="Lock" aria-hidden="true" /> **Locked** or <Icon name="LockOpen" aria-hidden="true" /> **Unlocked**.
+You cannot change the lock status while editing the flow.
+
+### Move a flow
+
+To move a flow from one project to another, do the following:
+
+1. On the **Projects** page, locate the flow you want to move.
+2. Click and drag the flow from the list of flows to the target project name in the list of projects.
+
+### Delete a flow
+
+1. On the **Projects** page, locate the flow you want to delete.
+2. Click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Delete**.
+
+## Flow storage and logs
+
+By default, flows and flow execution data are stored in the Langflow database, and flow logs are stored with other Langflow logs in the Langflow config directory.
+For more information, see [Memory management options](/memory) and [Logging](/logging).
+
+## See also
+
+* [Share and embed flows](/concepts-publish)
+* [Import and export flows](/concepts-flows-import)
+* [Langflow environment variables](/environment-variables)

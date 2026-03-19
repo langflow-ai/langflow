@@ -1,0 +1,51 @@
+---
+title: Dynamic Create Data
+slug: /dynamic-create-data
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialCurlyBraces from '@site/docs/_partial-escape-curly-braces.mdx';
+
+The **Dynamic Create Data** component creates a [`Data`](/data-types#data) object or [`Message`](/data-types#message) with configurable fields.
+Define the table in the **Input Configuration** field, and the component creates corresponding input or output handles in the component.
+
+## Use the Dynamic Create Data component in a flow
+
+The following example demonstrates how to use a **Dynamic Create Data** component to create a structured `Data` or `Message` object from multiple sources.
+
+1. Add the **Dynamic Create Data** component to your flow.
+
+2. To define your data's fields, in the **Input Configuration** field, click <Icon name="Table" aria-hidden="true"/> **Open table**.
+
+3. To add rows to your table, click <Icon name="Plus" aria-hidden="true"/> **Add a new row**.
+   Adding a new row creates input and output handles for the **Field Type**.
+   For example, if you add a `Text` type field, then`Text` input and output handles are added to the component.
+   For each new row, configure the **Field Name** and **Field Type**.
+
+    * **Field Name**: The name of the field used as both the internal key and display label.
+    * **Field Type**: The type of input field to create. The type options are:
+      * Text: Accepts direct text input or accepts `Text` or `Message` output from other components.
+      * Data: Accepts `Data` input from other components.
+      * Number: Accepts direct numeric input or accepts `Text` or `Message` outputs from other components.
+      * Handle: Accepts `Text`, `Data`, or `Message` output from other components.
+      * Boolean: Accepts Boolean values. Cannot accept input from another component.
+
+    For more information, see [Langflow data types](/data-types).
+4. Depending on your **Field Type** selections, either connect output from other components to dynamically populate the inputs, or enter values manually in the **Dynamic Create Data** component's fields.
+
+5. Select the desired output type at the component's output port. The component outputs either a [`Data`](/data-types#data) object containing all field values from the component's inputs, or a [`Message`](/data-types#message) containing all field values formatted as a text string.
+
+## Dynamic Create Data parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| `form_fields` | **Input Configuration** | Input parameter. A table that defines the dynamic form fields. |
+| `include_metadata` | **Include Metadata** | Input parameter. Whether to include form configuration metadata in the output.|
+| `form_data` | **Data** | Output parameter. A `Data` object containing all field values from the dynamic inputs. |
+| `message` | **Message** | Output parameter. A formatted `Text` message containing all field values in a human-readable format. |
+
