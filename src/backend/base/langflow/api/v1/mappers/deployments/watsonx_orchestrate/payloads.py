@@ -7,6 +7,14 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from langflow.api.v1.mappers.deployments.contracts import CreateFlowArtifactProviderData
+
+
+class WatsonxApiFlowArtifactProviderData(CreateFlowArtifactProviderData):
+    """Watsonx create-time flow artifact provider_data contract."""
+
+    project_id: str = Field(min_length=1)
+
 
 class WatsonxApiUpdateToolReference(BaseModel):
     """Tool reference for Watsonx bind operations."""
@@ -159,6 +167,7 @@ class WatsonxApiDeploymentUpdateResultData(BaseModel):
     model_config = {"extra": "ignore"}
 
     created_snapshot_ids: list[str] = Field(default_factory=list)
+    added_snapshot_bindings: list[dict[str, str]] = Field(default_factory=list)
     tool_app_bindings: list[WatsonxApiToolAppBinding] | None = None
 
     @field_validator("created_snapshot_ids", mode="before")
@@ -167,6 +176,23 @@ class WatsonxApiDeploymentUpdateResultData(BaseModel):
         if value is None:
             return []
         return [str(snapshot_id).strip() for snapshot_id in value if str(snapshot_id).strip()]
+
+    @field_validator("added_snapshot_bindings", mode="before")
+    @classmethod
+    def normalize_added_snapshot_bindings(cls, value: Any) -> list[dict[str, str]]:
+        if value is None:
+            return []
+        normalized: list[dict[str, str]] = []
+        if not isinstance(value, list):
+            return normalized
+        for item in value:
+            if not isinstance(item, dict):
+                continue
+            source_ref = str(item.get("source_ref") or "").strip()
+            snapshot_id = str(item.get("snapshot_id") or "").strip()
+            if source_ref and snapshot_id:
+                normalized.append({"source_ref": source_ref, "snapshot_id": snapshot_id})
+        return normalized
 
     @classmethod
     def from_provider_result(cls, provider_result: Any) -> WatsonxApiDeploymentUpdateResultData:
@@ -178,3 +204,32 @@ class WatsonxApiDeploymentUpdateResultData(BaseModel):
         """Return API-safe provider_data subset for deployment update responses."""
         payload = self.model_dump(include={"tool_app_bindings"}, exclude_none=True)
         return payload or None
+
+
+class WatsonxApiExecutionResultData(BaseModel):
+    """Normalized API-facing provider_result payload for Watsonx execution operations."""
+
+    model_config = {"extra": "allow"}
+
+    run_id: str | None = None
+    execution_id: str | None = None
+    agent_id: str | None = None
+    deployment_id: str | None = None
+
+    @field_validator("run_id", "execution_id", "agent_id", "deployment_id", mode="before")
+    @classmethod
+    def normalize_optional_id(cls, value: Any) -> str | None:
+        normalized = str(value or "").strip()
+        return normalized or None
+
+    @classmethod
+    def from_provider_result(cls, provider_result: Any) -> WatsonxApiExecutionResultData:
+        if not isinstance(provider_result, dict):
+            return cls()
+        return cls.model_validate(provider_result)
+
+    def resolved_execution_id(self) -> str | None:
+        return self.execution_id or self.run_id
+
+    def resolved_deployment_id(self) -> str | None:
+        return self.deployment_id or self.agent_id

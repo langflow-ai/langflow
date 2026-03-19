@@ -36,6 +36,10 @@ T_ConfigListParamsModel = TypeVar("T_ConfigListParamsModel", bound=BaseModel, de
 T_SnapshotListParams = TypeVar("T_SnapshotListParams", default=AdapterPayload)
 T_SnapshotListParamsModel = TypeVar("T_SnapshotListParamsModel", bound=BaseModel, default=BaseModel)
 
+# Flow artifact provider_data pair
+T_FlowProviderData = TypeVar("T_FlowProviderData", default=AdapterPayload)
+T_FlowProviderDataModel = TypeVar("T_FlowProviderDataModel", bound=BaseModel, default=BaseModel)
+
 # Outbound payload pairs
 T_DeploymentCreateResult = TypeVar("T_DeploymentCreateResult", default=AdapterPayload)
 T_DeploymentCreateResultModel = TypeVar("T_DeploymentCreateResultModel", bound=BaseModel, default=BaseModel)
@@ -94,6 +98,7 @@ class DeploymentPayloadFields(ProviderPayloadSchemas):
     deployment_list_params: PayloadSlot[T_DeploymentListParamsModel] | None = None
     config_list_params: PayloadSlot[T_ConfigListParamsModel] | None = None
     snapshot_list_params: PayloadSlot[T_SnapshotListParamsModel] | None = None
+    flow_artifact: PayloadSlot[T_FlowProviderDataModel] | None = None
 
     # Outbound (adapter -> response)
     deployment_create_result: PayloadSlot[T_DeploymentCreateResultModel] | None = None

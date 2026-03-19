@@ -14,7 +14,13 @@ except ModuleNotFoundError:
         allow_module_level=True,
     )
 
-from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import WatsonxDeploymentUpdatePayload
+from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
+    WatsonxDeploymentCreateResultData,
+    WatsonxDeploymentUpdatePayload,
+    WatsonxDeploymentUpdateResultData,
+    WatsonxExecutionResultData,
+    WatsonxFlowArtifactProviderData,
+)
 from langflow.services.adapters.deployment.watsonx_orchestrate.service import WatsonxOrchestrateDeploymentService
 from lfx.services.adapters.payload import AdapterPayloadValidationError
 
@@ -42,8 +48,16 @@ def _raw_connection(app_id: str) -> dict:
 def test_payload_schema_slot_registered_for_deployment_update() -> None:
     slot = WatsonxOrchestrateDeploymentService.payload_schemas
     assert slot is not None
+    assert slot.flow_artifact is not None
+    assert slot.flow_artifact.adapter_model is WatsonxFlowArtifactProviderData
+    assert slot.deployment_create_result is not None
+    assert slot.deployment_create_result.adapter_model is WatsonxDeploymentCreateResultData
     assert slot.deployment_update is not None
     assert slot.deployment_update.adapter_model is WatsonxDeploymentUpdatePayload
+    assert slot.deployment_update_result is not None
+    assert slot.deployment_update_result.adapter_model is WatsonxDeploymentUpdateResultData
+    assert slot.execution_result is not None
+    assert slot.execution_result.adapter_model is WatsonxExecutionResultData
 
 
 def test_update_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> None:

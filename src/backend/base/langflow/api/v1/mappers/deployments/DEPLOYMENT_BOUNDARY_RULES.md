@@ -1,0 +1,412 @@
+# Deployment Boundary and Separation Rules
+
+This document captures the architecture and contract rules established during the deployment mapper/adapter refactor workstream.
+
+The goal is strict separation of concerns between:
+
+- Langflow API orchestration (`src/backend/base/langflow/api/v1`)
+- Mapper translation/reconciliation layer (`src/backend/base/langflow/api/v1/mappers/deployments`)
+- Adapter execution layer (`src/backend/base/langflow/services/adapters/deployment/*`)
+- Generic adapter schema/payload contracts (`src/lfx/src/lfx/services/adapters/deployment/*`)
+
+---
+
+## 1) Core Boundary Principles
+
+### 1.1 API route modules must be provider-agnostic
+
+`deployments.py` must not import or branch on provider-specific payload models, constants, slot names, or parser logic.
+
+Allowed in routes:
+
+- Resolve mapper from provider key
+- Call mapper public APIs
+- Call adapter service APIs
+- Apply generic orchestration, transaction, and HTTP error mapping
+
+Not allowed in routes:
+
+- Watsonx (or any provider) specific schema imports
+- Direct reads of adapter payload slot internals
+- Provider-specific payload shape assumptions
+- Mapper-internal validation logic duplicated in route helpers
+
+### 1.2 Mapper is the API-boundary translation and reconciliation owner
+
+Mapper responsibility includes:
+
+- API payload validation and translation into adapter payloads
+- Provider-specific interpretation of adapter result payloads
+- Reconciliation extraction needed by Langflow persistence logic
+
+Mapper responsibility excludes:
+
+- Network calls
+- Provider side effects
+- Adapter execution logic
+
+### 1.3 Adapter is provider execution owner
+
+Adapter responsibility includes:
+
+- Provider API/network calls
+- Provider semantics and state transitions
+- Slot-based validation of adapter payload/result structures
+
+Adapter should not:
+
+- Depend on Langflow flow-version concepts directly
+- Encode Langflow DB semantics
+- Assume API route-level orchestration details
+
+---
+
+## 2) Langflow vs Adapter Vocabulary Rules
+
+### 2.1 No Langflow-specific identity terms in adapter contracts
+
+Do not expose `flow_version_id` as an adapter contract requirement.
+
+Use adapter-neutral correlation:
+
+- `source_ref: str`
+
+Langflow can choose to populate `source_ref` with serialized flow-version IDs, but this is an implementation decision at the mapper/API boundary.
+
+### 2.2 Clean break for fragile positional mapping
+
+Do not rely on ordering between:
+
+- input `flow_version_ids`
+- output provider `snapshot_ids`
+
+Instead require explicit create-time bindings:
+
+- `{ source_ref, snapshot_id }`
+
+---
+
+## 3) Contract and Schema Rules
+
+### 3.1 Explicit reconciliation contracts are required
+
+Mapper reconciliation outputs must have explicit schemas, not ad-hoc dict/list assumptions.
+
+Baseline contracts:
+
+- `CreateFlowArtifactProviderData`
+- `CreateSnapshotBinding`
+- `CreateSnapshotBindings`
+- `CreatedSnapshotIds`
+- `FlowVersionPatch`
+
+### 3.2 Public interfaces must document contract shape
+
+Public mapper methods must clearly indicate:
+
+- Return contract model
+- Intent (mapping vs utility/reconciliation)
+- Default behavior
+- Provider override expectations
+
+### 3.3 Generic placement rules for payload typing
+
+Generic provider data typing belongs with payload taxonomy definitions (`payloads.py`) when tied to payload slots.
+
+If a generic is used for slot shape constraints, pair it with a `BaseModel`-bound generic for slot declarations.
+
+### 3.4 Mapper-defined schemas are the final API-boundary contract
+
+Mapper contract models are the last stop before route orchestration consumes data.
+
+Rules:
+
+- Mapper-defined schemas must be complete and explicit for route needs.
+- Do not add provider-specific escape hatches (for example opaque passthrough blobs, free-form fallback fields, or "raw provider payload" backdoors) to mapper contracts.
+- If new provider behavior is needed, extend/normalize through explicit schema fields and mapper overrides, not contract bypass paths.
+
+---
+
+## 4) Payload Slot Ownership Rules
+
+### 4.1 Slot validation ownership
+
+Validation of provider payload/result shape should happen through configured payload slots in the appropriate layer:
+
+- API payload slots in mapper (API-side schema boundary)
+- Adapter payload slots in adapter service (provider execution boundary)
+
+Do not bypass slot validation with plain dict assumptions where a slot exists.
+
+### 4.2 Slot naming conventions
+
+Slot names should be concise and aligned with existing naming conventions.
+
+Example rule applied:
+
+- Prefer `flow_artifact` over verbose suffixes like `flow_artifact_provider_data`
+
+### 4.3 Create/update result slot usage
+
+Provider-specific create/update reconciliation data should be emitted through dedicated result slots:
+
+- `deployment_create_result`
+- `deployment_update_result`
+
+Do not stash custom reconciliation fields in untyped generic dicts without slot-backed schemas.
+
+### 4.4 Validation path should not duplicate slot/model work
+
+When a payload/result shape is already represented by a known slot model or explicit schema model:
+
+- Validate by calling slot parse directly, or by validating directly against the known schema model.
+- Do not add extra wrapper parse helpers that only re-dispatch to the same slot/model without adding new semantics.
+- Do not re-discover adapter payload slots through runtime adapter introspection when mapper/provider selection is already explicit.
+- When both adapter service and mapper consume the same provider slots, use one canonical provider payload-schema registry object (for example provider `DeploymentPayloadSchemas`) as the source of truth instead of duplicating free-standing slot constants.
+
+### 4.5 No silent no-op fallback on required reconciliation payloads
+
+For required provider reconciliation/result payloads:
+
+- Missing or malformed payloads must fail fast with explicit boundary errors.
+- Do not silently substitute empty/default model instances for required provider result contracts.
+
+### 4.6 Canonical payload-schema registry naming and consumption
+
+When a provider defines a canonical `DeploymentPayloadSchemas` registry object shared by adapter + mapper:
+
+- First define a provider `payloads.py` module as the canonical ownership location for provider payload/result contract models and the registry instance.
+- In the provider payload module, the canonical registry constant name must be `PAYLOAD_SCHEMAS`.
+- In cross-module imports (service/mapper), import and reference the registry as `PAYLOAD_SCHEMAS` (no aliasing).
+- Do not instantiate duplicate registry objects in consumers; import and reuse the single canonical provider registry.
+- Do not scatter free-standing slot constants that can drift from the canonical registry.
+
+---
+
+## 5) Mapper API Surface and Naming Rules
+
+### 5.1 Semantic families must be visually distinct
+
+Keep method naming families distinct by purpose:
+
+- `resolve_*` for API input resolution/translation
+- `shape_*` for outbound API shaping
+- `util_*` for reconciliation/util extraction helpers
+
+Avoid overlapping verbs that blur intent (`resolve` vs `reconcile`, etc.).
+
+### 5.2 Keep utility/reconciliation methods together and explicit
+
+Utility methods used by route orchestration (snapshot bindings, created snapshot IDs, flow-version patch extraction, flow artifact provider data construction) should use the utility naming family consistently.
+
+### 5.3 Registry utility should be separate from mapper base implementation
+
+Do not co-locate registry infrastructure with base mapper behavior when it hurts contract readability.
+
+Keep:
+
+- mapper behavior in `base.py`
+- registry implementation in `registry.py`
+- contract models in `contracts.py`
+
+---
+
+## 6) Provider-Specific Logic Placement Rules
+
+### 6.1 Provider-specific extraction belongs in provider mapper
+
+Examples:
+
+- Tenant ID derivation from provider URL
+- Parsing provider create/update results for reconciliation
+- Provider-specific flow-version patch extraction semantics
+
+These must be implemented as mapper overrides, not route conditionals.
+
+### 6.2 Provider-specific helper functions in adapters should be modularized
+
+When adapter service classes become heavy, move private create/update helpers into focused helper modules (for example `create_helpers.py`) to keep service orchestration lean and readable.
+
+### 6.3 Public schemas must live in schema/payload modules, not random internals
+
+If a schema is part of externally consumed adapter payload/result shape, define it in payload/schema modules (`payloads.py` or `schema.py`), not as ad-hoc local classes in deep internal tool modules.
+
+### 6.4 Public helper result contracts follow the same placement rule
+
+If a helper return type is consumed by adapter service orchestration (for example typed create/update apply results used by `service.py`), treat it as a public boundary contract even if it is not directly serialized over HTTP.
+
+Rules:
+
+- Do not define service-consumed contract classes in helper modules (`*_helpers.py`).
+- Place provider-specific execution/payload/result contracts in `payloads.py`.
+- Place adapter-neutral/shared domain contracts in `schema.py`.
+- Helper modules may use these contracts, but should not own them.
+
+---
+
+## 7) Route Orchestration Rules
+
+### 7.1 Routes orchestrate; they do not interpret provider payload internals
+
+Routes may:
+
+- call mapper utility methods
+- enforce generic invariants (counts, missing bindings, unexpected refs)
+- coordinate DB writes and transaction boundaries
+
+Routes must not:
+
+- parse provider-specific nested payloads directly
+- inspect adapter slot configuration internals directly
+
+### 7.2 Mapper lookup API should mirror adapter lookup ergonomics
+
+Provide and use a public mapper getter (`get_deployment_mapper(provider_key)`) to preserve a clear and symmetric contract alongside adapter getter usage.
+
+---
+
+## 8) Data Integrity Rules for Deployment Attachments
+
+### 8.1 Source-ref based matching is authoritative
+
+Create-time attachment mapping must use:
+
+- expected `source_ref -> flow_version_id`
+- provider returned `source_ref -> snapshot_id`
+
+with strict checks:
+
+- missing bindings => error
+- unexpected `source_ref` => error
+- count mismatch => error
+
+### 8.2 Update-time attachment changes are explicit patch operations
+
+Flow-version attachment add/remove operations should be represented via explicit patch semantics (`FlowVersionPatch`) and validated for no overlap.
+
+Provider mappers may enforce provider-specific constraints for where patch operations are expressed (for example inside provider operations payload).
+
+---
+
+## 9) Error Handling Rules
+
+### 9.1 Raise boundary-appropriate errors
+
+- Mapper/API boundary violations: HTTP 4xx/5xx with precise detail
+- Adapter slot validation failures: adapter payload validation errors translated into deployment-domain errors with context
+
+### 9.2 Do not silently degrade on contract violations
+
+Missing required bindings or malformed provider result contracts should fail fast with explicit error messages.
+
+---
+
+## 10) Testing and Enforcement Rules
+
+### 10.1 Tests must verify boundary contracts, not just happy paths
+
+Required coverage areas:
+
+- base mapper default utility behavior
+- provider mapper override behavior
+- route reconciliation failure modes (missing/mismatched bindings)
+- provider account shaping through mapper API
+- registry behavior and singleton accessors
+
+### 10.2 Tests should assert schema model outputs
+
+When mapper methods return contract objects, assert against model types and fields, not raw loosely typed dict/list assumptions.
+
+### 10.3 Keep naming consistency enforced in tests
+
+When method naming families change for semantic clarity, update tests immediately to prevent drift in contract language.
+
+---
+
+## 11) Practical Review Checklist (PRs touching deployments)
+
+Use this checklist before merge:
+
+- [ ] Route module contains no provider-specific payload model imports
+- [ ] Route module does not parse provider payload internals directly
+- [ ] Mapper owns provider-specific result interpretation
+- [ ] Adapter uses payload slots for validation (no bypassed plain dict assumptions)
+- [ ] Correlation uses explicit `source_ref` bindings (not positional mapping)
+- [ ] Reconciliation outputs use explicit schema models
+- [ ] Mapper-defined schemas contain no provider escape hatches/backdoors
+- [ ] Validation path uses direct slot/model parse (no redundant wrapper parse helpers)
+- [ ] Required reconciliation payloads fail fast (no silent default model fallback)
+- [ ] Provider defines `payloads.py` as canonical owner of provider payload/result contracts and payload-schema registry
+- [ ] Mapper and adapter reuse one canonical provider payload-schema registry (no duplicate slot registries/constants)
+- [ ] Method names follow semantic families (`resolve_*`, `shape_*`, `util_*`)
+- [ ] Registry/contracts/base files remain separated by purpose
+- [ ] Tests cover both base mapper defaults and provider overrides
+- [ ] Failure cases for missing/unexpected bindings are covered
+
+---
+
+## 12) Change Management Rules for Contract Evolution
+
+Use this workflow for any deployments change that alters payload shape, reconciliation semantics, or ownership boundaries.
+
+### 12.1 Classify the change before coding
+
+Identify the change category first:
+
+- contract addition (new explicit field/model)
+- contract tightening (stricter validation or invariants)
+- contract replacement (old path superseded by new explicit shape)
+- ownership move (logic moved route -> mapper, helper -> payload/schema module, etc.)
+
+The category determines whether compatibility bridges are required.
+
+### 12.2 Contract-first implementation order
+
+Apply changes in this order:
+
+1. Define/update explicit contract schemas (API mapper contracts + adapter payload/schema contracts).
+2. Update mapper interpretation/utilities to consume/emit those contracts.
+3. Update adapter service/helper orchestration to emit slot-backed results matching the new contracts.
+4. Rewire routes/services to call mapper public APIs only (no provider payload probing).
+5. Add/update tests for both valid flows and boundary failures.
+6. Remove legacy compatibility paths when the rollout mode allows it.
+
+This keeps every boundary explicit while code is in transition.
+
+### 12.3 Compatibility mode must be intentional
+
+For each contract evolution, explicitly choose one mode:
+
+- **Clean break:** old shape is rejected immediately with explicit errors.
+- **Transitional compatibility:** old shape is temporarily accepted through a narrow, documented fallback.
+
+Default policy:
+
+- Prefer **clean break** for changes internal to Langflow/adapter implementation layers when public API contracts are unchanged.
+- Use transitional compatibility only when required to preserve public API behavior or external integration expectations.
+
+Rules:
+
+- Transitional fallbacks must be minimal, local, and easy to delete.
+- Transitional behavior must not bypass slot validation.
+- Every fallback must include a removal condition (test or TODO note tied to cleanup).
+
+### 12.4 Public contract placement and naming during migrations
+
+When introducing new public contract types during refactors:
+
+- service-consumed/public helper result contracts belong in `payloads.py` (provider-specific) or `schema.py` (adapter-neutral/shared)
+- do not define public contracts in helper modules
+- provider-specific public contract names should carry provider prefix (for example `Watsonx...`) to prevent ambiguity
+
+### 12.5 Required test deltas for contract changes
+
+Any contract evolution PR must include tests that prove:
+
+- new contract models are used (not ad-hoc dict assumptions)
+- route/service behavior no longer depends on provider payload internals directly
+- invariant enforcement for reconciliation (missing bindings, unexpected refs, count mismatch, overlap, etc.)
+- compatibility behavior (if transitional mode is chosen) and eventual clean-break expectations
+
+Following this process keeps layering explicit, reduces leakage during migrations, and makes cleanup predictable.
+

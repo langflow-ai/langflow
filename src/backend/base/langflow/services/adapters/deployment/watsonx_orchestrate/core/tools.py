@@ -19,6 +19,7 @@ from lfx.services.adapters.deployment.exceptions import InvalidContentError, Inv
 from lfx.utils.flow_requirements import generate_requirements_from_flow
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import retry_create
+from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import WatsonxCreateSnapshotBinding
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     dedupe_list,
     normalize_wxo_name,
@@ -232,15 +233,8 @@ def create_wxo_flow_tool(
     """
     flow_definition = flow_payload.model_dump()
 
-    flow_provider_data = flow_definition.pop("provider_data", None)
-
-    if not isinstance(flow_provider_data, dict):
-        msg = "Flow payload must include provider_data with a non-empty project_id for Watsonx deployment."
-        raise InvalidContentError(message=msg)
-    project_id = str(flow_provider_data.get("project_id") or "").strip()
-    if not project_id:
-        msg = "Flow payload must include provider_data with a non-empty project_id for Watsonx deployment."
-        raise InvalidContentError(message=msg)
+    flow_provider_data = _resolve_flow_provider_data(flow_payload)
+    project_id = str(flow_provider_data.get("project_id")).strip()
 
     flow_definition.update(
         {
@@ -408,7 +402,7 @@ async def process_raw_flows_with_app_id(
     app_id: str,
     flows: list[BaseFlowArtifact],
     tool_name_prefix: str,
-) -> list[str]:
+) -> list[WatsonxCreateSnapshotBinding]:
     """Create langflow tools in wxO and connect them to the given app_id."""
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
 
@@ -418,12 +412,45 @@ async def process_raw_flows_with_app_id(
 
     connection = await validate_connection(clients.connections, app_id=app_id)
 
-    return await create_and_upload_wxo_flow_tools(
+    created_tool_ids = await create_and_upload_wxo_flow_tools(
         clients=clients,
         flow_payloads=flows,
         connections={app_id: connection.connection_id},
         tool_name_prefix=tool_name_prefix,
     )
+    if len(created_tool_ids) != len(flows):
+        msg = "Flow upload result mismatch: created tool ids count does not match the number of flow payloads."
+        raise InvalidDeploymentOperationError(message=msg)
+    return [
+        WatsonxCreateSnapshotBinding(
+            source_ref=_resolve_flow_source_ref(flow_payload),
+            snapshot_id=tool_id,
+            source_name=str(flow_payload.name).strip() or None,
+            provider_name=f"{tool_name_prefix}{normalize_wxo_name(str(flow_payload.name))}",
+        )
+        for flow_payload, tool_id in zip(flows, created_tool_ids, strict=True)
+    ]
+
+
+def _resolve_flow_source_ref(flow_payload: BaseFlowArtifact) -> str:
+    provider_data = _resolve_flow_provider_data(flow_payload)
+    source_ref = str(provider_data.get("source_ref") or "").strip()
+    if source_ref:
+        return source_ref
+    msg = "Flow payload must include provider_data.source_ref for snapshot correlation."
+    raise InvalidContentError(message=msg)
+
+
+def _resolve_flow_provider_data(flow_payload: BaseFlowArtifact) -> dict[str, Any]:
+    provider_data = flow_payload.provider_data
+    if not isinstance(provider_data, dict):
+        msg = "Flow payload must include provider_data with a non-empty project_id for Watsonx deployment."
+        raise InvalidContentError(message=msg)
+    project_id = str(provider_data.get("project_id") or "").strip()
+    if not project_id:
+        msg = "Flow payload must include provider_data with a non-empty project_id for Watsonx deployment."
+        raise InvalidContentError(message=msg)
+    return provider_data
 
 
 # TODO(WXO): find a way to make this fallback not hard-coded.

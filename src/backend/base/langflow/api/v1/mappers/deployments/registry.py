@@ -19,10 +19,38 @@ import threading
 
 from lfx.services.adapters.schema import AdapterType
 
-from .base import BaseDeploymentMapper, DeploymentMapperRegistry
+from .base import BaseDeploymentMapper
 
 _mapper_registry_singleton: DeploymentMapperRegistry | None = None
 _mapper_registry_singleton_lock = threading.Lock()
+
+
+class DeploymentMapperRegistry:
+    """Registry of per-provider deployment mappers."""
+
+    _default: BaseDeploymentMapper
+    _mapper_classes: dict[str, type[BaseDeploymentMapper]]
+    _mapper_instances: dict[str, BaseDeploymentMapper]
+
+    def __init__(self) -> None:
+        self._default = BaseDeploymentMapper()
+        self._mapper_classes = {}
+        self._mapper_instances = {}
+
+    def register(self, provider_key: str, mapper_class: type[BaseDeploymentMapper]) -> None:
+        if not issubclass(mapper_class, BaseDeploymentMapper):
+            msg = "mapper_class must inherit from BaseDeploymentMapper"
+            raise TypeError(msg)
+        self._mapper_classes[provider_key] = mapper_class
+        self._mapper_instances.pop(provider_key, None)
+
+    def get(self, provider_key: str) -> BaseDeploymentMapper:
+        mapper_class = self._mapper_classes.get(provider_key)
+        if mapper_class is None:
+            return self._default
+        if provider_key not in self._mapper_instances:
+            self._mapper_instances[provider_key] = mapper_class()
+        return self._mapper_instances[provider_key]
 
 
 def _get_mapper_registry_singleton() -> DeploymentMapperRegistry:
@@ -70,3 +98,13 @@ def get_mapper(adapter_type: AdapterType, provider_key: str | None) -> BaseDeplo
     """
     registry = get_mapper_registry(adapter_type)
     return registry.get((provider_key or "").strip())
+
+
+def get_deployment_mapper(provider_key: str | None) -> BaseDeploymentMapper:
+    """Resolve deployment mapper by provider key.
+
+    Convenience wrapper mirroring deployment adapter lookup call sites, so
+    deployment routes/services can use a direct accessor without repeatedly
+    passing ``AdapterType.DEPLOYMENT``.
+    """
+    return get_mapper(AdapterType.DEPLOYMENT, provider_key)

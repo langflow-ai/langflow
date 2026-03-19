@@ -10,20 +10,38 @@ from uuid import UUID
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadFields
 from lfx.services.adapters.deployment.schema import (
     ConfigDeploymentBindingUpdate,
+    DeploymentCreateResult,
     DeploymentType,
     DeploymentUpdateResult,
+    ExecutionCreateResult,
+    ExecutionStatusResult,
 )
 from lfx.services.adapters.deployment.schema import (
     DeploymentUpdate as AdapterDeploymentUpdate,
 )
 from lfx.services.adapters.payload import PayloadSlot
 
-from langflow.api.v1.schemas.deployments import DeploymentUpdateRequest, DeploymentUpdateResponse
+from langflow.api.v1.schemas.deployments import (
+    DeploymentProviderAccountGetResponse,
+    DeploymentUpdateRequest,
+    DeploymentUpdateResponse,
+    ExecutionCreateResponse,
+    ExecutionStatusResponse,
+)
+
+from .contracts import (
+    CreatedSnapshotIds,
+    CreateFlowArtifactProviderData,
+    CreateSnapshotBindings,
+    FlowVersionPatch,
+    UpdateSnapshotBindings,
+)
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from langflow.services.database.models.deployment.model import Deployment
+    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 
 
 @dataclass(frozen=True)
@@ -130,21 +148,85 @@ class BaseDeploymentMapper:
             provider_data=provider_data,
         )
 
-    def resolve_created_snapshot_ids(self, result: DeploymentUpdateResult) -> list[str]:
-        """Return snapshot ids created during this update.
+    def resolve_provider_tenant_id(self, *, provider_url: str, provider_tenant_id: str | None) -> str | None:
+        """Resolve provider tenant id for provider-account create/update."""
+        _ = provider_url
+        return provider_tenant_id
 
-        Base behavior treats ``result.snapshot_ids`` as created ids.
-        Provider-specific mappers may override this when the adapter uses
-        ``snapshot_ids`` for finalized bindings and exposes created ids in
-        provider-specific result payloads.
+    def shape_provider_account_response(
+        self,
+        provider_account: DeploymentProviderAccount,
+    ) -> DeploymentProviderAccountGetResponse:
+        return DeploymentProviderAccountGetResponse(
+            id=provider_account.id,
+            provider_tenant_id=provider_account.provider_tenant_id,
+            provider_key=provider_account.provider_key,
+            provider_url=provider_account.provider_url,
+            created_at=provider_account.created_at,
+            updated_at=provider_account.updated_at,
+        )
+
+    def util_create_flow_artifact_provider_data(
+        self,
+        *,
+        project_id: UUID,
+        flow_version_id: UUID,
+    ) -> CreateFlowArtifactProviderData:
+        """Build provider_data for create-time flow artifacts.
+
+        Contract schema: ``CreateFlowArtifactProviderData``.
         """
-        return [str(snapshot_id).strip() for snapshot_id in result.snapshot_ids if str(snapshot_id).strip()]
+        _ = project_id
+        return CreateFlowArtifactProviderData(source_ref=str(flow_version_id))
 
-    def resolve_flow_version_patch(self, payload: DeploymentUpdateRequest) -> tuple[list[UUID], list[UUID]]:
-        """Resolve flow-version attachment adds/removes represented by this update request."""
-        if payload.flow_version_ids is None:
-            return [], []
-        return list(payload.flow_version_ids.add or []), list(payload.flow_version_ids.remove or [])
+    def util_create_snapshot_bindings(
+        self,
+        *,
+        result: DeploymentCreateResult,
+    ) -> CreateSnapshotBindings:
+        """Reconcile normalized create bindings as ``source_ref -> snapshot_id``.
+
+        Base behavior is intentionally empty because binding extraction is
+        adapter-result-schema-specific and must be implemented by provider
+        mappers that define create-time snapshot association contracts.
+        """
+        _ = result
+        return CreateSnapshotBindings()
+
+    def util_created_snapshot_ids(
+        self,
+        *,
+        result: DeploymentUpdateResult,
+    ) -> CreatedSnapshotIds:
+        """Reconcile created snapshot ids for attachment patching.
+
+        Contract schema: ``CreatedSnapshotIds``.
+        """
+        return CreatedSnapshotIds(ids=[str(snapshot_id) for snapshot_id in result.snapshot_ids])
+
+    def util_update_snapshot_bindings(
+        self,
+        *,
+        result: DeploymentUpdateResult,
+    ) -> UpdateSnapshotBindings:
+        """Reconcile update-time ``source_ref -> snapshot_id`` bindings.
+
+        Base behavior is intentionally empty because binding extraction is
+        adapter-result-schema-specific and must be implemented by provider
+        mappers that define update-time snapshot association contracts.
+        """
+        _ = result
+        return UpdateSnapshotBindings()
+
+    def util_flow_version_patch(self, payload: DeploymentUpdateRequest) -> FlowVersionPatch:
+        """Reconcile attachment patch operation from update payload.
+
+        Contract schema: ``FlowVersionPatch``.
+        """
+        return FlowVersionPatch(
+            add_flow_version_ids=list(payload.add_flow_version_ids or []),
+            remove_flow_version_ids=list(payload.remove_flow_version_ids or []),
+        )
 
     def shape_deployment_operation_result(self, provider_result: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_result
@@ -158,8 +240,70 @@ class BaseDeploymentMapper:
     def shape_snapshot_list_result(self, provider_result: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_result
 
-    def shape_execution_result(self, provider_result: dict[str, Any] | None) -> dict[str, Any] | None:
+    def shape_execution_create_provider_data(self, provider_result: dict[str, Any] | None) -> dict[str, Any] | None:
+        """Shape provider_data for execution create responses."""
         return provider_result
+
+    def shape_execution_status_provider_data(self, provider_result: dict[str, Any] | None) -> dict[str, Any] | None:
+        """Shape provider_data for execution status responses."""
+        return provider_result
+
+    def shape_execution_create_result(
+        self,
+        result: ExecutionCreateResult,
+        *,
+        deployment_id: UUID,
+    ) -> ExecutionCreateResponse:
+        provider_result = self.shape_execution_create_provider_data(
+            result.provider_result if isinstance(result.provider_result, dict) else None
+        )
+        return ExecutionCreateResponse(
+            execution_id=self.util_execution_id(
+                execution_id=result.execution_id,
+                provider_result=provider_result,
+            ),
+            deployment_id=deployment_id,
+            provider_data=provider_result,
+        )
+
+    def shape_execution_status_result(
+        self,
+        result: ExecutionStatusResult,
+        *,
+        deployment_id: UUID,
+        fallback_execution_id: str | None = None,
+    ) -> ExecutionStatusResponse:
+        provider_result = self.shape_execution_status_provider_data(
+            result.provider_result if isinstance(result.provider_result, dict) else None
+        )
+        return ExecutionStatusResponse(
+            execution_id=self.util_execution_id(
+                execution_id=result.execution_id or fallback_execution_id,
+                provider_result=provider_result,
+            ),
+            deployment_id=deployment_id,
+            provider_data=provider_result,
+        )
+
+    def util_execution_id(
+        self,
+        *,
+        execution_id: str | None,
+        provider_result: dict[str, Any] | None,
+    ) -> str | None:
+        """Resolve execution identifier for API responses."""
+        _ = provider_result
+        return execution_id
+
+    def util_execution_deployment_resource_key(
+        self,
+        *,
+        deployment_id: str | None,
+        provider_result: dict[str, Any] | None,
+    ) -> str | None:
+        """Resolve provider deployment resource key from execution result."""
+        _ = provider_result
+        return (deployment_id or "").strip() or None
 
     def shape_deployment_item_data(self, provider_data: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_data
@@ -176,31 +320,3 @@ class BaseDeploymentMapper:
         if raw is None or slot is None:
             return raw
         return slot.apply(raw)
-
-
-class DeploymentMapperRegistry:
-    """Registry of per-provider deployment mappers."""
-
-    _default: BaseDeploymentMapper
-    _mapper_classes: dict[str, type[BaseDeploymentMapper]]
-    _mapper_instances: dict[str, BaseDeploymentMapper]
-
-    def __init__(self) -> None:
-        self._default = BaseDeploymentMapper()
-        self._mapper_classes = {}
-        self._mapper_instances = {}
-
-    def register(self, provider_key: str, mapper_class: type[BaseDeploymentMapper]) -> None:
-        if not issubclass(mapper_class, BaseDeploymentMapper):
-            msg = "mapper_class must inherit from BaseDeploymentMapper"
-            raise TypeError(msg)
-        self._mapper_classes[provider_key] = mapper_class
-        self._mapper_instances.pop(provider_key, None)
-
-    def get(self, provider_key: str) -> BaseDeploymentMapper:
-        mapper_class = self._mapper_classes.get(provider_key)
-        if mapper_class is None:
-            return self._default
-        if provider_key not in self._mapper_instances:
-            self._mapper_instances[provider_key] = mapper_class()
-        return self._mapper_instances[provider_key]

@@ -3,13 +3,26 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
+from lfx.services.adapters.deployment.payloads import DeploymentPayloadSchemas
 from lfx.services.adapters.deployment.schema import BaseFlowArtifact, EnvVarKey, EnvVarValueSpec, NormalizedId
-from lfx.services.adapters.payload import AdapterPayload
+from lfx.services.adapters.payload import AdapterPayload, PayloadSlot
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
 RawToolName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+class WatsonxFlowArtifactProviderData(BaseModel):
+    """Provider metadata for watsonx flow artifacts."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    project_id: NormalizedId = Field(description="Langflow project id carried for watsonx snapshot creation.")
+    source_ref: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)] | None = Field(
+        default=None,
+        description="Optional adapter-neutral source reference used for create-time snapshot correlation.",
+    )
 
 
 class WatsonxConnectionRawPayload(BaseModel):
@@ -33,7 +46,7 @@ class WatsonxUpdateTools(BaseModel):
         default=None,
         description="Known existing provider tool ids available for operation references.",
     )
-    raw_payloads: list[BaseFlowArtifact] | None = Field(
+    raw_payloads: list[BaseFlowArtifact[WatsonxFlowArtifactProviderData]] | None = Field(
         default=None,
         description="Raw tool payloads keyed by BaseFlowArtifact.name.",
     )
@@ -246,3 +259,94 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
             raise ValueError(msg)
 
         return self
+
+
+class WatsonxCreateSnapshotBinding(BaseModel):
+    """Normalized binding item for deployment create snapshot correlation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    source_ref: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    snapshot_id: NormalizedId
+    source_name: str | None = None
+    provider_name: str | None = None
+
+    @field_validator("source_name", "provider_name", mode="before")
+    @classmethod
+    def normalize_optional_value(cls, value: Any) -> str | None:
+        if value is None:
+            return None
+        normalized = str(value).strip()
+        return normalized or None
+
+
+class WatsonxDeploymentCreateResultData(BaseModel):
+    """Normalized provider result payload for deployment create."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    snapshot_bindings: list[WatsonxCreateSnapshotBinding] = Field(default_factory=list)
+
+
+class WatsonxToolAppBinding(BaseModel):
+    """Normalized tool-app binding item for deployment update result."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    tool_id: NormalizedId
+    app_ids: list[NormalizedId] = Field(default_factory=list)
+
+    @field_validator("app_ids", mode="before")
+    @classmethod
+    def normalize_app_ids(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        return [str(app_id).strip() for app_id in value if str(app_id).strip()]
+
+
+class WatsonxDeploymentUpdateResultData(BaseModel):
+    """Normalized provider result payload for deployment update."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    created_snapshot_ids: list[NormalizedId] = Field(default_factory=list)
+    added_snapshot_bindings: list[WatsonxCreateSnapshotBinding] = Field(default_factory=list)
+    tool_app_bindings: list[WatsonxToolAppBinding] | None = None
+
+    @field_validator("created_snapshot_ids", mode="before")
+    @classmethod
+    def normalize_created_snapshot_ids(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        return [str(snapshot_id).strip() for snapshot_id in value if str(snapshot_id).strip()]
+
+
+class WatsonxExecutionResultData(BaseModel):
+    """Normalized provider result payload for execution create/status."""
+
+    model_config = ConfigDict(extra="allow")
+
+    run_id: NormalizedId | None = None
+    execution_id: NormalizedId | None = None
+    agent_id: NormalizedId | None = None
+    deployment_id: NormalizedId | None = None
+
+
+class WatsonxProviderUpdateApplyResult(BaseModel):
+    """Public adapter contract for update helper apply results."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    added_snapshot_ids: list[NormalizedId] = Field(default_factory=list)
+    added_snapshot_bindings: list[WatsonxCreateSnapshotBinding] = Field(default_factory=list)
+
+
+# Canonical watsonx deployment payload registry. Adapter service and mapper
+# consume this same object to keep slot ownership explicit and avoid drift.
+PAYLOAD_SCHEMAS = DeploymentPayloadSchemas(
+    flow_artifact=PayloadSlot(WatsonxFlowArtifactProviderData),
+    deployment_create_result=PayloadSlot(WatsonxDeploymentCreateResultData),
+    deployment_update=PayloadSlot(WatsonxDeploymentUpdatePayload),
+    deployment_update_result=PayloadSlot(WatsonxDeploymentUpdateResultData),
+    execution_result=PayloadSlot(WatsonxExecutionResultData),
+)

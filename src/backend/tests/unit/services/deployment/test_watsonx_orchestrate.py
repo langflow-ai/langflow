@@ -1001,7 +1001,7 @@ async def test_process_raw_flows_with_app_id_awaits_connection_validation(monkey
         captured["flow_payloads"] = flow_payloads
         captured["connections"] = connections
         captured["tool_name_prefix"] = tool_name_prefix
-        return ["tool-1"]
+        return []
 
     monkeypatch.setattr(
         "langflow.services.adapters.deployment.watsonx_orchestrate.core.config.validate_connection",
@@ -1020,9 +1020,88 @@ async def test_process_raw_flows_with_app_id_awaits_connection_validation(monkey
         tool_name_prefix="lf_test_",
     )
 
-    assert result == ["tool-1"]
+    assert result == []
     assert captured["connections"] == {"app-1": "conn-123"}
     assert captured["tool_name_prefix"] == "lf_test_"
+
+
+@pytest.mark.anyio
+async def test_process_raw_flows_with_app_id_returns_source_ref_bindings(monkeypatch):
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core import tools as tools_core_module
+
+    fake_clients = SimpleNamespace(
+        tool=SimpleNamespace(),
+        connections=SimpleNamespace(),
+    )
+
+    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+        return SimpleNamespace(connection_id="conn-123")
+
+    async def mock_create_and_upload_wxo_flow_tools(
+        *,
+        clients,  # noqa: ARG001
+        flow_payloads,  # noqa: ARG001
+        connections,  # noqa: ARG001
+        tool_name_prefix,  # noqa: ARG001
+    ):
+        return ["tool-1", "tool-2"]
+
+    monkeypatch.setattr(
+        "langflow.services.adapters.deployment.watsonx_orchestrate.core.config.validate_connection",
+        mock_validate_connection,
+    )
+    monkeypatch.setattr(
+        tools_core_module,
+        "create_and_upload_wxo_flow_tools",
+        mock_create_and_upload_wxo_flow_tools,
+    )
+
+    result = await tools_core_module.process_raw_flows_with_app_id(
+        clients=fake_clients,
+        app_id="app-1",
+        flows=[
+            BaseFlowArtifact(
+                id=UUID("00000000-0000-0000-0000-000000000001"),
+                name="snapshot-one",
+                description="desc",
+                data={"nodes": [], "edges": []},
+                tags=[],
+                provider_data={"project_id": "project-1", "source_ref": "fv-1"},
+            ),
+            BaseFlowArtifact(
+                id=UUID("00000000-0000-0000-0000-000000000002"),
+                name="snapshot-two",
+                description="desc",
+                data={"nodes": [], "edges": []},
+                tags=[],
+                provider_data={"project_id": "project-1", "source_ref": "fv-2"},
+            ),
+        ],
+        tool_name_prefix="lf_test_",
+    )
+
+    assert [
+        {
+            "source_ref": binding.source_ref,
+            "snapshot_id": binding.snapshot_id,
+            "source_name": binding.source_name,
+            "provider_name": binding.provider_name,
+        }
+        for binding in result
+    ] == [
+        {
+            "source_ref": "fv-1",
+            "snapshot_id": "tool-1",
+            "source_name": "snapshot-one",
+            "provider_name": "lf_test_snapshot_one",
+        },
+        {
+            "source_ref": "fv-2",
+            "snapshot_id": "tool-2",
+            "source_name": "snapshot-two",
+            "provider_name": "lf_test_snapshot_two",
+        },
+    ]
 
 
 def test_create_wxo_flow_tool_keeps_load_from_db_global_values_unprefixed(monkeypatch):
@@ -1181,7 +1260,20 @@ async def test_create_wires_snapshot_ids_to_agent_and_prefixed_names(monkeypatch
         captured["snapshot_app_id"] = app_id
         captured["snapshot_flows"] = flows
         captured["tool_name_prefix"] = tool_name_prefix
-        return ["tool-1", "tool-2"]
+        return [
+            tools_module.WatsonxCreateSnapshotBinding(
+                source_ref="00000000-0000-0000-0000-000000000001",
+                snapshot_id="tool-1",
+                source_name="snapshot-one",
+                provider_name="lf_abcdef_snapshotone",
+            ),
+            tools_module.WatsonxCreateSnapshotBinding(
+                source_ref="00000000-0000-0000-0000-000000000002",
+                snapshot_id="tool-2",
+                source_name="snapshot-two",
+                provider_name="lf_abcdef_snapshottwo",
+            ),
+        ]
 
     monkeypatch.setattr(
         service_module,
@@ -1226,6 +1318,22 @@ async def test_create_wires_snapshot_ids_to_agent_and_prefixed_names(monkeypatch
     assert result.id == "dep-created"
     assert result.config_id == "lf_abcdef_my_deployment_ignored_app_id"
     assert result.snapshot_ids == ["tool-1", "tool-2"]
+    assert result.provider_result == {
+        "snapshot_bindings": [
+            {
+                "source_ref": "00000000-0000-0000-0000-000000000001",
+                "snapshot_id": "tool-1",
+                "source_name": "snapshot-one",
+                "provider_name": "lf_abcdef_snapshotone",
+            },
+            {
+                "source_ref": "00000000-0000-0000-0000-000000000002",
+                "snapshot_id": "tool-2",
+                "source_name": "snapshot-two",
+                "provider_name": "lf_abcdef_snapshottwo",
+            },
+        ]
+    }
     assert captured["config_deployment_name"] == "lf_abcdef_my_deployment_ignored_app_id"
     assert captured["snapshot_app_id"] == "lf_abcdef_my_deployment_ignored_app_id"
     assert len(captured["snapshot_flows"]) == 1
@@ -1271,7 +1379,20 @@ async def test_create_uses_caller_provided_resource_name_prefix(monkeypatch):
         captured["snapshot_app_id"] = app_id
         captured["snapshot_flows"] = flows
         captured["tool_name_prefix"] = tool_name_prefix
-        return ["tool-1", "tool-2"]
+        return [
+            tools_module.WatsonxCreateSnapshotBinding(
+                source_ref="00000000-0000-0000-0000-000000000001",
+                snapshot_id="tool-1",
+                source_name="snapshot-one",
+                provider_name="idempotent_abc_snapshotone",
+            ),
+            tools_module.WatsonxCreateSnapshotBinding(
+                source_ref="00000000-0000-0000-0000-000000000002",
+                snapshot_id="tool-2",
+                source_name="snapshot-two",
+                provider_name="idempotent_abc_snapshottwo",
+            ),
+        ]
 
     monkeypatch.setattr(
         service_module,
@@ -1314,6 +1435,23 @@ async def test_create_uses_caller_provided_resource_name_prefix(monkeypatch):
     )
 
     assert result.id == "dep-created"
+    assert result.snapshot_ids == ["tool-1", "tool-2"]
+    assert result.provider_result == {
+        "snapshot_bindings": [
+            {
+                "source_ref": "00000000-0000-0000-0000-000000000001",
+                "snapshot_id": "tool-1",
+                "source_name": "snapshot-one",
+                "provider_name": "idempotent_abc_snapshotone",
+            },
+            {
+                "source_ref": "00000000-0000-0000-0000-000000000002",
+                "snapshot_id": "tool-2",
+                "source_name": "snapshot-two",
+                "provider_name": "idempotent_abc_snapshottwo",
+            },
+        ]
+    }
     assert captured["config_deployment_name"] == "idempotent_abc_my_deployment_ignored_app_id"
     assert captured["snapshot_app_id"] == "idempotent_abc_my_deployment_ignored_app_id"
     assert captured["tool_name_prefix"] == "idempotent_abc_"

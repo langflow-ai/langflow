@@ -477,11 +477,18 @@ class DeploymentCreateRequest(BaseModel):
         default=None,
         description="Langflow DB project id to persist the deployment under. Defaults to user's Starter Project.",
     )
-    flow_version_ids: FlowVersionsAttach | None = Field(
+    flow_version_ids: list[UUID] | None = Field(
         default=None,
         description="Flow version ids to attach to the deployment.",
     )
     config: DeploymentConfigCreate | None = Field(default=None, description="Deployment configuration.")
+
+    @field_validator("flow_version_ids")
+    @classmethod
+    def validate_create_flow_version_ids(cls, values: list[UUID] | None) -> list[UUID] | None:
+        if values is None:
+            return None
+        return _validate_uuid_list(values, field_name="flow_version_ids")
 
 
 class DeploymentUpdateRequest(BaseModel):
@@ -490,9 +497,13 @@ class DeploymentUpdateRequest(BaseModel):
     spec: _StrictBaseDeploymentDataUpdate | None = Field(
         default=None, description="Deployment metadata updates (service-layer schema, no ID fields)."
     )
-    flow_version_ids: FlowVersionsPatch | None = Field(
+    add_flow_version_ids: list[UUID] | None = Field(
         default=None,
-        description="Flow version attach/detach operations.",
+        description="Flow version ids to attach to the deployment.",
+    )
+    remove_flow_version_ids: list[UUID] | None = Field(
+        default=None,
+        description="Flow version ids to detach from the deployment.",
     )
     config: DeploymentConfigBindingUpdate | None = Field(default=None, description="Deployment configuration update.")
     provider_data: dict[str, Any] | None = Field(
@@ -503,10 +514,40 @@ class DeploymentUpdateRequest(BaseModel):
     @model_validator(mode="after")
     def ensure_any_field_provided(self) -> DeploymentUpdateRequest:
         if not self.model_fields_set:
-            msg = "At least one of 'spec', 'flow_version_ids', 'config', or 'provider_data' must be provided."
+            msg = (
+                "At least one of 'spec', 'add_flow_version_ids', "
+                "'remove_flow_version_ids', 'config', or 'provider_data' must be provided."
+            )
             raise ValueError(msg)
-        if self.spec is None and self.flow_version_ids is None and self.config is None and self.provider_data is None:
-            msg = "At least one of 'spec', 'flow_version_ids', 'config', or 'provider_data' must be provided."
+        if (
+            self.spec is None
+            and self.add_flow_version_ids is None
+            and self.remove_flow_version_ids is None
+            and self.config is None
+            and self.provider_data is None
+        ):
+            msg = (
+                "At least one of 'spec', 'add_flow_version_ids', "
+                "'remove_flow_version_ids', 'config', or 'provider_data' must be provided."
+            )
+            raise ValueError(msg)
+        return self
+
+    @field_validator("add_flow_version_ids", "remove_flow_version_ids")
+    @classmethod
+    def validate_update_flow_version_ids(cls, values: list[UUID] | None, info: ValidationInfo) -> list[UUID] | None:
+        if values is None:
+            return None
+        return _validate_uuid_list(values, field_name=info.field_name)
+
+    @model_validator(mode="after")
+    def validate_update_flow_version_operations(self) -> DeploymentUpdateRequest:
+        add_values = self.add_flow_version_ids or []
+        remove_values = self.remove_flow_version_ids or []
+        overlap = set(add_values).intersection(remove_values)
+        if overlap:
+            ids = ", ".join(sorted(str(v) for v in overlap))
+            msg = f"Flow version ids cannot be present in both add/remove operations: {ids}."
             raise ValueError(msg)
         return self
 
@@ -538,7 +579,8 @@ class _ExecutionResponseBase(BaseModel):
     execution_id: str | None = Field(
         default=None,
         description=(
-            "Provider-owned opaque execution identifier. "
+            "When the provider_id query parameter is provided, "
+            "this is the Provider-owned opaque execution identifier. "
             "May be None when the provider acknowledges the request but has not yet assigned an id."
         ),
     )

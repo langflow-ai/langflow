@@ -9,6 +9,12 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 from langflow.api.v1.mappers.deployments import get_mapper
+from langflow.api.v1.mappers.deployments.contracts import (
+    CreatedSnapshotIds,
+    CreateSnapshotBindings,
+    FlowVersionPatch,
+    UpdateSnapshotBindings,
+)
 from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
 from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiDeploymentUpdatePayload,
@@ -18,7 +24,7 @@ from langflow.api.v1.schemas.deployments import DeploymentUpdateRequest
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
     WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
 )
-from lfx.services.adapters.deployment.schema import DeploymentType, DeploymentUpdateResult
+from lfx.services.adapters.deployment.schema import DeploymentCreateResult, DeploymentType, DeploymentUpdateResult
 from lfx.services.adapters.schema import AdapterType
 
 
@@ -84,34 +90,6 @@ def test_watsonx_api_payload_accepts_flow_version_unbind_and_remove_contract() -
     assert payload.operations[1].op == "remove_tool"
 
 
-def test_watsonx_mapper_resolves_flow_version_patch_from_provider_operations() -> None:
-    mapper = WatsonxOrchestrateDeploymentMapper()
-    add_flow_version_id = uuid4()
-    remove_flow_version_id = uuid4()
-    payload = DeploymentUpdateRequest(
-        provider_data={
-            "connections": {"existing_app_ids": ["app-one"]},
-            "operations": [
-                {
-                    "op": "bind",
-                    "tool": {"flow_version_id": str(add_flow_version_id)},
-                    "app_ids": ["app-one"],
-                },
-                {
-                    "op": "unbind",
-                    "tool": {"flow_version_id": str(remove_flow_version_id)},
-                    "app_ids": ["app-one"],
-                },
-            ],
-        }
-    )
-
-    add_ids, remove_ids = mapper.resolve_flow_version_patch(payload)
-
-    assert add_ids == [add_flow_version_id]
-    assert remove_ids == [remove_flow_version_id]
-
-
 @pytest.mark.asyncio
 async def test_watsonx_mapper_resolve_update_passthrough_without_provider_data() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
@@ -166,6 +144,10 @@ async def test_watsonx_mapper_translates_flow_version_bind_into_raw_tool_payload
     provider_data = resolved.provider_data or {}
 
     assert provider_data["tools"]["raw_payloads"][0]["name"] == "Flow A_v1"
+    assert provider_data["tools"]["raw_payloads"][0]["provider_data"] == {
+        "project_id": str(project_id),
+        "source_ref": str(flow_version_id),
+    }
     assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow A_v1"
 
 
@@ -184,18 +166,6 @@ async def test_watsonx_mapper_rejects_top_level_config_updates() -> None:
             db=_FakeDb([]),
             payload=payload,
         )
-
-
-def test_watsonx_mapper_rejects_top_level_flow_version_patch() -> None:
-    mapper = WatsonxOrchestrateDeploymentMapper()
-    payload = DeploymentUpdateRequest(
-        flow_version_ids={
-            "add": [uuid4()],
-        }
-    )
-
-    with pytest.raises(HTTPException, match="Top-level 'flow_version_ids' is not supported"):
-        mapper.resolve_flow_version_patch(payload)
 
 
 @pytest.mark.asyncio
@@ -278,4 +248,85 @@ def test_watsonx_mapper_shapes_update_response_from_result_schema() -> None:
 
     assert shaped.id == deployment_id
     assert shaped.provider_data == {"tool_app_bindings": [{"tool_id": "tool-1", "app_ids": ["app-a"]}]}
-    assert mapper.resolve_created_snapshot_ids(result) == ["snap-1"]
+
+
+def test_watsonx_mapper_exposes_reconciliation_resolvers() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    add_id = uuid4()
+    remove_id = uuid4()
+    patch = mapper.util_flow_version_patch(
+        DeploymentUpdateRequest(
+            provider_data={
+                "connections": {"existing_app_ids": ["app-one"]},
+                "operations": [
+                    {"op": "bind", "tool": {"flow_version_id": str(add_id)}, "app_ids": ["app-one"]},
+                    {"op": "unbind", "tool": {"flow_version_id": str(remove_id)}, "app_ids": ["app-one"]},
+                ],
+            }
+        )
+    )
+    assert isinstance(patch, FlowVersionPatch)
+    add_ids, remove_ids = patch.add_flow_version_ids, patch.remove_flow_version_ids
+    assert add_ids == [add_id]
+    assert remove_ids == [remove_id]
+
+    create_bindings = mapper.util_create_snapshot_bindings(
+        result=DeploymentCreateResult(
+            id="provider-id",
+            provider_result={"snapshot_bindings": [{"source_ref": "fv-1", "snapshot_id": "snap-1"}]},
+        ),
+    )
+    assert isinstance(create_bindings, CreateSnapshotBindings)
+    assert create_bindings.to_source_ref_map() == {"fv-1": "snap-1"}
+
+    created_ids = mapper.util_created_snapshot_ids(
+        result=DeploymentUpdateResult(
+            id="provider-id",
+            provider_result={
+                "created_snapshot_ids": ["snap-1"],
+                "added_snapshot_bindings": [{"source_ref": str(add_id), "snapshot_id": "snap-1"}],
+            },
+        ),
+    )
+    assert isinstance(created_ids, CreatedSnapshotIds)
+    assert created_ids.ids == ["snap-1"]
+    update_bindings = mapper.util_update_snapshot_bindings(
+        result=DeploymentUpdateResult(
+            id="provider-id",
+            provider_result={
+                "added_snapshot_bindings": [{"source_ref": str(add_id), "snapshot_id": "snap-1"}],
+            },
+        ),
+    )
+    assert isinstance(update_bindings, UpdateSnapshotBindings)
+    assert update_bindings.to_source_ref_map() == {str(add_id): "snap-1"}
+
+
+def test_watsonx_mapper_resolve_provider_tenant_id_from_url() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    assert (
+        mapper.resolve_provider_tenant_id(
+            provider_url="https://api.example.com/orchestrate/instances/account-123/agents",
+            provider_tenant_id=None,
+        )
+        == "account-123"
+    )
+    assert (
+        mapper.resolve_provider_tenant_id(
+            provider_url="https://api.example.com/orchestrate/instances/account-123/agents",
+            provider_tenant_id="tenant-explicit",
+        )
+        == "tenant-explicit"
+    )
+
+
+def test_watsonx_mapper_resolves_execution_identifiers_from_provider_result() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    provider_result = {
+        "run_id": "run-1",
+        "agent_id": "dep-1",
+        "status": "accepted",
+    }
+
+    assert mapper.util_execution_id(execution_id=None, provider_result=provider_result) == "run-1"
+    assert mapper.util_execution_deployment_resource_key(deployment_id=None, provider_result=provider_result) == "dep-1"

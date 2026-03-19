@@ -21,6 +21,7 @@ from lfx.services.adapters.deployment.payloads import (
     T_DeploymentUpdate,
     T_ExecutionInput,
     T_ExecutionResult,
+    T_FlowProviderData,
     T_ListParamsPayload,
     T_ProviderData,
     T_ProviderResult,
@@ -46,7 +47,7 @@ class DeploymentType(str, Enum):
     AGENT = "agent"
 
 
-class BaseFlowArtifact(BaseModel):
+class BaseFlowArtifact(BaseModel, Generic[T_FlowProviderData]):
     """Model representing a payload for a flow."""
 
     model_config = ConfigDict(extra="allow")  # e.g., viewport - good for viewing the flow in the UI
@@ -58,7 +59,7 @@ class BaseFlowArtifact(BaseModel):
     description: str | None = Field(None, description="The description of the flow")
     data: dict = Field(description="The data of the flow")
     tags: list[str] | None = Field(None, description="The tags of the flow")
-    provider_data: dict | None = Field(
+    provider_data: T_FlowProviderData | None = Field(
         None,
         description="Provider-specific flow metadata consumed only by the active deployment adapter.",
     )
@@ -85,7 +86,7 @@ class BaseFlowArtifact(BaseModel):
         return value
 
 
-SnapshotList = Annotated[list[BaseFlowArtifact], Field(min_length=1)]
+SnapshotList = Annotated[list[BaseFlowArtifact[AdapterPayload]], Field(min_length=1)]
 
 
 class SnapshotItem(BaseModel):
@@ -96,7 +97,7 @@ class SnapshotItem(BaseModel):
     provider_data: dict | None = Field(None, description="The data of the snapshot item from the provider")
 
 
-class SnapshotItems(BaseModel):
+class SnapshotItems(BaseModel, Generic[T_FlowProviderData]):
     """Snapshot input for deployment create.
 
     Accept raw snapshot artifact payloads for deployment create.
@@ -104,7 +105,7 @@ class SnapshotItems(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    raw_payloads: SnapshotList | None = Field(
+    raw_payloads: Annotated[list[BaseFlowArtifact[T_FlowProviderData]], Field(min_length=1)] | None = Field(
         None,
         description="List of raw snapshot payloads to create and bind for this deployment. Omit to leave unchanged.",
     )
@@ -128,7 +129,7 @@ class SnapshotItems(BaseModel):
         return self
 
 
-class SnapshotDeploymentBindingUpdate(BaseModel):
+class SnapshotDeploymentBindingUpdate(BaseModel, Generic[T_FlowProviderData]):
     """Snapshot deployment binding patch payload.
 
     Supports three operations: bind existing snapshots by ID, create new
@@ -140,7 +141,7 @@ class SnapshotDeploymentBindingUpdate(BaseModel):
         None,
         description="Existing snapshot ids to attach to the deployment. Omit to leave unchanged.",
     )
-    add_raw_payloads: SnapshotList | None = Field(
+    add_raw_payloads: Annotated[list[BaseFlowArtifact[T_FlowProviderData]], Field(min_length=1)] | None = Field(
         None,
         description="Raw snapshot payloads to create and attach to the deployment. Omit to leave unchanged.",
     )

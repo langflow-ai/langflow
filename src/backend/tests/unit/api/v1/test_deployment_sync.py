@@ -12,7 +12,16 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
-
+from langflow.api.v1.mappers.deployments.base import BaseDeploymentMapper
+from langflow.api.v1.mappers.deployments.contracts import (
+    CreateSnapshotBinding,
+    CreateSnapshotBindings,
+    UpdateSnapshotBinding,
+    UpdateSnapshotBindings,
+)
+from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
+from langflow.api.v1.schemas.deployments import DeploymentUpdateRequest
+from lfx.services.adapters.deployment.schema import DeploymentCreateResult, DeploymentUpdateResult
 
 MODULE = "langflow.api.v1.deployments"
 
@@ -22,10 +31,10 @@ MODULE = "langflow.api.v1.deployments"
 # ---------------------------------------------------------------------------
 
 
-def _mock_item(*, id: str, name: str = "irrelevant") -> MagicMock:
+def _mock_item(*, item_id: str, name: str = "irrelevant") -> MagicMock:
     """Simulate an ItemResult from the provider."""
     item = MagicMock()
-    item.id = id
+    item.id = item_id
     item.name = name
     return item
 
@@ -54,10 +63,12 @@ class TestFetchProviderResourceKeys:
     async def test_returns_ids_only(self):
         """Provider items matched by str(item.id), not item.name."""
         adapter = AsyncMock()
-        adapter.list.return_value = _mock_provider_view([
-            _mock_item(id="rk-1", name="deploy-one"),
-            _mock_item(id="rk-2", name="deploy-two"),
-        ])
+        adapter.list.return_value = _mock_provider_view(
+            [
+                _mock_item(item_id="rk-1", name="deploy-one"),
+                _mock_item(item_id="rk-2", name="deploy-two"),
+            ]
+        )
 
         from langflow.api.v1.deployments import _fetch_provider_resource_keys
 
@@ -76,9 +87,11 @@ class TestFetchProviderResourceKeys:
         """If a name matches a resource_key but the id doesn't, it should NOT be included."""
         adapter = AsyncMock()
         # Provider returns item with id="different" but name="rk-1"
-        adapter.list.return_value = _mock_provider_view([
-            _mock_item(id="different", name="rk-1"),
-        ])
+        adapter.list.return_value = _mock_provider_view(
+            [
+                _mock_item(item_id="different", name="rk-1"),
+            ]
+        )
 
         from langflow.api.v1.deployments import _fetch_provider_resource_keys
 
@@ -97,10 +110,12 @@ class TestFetchProviderResourceKeys:
     @pytest.mark.asyncio
     async def test_skips_items_with_no_id(self):
         adapter = AsyncMock()
-        adapter.list.return_value = _mock_provider_view([
-            _mock_item(id="rk-1"),
-            _mock_item(id=""),  # falsy id
-        ])
+        adapter.list.return_value = _mock_provider_view(
+            [
+                _mock_item(item_id="rk-1"),
+                _mock_item(item_id=""),  # falsy id
+            ]
+        )
 
         from langflow.api.v1.deployments import _fetch_provider_resource_keys
 
@@ -224,6 +239,7 @@ class TestListDeploymentsSynced:
         assert accepted[0][0] is row1
         assert accepted[1][0] is row2
         assert total == 2
+        mock_count.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
@@ -262,6 +278,7 @@ class TestListDeploymentsSynced:
             user_id=uid,
             deployment_id=stale_row.id,
         )
+        mock_count.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=0)
@@ -286,6 +303,7 @@ class TestListDeploymentsSynced:
         assert accepted == []
         assert total == 0
         mock_fetch.assert_not_awaited()
+        mock_count.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=2)
@@ -325,6 +343,7 @@ class TestListDeploymentsSynced:
         assert accepted[0][0] is row_match
         # rk-2 was NOT deleted — just skipped
         mock_delete.assert_not_awaited()
+        mock_count.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=0)
@@ -344,8 +363,8 @@ class TestListDeploymentsSynced:
             [],
         ]
         mock_fetch.side_effect = [
-            set(),       # stale not known
-            {"rk-good"}, # good is known
+            set(),  # stale not known
+            {"rk-good"},  # good is known
         ]
 
         from langflow.api.v1.deployments import _list_deployments_synced
@@ -365,6 +384,8 @@ class TestListDeploymentsSynced:
         assert offsets == [0, 0], f"Expected cursor to stay at 0 after deletion, got offsets={offsets}"
         assert len(accepted) == 1
         assert accepted[0][0] is good
+        mock_delete.assert_awaited_once()
+        mock_count.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=5)
@@ -387,6 +408,8 @@ class TestListDeploymentsSynced:
         )
 
         assert mock_list.call_args.kwargs["offset"] == 5
+        mock_fetch.assert_not_awaited()
+        mock_count.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=0)
@@ -415,6 +438,8 @@ class TestListDeploymentsSynced:
         assert accepted == []
         # guard = size * 4 + 20 = 28, so loop ran at most 28 times
         assert mock_list.call_count <= 28
+        assert mock_delete.await_count > 0
+        mock_count.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=3)
@@ -440,3 +465,217 @@ class TestListDeploymentsSynced:
 
         assert mock_list.call_args.kwargs["flow_version_ids"] == fv_ids
         assert mock_count.call_args.kwargs["flow_version_ids"] == fv_ids
+        mock_fetch.assert_not_awaited()
+
+
+class _FakeMapper(BaseDeploymentMapper):
+    def util_create_snapshot_bindings(self, *, result) -> CreateSnapshotBindings:  # type: ignore[override]
+        provider_result = result.provider_result
+        if not isinstance(provider_result, dict):
+            return CreateSnapshotBindings()
+        snapshot_bindings = provider_result.get("snapshot_bindings")
+        if not isinstance(snapshot_bindings, list):
+            return CreateSnapshotBindings()
+        resolved: list[CreateSnapshotBinding] = []
+        for binding in snapshot_bindings:
+            if not isinstance(binding, dict):
+                continue
+            source_ref = str(binding.get("source_ref") or "").strip()
+            snapshot_id = str(binding.get("snapshot_id") or "").strip()
+            if source_ref and snapshot_id:
+                resolved.append(
+                    CreateSnapshotBinding(
+                        source_ref=source_ref,
+                        snapshot_id=snapshot_id,
+                    )
+                )
+        return CreateSnapshotBindings(snapshot_bindings=resolved)
+
+    def util_update_snapshot_bindings(self, *, result) -> UpdateSnapshotBindings:  # type: ignore[override]
+        provider_result = result.provider_result
+        if not isinstance(provider_result, dict):
+            return UpdateSnapshotBindings()
+        snapshot_bindings = provider_result.get("added_snapshot_bindings")
+        if not isinstance(snapshot_bindings, list):
+            return UpdateSnapshotBindings()
+        resolved: list[UpdateSnapshotBinding] = []
+        for binding in snapshot_bindings:
+            if not isinstance(binding, dict):
+                continue
+            source_ref = str(binding.get("source_ref") or "").strip()
+            snapshot_id = str(binding.get("snapshot_id") or "").strip()
+            if source_ref and snapshot_id:
+                resolved.append(
+                    UpdateSnapshotBinding(
+                        source_ref=source_ref,
+                        snapshot_id=snapshot_id,
+                    )
+                )
+        return UpdateSnapshotBindings(snapshot_bindings=resolved)
+
+
+class TestCreateSnapshotMapping:
+    def test_resolve_snapshot_map_for_create_maps_source_ref_to_flow_version_ids(self):
+        from langflow.api.v1.deployments import _resolve_snapshot_map_for_create
+
+        flow_version_ids = [uuid4(), uuid4()]
+        resolved = _resolve_snapshot_map_for_create(
+            deployment_mapper=_FakeMapper(),
+            result=DeploymentCreateResult(
+                id="provider-id",
+                provider_result={
+                    "snapshot_bindings": [
+                        {"source_ref": str(flow_version_ids[0]), "snapshot_id": "snap-1"},
+                        {"source_ref": str(flow_version_ids[1]), "snapshot_id": "snap-2"},
+                    ]
+                },
+            ),
+            flow_version_ids=flow_version_ids,
+        )
+
+        assert resolved == {
+            flow_version_ids[0]: "snap-1",
+            flow_version_ids[1]: "snap-2",
+        }
+
+    def test_resolve_snapshot_map_for_create_rejects_missing_bindings(self):
+        from langflow.api.v1.deployments import _resolve_snapshot_map_for_create
+
+        with pytest.raises(HTTPException, match="missing required snapshot bindings"):
+            _resolve_snapshot_map_for_create(
+                deployment_mapper=_FakeMapper(),
+                result=DeploymentCreateResult(id="provider-id"),
+                flow_version_ids=[uuid4()],
+            )
+
+
+class TestUpdateSnapshotMapping:
+    def test_resolve_added_snapshot_bindings_for_update_maps_source_ref(self):
+        from langflow.api.v1.deployments import _resolve_added_snapshot_bindings_for_update
+
+        flow_version_ids = [uuid4(), uuid4()]
+        resolved = _resolve_added_snapshot_bindings_for_update(
+            deployment_mapper=_FakeMapper(),
+            added_flow_version_ids=flow_version_ids,
+            result=DeploymentUpdateResult(
+                id="provider-id",
+                provider_result={
+                    "added_snapshot_bindings": [
+                        {"source_ref": str(flow_version_ids[0]), "snapshot_id": "snap-1"},
+                        {"source_ref": str(flow_version_ids[1]), "snapshot_id": "snap-2"},
+                    ]
+                },
+            ),
+        )
+
+        assert resolved == [
+            (flow_version_ids[0], "snap-1"),
+            (flow_version_ids[1], "snap-2"),
+        ]
+
+    def test_resolve_added_snapshot_bindings_for_update_rejects_unexpected_source_ref(self):
+        from langflow.api.v1.deployments import _resolve_added_snapshot_bindings_for_update
+
+        with pytest.raises(HTTPException, match="Unexpected source_ref"):
+            _resolve_added_snapshot_bindings_for_update(
+                deployment_mapper=_FakeMapper(),
+                added_flow_version_ids=[uuid4()],
+                result=DeploymentUpdateResult(
+                    id="provider-id",
+                    provider_result={
+                        "added_snapshot_bindings": [
+                            {"source_ref": "other", "snapshot_id": "snap-1"},
+                        ]
+                    },
+                ),
+            )
+
+    def test_resolve_snapshot_map_for_create_rejects_unexpected_source_ref(self):
+        from langflow.api.v1.deployments import _resolve_snapshot_map_for_create
+
+        with pytest.raises(HTTPException, match="Unexpected source_ref"):
+            _resolve_snapshot_map_for_create(
+                deployment_mapper=_FakeMapper(),
+                result=DeploymentCreateResult(
+                    id="provider-id",
+                    provider_result={"snapshot_bindings": [{"source_ref": "other-ref", "snapshot_id": "snap-1"}]},
+                ),
+                flow_version_ids=[uuid4()],
+            )
+
+
+def test_as_uuid_accepts_uuid_instances():
+    from langflow.api.v1.deployments import _as_uuid
+
+    value = uuid4()
+    assert _as_uuid(value) == value
+
+
+def test_watsonx_mapper_util_created_snapshot_ids_uses_adapter_slot():
+    created = WatsonxOrchestrateDeploymentMapper().util_created_snapshot_ids(
+        result=DeploymentUpdateResult(
+            id="provider-id",
+            provider_result={"created_snapshot_ids": ["snap-1", "snap-2"]},
+        ),
+    )
+
+    assert created.ids == ["snap-1", "snap-2"]
+
+
+def test_resolve_flow_version_patch_for_update_watsonx_operations():
+    from langflow.api.v1.deployments import _resolve_flow_version_patch_for_update
+
+    add_id = uuid4()
+    remove_id = uuid4()
+    add_ids, remove_ids = _resolve_flow_version_patch_for_update(
+        deployment_mapper=_FakeMapper(),
+        payload=DeploymentUpdateRequest(
+            add_flow_version_ids=[add_id],
+            remove_flow_version_ids=[remove_id],
+        ),
+    )
+
+    assert add_ids == [add_id]
+    assert remove_ids == [remove_id]
+
+
+class _FakeCountExecResult:
+    def __init__(self, count_value: int):
+        self._count_value = count_value
+
+    def one(self):
+        return self._count_value
+
+
+class _FakeCountDb:
+    def __init__(self, count_value: int):
+        self._count_value = count_value
+
+    async def exec(self, _statement):
+        return _FakeCountExecResult(self._count_value)
+
+
+@pytest.mark.asyncio
+async def test_validate_project_scoped_flow_version_ids_accepts_all_ids():
+    from langflow.api.v1.mappers.deployments.helpers import validate_project_scoped_flow_version_ids
+
+    flow_version_id = uuid4()
+    await validate_project_scoped_flow_version_ids(
+        flow_version_ids=[flow_version_id, flow_version_id],
+        user_id=uuid4(),
+        project_id=uuid4(),
+        db=_FakeCountDb(count_value=1),  # type: ignore[arg-type]
+    )
+
+
+@pytest.mark.asyncio
+async def test_validate_project_scoped_flow_version_ids_rejects_out_of_project_ids():
+    from langflow.api.v1.mappers.deployments.helpers import validate_project_scoped_flow_version_ids
+
+    with pytest.raises(HTTPException, match="selected project"):
+        await validate_project_scoped_flow_version_ids(
+            flow_version_ids=[uuid4(), uuid4()],
+            user_id=uuid4(),
+            project_id=uuid4(),
+            db=_FakeCountDb(count_value=1),  # type: ignore[arg-type]
+        )

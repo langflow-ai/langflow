@@ -21,7 +21,6 @@ from lfx.services.adapters.deployment.exceptions import (
     InvalidDeploymentTypeError,
     OperationNotSupportedError,
 )
-from lfx.services.adapters.deployment.payloads import DeploymentPayloadSchemas
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
     ConfigListItem,
@@ -49,7 +48,7 @@ from lfx.services.adapters.deployment.schema import (
     SnapshotListResult,
     _normalize_and_validate_id,
 )
-from lfx.services.adapters.payload import AdapterPayloadValidationError, PayloadSlot
+from lfx.services.adapters.payload import AdapterPayloadValidationError
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_provider_clients
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
@@ -79,8 +78,14 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import
     build_snapshot_tool_names,
     process_raw_flows_with_app_id,
 )
+from langflow.services.adapters.deployment.watsonx_orchestrate.create_helpers import (
+    build_create_provider_result,
+    validate_create_flow_provider_data,
+)
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
-    WatsonxDeploymentUpdatePayload,
+    PAYLOAD_SCHEMAS,
+    WatsonxCreateSnapshotBinding,
+    WatsonxDeploymentUpdateResultData,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.update_helpers import (
     apply_provider_update_plan_with_rollback,
@@ -117,9 +122,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     """Deployment adapter for Watsonx Orchestrate."""
 
     name = "deployment_service"
-    payload_schemas = DeploymentPayloadSchemas(
-        deployment_update=PayloadSlot(WatsonxDeploymentUpdatePayload),
-    )
+    payload_schemas = PAYLOAD_SCHEMAS
 
     def __init__(self, settings_service: SettingsService | None = None):
         super().__init__()
@@ -168,6 +171,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         # --
         logger.info("Creating wxO deployment for user_id=%s", user_id)
         agent_create_response: AgentUpsertResponse | None = None
+        created_snapshot_bindings: list[WatsonxCreateSnapshotBinding] = []
         created_tool_ids: list[str] = []
         created_app_id: str | None = None
         clients: WxOClient | None = None
@@ -227,13 +231,18 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 )
 
                 if payload.snapshot and (flow_payloads := payload.snapshot.raw_payloads):
-                    created_tool_ids = await retry_create(
+                    validated_flow_payloads = validate_create_flow_provider_data(
+                        payload_schemas=self.payload_schemas,
+                        flow_payloads=flow_payloads,
+                    )
+                    created_snapshot_bindings = await retry_create(
                         process_raw_flows_with_app_id,
                         clients=clients,
                         app_id=prefixed_app_id,
-                        flows=flow_payloads,
+                        flows=validated_flow_payloads,
                         tool_name_prefix=resource_prefix,
                     )
+                    created_tool_ids = [binding.snapshot_id for binding in created_snapshot_bindings]
 
                 derived_spec = deployment_spec.model_copy(deep=True)
 
@@ -322,6 +331,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             id=agent_create_response.id,
             config_id=created_app_id,
             snapshot_ids=created_tool_ids,
+            provider_result=build_create_provider_result(
+                payload_schemas=self.payload_schemas,
+                snapshot_bindings=created_snapshot_bindings,
+            ),
             **derived_spec.model_dump(exclude_unset=True),
         )
 
@@ -475,7 +488,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 provider_update=provider_update,
             )
 
-            added_snapshot_ids: list[str] = await apply_provider_update_plan_with_rollback(
+            apply_result = await apply_provider_update_plan_with_rollback(
                 clients=clients,
                 user_id=user_id,
                 db=db,
@@ -487,7 +500,13 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
             return DeploymentUpdateResult(
                 id=deployment_id,
-                snapshot_ids=added_snapshot_ids,
+                snapshot_ids=apply_result.added_snapshot_ids,
+                provider_result=self.payload_schemas.deployment_update_result.apply(
+                    WatsonxDeploymentUpdateResultData(
+                        created_snapshot_ids=apply_result.added_snapshot_ids,
+                        added_snapshot_bindings=apply_result.added_snapshot_bindings,
+                    ).model_dump(exclude_none=True)
+                ),
             )
 
         except (ClientAPIException, HTTPException) as exc:
@@ -636,7 +655,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         return ExecutionCreateResult(
             execution_id=agent_run_result.get("run_id"),
             deployment_id=agent_id,
-            provider_result=agent_run_result,
+            provider_result=self.payload_schemas.execution_result.parse(agent_run_result).model_dump(exclude_none=True),
         )
 
     async def get_execution(
@@ -668,7 +687,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         return ExecutionStatusResult(
             execution_id=run_id,
             deployment_id=agent_run_result.get("agent_id"),
-            provider_result=agent_run_result,
+            provider_result=self.payload_schemas.execution_result.parse(agent_run_result).model_dump(exclude_none=True),
         )
 
     async def list_configs(

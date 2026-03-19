@@ -35,7 +35,9 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxBindOperation,
     WatsonxConnectionRawPayload,
+    WatsonxCreateSnapshotBinding,
     WatsonxDeploymentUpdatePayload,
+    WatsonxProviderUpdateApplyResult,
     WatsonxRemoveToolOperation,
     WatsonxUnbindOperation,
 )
@@ -350,7 +352,7 @@ async def apply_provider_update_plan_with_rollback(
     agent: dict[str, Any],
     update_payload: dict[str, Any],
     plan: ProviderUpdatePlan,
-) -> list[str]:
+) -> WatsonxProviderUpdateApplyResult:
     """Apply provider_data update operations with rollback protection."""
     # Rollback journals:
     # - created_tool_ids: provider tool ids created during this update.
@@ -367,6 +369,7 @@ async def apply_provider_update_plan_with_rollback(
     # - rollback_agent_payload: best-effort restore payload for agent update rollback.
     resolved_connections: dict[str, str] = {}
     added_snapshot_ids: list[str] = []
+    added_snapshot_bindings: list[WatsonxCreateSnapshotBinding] = []
     final_update_payload = dict(update_payload)
     rollback_agent_payload: dict[str, Any] = {}
 
@@ -437,6 +440,14 @@ async def apply_provider_update_plan_with_rollback(
                     raise InvalidContentError(message=msg)
                 created_tool_ids.append(tool_id)
                 added_snapshot_ids.append(tool_id)
+                added_snapshot_bindings.append(
+                    WatsonxCreateSnapshotBinding(
+                        source_ref=_resolve_flow_source_ref(raw_plan.payload),
+                        snapshot_id=tool_id,
+                        source_name=str(raw_plan.payload.name).strip() or None,
+                        provider_name=f"{plan.resource_prefix}{raw_plan.raw_name}",
+                    )
+                )
 
         if plan.existing_tool_deltas:
             await _update_existing_tool_connection_deltas(
@@ -473,7 +484,10 @@ async def apply_provider_update_plan_with_rollback(
         )
         raise
 
-    return dedupe_list(added_snapshot_ids)
+    return WatsonxProviderUpdateApplyResult(
+        added_snapshot_ids=dedupe_list(added_snapshot_ids),
+        added_snapshot_bindings=added_snapshot_bindings,
+    )
 
 
 def build_update_payload_from_spec(spec: BaseDeploymentDataUpdate | None) -> dict[str, Any]:
@@ -493,3 +507,16 @@ def build_update_payload_from_spec(spec: BaseDeploymentDataUpdate | None) -> dic
     if "description" in spec_updates:
         update_payload["description"] = spec_updates["description"]
     return update_payload
+
+
+def _resolve_flow_source_ref(flow_payload: BaseFlowArtifact) -> str:
+    provider_data = flow_payload.provider_data
+    if isinstance(provider_data, dict):
+        source_ref = str(provider_data.get("source_ref") or "").strip()
+    else:
+        source_ref = str(getattr(provider_data, "source_ref", "") or "").strip()
+    if source_ref:
+        return source_ref
+    # Fallback keeps direct adapter-call compatibility when source_ref was not
+    # provided by older callers; mapper-driven API paths set source_ref explicitly.
+    return str(flow_payload.id)
