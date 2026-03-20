@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from lfx.services.adapters.deployment.exceptions import (
     DeploymentError,
@@ -18,19 +19,25 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import (
     retry_create,
+    retry_update,
     rollback_created_resources,
+    rollback_update_resources,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.shared import (
+    ConnectionCreateBatchError,
     OrderedUniqueStrs,
     RawConnectionCreatePlan,
     RawToolCreatePlan,
     create_connection_with_conflict_mapping,
-    rollback_created_app_ids,
+    create_raw_tools_with_bindings,
+    log_batch_errors,
+    resolve_connections_for_operations,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
-    FlowToolBindingSpec,
     ToolUploadBatchError,
     create_and_upload_wxo_flow_tools_with_bindings,
+    ensure_langflow_connections_binding,
+    to_writable_tool_payload,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxBindOperation,
@@ -38,9 +45,10 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxDeploymentCreatePayload,
     WatsonxFlowArtifactProviderData,
     WatsonxProviderCreateApplyResult,
+    WatsonxToolAppBinding,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
-    build_agent_payload,
+    build_agent_payload_from_values,
     dedupe_list,
     resolve_resource_name_prefix,
     validate_wxo_name,
@@ -66,6 +74,7 @@ class ProviderCreatePlan:
     resource_prefix: str
     prefixed_deployment_name: str
     existing_tool_ids: list[str]
+    existing_tool_bindings: dict[str, list[str]]
     existing_app_ids: list[str]
     raw_connections_to_create: list[RawConnectionCreatePlan]
     raw_tools_to_create: list[RawToolCreatePlan]
@@ -93,6 +102,7 @@ def build_provider_create_plan(
     prefixed_deployment_name = f"{resource_prefix}{normalized_deployment_name}"
 
     existing_tool_ids = OrderedUniqueStrs.from_values(list(provider_create.tools.existing_ids or []))
+    existing_tool_bindings: dict[str, OrderedUniqueStrs] = {}
     existing_app_ids = OrderedUniqueStrs.from_values(list(provider_create.connections.existing_app_ids or []))
     selected_operation_app_ids = OrderedUniqueStrs()
 
@@ -103,6 +113,8 @@ def build_provider_create_plan(
         selected_operation_app_ids.extend(operation.app_ids)
         if operation.tool.reference_id is not None:
             existing_tool_ids.add(operation.tool.reference_id)
+            existing_bindings = existing_tool_bindings.setdefault(operation.tool.reference_id, OrderedUniqueStrs())
+            existing_bindings.extend(operation.app_ids)
             continue
         raw_name = str(operation.tool.name_of_raw)
         raw_apps = raw_tool_app_ids.setdefault(raw_name, OrderedUniqueStrs())
@@ -126,6 +138,7 @@ def build_provider_create_plan(
         resource_prefix=resource_prefix,
         prefixed_deployment_name=prefixed_deployment_name,
         existing_tool_ids=existing_tool_ids.to_list(),
+        existing_tool_bindings={tool_id: app_ids.to_list() for tool_id, app_ids in existing_tool_bindings.items()},
         existing_app_ids=existing_app_ids.to_list(),
         raw_connections_to_create=raw_connections_to_create,
         raw_tools_to_create=raw_tools_to_create,
@@ -144,187 +157,203 @@ async def apply_provider_create_plan_with_rollback(
     """Apply provider create operations with rollback protection."""
     created_tool_ids: list[str] = []
     created_app_ids: list[str] = []
+    original_tools: dict[str, dict[str, Any]] = {}
     created_snapshot_bindings: list[WatsonxCreateSnapshotBinding] = []
+    created_tool_app_bindings: list[WatsonxToolAppBinding] = []
     agent_create_response = None
-    operation_to_provider_app_id = {app_id: app_id for app_id in plan.existing_app_ids}
+    operation_to_provider_app_id: dict[str, str] = {}
     resolved_connections: dict[str, str] = {}
 
     try:
-        if plan.existing_app_ids:
-            existing_connections = await asyncio.gather(
-                *(
-                    retry_create(
-                        validate_connection,
-                        clients.connections,
-                        app_id=app_id,
-                    )
-                    for app_id in plan.existing_app_ids
+        try:
+            connection_result = await resolve_connections_for_operations(
+                clients=clients,
+                user_id=user_id,
+                db=db,
+                existing_app_ids=plan.existing_app_ids,
+                raw_connections_to_create=plan.raw_connections_to_create,
+                error_prefix=ErrorPrefix.CREATE.value,
+                validate_connection_fn=validate_connection,
+                create_connection_fn=create_connection_with_conflict_mapping,
+            )
+            operation_to_provider_app_id = connection_result.operation_to_provider_app_id
+            resolved_connections = connection_result.resolved_connections
+            created_app_ids.extend(connection_result.created_app_ids)
+        except ConnectionCreateBatchError as exc:
+            created_app_ids.extend(exc.created_app_ids)
+            log_batch_errors(error_label="Connection create batch error", errors=exc.errors)
+            raise exc.errors[0] from exc
+
+        try:
+            tool_create_result = await create_raw_tools_with_bindings(
+                clients=clients,
+                raw_tools_to_create=plan.raw_tools_to_create,
+                operation_to_provider_app_id=operation_to_provider_app_id,
+                resolved_connections=resolved_connections,
+                resource_prefix=plan.resource_prefix,
+                create_and_upload_tools_fn=create_and_upload_wxo_flow_tools_with_bindings,
+            )
+            created_tool_ids.extend(tool_create_result.created_tool_ids)
+            created_snapshot_bindings.extend(tool_create_result.snapshot_bindings)
+            created_tool_app_bindings.extend(
+                _build_created_tool_app_bindings(
+                    raw_tools_to_create=plan.raw_tools_to_create,
+                    created_tool_ids=tool_create_result.created_tool_ids,
+                    operation_to_provider_app_id=operation_to_provider_app_id,
                 )
             )
-            for app_id, connection in zip(plan.existing_app_ids, existing_connections, strict=True):
-                resolved_connections[app_id] = connection.connection_id
+        except ToolUploadBatchError as exc:
+            created_tool_ids.extend(exc.created_tool_ids)
+            log_batch_errors(error_label="Tool upload batch error", errors=exc.errors)
+            raise exc.errors[0] from exc
 
-        if plan.raw_connections_to_create:
-            created_connections_results = await asyncio.gather(
-                *(
-                    create_connection_with_conflict_mapping(
-                        clients=clients,
-                        app_id=create_plan.provider_app_id,
-                        payload=create_plan.payload,
-                        user_id=user_id,
-                        db=db,
-                        error_prefix=ErrorPrefix.CREATE.value,
-                    )
-                    for create_plan in plan.raw_connections_to_create
-                ),
-                return_exceptions=True,
+        if plan.existing_tool_bindings:
+            await _bind_existing_tools_for_create(
+                clients=clients,
+                existing_tool_bindings=plan.existing_tool_bindings,
+                operation_to_provider_app_id=operation_to_provider_app_id,
+                resolved_connections=resolved_connections,
+                original_tools=original_tools,
             )
-            create_connection_errors: list[Exception] = []
-            created_app_ids_journal: list[str] = []
-            for result in created_connections_results:
-                if isinstance(result, BaseException):
-                    if isinstance(result, Exception):
-                        create_connection_errors.append(result)
-                    else:
-                        create_connection_errors.append(
-                            RuntimeError(
-                                f"Connection create failed with non-standard exception: {type(result).__name__}"
-                            )
-                        )
-                    continue
-                created_app_ids_journal.append(result)
-            created_app_ids.extend(dedupe_list(created_app_ids_journal))
-            if create_connection_errors:
-                for i, err in enumerate(create_connection_errors):
-                    logger.error(
-                        "Connection create batch error [%d/%d]: %s",
-                        i + 1,
-                        len(create_connection_errors),
-                        err,
-                    )
-                raise create_connection_errors[0]
-            validated_created_connections = await asyncio.gather(
-                *(
-                    retry_create(
-                        validate_connection,
-                        clients.connections,
-                        app_id=create_plan.provider_app_id,
-                    )
-                    for create_plan in plan.raw_connections_to_create
+            created_tool_app_bindings.extend(
+                _build_existing_tool_app_bindings(
+                    existing_tool_bindings=plan.existing_tool_bindings,
+                    operation_to_provider_app_id=operation_to_provider_app_id,
                 )
             )
-            for create_plan, connection in zip(
-                plan.raw_connections_to_create,
-                validated_created_connections,
-                strict=True,
-            ):
-                operation_to_provider_app_id[create_plan.operation_app_id] = create_plan.provider_app_id
-                resolved_connections[create_plan.provider_app_id] = connection.connection_id
-
-        if plan.raw_tools_to_create:
-            tool_bindings = []
-            for raw_plan in plan.raw_tools_to_create:
-                binding_connections: dict[str, str] = {}
-                for operation_app_id in raw_plan.app_ids:
-                    provider_app_id = operation_to_provider_app_id.get(operation_app_id)
-                    if not provider_app_id:
-                        msg = f"No provider app id available for operation app_id '{operation_app_id}'."
-                        raise InvalidContentError(message=msg)
-                    connection_id = resolved_connections.get(provider_app_id)
-                    if not connection_id:
-                        msg = f"No resolved connection id available for app_id '{operation_app_id}'."
-                        raise InvalidContentError(message=msg)
-                    binding_connections[provider_app_id] = connection_id
-                tool_bindings.append(
-                    FlowToolBindingSpec(
-                        flow_payload=raw_plan.payload,
-                        connections=binding_connections,
-                    )
-                )
-            try:
-                raw_create_results = await create_and_upload_wxo_flow_tools_with_bindings(
-                    clients=clients,
-                    tool_bindings=tool_bindings,
-                    tool_name_prefix=plan.resource_prefix,
-                )
-            except ToolUploadBatchError as exc:
-                created_tool_ids.extend(exc.created_tool_ids)
-                for i, err in enumerate(exc.errors):
-                    logger.exception("Tool upload batch error [%d/%d]: %s", i + 1, len(exc.errors), err)
-                raise exc.errors[0] from exc
-
-            for raw_plan, created_tool_id in zip(plan.raw_tools_to_create, raw_create_results, strict=True):
-                tool_id = str(created_tool_id).strip()
-                if not tool_id:
-                    msg = f"Failed to create tool for raw payload '{raw_plan.raw_name}'."
-                    raise InvalidContentError(message=msg)
-                created_tool_ids.append(tool_id)
-                created_snapshot_bindings.append(
-                    WatsonxCreateSnapshotBinding(
-                        source_ref=raw_plan.payload.provider_data.source_ref,
-                        snapshot_id=tool_id,
-                        source_name=str(raw_plan.payload.name).strip() or None,
-                        provider_name=f"{plan.resource_prefix}{raw_plan.raw_name}",
-                    )
-                )
 
         final_tool_ids = dedupe_list([*plan.existing_tool_ids, *created_tool_ids])
-        derived_spec = deployment_spec.model_copy(deep=True)
-        if derived_spec.provider_spec is None:
-            derived_spec.provider_spec = {}
-        derived_spec.provider_spec.update(
-            {
-                "name": plan.prefixed_deployment_name,
-                "display_name": derived_spec.name,
-            }
-        )
         agent_create_response = await retry_create(
             create_agent_deployment,
             clients=clients,
-            data=derived_spec,
+            agent_name=plan.prefixed_deployment_name,
+            agent_display_name=deployment_spec.name,
+            deployment_name=deployment_spec.name,
+            description=deployment_spec.description,
             tool_ids=final_tool_ids,
         )
     except Exception:
+        # undo tool<->connection bindings of existing tools
+        await rollback_update_resources(
+            clients=clients,
+            created_tool_ids=[],
+            created_app_id=None,
+            original_tools=original_tools,
+        )
         logger.warning(
-            "wxO create failed; rolling back agent_id=%s, tool_ids=%s, app_ids=%s",
+            "wxO create failed; rolling back agent_id=%s, tool_ids=%s, app_ids=%s, mutated_tool_ids=%s",
             getattr(agent_create_response, "id", None),
             created_tool_ids,
             created_app_ids,
+            list(original_tools.keys()),
         )
-        last_created_app_id = created_app_ids[-1] if created_app_ids else None
         await rollback_created_resources(
             clients=clients,
             agent_id=getattr(agent_create_response, "id", None),
             tool_ids=created_tool_ids,
-            app_id=last_created_app_id,
+            app_ids=created_app_ids,
         )
-        if len(created_app_ids) > 1:
-            await rollback_created_app_ids(
-                clients=clients,
-                created_app_ids=created_app_ids[:-1],
-            )
         raise
 
     if not agent_create_response or not getattr(agent_create_response, "id", None):
         msg = f"{ErrorPrefix.CREATE.value} Deployment response was empty."
         raise DeploymentError(message=msg, error_code="deployment_error")
 
-    unique_bound_provider_app_ids = dedupe_list(
-        [
-            operation_to_provider_app_id[app_id]
-            for app_id in plan.selected_operation_app_ids
-            if app_id in operation_to_provider_app_id
-        ]
-    )
-    config_id = unique_bound_provider_app_ids[0] if len(unique_bound_provider_app_ids) == 1 else None
-
     return WatsonxProviderCreateApplyResult(
         agent_id=str(agent_create_response.id),
-        config_id=config_id,
-        snapshot_ids=created_tool_ids,
-        snapshot_bindings=created_snapshot_bindings,
+        app_ids=created_app_ids,
+        tools_with_refs=created_snapshot_bindings,
+        tool_app_bindings=created_tool_app_bindings,
         prefixed_name=plan.prefixed_deployment_name,
         display_name=deployment_spec.name,
+    )
+
+
+def _build_created_tool_app_bindings(
+    *,
+    raw_tools_to_create: list[RawToolCreatePlan],
+    created_tool_ids: list[str],
+    operation_to_provider_app_id: dict[str, str],
+) -> list[WatsonxToolAppBinding]:
+    # Unmapped operation app_ids are silently skipped here rather than raising
+    # because this runs *after* the tools and connections have already been
+    # created successfully.  Any missing mapping would indicate an operation
+    # that was intentionally excluded from the plan (e.g. existing-only app_id
+    # with no raw counterpart), not a validation failure.
+    return [
+        WatsonxToolAppBinding(
+            tool_id=tool_id,
+            app_ids=[
+                operation_to_provider_app_id[operation_app_id]
+                for operation_app_id in raw_plan.app_ids
+                if operation_app_id in operation_to_provider_app_id
+            ],
+        )
+        for raw_plan, tool_id in zip(raw_tools_to_create, created_tool_ids, strict=True)
+    ]
+
+
+def _build_existing_tool_app_bindings(
+    *,
+    existing_tool_bindings: dict[str, list[str]],
+    operation_to_provider_app_id: dict[str, str],
+) -> list[WatsonxToolAppBinding]:
+    # Same silent-skip rationale as _build_created_tool_app_bindings.
+    return [
+        WatsonxToolAppBinding(
+            tool_id=tool_id,
+            app_ids=[
+                operation_to_provider_app_id[operation_app_id]
+                for operation_app_id in operation_app_ids
+                if operation_app_id in operation_to_provider_app_id
+            ],
+        )
+        for tool_id, operation_app_ids in existing_tool_bindings.items()
+    ]
+
+
+async def _bind_existing_tools_for_create(
+    *,
+    clients: WxOClient,
+    existing_tool_bindings: dict[str, list[str]],
+    operation_to_provider_app_id: dict[str, str],
+    resolved_connections: dict[str, str],
+    original_tools: dict[str, dict[str, Any]],
+) -> None:
+    tool_ids = list(existing_tool_bindings.keys())
+    tools = await asyncio.to_thread(clients.tool.get_drafts_by_ids, tool_ids)
+    tool_by_id = {str(tool.get("id")): tool for tool in tools if isinstance(tool, dict) and tool.get("id")}
+    missing_tool_ids = [tool_id for tool_id in tool_ids if tool_id not in tool_by_id]
+    if missing_tool_ids:
+        missing_ids = ", ".join(missing_tool_ids)
+        msg = f"Snapshot tool(s) not found: {missing_ids}"
+        raise InvalidContentError(message=msg)
+
+    tool_updates: list[tuple[str, dict[str, Any]]] = []
+    for tool_id in tool_ids:
+        original_tool = to_writable_tool_payload(tool_by_id[tool_id])
+        original_tools[tool_id] = original_tool
+        writable_tool = copy.deepcopy(original_tool)
+        connections = ensure_langflow_connections_binding(writable_tool)
+
+        for operation_app_id in existing_tool_bindings[tool_id]:
+            provider_app_id = operation_to_provider_app_id.get(operation_app_id)
+            if not provider_app_id:
+                msg = f"No provider app id available for operation app_id '{operation_app_id}'."
+                raise InvalidContentError(message=msg)
+            connection_id = resolved_connections.get(provider_app_id)
+            if not connection_id:
+                msg = f"No resolved connection id available for app_id '{operation_app_id}'."
+                raise InvalidContentError(message=msg)
+            connections[provider_app_id] = connection_id
+
+        tool_updates.append((tool_id, writable_tool))
+
+    await asyncio.gather(
+        *(
+            retry_update(asyncio.to_thread, clients.tool.update, tool_id, writable_tool)
+            for tool_id, writable_tool in tool_updates
+        )
     )
 
 
@@ -332,11 +361,17 @@ async def create_agent_deployment(
     *,
     clients: WxOClient,
     tool_ids: list[str],
-    data: BaseDeploymentData,
+    agent_name: str,
+    agent_display_name: str,
+    deployment_name: str,
+    description: str,
 ):
-    """Create a provider agent deployment from normalized deployment data."""
-    payload = build_agent_payload(
-        data=data,
+    """Create a provider agent deployment from explicit payload fields."""
+    payload = build_agent_payload_from_values(
+        agent_name=agent_name,
+        agent_display_name=agent_display_name,
+        deployment_name=deployment_name,
+        description=description,
         tool_ids=tool_ids,
     )
     return await asyncio.to_thread(clients.agent.create, payload)

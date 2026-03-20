@@ -840,7 +840,15 @@ async def test_apply_provider_create_plan_binds_raw_tools_with_prefixed_provider
         captured["tool_name_prefix"] = tool_name_prefix
         return ["new-tool-1"]
 
-    async def mock_create_agent_deployment(*, clients, tool_ids, data):  # noqa: ARG001
+    async def mock_create_agent_deployment(
+        *,
+        clients,  # noqa: ARG001
+        tool_ids,  # noqa: ARG001
+        agent_name,  # noqa: ARG001
+        agent_display_name,  # noqa: ARG001
+        deployment_name,  # noqa: ARG001
+        description,  # noqa: ARG001
+    ):
         return SimpleNamespace(id="dep-created")
 
     monkeypatch.setattr(
@@ -870,8 +878,79 @@ async def test_apply_provider_create_plan_binds_raw_tools_with_prefixed_provider
 
     assert captured["connections"] == {"lf_cfg": "conn-lf_cfg"}
     assert captured["tool_name_prefix"] == "lf_"
-    assert result.config_id == "lf_cfg"
-    assert result.snapshot_ids == ["new-tool-1"]
+    assert result.app_ids == ["lf_cfg"]
+
+
+@pytest.mark.anyio
+async def test_apply_provider_create_plan_rolls_back_mutated_existing_tools_with_writable_payload(monkeypatch):
+    provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
+        {
+            "resource_name_prefix": "lf_",
+            "tools": {"existing_ids": ["tool-1"]},
+            "connections": {"existing_app_ids": ["cfg-1"]},
+            "operations": [{"op": "bind", "tool": {"reference_id": "tool-1"}, "app_ids": ["cfg-1"]}],
+        }
+    )
+    plan = create_core_module.build_provider_create_plan(
+        deployment_name="my deployment",
+        provider_create=provider_create,
+    )
+    fake_tool = FakeToolClient(
+        [
+            {
+                "id": "tool-1",
+                "name": "tool-1",
+                "display_name": "Tool 1",
+                "description": "desc",
+                "binding": {"langflow": {"connections": {"old": "conn-old"}}},
+                "created_at": "read-only-field",
+            }
+        ]
+    )
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]}),
+        tool=fake_tool,
+        connections=FakeConnectionsClient(existing_app_id="cfg-1"),
+    )
+
+    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+        return SimpleNamespace(connection_id="conn-new")
+
+    async def mock_create_agent_deployment(
+        *,
+        clients,  # noqa: ARG001
+        tool_ids,  # noqa: ARG001
+        agent_name,  # noqa: ARG001
+        agent_display_name,  # noqa: ARG001
+        deployment_name,  # noqa: ARG001
+        description,  # noqa: ARG001
+    ):
+        msg = "create failed"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(create_core_module, "validate_connection", mock_validate_connection)
+    monkeypatch.setattr(create_core_module, "create_agent_deployment", mock_create_agent_deployment)
+
+    with pytest.raises(RuntimeError, match="create failed"):
+        await create_core_module.apply_provider_create_plan_with_rollback(
+            clients=fake_clients,
+            user_id="user-1",
+            db=object(),
+            deployment_spec=BaseDeploymentData(
+                name="my deployment",
+                description="desc",
+                type=DeploymentType.AGENT,
+            ),
+            plan=plan,
+        )
+
+    assert len(fake_tool.update_calls) == 2
+    first_payload = fake_tool.update_calls[0][1]
+    rollback_payload = fake_tool.update_calls[1][1]
+    assert "id" not in first_payload
+    assert "created_at" not in first_payload
+    assert first_payload["binding"]["langflow"]["connections"]["cfg-1"] == "conn-new"
+    assert rollback_payload["binding"]["langflow"]["connections"] == {"old": "conn-old"}
 
 
 @pytest.mark.anyio
@@ -906,11 +985,8 @@ async def test_apply_provider_create_plan_rolls_back_successfully_created_raw_co
         msg = "boom-create-connection"
         raise RuntimeError(msg)
 
-    async def mock_rollback_created_resources(*, clients, agent_id, tool_ids, app_id):  # noqa: ARG001
-        captured["rollback_app_id"] = app_id
-
-    async def mock_rollback_created_app_ids(*, clients, created_app_ids):  # noqa: ARG001
-        captured["rolled_back_app_ids"] = list(created_app_ids)
+    async def mock_rollback_created_resources(*, clients, agent_id, tool_ids, app_ids=None):  # noqa: ARG001
+        captured["rollback_app_ids"] = list(app_ids or [])
 
     monkeypatch.setattr(
         create_core_module,
@@ -918,7 +994,6 @@ async def test_apply_provider_create_plan_rolls_back_successfully_created_raw_co
         mock_create_connection_with_conflict_mapping,
     )
     monkeypatch.setattr(create_core_module, "rollback_created_resources", mock_rollback_created_resources)
-    monkeypatch.setattr(create_core_module, "rollback_created_app_ids", mock_rollback_created_app_ids)
 
     with pytest.raises(RuntimeError, match="boom-create-connection"):
         await create_core_module.apply_provider_create_plan_with_rollback(
@@ -933,8 +1008,7 @@ async def test_apply_provider_create_plan_rolls_back_successfully_created_raw_co
             plan=plan,
         )
 
-    assert captured["rollback_app_id"] == "lf_cfg-a"
-    assert captured.get("rolled_back_app_ids") is None
+    assert captured.get("rollback_app_ids") == ["lf_cfg-a"]
 
 
 @pytest.mark.anyio
@@ -970,11 +1044,8 @@ async def test_apply_provider_create_plan_rolls_back_all_journaled_raw_connectio
             raise RuntimeError(msg)
         return app_id
 
-    async def mock_rollback_created_resources(*, clients, agent_id, tool_ids, app_id):  # noqa: ARG001
-        captured["rollback_app_id"] = app_id
-
-    async def mock_rollback_created_app_ids(*, clients, created_app_ids):  # noqa: ARG001
-        captured["rolled_back_app_ids"] = list(created_app_ids)
+    async def mock_rollback_created_resources(*, clients, agent_id, tool_ids, app_ids=None):  # noqa: ARG001
+        captured["rollback_app_ids"] = list(app_ids or [])
 
     monkeypatch.setattr(
         create_core_module,
@@ -982,7 +1053,6 @@ async def test_apply_provider_create_plan_rolls_back_all_journaled_raw_connectio
         mock_create_connection_with_conflict_mapping,
     )
     monkeypatch.setattr(create_core_module, "rollback_created_resources", mock_rollback_created_resources)
-    monkeypatch.setattr(create_core_module, "rollback_created_app_ids", mock_rollback_created_app_ids)
 
     with pytest.raises(RuntimeError, match="boom-create-connection"):
         await create_core_module.apply_provider_create_plan_with_rollback(
@@ -997,8 +1067,7 @@ async def test_apply_provider_create_plan_rolls_back_all_journaled_raw_connectio
             plan=plan,
         )
 
-    assert captured["rollback_app_id"] == "lf_cfg-b"
-    assert captured["rolled_back_app_ids"] == ["lf_cfg-a"]
+    assert captured["rollback_app_ids"] == ["lf_cfg-a", "lf_cfg-b"]
 
 
 @pytest.mark.anyio
@@ -1155,8 +1224,20 @@ async def test_create_provider_data_prefixes_created_resources_and_bindings(monk
         captured["tool_name_prefix"] = tool_name_prefix
         return ["new-tool-1"]
 
-    async def mock_create_agent_deployment(*, clients, tool_ids, data):  # noqa: ARG001
+    async def mock_create_agent_deployment(
+        *,
+        clients,  # noqa: ARG001
+        tool_ids,
+        agent_name,
+        agent_display_name,
+        deployment_name,
+        description,
+    ):
         captured["agent_tool_ids"] = list(tool_ids)
+        captured["agent_name"] = agent_name
+        captured["agent_display_name"] = agent_display_name
+        captured["deployment_name"] = deployment_name
+        captured["description"] = description
         return SimpleNamespace(id="dep-created")
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
@@ -1212,15 +1293,19 @@ async def test_create_provider_data_prefixes_created_resources_and_bindings(monk
     assert captured["connections"] == {"lf_cfg": "conn-lf_cfg"}
     assert captured["tool_name_prefix"] == "lf_"
     assert captured["agent_tool_ids"] == ["new-tool-1"]
-    assert result.config_id == "lf_cfg"
-    assert result.snapshot_ids == ["new-tool-1"]
+    assert captured["agent_name"] == "lf_my_deployment"
+    assert captured["agent_display_name"] == "my deployment"
+    assert captured["deployment_name"] == "my deployment"
+    assert captured["description"] == "desc"
+    assert result.config_id is None
+    assert result.snapshot_ids == []
     assert result.provider_result is not None
-    provider_result = result.provider_result
-    if isinstance(provider_result, dict):
-        provider_name = provider_result["snapshot_bindings"][0]["provider_name"]
-    else:
-        provider_name = provider_result.snapshot_bindings[0].provider_name
-    assert provider_name.startswith("lf_")
+    provider_result = (
+        result.provider_result.model_dump() if hasattr(result.provider_result, "model_dump") else result.provider_result
+    )
+    assert provider_result["app_ids"] == ["lf_cfg"]
+    assert provider_result["tool_app_bindings"] == [{"tool_id": "new-tool-1", "app_ids": ["lf_cfg"]}]
+    assert provider_result["tools_with_refs"] == [{"source_ref": "fv-create-service-1", "snapshot_id": "new-tool-1"}]
 
 
 @pytest.mark.anyio
@@ -1732,22 +1817,16 @@ async def test_process_raw_flows_with_app_id_returns_source_ref_bindings(monkeyp
         {
             "source_ref": binding.source_ref,
             "snapshot_id": binding.snapshot_id,
-            "source_name": binding.source_name,
-            "provider_name": binding.provider_name,
         }
         for binding in result
     ] == [
         {
             "source_ref": "fv-1",
             "snapshot_id": "tool-1",
-            "source_name": "snapshot-one",
-            "provider_name": "lf_test_snapshot_one",
         },
         {
             "source_ref": "fv-2",
             "snapshot_id": "tool-2",
-            "source_name": "snapshot-two",
-            "provider_name": "lf_test_snapshot_two",
         },
     ]
 
@@ -1805,7 +1884,6 @@ async def test_process_raw_flows_with_app_id_accepts_typed_provider_data(monkeyp
     assert len(result) == 1
     assert result[0].source_ref == "fv-typed-1"
     assert result[0].snapshot_id == "tool-1"
-    assert result[0].provider_name == "lf_test_snapshot_one"
 
 
 @pytest.mark.anyio
@@ -2017,21 +2095,20 @@ async def test_create_wires_provider_apply_result_to_response(monkeypatch):
     ):
         return payloads_module.WatsonxProviderCreateApplyResult(
             agent_id="dep-created",
-            config_id="lf_abcdef_cfg",
-            snapshot_ids=["tool-1", "tool-2"],
-            snapshot_bindings=[
+            app_ids=["lf_abcdef_cfg"],
+            tools_with_refs=[
                 tools_module.WatsonxCreateSnapshotBinding(
                     source_ref="00000000-0000-0000-0000-000000000001",
                     snapshot_id="tool-1",
-                    source_name="snapshot-one",
-                    provider_name="lf_abcdef_snapshotone",
                 ),
                 tools_module.WatsonxCreateSnapshotBinding(
                     source_ref="00000000-0000-0000-0000-000000000002",
                     snapshot_id="tool-2",
-                    source_name="snapshot-two",
-                    provider_name="lf_abcdef_snapshottwo",
                 ),
+            ],
+            tool_app_bindings=[
+                payloads_module.WatsonxToolAppBinding(tool_id="tool-1", app_ids=["lf_abcdef_cfg"]),
+                payloads_module.WatsonxToolAppBinding(tool_id="tool-2", app_ids=["lf_abcdef_cfg"]),
             ],
             prefixed_name="lf_abcdef_my_deployment",
             display_name="my deployment",
@@ -2061,23 +2138,25 @@ async def test_create_wires_provider_apply_result_to_response(monkeypatch):
     )
 
     assert result.id == "dep-created"
-    assert result.config_id == "lf_abcdef_cfg"
-    assert result.snapshot_ids == ["tool-1", "tool-2"]
-    assert result.provider_result == {
-        "snapshot_bindings": [
+    assert result.config_id is None
+    assert result.snapshot_ids == []
+    assert result.provider_result is not None
+    assert result.provider_result.model_dump() == {
+        "app_ids": ["lf_abcdef_cfg"],
+        "tools_with_refs": [
             {
                 "source_ref": "00000000-0000-0000-0000-000000000001",
                 "snapshot_id": "tool-1",
-                "source_name": "snapshot-one",
-                "provider_name": "lf_abcdef_snapshotone",
             },
             {
                 "source_ref": "00000000-0000-0000-0000-000000000002",
                 "snapshot_id": "tool-2",
-                "source_name": "snapshot-two",
-                "provider_name": "lf_abcdef_snapshottwo",
             },
-        ]
+        ],
+        "tool_app_bindings": [
+            {"tool_id": "tool-1", "app_ids": ["lf_abcdef_cfg"]},
+            {"tool_id": "tool-2", "app_ids": ["lf_abcdef_cfg"]},
+        ],
     }
 
 
@@ -2114,9 +2193,7 @@ async def test_create_uses_caller_provided_resource_name_prefix(monkeypatch):
     ):
         return payloads_module.WatsonxProviderCreateApplyResult(
             agent_id="dep-created",
-            config_id=None,
-            snapshot_ids=[],
-            snapshot_bindings=[],
+            tools_with_refs=[],
             prefixed_name="idempotent_abc_my_deployment",
             display_name="my deployment",
         )
@@ -2647,7 +2724,7 @@ async def test_rollback_created_resources_deletes_all(monkeypatch):
         clients=fake_clients,
         agent_id="agent-1",
         tool_ids=["tool-1", "tool-2"],
-        app_id="app-1",
+        app_ids=["app-1"],
     )
 
     assert deleted["agents"] == ["agent-1"]
@@ -2682,7 +2759,7 @@ async def test_rollback_continues_after_individual_failures(monkeypatch):
         clients=fake_clients,
         agent_id="agent-1",
         tool_ids=["tool-1"],
-        app_id="app-1",
+        app_ids=["app-1"],
     )
 
     assert deleted["configs"] == ["app-1"]
@@ -3871,7 +3948,7 @@ async def test_create_maps_422_to_invalid_content_error(monkeypatch):
         mock_apply_provider_create_plan_with_rollback,
     )
 
-    with pytest.raises(InvalidContentError, match="unprocessable"):
+    with pytest.raises(InvalidContentError, match="validation error"):
         await service.create(
             user_id="user-1",
             db=object(),

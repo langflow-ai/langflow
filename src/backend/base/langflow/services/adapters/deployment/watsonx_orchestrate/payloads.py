@@ -351,16 +351,6 @@ class WatsonxCreateSnapshotBinding(BaseModel):
 
     source_ref: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
     snapshot_id: NormalizedId
-    source_name: str | None = None
-    provider_name: str | None = None
-
-    @field_validator("source_name", "provider_name", mode="before")
-    @classmethod
-    def normalize_optional_value(cls, value: Any) -> str | None:
-        if value is None:
-            return None
-        normalized = str(value).strip()
-        return normalized or None
 
 
 class WatsonxDeploymentCreateResultData(BaseModel):
@@ -368,11 +358,20 @@ class WatsonxDeploymentCreateResultData(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    snapshot_bindings: list[WatsonxCreateSnapshotBinding] = Field(default_factory=list)
+    app_ids: list[NormalizedId] = Field(default_factory=list)
+    tools_with_refs: list[WatsonxCreateSnapshotBinding] = Field(default_factory=list)
+    tool_app_bindings: list[WatsonxToolAppBinding] = Field(default_factory=list)
+
+    @field_validator("app_ids", mode="before")
+    @classmethod
+    def normalize_app_ids(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        return [str(app_id).strip() for app_id in value if str(app_id).strip()]
 
 
 class WatsonxToolAppBinding(BaseModel):
-    """Normalized tool-app binding item for deployment update result."""
+    """Normalized tool-app binding item for deployment result payloads."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -430,9 +429,9 @@ class WatsonxProviderCreateApplyResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     agent_id: NormalizedId
-    config_id: NormalizedId | None = None
-    snapshot_ids: list[NormalizedId] = Field(default_factory=list)
-    snapshot_bindings: list[WatsonxCreateSnapshotBinding] = Field(default_factory=list)
+    app_ids: list[NormalizedId] = Field(default_factory=list)
+    tools_with_refs: list[WatsonxCreateSnapshotBinding] = Field(default_factory=list)
+    tool_app_bindings: list[WatsonxToolAppBinding] = Field(default_factory=list)
     prefixed_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
     display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 

@@ -431,8 +431,6 @@ async def process_raw_flows_with_app_id(
         WatsonxCreateSnapshotBinding(
             source_ref=_resolve_flow_source_ref(flow_payload),
             snapshot_id=tool_id,
-            source_name=str(flow_payload.name).strip() or None,
-            provider_name=f"{tool_name_prefix}{normalize_wxo_name(str(flow_payload.name))}",
         )
         for flow_payload, tool_id in zip(flows, created_tool_ids, strict=True)
     ]

@@ -148,6 +148,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
             validate_provider_create_request_sections(payload)
             deployment_create_slot = self.payload_schemas.deployment_create
+
             if deployment_create_slot is None:
                 msg = f"{ErrorPrefix.CREATE.value} Required slot 'deployment_create' is not configured."
                 raise DeploymentError(message=msg, error_code="deployment_error")
@@ -196,7 +197,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             raise DeploymentError(message=msg, error_code="deployment_error") from exc
 
         create_result_payload = WatsonxDeploymentCreateResultData(
-            snapshot_bindings=apply_result.snapshot_bindings,
+            app_ids=apply_result.app_ids,
+            tools_with_refs=apply_result.tools_with_refs,
+            tool_app_bindings=apply_result.tool_app_bindings,
         )
         create_result_slot = self.payload_schemas.deployment_create_result
         if create_result_slot is None:
@@ -205,8 +208,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         return DeploymentCreateResult[WatsonxDeploymentCreateResultData](
             id=apply_result.agent_id,
-            config_id=apply_result.config_id,
-            snapshot_ids=apply_result.snapshot_ids,
             provider_result=create_result_slot.parse(create_result_payload),
         )
 

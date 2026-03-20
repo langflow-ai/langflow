@@ -189,10 +189,27 @@ def build_agent_payload(
     if data.provider_spec is None:
         msg = "Deployment data must include provider_spec with a non-empty name and display_name."
         raise InvalidContentError(message=msg)
+    return build_agent_payload_from_values(
+        agent_name=str(data.provider_spec["name"]),
+        agent_display_name=str(data.provider_spec["display_name"]),
+        deployment_name=str(data.name),
+        description=str(data.description or ""),
+        tool_ids=tool_ids,
+    )
+
+
+def build_agent_payload_from_values(
+    *,
+    agent_name: str,
+    agent_display_name: str,
+    deployment_name: str,
+    description: str,
+    tool_ids: Sequence[str],
+) -> dict[str, Any]:
     return {
-        "name": data.provider_spec["name"],
-        "display_name": data.provider_spec["display_name"],
-        "description": str(data.description or "").strip() or f"Langflow deployment {data.name}",
+        "name": agent_name,
+        "display_name": agent_display_name,
+        "description": str(description).strip() or f"Langflow deployment {deployment_name}",
         "tools": list(tool_ids),
         "style": "default",
         # TODO: make configurable; the llm field is required by the wxO api
