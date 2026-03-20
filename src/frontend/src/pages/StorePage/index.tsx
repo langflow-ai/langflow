@@ -141,10 +141,7 @@ export default function StorePage(): JSX.Element {
           setLoading(false);
           setErrorData({
             title: t("errors.getComponents"),
-            list: [
-              err?.response?.data?.detail ??
-                t("store.fetchErrorDetail"),
-            ],
+            list: [err?.response?.data?.detail ?? t("store.fetchErrorDetail")],
           });
         }
       });
@@ -304,7 +301,8 @@ export default function StorePage(): JSX.Element {
             <span className="px-0.5 text-sm text-muted-foreground">
               {(!loading || searchData.length !== 0) && (
                 <>
-                  {totalRowsCount} {t("store.results", { count: totalRowsCount })}
+                  {totalRowsCount}{" "}
+                  {t("store.results", { count: totalRowsCount })}
                 </>
               )}
             </span>
@@ -319,9 +317,13 @@ export default function StorePage(): JSX.Element {
                 <SelectValue placeholder={t("store.sortPopular")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Popular">{t("store.sortPopular")}</SelectItem>
+                <SelectItem value="Popular">
+                  {t("store.sortPopular")}
+                </SelectItem>
                 {/* <SelectItem value="Recent">Most Recent</SelectItem> */}
-                <SelectItem value="Alphabetical">{t("store.sortAlphabetical")}</SelectItem>
+                <SelectItem value="Alphabetical">
+                  {t("store.sortAlphabetical")}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -357,17 +359,19 @@ export default function StorePage(): JSX.Element {
                     {selectFilter != "all" ? (
                       <>
                         {t("store.emptyCreatedOrLiked", {
-                          action: selectFilter === "createdbyme"
-                            ? t("store.emptyCreatedAction")
-                            : t("store.emptyLikedAction"),
+                          action:
+                            selectFilter === "createdbyme"
+                              ? t("store.emptyCreatedAction")
+                              : t("store.emptyLikedAction"),
                         })}
                       </>
                     ) : (
                       <>
                         {t("store.emptyNoItems", {
-                          type: tabActive == "Flows"
-                            ? t("store.tabFlows")
-                            : t("store.tabComponents"),
+                          type:
+                            tabActive == "Flows"
+                              ? t("store.tabFlows")
+                              : t("store.tabComponents"),
                         })}
                       </>
                     )}

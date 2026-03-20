@@ -79,7 +79,9 @@ export const AccountMenu = () => {
                   )}
                 >
                   {version}{" "}
-                  {isLatestVersion ? t("account.latest") : t("account.updateAvailable")}
+                  {isLatestVersion
+                    ? t("account.latest")
+                    : t("account.updateAvailable")}
                 </div>
               </div>
             </div>

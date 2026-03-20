@@ -24,7 +24,9 @@ export const useFileHandler = (currentFlowId: string) => {
       const fileExtension = file.name.split(".").pop()?.toLowerCase();
       if (file.size > maxFileSizeUpload) {
         setErrorData({
-          title: t("errors.fileTooLarge", { maxSizeMB: formatFileSize(maxFileSizeUpload) }),
+          title: t("errors.fileTooLarge", {
+            maxSizeMB: formatFileSize(maxFileSizeUpload),
+          }),
         });
         return;
       }

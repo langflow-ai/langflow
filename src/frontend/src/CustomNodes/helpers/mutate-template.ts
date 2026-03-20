@@ -1,8 +1,6 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import { cloneDeep, debounce } from "lodash";
-import {
-  SAVE_DEBOUNCE_TIME,
-} from "@/constants/constants";
+import { SAVE_DEBOUNCE_TIME } from "@/constants/constants";
 import i18n from "../../i18n";
 import type { APIClassType, ResponseErrorDetailAPI } from "@/types/api";
 import { updateHiddenOutputs } from "./update-hidden-outputs";
@@ -77,7 +75,10 @@ export const mutateTemplate = async (
             const error = e as ResponseErrorDetailAPI;
             setErrorData({
               title: i18n.t("input.titleErrorUpdatingComponent"),
-              list: [error.response?.data?.detail || i18n.t("input.errorUpdatingComponent")],
+              list: [
+                error.response?.data?.detail ||
+                  i18n.t("input.errorUpdatingComponent"),
+              ],
             });
           }
         },

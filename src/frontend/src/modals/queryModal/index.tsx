@@ -38,7 +38,9 @@ export default function QueryModal({
       <BaseModal.Header>
         <div className="flex w-full items-start gap-3">
           <div className="flex">
-            <span data-testid="modal-title">{title ?? t("dialog.editText")}</span>
+            <span data-testid="modal-title">
+              {title ?? t("dialog.editText")}
+            </span>
           </div>
         </div>
       </BaseModal.Header>

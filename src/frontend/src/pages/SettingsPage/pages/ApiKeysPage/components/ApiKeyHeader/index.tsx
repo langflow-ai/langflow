@@ -30,7 +30,9 @@ const ApiKeyHeaderComponent = ({
               className="ml-2 h-5 w-5 text-primary"
             />
           </h2>
-          <p className="text-sm text-muted-foreground">{t("settings.apiPageParagraph")}</p>
+          <p className="text-sm text-muted-foreground">
+            {t("settings.apiPageParagraph")}
+          </p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
           <SecretKeyModal

@@ -145,7 +145,9 @@ export default function ApiModal({
                   name="SlidersHorizontal"
                   className="h-3.5 w-3.5"
                 />
-                <span>{t("modal.api.inputSchema")} ({Object.keys(tweaks)?.length}) </span>
+                <span>
+                  {t("modal.api.inputSchema")} ({Object.keys(tweaks)?.length}){" "}
+                </span>
               </Button>
               <Separator orientation="vertical" className="ml-2 h-8" />
             </div>
@@ -179,7 +181,9 @@ export default function ApiModal({
                 </span>
                 {!validEndpointName && (
                   <span className="edit-flow-span">
-                    {t("modal.api.endpointValidation", { maxLength: MAX_LENGTH })}
+                    {t("modal.api.endpointValidation", {
+                      maxLength: MAX_LENGTH,
+                    })}
                   </span>
                 )}
               </div>
@@ -198,7 +202,9 @@ export default function ApiModal({
           )}
           <div className="flex flex-1 flex-col gap-2 overflow-hidden">
             <div className="flex flex-col gap-1">
-              <span className="shrink-0 text-sm font-medium">{t("modal.api.exposeApi")}</span>
+              <span className="shrink-0 text-sm font-medium">
+                {t("modal.api.exposeApi")}
+              </span>
               <span className="text-mmd text-muted-foreground">
                 {t("modal.api.exposeApiDescription")}
               </span>

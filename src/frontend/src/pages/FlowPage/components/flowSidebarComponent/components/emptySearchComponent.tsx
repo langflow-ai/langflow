@@ -22,7 +22,8 @@ const NoResultsMessage = ({
   const { t } = useTranslation();
   const resolvedMessage = message ?? t("sidebar.noComponentsFound");
   const resolvedClearSearchText = clearSearchText ?? t("sidebar.clearSearch");
-  const resolvedAdditionalText = additionalText ?? t("sidebar.tryDifferentQuery");
+  const resolvedAdditionalText =
+    additionalText ?? t("sidebar.tryDifferentQuery");
   return (
     <div className="flex h-full flex-col relative">
       {ENABLE_NEW_SIDEBAR && setShowConfig && (

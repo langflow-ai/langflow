@@ -281,45 +281,107 @@ export const FILE_ICONS = {
 };
 
 export const SIDEBAR_CATEGORIES = [
-  { display_name: "sidebar.category.saved", name: "saved_components", icon: "GradientSave" },
-  { display_name: "sidebar.category.inputOutput", name: "input_output", icon: "Cable" },
-  { display_name: "sidebar.category.dataSources", name: "data_source", icon: "Database" },
-  { display_name: "sidebar.category.modelsAndAgents", name: "models_and_agents", icon: "Bot" },
+  {
+    display_name: "sidebar.category.saved",
+    name: "saved_components",
+    icon: "GradientSave",
+  },
+  {
+    display_name: "sidebar.category.inputOutput",
+    name: "input_output",
+    icon: "Cable",
+  },
+  {
+    display_name: "sidebar.category.dataSources",
+    name: "data_source",
+    icon: "Database",
+  },
+  {
+    display_name: "sidebar.category.modelsAndAgents",
+    name: "models_and_agents",
+    icon: "Bot",
+  },
   {
     display_name: "sidebar.category.llmOperations",
     name: "llm_operations",
     icon: "BrainCircuit",
   },
   {
-    display_name: ENABLE_KNOWLEDGE_BASES ? "sidebar.category.filesAndKnowledge" : "sidebar.category.files",
+    display_name: ENABLE_KNOWLEDGE_BASES
+      ? "sidebar.category.filesAndKnowledge"
+      : "sidebar.category.files",
     name: "files_and_knowledge",
     icon: "Layers",
   },
-  { display_name: "sidebar.category.processing", name: "processing", icon: "ListFilter" },
+  {
+    display_name: "sidebar.category.processing",
+    name: "processing",
+    icon: "ListFilter",
+  },
   {
     display_name: "sidebar.category.flowControl",
     name: "flow_controls",
     icon: "ArrowRightLeft",
   },
-  { display_name: "sidebar.category.utilities", name: "utilities", icon: "Wand2" },
-  { display_name: "sidebar.category.prototypes", name: "prototypes", icon: "FlaskConical" },
+  {
+    display_name: "sidebar.category.utilities",
+    name: "utilities",
+    icon: "Wand2",
+  },
+  {
+    display_name: "sidebar.category.prototypes",
+    name: "prototypes",
+    icon: "FlaskConical",
+  },
   { display_name: "sidebar.category.tools", name: "tools", icon: "Hammer" },
   { display_name: "sidebar.category.agents", name: "agents", icon: "Bot" },
   { display_name: "sidebar.category.data", name: "data", icon: "Database" },
-  { display_name: "sidebar.category.logic", name: "logic", icon: "ArrowRightLeft" },
+  {
+    display_name: "sidebar.category.logic",
+    name: "logic",
+    icon: "ArrowRightLeft",
+  },
   { display_name: "sidebar.category.helpers", name: "helpers", icon: "Wand2" },
   { display_name: "sidebar.category.models", name: "models", icon: "BrainCog" },
-  { display_name: "sidebar.category.vectorStores", name: "vectorstores", icon: "Layers" },
+  {
+    display_name: "sidebar.category.vectorStores",
+    name: "vectorstores",
+    icon: "Layers",
+  },
   { display_name: "sidebar.category.inputs", name: "inputs", icon: "Download" },
   { display_name: "sidebar.category.outputs", name: "outputs", icon: "Upload" },
   { display_name: "sidebar.category.prompts", name: "prompts", icon: "braces" },
   { display_name: "sidebar.category.chains", name: "chains", icon: "Link" },
-  { display_name: "sidebar.category.loaders", name: "documentloaders", icon: "Paperclip" },
-  { display_name: "sidebar.category.linkExtractors", name: "link_extractors", icon: "Link2" },
-  { display_name: "sidebar.category.outputParsers", name: "output_parsers", icon: "Compass" },
-  { display_name: "sidebar.category.retrievers", name: "retrievers", icon: "FileSearch" },
-  { display_name: "sidebar.category.textSplitters", name: "textsplitters", icon: "Scissors" },
-  { display_name: "sidebar.category.toolkits", name: "toolkits", icon: "Package2" },
+  {
+    display_name: "sidebar.category.loaders",
+    name: "documentloaders",
+    icon: "Paperclip",
+  },
+  {
+    display_name: "sidebar.category.linkExtractors",
+    name: "link_extractors",
+    icon: "Link2",
+  },
+  {
+    display_name: "sidebar.category.outputParsers",
+    name: "output_parsers",
+    icon: "Compass",
+  },
+  {
+    display_name: "sidebar.category.retrievers",
+    name: "retrievers",
+    icon: "FileSearch",
+  },
+  {
+    display_name: "sidebar.category.textSplitters",
+    name: "textsplitters",
+    icon: "Scissors",
+  },
+  {
+    display_name: "sidebar.category.toolkits",
+    name: "toolkits",
+    icon: "Package2",
+  },
 ];
 
 export const SIDEBAR_BUNDLES = [
