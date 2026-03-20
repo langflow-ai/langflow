@@ -80,16 +80,6 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     For more information about available optional dependency groups, see [Install optional dependency groups for `langflow-base`](/install-custom-dependencies#install-optional-dependency-groups-for-langflow-base).
 
--   Docling installation behavior differs between Desktop and OSS
-
-    In Langflow 1.8.0, Docling behavior depends on how Langflow is installed.
-
-    For Langflow Desktop installations, you need to set `LANGFLOW_DOCLING=True` in your `.env` file to enable Docling dependency installation. For more information, see [Set environment variables for Langflow Desktop](/environment-variables#set-environment-variables-for-langflow-desktop).
-
-    For Langflow OSS installations with `uv pip install langflow`, Docling is included with the Langflow package.
-
-    For Langflow OSS installations with `uv pip install langflow-base`, install Docling explicitly as an extra with `uv pip install langflow-base[docling]`.
-
 -   Docker image does not include `uv` or `uvx`
 
     :::tip
@@ -128,6 +118,16 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
         ```
 
     For more information, see [Upgrade the Langflow Docker image](/deployment-docker#upgrade-the-langflow-docker-image).
+
+-   Docling installation behavior differs between Desktop and OSS
+
+    In Langflow 1.8.0, Docling behavior depends on how Langflow is installed.
+
+    For Langflow Desktop installations, you need to set `LANGFLOW_DOCLING=True` in your `.env` file to enable Docling dependency installation. For more information, see [Set environment variables for Langflow Desktop](/environment-variables#set-environment-variables-for-langflow-desktop).
+
+    For Langflow OSS installations with `uv pip install langflow`, Docling is included with the Langflow package.
+
+    For Langflow OSS installations with `uv pip install langflow-base`, install Docling explicitly as an extra with `uv pip install "langflow-base[docling]"` or `uv pip install "langflow[docling]"`.
 
 ### New features and enhancements
 
