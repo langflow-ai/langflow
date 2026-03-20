@@ -59,6 +59,7 @@ on:
         type: choice
         options:
           - ubuntu-latest
+          - windows-latest
           - self-hosted
           - '["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]'
         default: ubuntu-latest
@@ -93,6 +94,7 @@ jobs:
 
       - name: Determine Test Suites from Changes
         id: set-matrix
+        shell: bash
         run: |
           # Start with input suites if provided, otherwise empty array
           echo "Changes filter output: $(echo '${{ toJSON(steps.filter.outputs) }}')"
@@ -233,6 +235,7 @@ jobs:
 
       - name: Calculate Test Shards Distribution
         id: setup-matrix
+        shell: bash
         run: |
           cd src/frontend
 
@@ -310,14 +313,16 @@ jobs:
           restore-keys: |
             playwright-${{ env.PLAYWRIGHT_VERSION }}-chromium-${{ runner.os }}
 
-      - name: Install Playwright Browser Dependencies
-        if: steps.cache-playwright.outputs.cache-hit != 'true' && inputs.runs-on != 'self-hosted'
+      - name: Install Playwright Browser Dependencies (Linux)
+        if: steps.cache-playwright.outputs.cache-hit != 'true' && runner.os == 'Linux' && !contains(inputs.runs-on, 'self-hosted')
+        shell: bash
         run: |
           cd ./src/frontend
           npx playwright install --with-deps chromium
 
-      - name: Install Playwright Browsers (Self-Hosted)
-        if: steps.cache-playwright.outputs.cache-hit != 'true' && inputs.runs-on == 'self-hosted'
+      - name: Install Playwright Browsers (Windows/macOS/Self-Hosted)
+        if: steps.cache-playwright.outputs.cache-hit != 'true' && (runner.os != 'Linux' || contains(inputs.runs-on, 'self-hosted'))
+        shell: bash
         run: |
           cd ./src/frontend
           npx playwright install chromium
@@ -334,6 +339,7 @@ jobs:
         run: uv sync --extra audio
 
       - name: Configure Environment Variables
+        shell: bash
         run: |
           touch .env
           echo "${{ secrets.ENV_VARS }}" > .env
@@ -356,7 +362,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: blob-report-${{ matrix.shardIndex }}
+          name: blob-report-${{ runner.os }}-${{ matrix.shardIndex }}
           path: src/frontend/blob-report
           retention-days: 1
 
@@ -376,6 +382,7 @@ jobs:
         # If the CI was successful, we don't need to merge the reports
         # so we can skip all the steps below
         id: should_merge_reports
+        shell: bash
         run: |
           if [ "$EXIT_CODE" == "0" ]; then
             echo "should_merge_reports=false" >> $GITHUB_OUTPUT
@@ -407,6 +414,7 @@ jobs:
       - name: Merge into HTML Report
 
         if: ${{ steps.should_merge_reports.outputs.should_merge_reports == 'true' }}
+        shell: bash
         run: |
           npx playwright merge-reports --reporter html ./all-blob-reports
 
