@@ -8,24 +8,26 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 The [Agentics](https://github.com/IBM/agentics/) component bundle uses LLMs to transform tabular data. Add or fill columns row-by-row with the [**aMap** component](#amap-component), collapse many rows into one with [**aReduce** component](#areduce-component), or generate synthetic rows with the [**aGenerate** component](#agenerate-component).
 
-Define the structure of generated data in the components' **Schema** table.
-For example:
+Watch it in action with a sentiment analysis example that transforms customer reviews into structured insights:
 
-| Column | Type | Description | Required |
-|--------|------|-------------|----------|
-| Name | String | The name of the output field | Yes |
-| Type | Dropdown | `str`, `int`, `float`, `bool`, or `dict` | Yes |
-| Description | String | What this field represents and how it should be generated | No |
-| As List | Boolean | If true, field is a list of -componentthe specified type (e.g. list[str]) | No |
-
-All Agentics components return a **DataFrame**.
+<div style={{position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', maxWidth: '800px', marginBottom: '1rem'}}>
+  <iframe
+    style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: '8px'}}
+    src="https://www.youtube.com/embed/bugrV2pX-9Q"
+    title="Agentics Tutorial Video"
+    frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    referrerpolicy="strict-origin-when-cross-origin"
+    allowfullscreen>
+  </iframe>
+</div>
 
 ## Prerequisites
 
 1. Install the Agentics package in Langflow's virtual environment:
 
    ```bash
-   uv pip install agentics-py==0.3.1
+   uv pip install agentics-py
    ```
 
 2. Restart Langflow so the Agentics components are available:
@@ -153,5 +155,8 @@ It sums revenue into `total_revenue`, identifies the best-selling product in `be
 
 - [Agentics official documentation](https://ibm.github.io/Agentics/)
 - [Agentics GitHub repository](https://github.com/IBM/agentics/)
-- [Transduction is All You Need for Structured Data Workflows](https://arxiv.org/abs/2508.15610)
 - [Global variables configuration](/configuration-global-variables)
+
+**Publications:**
+- Alfio Gliozzo, Naweed Khan, Christodoulos Constantinides, Nandana Mihindukulasooriya, Nahuel Defosse, Gaetano Rossiello, Junkyu Lee. "Transduction is All You Need for Structured Data Workflows." arXiv:2508.15610, 2025. [Link](https://arxiv.org/abs/2508.15610)
+- Alfio Massimiliano Gliozzo, Junkyu Lee, Nahuel Defosse. "Agentics 2.0: Logical Transduction Algebra for Agentic Data Workflows." arXiv:2603.04241, 2026. [Link](https://arxiv.org/abs/2603.04241)
