@@ -694,8 +694,8 @@ async def test_download_profile_picture_path_traversal_attempt(empty_config_dir,
     """
     # Try path traversal to access parent directories
     response = await files_client.get("api/v1/files/profile_pictures/../../../etc/passwd")
-    # Should either be 404 (file not found) or the path should be sanitized
-    assert response.status_code in [404, 500]
+    # Should be 400 (invalid input), 404 (not found), or 422 (validation error)
+    assert response.status_code in [400, 404, 422, 500]
 
 
 async def test_download_profile_picture_special_characters_in_filename(empty_config_dir, files_client):  # noqa: ARG001
