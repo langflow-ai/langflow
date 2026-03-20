@@ -2,9 +2,8 @@ import re
 from typing import Any
 
 from lfx.base.models.unified_models import (
-    get_language_model_options,
     get_llm,
-    update_model_options_in_build_config,
+    handle_model_input_update,
 )
 from lfx.custom import Component
 from lfx.field_typing.range_spec import RangeSpec
@@ -51,7 +50,7 @@ class GuardrailsComponent(Component):
         SecretStrInput(
             name="api_key",
             display_name="API Key",
-            info="Model Provider API key",
+            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
             real_time_refresh=True,
             advanced=True,
         ),
@@ -130,14 +129,7 @@ class GuardrailsComponent(Component):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
-        return update_model_options_in_build_config(
-            component=self,
-            build_config=build_config,
-            cache_key_prefix="language_model_options",
-            get_options_func=get_language_model_options,
-            field_name=field_name,
-            field_value=field_value,
-        )
+        return handle_model_input_update(self, build_config, field_value, field_name)
 
     def _pre_run_setup(self):
         """Reset validation state before each run."""

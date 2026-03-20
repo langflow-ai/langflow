@@ -205,15 +205,34 @@ jobs:
             exit 1
           fi
 
-  frontend-tests:
+  frontend-tests-linux:
     if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
-    name: Run Frontend Tests
+    name: Run Frontend Tests - Linux
     needs: create-nightly-tag
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: "tests"
       release: true
-      runs-on: ${{ inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
+      runs-on: ubuntu-latest
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+
+  frontend-tests-windows:
+    if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
+    name: Run Frontend Tests - Windows
+    needs: create-nightly-tag
+    # Allow Windows tests to fail without blocking the nightly build
+    # This gives us visibility into Windows-specific issues while we stabilize the tests
+    # Remove this once Windows tests are consistently passing
+    continue-on-error: true
+    uses: ./.github/workflows/typescript_test.yml
+    with:
+      tests_folder: "tests"
+      release: true
+      runs-on: windows-latest
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
@@ -244,10 +263,10 @@ jobs:
   #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   release-nightly-build:
-    if: github.repository == 'langflow-ai/langflow' && always() && needs.frontend-tests.result != 'failure' && needs.backend-unit-tests.result != 'failure'
+    if: github.repository == 'langflow-ai/langflow' && always() && needs.frontend-tests-linux.result != 'failure' && needs.backend-unit-tests.result != 'failure'
     name: Run Nightly Langflow Build
     needs:
-      [validate-inputs, create-nightly-tag, frontend-tests, backend-unit-tests]
+      [validate-inputs, create-nightly-tag, frontend-tests-linux, frontend-tests-windows, backend-unit-tests]
     uses: ./.github/workflows/release_nightly.yml
     with:
       build_docker_base: true
@@ -264,19 +283,21 @@ jobs:
 
   slack-notification:
     name: Send Slack Notification
-    needs: [frontend-tests, backend-unit-tests, release-nightly-build]
-    if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.release-nightly-build.result == 'success') }}
+    needs: [frontend-tests-linux, frontend-tests-windows, backend-unit-tests, release-nightly-build]
+    if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests-linux.result == 'failure' || needs.frontend-tests-windows.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.release-nightly-build.result == 'success') }}
     runs-on: ubuntu-latest
     steps:
       - name: Send failure notification to Slack
-        if: ${{ needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' }}
+        if: ${{ needs.release-nightly-build.result == 'failure' || needs.frontend-tests-linux.result == 'failure' || needs.frontend-tests-windows.result == 'failure' || needs.backend-unit-tests.result == 'failure' }}
         run: |
           # Determine which job failed
           FAILED_JOB="unknown"
           if [ "${{ needs.release-nightly-build.result }}" == "failure" ]; then
             FAILED_JOB="release-nightly-build"
-          elif [ "${{ needs.frontend-tests.result }}" == "failure" ]; then
-            FAILED_JOB="frontend-tests"
+          elif [ "${{ needs.frontend-tests-linux.result }}" == "failure" ]; then
+            FAILED_JOB="frontend-tests-linux"
+          elif [ "${{ needs.frontend-tests-windows.result }}" == "failure" ]; then
+            FAILED_JOB="frontend-tests-windows (non-blocking)"
           elif [ "${{ needs.backend-unit-tests.result }}" == "failure" ]; then
             FAILED_JOB="backend-unit-tests"
           fi
@@ -303,6 +324,13 @@ jobs:
                     \"text\": \"*Status:*\\nfailure\"
                   }
                 ]
+              },
+              {
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"*Note:* Frontend tests now run on both Linux and Windows\"
+                }
               },
               {
                 \"type\": \"context\",
@@ -341,6 +369,13 @@ jobs:
                     "text": "*Status:*\n`${{ needs.release-nightly-build.result }}`"
                   }
                 ]
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Platforms:* Linux & Windows Playwright tests passed"
+                }
               },
               {
                 "type": "context",

@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { BaseInputProps } from "@/components/core/parameterRenderComponent/types";
 import ModelInputComponent from "../index";
-import type { ModelOption } from "../types";
+import type { ModelInputComponentType, ModelOption } from "../types";
 
 // Mock scrollIntoView for cmdk library
 Element.prototype.scrollIntoView = jest.fn();
@@ -138,7 +139,7 @@ const mockOptions: ModelOption[] = [
   },
 ];
 
-const defaultProps: any = {
+const defaultProps: BaseInputProps & ModelInputComponentType = {
   id: "test-model-input",
   value: [],
   disabled: false,
@@ -150,8 +151,16 @@ const defaultProps: any = {
     template: {
       model: {
         model_type: "language",
+        type: "",
+        required: false,
+        list: false,
+        show: false,
+        readonly: false,
       },
     },
+    description: "",
+    display_name: "",
+    documentation: "",
   },
   handleNodeClass: jest.fn(),
   editNode: false,
@@ -176,13 +185,14 @@ describe("ModelInputComponent", () => {
   });
 
   describe("Rendering", () => {
-    it("should render loading state when no options are provided", () => {
+    it("should render disabled combobox when no options are provided", () => {
       renderWithQueryClient(
         <ModelInputComponent {...defaultProps} options={[]} />,
       );
 
-      expect(screen.getByTestId("loading-text")).toBeInTheDocument();
-      expect(screen.getByText("Loading models")).toBeInTheDocument();
+      const combobox = screen.getByRole("combobox");
+      expect(combobox).toBeInTheDocument();
+      expect(combobox).toBeDisabled();
     });
 
     it("should render the model selector when options are available", () => {
