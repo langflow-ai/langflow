@@ -12,7 +12,7 @@ from fastapi.responses import StreamingResponse
 from lfx.services.settings.service import SettingsService
 from lfx.utils.helpers import build_content_type_from_extension
 
-from langflow.api.utils import CurrentActiveUser, DbSession, ValidatedFileName
+from langflow.api.utils import CurrentActiveUser, DbSession, ValidatedFileName, ValidatedFolderName
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service, get_storage_service
@@ -167,8 +167,8 @@ async def download_image(
 
 @router.get("/profile_pictures/{folder_name}/{file_name}")
 async def download_profile_picture(
-    folder_name: str,
-    file_name: str,
+    folder_name: ValidatedFolderName,
+    file_name: ValidatedFileName,
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
     """Download profile picture from local filesystem.
@@ -177,34 +177,27 @@ async def download_profile_picture(
     then fallback to the package's bundled profile_pictures directory.
     """
     try:
-        # SECURITY: Validate inputs to prevent path traversal attacks
-        # Reject any path components that contain directory traversal sequences
-        if ".." in folder_name or ".." in file_name:
-            raise HTTPException(
-                status_code=400, detail="Path traversal patterns ('..') are not allowed in folder or file names"
-            )
-
         # Only allow specific folder names (dynamic from config + package)
         allowed_folders = _get_allowed_profile_picture_folders(settings_service)
         if folder_name not in allowed_folders:
             raise HTTPException(status_code=400, detail=f"Folder must be one of: {', '.join(sorted(allowed_folders))}")
 
-        # Validate file name contains no path separators
-        if "/" in file_name or "\\" in file_name:
-            raise HTTPException(status_code=400, detail="File name cannot contain path separators ('/' or '\\')")
+        # SECURITY: Extract only the final path component to prevent path traversal.
+        # This is defense-in-depth on top of ValidatedFileName/ValidatedFolderName.
+        safe_folder = Path(folder_name).name
+        safe_file = Path(file_name).name
 
-        extension = file_name.split(".")[-1]
+        extension = safe_file.split(".")[-1]
         config_dir = settings_service.settings.config_dir
         config_path = Path(config_dir).resolve()  # type: ignore[arg-type]
 
         # Construct the file path
-        file_path = (config_path / "profile_pictures" / folder_name / file_name).resolve()
+        file_path = (config_path / "profile_pictures" / safe_folder / safe_file).resolve()
 
         # SECURITY: Verify the resolved path is still within the allowed directory
         # This prevents path traversal even if symbolic links are involved
         allowed_base = (config_path / "profile_pictures").resolve()
-        if not str(file_path).startswith(str(allowed_base)):
-            # Return 404 to prevent path traversal attempts from revealing system structure
+        if not file_path.is_relative_to(allowed_base):
             raise HTTPException(status_code=404, detail="Profile picture not found")
 
         # Fallback to package bundled profile pictures if not found in config_dir
@@ -212,18 +205,17 @@ async def download_profile_picture(
             from langflow.initial_setup import setup
 
             package_base = Path(setup.__file__).parent / "profile_pictures"
-            package_path = (package_base / folder_name / file_name).resolve()
+            package_path = (package_base / safe_folder / safe_file).resolve()
 
             # SECURITY: Verify package path is also within allowed directory
             allowed_package_base = package_base.resolve()
-            if not str(package_path).startswith(str(allowed_package_base)):
-                # Return 404 to prevent path traversal attempts from revealing system structure
+            if not package_path.is_relative_to(allowed_package_base):
                 raise HTTPException(status_code=404, detail="Profile picture not found")
 
             if package_path.exists():
                 file_path = package_path
             else:
-                raise HTTPException(status_code=404, detail=f"Profile picture {folder_name}/{file_name} not found")
+                raise HTTPException(status_code=404, detail=f"Profile picture {safe_folder}/{safe_file} not found")
 
         content_type = build_content_type_from_extension(extension)
         # Read file directly from local filesystem using async file operations
