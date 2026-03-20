@@ -1,0 +1,56 @@
+---
+title: Couchbase
+slug: /bundles-couchbase
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Couchbase** bundle.
+
+## Couchbase vector store
+
+The **Couchbase** component reads and writes to a Couchbase vector store using an instance of `CouchbaseSearchVectorStore`.
+
+<details>
+<summary>About vector store instances</summary>
+
+<PartialVectorStoreInstance />
+
+</details>
+
+<PartialVectorSearchResults />
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
+
+### Couchbase parameters
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+<PartialParams />
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Couchbase documentation](https://docs.couchbase.com/home/index.html) or inspect [component code](/concepts-components#component-code).
+
+| Name | Type | Description |
+|------|------|-------------|
+| couchbase_connection_string | SecretString | Input parameter. Couchbase Cluster connection string. Required. |
+| couchbase_username | String | Input parameter. Couchbase username for authentication. Required. |
+| couchbase_password | SecretString | Input parameter. Couchbase password for authentication. Required. |
+| bucket_name | String | Input parameter. Name of the Couchbase bucket. Required. |
+| scope_name | String | Input parameter. Name of the Couchbase scope. Required. |
+| collection_name | String | Input parameter. Name of the Couchbase collection. Required. |
+| index_name | String | Input parameter. Name of the Couchbase index. Required. |
+| ingest_data | Data | Input parameter. The records to load into the vector store. Only relevant for writes. |
+| search_query | String | Input parameter. The query string for vector search. Only relevant for reads. |
+| cache_vector_store | Boolean | Input parameter. If `true`, the component caches the vector store in memory for faster reads. Default: Enabled (`true`). |
+| embedding | Embeddings | Input parameter. The embedding function to use for the vector store. |
+| number_of_results | Integer | Input parameter. Maximum number of search results to return. Default: 4. Only relevant for reads. |

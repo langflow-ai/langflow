@@ -32,7 +32,7 @@ class ConversationChainComponent(LCChainComponent):
 
     def invoke_chain(self) -> Message:
         try:
-            from langchain.chains import ConversationChain
+            from langchain_classic.chains import ConversationChain
         except ImportError as e:
             msg = (
                 "ConversationChain requires langchain to be installed. Please install it with "

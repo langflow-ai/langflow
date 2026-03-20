@@ -78,7 +78,7 @@ def get_api_key_input() -> SecretStrInput:
     return SecretStrInput(
         name="api_key",
         display_name="API Key",
-        info="API key for authenticating with the selected model provider.",
+        info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
         real_time_refresh=True,
         advanced=True,
     )

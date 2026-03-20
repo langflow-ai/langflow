@@ -561,5 +561,4 @@ class KBIngestionHelper:
                 raise ValueError(msg)
 
         embedding_model = EmbeddingModelComponent(model=[selected_option], _user_id=current_user.id)
-        embeddings_with_models = embedding_model.build_embeddings()
-        return embeddings_with_models.embeddings
+        return embedding_model.build_embeddings()

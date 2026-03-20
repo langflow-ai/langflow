@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-tFM3s",
+            "id": "ChatInput-uygV1",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "question",
-            "id": "Prompt-dOXUU",
+            "id": "Prompt-rpYDO",
             "inputTypes": [
               "Message",
               "Text"
@@ -23,12 +23,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-tFM3s{œdataTypeœ:œChatInputœ,œidœ:œChatInput-tFM3sœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-dOXUU{œfieldNameœ:œquestionœ,œidœ:œPrompt-dOXUUœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-uygV1{œdataTypeœ:œChatInputœ,œidœ:œChatInput-uygV1œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-rpYDO{œfieldNameœ:œquestionœ,œidœ:œPrompt-rpYDOœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-tFM3s",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-tFM3sœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-dOXUU",
-        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-dOXUUœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-uygV1",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-uygV1œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-rpYDO",
+        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-rpYDOœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -36,7 +36,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-w1MvR",
+            "id": "parser-nqMV3",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -44,7 +44,7 @@
           },
           "targetHandle": {
             "fieldName": "context",
-            "id": "Prompt-dOXUU",
+            "id": "Prompt-rpYDO",
             "inputTypes": [
               "Message",
               "Text"
@@ -52,12 +52,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-w1MvR{œdataTypeœ:œparserœ,œidœ:œparser-w1MvRœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-dOXUU{œfieldNameœ:œcontextœ,œidœ:œPrompt-dOXUUœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-nqMV3{œdataTypeœ:œparserœ,œidœ:œparser-nqMV3œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-rpYDO{œfieldNameœ:œcontextœ,œidœ:œPrompt-rpYDOœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-w1MvR",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-w1MvRœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-dOXUU",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-dOXUUœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "parser-nqMV3",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-nqMV3œ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-rpYDO",
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-rpYDOœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-CByFc",
+            "id": "File-bnk4h",
             "name": "message",
             "output_types": [
               "Message"
@@ -73,7 +73,7 @@
           },
           "targetHandle": {
             "fieldName": "data_inputs",
-            "id": "SplitText-dINDR",
+            "id": "SplitText-dswy4",
             "inputTypes": [
               "Data",
               "JSON",
@@ -84,12 +84,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-File-CByFc{œdataTypeœ:œFileœ,œidœ:œFile-CByFcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-SplitText-dINDR{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-dINDRœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-File-bnk4h{œdataTypeœ:œFileœ,œidœ:œFile-bnk4hœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-SplitText-dswy4{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-dswy4œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "File-CByFc",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-CByFcœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "SplitText-dINDR",
-        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-dINDRœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "File-bnk4h",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-bnk4hœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "SplitText-dswy4",
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-dswy4œ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -97,7 +97,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-dOXUU",
+            "id": "Prompt-rpYDO",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -105,19 +105,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-GRGRg",
+            "id": "LanguageModelComponent-wirkR",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-dOXUU{œdataTypeœ:œPromptœ,œidœ:œPrompt-dOXUUœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-GRGRg{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-GRGRgœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-rpYDO{œdataTypeœ:œPromptœ,œidœ:œPrompt-rpYDOœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-wirkR{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-wirkRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-dOXUU",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-dOXUUœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-GRGRg",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-GRGRgœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-rpYDO",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-rpYDOœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-wirkR",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-wirkRœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -125,7 +125,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-GRGRg",
+            "id": "LanguageModelComponent-wirkR",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -133,7 +133,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-RZFDG",
+            "id": "ChatOutput-v55sc",
             "inputTypes": [
               "Data",
               "JSON",
@@ -144,12 +144,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-GRGRg{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-GRGRgœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-RZFDG{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-RZFDGœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-LanguageModelComponent-wirkR{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-wirkRœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-v55sc{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-v55scœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "LanguageModelComponent-GRGRg",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-GRGRgœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-RZFDG",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-RZFDGœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "LanguageModelComponent-wirkR",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-wirkRœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-v55sc",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-v55scœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -157,7 +157,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-tFM3s",
+            "id": "ChatInput-uygV1",
             "name": "message",
             "output_types": [
               "Message"
@@ -165,26 +165,27 @@
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "AstraDB-hIUdP",
+            "id": "AstraDB-r8EWl",
             "inputTypes": [
               "Message"
             ],
             "type": "query"
           }
         },
-        "id": "xy-edge__ChatInput-tFM3s{œdataTypeœ:œChatInputœ,œidœ:œChatInput-tFM3sœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-hIUdP{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-hIUdPœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
+        "id": "reactflow__edge-ChatInput-uygV1{œdataTypeœ:œChatInputœ,œidœ:œChatInput-uygV1œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-r8EWl{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-r8EWlœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
         "selected": false,
-        "source": "ChatInput-tFM3s",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-tFM3sœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AstraDB-hIUdP",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-hIUdPœ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
+        "source": "ChatInput-uygV1",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-uygV1œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AstraDB-r8EWl",
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-r8EWlœ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "SplitText",
-            "id": "SplitText-dINDR",
+            "id": "SplitText-dswy4",
             "name": "dataframe",
             "output_types": [
               "Table"
@@ -192,7 +193,7 @@
           },
           "targetHandle": {
             "fieldName": "ingest_data",
-            "id": "AstraDB-mGHwS",
+            "id": "AstraDB-2kFlp",
             "inputTypes": [
               "Data",
               "DataFrame"
@@ -200,11 +201,43 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__SplitText-dINDR{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-dINDRœ,œnameœ:œdataframeœ,œoutput_typesœ:[œTableœ]}-AstraDB-mGHwS{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-mGHwSœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ],œtypeœ:œotherœ}",
-        "source": "SplitText-dINDR",
-        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-dINDRœ, œnameœ: œdataframeœ, œoutput_typesœ: [œTableœ]}",
-        "target": "AstraDB-mGHwS",
-        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-mGHwSœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-SplitText-dswy4{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-dswy4œ,œnameœ:œdataframeœ,œoutput_typesœ:[œTableœ]}-AstraDB-2kFlp{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-2kFlpœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "SplitText-dswy4",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-dswy4œ, œnameœ: œdataframeœ, œoutput_typesœ: [œTableœ]}",
+        "target": "AstraDB-2kFlp",
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-2kFlpœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "AstraDB",
+            "id": "AstraDB-r8EWl",
+            "name": "search_results",
+            "output_types": [
+              "JSON"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_data",
+            "id": "parser-nqMV3",
+            "inputTypes": [
+              "DataFrame",
+              "Table",
+              "Data",
+              "JSON"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__AstraDB-r8EWl{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-r8EWlœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œJSONœ]}-parser-nqMV3{œfieldNameœ:œinput_dataœ,œidœ:œparser-nqMV3œ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "AstraDB-r8EWl",
+        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-r8EWlœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œJSONœ]}",
+        "target": "parser-nqMV3",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-nqMV3œ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œJSONœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -212,7 +245,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-tFM3s",
+          "id": "ChatInput-uygV1",
           "node": {
             "base_classes": [
               "Message"
@@ -451,9 +484,9 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-tFM3s",
+        "id": "ChatInput-uygV1",
         "measured": {
-          "height": 204,
+          "height": 207,
           "width": 320
         },
         "position": {
@@ -471,7 +504,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-dOXUU",
+          "id": "Prompt-rpYDO",
           "node": {
             "base_classes": [
               "Message"
@@ -636,9 +669,9 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-dOXUU",
+        "id": "Prompt-rpYDO",
         "measured": {
-          "height": 449,
+          "height": 429,
           "width": 320
         },
         "position": {
@@ -656,7 +689,7 @@
         "data": {
           "description": "Split text into chunks based on specified criteria.",
           "display_name": "Split Text",
-          "id": "SplitText-dINDR",
+          "id": "SplitText-dswy4",
           "node": {
             "base_classes": [
               "Data",
@@ -688,7 +721,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_text_splitters",
-                    "version": "0.3.11"
+                    "version": "1.1.1"
                   },
                   {
                     "name": "lfx",
@@ -883,9 +916,9 @@
           "type": "SplitText"
         },
         "dragging": false,
-        "id": "SplitText-dINDR",
+        "id": "SplitText-dswy4",
         "measured": {
-          "height": 413,
+          "height": 415,
           "width": 320
         },
         "position": {
@@ -901,7 +934,7 @@
       },
       {
         "data": {
-          "id": "note-sn19g",
+          "id": "note-YwbQr",
           "node": {
             "description": "## 🐕 2. Retriever Flow\n\nThis flow answers your questions with contextual data retrieved from your vector database.\n\nOpen the **Playground** and ask, \n\n```\nWhat is this document about?\n```\n",
             "display_name": "",
@@ -914,7 +947,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-sn19g",
+        "id": "note-YwbQr",
         "measured": {
           "height": 324,
           "width": 324
@@ -938,7 +971,7 @@
       },
       {
         "data": {
-          "id": "note-L7vtj",
+          "id": "note-0SlIe",
           "node": {
             "description": "# 📖 README\nRetrieval Augmented Generation (RAG) is a way of providing additional context to a Large Language Model (LLM) by preloading a vector database with embeddings for relevant content. When a user chats with the LLM, a _similarity search_ retrieves relevant content by comparing an embedding for the user's query against the embeddings in the vector database.\nFor example, a RAG chatbot could be pre-loaded with product data, and then it can help customers find specific products based on their queries.\nThis template has two sub-flows. One flow loads data into your vector store, and the other is the user-driven chat flow that compares a new query against the existing content in your vector database.\n\n## Quick start\n1. Configure your **Model Provider** with your API credentials.\n2. Add an Astra application token to the **Astra DB** vector store components, or replace these components with other vector store components available in the **Components** menu.\n\n## Run the flows\n1. Load your data into a vector database with the 📚 **Load Data** flow. Select a file to upload in the **File** component, and then click **Play** ▶️ on the **Astra DB** component to run the **Load Data** flow.\n2. Open the **Playground** to start a chat with the 🐕 **Retriever** flow.\n\nOnly the run the **Load Data** flow when you need to populate your vector database with baseline content, such as product data.\nThe **Retriever** flow is the user-facing chat flow. This flow generates an embedding from chat input, runs a similarity search against the vector database to retrieve relevant content, and then passes the original query and the retrieved content to the LLM, which produces the chat response sent to the user.\n\n## Next steps\nExperiment by changing the prompt and the loaded data to see how the LLM's responses change.",
             "display_name": "",
@@ -951,7 +984,7 @@
         },
         "dragging": false,
         "height": 556,
-        "id": "note-L7vtj",
+        "id": "note-0SlIe",
         "measured": {
           "height": 556,
           "width": 389
@@ -977,7 +1010,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-RZFDG",
+          "id": "ChatOutput-v55sc",
           "node": {
             "base_classes": [
               "Message"
@@ -1237,9 +1270,9 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-RZFDG",
+        "id": "ChatOutput-v55sc",
         "measured": {
-          "height": 204,
+          "height": 207,
           "width": 320
         },
         "position": {
@@ -1255,7 +1288,7 @@
       },
       {
         "data": {
-          "id": "note-goViz",
+          "id": "note-znTNw",
           "node": {
             "description": "## 📚 1. Load Data Flow\n\nRun this first! Load data from a local file and embed it into the vector database.\n\nSelect a Database and a Collection, or create new ones. \n\nClick  **Run component** on the **Astra DB** component to load your data.\n\n\n### Next steps:\n Experiment by changing the prompt and the contextual data to see how the retrieval flow's responses change.",
             "display_name": "",
@@ -1268,7 +1301,7 @@
         },
         "dragging": false,
         "height": 460,
-        "id": "note-goViz",
+        "id": "note-znTNw",
         "measured": {
           "height": 460,
           "width": 340
@@ -1292,7 +1325,7 @@
       },
       {
         "data": {
-          "id": "note-zuZVv",
+          "id": "note-CTxfN",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -1305,7 +1338,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-zuZVv",
+        "id": "note-CTxfN",
         "measured": {
           "height": 324,
           "width": 324
@@ -1324,7 +1357,7 @@
       },
       {
         "data": {
-          "id": "parser-w1MvR",
+          "id": "parser-nqMV3",
           "node": {
             "base_classes": [
               "Message"
@@ -1488,9 +1521,9 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-w1MvR",
+        "id": "parser-nqMV3",
         "measured": {
-          "height": 361,
+          "height": 363,
           "width": 320
         },
         "position": {
@@ -1502,7 +1535,7 @@
       },
       {
         "data": {
-          "id": "File-CByFc",
+          "id": "File-bnk4h",
           "node": {
             "base_classes": [
               "Message"
@@ -1543,7 +1576,7 @@
             ],
             "frozen": false,
             "icon": "file-text",
-            "last_updated": "2026-01-05T20:27:42.723Z",
+            "last_updated": "2026-03-19T15:54:20.360Z",
             "legacy": false,
             "metadata": {
               "code_hash": "12a5841f1a03",
@@ -1555,7 +1588,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.83"
+                    "version": "1.2.20"
                   },
                   {
                     "name": "pydantic",
@@ -1563,7 +1596,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.154.0"
+                    "version": "2.193.0"
                   }
                 ],
                 "total_dependencies": 4
@@ -2177,9 +2210,9 @@
           "type": "File"
         },
         "dragging": false,
-        "id": "File-CByFc",
+        "id": "File-bnk4h",
         "measured": {
-          "height": 355,
+          "height": 358,
           "width": 320
         },
         "position": {
@@ -2191,7 +2224,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-GRGRg",
+          "id": "LanguageModelComponent-wirkR",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2218,7 +2251,7 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
-            "last_updated": "2026-01-05T20:27:42.422Z",
+            "last_updated": "2026-03-19T15:53:46.864Z",
             "legacy": false,
             "lf_version": "1.7.0",
             "metadata": {
@@ -2248,6 +2281,7 @@
                 "cache": true,
                 "display_name": "Model Response",
                 "group_outputs": false,
+                "hidden": null,
                 "loop_types": null,
                 "method": "text_response",
                 "name": "text_output",
@@ -2265,6 +2299,7 @@
                 "cache": true,
                 "display_name": "Language Model",
                 "group_outputs": false,
+                "hidden": null,
                 "loop_types": null,
                 "method": "build_model",
                 "name": "model_output",
@@ -2282,10 +2317,10 @@
             "priority": 0,
             "template": {
               "_frontend_node_flow_id": {
-                "value": "4bcefe77-4a90-4884-bef2-98fde72704f4"
+                "value": "b638aa7b-d928-4b0c-9b2b-4f3b0c5343a3"
               },
               "_frontend_node_folder_id": {
-                "value": "e825f5e2-1a12-463c-9774-9d81642ec93f"
+                "value": "f665a5aa-a536-4dcd-badc-1c491e5d0867"
               },
               "_type": "Component",
               "api_key": {
@@ -2293,9 +2328,9 @@
                 "advanced": true,
                 "display_name": "API Key",
                 "dynamic": false,
-                "info": "Model Provider API key",
+                "info": "Falls back to environment variable",
                 "input_types": [],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "override_skip": false,
                 "password": true,
@@ -2338,7 +2373,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "str",
-                "value": "https://us-south.ml.cloud.ibm.com"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -2356,7 +2391,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from lfx.base.models.model import LCModelComponent\nfrom lfx.base.models.unified_models import (\n    apply_provider_variable_config_to_build_config,\n    get_language_model_options,\n    get_llm,\n    get_provider_for_model_name,\n    update_model_options_in_build_config,\n)\nfrom lfx.base.models.watsonx_constants import IBM_WATSONX_URLS\nfrom lfx.field_typing import LanguageModel\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, StrInput\nfrom lfx.io import IntInput, MessageInput, ModelInput, MultilineInput, SecretStrInput, SliderInput\n\nDEFAULT_OLLAMA_URL = \"http://localhost:11434\"\n\n\nclass LanguageModelComponent(LCModelComponent):\n    display_name = \"Language Model\"\n    description = \"Runs a language model given a specified provider.\"\n    documentation: str = \"https://docs.langflow.org/components-models\"\n    icon = \"brain-circuit\"\n    category = \"models\"\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Model Provider API key\",\n            required=False,\n            show=True,\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"base_url_ibm_watsonx\",\n            display_name=\"watsonx API Endpoint\",\n            info=\"The base URL of the API (IBM watsonx.ai only)\",\n            options=IBM_WATSONX_URLS,\n            value=IBM_WATSONX_URLS[0],\n            show=False,\n            real_time_refresh=True,\n        ),\n        StrInput(\n            name=\"project_id\",\n            display_name=\"watsonx Project ID\",\n            info=\"The project ID associated with the foundation model (IBM watsonx.ai only)\",\n            show=False,\n            required=False,\n        ),\n        StrInput(\n            name=\"ollama_base_url\",\n            display_name=\"Ollama API URL\",\n            info=f\"Endpoint of the Ollama API (Ollama only). Defaults to {DEFAULT_OLLAMA_URL}\",\n            value=DEFAULT_OLLAMA_URL,\n            show=False,\n            real_time_refresh=True,\n        ),\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"The input text to send to the model\",\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"A system message that helps set the behavior of the assistant\",\n            advanced=False,\n        ),\n        BoolInput(\n            name=\"stream\",\n            display_name=\"Stream\",\n            info=\"Whether to stream the response\",\n            value=False,\n            advanced=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Controls randomness in responses\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            info=\"Maximum number of tokens to generate. Field name varies by provider.\",\n            advanced=True,\n            range_spec=RangeSpec(min=1, max=128000, step=1, step_type=\"int\"),\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:\n        return get_llm(\n            model=self.model,\n            user_id=self.user_id,\n            api_key=self.api_key,\n            temperature=self.temperature,\n            stream=self.stream,\n            max_tokens=getattr(self, \"max_tokens\", None),\n            watsonx_url=getattr(self, \"base_url_ibm_watsonx\", None),\n            watsonx_project_id=getattr(self, \"project_id\", None),\n            ollama_base_url=getattr(self, \"ollama_base_url\", None),\n        )\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        \"\"\"Dynamically update build config with user-filtered model options.\"\"\"\n        # Update model options\n        build_config = update_model_options_in_build_config(\n            component=self,\n            build_config=build_config,\n            cache_key_prefix=\"language_model_options\",\n            get_options_func=get_language_model_options,\n            field_name=field_name,\n            field_value=field_value,\n        )\n\n        current_model_value = field_value if field_name == \"model\" else build_config.get(\"model\", {}).get(\"value\")\n        provider = \"\"\n        if isinstance(current_model_value, list) and current_model_value:\n            selected_model = current_model_value[0]\n            provider = (selected_model.get(\"provider\") or \"\").strip()\n            if not provider and selected_model.get(\"name\"):\n                provider = get_provider_for_model_name(str(selected_model[\"name\"]))\n\n        if provider:\n            build_config = apply_provider_variable_config_to_build_config(build_config, provider)\n\n        return build_config\n"
+                "value": "from lfx.base.models.model import LCModelComponent\nfrom lfx.base.models.unified_models import (\n    get_llm,\n    handle_model_input_update,\n)\nfrom lfx.base.models.watsonx_constants import IBM_WATSONX_URLS\nfrom lfx.field_typing.constants import LanguageModel\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, StrInput\nfrom lfx.io import IntInput, MessageInput, ModelInput, MultilineInput, SecretStrInput, SliderInput\n\nDEFAULT_OLLAMA_URL = \"http://localhost:11434\"\n\n\nclass LanguageModelComponent(LCModelComponent):\n    display_name = \"Language Model\"\n    description = \"Runs a language model given a specified provider.\"\n    documentation: str = \"https://docs.langflow.org/components-models\"\n    icon = \"brain-circuit\"\n    category = \"models\"\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            info=\"Select your model provider\",\n            real_time_refresh=True,\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Overrides global provider settings. Leave blank to use your pre-configured API Key.\",\n            required=False,\n            show=True,\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"base_url_ibm_watsonx\",\n            display_name=\"watsonx API Endpoint\",\n            info=\"The base URL of the API (IBM watsonx.ai only)\",\n            options=IBM_WATSONX_URLS,\n            value=IBM_WATSONX_URLS[0],\n            show=False,\n            real_time_refresh=True,\n        ),\n        StrInput(\n            name=\"project_id\",\n            display_name=\"watsonx Project ID\",\n            info=\"The project ID associated with the foundation model (IBM watsonx.ai only)\",\n            show=False,\n            required=False,\n        ),\n        StrInput(\n            name=\"ollama_base_url\",\n            display_name=\"Ollama API URL\",\n            info=f\"Endpoint of the Ollama API (Ollama only). Defaults to {DEFAULT_OLLAMA_URL}\",\n            value=DEFAULT_OLLAMA_URL,\n            show=False,\n            real_time_refresh=True,\n        ),\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"The input text to send to the model\",\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"A system message that helps set the behavior of the assistant\",\n            advanced=False,\n        ),\n        BoolInput(\n            name=\"stream\",\n            display_name=\"Stream\",\n            info=\"Whether to stream the response\",\n            value=False,\n            advanced=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Controls randomness in responses\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            info=\"Maximum number of tokens to generate. Field name varies by provider.\",\n            advanced=True,\n            range_spec=RangeSpec(min=1, max=128000, step=1, step_type=\"int\"),\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:\n        return get_llm(\n            model=self.model,\n            user_id=self.user_id,\n            api_key=self.api_key,\n            temperature=self.temperature,\n            stream=self.stream,\n            max_tokens=getattr(self, \"max_tokens\", None),\n            watsonx_url=getattr(self, \"base_url_ibm_watsonx\", None),\n            watsonx_project_id=getattr(self, \"project_id\", None),\n            ollama_base_url=getattr(self, \"ollama_base_url\", None),\n        )\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        \"\"\"Dynamically update build config with user-filtered model options.\"\"\"\n        return handle_model_input_update(self, build_config, field_value, field_name)\n"
               },
               "input_value": {
                 "_input_type": "MessageInput",
@@ -2383,7 +2418,7 @@
                 "type": "str",
                 "value": ""
               },
-              "is_refresh": false,
+              "is_refresh": true,
               "model": {
                 "_input_type": "ModelInput",
                 "advanced": false,
@@ -2401,233 +2436,14 @@
                   }
                 },
                 "info": "Select your model provider",
-                "input_types": [],
+                "input_types": [
+                  "LanguageModel"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "model_type": "language",
                 "name": "model",
-                "options": [
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-opus-4-5-20251101",
-                    "provider": "Anthropic"
-                  },
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-haiku-4-5-20251001",
-                    "provider": "Anthropic"
-                  },
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-sonnet-4-5-20250929",
-                    "provider": "Anthropic"
-                  },
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-opus-4-1-20250805",
-                    "provider": "Anthropic"
-                  },
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-opus-4-20250514",
-                    "provider": "Anthropic"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5.1"
-                      ]
-                    },
-                    "name": "gpt-5.1",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5"
-                      ]
-                    },
-                    "name": "gpt-5",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5-mini"
-                      ]
-                    },
-                    "name": "gpt-5-mini",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5-nano"
-                      ]
-                    },
-                    "name": "gpt-5-nano",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatOpenAI",
-                      "model_name_param": "model",
-                      "reasoning_models": [
-                        "gpt-5-chat-latest"
-                      ]
-                    },
-                    "name": "gpt-5-chat-latest",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "Ollama",
-                    "icon": "Ollama",
-                    "metadata": {
-                      "api_key_param": "base_url",
-                      "base_url_param": "base_url",
-                      "context_length": 128000,
-                      "model_class": "ChatOllama",
-                      "model_name_param": "model"
-                    },
-                    "name": "llama3.3",
-                    "provider": "Ollama"
-                  },
-                  {
-                    "category": "Ollama",
-                    "icon": "Ollama",
-                    "metadata": {
-                      "api_key_param": "base_url",
-                      "base_url_param": "base_url",
-                      "context_length": 128000,
-                      "model_class": "ChatOllama",
-                      "model_name_param": "model"
-                    },
-                    "name": "qwq",
-                    "provider": "Ollama"
-                  },
-                  {
-                    "category": "Ollama",
-                    "icon": "Ollama",
-                    "metadata": {
-                      "api_key_param": "base_url",
-                      "base_url_param": "base_url",
-                      "context_length": 128000,
-                      "model_class": "ChatOllama",
-                      "model_name_param": "model"
-                    },
-                    "name": "llama3.2",
-                    "provider": "Ollama"
-                  },
-                  {
-                    "category": "Ollama",
-                    "icon": "Ollama",
-                    "metadata": {
-                      "api_key_param": "base_url",
-                      "base_url_param": "base_url",
-                      "context_length": 128000,
-                      "model_class": "ChatOllama",
-                      "model_name_param": "model"
-                    },
-                    "name": "llama3.1",
-                    "provider": "Ollama"
-                  },
-                  {
-                    "category": "Ollama",
-                    "icon": "Ollama",
-                    "metadata": {
-                      "api_key_param": "base_url",
-                      "base_url_param": "base_url",
-                      "context_length": 128000,
-                      "model_class": "ChatOllama",
-                      "model_name_param": "model"
-                    },
-                    "name": "mistral",
-                    "provider": "Ollama"
-                  },
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "is_disabled_provider": true,
-                      "variable_name": "GOOGLE_API_KEY"
-                    },
-                    "name": "__enable_provider_Google Generative AI__",
-                    "provider": "Google Generative AI"
-                  },
-                  {
-                    "category": "IBM WatsonX",
-                    "icon": "WatsonxAI",
-                    "metadata": {
-                      "is_disabled_provider": true,
-                      "variable_name": "WATSONX_APIKEY"
-                    },
-                    "name": "__enable_provider_IBM WatsonX__",
-                    "provider": "IBM WatsonX"
-                  }
-                ],
+                "options": [],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -2639,20 +2455,7 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": [
-                  {
-                    "category": "Anthropic",
-                    "icon": "Anthropic",
-                    "metadata": {
-                      "api_key_param": "api_key",
-                      "context_length": 128000,
-                      "model_class": "ChatAnthropic",
-                      "model_name_param": "model"
-                    },
-                    "name": "claude-opus-4-5-20251101",
-                    "provider": "Anthropic"
-                  }
-                ]
+                "value": []
               },
               "ollama_base_url": {
                 "_input_type": "MessageInput",
@@ -2787,9 +2590,9 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-GRGRg",
+        "id": "LanguageModelComponent-wirkR",
         "measured": {
-          "height": 369,
+          "height": 371,
           "width": 320
         },
         "position": {
@@ -2801,7 +2604,7 @@
       },
       {
         "data": {
-          "id": "AstraDB-hIUdP",
+          "id": "AstraDB-r8EWl",
           "node": {
             "base_classes": [
               "Data",
@@ -2829,6 +2632,7 @@
               "search_query",
               "should_cache_vector_store",
               "embedding_model",
+              "api_key",
               "content_field",
               "deletion_field",
               "ignore_invalid_documents",
@@ -2843,10 +2647,10 @@
             ],
             "frozen": false,
             "icon": "AstraDB",
-            "last_updated": "2026-01-05T20:27:56.388Z",
+            "last_updated": "2026-03-19T15:54:27.599Z",
             "legacy": false,
             "metadata": {
-              "code_hash": "9ca3747e73d6",
+              "code_hash": "62ef40337614",
               "dependencies": {
                 "dependencies": [
                   {
@@ -2855,7 +2659,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.83"
+                    "version": "1.2.20"
                   },
                   {
                     "name": "lfx",
@@ -2863,7 +2667,7 @@
                   },
                   {
                     "name": "langchain_astradb",
-                    "version": "0.6.1"
+                    "version": "1.0.0"
                   }
                 ],
                 "total_dependencies": 4
@@ -2965,6 +2769,26 @@
                 "type": "str",
                 "value": ""
               },
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": true,
+                "display_name": "API Key",
+                "dynamic": false,
+                "info": "Overrides global provider settings. Leave blank to use your pre-configured API Key.",
+                "input_types": [],
+                "load_from_db": false,
+                "name": "api_key",
+                "override_skip": false,
+                "password": true,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
               "astradb_vectorstore_kwargs": {
                 "_input_type": "NestedDictInput",
                 "advanced": true,
@@ -3022,7 +2846,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from astrapy import DataAPIClient\nfrom langchain_core.documents import Document\n\nfrom lfx.base.datastax.astradb_base import AstraDBBaseComponent\nfrom lfx.base.models.unified_models import get_embedding_model_options, update_model_options_in_build_config\nfrom lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection\nfrom lfx.helpers.data import docs_to_data\nfrom lfx.io import (\n    BoolInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    ModelInput,\n    NestedDictInput,\n    QueryInput,\n    StrInput,\n)\nfrom lfx.schema.data import Data\nfrom lfx.serialization import serialize\nfrom lfx.utils.version import get_version_info\n\n\n@vector_store_connection\nclass AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):\n    display_name: str = \"Astra DB\"\n    description: str = \"Ingest and search documents in Astra DB\"\n    documentation: str = \"https://docs.langflow.org/bundles-datastax\"\n    name = \"AstraDB\"\n    icon: str = \"AstraDB\"\n\n    inputs = [\n        *AstraDBBaseComponent.inputs,\n        *LCVectorStoreComponent.inputs,\n        ModelInput(\n            name=\"embedding_model\",\n            display_name=\"Embedding Model\",\n            info=\"Specify the Embedding Model. Not required for Astra Vectorize collections.\",\n            required=False,\n            show=True,\n            model_type=\"embedding\",\n            input_types=[\"Embeddings\"],\n            real_time_refresh=True,\n        ),\n        StrInput(\n            name=\"content_field\",\n            display_name=\"Content Field\",\n            info=\"Field to use as the text content field for the vector store.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"deletion_field\",\n            display_name=\"Deletion Based On Field\",\n            info=\"When this parameter is provided, documents in the target collection with \"\n            \"metadata field values matching the input metadata field value will be deleted \"\n            \"before new data is loaded.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"ignore_invalid_documents\",\n            display_name=\"Ignore Invalid Documents\",\n            info=\"Boolean flag to determine whether to ignore invalid documents at runtime.\",\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"astradb_vectorstore_kwargs\",\n            display_name=\"AstraDBVectorStore Parameters\",\n            info=\"Optional dictionary of additional parameters for the AstraDBVectorStore.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"search_method\",\n            display_name=\"Search Method\",\n            info=(\n                \"Determine how your content is matched: Vector finds semantic similarity, \"\n                \"and Hybrid Search (suggested) combines both approaches \"\n                \"with a reranker.\"\n            ),\n            options=[\"Hybrid Search\", \"Vector Search\"],  # TODO: Restore Lexical Search?\n            options_metadata=[{\"icon\": \"SearchHybrid\"}, {\"icon\": \"SearchVector\"}],\n            value=\"Vector Search\",\n            advanced=True,\n            real_time_refresh=True,\n        ),\n        DropdownInput(\n            name=\"reranker\",\n            display_name=\"Reranker\",\n            info=\"Post-retrieval model that re-scores results for optimal relevance ranking.\",\n            show=False,\n            toggle=True,\n        ),\n        QueryInput(\n            name=\"lexical_terms\",\n            display_name=\"Lexical Terms\",\n            info=\"Add additional terms/keywords to augment search precision.\",\n            placeholder=\"Enter terms to search...\",\n            separator=\" \",\n            show=False,\n            value=\"\",\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Search Results\",\n            info=\"Number of search results to return.\",\n            advanced=True,\n            value=4,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            info=\"Search type to use\",\n            options=[\"Similarity\", \"Similarity with score threshold\", \"MMR (Max Marginal Relevance)\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"search_score_threshold\",\n            display_name=\"Search Score Threshold\",\n            info=\"Minimum similarity score threshold for search results. \"\n            \"(when using 'Similarity with score threshold')\",\n            value=0,\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"advanced_search_filter\",\n            display_name=\"Search Metadata Filter\",\n            info=\"Optional dictionary of filters to apply to the search query.\",\n            advanced=True,\n        ),\n    ]\n\n    async def update_build_config(\n        self,\n        build_config: dict,\n        field_value: str | dict,\n        field_name: str | None = None,\n    ) -> dict:\n        \"\"\"Update build configuration with proper handling of embedding and search options.\"\"\"\n        # Update model options for ModelInput only when relevant\n        # Only refresh when: initial load (None), embedding_model field changes, or api_key changes\n        if field_name in (None, \"embedding_model\", \"api_key\"):\n            build_config = update_model_options_in_build_config(\n                component=self,\n                build_config=build_config,\n                cache_key_prefix=\"astradb_embedding_model_options\",\n                get_options_func=get_embedding_model_options,\n                field_name=field_name,\n                field_value=field_value if field_name == \"embedding_model\" else None,\n                model_field_name=\"embedding_model\",\n            )\n\n        # Handle base astra db build config updates\n        build_config = await super().update_build_config(\n            build_config,\n            field_value=field_value,\n            field_name=field_name,\n        )\n\n        # Set embedding model display based on provider selection\n        if isinstance(field_value, dict) and \"02_embedding_generation_provider\" in field_value:\n            embedding_provider = field_value.get(\"02_embedding_generation_provider\")\n            is_custom_provider = embedding_provider and embedding_provider != \"Bring your own\"\n            provider = embedding_provider.lower() if is_custom_provider and embedding_provider is not None else None\n\n            build_config[\"embedding_model\"][\"show\"] = not bool(provider)\n            build_config[\"embedding_model\"][\"required\"] = not bool(provider)\n\n        # Early return if no API endpoint is configured\n        if not self.get_api_endpoint():\n            return build_config\n\n        # Configure search method and related options\n        return self._configure_search_options(build_config)\n\n    def _configure_search_options(self, build_config: dict) -> dict:\n        \"\"\"Configure hybrid search, reranker, and vector search options.\"\"\"\n        # Detect available hybrid search capabilities\n        hybrid_capabilities = self._detect_hybrid_capabilities()\n\n        # Return if we haven't selected a collection\n        if not build_config[\"collection_name\"][\"options\"] or not build_config[\"collection_name\"][\"value\"]:\n            return build_config\n\n        # Get collection options\n        collection_options = self._get_collection_options(build_config)\n\n        # Get the selected collection index\n        index = build_config[\"collection_name\"][\"options\"].index(build_config[\"collection_name\"][\"value\"])\n        provider = build_config[\"collection_name\"][\"options_metadata\"][index][\"provider\"]\n        build_config[\"embedding_model\"][\"show\"] = not bool(provider)\n        build_config[\"embedding_model\"][\"required\"] = not bool(provider)\n\n        # Determine search configuration\n        is_vector_search = build_config[\"search_method\"][\"value\"] == \"Vector Search\"\n        is_autodetect = build_config[\"autodetect_collection\"][\"value\"]\n\n        # Apply hybrid search configuration\n        if hybrid_capabilities[\"available\"]:\n            build_config[\"search_method\"][\"show\"] = True\n            build_config[\"search_method\"][\"options\"] = [\"Hybrid Search\", \"Vector Search\"]\n            build_config[\"search_method\"][\"value\"] = build_config[\"search_method\"].get(\"value\", \"Hybrid Search\")\n\n            build_config[\"reranker\"][\"options\"] = hybrid_capabilities[\"reranker_models\"]\n            build_config[\"reranker\"][\"options_metadata\"] = hybrid_capabilities[\"reranker_metadata\"]\n            if hybrid_capabilities[\"reranker_models\"]:\n                build_config[\"reranker\"][\"value\"] = hybrid_capabilities[\"reranker_models\"][0]\n        else:\n            build_config[\"search_method\"][\"show\"] = False\n            build_config[\"search_method\"][\"options\"] = [\"Vector Search\"]\n            build_config[\"search_method\"][\"value\"] = \"Vector Search\"\n            build_config[\"reranker\"][\"options\"] = []\n            build_config[\"reranker\"][\"options_metadata\"] = []\n\n        # Configure reranker visibility and state\n        hybrid_enabled = (\n            collection_options[\"rerank_enabled\"] and build_config[\"search_method\"][\"value\"] == \"Hybrid Search\"\n        )\n\n        build_config[\"reranker\"][\"show\"] = hybrid_enabled\n        build_config[\"reranker\"][\"toggle_value\"] = hybrid_enabled\n        build_config[\"reranker\"][\"toggle_disable\"] = is_vector_search\n\n        # Configure lexical terms\n        lexical_visible = collection_options[\"lexical_enabled\"] and not is_vector_search\n        build_config[\"lexical_terms\"][\"show\"] = lexical_visible\n        build_config[\"lexical_terms\"][\"value\"] = \"\" if is_vector_search else build_config[\"lexical_terms\"][\"value\"]\n\n        # Configure search type and score threshold\n        build_config[\"search_type\"][\"show\"] = is_vector_search\n        build_config[\"search_score_threshold\"][\"show\"] = is_vector_search\n\n        # Force similarity search for hybrid mode or autodetect\n        if hybrid_enabled or is_autodetect:\n            build_config[\"search_type\"][\"value\"] = \"Similarity\"\n\n        return build_config\n\n    def _detect_hybrid_capabilities(self) -> dict:\n        \"\"\"Detect available hybrid search and reranking capabilities.\"\"\"\n        environment = self.get_environment(self.environment)\n        client = DataAPIClient(environment=environment)\n        admin_client = client.get_admin()\n        db_admin = admin_client.get_database_admin(self.get_api_endpoint(), token=self.token)\n\n        try:\n            providers = db_admin.find_reranking_providers()\n            reranker_models = [\n                model.name for provider_data in providers.reranking_providers.values() for model in provider_data.models\n            ]\n            reranker_metadata = [\n                {\"icon\": self.get_provider_icon(provider_name=model.name.split(\"/\")[0])}\n                for provider in providers.reranking_providers.values()\n                for model in provider.models\n            ]\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Hybrid search not available: {e}\")\n            return {\n                \"available\": False,\n                \"reranker_models\": [],\n                \"reranker_metadata\": [],\n            }\n        else:\n            return {\n                \"available\": True,\n                \"reranker_models\": reranker_models,\n                \"reranker_metadata\": reranker_metadata,\n            }\n\n    def _get_collection_options(self, build_config: dict) -> dict:\n        \"\"\"Retrieve collection-level search options.\"\"\"\n        database = self.get_database_object(api_endpoint=build_config[\"api_endpoint\"][\"value\"])\n        collection = database.get_collection(\n            name=build_config[\"collection_name\"][\"value\"],\n            keyspace=build_config[\"keyspace\"][\"value\"],\n        )\n\n        col_options = collection.options()\n\n        return {\n            \"rerank_enabled\": bool(col_options.rerank and col_options.rerank.enabled),\n            \"lexical_enabled\": bool(col_options.lexical and col_options.lexical.enabled),\n        }\n\n    @check_cached_vector_store\n    def build_vector_store(self):\n        try:\n            from langchain_astradb import AstraDBVectorStore\n            from langchain_astradb.utils.astradb import HybridSearchMode\n        except ImportError as e:\n            msg = (\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n            raise ImportError(msg) from e\n\n        # Get the embedding model and additional params\n        embedding_params = {\"embedding\": self.embedding_model} if self.embedding_model else {}\n\n        # Get the additional parameters\n        additional_params = self.astradb_vectorstore_kwargs or {}\n\n        # Get Langflow version and platform information\n        __version__ = get_version_info()[\"version\"]\n        langflow_prefix = \"\"\n        # if os.getenv(\"AWS_EXECUTION_ENV\") == \"AWS_ECS_FARGATE\":  # TODO: More precise way of detecting\n        #     langflow_prefix = \"ds-\"\n\n        # Get the database object\n        database = self.get_database_object()\n        autodetect = self.collection_name in database.list_collection_names() and self.autodetect_collection\n\n        # Bundle up the auto-detect parameters\n        autodetect_params = {\n            \"autodetect_collection\": autodetect,\n            \"content_field\": (\n                self.content_field\n                if self.content_field and embedding_params\n                else (\n                    \"page_content\"\n                    if embedding_params\n                    and self.collection_data(collection_name=self.collection_name, database=database) == 0\n                    else None\n                )\n            ),\n            \"ignore_invalid_documents\": self.ignore_invalid_documents,\n        }\n\n        # Choose HybridSearchMode based on the selected param\n        hybrid_search_mode = HybridSearchMode.DEFAULT if self.search_method == \"Hybrid Search\" else HybridSearchMode.OFF\n\n        # Attempt to build the Vector Store object\n        try:\n            vector_store = AstraDBVectorStore(\n                # Astra DB Authentication Parameters\n                token=self.token,\n                api_endpoint=database.api_endpoint,\n                namespace=database.keyspace,\n                collection_name=self.collection_name,\n                environment=self.environment,\n                # Hybrid Search Parameters\n                hybrid_search=hybrid_search_mode,\n                # Astra DB Usage Tracking Parameters\n                ext_callers=[(f\"{langflow_prefix}langflow\", __version__)],\n                # Astra DB Vector Store Parameters\n                **autodetect_params,\n                **embedding_params,\n                **additional_params,\n            )\n        except ValueError as e:\n            msg = f\"Error initializing AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        # Add documents to the vector store\n        self._add_documents_to_vector_store(vector_store)\n\n        return vector_store\n\n    def _add_documents_to_vector_store(self, vector_store) -> None:\n        self.ingest_data = self._prepare_ingest_data()\n\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        documents = [\n            Document(page_content=doc.page_content, metadata=serialize(doc.metadata, to_str=True)) for doc in documents\n        ]\n\n        if documents and self.deletion_field:\n            self.log(f\"Deleting documents where {self.deletion_field}\")\n            try:\n                database = self.get_database_object()\n                collection = database.get_collection(self.collection_name, keyspace=database.keyspace)\n                delete_values = list({doc.metadata[self.deletion_field] for doc in documents})\n                self.log(f\"Deleting documents where {self.deletion_field} matches {delete_values}.\")\n                collection.delete_many({f\"metadata.{self.deletion_field}\": {\"$in\": delete_values}})\n            except ValueError as e:\n                msg = f\"Error deleting documents from AstraDBVectorStore based on '{self.deletion_field}': {e}\"\n                raise ValueError(msg) from e\n\n        if documents:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            try:\n                vector_store.add_documents(documents)\n            except ValueError as e:\n                msg = f\"Error adding documents to AstraDBVectorStore: {e}\"\n                raise ValueError(msg) from e\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n\n    def _map_search_type(self) -> str:\n        search_type_mapping = {\n            \"Similarity with score threshold\": \"similarity_score_threshold\",\n            \"MMR (Max Marginal Relevance)\": \"mmr\",\n        }\n\n        return search_type_mapping.get(self.search_type, \"similarity\")\n\n    def _build_search_args(self):\n        # Clean up the search query\n        query = self.search_query if isinstance(self.search_query, str) and self.search_query.strip() else None\n        lexical_terms = self.lexical_terms or None\n\n        # Check if we have a search query, and if so set the args\n        if query:\n            args = {\n                \"query\": query,\n                \"search_type\": self._map_search_type(),\n                \"k\": self.number_of_results,\n                \"score_threshold\": self.search_score_threshold,\n                \"lexical_query\": lexical_terms,\n            }\n        elif self.advanced_search_filter:\n            args = {\n                \"n\": self.number_of_results,\n            }\n        else:\n            return {}\n\n        filter_arg = self.advanced_search_filter or {}\n        if filter_arg:\n            args[\"filter\"] = filter_arg\n\n        return args\n\n    def search_documents(self, vector_store=None) -> list[Data]:\n        vector_store = vector_store or self.build_vector_store()\n\n        self.log(f\"Search input: {self.search_query}\")\n        self.log(f\"Search type: {self.search_type}\")\n        self.log(f\"Number of results: {self.number_of_results}\")\n        self.log(f\"store.hybrid_search: {vector_store.hybrid_search}\")\n        self.log(f\"Lexical terms: {self.lexical_terms}\")\n        self.log(f\"Reranker: {self.reranker}\")\n\n        try:\n            search_args = self._build_search_args()\n        except ValueError as e:\n            msg = f\"Error in AstraDBVectorStore._build_search_args: {e}\"\n            raise ValueError(msg) from e\n\n        if not search_args:\n            self.log(\"No search input or filters provided. Skipping search.\")\n            return []\n\n        docs = []\n        search_method = \"search\" if \"query\" in search_args else \"metadata_search\"\n\n        try:\n            self.log(f\"Calling vector_store.{search_method} with args: {search_args}\")\n            docs = getattr(vector_store, search_method)(**search_args)\n        except ValueError as e:\n            msg = f\"Error performing {search_method} in AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self.log(f\"Retrieved documents: {len(docs)}\")\n\n        data = docs_to_data(docs)\n        self.log(f\"Converted documents to data: {len(data)}\")\n        self.status = data\n\n        return data\n\n    def get_retriever_kwargs(self):\n        search_args = self._build_search_args()\n\n        return {\n            \"search_type\": self._map_search_type(),\n            \"search_kwargs\": search_args,\n        }\n"
+                "value": "from astrapy import DataAPIClient\nfrom langchain_core.documents import Document\n\nfrom lfx.base.datastax.astradb_base import AstraDBBaseComponent\nfrom lfx.base.models.unified_models import (\n    apply_provider_variable_config_to_build_config,\n    get_embedding_model_options,\n    get_embeddings,\n    update_model_options_in_build_config,\n)\nfrom lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection\nfrom lfx.helpers.data import docs_to_data\nfrom lfx.io import (\n    BoolInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    ModelInput,\n    NestedDictInput,\n    QueryInput,\n    SecretStrInput,\n    StrInput,\n)\nfrom lfx.schema.data import Data\nfrom lfx.serialization import serialize\nfrom lfx.utils.version import get_version_info\n\n\n@vector_store_connection\nclass AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):\n    display_name: str = \"Astra DB\"\n    description: str = \"Ingest and search documents in Astra DB\"\n    documentation: str = \"https://docs.langflow.org/bundles-datastax\"\n    name = \"AstraDB\"\n    icon: str = \"AstraDB\"\n\n    inputs = [\n        *AstraDBBaseComponent.inputs,\n        *LCVectorStoreComponent.inputs,\n        ModelInput(\n            name=\"embedding_model\",\n            display_name=\"Embedding Model\",\n            info=\"Specify the Embedding Model. Not required for Astra Vectorize collections.\",\n            required=False,\n            show=True,\n            model_type=\"embedding\",\n            input_types=[\"Embeddings\"],\n            real_time_refresh=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Overrides global provider settings. Leave blank to use your pre-configured API Key.\",\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        StrInput(\n            name=\"content_field\",\n            display_name=\"Content Field\",\n            info=\"Field to use as the text content field for the vector store.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"deletion_field\",\n            display_name=\"Deletion Based On Field\",\n            info=\"When this parameter is provided, documents in the target collection with \"\n            \"metadata field values matching the input metadata field value will be deleted \"\n            \"before new data is loaded.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"ignore_invalid_documents\",\n            display_name=\"Ignore Invalid Documents\",\n            info=\"Boolean flag to determine whether to ignore invalid documents at runtime.\",\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"astradb_vectorstore_kwargs\",\n            display_name=\"AstraDBVectorStore Parameters\",\n            info=\"Optional dictionary of additional parameters for the AstraDBVectorStore.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"search_method\",\n            display_name=\"Search Method\",\n            info=(\n                \"Determine how your content is matched: Vector finds semantic similarity, \"\n                \"and Hybrid Search (suggested) combines both approaches \"\n                \"with a reranker.\"\n            ),\n            options=[\"Hybrid Search\", \"Vector Search\"],  # TODO: Restore Lexical Search?\n            options_metadata=[{\"icon\": \"SearchHybrid\"}, {\"icon\": \"SearchVector\"}],\n            value=\"Vector Search\",\n            advanced=True,\n            real_time_refresh=True,\n        ),\n        DropdownInput(\n            name=\"reranker\",\n            display_name=\"Reranker\",\n            info=\"Post-retrieval model that re-scores results for optimal relevance ranking.\",\n            show=False,\n            toggle=True,\n        ),\n        QueryInput(\n            name=\"lexical_terms\",\n            display_name=\"Lexical Terms\",\n            info=\"Add additional terms/keywords to augment search precision.\",\n            placeholder=\"Enter terms to search...\",\n            separator=\" \",\n            show=False,\n            value=\"\",\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Search Results\",\n            info=\"Number of search results to return.\",\n            advanced=True,\n            value=4,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            info=\"Search type to use\",\n            options=[\"Similarity\", \"Similarity with score threshold\", \"MMR (Max Marginal Relevance)\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"search_score_threshold\",\n            display_name=\"Search Score Threshold\",\n            info=\"Minimum similarity score threshold for search results. \"\n            \"(when using 'Similarity with score threshold')\",\n            value=0,\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"advanced_search_filter\",\n            display_name=\"Search Metadata Filter\",\n            info=\"Optional dictionary of filters to apply to the search query.\",\n            advanced=True,\n        ),\n    ]\n\n    async def update_build_config(\n        self,\n        build_config: dict,\n        field_value: str | dict,\n        field_name: str | None = None,\n    ) -> dict:\n        \"\"\"Update build configuration with proper handling of embedding and search options.\"\"\"\n        # Update model options for ModelInput only when relevant.\n        # Only refresh when: initial load (None), embedding_model field changes, or api_key changes.\n        #\n        # Note: this intentionally uses update_model_options_in_build_config directly rather than\n        # handle_model_input_update because:\n        #   1. The model field is named \"embedding_model\" (not \"model\"), requiring model_field_name.\n        #   2. The refresh is conditional - we skip it for unrelated fields (e.g. database_name,\n        #      collection_name) to avoid unnecessary work.\n        #   3. AstraDB manages its own provider-field visibility (embedding_generation_provider\n        #      dialog), so the generic provider-field hide/show steps in handle_model_input_update\n        #      are not applicable here.\n        if field_name in (None, \"embedding_model\", \"api_key\"):\n            build_config = update_model_options_in_build_config(\n                component=self,\n                build_config=build_config,\n                cache_key_prefix=\"embedding_model_options\",\n                get_options_func=get_embedding_model_options,\n                field_name=field_name,\n                field_value=field_value if field_name == \"embedding_model\" else None,\n                model_field_name=\"embedding_model\",\n            )\n\n            # Auto-populate API key based on the selected embedding model's provider.\n            # Skip when user directly edits api_key to preserve their value.\n            if field_name != \"api_key\":\n                model_value = build_config.get(\"embedding_model\", {}).get(\"value\")\n                if isinstance(model_value, list) and model_value:\n                    provider = model_value[0].get(\"provider\", \"\")\n                    if provider:\n                        build_config = apply_provider_variable_config_to_build_config(build_config, provider)\n\n            # Ensure the API key field is always visible\n            if \"api_key\" in build_config:\n                build_config[\"api_key\"][\"show\"] = True\n\n        # Handle base astra db build config updates\n        build_config = await super().update_build_config(\n            build_config,\n            field_value=field_value,\n            field_name=field_name,\n        )\n\n        # Set embedding model display based on provider selection\n        if isinstance(field_value, dict) and \"02_embedding_generation_provider\" in field_value:\n            embedding_provider = field_value.get(\"02_embedding_generation_provider\")\n            is_custom_provider = embedding_provider and embedding_provider != \"Bring your own\"\n            provider = embedding_provider.lower() if is_custom_provider and embedding_provider is not None else None\n\n            build_config[\"embedding_model\"][\"show\"] = not bool(provider)\n            build_config[\"embedding_model\"][\"required\"] = not bool(provider)\n\n        # Early return if no API endpoint is configured\n        if not self.get_api_endpoint():\n            return build_config\n\n        # Configure search method and related options\n        return self._configure_search_options(build_config)\n\n    def _configure_search_options(self, build_config: dict) -> dict:\n        \"\"\"Configure hybrid search, reranker, and vector search options.\"\"\"\n        # Detect available hybrid search capabilities\n        hybrid_capabilities = self._detect_hybrid_capabilities()\n\n        # Return if we haven't selected a collection\n        if not build_config[\"collection_name\"][\"options\"] or not build_config[\"collection_name\"][\"value\"]:\n            return build_config\n\n        # Get collection options\n        collection_options = self._get_collection_options(build_config)\n\n        # Get the selected collection index\n        index = build_config[\"collection_name\"][\"options\"].index(build_config[\"collection_name\"][\"value\"])\n        provider = build_config[\"collection_name\"][\"options_metadata\"][index][\"provider\"]\n        build_config[\"embedding_model\"][\"show\"] = not bool(provider)\n        build_config[\"embedding_model\"][\"required\"] = not bool(provider)\n\n        # Determine search configuration\n        is_vector_search = build_config[\"search_method\"][\"value\"] == \"Vector Search\"\n        is_autodetect = build_config[\"autodetect_collection\"][\"value\"]\n\n        # Apply hybrid search configuration\n        if hybrid_capabilities[\"available\"]:\n            build_config[\"search_method\"][\"show\"] = True\n            build_config[\"search_method\"][\"options\"] = [\"Hybrid Search\", \"Vector Search\"]\n            build_config[\"search_method\"][\"value\"] = build_config[\"search_method\"].get(\"value\", \"Hybrid Search\")\n\n            build_config[\"reranker\"][\"options\"] = hybrid_capabilities[\"reranker_models\"]\n            build_config[\"reranker\"][\"options_metadata\"] = hybrid_capabilities[\"reranker_metadata\"]\n            if hybrid_capabilities[\"reranker_models\"]:\n                build_config[\"reranker\"][\"value\"] = hybrid_capabilities[\"reranker_models\"][0]\n        else:\n            build_config[\"search_method\"][\"show\"] = False\n            build_config[\"search_method\"][\"options\"] = [\"Vector Search\"]\n            build_config[\"search_method\"][\"value\"] = \"Vector Search\"\n            build_config[\"reranker\"][\"options\"] = []\n            build_config[\"reranker\"][\"options_metadata\"] = []\n\n        # Configure reranker visibility and state\n        hybrid_enabled = (\n            collection_options[\"rerank_enabled\"] and build_config[\"search_method\"][\"value\"] == \"Hybrid Search\"\n        )\n\n        build_config[\"reranker\"][\"show\"] = hybrid_enabled\n        build_config[\"reranker\"][\"toggle_value\"] = hybrid_enabled\n        build_config[\"reranker\"][\"toggle_disable\"] = is_vector_search\n\n        # Configure lexical terms\n        lexical_visible = collection_options[\"lexical_enabled\"] and not is_vector_search\n        build_config[\"lexical_terms\"][\"show\"] = lexical_visible\n        build_config[\"lexical_terms\"][\"value\"] = \"\" if is_vector_search else build_config[\"lexical_terms\"][\"value\"]\n\n        # Configure search type and score threshold\n        build_config[\"search_type\"][\"show\"] = is_vector_search\n        build_config[\"search_score_threshold\"][\"show\"] = is_vector_search\n\n        # Force similarity search for hybrid mode or autodetect\n        if hybrid_enabled or is_autodetect:\n            build_config[\"search_type\"][\"value\"] = \"Similarity\"\n\n        return build_config\n\n    def _detect_hybrid_capabilities(self) -> dict:\n        \"\"\"Detect available hybrid search and reranking capabilities.\"\"\"\n        environment = self.get_environment(self.environment)\n        client = DataAPIClient(environment=environment)\n        admin_client = client.get_admin()\n        db_admin = admin_client.get_database_admin(self.get_api_endpoint(), token=self.token)\n\n        try:\n            providers = db_admin.find_reranking_providers()\n            reranker_models = [\n                model.name for provider_data in providers.reranking_providers.values() for model in provider_data.models\n            ]\n            reranker_metadata = [\n                {\"icon\": self.get_provider_icon(provider_name=model.name.split(\"/\")[0])}\n                for provider in providers.reranking_providers.values()\n                for model in provider.models\n            ]\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Hybrid search not available: {e}\")\n            return {\n                \"available\": False,\n                \"reranker_models\": [],\n                \"reranker_metadata\": [],\n            }\n        else:\n            return {\n                \"available\": True,\n                \"reranker_models\": reranker_models,\n                \"reranker_metadata\": reranker_metadata,\n            }\n\n    def _get_collection_options(self, build_config: dict) -> dict:\n        \"\"\"Retrieve collection-level search options.\"\"\"\n        database = self.get_database_object(api_endpoint=build_config[\"api_endpoint\"][\"value\"])\n        collection = database.get_collection(\n            name=build_config[\"collection_name\"][\"value\"],\n            keyspace=build_config[\"keyspace\"][\"value\"],\n        )\n\n        col_options = collection.options()\n\n        return {\n            \"rerank_enabled\": bool(col_options.rerank and col_options.rerank.enabled),\n            \"lexical_enabled\": bool(col_options.lexical and col_options.lexical.enabled),\n        }\n\n    @check_cached_vector_store\n    def build_vector_store(self):\n        try:\n            from langchain_astradb import AstraDBVectorStore\n            from langchain_astradb.utils.astradb import HybridSearchMode\n        except ImportError as e:\n            msg = (\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n            raise ImportError(msg) from e\n\n        # Resolve the embedding model from ModelInput selection to an Embeddings instance\n        embedding = None\n        if self.embedding_model:\n            embedding = get_embeddings(\n                model=self.embedding_model,\n                user_id=self.user_id,\n                api_key=getattr(self, \"api_key\", None),\n            )\n        embedding_params = {\"embedding\": embedding} if embedding else {}\n\n        # Get the additional parameters\n        additional_params = self.astradb_vectorstore_kwargs or {}\n\n        # Get Langflow version and platform information\n        __version__ = get_version_info()[\"version\"]\n        langflow_prefix = \"\"\n        # if os.getenv(\"AWS_EXECUTION_ENV\") == \"AWS_ECS_FARGATE\":  # TODO: More precise way of detecting\n        #     langflow_prefix = \"ds-\"\n\n        # Get the database object\n        database = self.get_database_object()\n        autodetect = self.collection_name in database.list_collection_names() and self.autodetect_collection\n\n        # Bundle up the auto-detect parameters\n        autodetect_params = {\n            \"autodetect_collection\": autodetect,\n            \"content_field\": (\n                self.content_field\n                if self.content_field and embedding_params\n                else (\n                    \"page_content\"\n                    if embedding_params\n                    and self.collection_data(collection_name=self.collection_name, database=database) == 0\n                    else None\n                )\n            ),\n            \"ignore_invalid_documents\": self.ignore_invalid_documents,\n        }\n\n        # Choose HybridSearchMode based on the selected param\n        hybrid_search_mode = HybridSearchMode.DEFAULT if self.search_method == \"Hybrid Search\" else HybridSearchMode.OFF\n\n        # Attempt to build the Vector Store object\n        try:\n            vector_store = AstraDBVectorStore(\n                # Astra DB Authentication Parameters\n                token=self.token,\n                api_endpoint=database.api_endpoint,\n                namespace=database.keyspace,\n                collection_name=self.collection_name,\n                environment=self.environment,\n                # Hybrid Search Parameters\n                hybrid_search=hybrid_search_mode,\n                # Astra DB Usage Tracking Parameters\n                ext_callers=[(f\"{langflow_prefix}langflow\", __version__)],\n                # Astra DB Vector Store Parameters\n                **autodetect_params,\n                **embedding_params,\n                **additional_params,\n            )\n        except ValueError as e:\n            msg = f\"Error initializing AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        # Add documents to the vector store\n        self._add_documents_to_vector_store(vector_store)\n\n        return vector_store\n\n    def _add_documents_to_vector_store(self, vector_store) -> None:\n        self.ingest_data = self._prepare_ingest_data()\n\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        documents = [\n            Document(page_content=doc.page_content, metadata=serialize(doc.metadata, to_str=True)) for doc in documents\n        ]\n\n        if documents and self.deletion_field:\n            self.log(f\"Deleting documents where {self.deletion_field}\")\n            try:\n                database = self.get_database_object()\n                collection = database.get_collection(self.collection_name, keyspace=database.keyspace)\n                delete_values = list({doc.metadata[self.deletion_field] for doc in documents})\n                self.log(f\"Deleting documents where {self.deletion_field} matches {delete_values}.\")\n                collection.delete_many({f\"metadata.{self.deletion_field}\": {\"$in\": delete_values}})\n            except ValueError as e:\n                msg = f\"Error deleting documents from AstraDBVectorStore based on '{self.deletion_field}': {e}\"\n                raise ValueError(msg) from e\n\n        if documents:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            try:\n                vector_store.add_documents(documents)\n            except ValueError as e:\n                msg = f\"Error adding documents to AstraDBVectorStore: {e}\"\n                raise ValueError(msg) from e\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n\n    def _map_search_type(self) -> str:\n        search_type_mapping = {\n            \"Similarity with score threshold\": \"similarity_score_threshold\",\n            \"MMR (Max Marginal Relevance)\": \"mmr\",\n        }\n\n        return search_type_mapping.get(self.search_type, \"similarity\")\n\n    def _build_search_args(self):\n        # Clean up the search query\n        query = self.search_query if isinstance(self.search_query, str) and self.search_query.strip() else None\n        lexical_terms = self.lexical_terms or None\n\n        # Check if we have a search query, and if so set the args\n        if query:\n            args = {\n                \"query\": query,\n                \"search_type\": self._map_search_type(),\n                \"k\": self.number_of_results,\n                \"score_threshold\": self.search_score_threshold,\n                \"lexical_query\": lexical_terms,\n            }\n        elif self.advanced_search_filter:\n            args = {\n                \"n\": self.number_of_results,\n            }\n        else:\n            return {}\n\n        filter_arg = self.advanced_search_filter or {}\n        if filter_arg:\n            args[\"filter\"] = filter_arg\n\n        return args\n\n    def search_documents(self, vector_store=None) -> list[Data]:\n        vector_store = vector_store or self.build_vector_store()\n\n        self.log(f\"Search input: {self.search_query}\")\n        self.log(f\"Search type: {self.search_type}\")\n        self.log(f\"Number of results: {self.number_of_results}\")\n        self.log(f\"store.hybrid_search: {vector_store.hybrid_search}\")\n        self.log(f\"Lexical terms: {self.lexical_terms}\")\n        self.log(f\"Reranker: {self.reranker}\")\n\n        try:\n            search_args = self._build_search_args()\n        except ValueError as e:\n            msg = f\"Error in AstraDBVectorStore._build_search_args: {e}\"\n            raise ValueError(msg) from e\n\n        if not search_args:\n            self.log(\"No search input or filters provided. Skipping search.\")\n            return []\n\n        docs = []\n        search_method = \"search\" if \"query\" in search_args else \"metadata_search\"\n\n        try:\n            self.log(f\"Calling vector_store.{search_method} with args: {search_args}\")\n            docs = getattr(vector_store, search_method)(**search_args)\n        except ValueError as e:\n            msg = f\"Error performing {search_method} in AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self.log(f\"Retrieved documents: {len(docs)}\")\n\n        data = docs_to_data(docs)\n        self.log(f\"Converted documents to data: {len(data)}\")\n        self.status = data\n\n        return data\n\n    def get_retriever_kwargs(self):\n        search_args = self._build_search_args()\n\n        return {\n            \"search_type\": self._map_search_type(),\n            \"search_kwargs\": search_args,\n        }\n"
               },
               "collection_name": {
                 "_input_type": "DropdownInput",
@@ -3286,7 +3110,7 @@
                 "real_time_refresh": true,
                 "refresh_button": true,
                 "required": true,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "toggle": false,
                 "tool_mode": false,
@@ -3340,176 +3164,7 @@
                 "list_add_label": "Add More",
                 "model_type": "embedding",
                 "name": "embedding_model",
-                "options": [
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "embedding_class": "OpenAIEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "api_base": "base_url",
-                        "api_key": "api_key",
-                        "chunk_size": "chunk_size",
-                        "dimensions": "dimensions",
-                        "max_retries": "max_retries",
-                        "model": "model",
-                        "model_kwargs": "model_kwargs",
-                        "request_timeout": "timeout",
-                        "show_progress_bar": "show_progress_bar"
-                      }
-                    },
-                    "name": "text-embedding-3-small",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "embedding_class": "OpenAIEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "api_base": "base_url",
-                        "api_key": "api_key",
-                        "chunk_size": "chunk_size",
-                        "dimensions": "dimensions",
-                        "max_retries": "max_retries",
-                        "model": "model",
-                        "model_kwargs": "model_kwargs",
-                        "request_timeout": "timeout",
-                        "show_progress_bar": "show_progress_bar"
-                      }
-                    },
-                    "name": "text-embedding-3-large",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "embedding_class": "OpenAIEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "api_base": "base_url",
-                        "api_key": "api_key",
-                        "chunk_size": "chunk_size",
-                        "dimensions": "dimensions",
-                        "max_retries": "max_retries",
-                        "model": "model",
-                        "model_kwargs": "model_kwargs",
-                        "request_timeout": "timeout",
-                        "show_progress_bar": "show_progress_bar"
-                      }
-                    },
-                    "name": "text-embedding-ada-002",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "Ollama",
-                    "icon": "Ollama",
-                    "metadata": {
-                      "embedding_class": "OllamaEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "base_url": "base_url",
-                        "model": "model",
-                        "model_kwargs": "model_kwargs",
-                        "num_ctx": "num_ctx",
-                        "request_timeout": "request_timeout"
-                      }
-                    },
-                    "name": "nomic-embed-text",
-                    "provider": "Ollama"
-                  },
-                  {
-                    "category": "Ollama",
-                    "icon": "Ollama",
-                    "metadata": {
-                      "embedding_class": "OllamaEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "base_url": "base_url",
-                        "model": "model",
-                        "model_kwargs": "model_kwargs",
-                        "num_ctx": "num_ctx",
-                        "request_timeout": "request_timeout"
-                      }
-                    },
-                    "name": "mxbai-embed-large",
-                    "provider": "Ollama"
-                  },
-                  {
-                    "category": "Ollama",
-                    "icon": "Ollama",
-                    "metadata": {
-                      "embedding_class": "OllamaEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "base_url": "base_url",
-                        "model": "model",
-                        "model_kwargs": "model_kwargs",
-                        "num_ctx": "num_ctx",
-                        "request_timeout": "request_timeout"
-                      }
-                    },
-                    "name": "snowflake-arctic-embed",
-                    "provider": "Ollama"
-                  },
-                  {
-                    "category": "Ollama",
-                    "icon": "Ollama",
-                    "metadata": {
-                      "embedding_class": "OllamaEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "base_url": "base_url",
-                        "model": "model",
-                        "model_kwargs": "model_kwargs",
-                        "num_ctx": "num_ctx",
-                        "request_timeout": "request_timeout"
-                      }
-                    },
-                    "name": "all-minilm",
-                    "provider": "Ollama"
-                  },
-                  {
-                    "category": "Ollama",
-                    "icon": "Ollama",
-                    "metadata": {
-                      "embedding_class": "OllamaEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "base_url": "base_url",
-                        "model": "model",
-                        "model_kwargs": "model_kwargs",
-                        "num_ctx": "num_ctx",
-                        "request_timeout": "request_timeout"
-                      }
-                    },
-                    "name": "bge-m3",
-                    "provider": "Ollama"
-                  },
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "is_disabled_provider": true,
-                      "variable_name": "GOOGLE_API_KEY"
-                    },
-                    "name": "__enable_provider_Google Generative AI__",
-                    "provider": "Google Generative AI"
-                  },
-                  {
-                    "category": "IBM WatsonX",
-                    "icon": "WatsonxAI",
-                    "metadata": {
-                      "is_disabled_provider": true,
-                      "variable_name": "WATSONX_APIKEY"
-                    },
-                    "name": "__enable_provider_IBM WatsonX__",
-                    "provider": "IBM WatsonX"
-                  }
-                ],
+                "options": [],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -3521,29 +3176,7 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": [
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "embedding_class": "OpenAIEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "api_base": "base_url",
-                        "api_key": "api_key",
-                        "chunk_size": "chunk_size",
-                        "dimensions": "dimensions",
-                        "max_retries": "max_retries",
-                        "model": "model",
-                        "model_kwargs": "model_kwargs",
-                        "request_timeout": "timeout",
-                        "show_progress_bar": "show_progress_bar"
-                      }
-                    },
-                    "name": "text-embedding-3-small",
-                    "provider": "OpenAI"
-                  }
-                ]
+                "value": []
               },
               "environment": {
                 "_input_type": "DropdownInput",
@@ -3858,7 +3491,7 @@
                 "title_case": false,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": ""
+                "value": "ASTRA_DB_APPLICATION_TOKEN"
               }
             },
             "tool_mode": false
@@ -3868,9 +3501,9 @@
           "type": "AstraDB"
         },
         "dragging": false,
-        "id": "AstraDB-hIUdP",
+        "id": "AstraDB-r8EWl",
         "measured": {
-          "height": 496,
+          "height": 415,
           "width": 320
         },
         "position": {
@@ -3882,7 +3515,7 @@
       },
       {
         "data": {
-          "id": "AstraDB-mGHwS",
+          "id": "AstraDB-2kFlp",
           "node": {
             "base_classes": [
               "Data",
@@ -3910,6 +3543,7 @@
               "search_query",
               "should_cache_vector_store",
               "embedding_model",
+              "api_key",
               "content_field",
               "deletion_field",
               "ignore_invalid_documents",
@@ -3924,10 +3558,10 @@
             ],
             "frozen": false,
             "icon": "AstraDB",
-            "last_updated": "2026-01-05T20:28:32.057Z",
+            "last_updated": "2026-03-19T15:54:31.306Z",
             "legacy": false,
             "metadata": {
-              "code_hash": "9ca3747e73d6",
+              "code_hash": "62ef40337614",
               "dependencies": {
                 "dependencies": [
                   {
@@ -3936,7 +3570,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.83"
+                    "version": "1.2.20"
                   },
                   {
                     "name": "lfx",
@@ -3944,7 +3578,7 @@
                   },
                   {
                     "name": "langchain_astradb",
-                    "version": "0.6.1"
+                    "version": "1.0.0"
                   }
                 ],
                 "total_dependencies": 4
@@ -4046,6 +3680,26 @@
                 "type": "str",
                 "value": ""
               },
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": true,
+                "display_name": "API Key",
+                "dynamic": false,
+                "info": "Overrides global provider settings. Leave blank to use your pre-configured API Key.",
+                "input_types": [],
+                "load_from_db": false,
+                "name": "api_key",
+                "override_skip": false,
+                "password": true,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
               "astradb_vectorstore_kwargs": {
                 "_input_type": "NestedDictInput",
                 "advanced": true,
@@ -4103,7 +3757,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from astrapy import DataAPIClient\nfrom langchain_core.documents import Document\n\nfrom lfx.base.datastax.astradb_base import AstraDBBaseComponent\nfrom lfx.base.models.unified_models import get_embedding_model_options, update_model_options_in_build_config\nfrom lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection\nfrom lfx.helpers.data import docs_to_data\nfrom lfx.io import (\n    BoolInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    ModelInput,\n    NestedDictInput,\n    QueryInput,\n    StrInput,\n)\nfrom lfx.schema.data import Data\nfrom lfx.serialization import serialize\nfrom lfx.utils.version import get_version_info\n\n\n@vector_store_connection\nclass AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):\n    display_name: str = \"Astra DB\"\n    description: str = \"Ingest and search documents in Astra DB\"\n    documentation: str = \"https://docs.langflow.org/bundles-datastax\"\n    name = \"AstraDB\"\n    icon: str = \"AstraDB\"\n\n    inputs = [\n        *AstraDBBaseComponent.inputs,\n        *LCVectorStoreComponent.inputs,\n        ModelInput(\n            name=\"embedding_model\",\n            display_name=\"Embedding Model\",\n            info=\"Specify the Embedding Model. Not required for Astra Vectorize collections.\",\n            required=False,\n            show=True,\n            model_type=\"embedding\",\n            input_types=[\"Embeddings\"],\n            real_time_refresh=True,\n        ),\n        StrInput(\n            name=\"content_field\",\n            display_name=\"Content Field\",\n            info=\"Field to use as the text content field for the vector store.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"deletion_field\",\n            display_name=\"Deletion Based On Field\",\n            info=\"When this parameter is provided, documents in the target collection with \"\n            \"metadata field values matching the input metadata field value will be deleted \"\n            \"before new data is loaded.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"ignore_invalid_documents\",\n            display_name=\"Ignore Invalid Documents\",\n            info=\"Boolean flag to determine whether to ignore invalid documents at runtime.\",\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"astradb_vectorstore_kwargs\",\n            display_name=\"AstraDBVectorStore Parameters\",\n            info=\"Optional dictionary of additional parameters for the AstraDBVectorStore.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"search_method\",\n            display_name=\"Search Method\",\n            info=(\n                \"Determine how your content is matched: Vector finds semantic similarity, \"\n                \"and Hybrid Search (suggested) combines both approaches \"\n                \"with a reranker.\"\n            ),\n            options=[\"Hybrid Search\", \"Vector Search\"],  # TODO: Restore Lexical Search?\n            options_metadata=[{\"icon\": \"SearchHybrid\"}, {\"icon\": \"SearchVector\"}],\n            value=\"Vector Search\",\n            advanced=True,\n            real_time_refresh=True,\n        ),\n        DropdownInput(\n            name=\"reranker\",\n            display_name=\"Reranker\",\n            info=\"Post-retrieval model that re-scores results for optimal relevance ranking.\",\n            show=False,\n            toggle=True,\n        ),\n        QueryInput(\n            name=\"lexical_terms\",\n            display_name=\"Lexical Terms\",\n            info=\"Add additional terms/keywords to augment search precision.\",\n            placeholder=\"Enter terms to search...\",\n            separator=\" \",\n            show=False,\n            value=\"\",\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Search Results\",\n            info=\"Number of search results to return.\",\n            advanced=True,\n            value=4,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            info=\"Search type to use\",\n            options=[\"Similarity\", \"Similarity with score threshold\", \"MMR (Max Marginal Relevance)\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"search_score_threshold\",\n            display_name=\"Search Score Threshold\",\n            info=\"Minimum similarity score threshold for search results. \"\n            \"(when using 'Similarity with score threshold')\",\n            value=0,\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"advanced_search_filter\",\n            display_name=\"Search Metadata Filter\",\n            info=\"Optional dictionary of filters to apply to the search query.\",\n            advanced=True,\n        ),\n    ]\n\n    async def update_build_config(\n        self,\n        build_config: dict,\n        field_value: str | dict,\n        field_name: str | None = None,\n    ) -> dict:\n        \"\"\"Update build configuration with proper handling of embedding and search options.\"\"\"\n        # Update model options for ModelInput only when relevant\n        # Only refresh when: initial load (None), embedding_model field changes, or api_key changes\n        if field_name in (None, \"embedding_model\", \"api_key\"):\n            build_config = update_model_options_in_build_config(\n                component=self,\n                build_config=build_config,\n                cache_key_prefix=\"astradb_embedding_model_options\",\n                get_options_func=get_embedding_model_options,\n                field_name=field_name,\n                field_value=field_value if field_name == \"embedding_model\" else None,\n                model_field_name=\"embedding_model\",\n            )\n\n        # Handle base astra db build config updates\n        build_config = await super().update_build_config(\n            build_config,\n            field_value=field_value,\n            field_name=field_name,\n        )\n\n        # Set embedding model display based on provider selection\n        if isinstance(field_value, dict) and \"02_embedding_generation_provider\" in field_value:\n            embedding_provider = field_value.get(\"02_embedding_generation_provider\")\n            is_custom_provider = embedding_provider and embedding_provider != \"Bring your own\"\n            provider = embedding_provider.lower() if is_custom_provider and embedding_provider is not None else None\n\n            build_config[\"embedding_model\"][\"show\"] = not bool(provider)\n            build_config[\"embedding_model\"][\"required\"] = not bool(provider)\n\n        # Early return if no API endpoint is configured\n        if not self.get_api_endpoint():\n            return build_config\n\n        # Configure search method and related options\n        return self._configure_search_options(build_config)\n\n    def _configure_search_options(self, build_config: dict) -> dict:\n        \"\"\"Configure hybrid search, reranker, and vector search options.\"\"\"\n        # Detect available hybrid search capabilities\n        hybrid_capabilities = self._detect_hybrid_capabilities()\n\n        # Return if we haven't selected a collection\n        if not build_config[\"collection_name\"][\"options\"] or not build_config[\"collection_name\"][\"value\"]:\n            return build_config\n\n        # Get collection options\n        collection_options = self._get_collection_options(build_config)\n\n        # Get the selected collection index\n        index = build_config[\"collection_name\"][\"options\"].index(build_config[\"collection_name\"][\"value\"])\n        provider = build_config[\"collection_name\"][\"options_metadata\"][index][\"provider\"]\n        build_config[\"embedding_model\"][\"show\"] = not bool(provider)\n        build_config[\"embedding_model\"][\"required\"] = not bool(provider)\n\n        # Determine search configuration\n        is_vector_search = build_config[\"search_method\"][\"value\"] == \"Vector Search\"\n        is_autodetect = build_config[\"autodetect_collection\"][\"value\"]\n\n        # Apply hybrid search configuration\n        if hybrid_capabilities[\"available\"]:\n            build_config[\"search_method\"][\"show\"] = True\n            build_config[\"search_method\"][\"options\"] = [\"Hybrid Search\", \"Vector Search\"]\n            build_config[\"search_method\"][\"value\"] = build_config[\"search_method\"].get(\"value\", \"Hybrid Search\")\n\n            build_config[\"reranker\"][\"options\"] = hybrid_capabilities[\"reranker_models\"]\n            build_config[\"reranker\"][\"options_metadata\"] = hybrid_capabilities[\"reranker_metadata\"]\n            if hybrid_capabilities[\"reranker_models\"]:\n                build_config[\"reranker\"][\"value\"] = hybrid_capabilities[\"reranker_models\"][0]\n        else:\n            build_config[\"search_method\"][\"show\"] = False\n            build_config[\"search_method\"][\"options\"] = [\"Vector Search\"]\n            build_config[\"search_method\"][\"value\"] = \"Vector Search\"\n            build_config[\"reranker\"][\"options\"] = []\n            build_config[\"reranker\"][\"options_metadata\"] = []\n\n        # Configure reranker visibility and state\n        hybrid_enabled = (\n            collection_options[\"rerank_enabled\"] and build_config[\"search_method\"][\"value\"] == \"Hybrid Search\"\n        )\n\n        build_config[\"reranker\"][\"show\"] = hybrid_enabled\n        build_config[\"reranker\"][\"toggle_value\"] = hybrid_enabled\n        build_config[\"reranker\"][\"toggle_disable\"] = is_vector_search\n\n        # Configure lexical terms\n        lexical_visible = collection_options[\"lexical_enabled\"] and not is_vector_search\n        build_config[\"lexical_terms\"][\"show\"] = lexical_visible\n        build_config[\"lexical_terms\"][\"value\"] = \"\" if is_vector_search else build_config[\"lexical_terms\"][\"value\"]\n\n        # Configure search type and score threshold\n        build_config[\"search_type\"][\"show\"] = is_vector_search\n        build_config[\"search_score_threshold\"][\"show\"] = is_vector_search\n\n        # Force similarity search for hybrid mode or autodetect\n        if hybrid_enabled or is_autodetect:\n            build_config[\"search_type\"][\"value\"] = \"Similarity\"\n\n        return build_config\n\n    def _detect_hybrid_capabilities(self) -> dict:\n        \"\"\"Detect available hybrid search and reranking capabilities.\"\"\"\n        environment = self.get_environment(self.environment)\n        client = DataAPIClient(environment=environment)\n        admin_client = client.get_admin()\n        db_admin = admin_client.get_database_admin(self.get_api_endpoint(), token=self.token)\n\n        try:\n            providers = db_admin.find_reranking_providers()\n            reranker_models = [\n                model.name for provider_data in providers.reranking_providers.values() for model in provider_data.models\n            ]\n            reranker_metadata = [\n                {\"icon\": self.get_provider_icon(provider_name=model.name.split(\"/\")[0])}\n                for provider in providers.reranking_providers.values()\n                for model in provider.models\n            ]\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Hybrid search not available: {e}\")\n            return {\n                \"available\": False,\n                \"reranker_models\": [],\n                \"reranker_metadata\": [],\n            }\n        else:\n            return {\n                \"available\": True,\n                \"reranker_models\": reranker_models,\n                \"reranker_metadata\": reranker_metadata,\n            }\n\n    def _get_collection_options(self, build_config: dict) -> dict:\n        \"\"\"Retrieve collection-level search options.\"\"\"\n        database = self.get_database_object(api_endpoint=build_config[\"api_endpoint\"][\"value\"])\n        collection = database.get_collection(\n            name=build_config[\"collection_name\"][\"value\"],\n            keyspace=build_config[\"keyspace\"][\"value\"],\n        )\n\n        col_options = collection.options()\n\n        return {\n            \"rerank_enabled\": bool(col_options.rerank and col_options.rerank.enabled),\n            \"lexical_enabled\": bool(col_options.lexical and col_options.lexical.enabled),\n        }\n\n    @check_cached_vector_store\n    def build_vector_store(self):\n        try:\n            from langchain_astradb import AstraDBVectorStore\n            from langchain_astradb.utils.astradb import HybridSearchMode\n        except ImportError as e:\n            msg = (\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n            raise ImportError(msg) from e\n\n        # Get the embedding model and additional params\n        embedding_params = {\"embedding\": self.embedding_model} if self.embedding_model else {}\n\n        # Get the additional parameters\n        additional_params = self.astradb_vectorstore_kwargs or {}\n\n        # Get Langflow version and platform information\n        __version__ = get_version_info()[\"version\"]\n        langflow_prefix = \"\"\n        # if os.getenv(\"AWS_EXECUTION_ENV\") == \"AWS_ECS_FARGATE\":  # TODO: More precise way of detecting\n        #     langflow_prefix = \"ds-\"\n\n        # Get the database object\n        database = self.get_database_object()\n        autodetect = self.collection_name in database.list_collection_names() and self.autodetect_collection\n\n        # Bundle up the auto-detect parameters\n        autodetect_params = {\n            \"autodetect_collection\": autodetect,\n            \"content_field\": (\n                self.content_field\n                if self.content_field and embedding_params\n                else (\n                    \"page_content\"\n                    if embedding_params\n                    and self.collection_data(collection_name=self.collection_name, database=database) == 0\n                    else None\n                )\n            ),\n            \"ignore_invalid_documents\": self.ignore_invalid_documents,\n        }\n\n        # Choose HybridSearchMode based on the selected param\n        hybrid_search_mode = HybridSearchMode.DEFAULT if self.search_method == \"Hybrid Search\" else HybridSearchMode.OFF\n\n        # Attempt to build the Vector Store object\n        try:\n            vector_store = AstraDBVectorStore(\n                # Astra DB Authentication Parameters\n                token=self.token,\n                api_endpoint=database.api_endpoint,\n                namespace=database.keyspace,\n                collection_name=self.collection_name,\n                environment=self.environment,\n                # Hybrid Search Parameters\n                hybrid_search=hybrid_search_mode,\n                # Astra DB Usage Tracking Parameters\n                ext_callers=[(f\"{langflow_prefix}langflow\", __version__)],\n                # Astra DB Vector Store Parameters\n                **autodetect_params,\n                **embedding_params,\n                **additional_params,\n            )\n        except ValueError as e:\n            msg = f\"Error initializing AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        # Add documents to the vector store\n        self._add_documents_to_vector_store(vector_store)\n\n        return vector_store\n\n    def _add_documents_to_vector_store(self, vector_store) -> None:\n        self.ingest_data = self._prepare_ingest_data()\n\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        documents = [\n            Document(page_content=doc.page_content, metadata=serialize(doc.metadata, to_str=True)) for doc in documents\n        ]\n\n        if documents and self.deletion_field:\n            self.log(f\"Deleting documents where {self.deletion_field}\")\n            try:\n                database = self.get_database_object()\n                collection = database.get_collection(self.collection_name, keyspace=database.keyspace)\n                delete_values = list({doc.metadata[self.deletion_field] for doc in documents})\n                self.log(f\"Deleting documents where {self.deletion_field} matches {delete_values}.\")\n                collection.delete_many({f\"metadata.{self.deletion_field}\": {\"$in\": delete_values}})\n            except ValueError as e:\n                msg = f\"Error deleting documents from AstraDBVectorStore based on '{self.deletion_field}': {e}\"\n                raise ValueError(msg) from e\n\n        if documents:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            try:\n                vector_store.add_documents(documents)\n            except ValueError as e:\n                msg = f\"Error adding documents to AstraDBVectorStore: {e}\"\n                raise ValueError(msg) from e\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n\n    def _map_search_type(self) -> str:\n        search_type_mapping = {\n            \"Similarity with score threshold\": \"similarity_score_threshold\",\n            \"MMR (Max Marginal Relevance)\": \"mmr\",\n        }\n\n        return search_type_mapping.get(self.search_type, \"similarity\")\n\n    def _build_search_args(self):\n        # Clean up the search query\n        query = self.search_query if isinstance(self.search_query, str) and self.search_query.strip() else None\n        lexical_terms = self.lexical_terms or None\n\n        # Check if we have a search query, and if so set the args\n        if query:\n            args = {\n                \"query\": query,\n                \"search_type\": self._map_search_type(),\n                \"k\": self.number_of_results,\n                \"score_threshold\": self.search_score_threshold,\n                \"lexical_query\": lexical_terms,\n            }\n        elif self.advanced_search_filter:\n            args = {\n                \"n\": self.number_of_results,\n            }\n        else:\n            return {}\n\n        filter_arg = self.advanced_search_filter or {}\n        if filter_arg:\n            args[\"filter\"] = filter_arg\n\n        return args\n\n    def search_documents(self, vector_store=None) -> list[Data]:\n        vector_store = vector_store or self.build_vector_store()\n\n        self.log(f\"Search input: {self.search_query}\")\n        self.log(f\"Search type: {self.search_type}\")\n        self.log(f\"Number of results: {self.number_of_results}\")\n        self.log(f\"store.hybrid_search: {vector_store.hybrid_search}\")\n        self.log(f\"Lexical terms: {self.lexical_terms}\")\n        self.log(f\"Reranker: {self.reranker}\")\n\n        try:\n            search_args = self._build_search_args()\n        except ValueError as e:\n            msg = f\"Error in AstraDBVectorStore._build_search_args: {e}\"\n            raise ValueError(msg) from e\n\n        if not search_args:\n            self.log(\"No search input or filters provided. Skipping search.\")\n            return []\n\n        docs = []\n        search_method = \"search\" if \"query\" in search_args else \"metadata_search\"\n\n        try:\n            self.log(f\"Calling vector_store.{search_method} with args: {search_args}\")\n            docs = getattr(vector_store, search_method)(**search_args)\n        except ValueError as e:\n            msg = f\"Error performing {search_method} in AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self.log(f\"Retrieved documents: {len(docs)}\")\n\n        data = docs_to_data(docs)\n        self.log(f\"Converted documents to data: {len(data)}\")\n        self.status = data\n\n        return data\n\n    def get_retriever_kwargs(self):\n        search_args = self._build_search_args()\n\n        return {\n            \"search_type\": self._map_search_type(),\n            \"search_kwargs\": search_args,\n        }\n"
+                "value": "from astrapy import DataAPIClient\nfrom langchain_core.documents import Document\n\nfrom lfx.base.datastax.astradb_base import AstraDBBaseComponent\nfrom lfx.base.models.unified_models import (\n    apply_provider_variable_config_to_build_config,\n    get_embedding_model_options,\n    get_embeddings,\n    update_model_options_in_build_config,\n)\nfrom lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection\nfrom lfx.helpers.data import docs_to_data\nfrom lfx.io import (\n    BoolInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    ModelInput,\n    NestedDictInput,\n    QueryInput,\n    SecretStrInput,\n    StrInput,\n)\nfrom lfx.schema.data import Data\nfrom lfx.serialization import serialize\nfrom lfx.utils.version import get_version_info\n\n\n@vector_store_connection\nclass AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):\n    display_name: str = \"Astra DB\"\n    description: str = \"Ingest and search documents in Astra DB\"\n    documentation: str = \"https://docs.langflow.org/bundles-datastax\"\n    name = \"AstraDB\"\n    icon: str = \"AstraDB\"\n\n    inputs = [\n        *AstraDBBaseComponent.inputs,\n        *LCVectorStoreComponent.inputs,\n        ModelInput(\n            name=\"embedding_model\",\n            display_name=\"Embedding Model\",\n            info=\"Specify the Embedding Model. Not required for Astra Vectorize collections.\",\n            required=False,\n            show=True,\n            model_type=\"embedding\",\n            input_types=[\"Embeddings\"],\n            real_time_refresh=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Overrides global provider settings. Leave blank to use your pre-configured API Key.\",\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        StrInput(\n            name=\"content_field\",\n            display_name=\"Content Field\",\n            info=\"Field to use as the text content field for the vector store.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"deletion_field\",\n            display_name=\"Deletion Based On Field\",\n            info=\"When this parameter is provided, documents in the target collection with \"\n            \"metadata field values matching the input metadata field value will be deleted \"\n            \"before new data is loaded.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"ignore_invalid_documents\",\n            display_name=\"Ignore Invalid Documents\",\n            info=\"Boolean flag to determine whether to ignore invalid documents at runtime.\",\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"astradb_vectorstore_kwargs\",\n            display_name=\"AstraDBVectorStore Parameters\",\n            info=\"Optional dictionary of additional parameters for the AstraDBVectorStore.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"search_method\",\n            display_name=\"Search Method\",\n            info=(\n                \"Determine how your content is matched: Vector finds semantic similarity, \"\n                \"and Hybrid Search (suggested) combines both approaches \"\n                \"with a reranker.\"\n            ),\n            options=[\"Hybrid Search\", \"Vector Search\"],  # TODO: Restore Lexical Search?\n            options_metadata=[{\"icon\": \"SearchHybrid\"}, {\"icon\": \"SearchVector\"}],\n            value=\"Vector Search\",\n            advanced=True,\n            real_time_refresh=True,\n        ),\n        DropdownInput(\n            name=\"reranker\",\n            display_name=\"Reranker\",\n            info=\"Post-retrieval model that re-scores results for optimal relevance ranking.\",\n            show=False,\n            toggle=True,\n        ),\n        QueryInput(\n            name=\"lexical_terms\",\n            display_name=\"Lexical Terms\",\n            info=\"Add additional terms/keywords to augment search precision.\",\n            placeholder=\"Enter terms to search...\",\n            separator=\" \",\n            show=False,\n            value=\"\",\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Search Results\",\n            info=\"Number of search results to return.\",\n            advanced=True,\n            value=4,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            info=\"Search type to use\",\n            options=[\"Similarity\", \"Similarity with score threshold\", \"MMR (Max Marginal Relevance)\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"search_score_threshold\",\n            display_name=\"Search Score Threshold\",\n            info=\"Minimum similarity score threshold for search results. \"\n            \"(when using 'Similarity with score threshold')\",\n            value=0,\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"advanced_search_filter\",\n            display_name=\"Search Metadata Filter\",\n            info=\"Optional dictionary of filters to apply to the search query.\",\n            advanced=True,\n        ),\n    ]\n\n    async def update_build_config(\n        self,\n        build_config: dict,\n        field_value: str | dict,\n        field_name: str | None = None,\n    ) -> dict:\n        \"\"\"Update build configuration with proper handling of embedding and search options.\"\"\"\n        # Update model options for ModelInput only when relevant.\n        # Only refresh when: initial load (None), embedding_model field changes, or api_key changes.\n        #\n        # Note: this intentionally uses update_model_options_in_build_config directly rather than\n        # handle_model_input_update because:\n        #   1. The model field is named \"embedding_model\" (not \"model\"), requiring model_field_name.\n        #   2. The refresh is conditional - we skip it for unrelated fields (e.g. database_name,\n        #      collection_name) to avoid unnecessary work.\n        #   3. AstraDB manages its own provider-field visibility (embedding_generation_provider\n        #      dialog), so the generic provider-field hide/show steps in handle_model_input_update\n        #      are not applicable here.\n        if field_name in (None, \"embedding_model\", \"api_key\"):\n            build_config = update_model_options_in_build_config(\n                component=self,\n                build_config=build_config,\n                cache_key_prefix=\"embedding_model_options\",\n                get_options_func=get_embedding_model_options,\n                field_name=field_name,\n                field_value=field_value if field_name == \"embedding_model\" else None,\n                model_field_name=\"embedding_model\",\n            )\n\n            # Auto-populate API key based on the selected embedding model's provider.\n            # Skip when user directly edits api_key to preserve their value.\n            if field_name != \"api_key\":\n                model_value = build_config.get(\"embedding_model\", {}).get(\"value\")\n                if isinstance(model_value, list) and model_value:\n                    provider = model_value[0].get(\"provider\", \"\")\n                    if provider:\n                        build_config = apply_provider_variable_config_to_build_config(build_config, provider)\n\n            # Ensure the API key field is always visible\n            if \"api_key\" in build_config:\n                build_config[\"api_key\"][\"show\"] = True\n\n        # Handle base astra db build config updates\n        build_config = await super().update_build_config(\n            build_config,\n            field_value=field_value,\n            field_name=field_name,\n        )\n\n        # Set embedding model display based on provider selection\n        if isinstance(field_value, dict) and \"02_embedding_generation_provider\" in field_value:\n            embedding_provider = field_value.get(\"02_embedding_generation_provider\")\n            is_custom_provider = embedding_provider and embedding_provider != \"Bring your own\"\n            provider = embedding_provider.lower() if is_custom_provider and embedding_provider is not None else None\n\n            build_config[\"embedding_model\"][\"show\"] = not bool(provider)\n            build_config[\"embedding_model\"][\"required\"] = not bool(provider)\n\n        # Early return if no API endpoint is configured\n        if not self.get_api_endpoint():\n            return build_config\n\n        # Configure search method and related options\n        return self._configure_search_options(build_config)\n\n    def _configure_search_options(self, build_config: dict) -> dict:\n        \"\"\"Configure hybrid search, reranker, and vector search options.\"\"\"\n        # Detect available hybrid search capabilities\n        hybrid_capabilities = self._detect_hybrid_capabilities()\n\n        # Return if we haven't selected a collection\n        if not build_config[\"collection_name\"][\"options\"] or not build_config[\"collection_name\"][\"value\"]:\n            return build_config\n\n        # Get collection options\n        collection_options = self._get_collection_options(build_config)\n\n        # Get the selected collection index\n        index = build_config[\"collection_name\"][\"options\"].index(build_config[\"collection_name\"][\"value\"])\n        provider = build_config[\"collection_name\"][\"options_metadata\"][index][\"provider\"]\n        build_config[\"embedding_model\"][\"show\"] = not bool(provider)\n        build_config[\"embedding_model\"][\"required\"] = not bool(provider)\n\n        # Determine search configuration\n        is_vector_search = build_config[\"search_method\"][\"value\"] == \"Vector Search\"\n        is_autodetect = build_config[\"autodetect_collection\"][\"value\"]\n\n        # Apply hybrid search configuration\n        if hybrid_capabilities[\"available\"]:\n            build_config[\"search_method\"][\"show\"] = True\n            build_config[\"search_method\"][\"options\"] = [\"Hybrid Search\", \"Vector Search\"]\n            build_config[\"search_method\"][\"value\"] = build_config[\"search_method\"].get(\"value\", \"Hybrid Search\")\n\n            build_config[\"reranker\"][\"options\"] = hybrid_capabilities[\"reranker_models\"]\n            build_config[\"reranker\"][\"options_metadata\"] = hybrid_capabilities[\"reranker_metadata\"]\n            if hybrid_capabilities[\"reranker_models\"]:\n                build_config[\"reranker\"][\"value\"] = hybrid_capabilities[\"reranker_models\"][0]\n        else:\n            build_config[\"search_method\"][\"show\"] = False\n            build_config[\"search_method\"][\"options\"] = [\"Vector Search\"]\n            build_config[\"search_method\"][\"value\"] = \"Vector Search\"\n            build_config[\"reranker\"][\"options\"] = []\n            build_config[\"reranker\"][\"options_metadata\"] = []\n\n        # Configure reranker visibility and state\n        hybrid_enabled = (\n            collection_options[\"rerank_enabled\"] and build_config[\"search_method\"][\"value\"] == \"Hybrid Search\"\n        )\n\n        build_config[\"reranker\"][\"show\"] = hybrid_enabled\n        build_config[\"reranker\"][\"toggle_value\"] = hybrid_enabled\n        build_config[\"reranker\"][\"toggle_disable\"] = is_vector_search\n\n        # Configure lexical terms\n        lexical_visible = collection_options[\"lexical_enabled\"] and not is_vector_search\n        build_config[\"lexical_terms\"][\"show\"] = lexical_visible\n        build_config[\"lexical_terms\"][\"value\"] = \"\" if is_vector_search else build_config[\"lexical_terms\"][\"value\"]\n\n        # Configure search type and score threshold\n        build_config[\"search_type\"][\"show\"] = is_vector_search\n        build_config[\"search_score_threshold\"][\"show\"] = is_vector_search\n\n        # Force similarity search for hybrid mode or autodetect\n        if hybrid_enabled or is_autodetect:\n            build_config[\"search_type\"][\"value\"] = \"Similarity\"\n\n        return build_config\n\n    def _detect_hybrid_capabilities(self) -> dict:\n        \"\"\"Detect available hybrid search and reranking capabilities.\"\"\"\n        environment = self.get_environment(self.environment)\n        client = DataAPIClient(environment=environment)\n        admin_client = client.get_admin()\n        db_admin = admin_client.get_database_admin(self.get_api_endpoint(), token=self.token)\n\n        try:\n            providers = db_admin.find_reranking_providers()\n            reranker_models = [\n                model.name for provider_data in providers.reranking_providers.values() for model in provider_data.models\n            ]\n            reranker_metadata = [\n                {\"icon\": self.get_provider_icon(provider_name=model.name.split(\"/\")[0])}\n                for provider in providers.reranking_providers.values()\n                for model in provider.models\n            ]\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Hybrid search not available: {e}\")\n            return {\n                \"available\": False,\n                \"reranker_models\": [],\n                \"reranker_metadata\": [],\n            }\n        else:\n            return {\n                \"available\": True,\n                \"reranker_models\": reranker_models,\n                \"reranker_metadata\": reranker_metadata,\n            }\n\n    def _get_collection_options(self, build_config: dict) -> dict:\n        \"\"\"Retrieve collection-level search options.\"\"\"\n        database = self.get_database_object(api_endpoint=build_config[\"api_endpoint\"][\"value\"])\n        collection = database.get_collection(\n            name=build_config[\"collection_name\"][\"value\"],\n            keyspace=build_config[\"keyspace\"][\"value\"],\n        )\n\n        col_options = collection.options()\n\n        return {\n            \"rerank_enabled\": bool(col_options.rerank and col_options.rerank.enabled),\n            \"lexical_enabled\": bool(col_options.lexical and col_options.lexical.enabled),\n        }\n\n    @check_cached_vector_store\n    def build_vector_store(self):\n        try:\n            from langchain_astradb import AstraDBVectorStore\n            from langchain_astradb.utils.astradb import HybridSearchMode\n        except ImportError as e:\n            msg = (\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n            raise ImportError(msg) from e\n\n        # Resolve the embedding model from ModelInput selection to an Embeddings instance\n        embedding = None\n        if self.embedding_model:\n            embedding = get_embeddings(\n                model=self.embedding_model,\n                user_id=self.user_id,\n                api_key=getattr(self, \"api_key\", None),\n            )\n        embedding_params = {\"embedding\": embedding} if embedding else {}\n\n        # Get the additional parameters\n        additional_params = self.astradb_vectorstore_kwargs or {}\n\n        # Get Langflow version and platform information\n        __version__ = get_version_info()[\"version\"]\n        langflow_prefix = \"\"\n        # if os.getenv(\"AWS_EXECUTION_ENV\") == \"AWS_ECS_FARGATE\":  # TODO: More precise way of detecting\n        #     langflow_prefix = \"ds-\"\n\n        # Get the database object\n        database = self.get_database_object()\n        autodetect = self.collection_name in database.list_collection_names() and self.autodetect_collection\n\n        # Bundle up the auto-detect parameters\n        autodetect_params = {\n            \"autodetect_collection\": autodetect,\n            \"content_field\": (\n                self.content_field\n                if self.content_field and embedding_params\n                else (\n                    \"page_content\"\n                    if embedding_params\n                    and self.collection_data(collection_name=self.collection_name, database=database) == 0\n                    else None\n                )\n            ),\n            \"ignore_invalid_documents\": self.ignore_invalid_documents,\n        }\n\n        # Choose HybridSearchMode based on the selected param\n        hybrid_search_mode = HybridSearchMode.DEFAULT if self.search_method == \"Hybrid Search\" else HybridSearchMode.OFF\n\n        # Attempt to build the Vector Store object\n        try:\n            vector_store = AstraDBVectorStore(\n                # Astra DB Authentication Parameters\n                token=self.token,\n                api_endpoint=database.api_endpoint,\n                namespace=database.keyspace,\n                collection_name=self.collection_name,\n                environment=self.environment,\n                # Hybrid Search Parameters\n                hybrid_search=hybrid_search_mode,\n                # Astra DB Usage Tracking Parameters\n                ext_callers=[(f\"{langflow_prefix}langflow\", __version__)],\n                # Astra DB Vector Store Parameters\n                **autodetect_params,\n                **embedding_params,\n                **additional_params,\n            )\n        except ValueError as e:\n            msg = f\"Error initializing AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        # Add documents to the vector store\n        self._add_documents_to_vector_store(vector_store)\n\n        return vector_store\n\n    def _add_documents_to_vector_store(self, vector_store) -> None:\n        self.ingest_data = self._prepare_ingest_data()\n\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        documents = [\n            Document(page_content=doc.page_content, metadata=serialize(doc.metadata, to_str=True)) for doc in documents\n        ]\n\n        if documents and self.deletion_field:\n            self.log(f\"Deleting documents where {self.deletion_field}\")\n            try:\n                database = self.get_database_object()\n                collection = database.get_collection(self.collection_name, keyspace=database.keyspace)\n                delete_values = list({doc.metadata[self.deletion_field] for doc in documents})\n                self.log(f\"Deleting documents where {self.deletion_field} matches {delete_values}.\")\n                collection.delete_many({f\"metadata.{self.deletion_field}\": {\"$in\": delete_values}})\n            except ValueError as e:\n                msg = f\"Error deleting documents from AstraDBVectorStore based on '{self.deletion_field}': {e}\"\n                raise ValueError(msg) from e\n\n        if documents:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            try:\n                vector_store.add_documents(documents)\n            except ValueError as e:\n                msg = f\"Error adding documents to AstraDBVectorStore: {e}\"\n                raise ValueError(msg) from e\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n\n    def _map_search_type(self) -> str:\n        search_type_mapping = {\n            \"Similarity with score threshold\": \"similarity_score_threshold\",\n            \"MMR (Max Marginal Relevance)\": \"mmr\",\n        }\n\n        return search_type_mapping.get(self.search_type, \"similarity\")\n\n    def _build_search_args(self):\n        # Clean up the search query\n        query = self.search_query if isinstance(self.search_query, str) and self.search_query.strip() else None\n        lexical_terms = self.lexical_terms or None\n\n        # Check if we have a search query, and if so set the args\n        if query:\n            args = {\n                \"query\": query,\n                \"search_type\": self._map_search_type(),\n                \"k\": self.number_of_results,\n                \"score_threshold\": self.search_score_threshold,\n                \"lexical_query\": lexical_terms,\n            }\n        elif self.advanced_search_filter:\n            args = {\n                \"n\": self.number_of_results,\n            }\n        else:\n            return {}\n\n        filter_arg = self.advanced_search_filter or {}\n        if filter_arg:\n            args[\"filter\"] = filter_arg\n\n        return args\n\n    def search_documents(self, vector_store=None) -> list[Data]:\n        vector_store = vector_store or self.build_vector_store()\n\n        self.log(f\"Search input: {self.search_query}\")\n        self.log(f\"Search type: {self.search_type}\")\n        self.log(f\"Number of results: {self.number_of_results}\")\n        self.log(f\"store.hybrid_search: {vector_store.hybrid_search}\")\n        self.log(f\"Lexical terms: {self.lexical_terms}\")\n        self.log(f\"Reranker: {self.reranker}\")\n\n        try:\n            search_args = self._build_search_args()\n        except ValueError as e:\n            msg = f\"Error in AstraDBVectorStore._build_search_args: {e}\"\n            raise ValueError(msg) from e\n\n        if not search_args:\n            self.log(\"No search input or filters provided. Skipping search.\")\n            return []\n\n        docs = []\n        search_method = \"search\" if \"query\" in search_args else \"metadata_search\"\n\n        try:\n            self.log(f\"Calling vector_store.{search_method} with args: {search_args}\")\n            docs = getattr(vector_store, search_method)(**search_args)\n        except ValueError as e:\n            msg = f\"Error performing {search_method} in AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self.log(f\"Retrieved documents: {len(docs)}\")\n\n        data = docs_to_data(docs)\n        self.log(f\"Converted documents to data: {len(data)}\")\n        self.status = data\n\n        return data\n\n    def get_retriever_kwargs(self):\n        search_args = self._build_search_args()\n\n        return {\n            \"search_type\": self._map_search_type(),\n            \"search_kwargs\": search_args,\n        }\n"
               },
               "collection_name": {
                 "_input_type": "DropdownInput",
@@ -4367,7 +4021,7 @@
                 "real_time_refresh": true,
                 "refresh_button": true,
                 "required": true,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "toggle": false,
                 "tool_mode": false,
@@ -4421,176 +4075,7 @@
                 "list_add_label": "Add More",
                 "model_type": "embedding",
                 "name": "embedding_model",
-                "options": [
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "embedding_class": "OpenAIEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "api_base": "base_url",
-                        "api_key": "api_key",
-                        "chunk_size": "chunk_size",
-                        "dimensions": "dimensions",
-                        "max_retries": "max_retries",
-                        "model": "model",
-                        "model_kwargs": "model_kwargs",
-                        "request_timeout": "timeout",
-                        "show_progress_bar": "show_progress_bar"
-                      }
-                    },
-                    "name": "text-embedding-3-small",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "embedding_class": "OpenAIEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "api_base": "base_url",
-                        "api_key": "api_key",
-                        "chunk_size": "chunk_size",
-                        "dimensions": "dimensions",
-                        "max_retries": "max_retries",
-                        "model": "model",
-                        "model_kwargs": "model_kwargs",
-                        "request_timeout": "timeout",
-                        "show_progress_bar": "show_progress_bar"
-                      }
-                    },
-                    "name": "text-embedding-3-large",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "embedding_class": "OpenAIEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "api_base": "base_url",
-                        "api_key": "api_key",
-                        "chunk_size": "chunk_size",
-                        "dimensions": "dimensions",
-                        "max_retries": "max_retries",
-                        "model": "model",
-                        "model_kwargs": "model_kwargs",
-                        "request_timeout": "timeout",
-                        "show_progress_bar": "show_progress_bar"
-                      }
-                    },
-                    "name": "text-embedding-ada-002",
-                    "provider": "OpenAI"
-                  },
-                  {
-                    "category": "Ollama",
-                    "icon": "Ollama",
-                    "metadata": {
-                      "embedding_class": "OllamaEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "base_url": "base_url",
-                        "model": "model",
-                        "model_kwargs": "model_kwargs",
-                        "num_ctx": "num_ctx",
-                        "request_timeout": "request_timeout"
-                      }
-                    },
-                    "name": "nomic-embed-text",
-                    "provider": "Ollama"
-                  },
-                  {
-                    "category": "Ollama",
-                    "icon": "Ollama",
-                    "metadata": {
-                      "embedding_class": "OllamaEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "base_url": "base_url",
-                        "model": "model",
-                        "model_kwargs": "model_kwargs",
-                        "num_ctx": "num_ctx",
-                        "request_timeout": "request_timeout"
-                      }
-                    },
-                    "name": "mxbai-embed-large",
-                    "provider": "Ollama"
-                  },
-                  {
-                    "category": "Ollama",
-                    "icon": "Ollama",
-                    "metadata": {
-                      "embedding_class": "OllamaEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "base_url": "base_url",
-                        "model": "model",
-                        "model_kwargs": "model_kwargs",
-                        "num_ctx": "num_ctx",
-                        "request_timeout": "request_timeout"
-                      }
-                    },
-                    "name": "snowflake-arctic-embed",
-                    "provider": "Ollama"
-                  },
-                  {
-                    "category": "Ollama",
-                    "icon": "Ollama",
-                    "metadata": {
-                      "embedding_class": "OllamaEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "base_url": "base_url",
-                        "model": "model",
-                        "model_kwargs": "model_kwargs",
-                        "num_ctx": "num_ctx",
-                        "request_timeout": "request_timeout"
-                      }
-                    },
-                    "name": "all-minilm",
-                    "provider": "Ollama"
-                  },
-                  {
-                    "category": "Ollama",
-                    "icon": "Ollama",
-                    "metadata": {
-                      "embedding_class": "OllamaEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "base_url": "base_url",
-                        "model": "model",
-                        "model_kwargs": "model_kwargs",
-                        "num_ctx": "num_ctx",
-                        "request_timeout": "request_timeout"
-                      }
-                    },
-                    "name": "bge-m3",
-                    "provider": "Ollama"
-                  },
-                  {
-                    "category": "Google Generative AI",
-                    "icon": "GoogleGenerativeAI",
-                    "metadata": {
-                      "is_disabled_provider": true,
-                      "variable_name": "GOOGLE_API_KEY"
-                    },
-                    "name": "__enable_provider_Google Generative AI__",
-                    "provider": "Google Generative AI"
-                  },
-                  {
-                    "category": "IBM WatsonX",
-                    "icon": "WatsonxAI",
-                    "metadata": {
-                      "is_disabled_provider": true,
-                      "variable_name": "WATSONX_APIKEY"
-                    },
-                    "name": "__enable_provider_IBM WatsonX__",
-                    "provider": "IBM WatsonX"
-                  }
-                ],
+                "options": [],
                 "override_skip": false,
                 "placeholder": "Setup Provider",
                 "real_time_refresh": true,
@@ -4602,29 +4087,7 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": [
-                  {
-                    "category": "OpenAI",
-                    "icon": "OpenAI",
-                    "metadata": {
-                      "embedding_class": "OpenAIEmbeddings",
-                      "model_type": "embeddings",
-                      "param_mapping": {
-                        "api_base": "base_url",
-                        "api_key": "api_key",
-                        "chunk_size": "chunk_size",
-                        "dimensions": "dimensions",
-                        "max_retries": "max_retries",
-                        "model": "model",
-                        "model_kwargs": "model_kwargs",
-                        "request_timeout": "timeout",
-                        "show_progress_bar": "show_progress_bar"
-                      }
-                    },
-                    "name": "text-embedding-3-small",
-                    "provider": "OpenAI"
-                  }
-                ]
+                "value": []
               },
               "environment": {
                 "_input_type": "DropdownInput",
@@ -4939,7 +4402,7 @@
                 "title_case": false,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": ""
+                "value": "ASTRA_DB_APPLICATION_TOKEN"
               }
             },
             "tool_mode": false
@@ -4949,9 +4412,9 @@
           "type": "AstraDB"
         },
         "dragging": false,
-        "id": "AstraDB-mGHwS",
+        "id": "AstraDB-2kFlp",
         "measured": {
-          "height": 496,
+          "height": 415,
           "width": 320
         },
         "position": {
@@ -4963,16 +4426,17 @@
       }
     ],
     "viewport": {
-      "x": 80.63081608218556,
-      "y": -143.0245224643254,
-      "zoom": 0.42672383342079184
+      "x": -2.800234759146747,
+      "y": -166.3739802393984,
+      "zoom": 0.48207057170779677
     }
   },
   "description": "Load your data for chat context with Retrieval Augmented Generation.",
   "endpoint_name": null,
-  "id": "4bcefe77-4a90-4884-bef2-98fde72704f4",
+  "id": "b638aa7b-d928-4b0c-9b2b-4f3b0c5343a3",
   "is_component": false,
-  "last_tested_version": "1.7.1",
+  "last_tested_version": "1.9.0",
+  "locked": false,
   "name": "Vector Store RAG",
   "tags": [
     "openai",
