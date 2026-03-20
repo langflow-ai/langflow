@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Pull OpenAPI spec files from the langflow-ai/sdk repository.
 
+This script is only for syncing external SDK specs when needed.
+It is not used by the main Langflow OpenAPI generation workflow,
+which now relies on `docs/openapi/generate_openapi.py`.
+
 Usage:
     python3 fetch_openapi_spec.py                          # Download all files
     python3 fetch_openapi_spec.py --file <filename>       # Download specific file

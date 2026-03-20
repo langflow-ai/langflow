@@ -2075,7 +2075,7 @@ export function templatesGenerator(data: APIObjectType) {
   return Object.keys(data).reduce((acc, curr) => {
     Object.keys(data[curr]).forEach((c: keyof APIKindType) => {
       //prevent wrong overwriting of the component template by a group of the same type
-      if (!data[curr][c].flow) acc[c] = data[curr][c];
+      if (!data[curr][c].flow) acc[c] = cloneDeep(data[curr][c]);
     });
     return acc;
   }, {});
