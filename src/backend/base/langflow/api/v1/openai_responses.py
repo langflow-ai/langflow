@@ -74,7 +74,7 @@ async def run_flow_for_openai_responses(
     context = {}
     if variables:
         context["request_variables"] = variables
-        await logger.adebug(f"Added request variables to context: {variables}")
+        await logger.adebug(f"Added request variables to context: {list(variables.keys())}")
 
     # Convert OpenAI request to SimplifiedAPIRequest
     # Note: We're moving away from tweaks to a context-based approach
@@ -88,7 +88,7 @@ async def run_flow_for_openai_responses(
 
     # Context will be passed separately to simple_run_flow
 
-    await logger.adebug(f"SimplifiedAPIRequest created with context: {context}")
+    await logger.adebug(f"SimplifiedAPIRequest created with context keys: {list(context.keys())}")
 
     # Use session_id as response_id for OpenAI compatibility
     response_id = session_id
@@ -619,7 +619,7 @@ async def create_response(
 
     await logger.adebug(f"All headers received: {list(http_request.headers.keys())}")
     await logger.adebug(f"Extracted global variables from headers: {list(variables.keys())}")
-    await logger.adebug(f"Variables dict: {variables}")
+    await logger.adebug(f"Variables dict keys: {list(variables.keys())}")
 
     # Validate tools parameter - error out if tools are provided
     if request.tools is not None:
