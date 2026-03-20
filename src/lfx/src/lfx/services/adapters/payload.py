@@ -59,7 +59,7 @@ class AdapterPayloadMissingError(ValueError):
 class PayloadSlot(Generic[T_Model]):
     """Layer-agnostic contract between raw payload dicts and typed models."""
 
-    adapter_model: type[T_Model]
+    adapter_model: type[T_Model]  # TODO: rename to model
     policy: PayloadSlotPolicy = PayloadSlotPolicy.VALIDATE_AND_DUMP
 
     def parse(self, raw: AdapterPayload | BaseModel | None) -> T_Model:

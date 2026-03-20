@@ -137,7 +137,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         logger.info("Creating wxO deployment for user_id=%s", user_id)
         try:
             deployment_spec: BaseDeploymentData = payload.spec
-
+            # TODO: clean up ambiguity between spec vs config.
             if deployment_spec.type != DeploymentType.AGENT:
                 msg = (
                     f"{ErrorPrefix.CREATE.value}"
@@ -539,7 +539,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         *,
         user_id: IdLike,
         execution_id: IdLike,
-        deployment_type: DeploymentType | None = None,  # noqa: ARG002
         db: AsyncSession,
     ) -> ExecutionStatusResult:
         """Get provider-agnostic deployment execution state/output."""

@@ -9,13 +9,19 @@ from uuid import UUID
 
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadFields
 from lfx.services.adapters.deployment.schema import (
+    BaseFlowArtifact,
     ConfigDeploymentBindingUpdate,
+    ConfigItem,
     DeploymentCreateResult,
     DeploymentType,
     DeploymentUpdateResult,
     ExecutionCreate,
     ExecutionCreateResult,
     ExecutionStatusResult,
+    SnapshotItems,
+)
+from lfx.services.adapters.deployment.schema import (
+    DeploymentCreate as AdapterDeploymentCreate,
 )
 from lfx.services.adapters.deployment.schema import (
     DeploymentUpdate as AdapterDeploymentUpdate,
@@ -23,6 +29,7 @@ from lfx.services.adapters.deployment.schema import (
 from lfx.services.adapters.payload import PayloadSlot
 
 from langflow.api.v1.schemas.deployments import (
+    DeploymentCreateRequest,
     DeploymentProviderAccountGetResponse,
     DeploymentUpdateRequest,
     DeploymentUpdateResponse,
@@ -38,6 +45,7 @@ from .contracts import (
     FlowVersionPatch,
     UpdateSnapshotBindings,
 )
+from .helpers import build_project_scoped_flow_artifacts_from_flow_versions
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -88,6 +96,49 @@ class BaseDeploymentMapper:
 
     async def resolve_deployment_config(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
         return self._validate_slot(self.api_payloads.deployment_config, raw)
+
+    async def resolve_deployment_create(
+        self,
+        *,
+        user_id: UUID,
+        project_id: UUID,
+        db: AsyncSession,
+        payload: DeploymentCreateRequest,
+    ) -> AdapterDeploymentCreate:
+        snapshot_payloads: list[BaseFlowArtifact] | None = None
+        if payload.flow_version_ids:
+            flow_artifacts = await build_project_scoped_flow_artifacts_from_flow_versions(
+                reference_ids=payload.flow_version_ids,
+                user_id=user_id,
+                project_id=project_id,
+                db=db,
+            )
+            snapshot_payloads = [
+                artifact.model_copy(
+                    update={
+                        "provider_data": self.util_create_flow_artifact_provider_data(
+                            project_id=project_id,
+                            flow_version_id=flow_version_id,
+                        ).model_dump(exclude_none=True),
+                    }
+                )
+                for flow_version_id, artifact in flow_artifacts
+            ]
+        adapter_snapshot = SnapshotItems(raw_payloads=snapshot_payloads) if snapshot_payloads else None
+        adapter_config = (
+            ConfigItem(reference_id=payload.config.reference_id)
+            if payload.config is not None and payload.config.reference_id is not None
+            else ConfigItem(raw_payload=payload.config.raw_payload)
+            if payload.config is not None
+            else None
+        )
+        provider_data = self._validate_slot(self.api_payloads.deployment_create, payload.provider_data)
+        return AdapterDeploymentCreate(
+            spec=payload.spec,
+            snapshot=adapter_snapshot,
+            config=adapter_config,
+            provider_data=provider_data,
+        )
 
     async def resolve_deployment_update(
         self,
@@ -190,6 +241,10 @@ class BaseDeploymentMapper:
         """
         _ = project_id
         return CreateFlowArtifactProviderData(source_ref=str(flow_version_id))
+
+    def util_create_flow_version_ids(self, payload: DeploymentCreateRequest) -> list[UUID]:
+        """Resolve flow-version ids referenced by create payload."""
+        return list(payload.flow_version_ids or [])
 
     def util_create_snapshot_bindings(
         self,

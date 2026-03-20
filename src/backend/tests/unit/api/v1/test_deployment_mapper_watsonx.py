@@ -17,10 +17,11 @@ from langflow.api.v1.mappers.deployments.contracts import (
 )
 from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
 from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
+    WatsonxApiDeploymentCreatePayload,
     WatsonxApiDeploymentUpdatePayload,
     WatsonxApiDeploymentUpdateResultData,
 )
-from langflow.api.v1.schemas.deployments import DeploymentUpdateRequest
+from langflow.api.v1.schemas.deployments import DeploymentCreateRequest, DeploymentUpdateRequest
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
     WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
 )
@@ -47,8 +48,27 @@ class _FakeDb:
 def test_watsonx_mapper_is_registered() -> None:
     mapper = get_mapper(AdapterType.DEPLOYMENT, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
     assert isinstance(mapper, WatsonxOrchestrateDeploymentMapper)
+    assert mapper.api_payloads.deployment_create is not None
     assert mapper.api_payloads.deployment_update is not None
     assert mapper.api_payloads.deployment_update_result is not None
+
+
+def test_watsonx_api_payload_accepts_flow_version_create_bind_contract() -> None:
+    flow_version_id = uuid4()
+    payload = WatsonxApiDeploymentCreatePayload.model_validate(
+        {
+            "resource_name_prefix": "lf_abc_",
+            "connections": {"existing_app_ids": ["app-one"]},
+            "operations": [
+                {
+                    "op": "bind",
+                    "tool": {"flow_version_id": str(flow_version_id)},
+                    "app_ids": ["app-one"],
+                }
+            ],
+        }
+    )
+    assert payload.operations[0].op == "bind"
 
 
 def test_watsonx_api_payload_accepts_flow_version_bind_contract() -> None:
@@ -104,6 +124,85 @@ async def test_watsonx_mapper_resolve_update_passthrough_without_provider_data()
 
     assert resolved.spec is not None
     assert resolved.provider_data is None
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_translates_create_bind_into_raw_tool_payload() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    flow_version_id = uuid4()
+    flow_id = uuid4()
+    project_id = uuid4()
+    payload = DeploymentCreateRequest(
+        provider_id=uuid4(),
+        spec={"name": "create-deploy", "description": "", "type": "agent"},
+        provider_data={
+            "resource_name_prefix": "lf_test_",
+            "connections": {"existing_app_ids": ["app-one"]},
+            "operations": [
+                {
+                    "op": "bind",
+                    "tool": {"flow_version_id": str(flow_version_id)},
+                    "app_ids": ["app-one"],
+                }
+            ],
+        },
+    )
+    row = SimpleNamespace(
+        flow_version_id=flow_version_id,
+        flow_version_data={"nodes": [], "edges": []},
+        flow_id=flow_id,
+        flow_name="Flow A",
+        flow_description="desc",
+        flow_tags=["tag"],
+    )
+
+    resolved = await mapper.resolve_deployment_create(
+        user_id=uuid4(),
+        project_id=project_id,
+        db=_FakeDb([row]),
+        payload=payload,
+    )
+    provider_data = resolved.provider_data or {}
+
+    assert provider_data["resource_name_prefix"] == "lf_test_"
+    assert provider_data["tools"]["raw_payloads"][0]["name"] == "Flow A"
+    assert provider_data["tools"]["raw_payloads"][0]["provider_data"] == {
+        "project_id": str(project_id),
+        "source_ref": str(flow_version_id),
+    }
+    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow A"
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_rejects_top_level_flow_version_and_config_on_create() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    payload = DeploymentCreateRequest(
+        provider_id=uuid4(),
+        spec={"name": "create-deploy", "description": "", "type": "agent"},
+        flow_version_ids=[uuid4()],
+        provider_data={
+            "resource_name_prefix": "lf_test_",
+            "connections": {"existing_app_ids": ["app-one"]},
+            "operations": [
+                {
+                    "op": "bind",
+                    "tool": {"flow_version_id": str(uuid4())},
+                    "app_ids": ["app-one"],
+                }
+            ],
+        },
+    )
+
+    with pytest.raises(
+        HTTPException,
+        match="Watsonx create does not support top-level 'config' or 'flow_version_ids'",
+    ):
+        await mapper.resolve_deployment_create(
+            user_id=uuid4(),
+            project_id=uuid4(),
+            db=_FakeDb([]),
+            payload=payload,
+        )
 
 
 @pytest.mark.asyncio
@@ -247,7 +346,11 @@ def test_watsonx_mapper_shapes_update_response_from_result_schema() -> None:
     shaped = mapper.shape_deployment_update_result(result, deployment_row, description="updated")
 
     assert shaped.id == deployment_id
-    assert shaped.provider_data == {"tool_app_bindings": [{"tool_id": "tool-1", "app_ids": ["app-a"]}]}
+    assert shaped.provider_data == {
+        "created_snapshot_ids": ["snap-1"],
+        "added_snapshot_bindings": [],
+        "tool_app_bindings": [{"tool_id": "tool-1", "app_ids": ["app-a"]}],
+    }
 
 
 def test_watsonx_mapper_exposes_reconciliation_resolvers() -> None:

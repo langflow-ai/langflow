@@ -18,19 +18,13 @@ from lfx.services.adapters.deployment.exceptions import (
     InvalidDeploymentTypeError,
 )
 from lfx.services.adapters.deployment.schema import (
-    BaseFlowArtifact,
-    ConfigItem,
+    DeploymentCreateResult as AdapterDeploymentCreateResult,
+)
+from lfx.services.adapters.deployment.schema import (
     DeploymentListParams,
     DeploymentListTypesResult,
     DeploymentType,
     DeploymentUpdateResult,
-    SnapshotItems,
-)
-from lfx.services.adapters.deployment.schema import (
-    DeploymentCreate as AdapterDeploymentCreate,
-)
-from lfx.services.adapters.deployment.schema import (
-    DeploymentCreateResult as AdapterDeploymentCreateResult,
 )
 from lfx.services.deps import get_deployment_adapter
 from lfx.services.interfaces import DeploymentServiceProtocol
@@ -40,7 +34,6 @@ from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
 from langflow.api.v1.mappers.deployments import get_deployment_mapper
 from langflow.api.v1.mappers.deployments.base import BaseDeploymentMapper
 from langflow.api.v1.mappers.deployments.helpers import (
-    build_project_scoped_flow_artifacts_from_flow_versions,
     validate_project_scoped_flow_version_ids,
 )
 from langflow.api.v1.schemas.deployments import (
@@ -382,41 +375,6 @@ async def _resolve_project_id_for_deployment_create(
     return default_folder.id
 
 
-async def _build_flow_artifacts_from_flow_versions(
-    *,
-    deployment_mapper: BaseDeploymentMapper,
-    flow_version_ids: list[UUID | str],
-    user_id: UUID,
-    project_id: UUID,
-    db: DbSession,
-) -> list[tuple[UUID, BaseFlowArtifact]]:
-    flow_artifacts = await build_project_scoped_flow_artifacts_from_flow_versions(
-        reference_ids=flow_version_ids,
-        user_id=user_id,
-        project_id=project_id,
-        db=db,
-    )
-    artifacts: list[tuple[UUID, BaseFlowArtifact]] = []
-    for flow_version_id, artifact in flow_artifacts:
-        artifacts.append(
-            (
-                flow_version_id,
-                BaseFlowArtifact(
-                    id=artifact.id,
-                    name=artifact.name,
-                    description=artifact.description,
-                    data=artifact.data,
-                    tags=artifact.tags,
-                    provider_data=deployment_mapper.util_create_flow_artifact_provider_data(
-                        project_id=project_id,
-                        flow_version_id=flow_version_id,
-                    ).model_dump(exclude_none=True),
-                ),
-            )
-        )
-    return artifacts
-
-
 def _resolve_snapshot_map_for_create(
     *,
     deployment_mapper: BaseDeploymentMapper,
@@ -458,40 +416,6 @@ def _resolve_flow_version_patch_for_update(
 ) -> tuple[list[UUID], list[UUID]]:
     patch = deployment_mapper.util_flow_version_patch(payload)
     return patch.add_flow_version_ids, patch.remove_flow_version_ids
-
-
-def _to_adapter_create_config(payload: DeploymentCreateRequest) -> ConfigItem | None:
-    if payload.config is None:
-        return None
-    if payload.config.reference_id is not None:
-        return ConfigItem(reference_id=payload.config.reference_id)
-    return ConfigItem(raw_payload=payload.config.raw_payload)
-
-
-async def _build_adapter_deployment_create_payload(
-    *,
-    deployment_mapper: BaseDeploymentMapper,
-    payload: DeploymentCreateRequest,
-    project_id: UUID,
-    user_id: UUID,
-    db: DbSession,
-) -> AdapterDeploymentCreate:
-    flow_version_ids = payload.flow_version_ids
-    if flow_version_ids is None:
-        return AdapterDeploymentCreate(spec=payload.spec, snapshot=None, config=_to_adapter_create_config(payload))
-
-    artifacts = await _build_flow_artifacts_from_flow_versions(
-        deployment_mapper=deployment_mapper,
-        flow_version_ids=flow_version_ids,
-        user_id=user_id,
-        project_id=project_id,
-        db=db,
-    )
-    return AdapterDeploymentCreate(
-        spec=payload.spec,
-        snapshot=SnapshotItems(raw_payloads=[artifact for _, artifact in artifacts]),
-        config=_to_adapter_create_config(payload),
-    )
 
 
 async def _fetch_provider_resource_keys(
@@ -599,20 +523,16 @@ async def _list_deployments_synced(
 
 async def _attach_flow_versions(
     *,
-    payload: DeploymentCreateRequest,
+    flow_version_ids: list[UUID],
     user_id: UUID,
     deployment_row_id: UUID,
     snapshot_id_by_flow_version_id: dict[UUID, str] | None = None,
     db: DbSession,
 ) -> None:
-    if payload.flow_version_ids is None:
+    if not flow_version_ids:
         return
 
-    for ref in payload.flow_version_ids:
-        flow_version_id = _as_uuid(ref)
-        if flow_version_id is None:
-            msg = f"Invalid flow version id: {ref}"
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+    for flow_version_id in flow_version_ids:
         await create_deployment_attachment(
             db,
             user_id=user_id,
@@ -843,12 +763,11 @@ async def create_deployment(
     provider_key, deployment_adapter = _resolve_deployment_adapter_from_provider_account(provider_account)
     deployment_mapper = get_deployment_mapper(provider_key)
     project_id = await _resolve_project_id_for_deployment_create(payload=payload, user_id=current_user.id, db=session)
-    adapter_payload = await _build_adapter_deployment_create_payload(
-        deployment_mapper=deployment_mapper,
-        payload=payload,
-        project_id=project_id,
+    adapter_payload = await deployment_mapper.resolve_deployment_create(
         user_id=current_user.id,
+        project_id=project_id,
         db=session,
+        payload=payload,
     )
     with _handle_adapter_errors(), deployment_provider_scope(provider_id):
         result = await deployment_adapter.create(
@@ -876,7 +795,7 @@ async def create_deployment(
             )
 
         snapshot_id_by_flow_version_id: dict[UUID, str] = {}
-        flow_version_ids = payload.flow_version_ids if payload.flow_version_ids else None
+        flow_version_ids = deployment_mapper.util_create_flow_version_ids(payload)
         if flow_version_ids:
             snapshot_id_by_flow_version_id = _resolve_snapshot_map_for_create(
                 deployment_mapper=deployment_mapper,
@@ -884,7 +803,7 @@ async def create_deployment(
                 flow_version_ids=flow_version_ids,
             )
         await _attach_flow_versions(
-            payload=payload,
+            flow_version_ids=flow_version_ids,
             user_id=current_user.id,
             deployment_row_id=deployment_row.id,
             snapshot_id_by_flow_version_id=snapshot_id_by_flow_version_id,

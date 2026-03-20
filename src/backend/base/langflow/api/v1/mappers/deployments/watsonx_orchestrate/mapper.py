@@ -8,6 +8,9 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from lfx.services.adapters.deployment.schema import (
+    DeploymentCreate as AdapterDeploymentCreate,
+)
+from lfx.services.adapters.deployment.schema import (
     DeploymentCreateResult,
     DeploymentType,
     DeploymentUpdateResult,
@@ -39,10 +42,14 @@ from langflow.api.v1.mappers.deployments.contracts import (
     UpdateSnapshotBinding,
     UpdateSnapshotBindings,
 )
-from langflow.api.v1.mappers.deployments.helpers import build_flow_artifacts_from_flow_versions
+from langflow.api.v1.mappers.deployments.helpers import (
+    build_flow_artifacts_from_flow_versions,
+    build_project_scoped_flow_artifacts_from_flow_versions,
+)
 from langflow.api.v1.mappers.deployments.registry import register_mapper
 from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiBindOperation,
+    WatsonxApiDeploymentCreatePayload,
     WatsonxApiDeploymentUpdatePayload,
     WatsonxApiDeploymentUpdateResultData,
     WatsonxApiExecutionResultData,
@@ -52,6 +59,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiUnbindOperation,
 )
 from langflow.api.v1.schemas.deployments import (
+    DeploymentCreateRequest,
     DeploymentUpdateRequest,
     DeploymentUpdateResponse,
     ExecutionCreateResponse,
@@ -78,6 +86,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     """Deployment mapper for Watsonx Orchestrate provider."""
 
     api_payloads = DeploymentApiPayloads(
+        deployment_create=PayloadSlot(
+            adapter_model=WatsonxApiDeploymentCreatePayload,
+            policy=PayloadSlotPolicy.VALIDATE_ONLY,
+        ),
         deployment_update=PayloadSlot(
             adapter_model=WatsonxApiDeploymentUpdatePayload,
             policy=PayloadSlotPolicy.VALIDATE_ONLY,
@@ -121,6 +133,79 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             project_id=str(project_id),
         )
 
+    def util_create_flow_version_ids(self, payload: DeploymentCreateRequest) -> list[UUID]:
+        if payload.provider_data is None:
+            return []
+        api_provider_payload = self._parse_api_payload_slot(
+            slot=self.api_payloads.deployment_create,
+            slot_name="deployment_create",
+            raw=payload.provider_data,
+        )
+        return self._extract_bind_flow_version_ids(api_provider_payload.operations)
+
+    async def resolve_deployment_create(
+        self,
+        *,
+        user_id: UUID,
+        project_id: UUID,
+        db: AsyncSession,
+        payload: DeploymentCreateRequest,
+    ) -> AdapterDeploymentCreate:
+        if payload.config is not None or payload.flow_version_ids is not None:
+            msg = (
+                "Watsonx create does not support top-level 'config' or 'flow_version_ids'. "
+                "Use provider_data.operations instead."
+            )
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+        if payload.provider_data is None:
+            msg = "Watsonx create requires provider_data operations."
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
+
+        api_provider_payload: WatsonxApiDeploymentCreatePayload = self._parse_api_payload_slot(
+            slot=self.api_payloads.deployment_create,
+            slot_name="deployment_create",
+            raw=payload.provider_data,
+        )
+        flow_version_ids = self._extract_bind_flow_version_ids(api_provider_payload.operations)
+        flow_artifacts = await build_project_scoped_flow_artifacts_from_flow_versions(
+            db=db,
+            user_id=user_id,
+            project_id=project_id,
+            reference_ids=flow_version_ids,
+        )
+        raw_name_by_flow_version_id = {flow_version_id: artifact.name for flow_version_id, artifact in flow_artifacts}
+        provider_operations = self._build_provider_operations(
+            operations=api_provider_payload.operations,
+            raw_name_by_flow_version_id=raw_name_by_flow_version_id,
+        )
+
+        create_slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_create
+        if create_slot is None:
+            msg = "Watsonx deployment_create payload slot is not configured."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+        provider_payload: AdapterPayload = create_slot.apply(
+            self._build_provider_payload_body(
+                resource_name_prefix=api_provider_payload.resource_name_prefix,
+                raw_tool_payloads=[
+                    artifact.model_copy(
+                        update={
+                            "provider_data": self.util_create_flow_artifact_provider_data(
+                                project_id=project_id,
+                                flow_version_id=flow_version_id,
+                            ).model_dump(exclude_none=True),
+                        }
+                    ).model_dump(exclude_none=True)
+                    for flow_version_id, artifact in flow_artifacts
+                ],
+                connections=api_provider_payload.connections,
+                operations=provider_operations,
+            )
+        )
+        return AdapterDeploymentCreate(
+            spec=payload.spec,
+            provider_data=provider_payload,
+        )
+
     async def resolve_deployment_update(
         self,
         *,
@@ -129,24 +214,23 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         db: AsyncSession,
         payload: DeploymentUpdateRequest,
     ) -> AdapterDeploymentUpdate:
-        if payload.config is not None:
+        if (
+            payload.config is not None
+            or payload.add_flow_version_ids is not None
+            or payload.remove_flow_version_ids is not None
+        ):
             msg = "Watsonx update does not support top-level 'config'. Use provider_data.operations instead."
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
 
         if payload.provider_data is None:  # pure metadata update, e.g., name, description
             return AdapterDeploymentUpdate(spec=payload.spec, provider_data=None)
 
-        slot = self.api_payloads.deployment_update
-        if slot is None:
-            msg = "Watsonx deployment_update payload slot is not configured."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        api_provider_payload: WatsonxApiDeploymentUpdatePayload = slot.parse(payload.provider_data)
-        flow_version_ids = [
-            operation.tool.flow_version_id
-            for operation in api_provider_payload.operations
-            if isinstance(operation, WatsonxApiBindOperation) and operation.tool.flow_version_id is not None
-        ]
-        ordered_flow_version_ids = list(dict.fromkeys(flow_version_ids))
+        api_provider_payload: WatsonxApiDeploymentUpdatePayload = self._parse_api_payload_slot(
+            slot=self.api_payloads.deployment_update,
+            slot_name="deployment_update",
+            raw=payload.provider_data,
+        )
+        ordered_flow_version_ids = self._extract_bind_flow_version_ids(api_provider_payload.operations)
         flow_artifacts = await build_flow_artifacts_from_flow_versions(
             db=db,
             user_id=user_id,
@@ -170,7 +254,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             for flow_version_id, _version_number, project_id, artifact in flow_artifacts
         ]
 
-        provider_operations: list[AdapterPayload] = []
         existing_tool_flow_version_ids = [
             operation.tool.flow_version_id
             for operation in api_provider_payload.operations
@@ -182,59 +265,23 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             db=db,
             flow_version_ids=list(dict.fromkeys(existing_tool_flow_version_ids)),
         )
-        for operation in api_provider_payload.operations:
-            if isinstance(operation, WatsonxApiBindOperation):
-                flow_version_id = operation.tool.flow_version_id
-                if flow_version_id not in raw_name_by_flow_version_id:
-                    msg = f"bind.tool.flow_version_id not found: [{flow_version_id}]"
-                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
-                provider_operations.append(
-                    {
-                        "op": "bind",
-                        "tool": {"name_of_raw": raw_name_by_flow_version_id[flow_version_id]},
-                        "app_ids": operation.app_ids,
-                    }
-                )
-                continue
-            if isinstance(operation, WatsonxApiUnbindOperation):
-                flow_version_id = operation.tool.flow_version_id
-                provider_operations.append(
-                    {
-                        "op": "unbind",
-                        "tool_id": flow_version_snapshot_id_map[flow_version_id],
-                        "app_ids": operation.app_ids,
-                    }
-                )
-                continue
-            if isinstance(operation, WatsonxApiRemoveToolOperation):
-                flow_version_id = operation.tool.flow_version_id
-                provider_operations.append(
-                    {
-                        "op": "remove_tool",
-                        "tool_id": flow_version_snapshot_id_map[flow_version_id],
-                    }
-                )
+        provider_operations = self._build_provider_operations(
+            operations=api_provider_payload.operations,
+            raw_name_by_flow_version_id=raw_name_by_flow_version_id,
+            flow_version_snapshot_id_map=flow_version_snapshot_id_map,
+        )
 
         update_slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_update
         if update_slot is None:
             msg = "Watsonx deployment_update payload slot is not configured."
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
         provider_payload: AdapterPayload = update_slot.apply(
-            {
-                "resource_name_prefix": api_provider_payload.resource_name_prefix,
-                "tools": {
-                    "raw_payloads": [artifact.model_dump(exclude_none=True) for artifact in raw_payloads] or None,
-                },
-                "connections": {
-                    "existing_app_ids": api_provider_payload.connections.existing_app_ids,
-                    "raw_payloads": [
-                        raw_payload.model_dump(exclude_none=True)
-                        for raw_payload in (api_provider_payload.connections.raw_payloads or [])
-                    ]
-                    or None,
-                },
-                "operations": provider_operations,
-            }
+            self._build_provider_payload_body(
+                resource_name_prefix=api_provider_payload.resource_name_prefix,
+                raw_tool_payloads=[artifact.model_dump(exclude_none=True) for artifact in raw_payloads],
+                connections=api_provider_payload.connections,
+                operations=provider_operations,
+            )
         )
         return AdapterDeploymentUpdate(
             spec=payload.spec,
@@ -363,18 +410,12 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
         if payload.provider_data is None:
             return FlowVersionPatch()
-        slot = self.api_payloads.deployment_update
-        if slot is None:
-            msg = "Watsonx deployment_update payload slot is not configured."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        api_provider_payload: WatsonxApiDeploymentUpdatePayload = slot.parse(payload.provider_data)
-        add_ids = list(
-            dict.fromkeys(
-                operation.tool.flow_version_id
-                for operation in api_provider_payload.operations
-                if isinstance(operation, WatsonxApiBindOperation)
-            )
+        api_provider_payload: WatsonxApiDeploymentUpdatePayload = self._parse_api_payload_slot(
+            slot=self.api_payloads.deployment_update,
+            slot_name="deployment_update",
+            raw=payload.provider_data,
         )
+        add_ids = self._extract_bind_flow_version_ids(api_provider_payload.operations)
         remove_ids = list(
             dict.fromkeys(
                 operation.tool.flow_version_id
@@ -504,6 +545,115 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"{malformed_payload_detail} {detail}",
             ) from exc
+
+    def _parse_api_payload_slot(
+        self,
+        *,
+        slot: PayloadSlot | None,
+        slot_name: str,
+        raw: Any,
+    ) -> Any:
+        if slot is None:
+            msg = f"Watsonx {slot_name} payload slot is not configured."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+        return slot.parse(raw)
+
+    def _extract_bind_flow_version_ids(self, operations: list[Any]) -> list[UUID]:
+        return list(
+            dict.fromkeys(
+                operation.tool.flow_version_id
+                for operation in operations
+                if isinstance(operation, WatsonxApiBindOperation)
+            )
+        )
+
+    def _to_bind_provider_operation(self, *, raw_name: str, app_ids: list[str]) -> AdapterPayload:
+        return {
+            "op": "bind",
+            "tool": {"name_of_raw": raw_name},
+            "app_ids": app_ids,
+        }
+
+    def _to_unbind_provider_operation(self, *, tool_id: str, app_ids: list[str]) -> AdapterPayload:
+        return {
+            "op": "unbind",
+            "tool_id": tool_id,
+            "app_ids": app_ids,
+        }
+
+    def _to_remove_tool_provider_operation(self, *, tool_id: str) -> AdapterPayload:
+        return {
+            "op": "remove_tool",
+            "tool_id": tool_id,
+        }
+
+    def _build_provider_operations(
+        self,
+        *,
+        operations: list[Any],
+        raw_name_by_flow_version_id: dict[UUID, str],
+        flow_version_snapshot_id_map: dict[UUID, str] | None = None,
+    ) -> list[AdapterPayload]:
+        provider_operations: list[AdapterPayload] = []
+        for operation in operations:
+            if isinstance(operation, WatsonxApiBindOperation):
+                flow_version_id = operation.tool.flow_version_id
+                if flow_version_id not in raw_name_by_flow_version_id:
+                    msg = f"bind.tool.flow_version_id not found: [{flow_version_id}]"
+                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
+                provider_operations.append(
+                    self._to_bind_provider_operation(
+                        raw_name=raw_name_by_flow_version_id[flow_version_id],
+                        app_ids=operation.app_ids,
+                    )
+                )
+                continue
+            if isinstance(operation, WatsonxApiUnbindOperation):
+                flow_version_id = operation.tool.flow_version_id
+                if flow_version_snapshot_id_map is None:
+                    msg = "Snapshot id map is required for unbind operations."
+                    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+                provider_operations.append(
+                    self._to_unbind_provider_operation(
+                        tool_id=flow_version_snapshot_id_map[flow_version_id],
+                        app_ids=operation.app_ids,
+                    )
+                )
+                continue
+            if isinstance(operation, WatsonxApiRemoveToolOperation):
+                flow_version_id = operation.tool.flow_version_id
+                if flow_version_snapshot_id_map is None:
+                    msg = "Snapshot id map is required for remove_tool operations."
+                    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+                provider_operations.append(
+                    self._to_remove_tool_provider_operation(tool_id=flow_version_snapshot_id_map[flow_version_id])
+                )
+        return provider_operations
+
+    def _build_provider_payload_body(
+        self,
+        *,
+        resource_name_prefix: str | None,
+        raw_tool_payloads: list[dict[str, Any]],
+        connections: Any,
+        operations: list[AdapterPayload],
+    ) -> dict[str, Any]:
+        return {
+            "resource_name_prefix": resource_name_prefix,
+            "tools": {
+                "raw_payloads": raw_tool_payloads or None,
+            },
+            "connections": {
+                "existing_app_ids": connections.existing_app_ids,
+                "raw_payloads": self._dump_raw_connection_payloads(connections.raw_payloads),
+            },
+            "operations": operations,
+        }
+
+    def _dump_raw_connection_payloads(self, raw_payloads: list[Any] | None) -> list[dict[str, Any]] | None:
+        if not raw_payloads:
+            return None
+        return [raw_payload.model_dump(exclude_none=True) for raw_payload in raw_payloads]
 
     async def _resolve_existing_tool_snapshot_ids(
         self,

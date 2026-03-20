@@ -1,4 +1,4 @@
-"""Watsonx deployment update payload models at API boundary."""
+"""Watsonx deployment payload models at API boundary."""
 
 from __future__ import annotations
 
@@ -78,17 +78,15 @@ class WatsonxApiUpdateConnections(BaseModel):
     raw_payloads: list[WatsonxApiUpdateConnectionRawPayload] | None = None
 
 
-class WatsonxApiDeploymentUpdatePayload(BaseModel):
-    """Watsonx provider_data API contract for deployment update operations."""
+class WatsonxApiDeploymentPayloadBase(BaseModel):
+    """Shared API payload fields/validation for Watsonx create and update operations."""
 
     model_config = {"extra": "forbid"}
 
-    resource_name_prefix: str | None = None
     connections: WatsonxApiUpdateConnections = Field(default_factory=WatsonxApiUpdateConnections)
-    operations: list[WatsonxApiUpdateOperation] = Field(min_length=1)
 
     @model_validator(mode="after")
-    def validate_operation_references(self) -> WatsonxApiDeploymentUpdatePayload:
+    def validate_operation_references(self) -> WatsonxApiDeploymentPayloadBase:
         existing_app_ids = set(self.connections.existing_app_ids or [])
         raw_app_ids = {raw.app_id for raw in (self.connections.raw_payloads or [])}
         collisions = existing_app_ids.intersection(raw_app_ids)
@@ -102,7 +100,7 @@ class WatsonxApiDeploymentUpdatePayload(BaseModel):
         valid_app_ids = existing_app_ids.union(raw_app_ids)
         referenced_app_ids: set[str] = set()
 
-        for operation in self.operations:
+        for operation in getattr(self, "operations", []):
             if isinstance(operation, (WatsonxApiBindOperation, WatsonxApiUnbindOperation)):
                 for app_id in operation.app_ids:
                     referenced_app_ids.add(app_id)
@@ -134,6 +132,20 @@ class WatsonxApiDeploymentUpdatePayload(BaseModel):
             )
             raise ValueError(msg)
         return self
+
+
+class WatsonxApiDeploymentUpdatePayload(WatsonxApiDeploymentPayloadBase):
+    """Watsonx provider_data API contract for deployment update operations."""
+
+    resource_name_prefix: str | None = None
+    operations: list[WatsonxApiUpdateOperation] = Field(min_length=1)
+
+
+class WatsonxApiDeploymentCreatePayload(WatsonxApiDeploymentPayloadBase):
+    """Watsonx provider_data API contract for deployment create operations."""
+
+    resource_name_prefix: str = Field(min_length=1)
+    operations: list[WatsonxApiBindOperation] = Field(min_length=1)
 
 
 class WatsonxApiToolAppBinding(BaseModel):

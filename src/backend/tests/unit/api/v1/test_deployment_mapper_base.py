@@ -17,7 +17,7 @@ from langflow.api.v1.mappers.deployments.contracts import (
     UpdateSnapshotBindings,
 )
 from langflow.api.v1.mappers.deployments.registry import DeploymentMapperRegistry
-from langflow.api.v1.schemas.deployments import DeploymentUpdateRequest, ExecutionCreateRequest
+from langflow.api.v1.schemas.deployments import DeploymentCreateRequest, DeploymentUpdateRequest, ExecutionCreateRequest
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadSchemas
 from lfx.services.adapters.deployment.schema import (
     DeploymentCreateResult,
@@ -43,6 +43,10 @@ class _ApiUpdate(BaseModel):
     patch: str
 
 
+class _ApiCreate(BaseModel):
+    resource_name_prefix: str
+
+
 class _ApiExecutionInput(BaseModel):
     invocation_id: str
 
@@ -61,6 +65,7 @@ class _ApiSnapshotListParams(BaseModel):
 
 class _TypedMapper(BaseDeploymentMapper):
     api_payloads = DeploymentApiPayloads(
+        deployment_create=PayloadSlot(_ApiCreate, policy=PayloadSlotPolicy.VALIDATE_ONLY),
         deployment_spec=PayloadSlot(_ApiSpec, policy=PayloadSlotPolicy.VALIDATE_ONLY),
         deployment_config=PayloadSlot(_ApiConfig, policy=PayloadSlotPolicy.VALIDATE_ONLY),
         deployment_update=PayloadSlot(_ApiUpdate, policy=PayloadSlotPolicy.VALIDATE_ONLY),
@@ -164,6 +169,64 @@ async def test_base_mapper_resolvers_passthrough_none_payload_when_slot_configur
     resolver = getattr(mapper, method_name)
     resolved = await resolver(None, db=None)  # type: ignore[arg-type]
     assert resolved is None
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_deployment_create_passthrough_without_flow_versions() -> None:
+    mapper = BaseDeploymentMapper()
+    payload = DeploymentCreateRequest(
+        provider_id=uuid4(),
+        spec={"name": "create-deploy", "description": "", "type": "agent"},
+        provider_data={"resource_name_prefix": "lf_test_"},
+    )
+
+    resolved = await mapper.resolve_deployment_create(
+        user_id=uuid4(),
+        project_id=uuid4(),
+        db=None,  # type: ignore[arg-type]
+        payload=payload,
+    )
+
+    assert resolved.snapshot is None
+    assert resolved.config is None
+    assert resolved.provider_data == {"resource_name_prefix": "lf_test_"}
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_deployment_create_validates_provider_data_when_slot_configured() -> None:
+    mapper = _TypedMapper()
+    payload = DeploymentCreateRequest(
+        provider_id=uuid4(),
+        spec={"name": "create-deploy", "description": "", "type": "agent"},
+        provider_data={"resource_name_prefix": "lf_test_"},
+    )
+
+    resolved = await mapper.resolve_deployment_create(
+        user_id=uuid4(),
+        project_id=uuid4(),
+        db=None,  # type: ignore[arg-type]
+        payload=payload,
+    )
+
+    assert resolved.provider_data == {"resource_name_prefix": "lf_test_"}
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_deployment_create_rejects_invalid_provider_data_when_slot_configured() -> None:
+    mapper = _TypedMapper()
+    payload = DeploymentCreateRequest(
+        provider_id=uuid4(),
+        spec={"name": "create-deploy", "description": "", "type": "agent"},
+        provider_data={"invalid": "value"},
+    )
+
+    with pytest.raises(AdapterPayloadValidationError, match="Invalid payload"):
+        await mapper.resolve_deployment_create(
+            user_id=uuid4(),
+            project_id=uuid4(),
+            db=None,  # type: ignore[arg-type]
+            payload=payload,
+        )
 
 
 @pytest.mark.asyncio

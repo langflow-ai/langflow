@@ -482,6 +482,10 @@ class DeploymentCreateRequest(BaseModel):
         description="Flow version ids to attach to the deployment.",
     )
     config: DeploymentConfigCreate | None = Field(default=None, description="Deployment configuration.")
+    provider_data: dict[str, Any] | None = Field(
+        default=None,
+        description="Provider-owned opaque create payload.",
+    )
 
     @field_validator("flow_version_ids")
     @classmethod

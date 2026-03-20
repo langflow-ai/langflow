@@ -209,6 +209,18 @@ class TestSharedKernelProviderPayloadCompatibility:
         )
         assert request.spec.provider_spec == {"region": "us-east-1", "size": "small"}
 
+    def test_create_request_accepts_provider_data_payload(self):
+        request = DeploymentCreateRequest(
+            provider_id=uuid4(),
+            spec={
+                "name": "deployment",
+                "description": "",
+                "type": "agent",
+            },
+            provider_data={"resource_name_prefix": "lf_test_", "operations": []},
+        )
+        assert request.provider_data == {"resource_name_prefix": "lf_test_", "operations": []}
+
     def test_config_create_accepts_provider_config_dict_through_strict_wrapper(self):
         payload = DeploymentConfigCreate(
             raw_payload={
