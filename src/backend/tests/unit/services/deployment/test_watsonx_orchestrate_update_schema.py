@@ -15,6 +15,7 @@ except ModuleNotFoundError:
     )
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
+    WatsonxDeploymentCreatePayload,
     WatsonxDeploymentCreateResultData,
     WatsonxDeploymentUpdatePayload,
     WatsonxDeploymentUpdateResultData,
@@ -48,6 +49,8 @@ def _raw_connection(app_id: str) -> dict:
 def test_payload_schema_slot_registered_for_deployment_update() -> None:
     slot = WatsonxOrchestrateDeploymentService.payload_schemas
     assert slot is not None
+    assert slot.deployment_create is not None
+    assert slot.deployment_create.adapter_model is WatsonxDeploymentCreatePayload
     assert slot.flow_artifact is not None
     assert slot.flow_artifact.adapter_model is WatsonxFlowArtifactProviderData
     assert slot.deployment_create_result is not None
@@ -60,6 +63,90 @@ def test_payload_schema_slot_registered_for_deployment_update() -> None:
     assert slot.execution_create_result.adapter_model is WatsonxExecutionResultData
     assert slot.execution_status_result is not None
     assert slot.execution_status_result.adapter_model is WatsonxExecutionResultData
+
+
+def test_create_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> None:
+    slot = WatsonxOrchestrateDeploymentService.payload_schemas
+    assert slot is not None
+    assert slot.deployment_create is not None
+
+    payload = {
+        "resource_name_prefix": "lf_pref_",
+        "tools": {
+            "existing_ids": ["tool-existing-1"],
+            "raw_payloads": [_raw_tool("tool-new-1", 11)],
+        },
+        "connections": {
+            "existing_app_ids": ["app-existing-1"],
+            "raw_payloads": [_raw_connection("app-new-1")],
+        },
+        "operations": [
+            {
+                "op": "bind",
+                "tool": {"name_of_raw": "tool-new-1"},
+                "app_ids": ["app-new-1"],
+            },
+            {
+                "op": "bind",
+                "tool": {"reference_id": "tool-existing-1"},
+                "app_ids": ["app-existing-1"],
+            },
+        ],
+    }
+
+    applied = slot.deployment_create.apply(payload)
+    assert applied["resource_name_prefix"] == "lf_pref_"
+    assert applied["operations"][0]["tool"]["name_of_raw"] == "tool-new-1"
+
+
+def test_create_schema_dedupes_duplicate_raw_tool_names() -> None:
+    slot = WatsonxOrchestrateDeploymentService.payload_schemas
+    assert slot is not None
+    assert slot.deployment_create is not None
+
+    payload = {
+        "resource_name_prefix": "lf_pref_",
+        "tools": {
+            "raw_payloads": [
+                _raw_tool("tool-dup", 101),
+                _raw_tool("tool-dup", 102),
+            ],
+        },
+        "connections": {"existing_app_ids": ["app-existing-1"]},
+        "operations": [
+            {
+                "op": "bind",
+                "tool": {"name_of_raw": "tool-dup"},
+                "app_ids": ["app-existing-1"],
+            }
+        ],
+    }
+
+    applied = slot.deployment_create.apply(payload)
+    raw_payloads = applied["tools"]["raw_payloads"]
+    assert len(raw_payloads) == 1
+    assert raw_payloads[0]["name"] == "tool-dup"
+    # First payload wins after dedupe.
+    assert raw_payloads[0]["provider_data"]["source_ref"] == "fv-101"
+
+
+def test_create_schema_rejects_blank_resource_name_prefix() -> None:
+    with pytest.raises(AdapterPayloadValidationError) as exc:
+        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_create.apply(  # type: ignore[union-attr]
+            {
+                "resource_name_prefix": "   ",
+                "operations": [
+                    {
+                        "op": "bind",
+                        "tool": {"reference_id": "tool-existing-1"},
+                        "app_ids": ["app-existing-1"],
+                    }
+                ],
+                "tools": {"existing_ids": ["tool-existing-1"]},
+                "connections": {"existing_app_ids": ["app-existing-1"]},
+            }
+        )
+    assert "String should have at least 1 character" in str(exc.value.error)
 
 
 def test_update_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> None:

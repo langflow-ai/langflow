@@ -19,7 +19,10 @@ from lfx.services.adapters.deployment.exceptions import InvalidContentError, Inv
 from lfx.utils.flow_requirements import generate_requirements_from_flow
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import retry_create
-from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import WatsonxCreateSnapshotBinding
+from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
+    WatsonxCreateSnapshotBinding,
+    WatsonxFlowArtifactProviderData,
+)
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     dedupe_list,
     normalize_wxo_name,
@@ -209,7 +212,7 @@ def upload_tool_artifact_bytes(
 
 def create_wxo_flow_tool(
     *,
-    flow_payload: BaseFlowArtifact,
+    flow_payload: BaseFlowArtifact[WatsonxFlowArtifactProviderData],
     connections: dict[str, str],
     tool_name_prefix: str,
 ) -> tuple[dict[str, Any], bytes]:
@@ -233,8 +236,11 @@ def create_wxo_flow_tool(
     """
     flow_definition = flow_payload.model_dump()
 
-    flow_provider_data = _resolve_flow_provider_data(flow_payload)
-    project_id = str(flow_provider_data.get("project_id")).strip()
+    flow_provider_data = flow_payload.provider_data
+    if not isinstance(flow_provider_data, WatsonxFlowArtifactProviderData):
+        msg = "Flow payload provider_data must be a WatsonxFlowArtifactProviderData model instance."
+        raise InvalidContentError(message=msg)
+    project_id = str(flow_provider_data.project_id).strip()
 
     flow_definition.update(
         {
@@ -297,7 +303,7 @@ def create_langflow_tool(
 async def create_and_upload_wxo_flow_tools(
     *,
     clients: WxOClient,
-    flow_payloads: list[BaseFlowArtifact],
+    flow_payloads: list[BaseFlowArtifact[WatsonxFlowArtifactProviderData]],
     connections: dict[str, str],
     tool_name_prefix: str,
 ) -> list[str]:
@@ -400,7 +406,7 @@ def build_snapshot_tool_names(
 async def process_raw_flows_with_app_id(
     clients: WxOClient,
     app_id: str,
-    flows: list[BaseFlowArtifact],
+    flows: list[BaseFlowArtifact[WatsonxFlowArtifactProviderData]],
     tool_name_prefix: str,
 ) -> list[WatsonxCreateSnapshotBinding]:
     """Create langflow tools in wxO and connect them to the given app_id."""
@@ -432,25 +438,16 @@ async def process_raw_flows_with_app_id(
     ]
 
 
-def _resolve_flow_source_ref(flow_payload: BaseFlowArtifact) -> str:
-    provider_data = _resolve_flow_provider_data(flow_payload)
-    source_ref = str(provider_data.get("source_ref") or "").strip()
+def _resolve_flow_source_ref(flow_payload: BaseFlowArtifact[WatsonxFlowArtifactProviderData]) -> str:
+    provider_data = flow_payload.provider_data
+    if not isinstance(provider_data, WatsonxFlowArtifactProviderData):
+        msg = "Flow payload provider_data must be a WatsonxFlowArtifactProviderData model instance."
+        raise InvalidContentError(message=msg)
+    source_ref = str(provider_data.source_ref).strip()
     if source_ref:
         return source_ref
     msg = "Flow payload must include provider_data.source_ref for snapshot correlation."
     raise InvalidContentError(message=msg)
-
-
-def _resolve_flow_provider_data(flow_payload: BaseFlowArtifact) -> dict[str, Any]:
-    provider_data = flow_payload.provider_data
-    if not isinstance(provider_data, dict):
-        msg = "Flow payload must include provider_data with a non-empty project_id for Watsonx deployment."
-        raise InvalidContentError(message=msg)
-    project_id = str(provider_data.get("project_id") or "").strip()
-    if not project_id:
-        msg = "Flow payload must include provider_data with a non-empty project_id for Watsonx deployment."
-        raise InvalidContentError(message=msg)
-    return provider_data
 
 
 # TODO(WXO): find a way to make this fallback not hard-coded.

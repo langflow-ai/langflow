@@ -8,22 +8,25 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from fastapi import HTTPException, status
-from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 from lfx.services.adapters.deployment.exceptions import (
-    DeploymentConflictError,
     InvalidContentError,
     InvalidDeploymentOperationError,
 )
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import ErrorPrefix
-from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import create_config, validate_connection
+from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import (
-    delete_config_if_exists,
     retry_create,
     retry_rollback,
     retry_update,
     rollback_update_resources,
+)
+from langflow.services.adapters.deployment.watsonx_orchestrate.core.shared import (
+    OrderedUniqueStrs,
+    RawConnectionCreatePlan,
+    RawToolCreatePlan,
+    create_connection_with_conflict_mapping,
+    rollback_created_app_ids,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
     FlowToolBindingSpec,
@@ -34,10 +37,8 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxBindOperation,
-    WatsonxConnectionRawPayload,
     WatsonxCreateSnapshotBinding,
     WatsonxDeploymentUpdatePayload,
-    WatsonxFlowArtifactProviderData,
     WatsonxProviderUpdateApplyResult,
     WatsonxRemoveToolOperation,
     WatsonxUnbindOperation,
@@ -45,16 +46,12 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     dedupe_list,
     extract_agent_tool_ids,
-    extract_error_detail,
     validate_wxo_name,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
-
     from lfx.services.adapters.deployment.schema import (
         BaseDeploymentDataUpdate,
-        BaseFlowArtifact,
         DeploymentUpdate,
         IdLike,
     )
@@ -63,44 +60,6 @@ if TYPE_CHECKING:
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 
 logger = logging.getLogger(__name__)
-
-
-class OrderedUniqueStrs:
-    """Ordered, de-duplicating string collection used for deterministic update plans.
-
-    We intentionally avoid a plain list to avoid repeated O(n) membership checks.
-    Using a dictionary keeps membership/update checks O(1) while preserving insertion order.
-
-    Deterministic order is primarily for rollback correctness
-    Stable ordering ensures we undo the exact resources we created
-    in the correct (reverse) sequence.
-    """
-
-    def __init__(self, items: dict[str, None] | None = None) -> None:
-        self._items: dict[str, None] = items or {}
-
-    @classmethod
-    def from_values(cls, values: list[str]) -> OrderedUniqueStrs:
-        ordered = cls()
-        ordered.extend(values)
-        return ordered
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self._items)
-
-    def to_list(self) -> list[str]:
-        # Snapshot keys only at list-boundary call sites.
-        return list(self._items)
-
-    def add(self, value: str) -> None:
-        self._items.setdefault(value, None)
-
-    def extend(self, values: list[str]) -> None:
-        for value in values:
-            self.add(value)
-
-    def discard(self, value: str) -> None:
-        self._items.pop(value, None)
 
 
 class ToolConnectionOps:
@@ -120,20 +79,6 @@ def _get_or_create_tool_connection_ops(
     tool_id: str,
 ) -> ToolConnectionOps:
     return deltas.setdefault(tool_id, ToolConnectionOps())
-
-
-@dataclass(slots=True)
-class RawConnectionCreatePlan:
-    operation_app_id: str
-    provider_app_id: str
-    payload: WatsonxConnectionRawPayload
-
-
-@dataclass(slots=True)
-class RawToolCreatePlan:
-    raw_name: str
-    payload: BaseFlowArtifact[WatsonxFlowArtifactProviderData]
-    app_ids: list[str]
 
 
 @dataclass(slots=True)
@@ -225,49 +170,12 @@ def build_provider_update_plan(
     )
 
 
-async def _create_update_connection_with_conflict_mapping(
-    *,
-    clients: WxOClient,
-    app_id: str,
-    payload: WatsonxConnectionRawPayload,
-    user_id: IdLike,
-    db: AsyncSession,
-) -> str:
-    from lfx.services.adapters.deployment.schema import DeploymentConfig
-
-    config_payload = DeploymentConfig(
-        name=app_id,
-        description=None,
-        environment_variables=payload.environment_variables,
-        provider_config=payload.provider_config,
-    )
-    try:
-        return await retry_create(
-            create_config,
-            clients=clients,
-            config=config_payload,
-            user_id=user_id,
-            db=db,
-        )
-    except (ClientAPIException, HTTPException) as exc:
-        if isinstance(exc, ClientAPIException):
-            status_code = exc.response.status_code
-            error_detail = str(extract_error_detail(exc.response.text))
-        else:
-            status_code = exc.status_code
-            error_detail = str(extract_error_detail(str(exc.detail)))
-        is_conflict = status_code == status.HTTP_409_CONFLICT or "already exists" in error_detail.lower()
-        if is_conflict:
-            msg = f"{ErrorPrefix.UPDATE.value} error details: {error_detail}"
-            raise DeploymentConflictError(message=msg) from exc
-        raise
-
-
 async def _update_existing_tool_connection_deltas(
     *,
     clients: WxOClient,
     existing_tool_deltas: dict[str, ToolConnectionOps],
     resolved_connections: dict[str, str],
+    operation_to_provider_app_id: dict[str, str],
     original_tools: dict[str, dict[str, Any]],
 ) -> None:
     if not existing_tool_deltas:
@@ -291,13 +199,18 @@ async def _update_existing_tool_connection_deltas(
         connections = ensure_langflow_connections_binding(writable_tool)
 
         for app_id in delta.unbind:
-            connections.pop(app_id, None)
+            provider_app_id = operation_to_provider_app_id.get(app_id, app_id)
+            connections.pop(provider_app_id, None)
         for app_id in delta.bind:
-            connection_id = resolved_connections.get(app_id)
+            provider_app_id = operation_to_provider_app_id.get(app_id)
+            if not provider_app_id:
+                msg = f"No provider app id available for operation app_id '{app_id}'."
+                raise InvalidContentError(message=msg)
+            connection_id = resolved_connections.get(provider_app_id)
             if not connection_id:
                 msg = f"No resolved connection id available for app_id '{app_id}'."
                 raise InvalidContentError(message=msg)
-            connections[app_id] = connection_id
+            connections[provider_app_id] = connection_id
         tool_updates.append((tool_id, writable_tool))
 
     await asyncio.gather(
@@ -306,18 +219,6 @@ async def _update_existing_tool_connection_deltas(
             for tool_id, writable_tool in tool_updates
         )
     )
-
-
-async def _rollback_created_app_ids(
-    *,
-    clients: WxOClient,
-    created_app_ids: list[str],
-) -> None:
-    for app_id in reversed(created_app_ids):
-        try:
-            await retry_rollback(delete_config_if_exists, clients, app_id=app_id)
-        except Exception:
-            logger.exception("Rollback failed for created app_id=%s — resource may be orphaned", app_id)
 
 
 def _build_agent_rollback_payload(*, agent: dict[str, Any], final_update_payload: dict[str, Any]) -> dict[str, Any]:
@@ -369,6 +270,7 @@ async def apply_provider_update_plan_with_rollback(
     # - final_update_payload: outbound agent patch payload (spec + tools).
     # - rollback_agent_payload: best-effort restore payload for agent update rollback.
     resolved_connections: dict[str, str] = {}
+    operation_to_provider_app_id: dict[str, str] = {app_id: app_id for app_id in plan.existing_app_ids}
     added_snapshot_ids: list[str] = []
     added_snapshot_bindings: list[WatsonxCreateSnapshotBinding] = []
     final_update_payload = dict(update_payload)
@@ -386,19 +288,44 @@ async def apply_provider_update_plan_with_rollback(
                 resolved_connections[app_id] = connection.connection_id
 
         if plan.raw_connections_to_create:
-            created_connections = await asyncio.gather(
+            created_connections_results = await asyncio.gather(
                 *(
-                    _create_update_connection_with_conflict_mapping(
+                    create_connection_with_conflict_mapping(
                         clients=clients,
                         app_id=create_plan.provider_app_id,
                         payload=create_plan.payload,
                         user_id=user_id,
                         db=db,
+                        error_prefix=ErrorPrefix.UPDATE.value,
                     )
                     for create_plan in plan.raw_connections_to_create
-                )
+                ),
+                return_exceptions=True,
             )
-            created_app_ids.extend(created_connections)
+            create_connection_errors: list[Exception] = []
+            created_app_ids_journal: list[str] = []
+            for result in created_connections_results:
+                if isinstance(result, BaseException):
+                    if isinstance(result, Exception):
+                        create_connection_errors.append(result)
+                    else:
+                        create_connection_errors.append(
+                            RuntimeError(
+                                f"Connection create failed with non-standard exception: {type(result).__name__}"
+                            )
+                        )
+                    continue
+                created_app_ids_journal.append(result)
+            created_app_ids.extend(dedupe_list(created_app_ids_journal))
+            if create_connection_errors:
+                for i, err in enumerate(create_connection_errors):
+                    logger.error(
+                        "Connection create batch error [%d/%d]: %s",
+                        i + 1,
+                        len(create_connection_errors),
+                        err,
+                    )
+                raise create_connection_errors[0]
             validated_created_connections = await asyncio.gather(
                 *(
                     retry_create(
@@ -410,18 +337,33 @@ async def apply_provider_update_plan_with_rollback(
                 )
             )
             for create_plan, connection in zip(
-                plan.raw_connections_to_create, validated_created_connections, strict=True
+                plan.raw_connections_to_create,
+                validated_created_connections,
+                strict=True,
             ):
-                resolved_connections[create_plan.operation_app_id] = connection.connection_id
+                operation_to_provider_app_id[create_plan.operation_app_id] = create_plan.provider_app_id
+                resolved_connections[create_plan.provider_app_id] = connection.connection_id
 
         if plan.raw_tools_to_create:
-            tool_bindings = [
-                FlowToolBindingSpec(
-                    flow_payload=raw_plan.payload,
-                    connections={app_id: resolved_connections[app_id] for app_id in raw_plan.app_ids},
+            tool_bindings = []
+            for raw_plan in plan.raw_tools_to_create:
+                binding_connections: dict[str, str] = {}
+                for operation_app_id in raw_plan.app_ids:
+                    provider_app_id = operation_to_provider_app_id.get(operation_app_id)
+                    if not provider_app_id:
+                        msg = f"No provider app id available for operation app_id '{operation_app_id}'."
+                        raise InvalidContentError(message=msg)
+                    connection_id = resolved_connections.get(provider_app_id)
+                    if not connection_id:
+                        msg = f"No resolved connection id available for app_id '{operation_app_id}'."
+                        raise InvalidContentError(message=msg)
+                    binding_connections[provider_app_id] = connection_id
+                tool_bindings.append(
+                    FlowToolBindingSpec(
+                        flow_payload=raw_plan.payload,
+                        connections=binding_connections,
+                    )
                 )
-                for raw_plan in plan.raw_tools_to_create
-            ]
             try:
                 raw_create_results = await create_and_upload_wxo_flow_tools_with_bindings(
                     clients=clients,
@@ -455,6 +397,7 @@ async def apply_provider_update_plan_with_rollback(
                 clients=clients,
                 existing_tool_deltas=plan.existing_tool_deltas,
                 resolved_connections=resolved_connections,
+                operation_to_provider_app_id=operation_to_provider_app_id,
                 original_tools=original_tools,
             )
 
@@ -479,7 +422,7 @@ async def apply_provider_update_plan_with_rollback(
             created_app_id=None,
             original_tools=original_tools,
         )
-        await _rollback_created_app_ids(
+        await rollback_created_app_ids(
             clients=clients,
             created_app_ids=created_app_ids,
         )

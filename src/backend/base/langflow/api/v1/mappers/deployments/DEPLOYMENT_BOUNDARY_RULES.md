@@ -261,7 +261,7 @@ These must be implemented as mapper overrides, not route conditionals.
 
 ### 6.2 Provider-specific helper functions in adapters should be modularized
 
-When adapter service classes become heavy, move private create/update helpers into focused helper modules (for example `create_helpers.py`) to keep service orchestration lean and readable.
+When adapter service classes become heavy, move private create/update helpers into focused helper modules (for example `core/create.py`) to keep service orchestration lean and readable.
 
 ### 6.3 Public schemas must live in schema/payload modules, not random internals
 

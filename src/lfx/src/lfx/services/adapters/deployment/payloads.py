@@ -24,6 +24,9 @@ T_DeploymentConfigModel = TypeVar("T_DeploymentConfigModel", bound=BaseModel, de
 T_DeploymentUpdate = TypeVar("T_DeploymentUpdate", default=AdapterPayload)
 T_DeploymentUpdateModel = TypeVar("T_DeploymentUpdateModel", bound=BaseModel, default=BaseModel)
 
+T_DeploymentCreate = TypeVar("T_DeploymentCreate", default=AdapterPayload)
+T_DeploymentCreateModel = TypeVar("T_DeploymentCreateModel", bound=BaseModel, default=BaseModel)
+
 T_ExecutionInput = TypeVar("T_ExecutionInput", default=AdapterPayload)
 T_ExecutionInputModel = TypeVar("T_ExecutionInputModel", bound=BaseModel, default=BaseModel)
 
@@ -96,6 +99,7 @@ class DeploymentPayloadFields(ProviderPayloadSchemas):
 
     # Inbound (request -> adapter)
     deployment_spec: PayloadSlot[T_DeploymentSpecModel] | None = None
+    deployment_create: PayloadSlot[T_DeploymentCreateModel] | None = None
     deployment_config: PayloadSlot[T_DeploymentConfigModel] | None = None
     deployment_update: PayloadSlot[T_DeploymentUpdateModel] | None = None
     execution_input: PayloadSlot[T_ExecutionInputModel] | None = None

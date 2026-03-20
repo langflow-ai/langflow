@@ -52,66 +52,50 @@ from lfx.services.adapters.payload import AdapterPayloadMissingError, AdapterPay
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_provider_clients
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
-    PROVIDER_SPEC_RESOURCE_NAME_PREFIX_KEY,
     SUPPORTED_ADAPTER_DEPLOYMENT_TYPES,
     ErrorPrefix,
 )
-from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import (
-    process_config,
-    resolve_create_app_id,
-    validate_config_create_input,
+from langflow.services.adapters.deployment.watsonx_orchestrate.core.create import (
+    apply_provider_create_plan_with_rollback,
+    build_provider_create_plan,
+    validate_provider_create_request_sections,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import (
     create_agent_run,
     get_agent_run,
 )
-from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import (
-    retry_create,
-    rollback_created_resources,
-)
+from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import retry_create
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.status import (
     derive_agent_environment,
     get_deployment_detail_metadata,
     get_deployment_metadata,
 )
-from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
-    build_snapshot_tool_names,
-    process_raw_flows_with_app_id,
-)
-from langflow.services.adapters.deployment.watsonx_orchestrate.create_helpers import (
-    build_create_provider_result,
-    validate_create_flow_provider_data,
-)
-from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
-    PAYLOAD_SCHEMAS,
-    WatsonxCreateSnapshotBinding,
-    WatsonxDeploymentUpdateResultData,
-)
-from langflow.services.adapters.deployment.watsonx_orchestrate.update_helpers import (
+from langflow.services.adapters.deployment.watsonx_orchestrate.core.update import (
     apply_provider_update_plan_with_rollback,
     build_provider_update_plan,
     build_update_payload_from_spec,
     validate_provider_update_request_sections,
 )
+from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
+    PAYLOAD_SCHEMAS,
+    WatsonxDeploymentCreatePayload,
+    WatsonxDeploymentCreateResultData,
+    WatsonxDeploymentUpdateResultData,
+)
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     _require_single_deployment_id,
-    build_agent_payload,
     dedupe_list,
     extract_agent_tool_ids,
     extract_error_detail,
     raise_as_deployment_error,
-    resolve_resource_name_prefix,
-    validate_wxo_name,
 )
 from langflow.services.deps import get_settings_service
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
     from typing import Any
 
-    from ibm_watsonx_orchestrate_clients.agents.agent_client import AgentUpsertResponse
     from lfx.services.settings.service import SettingsService
     from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -150,36 +134,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         db: AsyncSession,
     ) -> DeploymentCreateResult:
         """Create a deployment in Watsonx Orchestrate."""
-        # The wxO API does not have an endpoint to create
-        # a connection, tool, and agent atomically.
-        # We have to make a separate api call for each resource.
-        # --
-        # If one of these resources is created successfully
-        # but the next one fails, then we end up with orphaned resources.
-        #     - We thus use a best-effort creation and rollback strategy:
-        #       Attempt to create each resource with retries.
-        #       If the creation of one resource fails,
-        #       then attempt to delete all previously created
-        #       resources with retries.
-        # --
-        # The caller must supply a resource name prefix via
-        # provider_spec["resource_name_prefix"].
-        # Every created resource (connection, tool, agent) is
-        # prefixed with this value, which prevents name collisions
-        # and supports idempotent retries (re-use the same prefix
-        # across attempts). We recommend using a random prefix.
-        # --
         logger.info("Creating wxO deployment for user_id=%s", user_id)
-        agent_create_response: AgentUpsertResponse | None = None
-        created_snapshot_bindings: list[WatsonxCreateSnapshotBinding] = []
-        created_tool_ids: list[str] = []
-        created_app_id: str | None = None
-        clients: WxOClient | None = None
-        derived_spec: BaseDeploymentData | None = None
         try:
             deployment_spec: BaseDeploymentData = payload.spec
-            normalized_deployment_name = validate_wxo_name(deployment_spec.name)
-            validate_config_create_input(payload.config)
 
             if deployment_spec.type != DeploymentType.AGENT:
                 msg = (
@@ -189,124 +146,35 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 )
                 raise DeploymentSupportError(message=msg)
 
-            caller_prefix = (deployment_spec.provider_spec or {}).get(PROVIDER_SPEC_RESOURCE_NAME_PREFIX_KEY)
-            if not caller_prefix:
-                msg = (
-                    f"{ErrorPrefix.CREATE.value} provider_spec must include '{PROVIDER_SPEC_RESOURCE_NAME_PREFIX_KEY}'."
-                )
-                raise InvalidContentError(message=msg)
+            validate_provider_create_request_sections(payload)
+            deployment_create_slot = self.payload_schemas.deployment_create
+            if deployment_create_slot is None:
+                msg = f"{ErrorPrefix.CREATE.value} Required slot 'deployment_create' is not configured."
+                raise DeploymentError(message=msg, error_code="deployment_error")
+
+            provider_create: WatsonxDeploymentCreatePayload
+            try:
+                provider_create = deployment_create_slot.parse(payload.provider_data)
+            except (AdapterPayloadMissingError, AdapterPayloadValidationError) as exc:
+                if isinstance(exc, AdapterPayloadValidationError):
+                    first_error = exc.error.errors()[0] if exc.error.errors() else {}
+                    msg = str(first_error.get("msg") or exc)
+                else:
+                    msg = str(exc)
+                raise InvalidContentError(message=msg) from None
 
             clients = await self._get_provider_clients(user_id=user_id, db=db)
-
-            resource_prefix = resolve_resource_name_prefix(
-                caller_prefix=caller_prefix,
+            provider_plan = build_provider_create_plan(
+                deployment_name=deployment_spec.name,
+                provider_create=provider_create,
             )
-            prefixed_deployment_name = f"{resource_prefix}{normalized_deployment_name}"
-
-            tool_names = build_snapshot_tool_names(
-                snapshots=payload.snapshot,
-                tool_name_prefix=resource_prefix,
+            apply_result = await apply_provider_create_plan_with_rollback(
+                clients=clients,
+                user_id=user_id,
+                db=db,
+                deployment_spec=deployment_spec,
+                plan=provider_plan,
             )
-            if len(tool_names) != len(set(tool_names)):
-                msg = (
-                    f"{ErrorPrefix.CREATE.value} "
-                    "Duplicate snapshot names detected in the request. "
-                    "Each snapshot must have a unique name."
-                )
-                raise DeploymentConflictError(message=msg)
-
-            prefixed_app_id = resolve_create_app_id(
-                prefixed_deployment_name=prefixed_deployment_name,
-                config=payload.config,
-            )
-
-            try:
-                created_app_id = await retry_create(
-                    process_config,
-                    clients=clients,
-                    user_id=user_id,
-                    db=db,
-                    deployment_name=prefixed_app_id,
-                    config=payload.config,
-                )
-
-                if payload.snapshot and (flow_payloads := payload.snapshot.raw_payloads):
-                    validated_flow_payloads = validate_create_flow_provider_data(
-                        payload_schemas=self.payload_schemas,
-                        flow_payloads=flow_payloads,
-                    )
-                    created_snapshot_bindings = await retry_create(
-                        process_raw_flows_with_app_id,
-                        clients=clients,
-                        app_id=prefixed_app_id,
-                        flows=validated_flow_payloads,
-                        tool_name_prefix=resource_prefix,
-                    )
-                    created_tool_ids = [binding.snapshot_id for binding in created_snapshot_bindings]
-
-                derived_spec = deployment_spec.model_copy(deep=True)
-
-                if derived_spec.provider_spec is None:
-                    derived_spec.provider_spec = {}
-
-                derived_spec.provider_spec.update(
-                    {
-                        "name": prefixed_deployment_name,
-                        "display_name": derived_spec.name,
-                    }
-                )
-
-                agent_create_response = await retry_create(
-                    self._create_agent_deployment,
-                    clients=clients,
-                    data=derived_spec,
-                    tool_ids=created_tool_ids,
-                )
-            except Exception:
-                logger.warning(
-                    "wxO create failed; rolling back agent_id=%s, tool_ids=%s, app_id=%s",
-                    agent_create_response.id if agent_create_response else None,
-                    created_tool_ids,
-                    created_app_id,
-                )
-                await rollback_created_resources(
-                    clients=clients,
-                    agent_id=agent_create_response.id if agent_create_response else None,
-                    tool_ids=created_tool_ids,
-                    app_id=created_app_id,
-                )
-                raise
-
-        except (ClientAPIException, HTTPException) as exc:
-            if isinstance(exc, ClientAPIException):
-                status_code = exc.response.status_code
-                error_detail = extract_error_detail(exc.response.text)
-            else:
-                status_code = exc.status_code
-                error_detail = extract_error_detail(str(exc.detail))
-            is_conflict = status_code == status.HTTP_409_CONFLICT or "already exists" in error_detail.lower()
-            if is_conflict:
-                msg = (
-                    f"{ErrorPrefix.CREATE.value} "
-                    "One or more resources already exist. "
-                    "Please ensure the names and/or ids of the "
-                    "following resources to be unique: "
-                    "(1) The deployment specification, "
-                    "(2) The deployment configuration, "
-                    "(3) The deployment snapshot. "
-                    f"error details: {error_detail}"
-                )
-                raise DeploymentConflictError(message=msg) from exc
-            if status_code == status.HTTP_422_UNPROCESSABLE_CONTENT:
-                msg = (
-                    f"{ErrorPrefix.CREATE.value} "
-                    "The deployment request entity is unprocessable. "
-                    "Please ensure the request entity is valid and complete. "
-                    f"error details: {error_detail}"
-                )
-                raise InvalidContentError(message=msg) from exc
-            msg = f"{ErrorPrefix.CREATE.value} error details: {error_detail}"
-            raise DeploymentError(message=msg, error_code="deployment_error") from exc
         except (
             AuthenticationError,
             DeploymentConflictError,
@@ -316,26 +184,30 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             DeploymentSupportError,
         ):
             raise
+        except (ClientAPIException, HTTPException) as exc:
+            raise_as_deployment_error(
+                exc,
+                error_prefix=ErrorPrefix.CREATE,
+                log_msg="Unexpected provider error during wxO deployment create",
+            )
         except Exception as exc:
             logger.exception("Unexpected error during wxO deployment creation")
             msg = f"{ErrorPrefix.CREATE.value} Please check server logs for details."
             raise DeploymentError(message=msg, error_code="deployment_error") from exc
 
-        if agent_create_response is None or derived_spec is None:
-            msg = f"{ErrorPrefix.CREATE.value} Deployment response was empty."
+        create_result_payload = WatsonxDeploymentCreateResultData(
+            snapshot_bindings=apply_result.snapshot_bindings,
+        )
+        create_result_slot = self.payload_schemas.deployment_create_result
+        if create_result_slot is None:
+            msg = f"{ErrorPrefix.CREATE.value} Required slot 'deployment_create_result' is not configured."
             raise DeploymentError(message=msg, error_code="deployment_error")
 
-        derived_spec.name = deployment_spec.name  # restore the original name
-
-        return DeploymentCreateResult[ExecutionCreateResult](
-            id=agent_create_response.id,
-            config_id=created_app_id,
-            snapshot_ids=created_tool_ids,
-            provider_result=build_create_provider_result(
-                payload_schemas=self.payload_schemas,
-                snapshot_bindings=created_snapshot_bindings,
-            ),
-            **derived_spec.model_dump(exclude_unset=True),
+        return DeploymentCreateResult[WatsonxDeploymentCreateResultData](
+            id=apply_result.agent_id,
+            config_id=apply_result.config_id,
+            snapshot_ids=apply_result.snapshot_ids,
+            provider_result=create_result_slot.parse(create_result_payload),
         )
 
     async def list_types(
@@ -696,6 +568,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             ),
         )
 
+    # TODO: allow listing all configs without filtering by deployment_id
     async def list_configs(
         self,
         *,
@@ -805,20 +678,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             snapshots=snapshots,
             provider_result={"deployment_id": agent_id},
         )
-
-    async def _create_agent_deployment(
-        self,
-        *,
-        clients: WxOClient,
-        tool_ids: Sequence[str],
-        data: BaseDeploymentData,
-    ) -> AgentUpsertResponse:
-        """Create an agent deployment."""
-        payload = build_agent_payload(
-            data=data,
-            tool_ids=tool_ids,
-        )
-        return await asyncio.to_thread(clients.agent.create, payload)
 
     async def teardown(self) -> None:
         """Teardown provider-specific resources."""

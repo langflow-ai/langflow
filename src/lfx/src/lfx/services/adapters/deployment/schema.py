@@ -11,6 +11,7 @@ from lfx.services.adapters.deployment.payloads import (
     T_ConfigListParams,
     T_ConfigListResult,
     T_DeploymentConfig,
+    T_DeploymentCreate,
     T_DeploymentCreateResult,
     T_DeploymentItemData,
     T_DeploymentListParams,
@@ -487,6 +488,10 @@ class DeploymentCreate(BaseModel):
     spec: BaseDeploymentData = Field(description="The base metadata of the deployment")
     snapshot: SnapshotItems | None = Field(None, description="The snapshots of the deployment")
     config: ConfigItem | None = Field(None, description="The config of the deployment")
+    provider_data: T_DeploymentCreate | None = Field(
+        None,
+        description="Provider-specific opaque payload for deployment create operations.",
+    )
 
 
 @lru_cache(maxsize=1)

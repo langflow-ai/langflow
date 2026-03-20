@@ -1,4 +1,4 @@
-"""Watsonx Orchestrate custom deployment update payload contracts."""
+"""Watsonx Orchestrate deployment payload contracts."""
 
 from __future__ import annotations
 
@@ -58,13 +58,15 @@ class WatsonxUpdateTools(BaseModel):
         return list(dict.fromkeys(value))
 
     @model_validator(mode="after")
-    def validate_unique_raw_tool_names(self) -> WatsonxUpdateTools:
+    def dedupe_raw_tool_names(self) -> WatsonxUpdateTools:
         raw_payloads = self.raw_payloads or []
-        name_counts = Counter(payload.name for payload in raw_payloads)
-        duplicates = sorted(name for name, count in name_counts.items() if count > 1)
-        if duplicates:
-            msg = f"tools.raw_payloads contains duplicate names: {duplicates}"
-            raise ValueError(msg)
+        if not raw_payloads:
+            return self
+        # Stable first-win dedupe keyed by raw tool name.
+        deduped_by_name: dict[str, BaseFlowArtifact[WatsonxFlowArtifactProviderData]] = {}
+        for payload in raw_payloads:
+            deduped_by_name.setdefault(payload.name, payload)
+        self.raw_payloads = list(deduped_by_name.values())
         return self
 
 
@@ -100,6 +102,61 @@ class WatsonxUpdateConnections(BaseModel):
             msg = f"connections.raw_payloads contains duplicate app_id values: {duplicates}"
             raise ValueError(msg)
         return self
+
+
+def _validate_declared_app_id_pools(
+    *,
+    existing_app_ids: set[str],
+    raw_app_ids: set[str],
+) -> set[str]:
+    collisions = sorted(existing_app_ids.intersection(raw_app_ids))
+    if collisions:
+        msg = f"connections.existing_app_ids collides with raw app ids from connections.raw_payloads: {collisions}"
+        raise ValueError(msg)
+    return existing_app_ids.union(raw_app_ids)
+
+
+def _validate_bind_operation_references(
+    *,
+    operations: list[WatsonxBindOperation],
+    raw_tool_names: set[str],
+    existing_tool_ids: set[str],
+    valid_app_ids: set[str],
+) -> set[str]:
+    referenced_app_ids: set[str] = set()
+    for operation in operations:
+        if operation.tool.name_of_raw is not None and operation.tool.name_of_raw not in raw_tool_names:
+            msg = f"bind.tool.name_of_raw not found in tools.raw_payloads: [{operation.tool.name_of_raw!r}]"
+            raise ValueError(msg)
+        if operation.tool.reference_id is not None and operation.tool.reference_id not in existing_tool_ids:
+            msg = f"bind.tool.reference_id not found in tools.existing_ids: [{operation.tool.reference_id!r}]"
+            raise ValueError(msg)
+        for app_id in operation.app_ids:
+            referenced_app_ids.add(app_id)
+            if app_id not in valid_app_ids:
+                msg = (
+                    "operation app_ids must be declared in "
+                    "connections.existing_app_ids or connections.raw_payloads[*].app_id: "
+                    f"[{app_id!r}]"
+                )
+                raise ValueError(msg)
+    return referenced_app_ids
+
+
+def _validate_all_declared_app_ids_are_referenced(
+    *,
+    existing_app_ids: set[str],
+    raw_app_ids: set[str],
+    referenced_app_ids: set[str],
+) -> None:
+    unused_existing_app_ids = sorted(existing_app_ids.difference(referenced_app_ids))
+    if unused_existing_app_ids:
+        msg = f"connections.existing_app_ids contains ids not referenced by operations: {unused_existing_app_ids}"
+        raise ValueError(msg)
+    unused_raw_app_ids = sorted(raw_app_ids.difference(referenced_app_ids))
+    if unused_raw_app_ids:
+        msg = f"connections.raw_payloads contains app_id values not referenced by operations: {unused_raw_app_ids}"
+        raise ValueError(msg)
 
 
 class WatsonxToolReference(BaseModel):
@@ -209,54 +266,81 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
 
         existing_app_ids = set(self.connections.existing_app_ids or [])
         raw_app_ids = {payload.app_id for payload in (self.connections.raw_payloads or [])}
-        collisions = sorted(existing_app_ids.intersection(raw_app_ids))
-        if collisions:
-            msg = f"connections.existing_app_ids collides with raw app ids from connections.raw_payloads: {collisions}"
-            raise ValueError(msg)
-        valid_app_ids = existing_app_ids.union(raw_app_ids)
+        valid_app_ids = _validate_declared_app_id_pools(
+            existing_app_ids=existing_app_ids,
+            raw_app_ids=raw_app_ids,
+        )
 
-        referenced_app_ids: set[str] = set()
+        bind_operations = [operation for operation in self.operations if isinstance(operation, WatsonxBindOperation)]
+        referenced_app_ids = _validate_bind_operation_references(
+            operations=bind_operations,
+            raw_tool_names=raw_tool_names,
+            existing_tool_ids=existing_tool_ids,
+            valid_app_ids=valid_app_ids,
+        )
 
         for operation in self.operations:
-            if isinstance(operation, WatsonxBindOperation):
-                if operation.tool.name_of_raw is not None and operation.tool.name_of_raw not in raw_tool_names:
-                    msg = f"bind.tool.name_of_raw not found in tools.raw_payloads: [{operation.tool.name_of_raw!r}]"
+            if not isinstance(operation, WatsonxUnbindOperation):
+                continue
+            for app_id in operation.app_ids:
+                referenced_app_ids.add(app_id)
+                if app_id not in valid_app_ids:
+                    msg = (
+                        "operation app_ids must be declared in "
+                        "connections.existing_app_ids or connections.raw_payloads[*].app_id: "
+                        f"[{app_id!r}]"
+                    )
                     raise ValueError(msg)
-                if operation.tool.reference_id is not None and operation.tool.reference_id not in existing_tool_ids:
-                    msg = f"bind.tool.reference_id not found in tools.existing_ids: [{operation.tool.reference_id!r}]"
+                if app_id in raw_app_ids:
+                    msg = f"unbind.operation app_ids must reference connections.existing_app_ids only: [{app_id!r}]"
                     raise ValueError(msg)
-                for app_id in operation.app_ids:
-                    referenced_app_ids.add(app_id)
-                    if app_id not in valid_app_ids:
-                        msg = (
-                            "operation app_ids must be declared in "
-                            "connections.existing_app_ids or connections.raw_payloads[*].app_id: "
-                            f"[{app_id!r}]"
-                        )
-                        raise ValueError(msg)
-            if isinstance(operation, WatsonxUnbindOperation):
-                for app_id in operation.app_ids:
-                    referenced_app_ids.add(app_id)
-                    if app_id not in valid_app_ids:
-                        msg = (
-                            "operation app_ids must be declared in "
-                            "connections.existing_app_ids or connections.raw_payloads[*].app_id: "
-                            f"[{app_id!r}]"
-                        )
-                        raise ValueError(msg)
-                    if app_id in raw_app_ids:
-                        msg = f"unbind.operation app_ids must reference connections.existing_app_ids only: [{app_id!r}]"
-                        raise ValueError(msg)
 
-        unused_existing_app_ids = sorted(existing_app_ids.difference(referenced_app_ids))
-        if unused_existing_app_ids:
-            msg = f"connections.existing_app_ids contains ids not referenced by operations: {unused_existing_app_ids}"
-            raise ValueError(msg)
-        unused_raw_app_ids = sorted(raw_app_ids.difference(referenced_app_ids))
-        if unused_raw_app_ids:
-            msg = f"connections.raw_payloads contains app_id values not referenced by operations: {unused_raw_app_ids}"
-            raise ValueError(msg)
+        _validate_all_declared_app_ids_are_referenced(
+            existing_app_ids=existing_app_ids,
+            raw_app_ids=raw_app_ids,
+            referenced_app_ids=referenced_app_ids,
+        )
 
+        return self
+
+
+class WatsonxDeploymentCreatePayload(BaseModel):
+    """Watsonx provider_data contract for deployment create operations."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    resource_name_prefix: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)] = Field(
+        description=(
+            "Prefix applied only when creating resources: "
+            "derived app ids from connections.raw_payloads[*].app_id and created tool names."
+        )
+    )
+    tools: WatsonxUpdateTools = Field(default_factory=WatsonxUpdateTools)
+    connections: WatsonxUpdateConnections = Field(default_factory=WatsonxUpdateConnections)
+    operations: list[WatsonxBindOperation] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_operation_references(self) -> WatsonxDeploymentCreatePayload:
+        raw_tool_names = {payload.name for payload in (self.tools.raw_payloads or [])}
+        existing_tool_ids = set(self.tools.existing_ids or [])
+
+        existing_app_ids = set(self.connections.existing_app_ids or [])
+        raw_app_ids = {payload.app_id for payload in (self.connections.raw_payloads or [])}
+        valid_app_ids = _validate_declared_app_id_pools(
+            existing_app_ids=existing_app_ids,
+            raw_app_ids=raw_app_ids,
+        )
+        referenced_app_ids = _validate_bind_operation_references(
+            operations=self.operations,
+            raw_tool_names=raw_tool_names,
+            existing_tool_ids=existing_tool_ids,
+            valid_app_ids=valid_app_ids,
+        )
+        _validate_all_declared_app_ids_are_referenced(
+            existing_app_ids=existing_app_ids,
+            raw_app_ids=raw_app_ids,
+            referenced_app_ids=referenced_app_ids,
+        )
         return self
 
 
@@ -340,9 +424,23 @@ class WatsonxProviderUpdateApplyResult(BaseModel):
     added_snapshot_bindings: list[WatsonxCreateSnapshotBinding] = Field(default_factory=list)
 
 
+class WatsonxProviderCreateApplyResult(BaseModel):
+    """Public adapter contract for create helper apply results."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    agent_id: NormalizedId
+    config_id: NormalizedId | None = None
+    snapshot_ids: list[NormalizedId] = Field(default_factory=list)
+    snapshot_bindings: list[WatsonxCreateSnapshotBinding] = Field(default_factory=list)
+    prefixed_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
 # Canonical watsonx deployment payload registry. Adapter service and mapper
 # consume this same object to keep slot ownership explicit and avoid drift.
 PAYLOAD_SCHEMAS = DeploymentPayloadSchemas(
+    deployment_create=PayloadSlot(WatsonxDeploymentCreatePayload),
     flow_artifact=PayloadSlot(WatsonxFlowArtifactProviderData),
     deployment_create_result=PayloadSlot(WatsonxDeploymentCreateResultData),
     deployment_update=PayloadSlot(WatsonxDeploymentUpdatePayload),

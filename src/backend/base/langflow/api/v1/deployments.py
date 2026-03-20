@@ -694,14 +694,17 @@ def _resolve_added_snapshot_bindings_for_update(
 
 
 def _to_deployment_create_response(
-    result: AdapterDeploymentCreateResult, deployment_id: UUID
+    result: AdapterDeploymentCreateResult, deployment_row: Deployment
 ) -> DeploymentCreateResponse:
     payload = result.model_dump(exclude_unset=True)
     return DeploymentCreateResponse(
-        id=deployment_id,
-        name=result.name,
-        description=result.description,
-        type=result.type,
+        id=deployment_row.id,
+        name=deployment_row.name,
+        # TODO(deployments): return the persisted deployment description here.
+        description=None,
+        type=_resolve_deployment_type(deployment_row, fallback=DeploymentType.AGENT),
+        created_at=deployment_row.created_at,
+        updated_at=deployment_row.updated_at,
         provider_data=payload.get("provider_result"),
     )
 
@@ -868,8 +871,8 @@ async def create_deployment(
                 project_id=project_id,
                 deployment_provider_account_id=provider_id,
                 resource_key=str(result.id),
-                name=result.name,
-                deployment_type=result.type.value if result.type else None,
+                name=payload.spec.name,
+                deployment_type=payload.spec.type.value if payload.spec.type else None,
             )
 
         snapshot_id_by_flow_version_id: dict[UUID, str] = {}
@@ -897,7 +900,7 @@ async def create_deployment(
             provider_id,
         )
         raise
-    return _to_deployment_create_response(result, deployment_row.id)
+    return _to_deployment_create_response(result, deployment_row)
 
 
 @router.get("", response_model=DeploymentListResponse)
