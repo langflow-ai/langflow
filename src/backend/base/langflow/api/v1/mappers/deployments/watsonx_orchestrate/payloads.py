@@ -16,21 +16,13 @@ class WatsonxApiFlowArtifactProviderData(CreateFlowArtifactProviderData):
     project_id: str = Field(min_length=1)
 
 
-class WatsonxApiUpdateToolReference(BaseModel):
-    """Tool reference for Watsonx bind operations."""
-
-    model_config = {"extra": "forbid"}
-
-    flow_version_id: UUID
-
-
 class WatsonxApiBindOperation(BaseModel):
     """Bind operation using a flow-version reference."""
 
     model_config = {"extra": "forbid"}
 
     op: Literal["bind"]
-    tool: WatsonxApiUpdateToolReference
+    flow_version_id: UUID
     app_ids: list[str] = Field(min_length=1)
 
 
@@ -40,7 +32,7 @@ class WatsonxApiUnbindOperation(BaseModel):
     model_config = {"extra": "forbid"}
 
     op: Literal["unbind"]
-    tool: WatsonxApiUpdateToolReference
+    flow_version_id: UUID
     app_ids: list[str] = Field(min_length=1)
 
 
@@ -50,7 +42,7 @@ class WatsonxApiRemoveToolOperation(BaseModel):
     model_config = {"extra": "forbid"}
 
     op: Literal["remove_tool"]
-    tool: WatsonxApiUpdateToolReference
+    flow_version_id: UUID
 
 
 WatsonxApiUpdateOperation = Annotated[
@@ -144,7 +136,13 @@ class WatsonxApiDeploymentUpdatePayload(WatsonxApiDeploymentPayloadBase):
 class WatsonxApiDeploymentCreatePayload(WatsonxApiDeploymentPayloadBase):
     """Watsonx provider_data API contract for deployment create operations."""
 
-    resource_name_prefix: str = Field(min_length=1)
+    resource_name_prefix: str = Field(
+        min_length=1,
+        description=(
+            "Prefix applied only when creating resources: "
+            "applied to app ids from connections.raw_payloads[*].app_id and names of created tools."
+        ),
+    )
     operations: list[WatsonxApiBindOperation] = Field(min_length=1)
 
 
@@ -153,17 +151,8 @@ class WatsonxApiToolAppBinding(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    tool_id: str = Field(min_length=1)
+    flow_version_id: UUID
     app_ids: list[str] = Field(default_factory=list)
-
-    @field_validator("tool_id", mode="before")
-    @classmethod
-    def normalize_tool_id(cls, value: Any) -> str:
-        normalized = str(value or "").strip()
-        if not normalized:
-            msg = "tool_id cannot be empty"
-            raise ValueError(msg)
-        return normalized
 
     @field_validator("app_ids", mode="before")
     @classmethod
@@ -178,33 +167,15 @@ class WatsonxApiDeploymentUpdateResultData(BaseModel):
 
     model_config = {"extra": "ignore"}
 
-    created_snapshot_ids: list[str] = Field(default_factory=list)
-    added_snapshot_bindings: list[dict[str, str]] = Field(default_factory=list)
+    created_app_ids: list[str] = Field(default_factory=list)
     tool_app_bindings: list[WatsonxApiToolAppBinding] | None = None
 
-    @field_validator("created_snapshot_ids", mode="before")
+    @field_validator("created_app_ids", mode="before")
     @classmethod
-    def normalize_created_snapshot_ids(cls, value: Any) -> list[str]:
+    def normalize_created_app_ids(cls, value: Any) -> list[str]:
         if value is None:
             return []
-        return [str(snapshot_id).strip() for snapshot_id in value if str(snapshot_id).strip()]
-
-    @field_validator("added_snapshot_bindings", mode="before")
-    @classmethod
-    def normalize_added_snapshot_bindings(cls, value: Any) -> list[dict[str, str]]:
-        if value is None:
-            return []
-        normalized: list[dict[str, str]] = []
-        if not isinstance(value, list):
-            return normalized
-        for item in value:
-            if not isinstance(item, dict):
-                continue
-            source_ref = str(item.get("source_ref") or "").strip()
-            snapshot_id = str(item.get("snapshot_id") or "").strip()
-            if source_ref and snapshot_id:
-                normalized.append({"source_ref": source_ref, "snapshot_id": snapshot_id})
-        return normalized
+        return [normalized for app_id in value if (normalized := str(app_id).strip())]
 
     @classmethod
     def from_provider_result(cls, provider_result: Any) -> WatsonxApiDeploymentUpdateResultData:
@@ -214,7 +185,7 @@ class WatsonxApiDeploymentUpdateResultData(BaseModel):
 
     def to_api_provider_data(self) -> dict[str, Any] | None:
         """Return API-safe provider_data subset for deployment update responses."""
-        payload = self.model_dump(include={"tool_app_bindings"}, exclude_none=True)
+        payload = self.model_dump(mode="json", include={"created_app_ids", "tool_app_bindings"}, exclude_none=True)
         return payload or None
 
 

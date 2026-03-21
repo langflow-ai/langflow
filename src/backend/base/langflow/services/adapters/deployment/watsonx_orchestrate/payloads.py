@@ -41,28 +41,16 @@ class WatsonxUpdateTools(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    existing_ids: list[NormalizedId] | None = Field(
-        default=None,
-        description="Known existing provider tool ids available for operation references.",
-    )
     raw_payloads: list[BaseFlowArtifact[WatsonxFlowArtifactProviderData]] | None = Field(
         default=None,
         description="Raw tool payloads keyed by BaseFlowArtifact.name.",
     )
-
-    @field_validator("existing_ids")
-    @classmethod
-    def dedupe_existing_ids(cls, value: list[str] | None) -> list[str] | None:
-        if value is None:
-            return None
-        return list(dict.fromkeys(value))
 
     @model_validator(mode="after")
     def dedupe_raw_tool_names(self) -> WatsonxUpdateTools:
         raw_payloads = self.raw_payloads or []
         if not raw_payloads:
             return self
-        # Stable first-win dedupe keyed by raw tool name.
         deduped_by_name: dict[str, BaseFlowArtifact[WatsonxFlowArtifactProviderData]] = {}
         for payload in raw_payloads:
             deduped_by_name.setdefault(payload.name, payload)
@@ -120,16 +108,12 @@ def _validate_bind_operation_references(
     *,
     operations: list[WatsonxBindOperation],
     raw_tool_names: set[str],
-    existing_tool_ids: set[str],
     valid_app_ids: set[str],
 ) -> set[str]:
     referenced_app_ids: set[str] = set()
     for operation in operations:
         if operation.tool.name_of_raw is not None and operation.tool.name_of_raw not in raw_tool_names:
             msg = f"bind.tool.name_of_raw not found in tools.raw_payloads: [{operation.tool.name_of_raw!r}]"
-            raise ValueError(msg)
-        if operation.tool.reference_id is not None and operation.tool.reference_id not in existing_tool_ids:
-            msg = f"bind.tool.reference_id not found in tools.existing_ids: [{operation.tool.reference_id!r}]"
             raise ValueError(msg)
         for app_id in operation.app_ids:
             referenced_app_ids.add(app_id)
@@ -141,6 +125,24 @@ def _validate_bind_operation_references(
                 )
                 raise ValueError(msg)
     return referenced_app_ids
+
+
+def _validate_tool_ref_consistency(operations: list[Any]) -> None:
+    """Reject conflicting source_ref values for the same tool_id across operations."""
+    seen: dict[str, str] = {}
+    for operation in operations:
+        ref: WatsonxToolRefBinding | None = None
+        if isinstance(operation, WatsonxBindOperation):
+            ref = operation.tool.tool_id_with_ref
+        elif isinstance(operation, (WatsonxUnbindOperation, WatsonxRemoveToolOperation)):
+            ref = operation.tool
+        if ref is None:
+            continue
+        existing_source_ref = seen.get(ref.tool_id)
+        if existing_source_ref is not None and existing_source_ref != ref.source_ref:
+            msg = f"Conflicting source_ref for tool_id={ref.tool_id!r}: {existing_source_ref!r} vs {ref.source_ref!r}"
+            raise ValueError(msg)
+        seen[ref.tool_id] = ref.source_ref
 
 
 def _validate_all_declared_app_ids_are_referenced(
@@ -164,9 +166,9 @@ class WatsonxToolReference(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    reference_id: NormalizedId | None = Field(
+    tool_id_with_ref: WatsonxToolRefBinding | None = Field(
         default=None,
-        description="Existing provider tool id.",
+        description="Existing provider tool reference with source_ref correlation.",
     )
     name_of_raw: RawToolName | None = Field(
         default=None,
@@ -175,10 +177,10 @@ class WatsonxToolReference(BaseModel):
 
     @model_validator(mode="after")
     def validate_exactly_one_selector(self) -> WatsonxToolReference:
-        has_reference_id = self.reference_id is not None
+        has_tool_id_with_ref = self.tool_id_with_ref is not None
         has_name_of_raw = self.name_of_raw is not None
-        if has_reference_id == has_name_of_raw:
-            msg = "Exactly one of 'tool.reference_id' or 'tool.name_of_raw' must be provided."
+        if has_tool_id_with_ref == has_name_of_raw:
+            msg = "Exactly one of 'tool.tool_id_with_ref' or 'tool.name_of_raw' must be provided."
             raise ValueError(msg)
         return self
 
@@ -210,7 +212,7 @@ class WatsonxUnbindOperation(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     op: Literal["unbind"]
-    tool_id: NormalizedId = Field(description="Existing provider tool id.")
+    tool: WatsonxToolRefBinding = Field(description="Existing provider tool reference with source_ref correlation.")
     app_ids: list[NormalizedId] = Field(
         min_length=1,
         description=("Operation app ids to unbind. Must reference connections.existing_app_ids only."),
@@ -228,7 +230,9 @@ class WatsonxRemoveToolOperation(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     op: Literal["remove_tool"]
-    tool_id: NormalizedId = Field(description="Existing provider tool id to remove from deployment.")
+    tool: WatsonxToolRefBinding = Field(
+        description="Existing provider tool reference with source_ref correlation.",
+    )
 
 
 WatsonxUpdateOperation = Annotated[
@@ -262,7 +266,6 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
     @model_validator(mode="after")
     def validate_operation_references(self) -> WatsonxDeploymentUpdatePayload:
         raw_tool_names = {payload.name for payload in (self.tools.raw_payloads or [])}
-        existing_tool_ids = set(self.tools.existing_ids or [])
 
         existing_app_ids = set(self.connections.existing_app_ids or [])
         raw_app_ids = {payload.app_id for payload in (self.connections.raw_payloads or [])}
@@ -275,7 +278,6 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
         referenced_app_ids = _validate_bind_operation_references(
             operations=bind_operations,
             raw_tool_names=raw_tool_names,
-            existing_tool_ids=existing_tool_ids,
             valid_app_ids=valid_app_ids,
         )
 
@@ -300,6 +302,7 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
             raw_app_ids=raw_app_ids,
             referenced_app_ids=referenced_app_ids,
         )
+        _validate_tool_ref_consistency(self.operations)
 
         return self
 
@@ -322,7 +325,6 @@ class WatsonxDeploymentCreatePayload(BaseModel):
     @model_validator(mode="after")
     def validate_operation_references(self) -> WatsonxDeploymentCreatePayload:
         raw_tool_names = {payload.name for payload in (self.tools.raw_payloads or [])}
-        existing_tool_ids = set(self.tools.existing_ids or [])
 
         existing_app_ids = set(self.connections.existing_app_ids or [])
         raw_app_ids = {payload.app_id for payload in (self.connections.raw_payloads or [])}
@@ -333,7 +335,6 @@ class WatsonxDeploymentCreatePayload(BaseModel):
         referenced_app_ids = _validate_bind_operation_references(
             operations=self.operations,
             raw_tool_names=raw_tool_names,
-            existing_tool_ids=existing_tool_ids,
             valid_app_ids=valid_app_ids,
         )
         _validate_all_declared_app_ids_are_referenced(
@@ -341,16 +342,32 @@ class WatsonxDeploymentCreatePayload(BaseModel):
             raw_app_ids=raw_app_ids,
             referenced_app_ids=referenced_app_ids,
         )
+        _validate_tool_ref_consistency(self.operations)
         return self
 
 
-class WatsonxCreateSnapshotBinding(BaseModel):
-    """Normalized binding item for deployment create snapshot correlation."""
+class WatsonxToolRefBinding(BaseModel):
+    """Correlates a source_ref (e.g. flow version id) with a provider tool_id.
+
+    Used for both newly-created and pre-existing tools so callers can translate
+    between adapter-level tool ids and higher-level source references.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     source_ref: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
-    snapshot_id: NormalizedId
+    tool_id: NormalizedId
+
+
+class WatsonxResultToolRefBinding(WatsonxToolRefBinding):
+    """Tool ref binding with provenance flag for adapter results.
+
+    Extends the base binding with a ``created`` flag so consumers can
+    distinguish tools that were created during the operation from
+    pre-existing tools whose refs were passed through for correlation.
+    """
+
+    created: bool = Field(description="True when the tool was created during this operation, False for pre-existing.")
 
 
 class WatsonxDeploymentCreateResultData(BaseModel):
@@ -359,7 +376,7 @@ class WatsonxDeploymentCreateResultData(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     app_ids: list[NormalizedId] = Field(default_factory=list)
-    tools_with_refs: list[WatsonxCreateSnapshotBinding] = Field(default_factory=list)
+    tools_with_refs: list[WatsonxToolRefBinding] = Field(default_factory=list)
     tool_app_bindings: list[WatsonxToolAppBinding] = Field(default_factory=list)
 
     @field_validator("app_ids", mode="before")
@@ -391,9 +408,17 @@ class WatsonxDeploymentUpdateResultData(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
+    created_app_ids: list[NormalizedId] = Field(default_factory=list)
     created_snapshot_ids: list[NormalizedId] = Field(default_factory=list)
-    added_snapshot_bindings: list[WatsonxCreateSnapshotBinding] = Field(default_factory=list)
+    added_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
     tool_app_bindings: list[WatsonxToolAppBinding] | None = None
+
+    @field_validator("created_app_ids", mode="before")
+    @classmethod
+    def normalize_created_app_ids(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        return [str(app_id).strip() for app_id in value if str(app_id).strip()]
 
     @field_validator("created_snapshot_ids", mode="before")
     @classmethod
@@ -419,8 +444,9 @@ class WatsonxProviderUpdateApplyResult(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    created_app_ids: list[NormalizedId] = Field(default_factory=list)
     added_snapshot_ids: list[NormalizedId] = Field(default_factory=list)
-    added_snapshot_bindings: list[WatsonxCreateSnapshotBinding] = Field(default_factory=list)
+    added_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
 
 
 class WatsonxProviderCreateApplyResult(BaseModel):
@@ -430,7 +456,7 @@ class WatsonxProviderCreateApplyResult(BaseModel):
 
     agent_id: NormalizedId
     app_ids: list[NormalizedId] = Field(default_factory=list)
-    tools_with_refs: list[WatsonxCreateSnapshotBinding] = Field(default_factory=list)
+    tools_with_refs: list[WatsonxToolRefBinding] = Field(default_factory=list)
     tool_app_bindings: list[WatsonxToolAppBinding] = Field(default_factory=list)
     prefixed_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
     display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]

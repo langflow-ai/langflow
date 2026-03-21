@@ -73,7 +73,6 @@ def test_create_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> Non
     payload = {
         "resource_name_prefix": "lf_pref_",
         "tools": {
-            "existing_ids": ["tool-existing-1"],
             "raw_payloads": [_raw_tool("tool-new-1", 11)],
         },
         "connections": {
@@ -88,7 +87,7 @@ def test_create_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> Non
             },
             {
                 "op": "bind",
-                "tool": {"reference_id": "tool-existing-1"},
+                "tool": {"tool_id_with_ref": {"source_ref": "fv-existing-1", "tool_id": "tool-existing-1"}},
                 "app_ids": ["app-existing-1"],
             },
         ],
@@ -138,11 +137,10 @@ def test_create_schema_rejects_blank_resource_name_prefix() -> None:
                 "operations": [
                     {
                         "op": "bind",
-                        "tool": {"reference_id": "tool-existing-1"},
+                        "tool": {"tool_id_with_ref": {"source_ref": "fv-1", "tool_id": "tool-existing-1"}},
                         "app_ids": ["app-existing-1"],
                     }
                 ],
-                "tools": {"existing_ids": ["tool-existing-1"]},
                 "connections": {"existing_app_ids": ["app-existing-1"]},
             }
         )
@@ -157,7 +155,6 @@ def test_update_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> Non
     payload = {
         "resource_name_prefix": "lf_pref_",
         "tools": {
-            "existing_ids": ["tool-existing-1"],
             "raw_payloads": [_raw_tool("tool-new-1", 1)],
         },
         "connections": {
@@ -172,7 +169,7 @@ def test_update_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> Non
             },
             {
                 "op": "bind",
-                "tool": {"reference_id": "tool-existing-1"},
+                "tool": {"tool_id_with_ref": {"source_ref": "fv-existing-1", "tool_id": "tool-existing-1"}},
                 "app_ids": ["app-existing-1"],
             },
         ],
@@ -180,7 +177,7 @@ def test_update_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> Non
 
     applied = slot.deployment_update.apply(payload)
     assert applied["operations"][0]["tool"]["name_of_raw"] == "tool-new-1"
-    assert applied["operations"][1]["tool"]["reference_id"] == "tool-existing-1"
+    assert applied["operations"][1]["tool"]["tool_id_with_ref"]["tool_id"] == "tool-existing-1"
 
 
 def test_update_schema_rejects_prefixed_app_id_collisions() -> None:
@@ -188,7 +185,6 @@ def test_update_schema_rejects_prefixed_app_id_collisions() -> None:
         WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
             {
                 "resource_name_prefix": "lf_",
-                "tools": {"existing_ids": ["tool-existing-1"]},
                 "connections": {
                     "existing_app_ids": ["dup"],
                     "raw_payloads": [_raw_connection("dup")],
@@ -196,7 +192,7 @@ def test_update_schema_rejects_prefixed_app_id_collisions() -> None:
                 "operations": [
                     {
                         "op": "bind",
-                        "tool": {"reference_id": "tool-existing-1"},
+                        "tool": {"tool_id_with_ref": {"source_ref": "fv-1", "tool_id": "tool-existing-1"}},
                         "app_ids": ["dup"],
                     }
                 ],
@@ -224,21 +220,47 @@ def test_update_schema_rejects_missing_raw_tool_reference() -> None:
     assert "name_of_raw not found" in str(exc.value.error)
 
 
-def test_update_schema_rejects_reference_id_when_existing_ids_not_declared() -> None:
+def test_update_schema_rejects_tool_reference_with_both_selectors() -> None:
     with pytest.raises(AdapterPayloadValidationError) as exc:
         WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
             {
+                "tools": {"raw_payloads": [_raw_tool("tool-new-1", 1)]},
                 "connections": {"existing_app_ids": ["app-existing-1"]},
                 "operations": [
                     {
                         "op": "bind",
-                        "tool": {"reference_id": "tool-existing-1"},
+                        "tool": {
+                            "tool_id_with_ref": {"source_ref": "fv-1", "tool_id": "tool-existing-1"},
+                            "name_of_raw": "tool-new-1",
+                        },
                         "app_ids": ["app-existing-1"],
                     }
                 ],
             }
         )
-    assert "reference_id not found in tools.existing_ids" in str(exc.value.error)
+    assert "Exactly one of 'tool.tool_id_with_ref' or 'tool.name_of_raw' must be provided" in str(exc.value.error)
+
+
+def test_update_schema_rejects_conflicting_source_ref_for_same_tool_id() -> None:
+    with pytest.raises(AdapterPayloadValidationError) as exc:
+        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
+            {
+                "connections": {"existing_app_ids": ["app-1", "app-2"]},
+                "operations": [
+                    {
+                        "op": "bind",
+                        "tool": {"tool_id_with_ref": {"source_ref": "fv-aaa", "tool_id": "tool-1"}},
+                        "app_ids": ["app-1"],
+                    },
+                    {
+                        "op": "unbind",
+                        "tool": {"source_ref": "fv-bbb", "tool_id": "tool-1"},
+                        "app_ids": ["app-2"],
+                    },
+                ],
+            }
+        )
+    assert "Conflicting source_ref for tool_id='tool-1'" in str(exc.value.error)
 
 
 def test_update_schema_rejects_bind_app_id_not_in_declared_pools() -> None:
@@ -267,12 +289,11 @@ def test_update_schema_rejects_unused_existing_app_ids() -> None:
     with pytest.raises(AdapterPayloadValidationError) as exc:
         WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
             {
-                "tools": {"existing_ids": ["tool-existing-1"]},
                 "connections": {"existing_app_ids": ["app-existing-1", "app-unused"]},
                 "operations": [
                     {
                         "op": "bind",
-                        "tool": {"reference_id": "tool-existing-1"},
+                        "tool": {"tool_id_with_ref": {"source_ref": "fv-1", "tool_id": "tool-existing-1"}},
                         "app_ids": ["app-existing-1"],
                     }
                 ],
@@ -306,12 +327,11 @@ def test_update_schema_dedupes_bind_app_ids() -> None:
     assert slot.deployment_update is not None
 
     payload = {
-        "tools": {"existing_ids": ["tool-existing-1"]},
         "connections": {"existing_app_ids": ["app-existing-1", "app-existing-2"]},
         "operations": [
             {
                 "op": "bind",
-                "tool": {"reference_id": "tool-existing-1"},
+                "tool": {"tool_id_with_ref": {"source_ref": "fv-1", "tool_id": "tool-existing-1"}},
                 "app_ids": ["app-existing-1", "app-existing-1", "app-existing-2"],
             }
         ],
@@ -328,7 +348,7 @@ def test_update_schema_requires_unbind_app_ids() -> None:
                 "operations": [
                     {
                         "op": "unbind",
-                        "tool_id": "tool-1",
+                        "tool": {"source_ref": "fv-1", "tool_id": "tool-1"},
                     }
                 ]
             }
@@ -343,7 +363,7 @@ def test_update_schema_rejects_unbind_raw_app_ids() -> None:
                 "operations": [
                     {
                         "op": "unbind",
-                        "tool_id": "tool-1",
+                        "tool": {"source_ref": "fv-1", "tool_id": "tool-1"},
                         "app_ids": ["app-new-1"],
                     }
                 ],

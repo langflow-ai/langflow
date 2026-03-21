@@ -20,8 +20,8 @@ from lfx.utils.flow_requirements import generate_requirements_from_flow
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import retry_create
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
-    WatsonxCreateSnapshotBinding,
     WatsonxFlowArtifactProviderData,
+    WatsonxToolRefBinding,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     dedupe_list,
@@ -408,7 +408,7 @@ async def process_raw_flows_with_app_id(
     app_id: str,
     flows: list[BaseFlowArtifact[WatsonxFlowArtifactProviderData]],
     tool_name_prefix: str,
-) -> list[WatsonxCreateSnapshotBinding]:
+) -> list[WatsonxToolRefBinding]:
     """Create langflow tools in wxO and connect them to the given app_id."""
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
 
@@ -428,9 +428,9 @@ async def process_raw_flows_with_app_id(
         msg = "Flow upload result mismatch: created tool ids count does not match the number of flow payloads."
         raise InvalidDeploymentOperationError(message=msg)
     return [
-        WatsonxCreateSnapshotBinding(
+        WatsonxToolRefBinding(
             source_ref=_resolve_flow_source_ref(flow_payload),
-            snapshot_id=tool_id,
+            tool_id=tool_id,
         )
         for flow_payload, tool_id in zip(flows, created_tool_ids, strict=True)
     ]

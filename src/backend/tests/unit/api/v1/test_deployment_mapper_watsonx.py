@@ -62,7 +62,7 @@ def test_watsonx_api_payload_accepts_flow_version_create_bind_contract() -> None
             "operations": [
                 {
                     "op": "bind",
-                    "tool": {"flow_version_id": str(flow_version_id)},
+                    "flow_version_id": str(flow_version_id),
                     "app_ids": ["app-one"],
                 }
             ],
@@ -79,7 +79,7 @@ def test_watsonx_api_payload_accepts_flow_version_bind_contract() -> None:
             "operations": [
                 {
                     "op": "bind",
-                    "tool": {"flow_version_id": str(flow_version_id)},
+                    "flow_version_id": str(flow_version_id),
                     "app_ids": ["app-one"],
                 }
             ],
@@ -96,12 +96,12 @@ def test_watsonx_api_payload_accepts_flow_version_unbind_and_remove_contract() -
             "operations": [
                 {
                     "op": "unbind",
-                    "tool": {"flow_version_id": str(flow_version_id)},
+                    "flow_version_id": str(flow_version_id),
                     "app_ids": ["app-one"],
                 },
                 {
                     "op": "remove_tool",
-                    "tool": {"flow_version_id": str(flow_version_id)},
+                    "flow_version_id": str(flow_version_id),
                 },
             ],
         }
@@ -141,7 +141,7 @@ async def test_watsonx_mapper_translates_create_bind_into_raw_tool_payload() -> 
             "operations": [
                 {
                     "op": "bind",
-                    "tool": {"flow_version_id": str(flow_version_id)},
+                    "flow_version_id": str(flow_version_id),
                     "app_ids": ["app-one"],
                 }
             ],
@@ -186,7 +186,7 @@ async def test_watsonx_mapper_rejects_top_level_flow_version_and_config_on_creat
             "operations": [
                 {
                     "op": "bind",
-                    "tool": {"flow_version_id": str(uuid4())},
+                    "flow_version_id": str(uuid4()),
                     "app_ids": ["app-one"],
                 }
             ],
@@ -227,7 +227,7 @@ async def test_watsonx_mapper_translates_flow_version_bind_into_raw_tool_payload
             "operations": [
                 {
                     "op": "bind",
-                    "tool": {"flow_version_id": str(flow_version_id)},
+                    "flow_version_id": str(flow_version_id),
                     "app_ids": ["app-one"],
                 }
             ],
@@ -279,12 +279,12 @@ async def test_watsonx_mapper_translates_unbind_and_remove_via_attachment_snapsh
             "operations": [
                 {
                     "op": "unbind",
-                    "tool": {"flow_version_id": str(flow_version_id)},
+                    "flow_version_id": str(flow_version_id),
                     "app_ids": ["app-one"],
                 },
                 {
                     "op": "remove_tool",
-                    "tool": {"flow_version_id": str(flow_version_id)},
+                    "flow_version_id": str(flow_version_id),
                 },
             ],
         }
@@ -303,24 +303,27 @@ async def test_watsonx_mapper_translates_unbind_and_remove_via_attachment_snapsh
     )
     provider_data = resolved.provider_data or {}
 
-    assert provider_data["operations"][0]["tool_id"] == "tool-1"
-    assert provider_data["operations"][1]["tool_id"] == "tool-1"
+    assert provider_data["operations"][0]["tool"]["tool_id"] == "tool-1"
+    assert provider_data["operations"][0]["tool"]["source_ref"] == str(flow_version_id)
+    assert provider_data["operations"][1]["tool"]["tool_id"] == "tool-1"
+    assert provider_data["operations"][1]["tool"]["source_ref"] == str(flow_version_id)
 
 
 def test_watsonx_update_result_data_normalizes_fields() -> None:
+    flow_version_id = uuid4()
     data = WatsonxApiDeploymentUpdateResultData.from_provider_result(
         {
-            "created_snapshot_ids": ["  snap-1  ", "", "snap-2"],
+            "created_app_ids": ["  app-one  ", "", "app-two"],
             "tool_app_bindings": [
-                {"tool_id": "  tool-1  ", "app_ids": [" app-a ", "", "app-b"]},
+                {"flow_version_id": str(flow_version_id), "app_ids": [" app-a ", "", "app-b"]},
             ],
             "ignored_key": True,
         }
     )
 
-    assert data.created_snapshot_ids == ["snap-1", "snap-2"]
+    assert data.created_app_ids == ["app-one", "app-two"]
     assert data.tool_app_bindings is not None
-    assert data.tool_app_bindings[0].tool_id == "tool-1"
+    assert data.tool_app_bindings[0].flow_version_id == flow_version_id
     assert data.tool_app_bindings[0].app_ids == ["app-a", "app-b"]
 
 
@@ -335,11 +338,20 @@ def test_watsonx_mapper_shapes_update_response_from_result_schema() -> None:
         created_at=timestamp,
         updated_at=timestamp,
     )
+    new_flow_version_id = uuid4()
+    existing_flow_version_id = uuid4()
     result = DeploymentUpdateResult(
         id="provider-id",
         provider_result={
-            "created_snapshot_ids": ["snap-1", ""],
-            "tool_app_bindings": [{"tool_id": "tool-1", "app_ids": ["app-a"]}],
+            "created_app_ids": ["created-app-1"],
+            "added_snapshot_bindings": [
+                {"source_ref": str(new_flow_version_id), "tool_id": "new-tool-1", "created": True},
+                {"source_ref": str(existing_flow_version_id), "tool_id": "existing-tool-1", "created": False},
+            ],
+            "tool_app_bindings": [
+                {"tool_id": "new-tool-1", "app_ids": ["app-a"]},
+                {"tool_id": "existing-tool-1", "app_ids": ["app-b"]},
+            ],
         },
     )
 
@@ -347,10 +359,75 @@ def test_watsonx_mapper_shapes_update_response_from_result_schema() -> None:
 
     assert shaped.id == deployment_id
     assert shaped.provider_data == {
-        "created_snapshot_ids": ["snap-1"],
-        "added_snapshot_bindings": [],
-        "tool_app_bindings": [{"tool_id": "tool-1", "app_ids": ["app-a"]}],
+        "created_app_ids": ["created-app-1"],
+        "tool_app_bindings": [
+            {"flow_version_id": str(new_flow_version_id), "app_ids": ["app-a"]},
+            {"flow_version_id": str(existing_flow_version_id), "app_ids": ["app-b"]},
+        ],
     }
+
+
+def test_watsonx_mapper_update_response_raises_on_invalid_source_ref() -> None:
+    """Non-UUID source_ref in snapshot bindings raises HTTP 500."""
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    timestamp = datetime.now(tz=UTC)
+    deployment_row = SimpleNamespace(
+        id=uuid4(),
+        name="WXO Deployment",
+        deployment_type=DeploymentType.AGENT.value,
+        created_at=timestamp,
+        updated_at=timestamp,
+    )
+    result = DeploymentUpdateResult(
+        id="provider-id",
+        provider_result={
+            "created_app_ids": [],
+            "added_snapshot_bindings": [
+                {"source_ref": "not-a-uuid", "tool_id": "tool-1", "created": False},
+            ],
+            "tool_app_bindings": [
+                {"tool_id": "tool-1", "app_ids": ["app-a"]},
+            ],
+        },
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        mapper.shape_deployment_update_result(result, deployment_row, description="updated")
+    assert exc.value.status_code == 500
+    assert "not a valid UUID" in exc.value.detail
+
+
+def test_watsonx_mapper_update_response_raises_on_unmapped_tool_binding() -> None:
+    """tool_app_binding whose tool_id has no matching snapshot ref raises HTTP 500."""
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    timestamp = datetime.now(tz=UTC)
+    mapped_fv_id = uuid4()
+    deployment_row = SimpleNamespace(
+        id=uuid4(),
+        name="WXO Deployment",
+        deployment_type=DeploymentType.AGENT.value,
+        created_at=timestamp,
+        updated_at=timestamp,
+    )
+    result = DeploymentUpdateResult(
+        id="provider-id",
+        provider_result={
+            "created_app_ids": [],
+            "added_snapshot_bindings": [
+                {"source_ref": str(mapped_fv_id), "tool_id": "mapped-tool", "created": True},
+            ],
+            "tool_app_bindings": [
+                {"tool_id": "mapped-tool", "app_ids": ["app-a"]},
+                {"tool_id": "orphan-tool", "app_ids": ["app-b"]},
+            ],
+        },
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        mapper.shape_deployment_update_result(result, deployment_row, description="updated")
+    assert exc.value.status_code == 500
+    assert "orphan-tool" in exc.value.detail
+    assert "no matching snapshot binding" in exc.value.detail
 
 
 def test_watsonx_mapper_exposes_reconciliation_resolvers() -> None:
@@ -362,8 +439,8 @@ def test_watsonx_mapper_exposes_reconciliation_resolvers() -> None:
             provider_data={
                 "connections": {"existing_app_ids": ["app-one"]},
                 "operations": [
-                    {"op": "bind", "tool": {"flow_version_id": str(add_id)}, "app_ids": ["app-one"]},
-                    {"op": "unbind", "tool": {"flow_version_id": str(remove_id)}, "app_ids": ["app-one"]},
+                    {"op": "bind", "flow_version_id": str(add_id), "app_ids": ["app-one"]},
+                    {"op": "unbind", "flow_version_id": str(remove_id), "app_ids": ["app-one"]},
                 ],
             }
         )
@@ -376,7 +453,7 @@ def test_watsonx_mapper_exposes_reconciliation_resolvers() -> None:
     create_bindings = mapper.util_create_snapshot_bindings(
         result=DeploymentCreateResult(
             id="provider-id",
-            provider_result={"snapshot_bindings": [{"source_ref": "fv-1", "snapshot_id": "snap-1"}]},
+            provider_result={"tools_with_refs": [{"source_ref": "fv-1", "tool_id": "snap-1"}]},
         ),
     )
     assert isinstance(create_bindings, CreateSnapshotBindings)
@@ -387,7 +464,7 @@ def test_watsonx_mapper_exposes_reconciliation_resolvers() -> None:
             id="provider-id",
             provider_result={
                 "created_snapshot_ids": ["snap-1"],
-                "added_snapshot_bindings": [{"source_ref": str(add_id), "snapshot_id": "snap-1"}],
+                "added_snapshot_bindings": [{"source_ref": str(add_id), "tool_id": "snap-1", "created": True}],
             },
         ),
     )
@@ -397,7 +474,7 @@ def test_watsonx_mapper_exposes_reconciliation_resolvers() -> None:
         result=DeploymentUpdateResult(
             id="provider-id",
             provider_result={
-                "added_snapshot_bindings": [{"source_ref": str(add_id), "snapshot_id": "snap-1"}],
+                "added_snapshot_bindings": [{"source_ref": str(add_id), "tool_id": "snap-1", "created": True}],
             },
         ),
     )

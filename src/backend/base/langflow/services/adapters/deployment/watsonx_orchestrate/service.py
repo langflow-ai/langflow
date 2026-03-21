@@ -374,13 +374,14 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 plan=provider_plan,
             )
 
-            return DeploymentUpdateResult(
+            return DeploymentUpdateResult[WatsonxDeploymentUpdateResultData](
                 id=deployment_id,
                 provider_result=self.payload_schemas.deployment_update_result.apply(
                     WatsonxDeploymentUpdateResultData(
+                        created_app_ids=apply_result.created_app_ids,
                         created_snapshot_ids=apply_result.added_snapshot_ids,
                         added_snapshot_bindings=apply_result.added_snapshot_bindings,
-                    ).model_dump(exclude_none=True)
+                    )
                 ),
             )
 

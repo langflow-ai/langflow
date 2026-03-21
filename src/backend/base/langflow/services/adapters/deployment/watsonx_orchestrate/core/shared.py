@@ -21,7 +21,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import
     FlowToolBindingSpec,
     create_and_upload_wxo_flow_tools_with_bindings,
 )
-from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import WatsonxCreateSnapshotBinding
+from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import WatsonxResultToolRefBinding
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import extract_error_detail
 
 if TYPE_CHECKING:
@@ -107,7 +107,7 @@ class ConnectionResolutionResult:
 @dataclass(slots=True)
 class RawToolCreateResult:
     created_tool_ids: list[str]
-    snapshot_bindings: list[WatsonxCreateSnapshotBinding]
+    snapshot_bindings: list[WatsonxResultToolRefBinding]
 
 
 async def create_connection_with_conflict_mapping(
@@ -281,7 +281,7 @@ async def create_raw_tools_with_bindings(
     )
 
     created_tool_ids: list[str] = []
-    created_snapshot_bindings: list[WatsonxCreateSnapshotBinding] = []
+    created_snapshot_bindings: list[WatsonxResultToolRefBinding] = []
     for raw_plan, created_tool_id in zip(raw_tools_to_create, raw_create_results, strict=True):
         tool_id = str(created_tool_id).strip()
         if not tool_id:
@@ -289,9 +289,10 @@ async def create_raw_tools_with_bindings(
             raise InvalidContentError(message=msg)
         created_tool_ids.append(tool_id)
         created_snapshot_bindings.append(
-            WatsonxCreateSnapshotBinding(
+            WatsonxResultToolRefBinding(
                 source_ref=raw_plan.payload.provider_data.source_ref,
-                snapshot_id=tool_id,
+                tool_id=tool_id,
+                created=True,
             )
         )
 
