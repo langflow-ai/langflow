@@ -46,6 +46,7 @@ def build_orchestrate_run_payload(
         "agent_id": str(provider_data.get("agent_id") or deployment_id),
     }
 
+    # TODO: remove these extra fields, don't need for MVP.
     extra_fields = [
         "thread_id",
         "llm_params",
