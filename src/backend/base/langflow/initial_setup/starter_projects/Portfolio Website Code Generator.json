@@ -1804,7 +1804,7 @@
                       "model_class": "ChatAnthropic",
                       "model_name_param": "model"
                     },
-                    "name": "claude-haiku-4-5-20251001",
+                    "name": "claude-haiku-4-5",
                     "provider": "Anthropic"
                   },
                   {
@@ -2481,7 +2481,7 @@
                       "model_class": "ChatAnthropic",
                       "model_name_param": "model"
                     },
-                    "name": "claude-haiku-4-5-20251001",
+                    "name": "claude-haiku-4-5",
                     "provider": "Anthropic"
                   },
                   {

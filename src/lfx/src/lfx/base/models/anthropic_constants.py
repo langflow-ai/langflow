@@ -4,7 +4,7 @@ ANTHROPIC_MODELS_DETAILED = [
     # Tool calling supported models
     create_model_metadata(provider="Anthropic", name="claude-opus-4-6", icon="Anthropic", tool_calling=True),
     create_model_metadata(provider="Anthropic", name="claude-sonnet-4-6", icon="Anthropic", tool_calling=True),
-    create_model_metadata(provider="Anthropic", name="claude-haiku-4-5-20251001", icon="Anthropic", tool_calling=True),
+    create_model_metadata(provider="Anthropic", name="claude-haiku-4-5", icon="Anthropic", tool_calling=True),
     create_model_metadata(provider="Anthropic", name="claude-opus-4-5-20251101", icon="Anthropic", tool_calling=True),
     create_model_metadata(provider="Anthropic", name="claude-sonnet-4-5-20250929", icon="Anthropic", tool_calling=True),
     create_model_metadata(provider="Anthropic", name="claude-opus-4-1-20250805", icon="Anthropic", tool_calling=True),
