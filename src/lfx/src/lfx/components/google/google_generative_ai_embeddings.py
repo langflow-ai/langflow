@@ -11,9 +11,9 @@ from lfx.io import MessageTextInput, Output, SecretStrInput
 
 MIN_DIMENSION_ERROR = "Output dimensionality must be at least 1"
 MAX_DIMENSION_ERROR = (
-    "Output dimensionality cannot exceed 768. Google's embedding models only support dimensions up to 768."
+    "Output dimensionality cannot exceed 3072. Google's embedding models only support dimensions up to 3072."
 )
-MAX_DIMENSION = 768
+MAX_DIMENSION = 3072
 MIN_DIMENSION = 1
 
 
@@ -29,7 +29,7 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
 
     inputs = [
         SecretStrInput(name="api_key", display_name="Google Generative AI API Key", required=True),
-        MessageTextInput(name="model_name", display_name="Model Name", value="models/text-embedding-004"),
+        MessageTextInput(name="model_name", display_name="Model Name", value="models/gemini-embedding-001"),
     ]
 
     outputs = [
