@@ -376,7 +376,8 @@ def test_base_mapper_shapes_deployment_update_result() -> None:
     deployment_row = SimpleNamespace(
         id=deployment_id,
         name="Deployment Name",
-        deployment_type=DeploymentType.AGENT.value,
+        description="desc",
+        deployment_type=DeploymentType.AGENT,
         created_at=timestamp,
         updated_at=timestamp,
     )
@@ -384,11 +385,11 @@ def test_base_mapper_shapes_deployment_update_result() -> None:
     shaped = mapper.shape_deployment_update_result(
         result,
         deployment_row,
-        description="desc",
     )
 
     assert shaped.id == deployment_id
     assert shaped.name == "Deployment Name"
+    assert shaped.description == "desc"
     assert shaped.type == DeploymentType.AGENT
     assert shaped.provider_data == {"ok": True}
 

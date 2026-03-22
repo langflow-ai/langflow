@@ -13,7 +13,6 @@ from lfx.services.adapters.deployment.schema import (
     ConfigDeploymentBindingUpdate,
     ConfigItem,
     DeploymentCreateResult,
-    DeploymentType,
     DeploymentUpdateResult,
     ExecutionCreate,
     ExecutionCreateResult,
@@ -194,18 +193,13 @@ class BaseDeploymentMapper:
         self,
         result: DeploymentUpdateResult,
         deployment_row: Deployment,
-        *,
-        description: str | None = None,
     ) -> DeploymentUpdateResponse:
         provider_data = result.provider_result if isinstance(result.provider_result, dict) else None
         return DeploymentUpdateResponse(
             id=deployment_row.id,
             name=deployment_row.name,
-            description=description,
-            # TODO: Make deployment.deployment_type
-            # a DeploymentType enum column in the
-            # DB model, and remove this fallback.
-            type=DeploymentType(deployment_row.deployment_type or DeploymentType.AGENT.value),
+            description=deployment_row.description,
+            type=deployment_row.deployment_type,
             created_at=deployment_row.created_at,
             updated_at=deployment_row.updated_at,
             provider_data=provider_data,

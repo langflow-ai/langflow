@@ -44,9 +44,18 @@ IdLike = UUID | NormalizedId
 
 
 class DeploymentType(str, Enum):
-    """Core deployment types recognized by LFX contracts."""
+    """Core deployment types recognized by LFX contracts.
 
-    # First-class deployment types recognized by the core schema.
+    **Cross-package coupling** — langflow's ``Deployment`` database model
+    (``langflow.services.database.models.deployment.model``) persists this
+    enum's ``.value`` as a ``NOT NULL`` string column and deserialises it
+    back via ``DeploymentType(value)``.  Because of this:
+
+    * **Never remove or rename** an existing member value — doing so will
+      cause ``ValueError`` on every read of rows that stored that value.
+    * Adding new members is safe and requires no migration.
+    """
+
     # Adapters may carry additional provider-specific classification in `provider_data`.
     AGENT = "agent"
 

@@ -3,12 +3,43 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 import sqlalchemy as sa
+from lfx.services.adapters.deployment.schema import DeploymentType
 from pydantic import field_validator
 from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
 from langflow.schema.serialize import UUIDstr
 from langflow.services.database.utils import validate_non_empty_string
+
+# NOTE: ``DeploymentType`` is defined and owned by the **lfx** package
+# (``lfx.services.adapters.deployment.schema``).  It is imported here as
+# a hard dependency because langflow persists deployment metadata on behalf
+# of lfx adapters and must guarantee round-trip fidelity of the enum values.
+# Existing enum member *values* must never be removed or renamed: the
+# ``_DeploymentTypeColumn`` TypeDecorator deserialises stored strings via
+# ``DeploymentType(value)`` — if a persisted value no longer maps to a
+# member, every read of that row will raise ``ValueError``.
+# If lfx ever relocates or splits this enum, this import and any migration
+# that references the enum values must be updated in lockstep.
+
+
+class _DeploymentTypeColumn(sa.TypeDecorator):
+    """Stores DeploymentType as a plain string but coerces on read/write."""
+
+    impl = sa.String
+    cache_ok = True
+
+    def process_bind_param(self, value, _dialect):
+        if value is None:
+            msg = "deployment_type must not be None"
+            raise ValueError(msg)
+        if isinstance(value, DeploymentType):
+            return value.value
+        return DeploymentType(value).value
+
+    def process_result_value(self, value, _dialect):
+        return DeploymentType(value)
+
 
 if TYPE_CHECKING:
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
@@ -40,7 +71,16 @@ class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
         )
     )
     name: str = Field(index=True)
-    deployment_type: str | None = Field(default=None, index=True)
+    description: str | None = Field(
+        default=None,
+        sa_column=Column(sa.Text(), nullable=True),
+    )
+    # nullable=True at the DB level to satisfy the EXPAND-phase migration
+    # validator; the _DeploymentTypeColumn TypeDecorator enforces NOT NULL
+    # at the application layer (process_bind_param rejects None).
+    deployment_type: DeploymentType = Field(
+        sa_column=Column(_DeploymentTypeColumn(), nullable=True, index=True),
+    )
     created_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
@@ -67,6 +107,7 @@ class DeploymentRead(SQLModel):
     project_id: UUID
     deployment_provider_account_id: UUID
     name: str
-    deployment_type: str | None = None
+    description: str | None = None
+    deployment_type: DeploymentType
     created_at: datetime
     updated_at: datetime

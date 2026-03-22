@@ -334,7 +334,8 @@ def test_watsonx_mapper_shapes_update_response_from_result_schema() -> None:
     deployment_row = SimpleNamespace(
         id=deployment_id,
         name="WXO Deployment",
-        deployment_type=DeploymentType.AGENT.value,
+        description="updated",
+        deployment_type=DeploymentType.AGENT,
         created_at=timestamp,
         updated_at=timestamp,
     )
@@ -355,7 +356,7 @@ def test_watsonx_mapper_shapes_update_response_from_result_schema() -> None:
         },
     )
 
-    shaped = mapper.shape_deployment_update_result(result, deployment_row, description="updated")
+    shaped = mapper.shape_deployment_update_result(result, deployment_row)
 
     assert shaped.id == deployment_id
     assert shaped.provider_data == {
@@ -374,7 +375,8 @@ def test_watsonx_mapper_update_response_raises_on_invalid_source_ref() -> None:
     deployment_row = SimpleNamespace(
         id=uuid4(),
         name="WXO Deployment",
-        deployment_type=DeploymentType.AGENT.value,
+        description="updated",
+        deployment_type=DeploymentType.AGENT,
         created_at=timestamp,
         updated_at=timestamp,
     )
@@ -392,7 +394,7 @@ def test_watsonx_mapper_update_response_raises_on_invalid_source_ref() -> None:
     )
 
     with pytest.raises(HTTPException) as exc:
-        mapper.shape_deployment_update_result(result, deployment_row, description="updated")
+        mapper.shape_deployment_update_result(result, deployment_row)
     assert exc.value.status_code == 500
     assert "not a valid UUID" in exc.value.detail
 
@@ -405,7 +407,8 @@ def test_watsonx_mapper_update_response_raises_on_unmapped_tool_binding() -> Non
     deployment_row = SimpleNamespace(
         id=uuid4(),
         name="WXO Deployment",
-        deployment_type=DeploymentType.AGENT.value,
+        description="updated",
+        deployment_type=DeploymentType.AGENT,
         created_at=timestamp,
         updated_at=timestamp,
     )
@@ -424,7 +427,7 @@ def test_watsonx_mapper_update_response_raises_on_unmapped_tool_binding() -> Non
     )
 
     with pytest.raises(HTTPException) as exc:
-        mapper.shape_deployment_update_result(result, deployment_row, description="updated")
+        mapper.shape_deployment_update_result(result, deployment_row)
     assert exc.value.status_code == 500
     assert "orphan-tool" in exc.value.detail
     assert "no matching snapshot binding" in exc.value.detail

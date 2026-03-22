@@ -16,6 +16,7 @@ from langflow.services.database.utils import parse_uuid
 if TYPE_CHECKING:
     from uuid import UUID
 
+    from lfx.services.adapters.deployment.schema import DeploymentType
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
@@ -36,7 +37,8 @@ async def create_deployment(
     deployment_provider_account_id: UUID,
     resource_key: str,
     name: str,
-    deployment_type: str | None = None,
+    deployment_type: DeploymentType,
+    description: str | None = None,
 ) -> Deployment:
     resource_key_s = _strip_or_raise(resource_key, "resource_key")
     name_s = _strip_or_raise(name, "name")
@@ -48,6 +50,7 @@ async def create_deployment(
         resource_key=resource_key_s,
         name=name_s,
         deployment_type=deployment_type,
+        description=description,
     )
     db.add(row)
     try:
@@ -90,17 +93,26 @@ async def get_deployment(
     return (await db.exec(stmt)).first()
 
 
+_UNSET = object()
+
+
 async def update_deployment(
     db: AsyncSession,
     *,
     deployment: Deployment,
     name: str | None = None,
     project_id: UUID | None = None,
+    deployment_type: DeploymentType | object = _UNSET,
+    description: str | None | object = _UNSET,
 ) -> Deployment:
     if name is not None:
         deployment.name = _strip_or_raise(name, "name")
     if project_id is not None:
         deployment.project_id = project_id
+    if deployment_type is not _UNSET:
+        deployment.deployment_type = deployment_type  # type: ignore[assignment]
+    if description is not _UNSET:
+        deployment.description = description  # type: ignore[assignment]
     deployment.updated_at = datetime.now(timezone.utc)
     db.add(deployment)
     try:

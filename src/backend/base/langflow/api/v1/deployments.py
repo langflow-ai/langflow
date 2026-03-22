@@ -146,24 +146,6 @@ def _as_uuid(value: UUID | str) -> UUID | None:
         return None
 
 
-def _resolve_deployment_type(row: Deployment, fallback: DeploymentType | None = None) -> DeploymentType:
-    if row.deployment_type:
-        try:
-            return DeploymentType(row.deployment_type)
-        except ValueError:
-            msg = f"Unknown deployment_type '{row.deployment_type}' for deployment {row.id}"
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg) from None
-    if fallback is not None:
-        logger.debug(
-            "Deployment %s has no deployment_type; using fallback '%s'",
-            row.id,
-            fallback.value,
-        )
-        return fallback
-    msg = f"Deployment {row.id} has no deployment_type set"
-    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-
-
 def _raise_http_for_value_error(exc: ValueError) -> None:
     status_code = status.HTTP_404_NOT_FOUND if "not found" in str(exc).lower() else status.HTTP_400_BAD_REQUEST
     raise HTTPException(status_code=status_code, detail=str(exc)) from exc
@@ -496,7 +478,7 @@ async def _list_deployments_synced(
 
         for row, attached_count, matched_flow_versions in batch:
             if row.resource_key not in known:
-                if deployment_type is not None and row.deployment_type != deployment_type.value:
+                if deployment_type is not None and row.deployment_type != deployment_type:
                     # Provider was filtered by type — this row's type didn't match,
                     # so its absence doesn't mean it was deleted. Skip, don't delete.
                     cursor += 1
@@ -620,9 +602,8 @@ def _to_deployment_create_response(
     return DeploymentCreateResponse(
         id=deployment_row.id,
         name=deployment_row.name,
-        # TODO(deployments): return the persisted deployment description here.
-        description=None,
-        type=_resolve_deployment_type(deployment_row, fallback=DeploymentType.AGENT),
+        description=deployment_row.description,
+        type=deployment_row.deployment_type,
         created_at=deployment_row.created_at,
         updated_at=deployment_row.updated_at,
         provider_data=payload.get("provider_result"),
@@ -791,7 +772,8 @@ async def create_deployment(
                 deployment_provider_account_id=provider_id,
                 resource_key=str(result.id),
                 name=payload.spec.name,
-                deployment_type=payload.spec.type.value if payload.spec.type else None,
+                deployment_type=payload.spec.type,
+                description=payload.spec.description or None,
             )
 
         snapshot_id_by_flow_version_id: dict[UUID, str] = {}
@@ -858,8 +840,9 @@ async def list_deployments(
         DeploymentListItem(
             id=row.id,
             resource_key=row.resource_key,
-            type=_resolve_deployment_type(row, fallback=deployment_type),
+            type=row.deployment_type,
             name=row.name,
+            description=row.description,
             attached_count=attached_count,
             created_at=row.created_at,
             updated_at=row.updated_at,
@@ -1099,17 +1082,22 @@ async def update_deployment(
         db=session,
     )
 
-    if payload.spec is not None and payload.spec.name is not None and payload.spec.name != deployment_row.name:
-        deployment_row = await update_deployment_db(
-            session,
-            deployment=deployment_row,
-            name=payload.spec.name,
-        )
+    if payload.spec is not None:
+        update_kwargs: dict = {}
+        if payload.spec.name is not None and payload.spec.name != deployment_row.name:
+            update_kwargs["name"] = payload.spec.name
+        if payload.spec.description is not None and payload.spec.description != deployment_row.description:
+            update_kwargs["description"] = payload.spec.description
+        if update_kwargs:
+            deployment_row = await update_deployment_db(
+                session,
+                deployment=deployment_row,
+                **update_kwargs,
+            )
 
     return deployment_mapper.shape_deployment_update_result(
         update_result,
         deployment_row,
-        description=payload.spec.description if payload.spec else None,
     )
 
 
@@ -1149,7 +1137,7 @@ async def get_deployment_status(
         db=session,
     )
     try:
-        with deployment_provider_scope(deployment_row.provider_account_id):
+        with deployment_provider_scope(deployment_row.deployment_provider_account_id):
             health_result = await deployment_adapter.get_status(
                 deployment_id=deployment_row.resource_key,
                 user_id=current_user.id,
@@ -1166,8 +1154,8 @@ async def get_deployment_status(
     return DeploymentStatusResponse(
         id=deployment_row.id,
         name=deployment_row.name,
-        description=None,
-        type=DeploymentType.AGENT,
+        description=deployment_row.description,
+        type=deployment_row.deployment_type,
         created_at=deployment_row.created_at,
         updated_at=deployment_row.updated_at,
         provider_data=health_result.provider_data,
@@ -1198,8 +1186,8 @@ async def redeploy_deployment(
     return DeploymentRedeployResponse(
         id=deployment_row.id,
         name=deployment_row.name,
-        description=None,
-        type=_resolve_deployment_type(deployment_row),
+        description=deployment_row.description,
+        type=deployment_row.deployment_type,
         created_at=deployment_row.created_at,
         updated_at=deployment_row.updated_at,
         provider_data=provider_data,
@@ -1243,7 +1231,8 @@ async def duplicate_deployment(
                 deployment_provider_account_id=deployment_row.deployment_provider_account_id,
                 resource_key=str(clone_result.id),
                 name=clone_result.name,
-                deployment_type=clone_result.type.value if clone_result.type else None,
+                deployment_type=clone_result.type,
+                description=getattr(clone_result, "description", None),
             )
     except Exception:
         logger.critical(

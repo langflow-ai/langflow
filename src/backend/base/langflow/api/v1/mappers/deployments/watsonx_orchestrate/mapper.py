@@ -12,7 +12,6 @@ from lfx.services.adapters.deployment.schema import (
 )
 from lfx.services.adapters.deployment.schema import (
     DeploymentCreateResult,
-    DeploymentType,
     DeploymentUpdateResult,
     ExecutionCreateResult,
     ExecutionStatusResult,
@@ -292,8 +291,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         self,
         result: DeploymentUpdateResult,
         deployment_row: Deployment,
-        *,
-        description: str | None = None,
     ) -> DeploymentUpdateResponse:
         adapter_provider_result = self._parse_required_payload_slot(
             slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_update_result,
@@ -317,8 +314,8 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         return DeploymentUpdateResponse(
             id=deployment_row.id,
             name=deployment_row.name,
-            description=description,
-            type=DeploymentType(deployment_row.deployment_type or DeploymentType.AGENT.value),
+            description=deployment_row.description,
+            type=deployment_row.deployment_type,
             created_at=deployment_row.created_at,
             updated_at=deployment_row.updated_at,
             provider_data=provider_api_result.model_dump(mode="json", exclude_none=True),
