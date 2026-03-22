@@ -11,7 +11,7 @@ from lfx.io import MessageTextInput, Output, SecretStrInput
 
 MIN_DIMENSION_ERROR = "Output dimensionality must be at least 1"
 MAX_DIMENSION_ERROR = (
-    "Output dimensionality cannot exceed 3072. Google's embedding models only support dimensions up to 3072."
+    "Output dimensionality {} cannot exceed 3072. Google's embedding models only support dimensions up to 3072."
 )
 MAX_DIMENSION = 3072
 MIN_DIMENSION = 1
