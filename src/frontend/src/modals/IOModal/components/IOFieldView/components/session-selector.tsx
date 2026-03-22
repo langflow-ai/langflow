@@ -161,7 +161,7 @@ export default function SessionSelector({
               <button
                 onClick={handleConfirm}
                 data-confirm="true"
-                className="ml-2 text-green-500 hover:text-green-600"
+                className="ml-2 text-accent-emerald-foreground hover:text-accent-emerald-foreground/80"
               >
                 <IconComponent name="Check" className="h-4 w-4" />
               </button>

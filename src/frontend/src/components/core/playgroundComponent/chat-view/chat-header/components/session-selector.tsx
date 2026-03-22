@@ -17,8 +17,6 @@ export interface SessionSelectorProps {
   updateVisibleSession: (session: string) => void;
   selectedView?: { type: string; id: string };
   setSelectedView?: (view: { type: string; id: string } | undefined) => void;
-  playgroundPage?: boolean;
-  setActiveSession?: (session: string) => void;
   handleRename?: (oldSessionId: string, newSessionId: string) => Promise<void>;
   menuOpen?: boolean;
   onMenuOpenChange?: (open: boolean) => void;
@@ -34,8 +32,6 @@ export function SessionSelector({
   updateVisibleSession,
   selectedView,
   setSelectedView,
-  playgroundPage = false,
-  setActiveSession,
   handleRename,
   menuOpen,
   onMenuOpenChange,
@@ -87,7 +83,7 @@ export function SessionSelector({
     }
   };
 
-  // Default session (flowId) cannot be renamed or deleted
+  // Default session (flowId) cannot be renamed, but can be deleted if it has messages
   const isDefaultSession = session === currentFlowId;
 
   const hasMessages = useSessionHasMessages({
@@ -96,6 +92,7 @@ export function SessionSelector({
   });
 
   const canModifySession = !isDefaultSession;
+  const canDeleteSession = hasMessages || !isDefaultSession;
   const canRenameSession = canModifySession && hasMessages;
 
   return (
@@ -144,7 +141,7 @@ export function SessionSelector({
           onMessageLogs={() => inspectSession?.(session)}
           onDelete={() => deleteSession(session)}
           showRename={canRenameSession}
-          showDelete={canModifySession}
+          showDelete={canDeleteSession}
           side="bottom"
           align="end"
           dataTestid={`session-${session}-more-menu`}
@@ -155,6 +152,7 @@ export function SessionSelector({
           tooltipSide="left"
           open={menuOpen}
           onOpenChange={onMenuOpenChange}
+          isDefaultSession={isDefaultSession}
         />
       </div>
     </div>

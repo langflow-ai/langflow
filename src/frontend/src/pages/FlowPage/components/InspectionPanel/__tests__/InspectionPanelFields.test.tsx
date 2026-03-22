@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import InspectionPanelFields from "../components/InspectionPanelFields";
 import type { NodeDataType } from "@/types/flow";
+import InspectionPanelFields from "../components/InspectionPanelFields";
 
 // Mock getFieldTitle
 jest.mock("@/CustomNodes/utils/get-field-title", () => ({

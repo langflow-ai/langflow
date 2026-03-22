@@ -31,10 +31,10 @@ export function SpanDetail({ span }: SpanDetailProps) {
     );
   }
 
-  const hasInputs = Object.keys(span.inputs).length > 0;
-  const hasOutputs = Object.keys(span.outputs).length > 0;
-  const hasTokenUsage = span.tokenUsage && span.tokenUsage.totalTokens > 0;
-  const isLlmSpan = span.type === "llm";
+  const hasInputs = Object.keys(span?.inputs || {}).length > 0;
+  const hasOutputs = Object.keys(span?.outputs || {}).length > 0;
+  const hasTokenUsage = span?.tokenUsage && span.tokenUsage.totalTokens > 0;
+  const isLlmSpan = span?.type === "llm";
 
   const { colorClass, iconName, shouldSpin } = getStatusIconProps(span.status);
 

@@ -50,7 +50,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
 
     def _resolve_parent_span_id(self, parent_run_id: UUID | None) -> UUID | None:
         """Return the correct parent span ID so nested LangChain calls form a proper tree."""
-        if parent_run_id:
+        if parent_run_id and parent_run_id in self._spans:
             return self._get_span_id(parent_run_id)
         return self.parent_span_id
 

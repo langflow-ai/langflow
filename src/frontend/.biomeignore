@@ -6,6 +6,7 @@ dist/
 node_modules/
 
 # Test outputs
+.nyc_output/
 coverage/
 test-results/
 playwright-report/

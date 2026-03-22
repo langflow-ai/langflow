@@ -73,7 +73,7 @@ class GoogleDriveSearchComponent(Component):
         Output(display_name="Document URLs", name="doc_urls", method="search_doc_urls"),
         Output(display_name="Document IDs", name="doc_ids", method="search_doc_ids"),
         Output(display_name="Document Titles", name="doc_titles", method="search_doc_titles"),
-        Output(display_name="Data", name="Data", method="search_data"),
+        Output(display_name="JSON", name="Data", method="search_data"),
     ]
 
     def generate_query_string(self) -> str:

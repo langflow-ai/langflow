@@ -6,19 +6,43 @@ This module provides components that leverage the Agentics framework for:
 - Synthetic data generation (SyntheticDataGenerator)
 """
 
-from lfx.components.agentics.constants import ERROR_AGENTICS_NOT_INSTALLED
+from __future__ import annotations
 
-__all__: list[str] = []
+from typing import TYPE_CHECKING, Any
 
-try:
-    import crewai  # noqa: F401
-    from agentics import AG  # noqa: F401
-    from agentics.core.atype import create_pydantic_model  # noqa: F401
-except ImportError as e:
-    raise ImportError(ERROR_AGENTICS_NOT_INSTALLED) from e
+from lfx.components._importing import import_mod
 
-from lfx.components.agentics.semantic_aggregator import SemanticAggregator
-from lfx.components.agentics.semantic_map import SemanticMap
-from lfx.components.agentics.synthetic_data_generator import SyntheticDataGenerator
+if TYPE_CHECKING:
+    from .semantic_aggregator import SemanticAggregator
+    from .semantic_map import SemanticMap
+    from .synthetic_data_generator import SyntheticDataGenerator
 
-__all__ = ["SemanticAggregator", "SemanticMap", "SyntheticDataGenerator"]
+_dynamic_imports = {
+    "SemanticAggregator": "semantic_aggregator",
+    "SemanticMap": "semantic_map",
+    "SyntheticDataGenerator": "synthetic_data_generator",
+}
+
+__all__ = [
+    "SemanticAggregator",
+    "SemanticMap",
+    "SyntheticDataGenerator",
+]
+
+
+def __getattr__(attr_name: str) -> Any:
+    """Lazily import agentics components on attribute access."""
+    if attr_name not in _dynamic_imports:
+        msg = f"module '{__name__}' has no attribute '{attr_name}'"
+        raise AttributeError(msg)
+    try:
+        result = import_mod(attr_name, _dynamic_imports[attr_name], __spec__.parent)
+    except (ModuleNotFoundError, ImportError, AttributeError) as e:
+        msg = f"Could not import '{attr_name}' from '{__name__}': {e}"
+        raise AttributeError(msg) from e
+    globals()[attr_name] = result
+    return result
+
+
+def __dir__() -> list[str]:
+    return list(__all__)

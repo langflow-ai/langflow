@@ -254,7 +254,7 @@ export default function DragFilesComponent({
         {allowFolderSelection && (
           <div className="text-xs text-muted-foreground text-center max-w-md space-y-2">
             <p>Drag-and-drop supports both individual files and folders.</p>
-            <p className="text-amber-600 dark:text-amber-400 font-medium">
+            <p className="text-accent-amber-foreground font-medium">
               ⚠️ Avoid folders with large hidden directories (.mypy_cache, .git,
               node_modules, etc.)
             </p>

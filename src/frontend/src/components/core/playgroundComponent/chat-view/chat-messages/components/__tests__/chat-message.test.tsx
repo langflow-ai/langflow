@@ -180,13 +180,13 @@ describe("ChatMessage Component", () => {
       chat: {
         ...mockChat,
         message: "",
-        files: ["/path/to/file.jpg"],
+        files: ["/path/to/file.pdf"],
       },
     };
 
     render(<ChatMessage {...propsWithFiles} />);
-    // Should render UserMessage with file preview (shows loading icon for files)
-    expect(screen.getByTestId("loading-icon")).toBeInTheDocument();
+    // Should render UserMessage with file preview (non-image files show File icon)
+    expect(screen.getByTestId("forwarded-icon")).toBeInTheDocument();
   });
 
   it("renders bot message when no text and no files", () => {
@@ -231,7 +231,7 @@ describe("ThinkingMessage Component", () => {
     render(<ThinkingMessage isThinking={false} duration={3000} />);
 
     const icon = screen.getByTestId("icon-Check");
-    expect(icon.className).toContain("text-emerald-400");
+    expect(icon.className).toContain("text-accent-emerald-foreground");
   });
 
   it("formats time in minutes when duration exceeds 60 seconds", () => {

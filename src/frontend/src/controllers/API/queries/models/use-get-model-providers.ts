@@ -30,32 +30,28 @@ export const useGetModelProviders: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const getModelProvidersFn = async (): Promise<ModelProviderWithStatus[]> => {
-    try {
-      // Build query params
-      const queryParams = new URLSearchParams();
-      if (params?.includeDeprecated) {
-        queryParams.append("include_deprecated", "true");
-      }
-      if (params?.includeUnsupported) {
-        queryParams.append("include_unsupported", "true");
-      }
-
-      const url = `${getURL("MODELS")}${
-        queryParams.toString() ? `?${queryParams.toString()}` : ""
-      }`;
-
-      // Fetch the models with provider information including is_enabled status from server
-      const response = await api.get<ModelProviderInfo[]>(url);
-      const providersData = response.data;
-
-      return providersData.map((providerInfo) => ({
-        ...providerInfo,
-        icon: getProviderIcon(providerInfo.provider),
-      }));
-    } catch (error) {
-      console.error("Error fetching model providers:", error);
-      return [];
+    // Build query params
+    const queryParams = new URLSearchParams();
+    if (params?.includeDeprecated) {
+      queryParams.append("include_deprecated", "true");
     }
+    if (params?.includeUnsupported) {
+      queryParams.append("include_unsupported", "true");
+    }
+
+    const url = `${getURL("MODELS")}${
+      queryParams.toString() ? `?${queryParams.toString()}` : ""
+    }`;
+
+    // Fetch the models with provider information including is_enabled status from server
+    // Let errors propagate so React Query can retry and preserve stale data
+    const response = await api.get<ModelProviderInfo[]>(url);
+    const providersData = response.data;
+
+    return providersData.map((providerInfo) => ({
+      ...providerInfo,
+      icon: getProviderIcon(providerInfo.provider),
+    }));
   };
 
   const queryResult = query(
