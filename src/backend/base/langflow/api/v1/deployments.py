@@ -74,6 +74,7 @@ from langflow.services.database.models.deployment.crud import (
 )
 from langflow.services.database.models.deployment.crud import (
     delete_deployment_by_id,
+    deployment_name_exists,
     get_deployment_by_resource_key,
 )
 from langflow.services.database.models.deployment.crud import (
@@ -252,6 +253,20 @@ async def create_deployment(
         user_id=current_user.id,
         db=session,
     )
+    # fail fast if the deployment name already exists
+    # we could have races but that is more
+    # acceptable than provider-side rollback failure
+    if await deployment_name_exists(
+        session,
+        user_id=current_user.id,
+        deployment_provider_account_id=provider_id,
+        name=payload.spec.name,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"A deployment named {payload.spec.name!r} already exists for this provider account",
+        )
+
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
     project_id = await resolve_project_id_for_deployment_create(payload=payload, user_id=current_user.id, db=session)
@@ -278,23 +293,16 @@ async def create_deployment(
     # so we need to create the deployment row and attach the flow versions
     # in the DB
     try:
-        deployment_row = await get_deployment_by_resource_key(
+        deployment_row = await create_deployment_db(
             session,
             user_id=current_user.id,
+            project_id=project_id,
             deployment_provider_account_id=provider_id,
             resource_key=str(result.id),
+            name=payload.spec.name,
+            deployment_type=payload.spec.type,
+            description=payload.spec.description or None,
         )
-        if deployment_row is None:
-            deployment_row = await create_deployment_db(
-                session,
-                user_id=current_user.id,
-                project_id=project_id,
-                deployment_provider_account_id=provider_id,
-                resource_key=str(result.id),
-                name=payload.spec.name,
-                deployment_type=payload.spec.type,
-                description=payload.spec.description or None,
-            )
 
         snapshot_id_by_flow_version_id: dict[UUID, str] = {}
         if flow_version_ids:

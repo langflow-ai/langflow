@@ -9,6 +9,7 @@ from langflow.services.database.models.deployment.crud import (
     create_deployment,
     delete_deployment_by_id,
     delete_deployment_by_resource_key,
+    deployment_name_exists,
     get_deployment,
     get_deployment_by_resource_key,
     list_deployments_page,
@@ -203,6 +204,60 @@ async def test_get_deployment_by_resource_key_not_found():
     )
 
     assert result is None
+
+
+# --- deployment_name_exists ---
+
+
+@pytest.mark.asyncio
+async def test_deployment_name_exists_returns_true_when_found():
+    db = _make_db()
+    mock_result = MagicMock()
+    mock_result.first.return_value = uuid4()
+    db.exec.return_value = mock_result
+
+    result = await deployment_name_exists(
+        db,
+        user_id=uuid4(),
+        deployment_provider_account_id=uuid4(),
+        name="existing-deploy",
+    )
+
+    assert result is True
+
+
+@pytest.mark.asyncio
+async def test_deployment_name_exists_returns_false_when_not_found():
+    db = _make_db()
+    mock_result = MagicMock()
+    mock_result.first.return_value = None
+    db.exec.return_value = mock_result
+
+    result = await deployment_name_exists(
+        db,
+        user_id=uuid4(),
+        deployment_provider_account_id=uuid4(),
+        name="nonexistent",
+    )
+
+    assert result is False
+
+
+@pytest.mark.asyncio
+async def test_deployment_name_exists_strips_whitespace():
+    db = _make_db()
+    mock_result = MagicMock()
+    mock_result.first.return_value = None
+    db.exec.return_value = mock_result
+
+    await deployment_name_exists(
+        db,
+        user_id=uuid4(),
+        deployment_provider_account_id=uuid4(),
+        name="  my-deploy  ",
+    )
+
+    db.exec.assert_awaited_once()
 
 
 # --- list_deployments_page ---

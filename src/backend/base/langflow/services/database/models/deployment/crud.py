@@ -64,6 +64,21 @@ async def create_deployment(
     return row
 
 
+async def deployment_name_exists(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment_provider_account_id: UUID,
+    name: str,
+) -> bool:
+    stmt = select(Deployment.id).where(
+        Deployment.user_id == user_id,
+        Deployment.deployment_provider_account_id == deployment_provider_account_id,
+        Deployment.name == name.strip(),
+    )
+    return (await db.exec(stmt)).first() is not None
+
+
 async def get_deployment_by_resource_key(
     db: AsyncSession,
     *,

@@ -76,22 +76,22 @@ class TestCreateDeploymentRollback:
     @patch(f"{ROUTES_MODULE}.rollback_provider_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.attach_flow_versions", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_snapshot_map_for_create", return_value={})
-    @patch(f"{ROUTES_MODULE}.get_deployment_by_resource_key", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.create_deployment_db", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
     async def test_rollback_called_on_commit_failure(
         self,
         mock_get_pa,
+        mock_name_exists,  # noqa: ARG002
         mock_get_mapper,
         mock_resolve_adapter,
         mock_resolve_project,
         mock_validate_fv,  # noqa: ARG002
         mock_create_db,
-        mock_get_by_rk,
         mock_resolve_snap,  # noqa: ARG002
         mock_attach,  # noqa: ARG002
         mock_rollback,
@@ -110,7 +110,6 @@ class TestCreateDeploymentRollback:
         mapper.resolve_deployment_create = AsyncMock(return_value=MagicMock())
         mock_get_mapper.return_value = mapper
         mock_resolve_project.return_value = uuid4()
-        mock_get_by_rk.return_value = None
         mock_create_db.return_value = _fake_deployment_row()
 
         session = AsyncMock()
@@ -132,22 +131,22 @@ class TestCreateDeploymentRollback:
     @patch(f"{ROUTES_MODULE}.rollback_provider_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.attach_flow_versions", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_snapshot_map_for_create", return_value={})
-    @patch(f"{ROUTES_MODULE}.get_deployment_by_resource_key", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.create_deployment_db", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
     async def test_no_rollback_on_success(
         self,
         mock_get_pa,
+        mock_name_exists,  # noqa: ARG002
         mock_get_mapper,
         mock_resolve_adapter,
         mock_resolve_project,
         mock_validate_fv,  # noqa: ARG002
         mock_create_db,
-        mock_get_by_rk,
         mock_resolve_snap,  # noqa: ARG002
         mock_attach,  # noqa: ARG002
         mock_rollback,
@@ -167,7 +166,6 @@ class TestCreateDeploymentRollback:
         mock_get_mapper.return_value = mapper
         mock_resolve_project.return_value = uuid4()
         dep_row = _fake_deployment_row()
-        mock_get_by_rk.return_value = None
         mock_create_db.return_value = dep_row
 
         session = AsyncMock()
@@ -488,6 +486,62 @@ class TestGetDeploymentSync:
 
 
 # ---------------------------------------------------------------------------
+# create_deployment: duplicate name returns 409
+# ---------------------------------------------------------------------------
+
+
+class TestCreateDeploymentDuplicateName:
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=True)
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_duplicate_name_returns_409(
+        self,
+        mock_get_pa,
+        mock_name_exists,  # noqa: ARG002
+    ):
+        """When a deployment with the same name already exists, 409 is returned without calling the provider."""
+        from langflow.api.v1.deployments import create_deployment
+
+        pa = _fake_provider_account()
+        mock_get_pa.return_value = pa
+
+        payload = MagicMock()
+        payload.provider_id = pa.id
+        payload.spec.name = "duplicate-name"
+
+        with pytest.raises(HTTPException) as exc_info:
+            await create_deployment(session=AsyncMock(), payload=payload, current_user=_fake_user())
+
+        assert exc_info.value.status_code == 409
+        assert "duplicate-name" in exc_info.value.detail
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=True)
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_duplicate_name_does_not_call_provider(
+        self,
+        mock_get_pa,
+        mock_name_exists,  # noqa: ARG002
+        mock_resolve_adapter,
+    ):
+        """When name already exists, the provider adapter is never invoked."""
+        from langflow.api.v1.deployments import create_deployment
+
+        pa = _fake_provider_account()
+        mock_get_pa.return_value = pa
+
+        payload = MagicMock()
+        payload.provider_id = pa.id
+        payload.spec.name = "taken"
+
+        with pytest.raises(HTTPException):
+            await create_deployment(session=AsyncMock(), payload=payload, current_user=_fake_user())
+
+        mock_resolve_adapter.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
 # create_deployment: project-scoped flow version validation
 # ---------------------------------------------------------------------------
 
@@ -498,10 +552,12 @@ class TestCreateDeploymentProjectValidation:
     @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
     async def test_validation_called_before_adapter(
         self,
         mock_get_pa,
+        mock_name_exists,  # noqa: ARG002
         mock_get_mapper,
         mock_resolve_adapter,
         mock_resolve_project,
@@ -541,10 +597,12 @@ class TestCreateDeploymentProjectValidation:
     @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
     async def test_empty_flow_version_ids_skips_validation(
         self,
         mock_get_pa,
+        mock_name_exists,  # noqa: ARG002
         mock_get_mapper,
         mock_resolve_adapter,
         mock_resolve_project,
@@ -575,7 +633,6 @@ class TestCreateDeploymentProjectValidation:
         session.commit.return_value = None
 
         with (
-            patch(f"{ROUTES_MODULE}.get_deployment_by_resource_key", new_callable=AsyncMock, return_value=None),
             patch(f"{ROUTES_MODULE}.create_deployment_db", new_callable=AsyncMock, return_value=_fake_deployment_row()),
             patch(f"{ROUTES_MODULE}.attach_flow_versions", new_callable=AsyncMock),
             patch(f"{ROUTES_MODULE}.to_deployment_create_response", return_value=MagicMock()),
