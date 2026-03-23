@@ -55,6 +55,19 @@ def _get_validated_file_name(file_name: str = Path()) -> str:
 
 ValidatedFileName = Annotated[str, Depends(_get_validated_file_name)]
 
+
+def _get_validated_folder_name(folder_name: str = Path()) -> str:
+    """Validate folder_name path parameter to prevent path traversal attacks."""
+    if ".." in folder_name or "/" in folder_name or "\\" in folder_name:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid folder name. Use a simple folder name without directory paths or '..'.",
+        )
+    return folder_name
+
+
+ValidatedFolderName = Annotated[str, Depends(_get_validated_folder_name)]
+
 # Message to raise if we're in an Astra cloud environment and a component or endpoint is not supported
 disable_endpoint_in_astra_cloud_msg = "This endpoint is not supported in Astra cloud environment."
 

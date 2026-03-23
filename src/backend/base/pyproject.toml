@@ -23,14 +23,14 @@ dependencies = [
     "aiofile>=3.9.0,<4.0.0",
     "uvicorn>=0.30.0,<1.0.0",
     "gunicorn>=22.0.0,<23.0.0",
-    "langchain~=0.3.27",
-    "langchain-community>=0.3.28,<1.0.0",
-    "langchain-core>=0.3.81,<1.0.0",
+    "langchain~=1.2.0",
+    "langchain-community~=0.4.1",
+    "langchain-core~=1.2.3",
     "langchainhub~=0.1.15",
     "loguru>=0.7.1,<1.0.0",
     "structlog>=25.4.0,<26.0.0",
     "rich>=13.7.0,<14.0.0",
-    "langchain-experimental>=0.3.0,<1.0.0",
+    "langchain-experimental~=0.4.1",
     "sqlmodel~=0.0.37",
     "pydantic~=2.12.5",
     "pydantic-settings>=2.2.0,<3.0.0",
@@ -91,9 +91,9 @@ dependencies = [
     'elevenlabs>=1.52.0,<2.0.0; python_version != "3.12"',
     "scipy>=1.15.2,<2.0.0",
     "ibm-watsonx-ai>=1.3.1,<2.0.0",
-    "langchain-ibm>=0.3.8,<1.0.0",
+    "langchain-ibm~=1.0.2",
     "trustcall>=0.0.38,<1.0.0",
-    "langchain-chroma>=0.1.4,<1.0.0",
+    "langchain-chroma~=0.2.6",
     "jaraco-context>=6.1.0",
     "wheel>=0.46.2,<1.0.0",
     "onnxruntime>=1.20,<=1.23" # >=1.24 does not support Python 3.10
@@ -203,7 +203,7 @@ clickhouse = ["clickhouse-connect==0.7.19"]
 mongodb = ["pymongo==4.10.1"]
 supabase = ["supabase>=2.6.0,<3.0.0"]
 redis = ["redis>=5.2.1,<6.0.0"]
-elasticsearch = ["elasticsearch==8.16.0", "langchain-elasticsearch>=0.3.0,<1.0.0"]
+elasticsearch = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0"]
 
 # Individual vector store providers
 faiss = ["faiss-cpu==1.9.0.post1"]
@@ -211,29 +211,30 @@ qdrant = ["qdrant-client==1.9.2"]
 weaviate = ["weaviate-client>=4.10.2,<5.0.0"]
 chroma = [
     "chromadb>=1.0.0,<2.0.0",
-    "langchain-chroma>=0.1.4,<1.0.0"
+    "langchain-chroma~=0.2.6"
 ]
 upstash = ["upstash-vector==0.6.0"]
-pinecone = ["langchain-pinecone>=0.2.8,<1.0.0"]
-milvus = ["langchain-milvus==0.1.7"]
+pinecone = ["langchain-pinecone~=0.2.13"]
+milvus = ["langchain-milvus~=0.3.2"]
 mongodb-vectors = ["langchain-mongodb==0.7.0"]
-astradb = ["langchain-astradb>=0.6.1,<1.0.0"]
+astradb = ["langchain-astradb~=1.0.0"]
 
 # Individual LLM providers
-openai = ["langchain-openai>=0.3.0,<1.0.0", "openai>=1.68.2,<2.0.0"]
-anthropic = ["langchain-anthropic==0.3.14"]
-cohere = ["langchain-cohere>=0.3.3,<1.0.0"]
+openai = ["langchain-openai~=1.1.6", "openai>=1.68.2,<2.0.0"]
+anthropic = ["langchain-anthropic~=1.3.0"]
+cohere = ["langchain-cohere~=0.5.0"]
 google = [
-    "langchain-google-genai==2.0.6",
-    "langchain-google-vertexai>=2.0.7,<3.0.0",
-    "langchain-google-community>=2.0.3,<3.0.0",
-    "langchain-google-calendar-tools==0.0.1"
+    "langchain-google-genai~=4.1.2",
+    "langchain-google-vertexai~=3.2.0",
+    "langchain-google-community~=3.0.2",
+    "langchain-google-calendar-tools~=0.0.1",
+    "google-api-python-client~=2.161",
 ]
-ollama = ["langchain-ollama==0.3.10"]
-nvidia = ["langchain-nvidia-ai-endpoints==0.3.8"]
-mistral = ["langchain-mistralai==0.2.3"]
-sambanova = ["langchain-sambanova==0.1.0"]
-groq = ["langchain-groq==0.2.1"]
+ollama = ["langchain-ollama~=0.3.10"]
+nvidia = ["langchain-nvidia-ai-endpoints~=1.0.0"]
+mistral = ["langchain-mistralai~=1.1.1"]
+sambanova = ["langchain-sambanova~=1.0.0"]
+groq = ["langchain-groq~=1.1.1"]
 
 # Individual local LLM providers
 llama-cpp = ["llama-cpp-python~=0.2.0"]
@@ -241,8 +242,8 @@ sentence-transformers = ["sentence-transformers>=2.3.1"]
 ctransformers = ["ctransformers>=0.2.10"]
 
 # Individual monitoring providers
-langfuse = ["langfuse==2.53.9"]
-langwatch = ["langwatch>=0.2.11,<0.3.0"]
+langfuse = ["langfuse~=3.8"]
+langwatch = ["langwatch~=0.10.0"]
 langsmith = ["langsmith>=0.3.42,<1.0.0"]
 arize = ["arize-phoenix-otel>=0.6.1"]
 
@@ -260,7 +261,7 @@ smolagents = ["smolagents>=1.8.0"]
 # Individual tools
 beautifulsoup = ["beautifulsoup4==4.12.3"]
 serpapi = ["google-search-results>=2.4.1,<3.0.0"]
-google-api = ["google-api-python-client==2.154.0"]
+google-api = ["google-api-python-client~=2.161"]
 wikipedia = ["wikipedia==1.4.0"]
 fake-useragent = ["fake-useragent>=2.0.0"]
 duckduckgo = ["ddgs>=9.0.0"]
@@ -268,7 +269,7 @@ yfinance = ["yfinance==0.2.50"]
 wolframalpha = ["wolframalpha==5.1.3"]
 
 # Individual utilities
-pyarrow = ["pyarrow==19.0.0"]
+pyarrow = ["pyarrow>=19.0.1"]
 fastavro = [
     'fastavro==1.9.7; python_version < "3.13"',
     'fastavro>=1.9.8,<2.0.0; python_version >= "3.13"',
@@ -282,7 +283,7 @@ huggingface = ["huggingface-hub[inference]>=0.23.2,<1.0.0"]
 metaphor = ["metaphor-python==0.1.23"]
 metal = ["metal_sdk==2.5.1"]
 markup = ["MarkupSafe==3.0.2"]
-aws = ["boto3>=1.34.162,<2.0.0", "langchain-aws>=0.2.33,<1.0.0"]
+aws = ["boto3>=1.34.162,<2.0.0", "langchain-aws~=1.1.0"]
 numexpr = ["numexpr==2.10.2"]
 qianfan = ["qianfan==0.3.5"]
 pgvector = ["pgvector==0.3.6"]
@@ -315,8 +316,8 @@ spider = ["spider-client>=0.0.27,<1.0.0"]
 altk = ["agent-lifecycle-toolkit~=0.4.4"]
 
 # Additional LangChain integrations
-langchain-huggingface = ["langchain-huggingface==0.3.1"]
-langchain-unstructured = ["langchain-unstructured==0.1.5"]
+langchain-huggingface = ["langchain-huggingface~=1.2.0"]
+langchain-unstructured = ["langchain-unstructured~=1.0.0"]
 graph-retriever = ["langchain-graph-retriever==0.8.0", "graph-retriever==0.8.0"]
 langchain-mcp-adapters = ["langchain-mcp-adapters>=0.1.14,<0.2.0"]
 
@@ -339,15 +340,15 @@ jigsawstack = ["jigsawstack==0.2.7"]
 assemblyai = ["assemblyai==0.35.1"]
 
 # Data processing
-datasets = ["datasets>2.14.7,<4.0.0"]
+datasets = ["datasets>2.14.7,<5.0.0"]
 fastparquet = ["fastparquet>=2024.11.0,<2025.0.0"]
 
 # Vision / ML
 vlmrun = ["vlmrun[all]>=0.2.0"]
-cuga = ["cuga~=0.2.6"]
+cuga = ["cuga~=0.2.9"]
 mlx = [
     "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
-    "mlx-vlm==0.3.3; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
+    "mlx-vlm~=0.3.9; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
 ]
 
 # MCP
