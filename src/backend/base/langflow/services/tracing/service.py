@@ -14,7 +14,7 @@ from langflow.services.base import Service
 if TYPE_CHECKING:
     from uuid import UUID
 
-    from langchain.callbacks.base import BaseCallbackHandler
+    from langchain_core.callbacks.base import BaseCallbackHandler
     from lfx.custom.custom_component.component import Component
     from lfx.graph.vertex.base import Vertex
     from lfx.services.settings.service import SettingsService
