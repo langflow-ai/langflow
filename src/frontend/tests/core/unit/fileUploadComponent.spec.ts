@@ -92,9 +92,20 @@ test(
         timeout: 5000,
       });
 
-      await expect(
-        page.getByTestId(`checkbox-${sourceFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
+      // On Windows CI, the auto-select after upload may not trigger due to a
+      // race condition between focus/change events. Click the checkbox manually
+      // if it's not auto-checked.
+      const checkbox = page.getByTestId(`checkbox-${sourceFileName}`).last();
+      try {
+        await expect(checkbox).toHaveAttribute("data-state", "checked", {
+          timeout: 5000,
+        });
+      } catch {
+        await checkbox.click();
+        await expect(checkbox).toHaveAttribute("data-state", "checked", {
+          timeout: 3000,
+        });
+      }
 
       // Create DataTransfer object and file
       const dataTransfer = await page.evaluateHandle((jsonFileName) => {

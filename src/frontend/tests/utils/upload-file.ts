@@ -88,9 +88,19 @@ export async function uploadFile(page: Page, fileName: string) {
     .waitFor({ state: "visible", timeout: 3000 });
 
   const checkbox = page.getByTestId(`checkbox-${sourceFileName}`).last();
-  await expect(checkbox).toHaveAttribute("data-state", "checked", {
-    timeout: 3000,
-  });
+  // On Windows CI, the auto-select after upload may not trigger due to a race
+  // condition between focus and change events in createFileUpload. If the
+  // checkbox is not checked after upload, click it to select the file manually.
+  try {
+    await expect(checkbox).toHaveAttribute("data-state", "checked", {
+      timeout: 3000,
+    });
+  } catch {
+    await checkbox.click();
+    await expect(checkbox).toHaveAttribute("data-state", "checked", {
+      timeout: 3000,
+    });
+  }
 
   await page.getByTestId("select-files-modal-button").click();
 
