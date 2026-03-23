@@ -393,8 +393,10 @@ def prepare_global_scope(module):
                     continue
 
             if module_obj is None:
-                # Fall back to original name to get the proper error
-                module_obj = importlib.import_module(module_name)
+                # Module not available (e.g. jq on Windows). Skip it so that
+                # components with optional platform-specific imports can still
+                # have their update_build_config and non-dependent methods work.
+                continue
 
             # Determine the variable name
             if alias.asname:

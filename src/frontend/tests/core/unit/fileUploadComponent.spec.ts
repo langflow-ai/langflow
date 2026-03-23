@@ -843,13 +843,12 @@ test(
     await page.mouse.up();
     await page.mouse.down();
 
+    await adjustScreenView(page);
     await enableInspectPanel(page);
     await page.getByTestId("title-Read File").click();
     await page.getByTestId("edit-fields-button").click();
     await page.getByTestId("showfile_path").click();
     await page.getByTestId("edit-fields-button").click();
-
-    await adjustScreenView(page);
 
     // Upload Files
     await page.getByTestId("button_open_file_management").click();
