@@ -313,6 +313,7 @@ async def list_project_tools(
     "/{project_id}/sse",
     response_class=HTMLResponse,
     dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    include_in_schema=False,
 )
 async def im_alive(project_id: str):  # noqa: ARG001
     return Response()
@@ -322,6 +323,7 @@ async def im_alive(project_id: str):  # noqa: ARG001
     "/{project_id}/sse",
     response_class=HTMLResponse,
     dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    include_in_schema=False,
 )
 async def handle_project_sse(
     project_id: UUID,
@@ -399,8 +401,16 @@ async def _handle_project_sse_messages(
         current_request_variables_ctx.reset(req_vars_token)
 
 
-@router.post("/{project_id}", dependencies=[Depends(raise_error_if_astra_cloud_env)])
-@router.post("/{project_id}/", dependencies=[Depends(raise_error_if_astra_cloud_env)])
+@router.post(
+    "/{project_id}",
+    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    include_in_schema=False,
+)
+@router.post(
+    "/{project_id}/",
+    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    include_in_schema=False,
+)
 async def handle_project_messages(
     project_id: UUID,
     request: Request,
@@ -415,7 +425,7 @@ async def handle_project_messages(
 ########################################################
 
 
-@router.head("/{project_id}/streamable")
+@router.head("/{project_id}/streamable", include_in_schema=False)
 async def streamable_health(project_id: UUID):  # noqa: ARG001
     return Response()
 
@@ -454,6 +464,7 @@ async def _dispatch_project_streamable_http(
 streamable_http_route_config = {
     "methods": ["GET", "POST", "DELETE"],
     "response_class": ResponseNoOp,
+    "include_in_schema": False,
 }
 
 
@@ -1013,6 +1024,13 @@ async def check_installed_mcp_servers(
                                 project_sse_url,
                                 list(config_data.get("mcpServers", {}).keys()),
                             )
+                    except FileNotFoundError:
+                        await logger.adebug(
+                            "%s config file not found at %s (directory exists, app installed but not configured)",
+                            client_name,
+                            config_path,
+                        )
+                        # available stays True, installed stays False — app is installed but not yet configured
                     except json.JSONDecodeError:
                         await logger.awarning("Failed to parse %s config JSON at: %s", client_name, config_path)
                         # available is True but installed remains False due to parse error

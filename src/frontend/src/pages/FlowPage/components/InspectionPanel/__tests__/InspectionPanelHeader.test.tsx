@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import InspectionPanelHeader from "../components/InspectionPanelHeader";
 import type { NodeDataType } from "@/types/flow";
+import InspectionPanelHeader from "../components/InspectionPanelHeader";
 
 // Mock EditableHeaderContent
 const mockHandleSave = jest.fn();

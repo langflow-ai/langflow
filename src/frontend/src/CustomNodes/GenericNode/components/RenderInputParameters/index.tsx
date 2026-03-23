@@ -1,16 +1,16 @@
 import { useMemo } from "react";
 import { getNodeInputColors } from "@/CustomNodes/helpers/get-node-input-colors";
 import { getNodeInputColorsName } from "@/CustomNodes/helpers/get-node-input-colors-name";
-import { sortToolModeFields } from "@/CustomNodes/helpers/sort-tool-mode-field";
-import getFieldTitle from "@/CustomNodes/utils/get-field-title";
-import { scapedJSONStringfy } from "@/utils/reactflowUtils";
-import NodeInputField from "../NodeInputField";
-import { findPrimaryInput } from "./utils";
 import {
   isCanvasVisible,
   isInternalField,
 } from "@/CustomNodes/helpers/parameter-filtering";
+import { sortToolModeFields } from "@/CustomNodes/helpers/sort-tool-mode-field";
+import getFieldTitle from "@/CustomNodes/utils/get-field-title";
 import useFlowStore from "@/stores/flowStore";
+import { scapedJSONStringfy } from "@/utils/reactflowUtils";
+import NodeInputField from "../NodeInputField";
+import { findPrimaryInput } from "./utils";
 
 const RenderInputParameters = ({
   data,

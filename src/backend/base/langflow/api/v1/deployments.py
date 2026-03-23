@@ -33,7 +33,7 @@ from langflow.api.v1.schemas.deployments import (
     FlowVersionIdsQuery,
 )
 
-router = APIRouter(prefix="/deployments", tags=["Deployments"])
+router = APIRouter(prefix="/deployments", tags=["Deployments"], include_in_schema=False)
 
 
 DeploymentProviderAccountIdQuery = Annotated[
@@ -59,6 +59,15 @@ DeploymentIdQuery = Annotated[
 # - Body ``provider_id`` is included on ``DeploymentCreateRequest`` and ``ExecutionCreateRequest``
 #   to allow provider routing without an extra DB lookup when the caller already has the context.
 # - Deployment-scoped routes derive provider context from persisted Langflow relationships.
+#
+# TODO(deployments-routing): Before replacing 501 stubs with live routing:
+# - Resolve provider_key from provider_id/deployment_id and fetch adapter via registry.
+# - If adapter is unavailable in current runtime (e.g. optional SDK not installed),
+#   return a deterministic domain error/HTTP status instead of 500.
+# - Add tests for:
+#   * provider account exists but adapter key not registered
+#   * adapter import was skipped at startup due to ModuleNotFoundError
+#   * direct WXO provider routes in unsupported runtimes (py3.10 scenarios)
 
 
 # ---------------------------------------------------------------------------

@@ -115,9 +115,9 @@ import { WolframIcon } from "@/icons/Wolfram";
 import { XAIIcon } from "@/icons/xAI";
 import { YoutubeIcon as YouTubeIcon } from "@/icons/Youtube";
 import { ZepMemoryIcon } from "@/icons/ZepMemory";
+import { AgenticsIcon } from "./Agentics";
 import { JigsawStackIcon } from "./JigsawStack";
 import { WindsurfIcon } from "./Windsurf";
-import { AgenticsIcon } from "./Agentics";
 
 // Export the eagerly loaded icons map
 export const eagerIconsMapping = {
