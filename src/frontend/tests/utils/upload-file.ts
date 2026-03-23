@@ -87,9 +87,9 @@ export async function uploadFile(page: Page, fileName: string) {
   // change) can cause the upload to silently not happen, leaving only the
   // optimistic "temp" entry. Waiting for the toast ensures the HTTP upload
   // finished and handleUpload was called.
-  await expect(
-    page.getByText("uploaded successfully"),
-  ).toBeVisible({ timeout: 30000 });
+  await expect(page.getByText("uploaded successfully")).toBeVisible({
+    timeout: 30000,
+  });
 
   const checkbox = page.getByTestId(`checkbox-${sourceFileName}`).last();
   try {

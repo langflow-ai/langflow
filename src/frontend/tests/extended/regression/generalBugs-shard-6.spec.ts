@@ -10,8 +10,7 @@ test(
     // platform-specific deps (e.g. jq) can still render. This means the
     // Code Modal won't show an import error for the test's fake module.
     test.skip(
-      testInfo.project.name.includes("win") ||
-        process.platform === "win32",
+      testInfo.project.name.includes("win") || process.platform === "win32",
       "Import error detection differs on Windows due to C-extension handling",
     );
 
