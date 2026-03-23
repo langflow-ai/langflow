@@ -147,6 +147,28 @@ def partition_file_to_data(file_path: str, *, silent_errors: bool) -> Data | Non
     return Data(text=text, data=metadata)
 
 
+def _detect_encoding_with_fallbacks(raw_data: bytes) -> list[str]:
+    """Detect encoding and build a fallback chain for decoding.
+
+    Returns a list of encodings to try in order, ending with latin-1
+    which always succeeds as it maps all 256 byte values.
+    """
+    result = chardet.detect(raw_data)
+    detected_encoding = result.get("encoding") if result else None
+
+    if detected_encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
+        detected_encoding = "utf-8"
+
+    encodings: list[str] = []
+    if detected_encoding:
+        encodings.append(detected_encoding)
+    for fallback in ("utf-8", "gb18030"):
+        if fallback not in encodings:
+            encodings.append(fallback)
+    encodings.append("latin-1")
+    return encodings
+
+
 def read_text_file(file_path: str) -> str:
     """Read a text file with automatic encoding detection.
 
@@ -158,27 +180,14 @@ def read_text_file(file_path: str) -> str:
     """
     file_path_ = Path(file_path)
     raw_data = file_path_.read_bytes()
-    result = chardet.detect(raw_data)
-    detected_encoding = result.get("encoding") if result else None
 
-    if detected_encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
-        detected_encoding = "utf-8"
-
-    # Build fallback chain: detected encoding → utf-8 → gb18030 → latin-1
-    encodings_to_try: list[str] = []
-    if detected_encoding:
-        encodings_to_try.append(detected_encoding)
-    for fallback in ("utf-8", "gb18030"):
-        if fallback not in encodings_to_try:
-            encodings_to_try.append(fallback)
-
-    for enc in encodings_to_try:
+    for enc in _detect_encoding_with_fallbacks(raw_data):
         try:
             return file_path_.read_text(encoding=enc)
         except (UnicodeDecodeError, LookupError):
             logger.debug("Encoding '%s' failed for %s, trying next fallback", enc, file_path)
 
-    # latin-1 maps all 256 byte values, so it never raises UnicodeDecodeError
+    # Unreachable: latin-1 in the fallback chain always succeeds
     return raw_data.decode("latin-1")
 
 
@@ -196,28 +205,13 @@ async def read_text_file_async(file_path: str) -> str:
     # Use storage-aware read to get bytes
     raw_data = await read_file_bytes(file_path)
 
-    # Auto-detect encoding
-    result = chardet.detect(raw_data)
-    detected_encoding = result.get("encoding") if result else None
-
-    if detected_encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
-        detected_encoding = "utf-8"
-
-    # Build fallback chain: detected encoding → utf-8 → gb18030 → latin-1
-    encodings_to_try: list[str] = []
-    if detected_encoding:
-        encodings_to_try.append(detected_encoding)
-    for fallback in ("utf-8", "gb18030"):
-        if fallback not in encodings_to_try:
-            encodings_to_try.append(fallback)
-
-    for enc in encodings_to_try:
+    for enc in _detect_encoding_with_fallbacks(raw_data):
         try:
             return raw_data.decode(enc)
         except (UnicodeDecodeError, LookupError):
             logger.debug("Encoding '%s' failed for %s, trying next fallback", enc, file_path)
 
-    # latin-1 maps all 256 byte values, so it never raises UnicodeDecodeError
+    # Unreachable: latin-1 in the fallback chain always succeeds
     return raw_data.decode("latin-1")
 
 
