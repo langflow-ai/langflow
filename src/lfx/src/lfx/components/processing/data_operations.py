@@ -2,7 +2,6 @@ import ast
 import json
 from typing import TYPE_CHECKING, Any
 
-import jq
 from json_repair import repair_json
 
 from lfx.custom import Component
@@ -534,6 +533,8 @@ class DataOperationsComponent(Component):
         return build_config
 
     def json_path(self) -> Data:
+        import jq
+
         try:
             if not self.data or not self.selected_key:
                 msg = "Missing input data or selected key."
