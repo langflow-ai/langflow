@@ -1,5 +1,9 @@
 """Regression tests for FaissVectorStoreComponent security defaults."""
 
+import pytest
+
+pytest.importorskip("langchain_community")
+
 from lfx.components.FAISS.faiss import FaissVectorStoreComponent
 from lfx.io import BoolInput
 
