@@ -288,7 +288,11 @@ This can help you find broken links before creating a PR.
 
 To submit a pull request, do the following:
 
-1. Open a new GitHub pull request with your patch against the `main` branch.
+1. Open a GitHub pull request against the active `release-X.Y.Z` release candidate branch.
+Do not target `main`.
+For example, if the latest released version is `1.8.0`, your pull request should target the `release-1.9.0` branch.
+Include a clear title and description.
+
 2. Ensure the PR title follows semantic commit conventions. For example, features are `feat: add new feature` and fixes are `fix: correct issue with X`.
 
 Some additional guidance on pull request titles:
