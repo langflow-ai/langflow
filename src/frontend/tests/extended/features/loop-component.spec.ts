@@ -182,6 +182,11 @@ test(
 
     await page.getByTestId("list_item_append_or_update").click();
 
+    // Wait for keypair fields to render after update_build_config round-trip
+    await page.waitForSelector('[data-testid="keypair0"]', {
+      timeout: 30000,
+    });
+
     await page.getByTestId("keypair0").fill("text");
     await page.getByTestId("keypair100").fill("modified_value");
 
