@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime, Text, UniqueConstraint
+from sqlalchemy import Column, DateTime, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
@@ -36,8 +36,12 @@ class FlowScheduleBase(SQLModel):
     )
     last_run_status: str | None = Field(default=None, nullable=True, description="Status of the last run")
     # Retry fields
-    retry_count: int = Field(default=0, nullable=False, description="Current consecutive failure count, reset on success")
-    max_retries: int = Field(default=3, nullable=False, description="Max retry attempts before marking as permanently failed")
+    retry_count: int = Field(
+        default=0, nullable=False, description="Current consecutive failure count, reset on success"
+    )
+    max_retries: int = Field(
+        default=3, nullable=False, description="Max retry attempts before marking as permanently failed"
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(DateTime(timezone=True), nullable=False),

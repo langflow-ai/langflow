@@ -22,7 +22,6 @@ from lfx.log.logger import logger
 from langflow.services.base import Service
 from langflow.services.database.models.schedule.crud import (
     get_all_active_schedules,
-    get_schedule_by_id,
     increment_retry_count,
     reset_retry_count,
     update_last_run,
@@ -340,8 +339,7 @@ class SchedulerService(Service):
                         misfire_grace_time=60,
                     )
                     await logger.ainfo(
-                        f"Scheduled retry {schedule.retry_count}/{max_retries} "
-                        f"for flow {flow_id} in {delay}s",
+                        f"Scheduled retry {schedule.retry_count}/{max_retries} for flow {flow_id} in {delay}s",
                         extra={
                             "flow_id": str(flow_id),
                             "retry_attempt": schedule.retry_count,
