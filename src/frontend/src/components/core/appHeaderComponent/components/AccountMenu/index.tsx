@@ -23,6 +23,7 @@ import {
   HeaderMenuToggle,
 } from "../HeaderMenu";
 import ThemeButtons from "../ThemeButtons";
+import LanguageSelector from "../LanguageSelector";
 
 export const AccountMenu = () => {
   const { t } = useTranslation();
@@ -79,9 +80,7 @@ export const AccountMenu = () => {
                   )}
                 >
                   {version}{" "}
-                  {isLatestVersion
-                    ? t("account.latest")
-                    : t("account.updateAvailable")}
+                  {isLatestVersion ? t("account.latest") : t("account.updateAvailable")}
                 </div>
               </div>
             </div>
@@ -168,6 +167,13 @@ export const AccountMenu = () => {
             <span className="">{t("account.theme")}</span>
             <div className="relative top-[1px] float-right">
               <ThemeButtons />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between px-4 py-[6.5px] text-sm">
+            <span>Language</span>
+            <div className="relative top-[1px] float-right">
+              <LanguageSelector />
             </div>
           </div>
 
