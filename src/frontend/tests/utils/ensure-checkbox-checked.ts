@@ -7,10 +7,7 @@ import { expect } from "../fixtures";
  * condition between focus/change events. This helper clicks the checkbox
  * manually if it's not auto-checked within the initial timeout.
  */
-export async function ensureCheckboxChecked(
-  checkbox: Locator,
-  timeout = 5000,
-) {
+export async function ensureCheckboxChecked(checkbox: Locator, timeout = 5000) {
   try {
     await expect(checkbox).toHaveAttribute("data-state", "checked", {
       timeout,
