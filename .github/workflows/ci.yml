@@ -354,6 +354,51 @@ jobs:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
+  merge-frontend-coverage:
+    name: Merge Frontend Jest + Playwright Coverage Reports
+    needs: [test-frontend-unit, test-frontend]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download Jest Coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: jest-coverage
+          path: coverage/jest
+
+      - name: Download Playwright Coverage
+        uses: actions/download-artifact@v4
+        with:
+          pattern: playwright-coverage-*
+          path: coverage/playwright
+          merge-multiple: true
+
+      - name: Merge Coverage
+        run: |
+          mkdir -p coverage/combined
+          npx nyc merge coverage/playwright/individual-test coverage/combined/playwright.json || echo "Failed to merge Playwright coverage"
+          npx nyc merge coverage/jest coverage/combined/jest.json || echo "Failed to merge Jest coverage"
+          npx nyc merge coverage/combined coverage/combined/total-frontend-coverage.json || echo "Failed to combine Playwright + Jest coverage"
+
+      - name: Generate Combined Report
+        run: |
+          npx nyc report \
+            --reporter=html \
+            --reporter=text \
+            --temp-dir coverage/combined \
+            --report-dir coverage/final
+
+      - name: Upload Merged Frontend Coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage/combined/total-frontend-coverage.json
+          flags: frontend
+          fail_ci_if_error: true
+
   # https://github.com/langchain-ai/langchain/blob/master/.github/workflows/check_diffs.yml
   ci_success:
     name: "CI Success"
@@ -369,6 +414,7 @@ jobs:
         set-ci-condition,
         path-filter,
         check-nightly-status,
+        merge-frontend-coverage,
       ]
 
     if: ${{ always() }}
