@@ -1,8 +1,10 @@
 import contextlib
+import logging
 import tempfile
 import unicodedata
 from collections.abc import Callable
 from concurrent import futures
+from contextvars import copy_context
 from io import BytesIO
 from pathlib import Path
 
@@ -16,6 +18,8 @@ from lfx.base.data.storage_utils import read_file_bytes
 from lfx.schema.data import Data
 from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
+
+logger = logging.getLogger(__name__)
 
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
@@ -155,12 +159,27 @@ def read_text_file(file_path: str) -> str:
     file_path_ = Path(file_path)
     raw_data = file_path_.read_bytes()
     result = chardet.detect(raw_data)
-    encoding = result["encoding"]
+    detected_encoding = result.get("encoding") if result else None
 
-    if encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
-        encoding = "utf-8"
+    if detected_encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
+        detected_encoding = "utf-8"
 
-    return file_path_.read_text(encoding=encoding)
+    # Build fallback chain: detected encoding → utf-8 → gb18030 → latin-1
+    encodings_to_try: list[str] = []
+    if detected_encoding:
+        encodings_to_try.append(detected_encoding)
+    for fallback in ("utf-8", "gb18030"):
+        if fallback not in encodings_to_try:
+            encodings_to_try.append(fallback)
+
+    for enc in encodings_to_try:
+        try:
+            return file_path_.read_text(encoding=enc)
+        except (UnicodeDecodeError, LookupError):
+            logger.debug("Encoding '%s' failed for %s, trying next fallback", enc, file_path)
+
+    # latin-1 maps all 256 byte values, so it never raises UnicodeDecodeError
+    return raw_data.decode("latin-1")
 
 
 async def read_text_file_async(file_path: str) -> str:
@@ -179,13 +198,27 @@ async def read_text_file_async(file_path: str) -> str:
 
     # Auto-detect encoding
     result = chardet.detect(raw_data)
-    encoding = result.get("encoding")
+    detected_encoding = result.get("encoding") if result else None
 
-    # If encoding detection fails (e.g., binary file), default to utf-8
-    if not encoding or encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
-        encoding = "utf-8"
+    if detected_encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
+        detected_encoding = "utf-8"
 
-    return raw_data.decode(encoding, errors="replace")
+    # Build fallback chain: detected encoding → utf-8 → gb18030 → latin-1
+    encodings_to_try: list[str] = []
+    if detected_encoding:
+        encodings_to_try.append(detected_encoding)
+    for fallback in ("utf-8", "gb18030"):
+        if fallback not in encodings_to_try:
+            encodings_to_try.append(fallback)
+
+    for enc in encodings_to_try:
+        try:
+            return raw_data.decode(enc)
+        except (UnicodeDecodeError, LookupError):
+            logger.debug("Encoding '%s' failed for %s, trying next fallback", enc, file_path)
+
+    # latin-1 maps all 256 byte values, so it never raises UnicodeDecodeError
+    return raw_data.decode("latin-1")
 
 
 def read_docx_file(file_path: str) -> str:
@@ -379,10 +412,14 @@ def parallel_load_data(
     max_concurrency: int,
     load_function: Callable = parse_text_file_to_data,
 ) -> list[Data | None]:
+    # Capture current context so ContextVars (e.g. component_context_var)
+    # are available in thread pool workers across all Python versions.
+    ctx = copy_context()
+
+    def _run_in_context(file_path: str) -> Data | None:
+        return ctx.run(load_function, file_path, silent_errors=silent_errors)
+
     with futures.ThreadPoolExecutor(max_workers=max_concurrency) as executor:
-        loaded_files = executor.map(
-            lambda file_path: load_function(file_path, silent_errors=silent_errors),
-            file_paths,
-        )
+        loaded_files = executor.map(_run_in_context, file_paths)
     # loaded_files is an iterator, so we need to convert it to a list
     return list(loaded_files)
