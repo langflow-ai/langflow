@@ -487,11 +487,7 @@ Rollback and synchronization address different consistency problems:
 
 When rollback is unavailable or fails, provider state may diverge from the DB. Synchronization operates from DB rows outward (checking whether each row's resource still exists in the provider), so it can only detect stale DB rows for deleted provider resources. It cannot detect orphaned provider resources that were never recorded in the DB (e.g. a failed create rollback), nor can it detect that an existing provider resource's state diverged after a failed update rollback.
 
-### 13.5 Batch efficiency for snapshot sync
-
-Snapshot-level synchronization in the list path must batch all `provider_snapshot_id` values across all deployments in a page into a single provider call. One call per deployment is not acceptable.
-
-### 13.6 Explicit session commit for write-path rollback
+### 13.5 Explicit session commit for write-path rollback
 
 Routes that perform write-path rollback must call `session.commit()` explicitly after staging all DB writes, rather than relying on `session_scope()` auto-commit. This allows the route to catch commit failures and issue compensating provider calls before re-raising.
 
