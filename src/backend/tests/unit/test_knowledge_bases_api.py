@@ -295,37 +295,125 @@ class TestKnowledgeBaseAPI:
         assert mock_delete.called
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    async def test_bulk_delete_path_traversal(self, mock_root, client: AsyncClient, logged_in_headers, tmp_path):
-        """Validate path traversal vulnerability in bulk delete.
-
-        An attacker can pass '../victim_user/victim_kb' as kb_name to delete
-        a knowledge base belonging to another user.
-        """
+    async def test_bulk_delete_path_traversal_single_level(
+        self, mock_root, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        """Single-level traversal '../victim_user/secret_kb' must be blocked with 403."""
         mock_root.return_value = tmp_path
 
-        # Setup: attacker user dir must exist so OS can resolve ".."
-        attacker_dir = tmp_path / "activeuser"
-        attacker_dir.mkdir(parents=True)
-
-        # Setup: victim user has a KB
+        (tmp_path / "activeuser").mkdir(parents=True)
         victim_kb = tmp_path / "victim_user" / "secret_kb"
         victim_kb.mkdir(parents=True)
 
-        # Attacker sends path traversal payload
-        traversal_name = "../victim_user/secret_kb"
         response = await client.request(
             "DELETE",
             "api/v1/knowledge_bases",
             headers=logged_in_headers,
-            json={"kb_names": [traversal_name]},
+            json={"kb_names": ["../victim_user/secret_kb"]},
         )
 
-        # If vulnerable: returns 200 and victim's KB is deleted
-        # If fixed: should return 403/400 or victim's KB must still exist
-        assert victim_kb.exists() is not False, "VULNERABILITY CONFIRMED: path traversal deleted another user's KB"
-        assert response.status_code in (400, 403, 422), (
+        assert response.status_code == 403, (
             f"VULNERABILITY CONFIRMED: server accepted traversal payload with status {response.status_code}"
         )
+        assert victim_kb.exists(), "VULNERABILITY CONFIRMED: path traversal deleted another user's KB"
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_bulk_delete_path_traversal_multi_level(
+        self, mock_root, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        """Multi-level traversal '../../other_path' must also be blocked."""
+        mock_root.return_value = tmp_path
+
+        (tmp_path / "activeuser").mkdir(parents=True)
+        victim_kb = tmp_path / "other_root" / "secret_kb"
+        victim_kb.mkdir(parents=True)
+
+        response = await client.request(
+            "DELETE",
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={"kb_names": ["../../other_root/secret_kb"]},
+        )
+
+        assert response.status_code == 403
+        assert victim_kb.exists(), "VULNERABILITY CONFIRMED: multi-level traversal deleted data outside user dir"
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_bulk_delete_path_traversal_prefix_ambiguity(
+        self, mock_root, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        """Prefix-ambiguity attack: user='activeuser', target dir='activeuser_evil'.
+
+        With startswith('/root/activeuser'), the path '/root/activeuser_evil/kb' incorrectly
+        passes because the string starts with '/root/activeuser'. is_relative_to() closes this gap.
+        """
+        mock_root.return_value = tmp_path
+
+        (tmp_path / "activeuser").mkdir(parents=True)
+        victim_kb = tmp_path / "activeuser_evil" / "secret_kb"
+        victim_kb.mkdir(parents=True)
+
+        response = await client.request(
+            "DELETE",
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={"kb_names": ["../activeuser_evil/secret_kb"]},
+        )
+
+        assert response.status_code == 403, (
+            "VULNERABILITY CONFIRMED: prefix-ambiguity bypass succeeded — "
+            "startswith() may still be in use instead of is_relative_to()"
+        )
+        assert victim_kb.exists(), "VULNERABILITY CONFIRMED: prefix-ambiguity attack deleted another user's KB"
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_bulk_delete_path_traversal_encoded_sequences(
+        self, mock_root, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        """URL-encoded traversal sequences in the JSON body must not bypass path validation.
+
+        '%2e%2e%2f' in a JSON body is NOT decoded by Python's Path — it is treated as a
+        literal directory name, so Path.resolve() keeps it inside the user directory.
+        The endpoint must return 404 (no such literal dir) rather than 200.
+        """
+        mock_root.return_value = tmp_path
+
+        (tmp_path / "activeuser").mkdir(parents=True)
+        victim_kb = tmp_path / "victim_user" / "secret_kb"
+        victim_kb.mkdir(parents=True)
+
+        response = await client.request(
+            "DELETE",
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={"kb_names": ["%2e%2e%2fvictim_user%2fsecret_kb"]},
+        )
+
+        # The encoded string is not a real directory — expect 404, not 200
+        assert response.status_code == 404
+        assert victim_kb.exists(), "VULNERABILITY CONFIRMED: encoded traversal deleted another user's KB"
+
+    @patch("langflow.api.v1.knowledge_bases.logger")
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_bulk_delete_path_traversal_logs_warning(
+        self, mock_root, mock_logger, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        """A traversal attempt must emit a warning log with user context."""
+        mock_root.return_value = tmp_path
+
+        (tmp_path / "activeuser").mkdir(parents=True)
+        (tmp_path / "victim_user" / "secret_kb").mkdir(parents=True)
+
+        await client.request(
+            "DELETE",
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={"kb_names": ["../victim_user/secret_kb"]},
+        )
+
+        mock_logger.warning.assert_called_once()
+        warning_args = mock_logger.warning.call_args[0]
+        assert "activeuser" in str(warning_args), "Warning log must include the requesting user"
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
