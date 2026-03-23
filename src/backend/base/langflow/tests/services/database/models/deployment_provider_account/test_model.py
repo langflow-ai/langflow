@@ -4,6 +4,7 @@ import pytest
 from langflow.services.database.models.deployment_provider_account.model import (
     DeploymentProviderAccount,
     DeploymentProviderAccountRead,
+    DeploymentProviderKey,
 )
 
 
@@ -14,14 +15,6 @@ class TestDeploymentProviderAccountValidation:
         info = MagicMock()
         info.field_name = field_name
         return info
-
-    def test_rejects_empty_provider_key(self):
-        with pytest.raises(ValueError, match="provider_key must not be empty"):
-            DeploymentProviderAccount.validate_non_empty("", self._make_info("provider_key"))
-
-    def test_rejects_whitespace_provider_key(self):
-        with pytest.raises(ValueError, match="provider_key must not be empty"):
-            DeploymentProviderAccount.validate_non_empty("   ", self._make_info("provider_key"))
 
     def test_rejects_empty_provider_url(self):
         with pytest.raises(ValueError, match="provider_url must not be empty"):
@@ -40,8 +33,11 @@ class TestDeploymentProviderAccountValidation:
             DeploymentProviderAccount.validate_non_empty("   ", self._make_info("api_key"))
 
     def test_strips_whitespace(self):
-        result = DeploymentProviderAccount.validate_non_empty("  watsonx  ", self._make_info("provider_key"))
-        assert result == "watsonx"
+        result = DeploymentProviderAccount.validate_non_empty("  value  ", self._make_info("provider_url"))
+        assert result == "value"
+
+    def test_provider_key_enum_has_expected_members(self):
+        assert DeploymentProviderKey.WATSONX_ORCHESTRATE.value == "watsonx-orchestrate"
 
     def test_normalizes_blank_tenant_id_to_none(self):
         result = DeploymentProviderAccount.normalize_tenant_id("   ")

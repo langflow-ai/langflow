@@ -220,13 +220,11 @@ async def update_provider_account(
     # caller explicitly included it in the request body so the CRUD _UNSET
     # sentinel preserves the existing value when omitted.
     update_kwargs: dict = {
-        "provider_key": payload.provider_key,
         "provider_url": payload.provider_url,
         "api_key": payload.api_key.get_secret_value() if payload.api_key is not None else None,
     }
     if "provider_tenant_id" in payload.model_fields_set:
-        effective_provider_key = payload.provider_key or provider_account.provider_key
-        deployment_mapper = get_deployment_mapper(effective_provider_key)
+        deployment_mapper = get_deployment_mapper(provider_account.provider_key)
         resolved_provider_tenant_id = resolve_provider_tenant_id(
             deployment_mapper=deployment_mapper,
             provider_url=payload.provider_url or provider_account.provider_url,

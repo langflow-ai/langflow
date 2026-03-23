@@ -1,9 +1,11 @@
 from datetime import datetime
+from enum import Enum
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 import sqlalchemy as sa
 from pydantic import field_validator
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
@@ -16,6 +18,17 @@ from langflow.services.database.utils import (
 if TYPE_CHECKING:
     from langflow.services.database.models.deployment.model import Deployment
     from langflow.services.database.models.user.model import User
+
+
+class DeploymentProviderKey(str, Enum):
+    """Deployment provider identifiers recognised by Langflow.
+
+    Each member value must match the adapter registry key used by
+    ``get_deployment_adapter(adapter_key)`` in LFX and the corresponding
+    mapper registration in the Langflow mapper registry.
+    """
+
+    WATSONX_ORCHESTRATE = "watsonx-orchestrate"
 
 
 class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
@@ -39,7 +52,44 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
     # allowed when provider_tenant_id is NULL.  This is intentional: a provider
     # may not require a tenant/organization identifier.
     provider_tenant_id: str | None = Field(default=None, index=True)
-    provider_key: str = Field(index=True)  # TODO: define an enum for this
+    # The DB-level ``deployment_provider_key_enum`` constraint is defined
+    # by a Langflow alembic migration.  The enum is Langflow-owned (see
+    # ``DeploymentProviderKey`` above); LFX uses plain strings for adapter
+    # registry keys and does not reference this enum.
+    #
+    # To add a new value to ``deployment_provider_key_enum``:
+    #   1. Add the member to ``DeploymentProviderKey`` in this module.
+    #   2. Register the corresponding adapter in LFX and mapper in Langflow.
+    #   3. Create a Langflow alembic migration that runs:
+    #        op.execute(
+    #            "ALTER TYPE deployment_provider_key_enum ADD VALUE '<new>'"
+    #        )
+    #      For SQLite (dev/test) this is a no-op; the CHECK constraint is
+    #      recreated automatically by ``batch_alter_table``.
+    #   4. Deploy the migration before any code writes the new value.
+    #
+    # Removing or renaming a value is **strongly discouraged**.  Existing
+    # rows reference the old string; renaming silently breaks every read
+    # of those rows and invalidates any provider accounts using that key.
+    # If absolutely necessary:
+    #   1. Create a migration that (a) updates existing rows to the
+    #      replacement value, then (b) recreates the enum type without
+    #      the old value (PostgreSQL requires CREATE TYPE … / ALTER COLUMN
+    #      … TYPE … USING …; SQLite uses ``batch_alter_table``).
+    #   2. Update or remove the member in ``DeploymentProviderKey``.
+    #   3. Update the adapter registry key and mapper registration to
+    #      match the new value.
+    provider_key: DeploymentProviderKey = Field(
+        sa_column=Column(
+            SQLEnum(
+                DeploymentProviderKey,
+                name="deployment_provider_key_enum",
+                values_callable=lambda enum: [member.value for member in enum],
+            ),
+            nullable=False,
+            index=True,
+        ),
+    )
     provider_url: str = Field()
     # MUST be stored encrypted; the CRUD layer encrypts via auth_utils before writing
     # and the Read schema intentionally excludes this field.
@@ -64,7 +114,7 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
     def normalize_tenant_id(cls, v: str | None) -> str | None:
         return normalize_string_or_none(v)
 
-    @field_validator("provider_key", "provider_url", "api_key")
+    @field_validator("provider_url", "api_key")
     @classmethod
     def validate_non_empty(cls, v: str, info: object) -> str:
         return validate_non_empty_string(v, info)
@@ -74,7 +124,7 @@ class DeploymentProviderAccountRead(SQLModel):
     id: UUID
     user_id: UUID
     provider_tenant_id: str | None = None
-    provider_key: str
+    provider_key: DeploymentProviderKey
     provider_url: str
     created_at: datetime
     updated_at: datetime

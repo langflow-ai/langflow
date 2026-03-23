@@ -32,7 +32,7 @@ def _make_provider_account(**overrides) -> MagicMock:
         "id": uuid4(),
         "user_id": uuid4(),
         "provider_tenant_id": "tenant-1",
-        "provider_key": "watsonx",
+        "provider_key": "watsonx-orchestrate",
         "provider_url": "https://example.com",
         "api_key": "encrypted-key",  # pragma: allowlist secret
     }
@@ -121,7 +121,7 @@ async def test_create_provider_account_success():
     ):
         mock_auth.encrypt_api_key.return_value = "encrypted"
         mock_obj = MagicMock()
-        mock_obj.provider_key = "watsonx"
+        mock_obj.provider_key = "watsonx-orchestrate"
         mock_obj.api_key = "encrypted"  # pragma: allowlist secret
         mock_cls.return_value = mock_obj
 
@@ -129,7 +129,7 @@ async def test_create_provider_account_success():
             db,
             user_id=uuid4(),
             provider_tenant_id="tenant-1",
-            provider_key="watsonx",
+            provider_key="watsonx-orchestrate",
             provider_url="https://example.com",
             api_key="test-token",  # pragma: allowlist secret
         )
@@ -138,7 +138,7 @@ async def test_create_provider_account_success():
     db.flush.assert_awaited_once()
     db.refresh.assert_awaited_once_with(mock_obj)
     assert result is mock_obj
-    assert result.provider_key == "watsonx"
+    assert result.provider_key == "watsonx-orchestrate"
     assert result.api_key == "encrypted"  # pragma: allowlist secret
     mock_auth.encrypt_api_key.assert_called_once_with("test-token")
 
@@ -158,14 +158,14 @@ async def test_create_provider_account_strips_whitespace():
             db,
             user_id=uuid4(),
             provider_tenant_id="  tenant-1  ",
-            provider_key="  watsonx  ",
+            provider_key="  watsonx-orchestrate  ",
             provider_url="  https://example.com  ",
             api_key="  test-token  ",  # pragma: allowlist secret
         )
 
     call_kwargs = mock_cls.call_args.kwargs
     assert call_kwargs["provider_tenant_id"] == "tenant-1"
-    assert call_kwargs["provider_key"] == "watsonx"
+    assert call_kwargs["provider_key"] == "watsonx-orchestrate"
     assert call_kwargs["provider_url"] == "https://example.com"
     mock_auth.encrypt_api_key.assert_called_once_with("test-token")
 
@@ -185,7 +185,7 @@ async def test_create_provider_account_none_tenant_id():
             db,
             user_id=uuid4(),
             provider_tenant_id=None,
-            provider_key="watsonx",
+            provider_key="watsonx-orchestrate",
             provider_url="https://example.com",
             api_key="test-token",  # pragma: allowlist secret
         )
@@ -209,7 +209,7 @@ async def test_create_provider_account_blank_tenant_id_normalizes_to_none():
             db,
             user_id=uuid4(),
             provider_tenant_id="   ",
-            provider_key="watsonx",
+            provider_key="watsonx-orchestrate",
             provider_url="https://example.com",
             api_key="test-token",  # pragma: allowlist secret
         )
@@ -242,7 +242,7 @@ async def test_create_provider_account_empty_provider_url_raises():
             db,
             user_id=uuid4(),
             provider_tenant_id=None,
-            provider_key="watsonx",
+            provider_key="watsonx-orchestrate",
             provider_url="",
             api_key="test-token",  # pragma: allowlist secret
         )
@@ -257,7 +257,7 @@ async def test_create_provider_account_empty_api_key_raises():
             db,
             user_id=uuid4(),
             provider_tenant_id=None,
-            provider_key="watsonx",
+            provider_key="watsonx-orchestrate",
             provider_url="https://example.com",
             api_key="   ",  # pragma: allowlist secret
         )
@@ -280,7 +280,7 @@ async def test_create_provider_account_integrity_error_raises_value_error():
                 db,
                 user_id=uuid4(),
                 provider_tenant_id=None,
-                provider_key="watsonx",
+                provider_key="watsonx-orchestrate",
                 provider_url="https://example.com",
                 api_key="test-token",  # pragma: allowlist secret
             )
@@ -303,7 +303,7 @@ async def test_create_provider_account_encryption_value_error():
                 db,
                 user_id=uuid4(),
                 provider_tenant_id=None,
-                provider_key="watsonx",
+                provider_key="watsonx-orchestrate",
                 provider_url="https://example.com",
                 api_key="test-token",  # pragma: allowlist secret
             )
@@ -324,7 +324,7 @@ async def test_create_provider_account_encryption_invalid_token():
                 db,
                 user_id=uuid4(),
                 provider_tenant_id=None,
-                provider_key="watsonx",
+                provider_key="watsonx-orchestrate",
                 provider_url="https://example.com",
                 api_key="test-token",  # pragma: allowlist secret
             )
@@ -344,13 +344,13 @@ async def test_update_provider_account_success():
             db,
             provider_account=acct,
             provider_tenant_id="new-tenant",
-            provider_key="new-key",
+            provider_key="watsonx-orchestrate",
             provider_url="https://new.example.com",
             api_key="updated-token",  # pragma: allowlist secret
         )
 
     assert result.provider_tenant_id == "new-tenant"
-    assert result.provider_key == "new-key"
+    assert result.provider_key == "watsonx-orchestrate"
     assert result.provider_url == "https://new.example.com"
     assert result.api_key == "new-encrypted"  # pragma: allowlist secret
     db.flush.assert_awaited_once()

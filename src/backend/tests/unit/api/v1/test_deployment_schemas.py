@@ -19,6 +19,7 @@ from langflow.api.v1.schemas.deployments import (
     FlowVersionsAttach,
     FlowVersionsPatch,
 )
+from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderKey
 from pydantic import SecretStr, ValidationError
 
 # ---------------------------------------------------------------------------
@@ -37,7 +38,7 @@ class TestApiKeyWriteOnly:
         """model_dump() on a response instance must never contain api_key."""
         response = DeploymentProviderAccountGetResponse(
             id=uuid4(),
-            provider_key="aws",
+            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
             provider_url="https://example.com",
         )
         dumped = response.model_dump()
@@ -46,7 +47,7 @@ class TestApiKeyWriteOnly:
     def test_create_schema_masks_api_key_in_repr(self):
         """SecretStr should mask the value in string representations."""
         account = DeploymentProviderAccountCreateRequest(
-            provider_key="aws",
+            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
             provider_url="https://example.com",
             api_key="super-secret-key",
         )
@@ -65,27 +66,35 @@ class TestApiKeyWriteOnly:
 # ---------------------------------------------------------------------------
 
 
-class TestNonEmptyStr:
-    def test_strips_whitespace(self):
+class TestProviderKeyEnum:
+    def test_accepts_valid_enum_value(self):
         account = DeploymentProviderAccountCreateRequest(
-            provider_key="  aws  ",
+            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
             provider_url="https://example.com",
             api_key="key",
         )
-        assert account.provider_key == "aws"
+        assert account.provider_key == DeploymentProviderKey.WATSONX_ORCHESTRATE
+
+    def test_accepts_valid_string_value(self):
+        account = DeploymentProviderAccountCreateRequest(
+            provider_key="watsonx-orchestrate",
+            provider_url="https://example.com",
+            api_key="key",
+        )
+        assert account.provider_key == DeploymentProviderKey.WATSONX_ORCHESTRATE
+
+    def test_rejects_invalid_provider_key(self):
+        with pytest.raises(ValidationError):
+            DeploymentProviderAccountCreateRequest(
+                provider_key="unknown-provider",
+                provider_url="https://example.com",
+                api_key="key",
+            )
 
     def test_rejects_empty_string(self):
         with pytest.raises(ValidationError):
             DeploymentProviderAccountCreateRequest(
                 provider_key="",
-                provider_url="https://example.com",
-                api_key="key",
-            )
-
-    def test_rejects_whitespace_only(self):
-        with pytest.raises(ValidationError):
-            DeploymentProviderAccountCreateRequest(
-                provider_key="   ",
                 provider_url="https://example.com",
                 api_key="key",
             )

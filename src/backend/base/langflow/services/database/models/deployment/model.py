@@ -5,41 +5,12 @@ from uuid import UUID, uuid4
 import sqlalchemy as sa
 from lfx.services.adapters.deployment.schema import DeploymentType
 from pydantic import field_validator
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
 from langflow.schema.serialize import UUIDstr
 from langflow.services.database.utils import validate_non_empty_string
-
-# NOTE: ``DeploymentType`` is defined and owned by the **lfx** package
-# (``lfx.services.adapters.deployment.schema``).  It is imported here as
-# a hard dependency because langflow persists deployment metadata on behalf
-# of lfx adapters and must guarantee round-trip fidelity of the enum values.
-# Existing enum member *values* must never be removed or renamed: the
-# ``_DeploymentTypeColumn`` TypeDecorator deserialises stored strings via
-# ``DeploymentType(value)`` — if a persisted value no longer maps to a
-# member, every read of that row will raise ``ValueError``.
-# If lfx ever relocates or splits this enum, this import and any migration
-# that references the enum values must be updated in lockstep.
-
-
-class _DeploymentTypeColumn(sa.TypeDecorator):
-    """Stores DeploymentType as a plain string but coerces on read/write."""
-
-    impl = sa.String
-    cache_ok = True
-
-    def process_bind_param(self, value, _dialect):
-        if value is None:
-            msg = "deployment_type must not be None"
-            raise ValueError(msg)
-        if isinstance(value, DeploymentType):
-            return value.value
-        return DeploymentType(value).value
-
-    def process_result_value(self, value, _dialect):
-        return DeploymentType(value)
-
 
 if TYPE_CHECKING:
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
@@ -75,11 +46,62 @@ class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
         default=None,
         sa_column=Column(sa.Text(), nullable=True),
     )
+    # ``DeploymentType`` is imported from LFX
+    # (``lfx.services.adapters.deployment.schema``).  The DB-level
+    # ``deployment_type_enum`` constraint is defined by a Langflow alembic
+    # migration, **not** by LFX code.  This decoupling is intentional:
+    #
+    # LFX adds a new member  -> INSERT/UPDATE with the new value is rejected
+    #                           by the DB until a Langflow migration adds it
+    #                           to the enum type.  Langflow explicitly opts
+    #                           in to new deployment types.
+    #
+    # LFX renames a value    -> Existing rows are unaffected (the DB stores
+    #                           the old string).  Python deserialization via
+    #                           ``DeploymentType(value)`` will raise
+    #                           ``ValueError`` on read until the migration
+    #                           and enum are reconciled.
+    #
+    # LFX removes a member   -> Same as rename: stored rows retain the
+    #                           deleted string, but Python reads break.
+    #                           The DB constraint still lists the old value,
+    #                           so no data loss occurs.
+    #
+    # In all mutation scenarios the DB data remains intact; only the
+    # application layer breaks until a coordinated migration is applied.
+    #
+    # To add a new value to ``deployment_type_enum``:
+    #   1. Add the member to ``DeploymentType`` in LFX (or confirm it exists).
+    #   2. Create a Langflow alembic migration that runs:
+    #        op.execute("ALTER TYPE deployment_type_enum ADD VALUE '<new>'")
+    #      For SQLite (dev/test) this is a no-op; the CHECK constraint is
+    #      recreated automatically by ``batch_alter_table``.
+    #   3. Deploy the migration before any code writes the new value.
+    #
+    # Removing or renaming a value is **strongly discouraged**.  Existing
+    # rows reference the old string; renaming silently breaks every read
+    # of those rows (``DeploymentType(value)`` raises ``ValueError``).
+    # If absolutely necessary:
+    #   1. Create a migration that (a) updates existing rows to the
+    #      replacement value, then (b) recreates the enum type without
+    #      the old value (PostgreSQL requires CREATE TYPE … / ALTER COLUMN
+    #      … TYPE … USING …; SQLite uses ``batch_alter_table``).
+    #   2. Update or remove the member in the Python enum.
+    #   3. Coordinate with LFX — adapters and callers may still reference
+    #      the old value.
+    #
     # nullable=True at the DB level to satisfy the EXPAND-phase migration
-    # validator; the _DeploymentTypeColumn TypeDecorator enforces NOT NULL
-    # at the application layer (process_bind_param rejects None).
+    # validator; application-layer code treats this as required.
     deployment_type: DeploymentType = Field(
-        sa_column=Column(_DeploymentTypeColumn(), nullable=True, index=True),
+        sa_column=Column(
+            SQLEnum(
+                DeploymentType,
+                name="deployment_type_enum",
+                values_callable=lambda enum: [member.value for member in enum],
+            ),
+            nullable=True,
+            index=True,
+        ),
     )
     created_at: datetime | None = Field(
         default=None,

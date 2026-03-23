@@ -7,6 +7,8 @@ from enum import Enum
 
 from lfx.services.adapters.deployment.schema import DeploymentType
 
+from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderKey
+
 SUPPORTED_ADAPTER_DEPLOYMENT_TYPES: frozenset[DeploymentType] = frozenset({DeploymentType.AGENT})
 CREATE_MAX_RETRIES = 3
 UPDATE_MAX_RETRIES = 3
@@ -45,6 +47,4 @@ class ErrorPrefix(str, Enum):
     GET_EXECUTION = f"{ERROR_PREFIX} getting a deployment execution {ERROR_SUFFIX_IN}"
 
 
-# NOTE: this key must match the value of the provider_key column
-# in the deployment_provider_account table.
-WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY = "watsonx-orchestrate"
+WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY = DeploymentProviderKey.WATSONX_ORCHESTRATE.value

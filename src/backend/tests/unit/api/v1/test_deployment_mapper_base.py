@@ -500,7 +500,7 @@ def test_base_mapper_shapes_provider_account_response() -> None:
     account = SimpleNamespace(
         id=uuid4(),
         provider_tenant_id="tenant-1",
-        provider_key="provider-1",
+        provider_key="watsonx-orchestrate",
         provider_url="https://provider.example",
         created_at=timestamp,
         updated_at=timestamp,
@@ -509,7 +509,7 @@ def test_base_mapper_shapes_provider_account_response() -> None:
     shaped = mapper.shape_provider_account_response(account)
     assert shaped.id == account.id
     assert shaped.provider_tenant_id == "tenant-1"
-    assert shaped.provider_key == "provider-1"
+    assert shaped.provider_key == "watsonx-orchestrate"
     assert shaped.provider_url == "https://provider.example"
 
 

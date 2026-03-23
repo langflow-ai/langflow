@@ -57,6 +57,8 @@ from lfx.services.adapters.deployment.schema import (
 )
 from pydantic import AfterValidator, BaseModel, Field, SecretStr, ValidationInfo, field_validator, model_validator
 
+from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderKey
+
 # ---------------------------------------------------------------------------
 # Shared validation helpers
 # ---------------------------------------------------------------------------
@@ -134,7 +136,7 @@ class DeploymentProviderAccountCreateRequest(BaseModel):
         default=None,
         description="Provider-owned tenant/organization id. Langflow persists this opaque value.",
     )
-    provider_key: NonEmptyStr = Field(description="Deployment provider key.")
+    provider_key: DeploymentProviderKey = Field(description="Deployment provider key.")
     provider_url: NonEmptyStr = Field(
         description="Provider service URL persisted in Langflow DB for provider-account resolution.",
     )
@@ -158,10 +160,6 @@ class DeploymentProviderAccountUpdateRequest(BaseModel):
         default=None,
         description="Provider-owned tenant/organization id. Omit to keep existing value, null to clear.",
     )
-    provider_key: NonEmptyStr | None = Field(
-        default=None,
-        description="Deployment provider key. Omit to keep existing value; cannot be set to null.",
-    )
     provider_url: NonEmptyStr | None = Field(
         default=None,
         description="Provider service URL. Omit to keep existing value; cannot be set to null.",
@@ -184,9 +182,9 @@ class DeploymentProviderAccountUpdateRequest(BaseModel):
         if not self.model_fields_set:
             msg = "At least one field must be provided for update."
             raise ValueError(msg)
-        # provider_key, provider_url, and api_key are required-on-create;
+        # provider_url and api_key are required-on-create;
         # reject explicit null to prevent clearing these fields.
-        for field_name in ("provider_key", "provider_url", "api_key"):
+        for field_name in ("provider_url", "api_key"):
             if field_name in self.model_fields_set and getattr(self, field_name) is None:
                 msg = f"'{field_name}' cannot be set to null."
                 raise ValueError(msg)
@@ -199,7 +197,7 @@ class DeploymentProviderAccountGetResponse(BaseModel):
         default=None,
         description="Provider-owned tenant/organization identifier persisted as opaque text.",
     )
-    provider_key: str = Field(description="Provider adapter key used by Langflow.")
+    provider_key: DeploymentProviderKey = Field(description="Official provider name used by Langflow.")
     provider_url: str = Field(description="Provider service URL persisted in Langflow DB.")
     created_at: datetime | None = Field(default=None, description="Langflow DB row creation timestamp.")
     updated_at: datetime | None = Field(default=None, description="Langflow DB row update timestamp.")

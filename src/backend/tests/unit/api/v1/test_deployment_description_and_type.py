@@ -2,7 +2,6 @@
 
 Covers:
 - Model: Deployment and DeploymentRead require DeploymentType enum and accept description
-- TypeDecorator: validates on write, coerces on read
 - API responses: to_deployment_create_response surfaces persisted description
 - Mapper: shape_deployment_update_result reads description from the DB row
 """
@@ -13,10 +12,9 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from uuid import uuid4
 
-import pytest
 from langflow.api.v1.mappers.deployments.base import BaseDeploymentMapper
 from langflow.api.v1.mappers.deployments.helpers import to_deployment_create_response
-from langflow.services.database.models.deployment.model import Deployment, DeploymentRead, _DeploymentTypeColumn
+from langflow.services.database.models.deployment.model import Deployment, DeploymentRead
 from lfx.services.adapters.deployment.schema import DeploymentCreateResult, DeploymentType, DeploymentUpdateResult
 
 # ---------------------------------------------------------------------------
@@ -92,37 +90,6 @@ class TestDeploymentModel:
         )
         assert read.description is None
         assert read.deployment_type == DeploymentType.AGENT
-
-
-# ---------------------------------------------------------------------------
-# TypeDecorator tests
-# ---------------------------------------------------------------------------
-
-
-class TestDeploymentTypeColumn:
-    def test_rejects_none_on_bind(self):
-        col = _DeploymentTypeColumn()
-        with pytest.raises(ValueError, match="must not be None"):
-            col.process_bind_param(None, None)
-
-    def test_coerces_enum_to_string_on_bind(self):
-        col = _DeploymentTypeColumn()
-        assert col.process_bind_param(DeploymentType.AGENT, None) == "agent"
-
-    def test_coerces_valid_string_on_bind(self):
-        col = _DeploymentTypeColumn()
-        assert col.process_bind_param("agent", None) == "agent"
-
-    def test_rejects_invalid_string_on_bind(self):
-        col = _DeploymentTypeColumn()
-        with pytest.raises(ValueError, match="is not a valid"):
-            col.process_bind_param("garbage", None)
-
-    def test_returns_enum_on_result(self):
-        col = _DeploymentTypeColumn()
-        result = col.process_result_value("agent", None)
-        assert result is DeploymentType.AGENT
-        assert isinstance(result, DeploymentType)
 
 
 # ---------------------------------------------------------------------------
