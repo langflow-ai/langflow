@@ -866,6 +866,76 @@ async def test_upload_bad_zip_file_returns_400(client: AsyncClient, logged_in_he
 
 
 @pytest.mark.usefixtures("session")
+async def test_upload_no_file_to_flows_returns_400(client: AsyncClient, logged_in_headers):
+    """Uploading with no file to flows endpoint returns 400."""
+    response = await client.post(
+        "api/v1/flows/upload/",
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "No file provided"
+
+
+@pytest.mark.usefixtures("session")
+async def test_upload_no_file_to_projects_returns_400(client: AsyncClient, logged_in_headers):
+    """Uploading with no file to projects endpoint returns 400."""
+    response = await client.post(
+        "api/v1/projects/upload/",
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "No file provided"
+
+
+@pytest.mark.usefixtures("session")
+async def test_upload_empty_file_to_flows_returns_400(client: AsyncClient, logged_in_headers):
+    """Uploading an empty file to flows endpoint returns 400."""
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("empty.json", b"", "application/json")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "The uploaded file is empty"
+
+
+@pytest.mark.usefixtures("session")
+async def test_upload_empty_file_to_projects_returns_400(client: AsyncClient, logged_in_headers):
+    """Uploading an empty file to projects endpoint returns 400."""
+    response = await client.post(
+        "api/v1/projects/upload/",
+        files={"file": ("empty.json", b"", "application/json")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "The uploaded file is empty"
+
+
+@pytest.mark.usefixtures("session")
+async def test_upload_invalid_json_to_flows_returns_400(client: AsyncClient, logged_in_headers):
+    """Uploading invalid JSON content to flows endpoint returns 400."""
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("bad.json", b"this is not json", "application/json")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 400
+    assert "Invalid JSON file" in response.json()["detail"]
+
+
+@pytest.mark.usefixtures("session")
+async def test_upload_invalid_json_to_projects_returns_400(client: AsyncClient, logged_in_headers):
+    """Uploading invalid JSON content to projects endpoint returns 400."""
+    response = await client.post(
+        "api/v1/projects/upload/",
+        files={"file": ("bad.json", b"this is not json", "application/json")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 400
+    assert "Invalid JSON file" in response.json()["detail"]
+
+
+@pytest.mark.usefixtures("session")
 async def test_upload_zip_to_projects_batch_name_dedup(client: AsyncClient, json_flow: str, logged_in_headers):
     """Multiple flows with the same name get unique names within the batch."""
     flow = orjson.loads(json_flow)

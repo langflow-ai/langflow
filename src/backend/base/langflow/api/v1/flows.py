@@ -740,7 +740,7 @@ async def create_flows(
 async def upload_file(
     *,
     session: DbSession,
-    file: Annotated[UploadFile, File(...)],
+    file: Annotated[UploadFile | None, File()] = None,
     current_user: CurrentActiveUser,
     folder_id: UUID | None = None,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
@@ -750,7 +750,13 @@ async def upload_file(
     Accepts either a JSON file (single flow or multi-flow format) or a ZIP file
     containing individual flow JSON files (as produced by the download endpoint).
     """
+    if file is None:
+        raise HTTPException(status_code=400, detail="No file provided")
+
     contents = await file.read()
+
+    if not contents:
+        raise HTTPException(status_code=400, detail="The uploaded file is empty")
 
     if zipfile.is_zipfile(io.BytesIO(contents)):
         try:
@@ -761,7 +767,10 @@ async def upload_file(
             raise HTTPException(status_code=400, detail="No valid flow JSON files found in the ZIP")
         data = {"flows": flows_data}
     else:
-        data = orjson.loads(contents)
+        try:
+            data = orjson.loads(contents)
+        except orjson.JSONDecodeError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid JSON file: {e}") from e
 
     flow_list = FlowListCreate(**data) if "flows" in data else FlowListCreate(flows=[FlowCreate(**data)])
 

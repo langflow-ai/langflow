@@ -641,7 +641,7 @@ async def download_file(
 async def upload_file(
     *,
     session: DbSession,
-    file: Annotated[UploadFile, File(...)],
+    file: Annotated[UploadFile | None, File()] = None,
     current_user: CurrentActiveUser,
 ):
     """Upload flows from a file.
@@ -649,7 +649,13 @@ async def upload_file(
     Accepts either a JSON file with project metadata (folder_name, folder_description, flows)
     or a ZIP file containing individual flow JSON files (as produced by the download endpoint).
     """
+    if file is None:
+        raise HTTPException(status_code=400, detail="No file provided")
+
     contents = await file.read()
+
+    if not contents:
+        raise HTTPException(status_code=400, detail="The uploaded file is empty")
 
     # Detect ZIP files and extract flow data
     if zipfile.is_zipfile(io.BytesIO(contents)):
@@ -669,7 +675,10 @@ async def upload_file(
             "flows": flows_data,
         }
     else:
-        data = orjson.loads(contents)
+        try:
+            data = orjson.loads(contents)
+        except orjson.JSONDecodeError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid JSON file: {e}") from e
 
     if not data:
         raise HTTPException(status_code=400, detail="No flows found in the file")
