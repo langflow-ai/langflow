@@ -412,11 +412,10 @@ def parallel_load_data(
     max_concurrency: int,
     load_function: Callable = parse_text_file_to_data,
 ) -> list[Data | None]:
-    # Capture current context so ContextVars (e.g. component_context_var)
+    # Each thread gets its own context copy so ContextVars (e.g. component_context_var)
     # are available in thread pool workers across all Python versions.
-    ctx = copy_context()
-
     def _run_in_context(file_path: str) -> Data | None:
+        ctx = copy_context()
         return ctx.run(load_function, file_path, silent_errors=silent_errors)
 
     with futures.ThreadPoolExecutor(max_workers=max_concurrency) as executor:
