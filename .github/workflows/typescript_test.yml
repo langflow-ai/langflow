@@ -314,14 +314,14 @@ jobs:
             playwright-${{ env.PLAYWRIGHT_VERSION }}-chromium-${{ runner.os }}
 
       - name: Install Playwright Browser Dependencies (Linux)
-        if: steps.cache-playwright.outputs.cache-hit != 'true' && runner.os == 'Linux' && inputs.runs-on != 'self-hosted'
+        if: steps.cache-playwright.outputs.cache-hit != 'true' && runner.os == 'Linux' && !contains(inputs.runs-on, 'self-hosted')
         shell: bash
         run: |
           cd ./src/frontend
           npx playwright install --with-deps chromium
 
       - name: Install Playwright Browsers (Windows/macOS/Self-Hosted)
-        if: steps.cache-playwright.outputs.cache-hit != 'true' && (runner.os != 'Linux' || inputs.runs-on == 'self-hosted')
+        if: steps.cache-playwright.outputs.cache-hit != 'true' && (runner.os != 'Linux' || contains(inputs.runs-on, 'self-hosted'))
         shell: bash
         run: |
           cd ./src/frontend
@@ -362,7 +362,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: blob-report-${{ matrix.shardIndex }}
+          name: blob-report-${{ runner.os }}-${{ matrix.shardIndex }}
           path: src/frontend/blob-report
           retention-days: 1
 

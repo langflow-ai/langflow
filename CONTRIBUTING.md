@@ -6,7 +6,10 @@ Thank you for your interest in contributing!
 
 1. Fork the [Langflow GitHub repository](https://github.com/langflow-ai/langflow).
 2. Create a new branch for your changes.
-3. Submit a pull request to the `main` branch with a clear title and description.
+3. Open a GitHub pull request against the active `release-X.Y.Z` release candidate branch.
+Do not target `main`.
+For example, if the latest released version is `1.8.0`, your pull request should target the `release-1.9.0` branch.
+Include a clear title and description.
 Reference any issues fixed, for example `Fixes #1234`.
 Ensure your PR title follows [semantic commit conventions](https://www.conventionalcommits.org/).
 4. A maintainer will review your PR and may request changes.
