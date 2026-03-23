@@ -86,6 +86,7 @@ dependencies = [
     "aiosqlite>=0.20.0,<1.0.0",
     "greenlet>=3.1.1,<4.0.0",
     "jsonquerylang>=1.1.1,<2.0.0",
+    "apscheduler>=3.10,<4.0.0",
     "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
     'elevenlabs==1.58.1; python_version == "3.12"',
     'elevenlabs>=1.52.0,<2.0.0; python_version != "3.12"',

@@ -281,6 +281,15 @@ def get_lifespan(*, fix_migration=False, version=None):
                 queue_service.start()
             await logger.adebug(f"Flows loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
+            # Start scheduler service for automatic flow execution
+            current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Starting scheduler service")
+            from langflow.services.deps import get_scheduler_service
+
+            scheduler_service = get_scheduler_service()
+            await scheduler_service.start()
+            await logger.adebug(f"Scheduler service started in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
             total_time = asyncio.get_event_loop().time() - start_time
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
 
