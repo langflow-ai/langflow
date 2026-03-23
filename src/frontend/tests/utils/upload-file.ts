@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import fs from "fs";
 import path from "path";
 import { expect } from "../fixtures";
+import { ensureCheckboxChecked } from "./ensure-checkbox-checked";
 import { generateRandomFilename } from "./generate-filename";
 import { unselectNodes } from "./unselect-nodes";
 
@@ -92,16 +93,7 @@ export async function uploadFile(page: Page, fileName: string) {
   ).toBeVisible({ timeout: 30000 });
 
   const checkbox = page.getByTestId(`checkbox-${sourceFileName}`).last();
-  try {
-    await expect(checkbox).toHaveAttribute("data-state", "checked", {
-      timeout: 5000,
-    });
-  } catch {
-    await checkbox.click();
-    await expect(checkbox).toHaveAttribute("data-state", "checked", {
-      timeout: 3000,
-    });
-  }
+  await ensureCheckboxChecked(checkbox);
 
   await page.getByTestId("select-files-modal-button").click();
 

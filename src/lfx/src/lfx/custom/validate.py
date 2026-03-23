@@ -417,6 +417,7 @@ def prepare_global_scope(module):
                     # of the module at runtime will raise ModuleNotFoundError.
                     variable_name = alias.asname or module_name.split(".")[0]
                     exec_globals[variable_name] = _MissingModulePlaceholder(module_name)
+                    logger.debug("Module '%s' unavailable on Windows — inserted placeholder", module_name)
                     continue
                 # On other platforms the package should be installable, so
                 # raise to surface the real error.
