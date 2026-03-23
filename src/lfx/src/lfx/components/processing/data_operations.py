@@ -272,9 +272,10 @@ class DataOperationsComponent(Component):
         return data.model_dump()
 
     def json_query(self) -> Data:
+        import importlib
         import json
 
-        import jq
+        jq = importlib.import_module("jq")
 
         if not self.query or not self.query.strip():
             msg = "JSON Query is required and cannot be blank."
@@ -533,7 +534,9 @@ class DataOperationsComponent(Component):
         return build_config
 
     def json_path(self) -> Data:
-        import jq
+        import importlib
+
+        jq = importlib.import_module("jq")
 
         try:
             if not self.data or not self.selected_key:

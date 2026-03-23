@@ -82,18 +82,19 @@ export async function uploadFile(page: Page, fileName: string) {
     },
   ]);
 
-  await page
-    .getByText(sourceFileName + `.${testFileType}`)
-    .last()
-    .waitFor({ state: "visible", timeout: 3000 });
+  // Wait for the upload success toast to confirm the upload actually completed.
+  // On Windows CI, a race condition in createFileUpload (focus fires before
+  // change) can cause the upload to silently not happen, leaving only the
+  // optimistic "temp" entry. Waiting for the toast ensures the HTTP upload
+  // finished and handleUpload was called.
+  await expect(
+    page.getByText("uploaded successfully"),
+  ).toBeVisible({ timeout: 30000 });
 
   const checkbox = page.getByTestId(`checkbox-${sourceFileName}`).last();
-  // On Windows CI, the auto-select after upload may not trigger due to a race
-  // condition between focus and change events in createFileUpload. If the
-  // checkbox is not checked after upload, click it to select the file manually.
   try {
     await expect(checkbox).toHaveAttribute("data-state", "checked", {
-      timeout: 3000,
+      timeout: 5000,
     });
   } catch {
     await checkbox.click();
