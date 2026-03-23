@@ -68,20 +68,62 @@ function frequencyToCron(
   minute: string,
   selectedDays: string[],
   dayOfMonth: string,
-): { minute: string; hour: string; day_of_week: string; day_of_month: string; month: string } {
+): {
+  minute: string;
+  hour: string;
+  day_of_week: string;
+  day_of_month: string;
+  month: string;
+} {
   switch (frequency) {
     case "every_minute":
-      return { minute: "*", hour: "*", day_of_week: "*", day_of_month: "*", month: "*" };
+      return {
+        minute: "*",
+        hour: "*",
+        day_of_week: "*",
+        day_of_month: "*",
+        month: "*",
+      };
     case "every_5_minutes":
-      return { minute: "*/5", hour: "*", day_of_week: "*", day_of_month: "*", month: "*" };
+      return {
+        minute: "*/5",
+        hour: "*",
+        day_of_week: "*",
+        day_of_month: "*",
+        month: "*",
+      };
     case "every_15_minutes":
-      return { minute: "*/15", hour: "*", day_of_week: "*", day_of_month: "*", month: "*" };
+      return {
+        minute: "*/15",
+        hour: "*",
+        day_of_week: "*",
+        day_of_month: "*",
+        month: "*",
+      };
     case "every_30_minutes":
-      return { minute: "*/30", hour: "*", day_of_week: "*", day_of_month: "*", month: "*" };
+      return {
+        minute: "*/30",
+        hour: "*",
+        day_of_week: "*",
+        day_of_month: "*",
+        month: "*",
+      };
     case "hourly":
-      return { minute: minute || "0", hour: "*", day_of_week: "*", day_of_month: "*", month: "*" };
+      return {
+        minute: minute || "0",
+        hour: "*",
+        day_of_week: "*",
+        day_of_month: "*",
+        month: "*",
+      };
     case "daily":
-      return { minute: minute || "0", hour: hour || "9", day_of_week: "*", day_of_month: "*", month: "*" };
+      return {
+        minute: minute || "0",
+        hour: hour || "9",
+        day_of_week: "*",
+        day_of_month: "*",
+        month: "*",
+      };
     case "weekly":
       return {
         minute: minute || "0",
@@ -99,7 +141,13 @@ function frequencyToCron(
         month: "*",
       };
     default:
-      return { minute: "0", hour: "*", day_of_week: "*", day_of_month: "*", month: "*" };
+      return {
+        minute: "0",
+        hour: "*",
+        day_of_week: "*",
+        day_of_month: "*",
+        month: "*",
+      };
   }
 }
 
@@ -108,36 +156,101 @@ function cronToFrequency(
   hr: string,
   dow: string,
   dom: string,
-): { frequency: string; hour: string; minute: string; selectedDays: string[]; dayOfMonth: string } {
+): {
+  frequency: string;
+  hour: string;
+  minute: string;
+  selectedDays: string[];
+  dayOfMonth: string;
+} {
   if (min === "*" && hr === "*" && dow === "*" && dom === "*") {
-    return { frequency: "every_minute", hour: "0", minute: "0", selectedDays: [], dayOfMonth: "1" };
+    return {
+      frequency: "every_minute",
+      hour: "0",
+      minute: "0",
+      selectedDays: [],
+      dayOfMonth: "1",
+    };
   }
   if (min === "*/5" && hr === "*") {
-    return { frequency: "every_5_minutes", hour: "0", minute: "0", selectedDays: [], dayOfMonth: "1" };
+    return {
+      frequency: "every_5_minutes",
+      hour: "0",
+      minute: "0",
+      selectedDays: [],
+      dayOfMonth: "1",
+    };
   }
   if (min === "*/15" && hr === "*") {
-    return { frequency: "every_15_minutes", hour: "0", minute: "0", selectedDays: [], dayOfMonth: "1" };
+    return {
+      frequency: "every_15_minutes",
+      hour: "0",
+      minute: "0",
+      selectedDays: [],
+      dayOfMonth: "1",
+    };
   }
   if (min === "*/30" && hr === "*") {
-    return { frequency: "every_30_minutes", hour: "0", minute: "0", selectedDays: [], dayOfMonth: "1" };
+    return {
+      frequency: "every_30_minutes",
+      hour: "0",
+      minute: "0",
+      selectedDays: [],
+      dayOfMonth: "1",
+    };
   }
   if (hr === "*" && dow === "*" && dom === "*") {
-    return { frequency: "hourly", hour: "0", minute: min, selectedDays: [], dayOfMonth: "1" };
+    return {
+      frequency: "hourly",
+      hour: "0",
+      minute: min,
+      selectedDays: [],
+      dayOfMonth: "1",
+    };
   }
   if (dow === "*" && dom === "*") {
-    return { frequency: "daily", hour: hr, minute: min, selectedDays: [], dayOfMonth: "1" };
+    return {
+      frequency: "daily",
+      hour: hr,
+      minute: min,
+      selectedDays: [],
+      dayOfMonth: "1",
+    };
   }
   if (dom === "*" && dow !== "*") {
-    return { frequency: "weekly", hour: hr, minute: min, selectedDays: dow.split(","), dayOfMonth: "1" };
+    return {
+      frequency: "weekly",
+      hour: hr,
+      minute: min,
+      selectedDays: dow.split(","),
+      dayOfMonth: "1",
+    };
   }
   if (dow === "*" && dom !== "*") {
-    return { frequency: "monthly", hour: hr, minute: min, selectedDays: [], dayOfMonth: dom };
+    return {
+      frequency: "monthly",
+      hour: hr,
+      minute: min,
+      selectedDays: [],
+      dayOfMonth: dom,
+    };
   }
-  return { frequency: "custom", hour: hr, minute: min, selectedDays: [], dayOfMonth: dom };
+  return {
+    frequency: "custom",
+    hour: hr,
+    minute: min,
+    selectedDays: [],
+    dayOfMonth: dom,
+  };
 }
 
 /** Frequencies that require the user to pick a specific time (and thus a timezone). */
-const FREQUENCIES_WITH_TIMEZONE = new Set(["daily", "weekly", "monthly", "custom"]);
+const FREQUENCIES_WITH_TIMEZONE = new Set([
+  "daily",
+  "weekly",
+  "monthly",
+  "custom",
+]);
 
 function needsTimezone(frequency: string): boolean {
   return FREQUENCIES_WITH_TIMEZONE.has(frequency);
@@ -164,16 +277,26 @@ function describeSchedule(
   const time = `${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
   const tzSuffix = needsTimezone(frequency) ? ` (${tz})` : "";
   switch (frequency) {
-    case "every_minute": return "Every minute";
-    case "every_5_minutes": return "Every 5 minutes";
-    case "every_15_minutes": return "Every 15 minutes";
-    case "every_30_minutes": return "Every 30 minutes";
-    case "hourly": return `Every hour at minute ${minute}`;
-    case "daily": return `Daily at ${time}${tzSuffix}`;
-    case "weekly": return `Weekly on ${selectedDays.join(", ")} at ${time}${tzSuffix}`;
-    case "monthly": return `Monthly on day ${dayOfMonth} at ${time}${tzSuffix}`;
-    case "custom": return `Custom cron schedule${tzSuffix}`;
-    default: return "";
+    case "every_minute":
+      return "Every minute";
+    case "every_5_minutes":
+      return "Every 5 minutes";
+    case "every_15_minutes":
+      return "Every 15 minutes";
+    case "every_30_minutes":
+      return "Every 30 minutes";
+    case "hourly":
+      return `Every hour at minute ${minute}`;
+    case "daily":
+      return `Daily at ${time}${tzSuffix}`;
+    case "weekly":
+      return `Weekly on ${selectedDays.join(", ")} at ${time}${tzSuffix}`;
+    case "monthly":
+      return `Monthly on day ${dayOfMonth} at ${time}${tzSuffix}`;
+    case "custom":
+      return `Custom cron schedule${tzSuffix}`;
+    default:
+      return "";
   }
 }
 
@@ -242,7 +365,13 @@ export default function ScheduleModal({
           month: customMonth,
         };
       } else {
-        cronFields = frequencyToCron(frequency, hour, minute, selectedDays, dayOfMonth);
+        cronFields = frequencyToCron(
+          frequency,
+          hour,
+          minute,
+          selectedDays,
+          dayOfMonth,
+        );
       }
 
       const effectiveTimezone = showTimezone ? timezone : "UTC";
@@ -299,7 +428,12 @@ export default function ScheduleModal({
   if (!open) return null;
 
   return (
-    <BaseModal open={open} setOpen={setOpen} size="small-update" className="p-4">
+    <BaseModal
+      open={open}
+      setOpen={setOpen}
+      size="small-update"
+      className="p-4"
+    >
       <BaseModal.Header>
         <div className="flex items-center gap-2">
           <IconComponent name="Clock" className="h-5 w-5" />
@@ -390,7 +524,9 @@ export default function ScheduleModal({
                     <Button
                       key={day.value}
                       type="button"
-                      variant={selectedDays.includes(day.value) ? "default" : "outline"}
+                      variant={
+                        selectedDays.includes(day.value) ? "default" : "outline"
+                      }
                       size="sm"
                       onClick={() => toggleDay(day.value)}
                       data-testid={`schedule-day-${day.value}`}
@@ -423,24 +559,45 @@ export default function ScheduleModal({
                 <Label className="text-sm font-medium">Cron Expression</Label>
                 <div className="grid grid-cols-5 gap-2">
                   <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">Minute</span>
-                    <Input value={customMinute} onChange={(e) => setCustomMinute(e.target.value)} />
+                    <span className="text-xs text-muted-foreground">
+                      Minute
+                    </span>
+                    <Input
+                      value={customMinute}
+                      onChange={(e) => setCustomMinute(e.target.value)}
+                    />
                   </div>
                   <div className="flex flex-col gap-1">
                     <span className="text-xs text-muted-foreground">Hour</span>
-                    <Input value={customHour} onChange={(e) => setCustomHour(e.target.value)} />
+                    <Input
+                      value={customHour}
+                      onChange={(e) => setCustomHour(e.target.value)}
+                    />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">Day/Month</span>
-                    <Input value={customDom} onChange={(e) => setCustomDom(e.target.value)} />
+                    <span className="text-xs text-muted-foreground">
+                      Day/Month
+                    </span>
+                    <Input
+                      value={customDom}
+                      onChange={(e) => setCustomDom(e.target.value)}
+                    />
                   </div>
                   <div className="flex flex-col gap-1">
                     <span className="text-xs text-muted-foreground">Month</span>
-                    <Input value={customMonth} onChange={(e) => setCustomMonth(e.target.value)} />
+                    <Input
+                      value={customMonth}
+                      onChange={(e) => setCustomMonth(e.target.value)}
+                    />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">Day/Week</span>
-                    <Input value={customDow} onChange={(e) => setCustomDow(e.target.value)} />
+                    <span className="text-xs text-muted-foreground">
+                      Day/Week
+                    </span>
+                    <Input
+                      value={customDow}
+                      onChange={(e) => setCustomDow(e.target.value)}
+                    />
                   </div>
                 </div>
               </div>
@@ -488,7 +645,9 @@ export default function ScheduleModal({
                 )}
               </div>
               <span className="text-xs text-muted-foreground">
-                {startAt ? `Starts at ${formatStartAt(startAt)}` : "Starts immediately"}
+                {startAt
+                  ? `Starts at ${formatStartAt(startAt)}`
+                  : "Starts immediately"}
               </span>
             </div>
 
@@ -497,14 +656,22 @@ export default function ScheduleModal({
               <span className="text-sm text-muted-foreground">
                 {frequency === "custom"
                   ? `Cron: ${customMinute} ${customHour} ${customDom} ${customMonth} ${customDow} (${timezone})`
-                  : describeSchedule(frequency, hour, minute, selectedDays, dayOfMonth, timezone)}
+                  : describeSchedule(
+                      frequency,
+                      hour,
+                      minute,
+                      selectedDays,
+                      dayOfMonth,
+                      timezone,
+                    )}
               </span>
             </div>
 
             {/* Last run info */}
             {existingSchedule?.last_run_at && (
               <div className="text-xs text-muted-foreground">
-                Last run: {new Date(existingSchedule.last_run_at).toLocaleString()} —{" "}
+                Last run:{" "}
+                {new Date(existingSchedule.last_run_at).toLocaleString()} —{" "}
                 {existingSchedule.last_run_status}
               </div>
             )}
