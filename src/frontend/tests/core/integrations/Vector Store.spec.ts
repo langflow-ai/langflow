@@ -23,8 +23,12 @@ withEventDeliveryModes(
       "ASTRA_DB_APPLICATION_TOKEN required to run this test",
     );
 
-    // AstraDB connections are significantly slower on Windows CI
-    test.setTimeout(240_000);
+    // AstraDB Cassandra driver causes infinite retry loops on Windows
+    // (system_virtual_schema permission errors) leading to shard timeouts
+    test.skip(
+      process.platform === "win32",
+      "AstraDB driver is not compatible with Windows CI",
+    );
 
     await awaitBootstrapTest(page);
 
