@@ -370,3 +370,109 @@ def test_update_schema_rejects_unbind_raw_app_ids() -> None:
             }
         )
     assert "must reference connections.existing_app_ids only" in str(exc.value.error)
+
+
+# ---------------------------------------------------------------------------
+# validate_has_work / put_tools
+# ---------------------------------------------------------------------------
+
+
+def test_update_schema_rejects_empty_operations_without_put_tools() -> None:
+    """Neither operations nor put_tools → must reject."""
+    with pytest.raises(AdapterPayloadValidationError) as exc:
+        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
+            {}
+        )
+    assert "At least one of 'operations' or 'put_tools' must be provided" in str(exc.value.error)
+
+
+def test_update_schema_accepts_put_tools_alone() -> None:
+    slot = WatsonxOrchestrateDeploymentService.payload_schemas
+    assert slot is not None
+    assert slot.deployment_update is not None
+
+    applied = slot.deployment_update.apply({"put_tools": ["tool-id-1", "tool-id-2"]})
+    assert applied["put_tools"] == ["tool-id-1", "tool-id-2"]
+    assert applied["operations"] == []
+
+
+def test_update_schema_put_tools_deduplicates() -> None:
+    slot = WatsonxOrchestrateDeploymentService.payload_schemas
+    assert slot is not None
+    assert slot.deployment_update is not None
+
+    applied = slot.deployment_update.apply({"put_tools": ["t1", "t2", "t1", "t3", "t2"]})
+    assert applied["put_tools"] == ["t1", "t2", "t3"]
+
+
+def test_update_schema_rejects_put_tools_with_operations() -> None:
+    with pytest.raises(AdapterPayloadValidationError) as exc:
+        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
+            {
+                "put_tools": ["tool-id-1"],
+                "connections": {"existing_app_ids": ["app-1"]},
+                "operations": [
+                    {
+                        "op": "bind",
+                        "tool": {"tool_id_with_ref": {"source_ref": "fv-1", "tool_id": "tool-1"}},
+                        "app_ids": ["app-1"],
+                    }
+                ],
+            }
+        )
+    assert "standalone full replacement and cannot be combined" in str(exc.value.error)
+
+
+def test_update_schema_rejects_put_tools_with_resource_name_prefix() -> None:
+    with pytest.raises(AdapterPayloadValidationError) as exc:
+        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
+            {
+                "put_tools": ["tool-id-1"],
+                "resource_name_prefix": "lf_",
+            }
+        )
+    assert "standalone full replacement and cannot be combined" in str(exc.value.error)
+
+
+def test_update_schema_rejects_put_tools_with_raw_tool_payloads() -> None:
+    with pytest.raises(AdapterPayloadValidationError) as exc:
+        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
+            {
+                "put_tools": ["tool-id-1"],
+                "tools": {"raw_payloads": [_raw_tool("tool-new", 1)]},
+            }
+        )
+    assert "standalone full replacement and cannot be combined" in str(exc.value.error)
+
+
+def test_update_schema_rejects_put_tools_with_connection_existing_app_ids() -> None:
+    with pytest.raises(AdapterPayloadValidationError) as exc:
+        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
+            {
+                "put_tools": ["tool-id-1"],
+                "connections": {"existing_app_ids": ["app-1"]},
+            }
+        )
+    assert "standalone full replacement and cannot be combined" in str(exc.value.error)
+
+
+def test_update_schema_accepts_operations_without_put_tools() -> None:
+    """Existing happy-path: operations alone is valid (pre-existing behavior)."""
+    slot = WatsonxOrchestrateDeploymentService.payload_schemas
+    assert slot is not None
+    assert slot.deployment_update is not None
+
+    applied = slot.deployment_update.apply(
+        {
+            "connections": {"existing_app_ids": ["app-1"]},
+            "operations": [
+                {
+                    "op": "bind",
+                    "tool": {"tool_id_with_ref": {"source_ref": "fv-1", "tool_id": "tool-1"}},
+                    "app_ids": ["app-1"],
+                }
+            ],
+        }
+    )
+    assert len(applied["operations"]) == 1
+    assert applied["put_tools"] is None

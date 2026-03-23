@@ -8,13 +8,14 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from lfx.services.adapters.deployment.schema import (
-    DeploymentCreate as AdapterDeploymentCreate,
-)
-from lfx.services.adapters.deployment.schema import (
+    BaseDeploymentDataUpdate,
     DeploymentCreateResult,
     DeploymentUpdateResult,
     ExecutionCreateResult,
     ExecutionStatusResult,
+)
+from lfx.services.adapters.deployment.schema import (
+    DeploymentCreate as AdapterDeploymentCreate,
 )
 from lfx.services.adapters.deployment.schema import (
     DeploymentUpdate as AdapterDeploymentUpdate,
@@ -287,6 +288,64 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             provider_data=provider_payload,
         )
 
+    def util_snapshot_ids_to_verify(
+        self,
+        attachments: list[Any],
+    ) -> list[str]:
+        return [
+            att.provider_snapshot_id
+            for att in attachments
+            if getattr(att, "provider_snapshot_id", None) and att.provider_snapshot_id.strip()
+        ]
+
+    async def resolve_rollback_update(
+        self,
+        *,
+        user_id: UUID,
+        deployment_db_id: UUID,
+        deployment_resource_key: str,
+        db: AsyncSession,
+    ) -> AdapterDeploymentUpdate | None:
+        """Build a compensating update from current DB attachment state.
+
+        Queries flow_version_deployment_attachment for provider_snapshot_ids
+        (WXO tool IDs) and constructs an update that declaratively sets the
+        agent's tool list to match the (still-committed) DB state.  Also
+        restores deployment name/description via spec.
+
+        If the provider snapshots were concurrently deleted, the adapter call
+        may fail; read-path snapshot sync handles that residual divergence.
+        """
+        from langflow.services.database.models.deployment.crud import get_deployment
+        from langflow.services.database.models.flow_version_deployment_attachment.crud import (
+            list_deployment_attachments,
+        )
+
+        _ = deployment_resource_key
+        deployment = await get_deployment(db, user_id=user_id, deployment_id=deployment_db_id)
+        if deployment is None:
+            return None
+
+        attachments = await list_deployment_attachments(db, user_id=user_id, deployment_id=deployment_db_id)
+        existing_tool_ids = [
+            str(att.provider_snapshot_id).strip()
+            for att in attachments
+            if att.provider_snapshot_id and str(att.provider_snapshot_id).strip()
+        ]
+
+        update_slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_update
+        if update_slot is None:
+            return None
+        provider_payload = update_slot.apply({"put_tools": existing_tool_ids})
+
+        return AdapterDeploymentUpdate(
+            spec=BaseDeploymentDataUpdate(
+                name=deployment.name,
+                description=deployment.description or "",
+            ),
+            provider_data=provider_payload,
+        )
+
     def shape_deployment_update_result(
         self,
         result: DeploymentUpdateResult,
@@ -543,7 +602,20 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         if slot is None:
             msg = f"Watsonx {slot_name} payload slot is not configured."
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        return slot.parse(raw)
+        try:
+            return slot.parse(raw)
+        except AdapterPayloadMissingError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Missing {slot_name} payload.",
+            ) from exc
+        except AdapterPayloadValidationError as exc:
+            first_error = exc.error.errors()[0] if exc.error.errors() else {}
+            detail = str(first_error.get("msg") or exc)
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid {slot_name} payload: {detail}",
+            ) from exc
 
     def _extract_bind_flow_version_ids(self, operations: list[Any]) -> list[UUID]:
         return list(

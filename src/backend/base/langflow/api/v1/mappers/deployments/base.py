@@ -290,6 +290,45 @@ class BaseDeploymentMapper:
             remove_flow_version_ids=list(payload.remove_flow_version_ids or []),
         )
 
+    def util_snapshot_ids_to_verify(
+        self,
+        attachments: list[Any],
+    ) -> list[str]:
+        """Extract provider snapshot IDs that should be verified against the provider.
+
+        Called by read-path snapshot-level sync to determine which attachments
+        carry a provider-trackable snapshot identity.  The route passes the
+        returned IDs to the adapter's ``list_snapshots`` by-IDs mode and
+        deletes DB rows whose IDs are no longer present on the provider.
+
+        The base implementation returns an empty list, meaning snapshot-level
+        sync is a no-op for providers that do not track snapshots separately.
+        Provider mappers that assign ``provider_snapshot_id`` on attachments
+        must override this to extract those IDs.
+        """
+        _ = attachments
+        return []
+
+    async def resolve_rollback_update(
+        self,
+        *,
+        user_id: UUID,
+        deployment_db_id: UUID,
+        deployment_resource_key: str,
+        db: AsyncSession,
+    ) -> AdapterDeploymentUpdate | None:
+        """Build a compensating update payload from current DB attachment state.
+
+        Called when a provider update succeeded but the subsequent DB commit
+        failed. The returned payload should restore the provider to match the
+        (still-committed) DB state.
+
+        Returns ``None`` when the mapper cannot construct a meaningful rollback,
+        in which case provider state may diverge from the DB.
+        """
+        _ = (user_id, deployment_db_id, deployment_resource_key, db)
+        return None
+
     def shape_deployment_operation_result(self, provider_result: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_result
 

@@ -33,7 +33,7 @@ from langflow.utils.version import get_version_info
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from lfx.services.adapters.deployment.schema import BaseFlowArtifact, SnapshotItems
+    from lfx.services.adapters.deployment.schema import BaseFlowArtifact, SnapshotItems, SnapshotListResult
 
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 
@@ -467,3 +467,38 @@ def _resolve_lfx_requirement() -> str:
             _LFX_MINIMUM_REQUIREMENT,
         )
         return _LFX_MINIMUM_REQUIREMENT
+
+
+async def verify_tools_by_ids(
+    clients: WxOClient,
+    snapshot_ids: list[str],
+) -> SnapshotListResult:
+    """Fetch tools by ID and return only those that still exist on the provider."""
+    from lfx.services.adapters.deployment.schema import SnapshotItem, SnapshotListResult
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.constants import ErrorPrefix
+    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import raise_as_deployment_error
+
+    if not snapshot_ids:
+        return SnapshotListResult(snapshots=[])
+
+    unique_ids = list(dict.fromkeys(snapshot_ids))
+    try:
+        tools = await asyncio.to_thread(clients.tool.get_drafts_by_ids, unique_ids)
+    except Exception as exc:  # noqa: BLE001
+        raise_as_deployment_error(
+            exc,
+            error_prefix=ErrorPrefix.LIST,
+            log_msg="Unexpected error while verifying wxO tool snapshots by ID",
+        )
+
+    return SnapshotListResult(
+        snapshots=[
+            SnapshotItem(
+                id=tool["id"],
+                name=tool.get("name") or tool["id"],
+            )
+            for tool in (tools or [])
+            if isinstance(tool, dict) and tool.get("id")
+        ],
+    )

@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from uuid import uuid4
 
-from langflow.api.v1.deployments import _to_deployment_create_response
+from langflow.api.v1.mappers.deployments.helpers import to_deployment_create_response
 from lfx.services.adapters.deployment.schema import DeploymentCreateResult, DeploymentType
 
 
@@ -21,11 +21,12 @@ def test_to_deployment_create_response_maps_db_identity_and_provider_result() ->
         provider_result={"snapshot_bindings": [{"source_ref": "fv-1", "snapshot_id": "tool-1"}]},
     )
 
-    response = _to_deployment_create_response(adapter_result, deployment_row)
+    response = to_deployment_create_response(adapter_result, deployment_row)
 
     assert response.id == deployment_row.id
     assert response.name == deployment_row.name
     assert response.description == "db-description"
     assert response.created_at == now
     assert response.updated_at == now
+    assert response.type == DeploymentType.AGENT
     assert response.provider_data == {"snapshot_bindings": [{"source_ref": "fv-1", "snapshot_id": "tool-1"}]}

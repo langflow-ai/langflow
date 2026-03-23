@@ -35,6 +35,15 @@ Live lifecycle scenarios:
 - `live_status_after_delete_not_found_state`: confirms status on deleted deployment returns not found
   (expects DeploymentNotFoundError).
 
+Live list-snapshots-by-ids scenarios:
+- `live_list_snapshots_by_ids_returns_known`: fetches known snapshot ids via
+  snapshot_ids mode and confirms all are returned (expects Success).
+- `live_list_snapshots_by_ids_filters_unknown`: mixes a known id with a bogus id;
+  confirms the provider returns only existing snapshots (expects Success).
+- `live_list_snapshots_by_ids_empty_input`: passes an empty list; the adapter treats
+  this as "no snapshot filter" and falls through to the deployment-scoped branch,
+  which rejects because no deployment_id is provided (expects DeploymentError).
+
 Live negative scenarios:
 - `live_negative_create_seed`: creates a second seed deployment for negative-path checks (expects Success).
 - `live_create_execution_rejects_empty_input`: rejects empty execution input payload (expects InvalidContentError).
@@ -67,6 +76,12 @@ Live update-matrix scenarios:
 - `upd_config_raw_payload_conflict`: detects conflict when creating duplicate provider_data
   raw connection app id (expects DeploymentConflictError).
 - `upd_not_found_deployment`: update unknown deployment id returns not found (expects DeploymentNotFoundError).
+- `upd_put_tools_replaces_tool_list`: uses put_tools to declaratively replace
+  the agent's tool list with a subset (expects Success).
+- `upd_put_tools_empty_clears_all_tools`: passes an empty put_tools list to
+  remove all tools from the agent (expects Success).
+- `upd_put_tools_deduplicates`: passes duplicate tool ids in put_tools and
+  confirms deduplication produces a single binding (expects Success).
 
 Failpoint scenarios:
 - `fp_retry_create_config_then_success`: injects transient config-create failures; retries
@@ -78,6 +93,9 @@ Failpoint scenarios:
   and validates rollback path (expects DeploymentError).
 - `fp_update_bindings_failure_with_rollback_failure`: injects update failure + rollback
   failure and expects terminal error (expects DeploymentError).
+- `fp_update_failure_then_put_tools_restore`: injects a binding-stage failure to corrupt
+  the tool list, then uses put_tools to restore the original snapshot set and confirms
+  the tool list matches the pre-failure state (expects Success after restore).
 """
 
 from __future__ import annotations
@@ -271,6 +289,7 @@ class WatsonxAdapterDirectE2E:
         ]
         results = await self._run_scenarios(scenarios)
         results.extend(await self._run_live_lifecycle_scenarios())
+        results.extend(await self._run_live_list_snapshots_by_ids_scenarios())
         results.extend(await self._run_live_update_matrix_scenarios())
         results.extend(await self._run_live_concurrency_scenarios())
         results.extend(await self._run_live_negative_scenarios())
@@ -522,6 +541,30 @@ class WatsonxAdapterDirectE2E:
             return OUTCOME_FAILURE, str(exc), None
         else:
             return OUTCOME_SUCCESS, "snapshots_listed", result
+
+    async def _run_list_snapshots_by_ids(self, snapshot_ids: list[str]) -> tuple[str, str, Any | None]:
+        try:
+            result = await self.service.list_snapshots(
+                user_id=self.user_id,
+                params=SnapshotListParams(snapshot_ids=snapshot_ids),
+                db=self.db,
+            )
+        except DeploymentNotFoundError as exc:
+            return OUTCOME_NOT_FOUND, str(exc), None
+        except DeploymentConflictError as exc:
+            return OUTCOME_CONFLICT, exc.message, None
+        except InvalidContentError as exc:
+            return OUTCOME_INVALID_CONTENT, exc.message, None
+        except (InvalidDeploymentOperationError, InvalidDeploymentTypeError) as exc:
+            return OUTCOME_INVALID_OPERATION, exc.message, None
+        except DeploymentError as exc:
+            return OUTCOME_FAILURE, exc.message, None
+        except HTTPException as exc:
+            return self._outcome_from_http_exception(exc), str(exc.detail), None
+        except Exception as exc:  # noqa: BLE001
+            return OUTCOME_FAILURE, str(exc), None
+        else:
+            return OUTCOME_SUCCESS, "snapshots_by_ids_listed", result
 
     async def _run_list_configs(self, deployment_id: str) -> tuple[str, str, Any | None]:
         try:
@@ -845,6 +888,76 @@ class WatsonxAdapterDirectE2E:
                 actual_outcome=status_code,
                 detail=detail,
                 ok=status_code == OUTCOME_NOT_FOUND,
+            )
+        )
+
+        return results
+
+    async def _run_live_list_snapshots_by_ids_scenarios(self) -> list[ScenarioResult]:
+        results: list[ScenarioResult] = []
+        print("\n[snap-ids/1] creating seed for list_snapshots by-ids mode")
+        _deployment_id, _config_id, seed_snapshot_ids, _ = await self._create_update_seed(
+            label="snap_ids_seed",
+            snapshot_count=2,
+        )
+        known_ids = sorted(seed_snapshot_ids)
+        if len(known_ids) < MIN_MIXED_SNAPSHOT_IDS:
+            results.append(
+                self._build_result(
+                    name="live_list_snapshots_by_ids_seed_insufficient",
+                    expected={OUTCOME_SUCCESS},
+                    actual_outcome=OUTCOME_FAILURE,
+                    detail=f"need >= {MIN_MIXED_SNAPSHOT_IDS} snapshot ids, got {len(known_ids)}",
+                    ok=False,
+                )
+            )
+            return results
+
+        print("[snap-ids/2] live_list_snapshots_by_ids_returns_known")
+        status_code, detail, snap_result = await self._run_list_snapshots_by_ids(known_ids)
+        returned_ids = self._extract_snapshot_ids(snap_result)
+        ids_match = set(known_ids) == returned_ids
+        results.append(
+            self._build_result(
+                name="live_list_snapshots_by_ids_returns_known",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=f"{detail} | returned={sorted(returned_ids)} expected={known_ids}",
+                ok=status_code == OUTCOME_SUCCESS and ids_match,
+            )
+        )
+
+        print("[snap-ids/3] live_list_snapshots_by_ids_filters_unknown")
+        bogus_id = str(uuid4())
+        mixed_ids = [known_ids[0], bogus_id]
+        status_code, detail, snap_result = await self._run_list_snapshots_by_ids(mixed_ids)
+        returned_ids = self._extract_snapshot_ids(snap_result)
+        has_known = known_ids[0] in returned_ids
+        no_bogus = bogus_id not in returned_ids
+        results.append(
+            self._build_result(
+                name="live_list_snapshots_by_ids_filters_unknown",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=f"{detail} | returned={sorted(returned_ids)} has_known={has_known} no_bogus={no_bogus}",
+                ok=status_code == OUTCOME_SUCCESS and has_known and no_bogus,
+            )
+        )
+
+        # Empty snapshot_ids → SnapshotListParams.has_snapshot_ids is False →
+        # the service falls through to the deployment-scoped path which requires
+        # deployment_id.  Since we don't provide one here, a DeploymentError is
+        # raised, making OUTCOME_FAILURE the correct expectation.
+        print("[snap-ids/4] live_list_snapshots_by_ids_empty_input")
+        status_code, detail, snap_result = await self._run_list_snapshots_by_ids([])
+        returned_ids = self._extract_snapshot_ids(snap_result)
+        results.append(
+            self._build_result(
+                name="live_list_snapshots_by_ids_empty_input",
+                expected={OUTCOME_FAILURE},
+                actual_outcome=status_code,
+                detail=f"{detail} | returned_count={len(returned_ids)}",
+                ok=status_code == OUTCOME_FAILURE,
             )
         )
 
@@ -1477,10 +1590,78 @@ class WatsonxAdapterDirectE2E:
             )
         )
 
+        print("[upd/14] upd_put_tools_replaces_tool_list")
+        put_tools_id, _put_tools_cfg, put_tools_snaps, _ = await self._create_update_seed(
+            label="upd_put_tools", snapshot_count=2
+        )
+        put_tools_sorted = sorted(put_tools_snaps)
+        keep_only = [put_tools_sorted[0]]
+        status_code, detail, _ = await self._run_update(
+            put_tools_id,
+            DeploymentUpdate(provider_data={"put_tools": keep_only}),
+        )
+        list_status, _list_detail, snap_after = await self._run_list_snapshots(put_tools_id)
+        attached_after = self._extract_snapshot_ids(snap_after)
+        results.append(
+            self._build_result(
+                name="upd_put_tools_replaces_tool_list",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=f"{detail} | attached_after={sorted(attached_after)} keep_only={keep_only}",
+                ok=(
+                    status_code == OUTCOME_SUCCESS
+                    and list_status == OUTCOME_SUCCESS
+                    and attached_after == set(keep_only)
+                ),
+            )
+        )
+
+        print("[upd/15] upd_put_tools_empty_clears_all_tools")
+        status_code, detail, _ = await self._run_update(
+            put_tools_id,
+            DeploymentUpdate(provider_data={"put_tools": []}),
+        )
+        list_status, _list_detail, snap_after_clear = await self._run_list_snapshots(put_tools_id)
+        attached_after_clear = self._extract_snapshot_ids(snap_after_clear)
+        results.append(
+            self._build_result(
+                name="upd_put_tools_empty_clears_all_tools",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=f"{detail} | attached_after={sorted(attached_after_clear)}",
+                ok=(
+                    status_code == OUTCOME_SUCCESS and list_status == OUTCOME_SUCCESS and len(attached_after_clear) == 0
+                ),
+            )
+        )
+
+        print("[upd/16] upd_put_tools_deduplicates")
+        dup_id = put_tools_sorted[0]
+        status_code, detail, _ = await self._run_update(
+            put_tools_id,
+            DeploymentUpdate(provider_data={"put_tools": [dup_id, dup_id, dup_id]}),
+        )
+        list_status, _list_detail, snap_after_dedup = await self._run_list_snapshots(put_tools_id)
+        attached_after_dedup = self._extract_snapshot_ids(snap_after_dedup)
+        results.append(
+            self._build_result(
+                name="upd_put_tools_deduplicates",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=f"{detail} | attached_after={sorted(attached_after_dedup)}",
+                ok=(
+                    status_code == OUTCOME_SUCCESS
+                    and list_status == OUTCOME_SUCCESS
+                    and attached_after_dedup == {dup_id}
+                ),
+            )
+        )
+
         # keep seed deployments tracked for shared final cleanup
         self.created_deployment_ids.add(primary_deployment_id)
         self.created_deployment_ids.add(donor_deployment_id)
         self.created_deployment_ids.add(mixed_donor_deployment_id)
+        self.created_deployment_ids.add(put_tools_id)
         return results
 
     async def _run_live_concurrency_scenarios(self) -> list[ScenarioResult]:
@@ -2380,6 +2561,80 @@ class WatsonxAdapterDirectE2E:
                 actual_outcome=status_code,
                 detail=detail,
                 ok=status_code == OUTCOME_FAILURE,
+            )
+        )
+
+        print("[fp-upd/3] fp_update_failure_then_put_tools_restore")
+        restore_id, restore_cfg_id, restore_snaps, _ = await self._create_update_seed(
+            label="fp_put_tools_restore",
+            snapshot_count=2,
+        )
+        original_snap_ids = sorted(restore_snaps)
+        if not restore_cfg_id or len(original_snap_ids) < MIN_MIXED_SNAPSHOT_IDS:
+            results.append(
+                self._build_result(
+                    name="fp_update_failure_then_put_tools_restore",
+                    expected={OUTCOME_SUCCESS},
+                    actual_outcome=OUTCOME_FAILURE,
+                    detail=f"seed insufficient: cfg={restore_cfg_id} snaps={len(original_snap_ids)}",
+                    ok=False,
+                )
+            )
+            return results
+
+        restore_prefix = f"e2e_fp_restore_{uuid4().hex[:6]}_"
+        restore_raw_cfg = self._mk_name("fp_restore_cfg")
+        print("[fp-upd/3a] injecting update failure to corrupt tool list")
+        inject_status, inject_detail, _ = await self._run_update(
+            restore_id,
+            DeploymentUpdate(
+                provider_data={
+                    "resource_name_prefix": restore_prefix,
+                    "tools": {},
+                    "connections": {"raw_payloads": [{"app_id": restore_raw_cfg, "environment_variables": {}}]},
+                    "operations": [
+                        {
+                            "op": "bind",
+                            "tool": self._make_tool_id_with_ref(original_snap_ids[0]),
+                            "app_ids": [restore_raw_cfg],
+                        }
+                    ],
+                }
+            ),
+            inject={
+                "update_bindings": {
+                    "fail_first_n": 1,
+                    "error_type": "runtime",
+                    "message": "fp_put_tools_restore_trigger",
+                }
+            },
+        )
+        failure_triggered = inject_status == OUTCOME_FAILURE
+
+        print("[fp-upd/3b] restoring via put_tools")
+        restore_status, restore_detail, _ = await self._run_update(
+            restore_id,
+            DeploymentUpdate(provider_data={"put_tools": original_snap_ids}),
+        )
+        list_status, _list_detail, snap_after_restore = await self._run_list_snapshots(restore_id)
+        attached_after_restore = self._extract_snapshot_ids(snap_after_restore)
+        restored_ok = set(original_snap_ids) == attached_after_restore
+        results.append(
+            self._build_result(
+                name="fp_update_failure_then_put_tools_restore",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=restore_status,
+                detail=(
+                    f"failure_triggered={failure_triggered} inject={inject_status}:{inject_detail} "
+                    f"restore={restore_status}:{restore_detail} "
+                    f"attached_after={sorted(attached_after_restore)} expected={original_snap_ids}"
+                ),
+                ok=(
+                    failure_triggered
+                    and restore_status == OUTCOME_SUCCESS
+                    and list_status == OUTCOME_SUCCESS
+                    and restored_ok
+                ),
             )
         )
 

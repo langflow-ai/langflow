@@ -793,6 +793,46 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
     assert delta.unbind.to_list() == ["cfg-3", "cfg-1"]
 
 
+def test_build_provider_update_plan_put_tools_replaces_agent_tool_list():
+    """put_tools standalone path seeds final_existing_tool_ids from the payload, not the agent."""
+    provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
+        {"put_tools": ["tool-x", "tool-y", "tool-z"]}
+    )
+    plan = update_core_module.build_provider_update_plan(
+        agent={"id": "dep-1", "tools": ["tool-a", "tool-b"]},
+        provider_update=provider_update,
+    )
+
+    assert plan.final_existing_tool_ids == ["tool-x", "tool-y", "tool-z"]
+    assert plan.bind_existing_tool_ids == []
+    assert plan.raw_tools_to_create == []
+    assert plan.existing_tool_deltas == {}
+
+
+def test_build_provider_update_plan_put_tools_deduplicates():
+    """Duplicate IDs in put_tools are collapsed (validator + OrderedUniqueStrs)."""
+    provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
+        {"put_tools": ["tool-a", "tool-b", "tool-a"]}
+    )
+    plan = update_core_module.build_provider_update_plan(
+        agent={"id": "dep-1", "tools": []},
+        provider_update=provider_update,
+    )
+
+    assert plan.final_existing_tool_ids == ["tool-a", "tool-b"]
+
+
+def test_build_provider_update_plan_put_tools_empty_clears_all():
+    """An empty put_tools list clears the agent's tool list entirely."""
+    provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate({"put_tools": []})
+    plan = update_core_module.build_provider_update_plan(
+        agent={"id": "dep-1", "tools": ["tool-a", "tool-b"]},
+        provider_update=provider_update,
+    )
+
+    assert plan.final_existing_tool_ids == []
+
+
 @pytest.mark.anyio
 async def test_update_existing_tool_connection_deltas_uses_bind_order_in_errors():
     fake_tool = FakeToolClient([{"id": "tool-c", "name": "tool-c", "binding": {"langflow": {"connections": {}}}}])

@@ -248,11 +248,17 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
     - operations[*].app_ids are operation-side ids.
     - resource_name_prefix is applied only when creating resources
       (for raw connections and raw tools).
+    - put_tools performs a standalone full replacement of the agent's tool
+      list.  The agent will have exactly these tool IDs and no others.
+      It cannot be combined with operations, tools, connections, or
+      resource_name_prefix (the validator rejects such payloads).
+      This should only be used by rollback to restore pre-update
+      attachment state.
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    resource_name_prefix: str | None = Field(
+    resource_name_prefix: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)] | None = Field(
         default=None,
         description=(
             "Prefix applied only when creating resources: "
@@ -261,10 +267,47 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
     )
     tools: WatsonxUpdateTools = Field(default_factory=WatsonxUpdateTools)
     connections: WatsonxUpdateConnections = Field(default_factory=WatsonxUpdateConnections)
-    operations: list[WatsonxUpdateOperation] = Field(min_length=1)
+    operations: list[WatsonxUpdateOperation] = Field(default_factory=list)
+    put_tools: list[NormalizedId] | None = Field(
+        default=None,
+        description=(
+            "Declarative list of existing provider tool IDs the deployment should have. "
+            "Performs a standalone full replacement of the agent's tool list — "
+            "cannot be combined with operations, tools, connections, or resource_name_prefix. "
+            "This should only be used by rollback to restore pre-update attachment state."
+        ),
+    )
+
+    @field_validator("put_tools")
+    @classmethod
+    def dedupe_put_tools(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        return list(dict.fromkeys(value))
+
+    @model_validator(mode="after")
+    def validate_has_work(self) -> WatsonxDeploymentUpdatePayload:
+        if self.put_tools is not None:
+            has_other = (
+                self.operations
+                or self.tools.raw_payloads
+                or self.connections.existing_app_ids
+                or self.connections.raw_payloads
+                or self.resource_name_prefix
+            )
+            if has_other:
+                msg = "put_tools is a standalone full replacement and cannot be combined with other fields."
+                raise ValueError(msg)
+            return self
+        if not self.operations:
+            msg = "At least one of 'operations' or 'put_tools' must be provided."
+            raise ValueError(msg)
+        return self
 
     @model_validator(mode="after")
     def validate_operation_references(self) -> WatsonxDeploymentUpdatePayload:
+        if self.put_tools is not None:
+            return self
         raw_tool_names = {payload.name for payload in (self.tools.raw_payloads or [])}
 
         existing_app_ids = set(self.connections.existing_app_ids or [])

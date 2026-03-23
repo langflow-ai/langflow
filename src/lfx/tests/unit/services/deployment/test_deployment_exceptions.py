@@ -24,6 +24,7 @@ from lfx.services.adapters.deployment.exceptions import (
     RateLimitError,
     ResourceNotFoundError,
     ServiceUnavailableError,
+    http_status_for_deployment_error,
     raise_for_status_and_detail,
 )
 from lfx.services.interfaces import DeploymentServiceProtocol
@@ -248,6 +249,37 @@ def test_raise_for_status_and_detail_uses_detail_heuristics_without_status() -> 
         raise_for_status_and_detail(status_code=None, detail="request timed out")
     with pytest.raises(ServiceUnavailableError):
         raise_for_status_and_detail(status_code=None, detail="service unavailable")
+
+
+@pytest.mark.parametrize(
+    ("exc", "expected_status"),
+    [
+        (DeploymentConflictError(), 409),
+        (InvalidDeploymentOperationError(), 400),
+        (DeploymentSupportError(), 400),
+        (InvalidDeploymentTypeError(), 400),
+        (InvalidContentError(), 422),
+        (DeploymentNotFoundError(), 404),
+        (ResourceNotFoundError(), 404),
+        (RateLimitError(), 429),
+        (DeploymentTimeoutError(), 408),
+        (ServiceUnavailableError(), 503),
+        (OperationNotSupportedError(), 501),
+        (AuthenticationError("auth fail", error_code="authentication_error"), 401),
+        (CredentialResolutionError(), 401),
+        (AuthSchemeError(), 401),
+        (AuthorizationError("forbidden", error_code="authorization_error"), 403),
+        (DeploymentNotConfiguredError(), 503),
+        (DeploymentNotConfiguredError(method="create"), 503),
+        (DeploymentError("generic", error_code="deployment_error"), 500),
+        (DeploymentServiceError("bare root", error_code="unknown"), 500),
+    ],
+)
+def test_http_status_for_deployment_error_maps_exception_to_status(
+    exc: DeploymentServiceError,
+    expected_status: int,
+) -> None:
+    assert http_status_for_deployment_error(exc) == expected_status
 
 
 def test_package_exports_base_and_error() -> None:

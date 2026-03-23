@@ -42,8 +42,7 @@ async def create_deployment_attachment(
             exc,
         )
         msg = (
-            f"Attachment conflicts with an existing record "
-            f"(flow_version={flow_version_id}, deployment={deployment_id})"
+            f"Attachment conflicts with an existing record (flow_version={flow_version_id}, deployment={deployment_id})"
         )
         raise ValueError(msg) from exc
     await db.refresh(row)
@@ -71,9 +70,13 @@ async def list_deployment_attachments(
     user_id: UUID,
     deployment_id: UUID,
 ) -> list[FlowVersionDeploymentAttachment]:
-    stmt = select(FlowVersionDeploymentAttachment).where(
-        FlowVersionDeploymentAttachment.user_id == user_id,
-        FlowVersionDeploymentAttachment.deployment_id == deployment_id,
+    stmt = (
+        select(FlowVersionDeploymentAttachment)
+        .where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            FlowVersionDeploymentAttachment.deployment_id == deployment_id,
+        )
+        .order_by(FlowVersionDeploymentAttachment.created_at)
     )
     return list((await db.exec(stmt)).all())
 
@@ -136,6 +139,25 @@ async def delete_deployment_attachments_by_deployment_id(
     )
     result = await db.exec(stmt)
     return int(result.rowcount or 0)
+
+
+async def list_attachments_by_deployment_ids(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment_ids: list[UUID],
+) -> list[FlowVersionDeploymentAttachment]:
+    if not deployment_ids:
+        return []
+    stmt = (
+        select(FlowVersionDeploymentAttachment)
+        .where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            FlowVersionDeploymentAttachment.deployment_id.in_(deployment_ids),
+        )
+        .order_by(FlowVersionDeploymentAttachment.created_at)
+    )
+    return list((await db.exec(stmt)).all())
 
 
 async def count_attachments_by_deployment_ids(

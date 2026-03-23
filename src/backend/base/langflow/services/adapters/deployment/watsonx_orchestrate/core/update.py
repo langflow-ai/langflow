@@ -111,10 +111,22 @@ def build_provider_update_plan(
     provider_update: WatsonxDeploymentUpdatePayload,
 ) -> ProviderUpdatePlan:
     """Build a deterministic CPU-only plan for provider_data update operations."""
+    # put_tools is a standalone full replacement of the agent's tool list
+    # (no operations accompany it).
+    if provider_update.put_tools is not None:
+        return ProviderUpdatePlan(
+            resource_prefix="",
+            existing_app_ids=[],
+            raw_connections_to_create=[],
+            existing_tool_deltas={},
+            raw_tools_to_create=[],
+            final_existing_tool_ids=list(dict.fromkeys(provider_update.put_tools)),
+            bind_existing_tool_ids=[],
+            existing_tool_refs=[],
+        )
+
     resource_prefix = (provider_update.resource_name_prefix or "").strip()
     agent_tool_ids = extract_agent_tool_ids(agent)
-    # final_existing_tool_ids: tool ids the agent should have after the update
-    #   (seeded from current agent, then mutated by bind/remove operations).
     final_existing_tool_ids = OrderedUniqueStrs.from_values(agent_tool_ids)
 
     # existing_tool_deltas: per existing tool_id, tracks app_ids to bind/unbind.

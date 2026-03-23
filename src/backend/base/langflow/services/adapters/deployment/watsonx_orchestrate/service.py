@@ -70,6 +70,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.status impor
     get_deployment_detail_metadata,
     get_deployment_metadata,
 )
+from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import verify_tools_by_ids
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.update import (
     apply_provider_update_plan_with_rollback,
     build_provider_update_plan,
@@ -635,9 +636,30 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         params: SnapshotListParams | None = None,
         db: AsyncSession,
     ) -> SnapshotListResult:
-        """List snapshots visible to this adapter."""
-        agent_id = _require_single_deployment_id(params, resource_label="snapshot")
+        """List snapshots visible to this adapter.
+
+        Supports two modes:
+        - **deployment-scoped**: requires exactly one ``deployment_id`` in params;
+          returns tools bound to that agent.
+        - **snapshot-ids-only**: when ``snapshot_ids`` is provided and
+          ``deployment_ids`` is empty/None, fetches tools directly by ID to
+          verify which ones still exist in the provider.
+        """
+        has_deployment_ids = params and params.deployment_ids
+        has_snapshot_ids = params and params.snapshot_ids
+
+        if has_snapshot_ids and has_deployment_ids:
+            logger.warning(
+                "list_snapshots called with both deployment_ids and snapshot_ids; "
+                "snapshot_ids will be ignored in favour of the deployment-scoped path"
+            )
+
         clients = await self._get_provider_clients(user_id=user_id, db=db)
+
+        if has_snapshot_ids and not has_deployment_ids:
+            return await verify_tools_by_ids(clients, params.snapshot_ids)  # type: ignore[union-attr]
+
+        agent_id = _require_single_deployment_id(params, resource_label="snapshot")
 
         try:
             agent = await asyncio.to_thread(clients.agent.get_draft_by_id, agent_id)
@@ -679,6 +701,28 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             snapshots=snapshots,
             provider_result={"deployment_id": agent_id},
         )
+
+    async def _list_snapshots_by_ids(
+        self,
+        *,
+        user_id: IdLike,
+        snapshot_ids: list[str],
+        db: AsyncSession,
+    ) -> SnapshotListResult:
+        """Fetch tools directly by ID to verify which ones still exist."""
+        if not snapshot_ids:
+            return SnapshotListResult(snapshots=[])
+
+        clients = await self._get_provider_clients(user_id=user_id, db=db)
+        try:
+            snapshots = await verify_tools_by_ids(clients, snapshot_ids)
+        except Exception as exc:  # noqa: BLE001
+            raise_as_deployment_error(
+                exc,
+                error_prefix=ErrorPrefix.LIST,
+                log_msg="Unexpected error while verifying wxO tool snapshots by ID",
+            )
+        return SnapshotListResult(snapshots=snapshots)
 
     async def teardown(self) -> None:
         """Teardown provider-specific resources."""

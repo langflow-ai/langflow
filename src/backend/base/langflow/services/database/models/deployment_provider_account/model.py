@@ -39,7 +39,7 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
     # allowed when provider_tenant_id is NULL.  This is intentional: a provider
     # may not require a tenant/organization identifier.
     provider_tenant_id: str | None = Field(default=None, index=True)
-    provider_key: str = Field(index=True)
+    provider_key: str = Field(index=True)  # TODO: define an enum for this
     provider_url: str = Field()
     # MUST be stored encrypted; the CRUD layer encrypts via auth_utils before writing
     # and the Read schema intentionally excludes this field.
