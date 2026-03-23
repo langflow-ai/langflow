@@ -1,8 +1,11 @@
 """Pydantic schemas for v2 API endpoints."""
 
+import logging
 from pathlib import Path
 
 from pydantic import BaseModel, field_validator
+
+logger = logging.getLogger(__name__)
 
 # SECURITY: Allowlist of approved MCP stdio commands
 # Following Flowise best practice: https://github.com/FlowiseAI/Flowise/blob/main/packages/components/nodes/tools/MCP/CustomMCP/CustomMCP.ts#L166
@@ -14,6 +17,22 @@ ALLOWED_MCP_COMMANDS = {
     "npx",  # npm package executor for MCP servers
     "uvx",  # uv package executor for Python MCP servers
     "docker",  # Docker-based MCP servers
+}
+
+# SECURITY: Shell metacharacters that enable command injection
+DANGEROUS_SHELL_CHARS = [";", "|", "&", "$", "`", "<", ">", "\n", "\r"]
+
+# SECURITY: Keywords that enable code execution or package installation
+DANGEROUS_KEYWORDS = {
+    "-c",  # Python code execution
+    "-e",  # Node eval
+    "pip",  # Python package manager
+    "install",  # Package installation
+    "npm",  # Node package manager
+    "yarn",  # Alternative Node package manager
+    "pnpm",  # Alternative Node package manager
+    "eval",  # Code evaluation
+    "exec",  # Code execution
 }
 
 
@@ -44,7 +63,7 @@ class MCPServerConfig(BaseModel):
             ValueError: If the command is not in the allowlist
         """
         if v is None:
-            return v
+            return None
 
         # Extract base command (handle paths like /usr/bin/node or C:\Program Files\nodejs\node.exe)
         # Replace backslashes with forward slashes to handle Windows paths on any platform
@@ -59,6 +78,15 @@ class MCPServerConfig(BaseModel):
         if base_command not in ALLOWED_MCP_COMMANDS:
             allowed_list = ", ".join(sorted(ALLOWED_MCP_COMMANDS))
             msg = f"Command '{base_command}' is not allowed for security reasons. Allowed commands: {allowed_list}"
+            logger.warning(
+                "MCP command rejected",
+                extra={
+                    "security_event": "mcp_command_rejected",
+                    "rejected_command": base_command,
+                    "full_path": v,
+                    "allowed_commands": list(ALLOWED_MCP_COMMANDS),
+                },
+            )
             raise ValueError(msg)
 
         return v
@@ -66,9 +94,10 @@ class MCPServerConfig(BaseModel):
     @field_validator("args")
     @classmethod
     def validate_args(cls, v: list[str] | None) -> list[str] | None:
-        """Validate MCP command arguments to prevent shell injection.
+        """Validate MCP command arguments to prevent shell injection and code execution.
 
-        Blocks shell metacharacters that could be used for command injection.
+        Blocks shell metacharacters and dangerous flags that could be used for
+        command injection, code execution, or package installation attacks.
 
         Args:
             v: The list of arguments to validate
@@ -77,19 +106,42 @@ class MCPServerConfig(BaseModel):
             The validated arguments list
 
         Raises:
-            ValueError: If any argument contains dangerous shell metacharacters
+            ValueError: If any argument contains dangerous patterns
         """
         if v is None:
-            return v
+            return None
 
         # Block shell metacharacters that could enable command injection
-        dangerous_chars = [";", "|", "&", "$", "`", "(", ")", "<", ">", "\n", "\r"]
-
         for arg in v:
-            for char in dangerous_chars:
+            for char in DANGEROUS_SHELL_CHARS:
                 if char in arg:
                     msg = f"Argument contains dangerous shell metacharacter '{char}': {arg}"
+                    logger.warning(
+                        "MCP argument rejected - shell metacharacter",
+                        extra={
+                            "security_event": "mcp_arg_shell_char_rejected",
+                            "rejected_arg": arg,
+                            "dangerous_char": char,
+                            "all_args": v,
+                        },
+                    )
                     raise ValueError(msg)
+
+        # Block dangerous flags that enable code execution or package installation
+        # Note: We allow -m for legitimate Python MCP servers, but block pip/install
+        for arg in v:
+            # Check if argument matches any dangerous keyword (case-insensitive)
+            if arg.lower() in DANGEROUS_KEYWORDS:
+                msg = f"Argument '{arg}' is not allowed for security reasons"
+                logger.warning(
+                    "MCP argument rejected - dangerous keyword",
+                    extra={
+                        "security_event": "mcp_arg_keyword_rejected",
+                        "rejected_arg": arg,
+                        "all_args": v,
+                    },
+                )
+                raise ValueError(msg)
 
         return v
 

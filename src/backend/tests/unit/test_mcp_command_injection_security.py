@@ -9,9 +9,19 @@ arbitrary commands, achieving Remote Code Execution (RCE).
 Fix: Implement command allowlist validation in MCPServerConfig schema.
 """
 
+import logging
+
 import pytest
 from langflow.api.v2.schemas import ALLOWED_MCP_COMMANDS, MCPServerConfig
 from pydantic import ValidationError
+
+
+# Fixture to capture security logs
+@pytest.fixture
+def caplog_security(caplog):
+    """Fixture to capture security-related log messages."""
+    caplog.set_level(logging.WARNING)
+    return caplog
 
 
 class TestMCPCommandInjectionSecurity:
@@ -113,6 +123,65 @@ class TestMCPCommandInjectionSecurity:
 
         error_msg = str(exc_info.value)
         assert "dangerous shell metacharacter" in error_msg.lower()
+
+    # ==================== Dangerous Flags Tests ====================
+
+    def test_python_code_execution_flag_rejected(self):
+        """Test that Python -c flag is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(command="python3", args=["-c", "print('hello')"])
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_python_pip_install_rejected(self):
+        """Test that Python pip install is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(command="python3", args=["-m", "pip", "install", "malicious-pkg"])
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+        assert "pip" in error_msg.lower()
+
+    def test_node_eval_flag_rejected(self):
+        """Test that Node -e flag is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(command="node", args=["-e", "console.log('hello')"])
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_pip_install_rejected(self):
+        """Test that pip install is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(command="python3", args=["pip", "install", "malicious-package"])
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_npm_install_rejected(self):
+        """Test that npm install is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(command="node", args=["npm", "install", "malicious-package"])
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_eval_keyword_rejected(self):
+        """Test that eval keyword is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(command="node", args=["eval", "malicious code"])
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_exec_keyword_rejected(self):
+        """Test that exec keyword is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(command="python3", args=["exec", "malicious code"])
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
 
     # ==================== Proof of Concept Tests ====================
 
@@ -267,3 +336,27 @@ class TestMCPCommandInjectionSecurity:
         error_msg = str(exc_info.value)
         assert ";" in error_msg
         assert "dangerous" in error_msg.lower()
+
+    # ==================== Security Logging Tests ====================
+
+    def test_rejected_command_logs_security_event(self, caplog_security):
+        """Test that rejected commands generate security log entries."""
+        with pytest.raises(ValidationError):
+            MCPServerConfig(command="rm", args=["-rf", "/"])
+
+        # Check that security event was logged
+        assert any(
+            "mcp_command_rejected" in record.message or "security_event" in str(record.__dict__)
+            for record in caplog_security.records
+        )
+
+    def test_rejected_arg_logs_security_event(self, caplog_security):
+        """Test that rejected arguments generate security log entries."""
+        with pytest.raises(ValidationError):
+            MCPServerConfig(command="python3", args=["-c", "print('pwned')"])
+
+        # Check that security event was logged
+        assert any(
+            "mcp_arg" in record.message.lower() or "security_event" in str(record.__dict__)
+            for record in caplog_security.records
+        )
