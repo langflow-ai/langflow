@@ -649,7 +649,7 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
             try:
                 kb_path = _resolve_kb_path(kb_name, current_user)
             except HTTPException as exc:
-                if exc.status_code == 404:
+                if exc.status_code == HTTPStatus.NOT_FOUND:
                     not_found_kbs.append(kb_name)
                     continue
                 raise  # Re-raise 403 (traversal) and 500 errors
