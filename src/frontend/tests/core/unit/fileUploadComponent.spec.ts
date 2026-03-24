@@ -834,6 +834,8 @@ test(
 
     await enableInspectPanel(page);
 
+    await adjustScreenView(page);
+
     // Select the Read File node and toggle file_path to canvas
     await page.getByTestId("title-Read File").click();
     await page.getByTestId("edit-fields-button").click();
