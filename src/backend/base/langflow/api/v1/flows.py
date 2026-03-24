@@ -22,6 +22,7 @@ from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
+from langflow.api.utils.zip_utils import extract_flows_from_zip
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
@@ -739,14 +740,37 @@ async def create_flows(
 async def upload_file(
     *,
     session: DbSession,
-    file: Annotated[UploadFile, File(...)],
+    file: Annotated[UploadFile | None, File()] = None,
     current_user: CurrentActiveUser,
     folder_id: UUID | None = None,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
-    """Upload flows from a file."""
+    """Upload flows from a file.
+
+    Accepts either a JSON file (single flow or multi-flow format) or a ZIP file
+    containing individual flow JSON files (as produced by the download endpoint).
+    """
+    if file is None:
+        raise HTTPException(status_code=400, detail="No file provided")
+
     contents = await file.read()
-    data = orjson.loads(contents)
+
+    if not contents:
+        raise HTTPException(status_code=400, detail="The uploaded file is empty")
+
+    if zipfile.is_zipfile(io.BytesIO(contents)):
+        try:
+            flows_data = await extract_flows_from_zip(contents)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+        if not flows_data:
+            raise HTTPException(status_code=400, detail="No valid flow JSON files found in the ZIP")
+        data = {"flows": flows_data}
+    else:
+        try:
+            data = orjson.loads(contents)
+        except orjson.JSONDecodeError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid JSON file: {e}") from e
 
     flow_list = FlowListCreate(**data) if "flows" in data else FlowListCreate(flows=[FlowCreate(**data)])
 

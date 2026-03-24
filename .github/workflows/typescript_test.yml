@@ -366,6 +366,14 @@ jobs:
           path: src/frontend/blob-report
           retention-days: 1
 
+      - name: Upload Playwright Coverage Artifact
+        if: always() && hashFiles('src/frontend/coverage/playwright/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-coverage-${{ matrix.shardIndex }}
+          path: src/frontend/coverage/playwright
+          retention-days: 7
+
       - name: Cleanup UV Cache
         run: uv cache prune --ci
 
