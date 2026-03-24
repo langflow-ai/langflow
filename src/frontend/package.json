@@ -7,6 +7,7 @@
   },
   "overrides": {
     "tar": "^7.5.7",
+    "tar-fs": ">=2.1.4",
     "glob": "^11.1.0",
     "test-exclude": "^7.0.0"
   },
@@ -96,8 +97,6 @@
     "use-stick-to-bottom": "^1.1.1",
     "uuid": "^10.0.0",
     "vanilla-jsoneditor": "^2.3.3",
-    "vite-plugin-svgr": "^4.2.0",
-    "vite-tsconfig-paths": "^6.0.3",
     "web-vitals": "^4.1.1",
     "whatwg-fetch": "^3.6.20",
     "zod": "^3.23.8",
@@ -166,6 +165,7 @@
     "jest": "^30.0.3",
     "jest-environment-jsdom": "^30.0.2",
     "jest-junit": "^16.0.0",
+    "nyc": "^18.0.0",
     "postcss": "^8.4.38",
     "storybook": "^10.1.0",
     "tailwindcss": "^3.4.4",
@@ -173,6 +173,9 @@
     "ts-jest": "^29.4.0",
     "typescript": "^5.4.5",
     "ua-parser-js": "^1.0.38",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vite-plugin-istanbul": "^8.0.0",
+    "vite-plugin-svgr": "^4.5.0",
+    "vite-tsconfig-paths": "^6.1.0"
   }
 }
