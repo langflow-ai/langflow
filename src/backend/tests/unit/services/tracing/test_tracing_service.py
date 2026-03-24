@@ -637,3 +637,19 @@ async def test_concurrent_tracing(tracing_service, mock_component):
     assert tracer2.session_id == "session_id2"
     assert dict(tracer2.outputs_param.get("run_id2 trace_name1")) == {"output_key": "task2_run_id2 component1_output"}
     assert dict(tracer2.outputs_param.get("run_id2 trace_name2")) == {"output_key": "task2_run_id2 component2_output"}
+
+
+def test_add_log_without_component_context(tracing_service):
+    """add_log should log debug and return (not raise) when component context is missing."""
+    # Ensure no component context is set
+    component_context_var.set(None)
+    # Should not raise
+    tracing_service.add_log("some_trace", {"message": "test"})
+
+
+def test_set_outputs_without_component_context(tracing_service):
+    """set_outputs should log debug and return (not raise) when component context is missing."""
+    # Ensure no component context is set
+    component_context_var.set(None)
+    # Should not raise
+    tracing_service.set_outputs("some_trace", {"key": "value"})
