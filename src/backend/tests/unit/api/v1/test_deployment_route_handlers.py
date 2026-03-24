@@ -10,6 +10,7 @@ Covers the integration behaviour of the FastAPI route handlers:
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -31,39 +32,34 @@ HELPERS_MODULE = "langflow.api.v1.mappers.deployments.helpers"
 # ---------------------------------------------------------------------------
 
 
-def _fake_provider_account(*, provider_key: str = "watsonx_orchestrate") -> MagicMock:
-    pa = MagicMock()
-    pa.id = uuid4()
-    pa.provider_key = provider_key
-    return pa
+def _fake_provider_account(*, provider_key: str = "watsonx_orchestrate") -> SimpleNamespace:
+    return SimpleNamespace(id=uuid4(), provider_key=provider_key)
 
 
-def _fake_deployment_row(**overrides) -> MagicMock:
-    row = MagicMock()
-    row.id = overrides.get("id", uuid4())
-    row.resource_key = overrides.get("resource_key", "rk-1")
-    row.name = overrides.get("name", "test-deployment")
-    row.description = overrides.get("description")
-    row.deployment_type = overrides.get("deployment_type", "agent")
-    row.deployment_provider_account_id = overrides.get("deployment_provider_account_id", uuid4())
-    row.project_id = overrides.get("project_id", uuid4())
-    row.created_at = overrides.get("created_at")
-    row.updated_at = overrides.get("updated_at")
-    return row
+def _fake_deployment_row(**overrides) -> SimpleNamespace:
+    return SimpleNamespace(
+        id=overrides.get("id", uuid4()),
+        resource_key=overrides.get("resource_key", "rk-1"),
+        name=overrides.get("name", "test-deployment"),
+        description=overrides.get("description"),
+        deployment_type=overrides.get("deployment_type", "agent"),
+        deployment_provider_account_id=overrides.get("deployment_provider_account_id", uuid4()),
+        project_id=overrides.get("project_id", uuid4()),
+        created_at=overrides.get("created_at"),
+        updated_at=overrides.get("updated_at"),
+    )
 
 
-def _fake_user() -> MagicMock:
-    user = MagicMock()
-    user.id = uuid4()
-    return user
+def _fake_user() -> SimpleNamespace:
+    return SimpleNamespace(id=uuid4())
 
 
-def _fake_attachment(*, provider_snapshot_id: str | None = None) -> MagicMock:
-    att = MagicMock()
-    att.flow_version_id = uuid4()
-    att.provider_snapshot_id = provider_snapshot_id
-    att.deployment_id = uuid4()
-    return att
+def _fake_attachment(*, provider_snapshot_id: str | None = None) -> SimpleNamespace:
+    return SimpleNamespace(
+        flow_version_id=uuid4(),
+        provider_snapshot_id=provider_snapshot_id,
+        deployment_id=uuid4(),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -747,13 +743,13 @@ class TestResolveDeploymentAdapter:
         assert exc_info.value.status_code == 400
 
     @patch(f"{HELPERS_MODULE}.get_deployment_adapter", return_value=None)
-    def test_unknown_provider_key_raises_400(self, _mock_get):  # noqa: PT019
+    def test_unknown_provider_key_raises_503(self, _mock_get):  # noqa: PT019
         from langflow.api.v1.mappers.deployments.helpers import resolve_deployment_adapter
 
         with pytest.raises(HTTPException) as exc_info:
             resolve_deployment_adapter("nonexistent_provider")
 
-        assert exc_info.value.status_code == 400
+        assert exc_info.value.status_code == 503
         assert "nonexistent_provider" in exc_info.value.detail
 
     @patch(f"{HELPERS_MODULE}.get_deployment_adapter", side_effect=RuntimeError("registry boom"))

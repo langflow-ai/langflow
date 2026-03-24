@@ -7,6 +7,7 @@ Covers:
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -31,26 +32,16 @@ MODULE = "langflow.api.v1.mappers.deployments.helpers"
 # ---------------------------------------------------------------------------
 
 
-def _mock_item(*, item_id: str, name: str = "irrelevant") -> MagicMock:
-    """Simulate an ItemResult from the provider."""
-    item = MagicMock()
-    item.id = item_id
-    item.name = name
-    return item
+def _mock_item(*, item_id: str, name: str = "irrelevant") -> SimpleNamespace:
+    return SimpleNamespace(id=item_id, name=name)
 
 
-def _mock_provider_view(items: list[MagicMock]) -> MagicMock:
-    view = MagicMock()
-    view.deployments = items
-    return view
+def _mock_provider_view(items: list) -> SimpleNamespace:
+    return SimpleNamespace(deployments=items)
 
 
-def _mock_deployment_row(resource_key: str, deployment_type: str | None = None) -> MagicMock:
-    row = MagicMock()
-    row.id = uuid4()
-    row.resource_key = resource_key
-    row.deployment_type = deployment_type
-    return row
+def _mock_deployment_row(resource_key: str, deployment_type: str | None = None) -> SimpleNamespace:
+    return SimpleNamespace(id=uuid4(), resource_key=resource_key, deployment_type=deployment_type)
 
 
 # ---------------------------------------------------------------------------
@@ -712,17 +703,12 @@ async def test_validate_project_scoped_flow_version_ids_rejects_out_of_project_i
 # ---------------------------------------------------------------------------
 
 
-def _mock_snapshot_item(*, item_id: str, name: str = "irrelevant") -> MagicMock:
-    item = MagicMock()
-    item.id = item_id
-    item.name = name
-    return item
+def _mock_snapshot_item(*, item_id: str, name: str = "irrelevant") -> SimpleNamespace:
+    return SimpleNamespace(id=item_id, name=name)
 
 
-def _mock_snapshot_view(items: list[MagicMock]) -> MagicMock:
-    view = MagicMock()
-    view.snapshots = items
-    return view
+def _mock_snapshot_view(items: list) -> SimpleNamespace:
+    return SimpleNamespace(snapshots=items)
 
 
 class TestFetchProviderSnapshotKeys:
@@ -786,12 +772,12 @@ class TestFetchProviderSnapshotKeys:
 # ---------------------------------------------------------------------------
 
 
-def _mock_attachment(*, flow_version_id=None, provider_snapshot_id=None, deployment_id=None) -> MagicMock:
-    att = MagicMock()
-    att.flow_version_id = flow_version_id or uuid4()
-    att.provider_snapshot_id = provider_snapshot_id
-    att.deployment_id = deployment_id or uuid4()
-    return att
+def _mock_attachment(*, flow_version_id=None, provider_snapshot_id=None, deployment_id=None) -> SimpleNamespace:
+    return SimpleNamespace(
+        flow_version_id=flow_version_id or uuid4(),
+        provider_snapshot_id=provider_snapshot_id,
+        deployment_id=deployment_id or uuid4(),
+    )
 
 
 class TestSyncAttachmentSnapshotIds:
