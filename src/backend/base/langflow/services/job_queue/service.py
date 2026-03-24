@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from uuid import UUID
 
 from lfx.log.logger import logger
 
@@ -68,6 +69,7 @@ class JobQueueService(Service):
         to active.
         """
         self._queues: dict[str, tuple[asyncio.Queue, EventManager, asyncio.Task | None, float | None]] = {}
+        self._job_owners: dict[str, UUID] = {}
         self._cleanup_task: asyncio.Task | None = None
         self._closed = False
         self.ready = False
@@ -207,6 +209,14 @@ class JobQueueService(Service):
         except KeyError as exc:
             raise JobQueueNotFoundError(job_id) from exc
 
+    def register_job_owner(self, job_id: str, user_id: UUID) -> None:
+        """Register the authenticated user who initiated a build job."""
+        self._job_owners[job_id] = user_id
+
+    def get_job_owner(self, job_id: str) -> UUID | None:
+        """Return the user ID that owns a job, or None if not tracked."""
+        return self._job_owners.get(job_id)
+
     async def cleanup_job(self, job_id: str) -> None:
         """Clean up and release resources for a specific job.
 
@@ -261,6 +271,7 @@ class JobQueueService(Service):
         await logger.adebug(f"Removed {items_cleared} items from queue for job_id {job_id}")
         # Remove the job entry from the registry
         self._queues.pop(job_id, None)
+        self._job_owners.pop(job_id, None)
         await logger.adebug(f"Cleanup successful for job_id {job_id}: resources have been released.")
 
     async def _periodic_cleanup(self) -> None:

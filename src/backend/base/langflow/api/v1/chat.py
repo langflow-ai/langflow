@@ -39,7 +39,7 @@ from langflow.api.v1.schemas import (
 from langflow.exceptions.component import ComponentBuildError
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.deps import (
     get_chat_service,
     get_queue_service,
@@ -47,6 +47,7 @@ from langflow.services.deps import (
     session_scope,
 )
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
+from sqlmodel import select
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 if TYPE_CHECKING:
@@ -173,9 +174,15 @@ async def build_flow(
     Returns:
         Dict with job_id that can be used to poll for build status
     """
-    # First verify the flow exists
+    # Verify the flow exists and belongs to the requesting user (or is public).
+    # Returns 404 for both "not found" and "not owned" to avoid UUID enumeration.
     async with session_scope() as session:
-        flow = await session.get(Flow, flow_id)
+        stmt = (
+            select(Flow)
+            .where(Flow.id == flow_id)
+            .where((Flow.user_id == current_user.id) | (Flow.access_type == AccessTypeEnum.PUBLIC))
+        )
+        flow = (await session.exec(stmt)).first()
         if not flow:
             raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
 
@@ -192,6 +199,7 @@ async def build_flow(
         queue_service=queue_service,
         flow_name=flow_name,
     )
+    queue_service.register_job_owner(job_id, current_user.id)
 
     # This is required to support FE tests - we need to be able to set the event delivery to direct
     if event_delivery != EventDeliveryType.DIRECT:
@@ -203,17 +211,25 @@ async def build_flow(
     )
 
 
-@router.get("/build/{job_id}/events", dependencies=[Depends(get_current_active_user)])
+@router.get("/build/{job_id}/events")
 async def get_build_events(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
+    current_user: CurrentActiveUser,
     *,
     event_delivery: EventDeliveryType = EventDeliveryType.STREAMING,
 ):
     """Get events for a specific build job.
 
-    Requires authentication to prevent unauthorized access to build events.
+    Requires authentication and ownership verification. A job owner is registered
+    when build_flow is called; if a registered owner does not match the requesting
+    user the endpoint returns 404 to avoid leaking job existence.
+    Jobs started via build_public_tmp have no registered owner and remain accessible
+    to any authenticated user.
     """
+    job_owner = queue_service.get_job_owner(job_id)
+    if job_owner is not None and job_owner != current_user.id:
+        raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
     return await get_flow_events_response(
         job_id=job_id,
         queue_service=queue_service,
