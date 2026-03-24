@@ -18,8 +18,9 @@ Risks
 * **Backfill collision (extremely unlikely):** The backfill derives names
   from the first 8 hex characters of each row's UUID.  A collision can
   only occur between two rows that share the same ``provider_key`` *and*
-  whose UUIDs share the same first 8 hex chars (~1-in-4-billion per
-  pair).  If this ever triggers an ``IntegrityError`` during migration,
+  whose UUIDs share the same first 8 hex chars which is unlikely given
+  the deployments feature is not officially shipped.
+  If this ever triggers an ``IntegrityError`` during migration,
   re-run after manually assigning distinct names to the affected rows.
 
 * **NOT-NULL on existing data:** The column is added as nullable, then
