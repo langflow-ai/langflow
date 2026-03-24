@@ -558,6 +558,26 @@ async def test_build_flow_public_flow_accessible_by_other_user(
 
 
 @pytest.mark.benchmark
+async def test_cancel_build_cross_user_blocked(client, json_memory_chatbot_no_llm, logged_in_headers, user_two):
+    """Security: authenticated user cannot cancel a build job owned by another user.
+
+    cancel_build carries the same DoS risk as get_build_events — an attacker who
+    obtains a job_id should not be able to abort the victim's running build.
+    """
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    build_response = await build_flow(client, flow_id, logged_in_headers)
+    job_id = build_response["job_id"]
+
+    login_data = {"username": user_two.username, "password": "hashed_password"}
+    response = await client.post("api/v1/login", data=login_data)
+    assert response.status_code == 200
+    attacker_headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+    response = await client.post(f"api/v1/build/{job_id}/cancel", headers=attacker_headers)
+    assert response.status_code == 404
+
+
+@pytest.mark.benchmark
 async def test_build_public_tmp_without_data_parameter(client, json_memory_chatbot_no_llm, logged_in_headers):
     """Test that build_public_tmp endpoint works without data parameter.
 
