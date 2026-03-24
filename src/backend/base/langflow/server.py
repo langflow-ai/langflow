@@ -71,6 +71,15 @@ class LangflowApplication(BaseApplication):
         super().__init__()
 
     def load_config(self) -> None:
+        # Apply GUNICORN_CMD_ARGS env var (and any gunicorn config file) before programmatic options
+        parser = self.cfg.parser()
+        env_args = parser.parse_args(self.cfg.get_cmd_args_from_env())
+        for k, v in vars(env_args).items():
+            if v is None or k == "args":
+                continue
+            self.cfg.set(k.lower(), v)
+
+        # Programmatic options override env args
         config = {key: value for key, value in self.options.items() if key in self.cfg.settings and value is not None}
         for key, value in config.items():
             self.cfg.set(key.lower(), value)
