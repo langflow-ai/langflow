@@ -619,7 +619,6 @@ async def create_response(
 
     await logger.adebug(f"All headers received: {list(http_request.headers.keys())}")
     await logger.adebug(f"Extracted global variables from headers: {list(variables.keys())}")
-    await logger.adebug(f"Variables dict keys: {list(variables.keys())}")
 
     # Validate tools parameter - error out if tools are provided
     if request.tools is not None:

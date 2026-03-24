@@ -322,7 +322,7 @@ async def initialize_agentic_user_variables(user_id: UUID | str, session: AsyncS
 
         # Create a dict with agentic variable names and default values as empty strings
         agentic_variables = dict.fromkeys(AGENTIC_VARIABLES, DEFAULT_AGENTIC_VARIABLE_VALUE)
-        logger.adebug(f"Agentic variables: {list(agentic_variables.keys())}")
+        await logger.adebug(f"Agentic variables: {list(agentic_variables.keys())}")
 
         existing_vars = await variable_service.list_variables(user_id, session)
 

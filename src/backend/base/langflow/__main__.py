@@ -969,7 +969,7 @@ def api_key_banner(unmasked_api_key) -> None:
     except UnicodeEncodeError:
         # Fallback for Windows encoding issues
         logger.info("API Key Created Successfully:")
-        logger.info("***%s", unmasked_api_key.api_key[-4:])
+        logger.info(unmasked_api_key.api_key)
         logger.info("This is the only time the API key will be displayed.")
         logger.info("Make sure to store it in a secure location.")
         ctrl_cmd = "Ctrl" if not is_mac else "Cmd"

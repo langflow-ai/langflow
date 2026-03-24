@@ -355,12 +355,10 @@ def print_setup_results(setup_state: dict):
     print(f"{'=' * 80}")
     print(f"Host:        {setup_state['host']}")
     print(f"Username:    {setup_state['username']}")
-    print(f"Password:    ***{setup_state['password'][-4:]}")
+    print(f"Password:    {setup_state['password']}")
     print(f"User ID:     {setup_state.get('user_id', 'N/A')}")
-    print(f"JWT Token:   ***{setup_state['access_token'][-4:]}") if setup_state["access_token"] else print(
-        "JWT Token:   N/A"
-    )
-    print(f"API Key:     ***{setup_state['api_key'][-4:]}")
+    print(f"JWT Token:   {setup_state['access_token'][:50]}..." if setup_state["access_token"] else "N/A")
+    print(f"API Key:     {setup_state['api_key']}")
     print(f"Flow ID:     {setup_state['flow_id']}")
     print(f"Flow Name:   {setup_state['flow_name']}")
     print(f"{'=' * 80}")
@@ -371,7 +369,7 @@ def print_setup_results(setup_state: dict):
     # Environment variables for easy copy-paste
     print("# Set environment variables:")
     print(f"export LANGFLOW_HOST='{setup_state['host']}'")
-    print(f"export API_KEY='***{setup_state['api_key'][-4:]}'")
+    print(f"export API_KEY='{setup_state['api_key']}'")
     print(f"export FLOW_ID='{setup_state['flow_id']}'")
     print()
 
