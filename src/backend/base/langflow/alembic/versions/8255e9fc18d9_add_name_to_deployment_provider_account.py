@@ -1,8 +1,8 @@
-"""add name column to deployment_provider_account
+"""add name to deployment_provider_account
 
-Revision ID: b4e6f8a2c1d3
+Revision ID: 8255e9fc18d9
 Revises: a1b2c3d4e5f6
-Create Date: 2026-03-24 00:00:00.000000
+Create Date: 2026-03-24 19:23:55.194564
 
 Phase: EXPAND
 
@@ -12,6 +12,21 @@ names are unique within a given provider.
 
 Existing rows are backfilled with ``'account-<first-8-chars-of-id>'``
 before the unique constraint is applied.
+
+Risks
+-----
+* **Backfill collision (extremely unlikely):** The backfill derives names
+  from the first 8 hex characters of each row's UUID.  A collision can
+  only occur between two rows that share the same ``provider_key`` *and*
+  whose UUIDs share the same first 8 hex chars (~1-in-4-billion per
+  pair).  If this ever triggers an ``IntegrityError`` during migration,
+  re-run after manually assigning distinct names to the affected rows.
+
+* **NOT-NULL on existing data:** The column is added as nullable, then
+  backfilled, then altered to non-nullable.  If a concurrent transaction
+  inserts a row without a ``name`` between the ADD COLUMN and the ALTER
+  COLUMN steps, the ALTER will fail.  This is mitigated by running
+  migrations during a maintenance window or with exclusive table locks.
 """
 
 from collections.abc import Sequence
@@ -22,7 +37,7 @@ from langflow.utils import migration
 from sqlmodel.sql.sqltypes import AutoString
 
 # revision identifiers, used by Alembic.
-revision: str = "b4e6f8a2c1d3"  # pragma: allowlist secret
+revision: str = "8255e9fc18d9"  # pragma: allowlist secret
 down_revision: str | None = "a1b2c3d4e5f6"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
@@ -44,29 +59,23 @@ def upgrade() -> None:
         batch_op.add_column(sa.Column(COLUMN_NAME, AutoString(), nullable=True))
 
     # Backfill existing rows with a unique name derived from the row id.
+    # Uses the SQL-standard ``||`` operator (via SQLAlchemy's .concat())
+    # and ``substr()``, both of which work on PostgreSQL and SQLite.
     # The unique constraint is on (provider_key, name), so collisions can
     # only happen between rows sharing the same provider_key whose UUID
-    # hex representations share the same first 8 characters -- a ~1-in-4-
-    # billion chance per pair, which is safe for any realistic dataset.
+    # hex representations share the same first 8 characters
+    # which is unlikely given the deployments feature is not officially shipped.
     table = sa.table(
         TABLE_NAME,
         sa.column("id", sa.Uuid()),
         sa.column(COLUMN_NAME, AutoString()),
     )
-    dialect = conn.dialect.name
 
-    if dialect == "postgresql":
-        op.execute(
-            table.update()
-            .where(table.c.name.is_(None))
-            .values(name=sa.func.concat("account-", sa.func.left(sa.cast(table.c.id, sa.String), 8)))
-        )
-    else:
-        op.execute(
-            table.update()
-            .where(table.c.name.is_(None))
-            .values(name=sa.func.concat("account-", sa.func.substr(sa.cast(table.c.id, sa.String), 1, 8)))
-        )
+    op.execute(
+        table.update()
+        .where(table.c.name.is_(None))
+        .values(name=sa.literal("account-").concat(sa.func.substr(sa.cast(table.c.id, sa.String), 1, 8)))
+    )
 
     with op.batch_alter_table(TABLE_NAME, schema=None) as batch_op:
         batch_op.alter_column(COLUMN_NAME, nullable=False)
