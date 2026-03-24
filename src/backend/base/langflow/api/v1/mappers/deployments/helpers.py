@@ -417,7 +417,7 @@ def resolve_deployment_adapter(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
     if deployment_adapter is None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"No deployment adapter registered for provider_key '{adapter_key}'.",
         )
     return deployment_adapter
@@ -742,6 +742,78 @@ async def sync_attachment_snapshot_ids(
         else:
             corrected_counts[attachment.deployment_id] = corrected_counts.get(attachment.deployment_id, 0) + 1
     return corrected_counts
+
+
+async def sync_flow_version_attachments(
+    *,
+    db: DbSession,
+    flow_id: UUID,
+    user_id: UUID,
+) -> None:
+    """Best-effort snapshot-level sync for all attachments of a flow's versions.
+
+    Groups attachments by provider account, resolves the adapter/mapper for
+    each, and prunes attachment rows whose ``provider_snapshot_id`` is no
+    longer recognised by the provider.  Errors for individual providers are
+    logged and skipped so that a single provider outage does not block the
+    flow version read path.
+    """
+    from collections import defaultdict
+
+    from langflow.api.v1.mappers.deployments.registry import get_deployment_mapper
+    from langflow.services.database.models.flow_version_deployment_attachment.crud import (
+        list_attachments_for_flow_with_provider_info,
+    )
+
+    rows = await list_attachments_for_flow_with_provider_info(db, user_id=user_id, flow_id=flow_id)
+    if not rows:
+        return
+
+    # Group attachments by (provider_account_id, provider_key).
+    grouped: dict[tuple[UUID, str], list[FlowVersionDeploymentAttachment]] = defaultdict(list)
+    for attachment, provider_account_id, provider_key in rows:
+        grouped[(provider_account_id, provider_key)].append(attachment)
+
+    for (provider_account_id, provider_key), attachments in grouped.items():
+        try:
+            deployment_adapter = get_deployment_adapter(provider_key)
+            deployment_mapper = get_deployment_mapper(provider_key)
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "Failed to resolve adapter/mapper for provider_key=%s during flow version sync; skipping",
+                provider_key,
+                exc_info=True,
+            )
+            continue
+
+        snapshot_ids = list(dict.fromkeys(deployment_mapper.util_snapshot_ids_to_verify(attachments)))
+        if not snapshot_ids:
+            continue
+
+        try:
+            with deployment_provider_scope(provider_account_id):
+                known_snapshots = await fetch_provider_snapshot_keys(
+                    deployment_adapter=deployment_adapter,
+                    user_id=user_id,
+                    provider_id=provider_account_id,
+                    db=db,
+                    snapshot_ids=snapshot_ids,
+                )
+            deployment_ids = list({a.deployment_id for a in attachments})
+            await sync_attachment_snapshot_ids(
+                user_id=user_id,
+                deployment_ids=deployment_ids,
+                attachments=attachments,
+                known_snapshot_ids=known_snapshots,
+                db=db,
+            )
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "Snapshot-level sync failed for provider %s (flow %s); skipping",
+                provider_account_id,
+                flow_id,
+                exc_info=True,
+            )
 
 
 async def list_deployments_synced(

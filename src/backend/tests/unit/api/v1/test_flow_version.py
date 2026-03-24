@@ -843,3 +843,434 @@ async def test_rapid_snapshots_with_low_limit(client: AsyncClient, logged_in_hea
     # The newest ones should survive
     assert entries[0]["version_number"] == 5
     assert entries[1]["version_number"] == 4
+
+
+# ---------------------------------------------------------------------------
+# Deployment-aware: is_deployed indicator + deployment_ids filter
+# ---------------------------------------------------------------------------
+
+
+async def _attach_version_to_deployment(
+    session, *, user_id, flow_version_id, deployment_id, provider_snapshot_id=None
+):
+    """Create a FlowVersionDeploymentAttachment row directly in the DB."""
+    from langflow.services.database.models.flow_version_deployment_attachment.crud import (
+        create_deployment_attachment,
+    )
+
+    return await create_deployment_attachment(
+        session,
+        user_id=user_id,
+        flow_version_id=flow_version_id,
+        deployment_id=deployment_id,
+        provider_snapshot_id=provider_snapshot_id,
+    )
+
+
+async def _create_deployment_row(session, *, user_id, project_id, provider_account_id, name, resource_key):
+    """Create a Deployment row directly in the DB."""
+    from langflow.services.database.models.deployment.crud import create_deployment
+    from lfx.services.adapters.deployment.schema import DeploymentType
+
+    return await create_deployment(
+        session,
+        user_id=user_id,
+        project_id=project_id,
+        deployment_provider_account_id=provider_account_id,
+        resource_key=resource_key,
+        name=name,
+        deployment_type=DeploymentType.AGENT,
+    )
+
+
+async def _create_provider_account_row(session, *, user_id):
+    """Create a DeploymentProviderAccount row directly in the DB."""
+    from langflow.services.database.models.deployment_provider_account.crud import create_provider_account
+
+    return await create_provider_account(
+        session,
+        user_id=user_id,
+        provider_tenant_id=None,
+        provider_key="watsonx-orchestrate",
+        provider_url="https://test.example.com",
+        api_key="test-key",
+    )
+
+
+async def test_list_versions_includes_is_deployed_false_by_default(client: AsyncClient, logged_in_headers):
+    """Versions with no deployment attachments should have is_deployed=False."""
+    flow = await _create_flow(client, logged_in_headers)
+    await _create_snapshot(client, logged_in_headers, flow["id"])
+
+    entries = await _list_versions(client, logged_in_headers, flow["id"])
+    assert len(entries) == 1
+    assert entries[0]["is_deployed"] is False
+
+
+async def test_get_single_version_includes_is_deployed_false(client: AsyncClient, logged_in_headers):
+    """Single version get should include is_deployed=False when not attached."""
+    flow = await _create_flow(client, logged_in_headers)
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"])
+
+    resp = await client.get(f"api/v1/flows/{flow['id']}/versions/{snap['id']}", headers=logged_in_headers)
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.json()["is_deployed"] is False
+
+
+async def test_list_versions_is_deployed_true_when_attached(client: AsyncClient, logged_in_headers):
+    """Versions attached to a deployment should have is_deployed=True."""
+    from uuid import UUID
+
+    from langflow.services.deps import session_scope
+
+    flow = await _create_flow(client, logged_in_headers)
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"])
+    snap2 = await _create_snapshot(client, logged_in_headers, flow["id"], description="undeployed")
+
+    async with session_scope() as session:
+        from langflow.services.database.models.flow.model import Flow
+        from sqlmodel import select
+
+        flow_row = (await session.exec(select(Flow).where(Flow.id == UUID(flow["id"])))).one()
+        user_id = flow_row.user_id
+        project_id = flow_row.folder_id
+        provider_account = await _create_provider_account_row(session, user_id=user_id)
+        deployment = await _create_deployment_row(
+            session,
+            user_id=user_id,
+            project_id=project_id,
+            provider_account_id=provider_account.id,
+            name="test-deployment",
+            resource_key="rk-1",
+        )
+        await _attach_version_to_deployment(
+            session,
+            user_id=user_id,
+            flow_version_id=UUID(snap["id"]),
+            deployment_id=deployment.id,
+        )
+
+    entries = await _list_versions(client, logged_in_headers, flow["id"])
+    assert len(entries) == 2
+    deployed_entry = next(e for e in entries if e["id"] == snap["id"])
+    undeployed_entry = next(e for e in entries if e["id"] == snap2["id"])
+    assert deployed_entry["is_deployed"] is True
+    assert undeployed_entry["is_deployed"] is False
+
+
+async def test_get_single_version_is_deployed_true_when_attached(client: AsyncClient, logged_in_headers):
+    """Single version get should have is_deployed=True when attached to a deployment."""
+    from uuid import UUID
+
+    from langflow.services.deps import session_scope
+
+    flow = await _create_flow(client, logged_in_headers)
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"])
+
+    async with session_scope() as session:
+        from langflow.services.database.models.flow.model import Flow
+        from sqlmodel import select
+
+        flow_row = (await session.exec(select(Flow).where(Flow.id == UUID(flow["id"])))).one()
+        user_id = flow_row.user_id
+        project_id = flow_row.folder_id
+        provider_account = await _create_provider_account_row(session, user_id=user_id)
+        deployment = await _create_deployment_row(
+            session,
+            user_id=user_id,
+            project_id=project_id,
+            provider_account_id=provider_account.id,
+            name="test-deployment-get",
+            resource_key="rk-get-1",
+        )
+        await _attach_version_to_deployment(
+            session,
+            user_id=user_id,
+            flow_version_id=UUID(snap["id"]),
+            deployment_id=deployment.id,
+        )
+
+    resp = await client.get(f"api/v1/flows/{flow['id']}/versions/{snap['id']}", headers=logged_in_headers)
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.json()["is_deployed"] is True
+
+
+async def test_list_versions_filter_by_deployment_ids(client: AsyncClient, logged_in_headers):
+    """Filtering by deployment_ids returns only versions attached to those deployments."""
+    from uuid import UUID
+
+    from langflow.services.deps import session_scope
+
+    flow = await _create_flow(client, logged_in_headers)
+    snap1 = await _create_snapshot(client, logged_in_headers, flow["id"], description="deployed-to-d1")
+    snap2 = await _create_snapshot(client, logged_in_headers, flow["id"], description="deployed-to-d2")
+    await _create_snapshot(client, logged_in_headers, flow["id"], description="not-deployed")
+
+    async with session_scope() as session:
+        from langflow.services.database.models.flow.model import Flow
+        from sqlmodel import select
+
+        flow_row = (await session.exec(select(Flow).where(Flow.id == UUID(flow["id"])))).one()
+        user_id = flow_row.user_id
+        project_id = flow_row.folder_id
+        provider_account = await _create_provider_account_row(session, user_id=user_id)
+        d1 = await _create_deployment_row(
+            session,
+            user_id=user_id,
+            project_id=project_id,
+            provider_account_id=provider_account.id,
+            name="deploy-filter-1",
+            resource_key="rk-filter-1",
+        )
+        d2 = await _create_deployment_row(
+            session,
+            user_id=user_id,
+            project_id=project_id,
+            provider_account_id=provider_account.id,
+            name="deploy-filter-2",
+            resource_key="rk-filter-2",
+        )
+        await _attach_version_to_deployment(
+            session,
+            user_id=user_id,
+            flow_version_id=UUID(snap1["id"]),
+            deployment_id=d1.id,
+        )
+        await _attach_version_to_deployment(
+            session,
+            user_id=user_id,
+            flow_version_id=UUID(snap2["id"]),
+            deployment_id=d2.id,
+        )
+        d1_id = str(d1.id)
+        d2_id = str(d2.id)
+
+    # Filter by d1 only
+    resp = await client.get(
+        f"api/v1/flows/{flow['id']}/versions/",
+        params={"deployment_ids": d1_id},
+        headers=logged_in_headers,
+    )
+    assert resp.status_code == status.HTTP_200_OK
+    entries = resp.json()["entries"]
+    assert len(entries) == 1
+    assert entries[0]["id"] == snap1["id"]
+    assert entries[0]["is_deployed"] is True
+
+    # Filter by both d1 and d2
+    resp = await client.get(
+        f"api/v1/flows/{flow['id']}/versions/",
+        params=[("deployment_ids", d1_id), ("deployment_ids", d2_id)],
+        headers=logged_in_headers,
+    )
+    assert resp.status_code == status.HTTP_200_OK
+    entries = resp.json()["entries"]
+    assert len(entries) == 2
+    entry_ids = {e["id"] for e in entries}
+    assert snap1["id"] in entry_ids
+    assert snap2["id"] in entry_ids
+
+
+async def test_list_versions_no_deployment_ids_returns_all(client: AsyncClient, logged_in_headers):
+    """Without deployment_ids filter, all versions are returned."""
+    from uuid import UUID
+
+    from langflow.services.deps import session_scope
+
+    flow = await _create_flow(client, logged_in_headers)
+    await _create_snapshot(client, logged_in_headers, flow["id"], description="deployed")
+    await _create_snapshot(client, logged_in_headers, flow["id"], description="draft")
+
+    async with session_scope() as session:
+        from langflow.services.database.models.flow.model import Flow
+        from sqlmodel import select
+
+        flow_row = (await session.exec(select(Flow).where(Flow.id == UUID(flow["id"])))).one()
+        user_id = flow_row.user_id
+        project_id = flow_row.folder_id
+        provider_account = await _create_provider_account_row(session, user_id=user_id)
+        deployment = await _create_deployment_row(
+            session,
+            user_id=user_id,
+            project_id=project_id,
+            provider_account_id=provider_account.id,
+            name="test-no-filter",
+            resource_key="rk-no-filter",
+        )
+        entries = await _list_versions(client, logged_in_headers, flow["id"])
+        snap_deployed = next(e for e in entries if e["description"] == "deployed")
+        await _attach_version_to_deployment(
+            session,
+            user_id=user_id,
+            flow_version_id=UUID(snap_deployed["id"]),
+            deployment_id=deployment.id,
+        )
+
+    # No filter — should return both versions
+    entries = await _list_versions(client, logged_in_headers, flow["id"])
+    assert len(entries) == 2
+    deployed = next(e for e in entries if e["description"] == "deployed")
+    draft = next(e for e in entries if e["description"] == "draft")
+    assert deployed["is_deployed"] is True
+    assert draft["is_deployed"] is False
+
+
+async def test_create_snapshot_returns_is_deployed_false(client: AsyncClient, logged_in_headers):
+    """Newly created snapshots are never deployed."""
+    flow = await _create_flow(client, logged_in_headers)
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"])
+    assert snap["is_deployed"] is False
+
+
+# ---------------------------------------------------------------------------
+# Sync-on-read: stale attachment pruning via provider verification
+# ---------------------------------------------------------------------------
+
+SYNC_MODULE = "langflow.api.v1.flow_version.sync_flow_version_attachments"
+
+
+async def test_list_versions_sync_prunes_stale_attachment(client: AsyncClient, logged_in_headers):
+    """When sync removes a stale attachment, is_deployed should flip to False."""
+    from unittest.mock import AsyncMock, MagicMock, patch
+    from uuid import UUID
+
+    from langflow.services.deps import session_scope
+
+    flow = await _create_flow(client, logged_in_headers)
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"])
+
+    # Set up a deployed version with a provider_snapshot_id.
+    async with session_scope() as session:
+        from langflow.services.database.models.flow.model import Flow
+        from sqlmodel import select
+
+        flow_row = (await session.exec(select(Flow).where(Flow.id == UUID(flow["id"])))).one()
+        user_id = flow_row.user_id
+        project_id = flow_row.folder_id
+        provider_account = await _create_provider_account_row(session, user_id=user_id)
+        deployment = await _create_deployment_row(
+            session,
+            user_id=user_id,
+            project_id=project_id,
+            provider_account_id=provider_account.id,
+            name="sync-prune-test",
+            resource_key="rk-sync-prune",
+        )
+        await _attach_version_to_deployment(
+            session,
+            user_id=user_id,
+            flow_version_id=UUID(snap["id"]),
+            deployment_id=deployment.id,
+            provider_snapshot_id="tool-abc-123",
+        )
+
+    # Confirm is_deployed=True before sync prunes it.
+    with patch(SYNC_MODULE, new_callable=AsyncMock):
+        entries = await _list_versions(client, logged_in_headers, flow["id"])
+        assert entries[0]["is_deployed"] is True
+
+    # Now let the real sync run — but mock the adapter to return an empty
+    # snapshot list so the attachment is considered stale and pruned.
+    mock_adapter = AsyncMock()
+    mock_snapshot_view = AsyncMock()
+    mock_snapshot_view.snapshots = []  # provider recognises nothing
+    mock_adapter.list_snapshots.return_value = mock_snapshot_view
+
+    mock_mapper = MagicMock()
+    mock_mapper.util_snapshot_ids_to_verify.return_value = ["tool-abc-123"]
+
+    with (
+        patch("langflow.api.v1.mappers.deployments.helpers.get_deployment_adapter", return_value=mock_adapter),
+        patch("langflow.api.v1.mappers.deployments.registry.get_deployment_mapper", return_value=mock_mapper),
+    ):
+        entries = await _list_versions(client, logged_in_headers, flow["id"])
+        assert len(entries) == 1
+        assert entries[0]["is_deployed"] is False
+
+
+async def test_list_versions_sync_failure_does_not_block_response(client: AsyncClient, logged_in_headers):
+    """If sync raises, the list endpoint should still return results."""
+    from unittest.mock import AsyncMock, patch
+
+    flow = await _create_flow(client, logged_in_headers)
+    await _create_snapshot(client, logged_in_headers, flow["id"])
+
+    with patch(SYNC_MODULE, new_callable=AsyncMock, side_effect=RuntimeError("provider down")):
+        entries = await _list_versions(client, logged_in_headers, flow["id"])
+        assert len(entries) == 1
+
+
+async def test_get_single_version_sync_failure_does_not_block_response(client: AsyncClient, logged_in_headers):
+    """If sync raises on get, the endpoint should still return the version."""
+    from unittest.mock import AsyncMock, patch
+
+    flow = await _create_flow(client, logged_in_headers)
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"])
+
+    with patch(SYNC_MODULE, new_callable=AsyncMock, side_effect=RuntimeError("provider down")):
+        resp = await client.get(
+            f"api/v1/flows/{flow['id']}/versions/{snap['id']}", headers=logged_in_headers
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.json()["id"] == snap["id"]
+
+
+async def test_get_single_version_sync_prunes_stale_attachment(client: AsyncClient, logged_in_headers):
+    """When sync removes a stale attachment, get should show is_deployed=False."""
+    from unittest.mock import AsyncMock, MagicMock, patch
+    from uuid import UUID
+
+    from langflow.services.deps import session_scope
+
+    flow = await _create_flow(client, logged_in_headers)
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"])
+
+    async with session_scope() as session:
+        from langflow.services.database.models.flow.model import Flow
+        from sqlmodel import select
+
+        flow_row = (await session.exec(select(Flow).where(Flow.id == UUID(flow["id"])))).one()
+        user_id = flow_row.user_id
+        project_id = flow_row.folder_id
+        provider_account = await _create_provider_account_row(session, user_id=user_id)
+        deployment = await _create_deployment_row(
+            session,
+            user_id=user_id,
+            project_id=project_id,
+            provider_account_id=provider_account.id,
+            name="sync-get-test",
+            resource_key="rk-sync-get",
+        )
+        await _attach_version_to_deployment(
+            session,
+            user_id=user_id,
+            flow_version_id=UUID(snap["id"]),
+            deployment_id=deployment.id,
+            provider_snapshot_id="tool-xyz-789",
+        )
+
+    # Confirm is_deployed=True before sync.
+    with patch(SYNC_MODULE, new_callable=AsyncMock):
+        resp = await client.get(
+            f"api/v1/flows/{flow['id']}/versions/{snap['id']}", headers=logged_in_headers
+        )
+        assert resp.json()["is_deployed"] is True
+
+    # Let sync run with adapter returning empty snapshots.
+    mock_adapter = AsyncMock()
+    mock_snapshot_view = AsyncMock()
+    mock_snapshot_view.snapshots = []
+    mock_adapter.list_snapshots.return_value = mock_snapshot_view
+
+    mock_mapper = MagicMock()
+    mock_mapper.util_snapshot_ids_to_verify.return_value = ["tool-xyz-789"]
+
+    with (
+        patch("langflow.api.v1.mappers.deployments.helpers.get_deployment_adapter", return_value=mock_adapter),
+        patch("langflow.api.v1.mappers.deployments.registry.get_deployment_mapper", return_value=mock_mapper),
+    ):
+        resp = await client.get(
+            f"api/v1/flows/{flow['id']}/versions/{snap['id']}", headers=logged_in_headers
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.json()["is_deployed"] is False

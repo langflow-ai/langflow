@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
+
 async def create_deployment_attachment(
     db: AsyncSession,
     *,
@@ -158,6 +159,46 @@ async def list_attachments_by_deployment_ids(
         .order_by(FlowVersionDeploymentAttachment.created_at)
     )
     return list((await db.exec(stmt)).all())
+
+
+async def list_attachments_for_flow_with_provider_info(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    flow_id: UUID,
+) -> list[tuple[FlowVersionDeploymentAttachment, UUID, str]]:
+    """Return attachments for all versions of a flow, with provider context.
+
+    Each tuple contains:
+      - the attachment row
+      - the deployment's ``deployment_provider_account_id``
+      - the provider account's ``provider_key``
+
+    This avoids N+1 queries when the caller needs to group attachments by
+    provider for sync operations.
+    """
+    from langflow.services.database.models.deployment.model import Deployment
+    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+    from langflow.services.database.models.flow_version.model import FlowVersion
+
+    stmt = (
+        select(
+            FlowVersionDeploymentAttachment,
+            Deployment.deployment_provider_account_id,
+            DeploymentProviderAccount.provider_key,
+        )
+        .join(Deployment, Deployment.id == FlowVersionDeploymentAttachment.deployment_id)
+        .join(DeploymentProviderAccount, DeploymentProviderAccount.id == Deployment.deployment_provider_account_id)
+        .where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            FlowVersionDeploymentAttachment.flow_version_id.in_(
+                select(FlowVersion.id).where(FlowVersion.flow_id == flow_id)
+            ),
+        )
+        .order_by(FlowVersionDeploymentAttachment.created_at)
+    )
+    rows = (await db.exec(stmt)).all()
+    return [(attachment, provider_account_id, provider_key) for attachment, provider_account_id, provider_key in rows]
 
 
 async def count_attachments_by_deployment_ids(

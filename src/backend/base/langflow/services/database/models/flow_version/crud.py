@@ -135,21 +135,75 @@ async def create_flow_version_entry(
     return entry
 
 
-async def get_flow_version_list(
+async def get_flow_version_list_simple(
     session: AsyncSession,
     flow_id: UUID,
     user_id: UUID,
     limit: int = 50,
     offset: int = 0,
-) -> list[FlowVersion]:
-    result = await session.exec(
+) -> list[tuple[FlowVersion, bool]]:
+    """Return flow versions without deployment awareness.
+
+    Used when no deployment provider is configured, avoiding unnecessary
+    joins against the (empty) attachment table.  The boolean second
+    element is always ``False``.
+    """
+    stmt = (
         select(FlowVersion)
         .where(FlowVersion.flow_id == flow_id, FlowVersion.user_id == user_id)
         .order_by(col(FlowVersion.version_number).desc())
         .offset(offset)
         .limit(limit)
     )
-    return list(result.all())
+    rows = (await session.exec(stmt)).all()
+    return [(version, False) for version in rows]
+
+
+async def get_flow_version_list(
+    session: AsyncSession,
+    flow_id: UUID,
+    user_id: UUID,
+    limit: int = 50,
+    offset: int = 0,
+    deployment_ids: list[UUID] | None = None,
+) -> list[tuple[FlowVersion, bool]]:
+    """Return flow versions with a deployed indicator.
+
+    When *deployment_ids* is provided, only versions attached to at least one
+    of those deployments are returned.  The boolean second element is True when
+    the version is attached to *any* deployment (regardless of the filter).
+    """
+    deployed_subquery = (
+        select(FlowVersionDeploymentAttachment.flow_version_id)
+        .where(
+            FlowVersionDeploymentAttachment.flow_version_id.in_(
+                select(FlowVersion.id).where(FlowVersion.flow_id == flow_id)
+            )
+        )
+        .distinct()
+        .subquery()
+    )
+    stmt = (
+        select(
+            FlowVersion,
+            deployed_subquery.c.flow_version_id.isnot(None).label("is_deployed"),
+        )
+        .outerjoin(deployed_subquery, deployed_subquery.c.flow_version_id == FlowVersion.id)
+        .where(FlowVersion.flow_id == flow_id, FlowVersion.user_id == user_id)
+    )
+    if deployment_ids:
+        filter_subquery = (
+            select(FlowVersionDeploymentAttachment.flow_version_id)
+            .where(
+                FlowVersionDeploymentAttachment.deployment_id.in_(deployment_ids),
+            )
+            .distinct()
+            .subquery()
+        )
+        stmt = stmt.join(filter_subquery, filter_subquery.c.flow_version_id == FlowVersion.id)
+    stmt = stmt.order_by(col(FlowVersion.version_number).desc()).offset(offset).limit(limit)
+    rows = (await session.exec(stmt)).all()
+    return [(version, bool(is_deployed)) for version, is_deployed in rows]
 
 
 async def get_flow_version_entry(
@@ -176,6 +230,14 @@ async def get_flow_version_entry_or_raise(
         msg = f"Version entry {version_id} not found"
         raise FlowVersionNotFoundError(msg)
     return entry
+
+
+async def is_flow_version_deployed(
+    session: AsyncSession,
+    flow_version_id: UUID,
+) -> bool:
+    """Return True if the flow version is attached to at least one deployment."""
+    return await has_deployment_attachments(session, flow_version_id)
 
 
 async def has_deployment_attachments(
