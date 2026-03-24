@@ -5,10 +5,7 @@ import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { generateRandomFilename } from "../../utils/generate-filename";
-import {
-  closeAdvancedOptions,
-  openAdvancedOptions,
-} from "../../utils/open-advanced-options";
+import { enableInspectPanel } from "../../utils/open-advanced-options";
 
 // Run tests in this file serially to avoid database conflicts with shared file state
 test.describe.configure({ mode: "serial" });
@@ -835,13 +832,13 @@ test(
     await page.mouse.up();
     await page.mouse.down();
 
-    await openAdvancedOptions(page);
+    await enableInspectPanel(page);
 
-    await openAdvancedOptions(page);
-
+    // Select the Read File node and toggle file_path to canvas
+    await page.getByTestId("title-Read File").click();
+    await page.getByTestId("edit-fields-button").click();
     await page.getByTestId("showfile_path").click();
-
-    await closeAdvancedOptions(page);
+    await page.getByTestId("edit-fields-button").click();
 
     await adjustScreenView(page);
 
