@@ -1,13 +1,14 @@
 import ast
 import json
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import jq
 from json_repair import repair_json
 
 from lfx.custom import Component
-from lfx.inputs import DictInput, DropdownInput, MessageTextInput, SortableListInput
-from lfx.io import DataInput, MultilineInput, Output
+from lfx.inputs import DictInput, DropdownInput, MessageTextInput, SortableListInput, TabInput
+from lfx.io import DataInput, FileInput, MultilineInput, Output
 from lfx.log.logger import logger
 from lfx.schema import Data
 from lfx.schema.dotdict import dotdict
@@ -41,7 +42,7 @@ class DataOperationsComponent(Component):
     description = "Perform various operations on a JSON object."
     icon = "file-json"
     name = "DataOperations"
-    default_keys = ["operations", "data"]
+    default_keys = ["operations", "data", "json_source"]
     metadata = {
         "keywords": [
             "data",
@@ -135,7 +136,24 @@ class DataOperationsComponent(Component):
         return obj
 
     inputs = [
-        DataInput(name="data", display_name="JSON", info="Data object to filter.", required=True, is_list=True),
+        TabInput(
+            name="json_source",
+            display_name="JSON Source",
+            options=["Handle", "File"],
+            value="Handle",
+            info="Choose how to provide the JSON: connect via a handle or upload a .json file.",
+            real_time_refresh=True,
+            advanced=True,
+        ),
+        DataInput(name="data", display_name="JSON", info="Data object to filter.", required=False, is_list=True),
+        FileInput(
+            name="json_file",
+            display_name="JSON File",
+            file_types=["json"],
+            info="Upload a JSON file to use as input.",
+            show=False,
+            required=False,
+        ),
         SortableListInput(
             name="operations",
             display_name="Operations",
@@ -267,9 +285,29 @@ class DataOperationsComponent(Component):
     ]
 
     # Helper methods for data operations
+    def _resolve_data(self) -> list[Data]:
+        """Return effective data from handle connection or uploaded JSON file."""
+        if getattr(self, "json_source", "Handle") == "File":
+            if not self.json_file:
+                msg = "No JSON file provided."
+                raise ValueError(msg)
+            file_path = self.resolve_path(self.json_file)
+            json_text = Path(file_path).read_text(encoding="utf-8")
+            try:
+                parsed = json.loads(json_text)
+            except json.JSONDecodeError:
+                parsed = json.loads(repair_json(json_text))
+            if isinstance(parsed, list):
+                return [Data(data=item) for item in parsed]
+            return [Data(data=parsed)]
+        if isinstance(self.data, list):
+            return self.data
+        return [self.data]
+
     def get_data_dict(self) -> dict:
-        """Extract data dictionary from Data object."""
-        data = self.data[0] if isinstance(self.data, list) and len(self.data) == 1 else self.data
+        """Extract data dictionary from Data object or JSON file."""
+        effective = self._resolve_data()
+        data = effective[0]
         return data.model_dump()
 
     def json_query(self) -> Data:
@@ -309,7 +347,7 @@ class DataOperationsComponent(Component):
 
     def data_is_list(self) -> bool:
         """Check if data contains multiple items."""
-        return isinstance(self.data, list) and len(self.data) > 1
+        return len(self._resolve_data()) > 1
 
     def validate_single_data(self, operation: str) -> None:
         """Validate that the operation is being performed on a single data object."""
@@ -399,14 +437,15 @@ class DataOperationsComponent(Component):
     def combine_data(self, *, evaluate: bool | None = None) -> Data:
         """Combine multiple data objects into one."""
         logger.info("combining data")
+        effective = self._resolve_data()
         if not self.data_is_list():
-            return self.data[0] if self.data else Data(data={})
+            return effective[0] if effective else Data(data={})
 
-        if len(self.data) == 1:
+        if len(effective) == 1:
             msg = "Combine operation requires multiple data inputs."
             raise ValueError(msg)
 
-        data_dicts = [data.model_dump().get("data", data.model_dump()) for data in self.data]
+        data_dicts = [data.model_dump().get("data", data.model_dump()) for data in effective]
         combined_data = {}
 
         for data_dict in data_dicts:
@@ -495,6 +534,15 @@ class DataOperationsComponent(Component):
 
     # Configuration and execution methods
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
+        if field_name == "json_source":
+            if field_value == "File":
+                build_config["data"]["show"] = False
+                build_config["json_file"]["show"] = True
+            else:
+                build_config["data"]["show"] = True
+                build_config["json_file"]["show"] = False
+            return build_config
+
         if field_name == "operations":
             build_config["operations"]["value"] = field_value
             # Mirror Text Operations: first hide all operation-specific fields and clear their values
@@ -512,13 +560,19 @@ class DataOperationsComponent(Component):
                 config = ACTION_CONFIG[action]
                 build_config["data"]["is_list"] = config["is_list"]
                 logger.info(config["log_msg"])
-                return set_current_fields(
+                result = set_current_fields(
                     build_config=build_config,
                     action_fields=self.actions_data,
                     selected_action=action,
-                    default_fields=["operations", "data"],
+                    default_fields=["operations", "data", "json_source"],
                     func=set_field_display,
                 )
+                # Restore json_source visibility state after set_current_fields
+                json_source = result.get("json_source", {}).get("value", "Handle")
+                if json_source == "File":
+                    result["data"]["show"] = False
+                    result["json_file"]["show"] = True
+                return result
             return build_config
 
         if field_name == "mapped_json_display":
@@ -535,10 +589,11 @@ class DataOperationsComponent(Component):
 
     def json_path(self) -> Data:
         try:
-            if not self.data or not self.selected_key:
+            effective = self._resolve_data()
+            if not effective or not self.selected_key:
                 msg = "Missing input data or selected key."
                 raise ValueError(msg)
-            input_payload = self.data[0].data if isinstance(self.data, list) else self.data.data
+            input_payload = effective[0].data
             compiled = jq.compile(self.selected_key)
             result = compiled.input(input_payload).first()
             if isinstance(result, dict):
@@ -550,8 +605,17 @@ class DataOperationsComponent(Component):
             return Data(data={"error": str(e)})
 
     def as_data(self) -> Data:
+        if getattr(self, "json_source", "Handle") == "File":
+            if not getattr(self, "json_file", None):
+                msg = "No JSON file provided. Please upload a .json file."
+                raise ValueError(msg)
+        elif not getattr(self, "data", None):
+            msg = "No JSON connected. Please connect a JSON object to the handle."
+            raise ValueError(msg)
+
         if not hasattr(self, "operations") or not self.operations:
-            return Data(data={})
+            msg = "No operation selected. Please select an operation from the Operations list."
+            raise ValueError(msg)
 
         selected_actions = [action["name"] for action in self.operations]
         logger.info(f"selected_actions: {selected_actions}")
