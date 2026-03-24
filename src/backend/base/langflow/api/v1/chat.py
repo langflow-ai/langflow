@@ -176,6 +176,8 @@ async def build_flow(
     """
     # Verify the flow exists and belongs to the requesting user (or is public).
     # Returns 404 for both "not found" and "not owned" to avoid UUID enumeration.
+    # Note: intentionally extends _read_flow (flows.py) to also allow PUBLIC flows,
+    # since build is a valid operation on shared flows.
     async with session_scope() as session:
         stmt = (
             select(Flow)
@@ -184,6 +186,11 @@ async def build_flow(
         )
         flow = (await session.exec(stmt)).first()
         if not flow:
+            await logger.awarning(
+                "IDOR attempt blocked in build_flow: user %s tried to access flow %s",
+                current_user.id,
+                flow_id,
+            )
             raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
 
     job_id = await start_flow_build(
@@ -229,6 +236,12 @@ async def get_build_events(
     """
     job_owner = queue_service.get_job_owner(job_id)
     if job_owner is not None and job_owner != current_user.id:
+        await logger.awarning(
+            "IDOR attempt blocked in get_build_events: user %s tried to access job %s owned by %s",
+            current_user.id,
+            job_id,
+            job_owner,
+        )
         raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
     return await get_flow_events_response(
         job_id=job_id,
@@ -240,16 +253,28 @@ async def get_build_events(
 @router.post(
     "/build/{job_id}/cancel",
     response_model=CancelFlowResponse,
-    dependencies=[Depends(get_current_active_user)],
 )
 async def cancel_build(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
+    current_user: CurrentActiveUser,
 ):
     """Cancel a specific build job.
 
-    Requires authentication to prevent unauthorized build cancellation.
+    Requires authentication and ownership verification to prevent a user from
+    aborting another user's running build (DoS via job cancellation).
+    Jobs with no registered owner (build_public_tmp) are accessible to any
+    authenticated user, consistent with get_build_events.
     """
+    job_owner = queue_service.get_job_owner(job_id)
+    if job_owner is not None and job_owner != current_user.id:
+        await logger.awarning(
+            "Unauthorized cancel attempt blocked: user %s tried to cancel job %s owned by %s",
+            current_user.id,
+            job_id,
+            job_owner,
+        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job not found: {job_id}")
     try:
         # Cancel the flow build and check if it was successful
         cancellation_success = await cancel_flow_build(job_id=job_id, queue_service=queue_service)
