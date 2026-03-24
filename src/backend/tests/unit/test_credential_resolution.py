@@ -17,7 +17,8 @@ class TestGetApiKeyForProviderDbFallback:
     @patch("lfx.base.models.unified_models.credentials.get_model_provider_variable_mapping")
     @patch("lfx.base.models.unified_models.credentials.run_until_complete")
     def test_should_fallback_to_env_when_db_lookup_raises_value_error(self, mock_run, mock_mapping, monkeypatch):
-        """When variable_service.get_variable raises ValueError (variable not found in DB),
+        """When variable_service.get_variable raises ValueError (variable not found in DB).
+
         get_api_key_for_provider should fall back to os.getenv() instead of returning None.
         """
         from lfx.base.models.unified_models.credentials import get_api_key_for_provider
