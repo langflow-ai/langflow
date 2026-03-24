@@ -304,9 +304,7 @@ async def upload_user_file(
             # Ephemeral uploads: file is saved to storage (servable for chat history)
             # but no UserFile record is created (won't appear in "My Files")
             file_path = f"{current_user.id}/{stored_file_name}"
-            return UploadFileResponse(
-                id=file_id, name=root_filename, path=Path(file_path), size=file_size
-            )
+            return UploadFileResponse(id=file_id, name=root_filename, path=Path(file_path), size=file_size)
 
         if append and existing_file:
             existing_file.size = file_size
