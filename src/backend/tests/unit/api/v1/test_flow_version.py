@@ -850,9 +850,7 @@ async def test_rapid_snapshots_with_low_limit(client: AsyncClient, logged_in_hea
 # ---------------------------------------------------------------------------
 
 
-async def _attach_version_to_deployment(
-    session, *, user_id, flow_version_id, deployment_id, provider_snapshot_id=None
-):
+async def _attach_version_to_deployment(session, *, user_id, flow_version_id, deployment_id, provider_snapshot_id=None):
     """Create a FlowVersionDeploymentAttachment row directly in the DB."""
     from langflow.services.database.models.flow_version_deployment_attachment.crud import (
         create_deployment_attachment,
@@ -1208,9 +1206,7 @@ async def test_get_single_version_sync_failure_does_not_block_response(client: A
     snap = await _create_snapshot(client, logged_in_headers, flow["id"])
 
     with patch(SYNC_MODULE, new_callable=AsyncMock, side_effect=RuntimeError("provider down")):
-        resp = await client.get(
-            f"api/v1/flows/{flow['id']}/versions/{snap['id']}", headers=logged_in_headers
-        )
+        resp = await client.get(f"api/v1/flows/{flow['id']}/versions/{snap['id']}", headers=logged_in_headers)
         assert resp.status_code == status.HTTP_200_OK
         assert resp.json()["id"] == snap["id"]
 
@@ -1251,9 +1247,7 @@ async def test_get_single_version_sync_prunes_stale_attachment(client: AsyncClie
 
     # Confirm is_deployed=True before sync.
     with patch(SYNC_MODULE, new_callable=AsyncMock):
-        resp = await client.get(
-            f"api/v1/flows/{flow['id']}/versions/{snap['id']}", headers=logged_in_headers
-        )
+        resp = await client.get(f"api/v1/flows/{flow['id']}/versions/{snap['id']}", headers=logged_in_headers)
         assert resp.json()["is_deployed"] is True
 
     # Let sync run with adapter returning empty snapshots.
@@ -1269,8 +1263,6 @@ async def test_get_single_version_sync_prunes_stale_attachment(client: AsyncClie
         patch("langflow.api.v1.mappers.deployments.helpers.get_deployment_adapter", return_value=mock_adapter),
         patch("langflow.api.v1.mappers.deployments.registry.get_deployment_mapper", return_value=mock_mapper),
     ):
-        resp = await client.get(
-            f"api/v1/flows/{flow['id']}/versions/{snap['id']}", headers=logged_in_headers
-        )
+        resp = await client.get(f"api/v1/flows/{flow['id']}/versions/{snap['id']}", headers=logged_in_headers)
         assert resp.status_code == status.HTTP_200_OK
         assert resp.json()["is_deployed"] is False

@@ -16,7 +16,6 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
-
 async def create_deployment_attachment(
     db: AsyncSession,
     *,
