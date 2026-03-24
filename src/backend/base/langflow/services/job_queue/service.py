@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import asyncio
-from uuid import UUID
+from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
 
 from langflow.events.event_manager import EventManager
 from langflow.services.base import Service
+
+if TYPE_CHECKING:
+    from uuid import UUID
 
 
 class JobQueueNotFoundError(Exception):
