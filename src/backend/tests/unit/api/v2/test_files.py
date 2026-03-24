@@ -149,6 +149,40 @@ async def test_upload_file(files_client, files_created_api_key):
     assert "id" in response_json
 
 
+async def test_should_return_path_with_forward_slashes_when_uploading_file(files_client, files_created_api_key):
+    """Upload response path must use forward slashes on all platforms.
+
+    On Windows, pathlib.Path serializes with backslashes, but the GET list
+    endpoint returns the raw DB string with forward slashes. If the POST
+    response uses backslashes, the frontend cannot match them with
+    selectedFiles.includes(file.path), leaving checkboxes unchecked.
+    """
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    response = await files_client.post(
+        "api/v2/files",
+        files={"file": ("test_path.txt", b"path test content")},
+        headers=headers,
+    )
+    assert response.status_code == 201
+
+    upload_path = response.json()["path"]
+    assert "\\" not in upload_path, (
+        f"Upload response path contains backslashes: '{upload_path}'. "
+        "Path must use forward slashes on all platforms for frontend compatibility."
+    )
+
+    # Verify the upload path matches what GET /files returns
+    list_response = await files_client.get("api/v2/files", headers=headers)
+    assert list_response.status_code == 200
+
+    listed_paths = [f["path"] for f in list_response.json()]
+    assert upload_path in listed_paths, (
+        f"Upload path '{upload_path}' not found in listed paths {listed_paths}. "
+        "POST and GET must return identical path strings."
+    )
+
+
 async def test_download_file(files_client, files_created_api_key):
     headers = {"x-api-key": files_created_api_key.api_key}
 
