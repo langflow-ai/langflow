@@ -12,7 +12,7 @@ jobs:
   download:
     runs-on: ubuntu-latest
     name: Download translations from Globalization Pipeline
-    environment: GP_test
+    environment: GP-test
 
     steps:
       - name: Checkout repository
