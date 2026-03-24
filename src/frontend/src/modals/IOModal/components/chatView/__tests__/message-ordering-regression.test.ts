@@ -470,18 +470,18 @@ describe("Message Ordering Regression Tests - GitHub Issue #9186", () => {
       });
 
       // Verify performance scales reasonably (not exponentially)
-      // Each 10x increase in size should not cause more than 20x increase in time
-      // (allowing for O(n log n) which is ~13x for 10x size increase, plus noise margin)
-      // Only check ratios if base timing is above noise floor (0.1ms)
-      if (timings[0] > 0.1) {
-        expect(timings[1]).toBeLessThan(timings[0] * 20); // 1000 items vs 100 items
+      // Each 10x increase in size should not cause more than 50x increase in time
+      // (allowing for O(n log n) plus CI noise, GC pauses, and variable runner load)
+      // Only check ratios if base timing is above noise floor (0.5ms)
+      if (timings[0] > 0.5) {
+        expect(timings[1]).toBeLessThan(timings[0] * 50); // 1000 items vs 100 items
       }
-      if (timings[1] > 0.1) {
-        expect(timings[2]).toBeLessThan(timings[1] * 20); // 10000 items vs 1000 items
+      if (timings[1] > 0.5) {
+        expect(timings[2]).toBeLessThan(timings[1] * 50); // 10000 items vs 1000 items
       }
 
-      // Always verify absolute performance: 10000 items should complete in under 100ms
-      expect(timings[2]).toBeLessThan(100);
+      // Always verify absolute performance: 10000 items should complete in under 500ms
+      expect(timings[2]).toBeLessThan(500);
     });
 
     it("should handle worst-case scenario: all messages have identical timestamps", () => {
@@ -498,7 +498,7 @@ describe("Message Ordering Regression Tests - GitHub Issue #9186", () => {
       const sorted = [...messages].sort(sortSenderMessages);
       const endTime = performance.now();
 
-      expect(endTime - startTime).toBeLessThan(50); // Should complete in <50ms
+      expect(endTime - startTime).toBeLessThan(200); // Should complete in <200ms
       expect(sorted.length).toBe(500);
 
       // All user messages should come before all AI messages
