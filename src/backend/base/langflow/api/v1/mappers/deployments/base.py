@@ -216,6 +216,7 @@ class BaseDeploymentMapper:
     ) -> DeploymentProviderAccountGetResponse:
         return DeploymentProviderAccountGetResponse(
             id=provider_account.id,
+            name=provider_account.name,
             provider_tenant_id=provider_account.provider_tenant_id,
             provider_key=provider_account.provider_key,
             provider_url=provider_account.provider_url,

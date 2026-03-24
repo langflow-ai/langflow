@@ -16,6 +16,18 @@ class TestDeploymentProviderAccountValidation:
         info.field_name = field_name
         return info
 
+    def test_rejects_empty_name(self):
+        with pytest.raises(ValueError, match="name must not be empty"):
+            DeploymentProviderAccount.validate_non_empty("", self._make_info("name"))
+
+    def test_rejects_whitespace_name(self):
+        with pytest.raises(ValueError, match="name must not be empty"):
+            DeploymentProviderAccount.validate_non_empty("   ", self._make_info("name"))
+
+    def test_strips_name_whitespace(self):
+        result = DeploymentProviderAccount.validate_non_empty("  staging  ", self._make_info("name"))
+        assert result == "staging"
+
     def test_rejects_empty_provider_url(self):
         with pytest.raises(ValueError, match="provider_url must not be empty"):
             DeploymentProviderAccount.validate_non_empty("", self._make_info("provider_url"))
@@ -66,6 +78,7 @@ class TestDeploymentProviderAccountRead:
         expected = {
             "id",
             "user_id",
+            "name",
             "provider_tenant_id",
             "provider_key",
             "provider_url",

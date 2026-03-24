@@ -38,6 +38,7 @@ class TestApiKeyWriteOnly:
         """model_dump() on a response instance must never contain api_key."""
         response = DeploymentProviderAccountGetResponse(
             id=uuid4(),
+            name="staging",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
             provider_url="https://example.com",
         )
@@ -47,6 +48,7 @@ class TestApiKeyWriteOnly:
     def test_create_schema_masks_api_key_in_repr(self):
         """SecretStr should mask the value in string representations."""
         account = DeploymentProviderAccountCreateRequest(
+            name="staging",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
             provider_url="https://example.com",
             api_key="super-secret-key",
@@ -66,9 +68,67 @@ class TestApiKeyWriteOnly:
 # ---------------------------------------------------------------------------
 
 
+class TestProviderAccountName:
+    def test_create_accepts_valid_name(self):
+        account = DeploymentProviderAccountCreateRequest(
+            name="production",
+            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+            provider_url="https://example.com",
+            api_key="key",
+        )
+        assert account.name == "production"
+
+    def test_create_strips_name_whitespace(self):
+        account = DeploymentProviderAccountCreateRequest(
+            name="  staging  ",
+            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+            provider_url="https://example.com",
+            api_key="key",
+        )
+        assert account.name == "staging"
+
+    def test_create_rejects_empty_name(self):
+        with pytest.raises(ValidationError, match="name"):
+            DeploymentProviderAccountCreateRequest(
+                name="",
+                provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+                provider_url="https://example.com",
+                api_key="key",
+            )
+
+    def test_create_rejects_whitespace_only_name(self):
+        with pytest.raises(ValidationError, match="name"):
+            DeploymentProviderAccountCreateRequest(
+                name="   ",
+                provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+                provider_url="https://example.com",
+                api_key="key",
+            )
+
+    def test_create_rejects_missing_name(self):
+        with pytest.raises(ValidationError):
+            DeploymentProviderAccountCreateRequest(
+                provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+                provider_url="https://example.com",
+                api_key="key",
+            )
+
+    def test_update_accepts_name(self):
+        update = DeploymentProviderAccountUpdateRequest(name="new-name")
+        assert update.name == "new-name"
+
+    def test_update_rejects_null_name(self):
+        with pytest.raises(ValidationError, match=r"name.*cannot be set to null"):
+            DeploymentProviderAccountUpdateRequest(name=None)
+
+    def test_response_includes_name(self):
+        assert "name" in DeploymentProviderAccountGetResponse.model_fields
+
+
 class TestProviderKeyEnum:
     def test_accepts_valid_enum_value(self):
         account = DeploymentProviderAccountCreateRequest(
+            name="staging",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
             provider_url="https://example.com",
             api_key="key",
@@ -77,6 +137,7 @@ class TestProviderKeyEnum:
 
     def test_accepts_valid_string_value(self):
         account = DeploymentProviderAccountCreateRequest(
+            name="staging",
             provider_key="watsonx-orchestrate",
             provider_url="https://example.com",
             api_key="key",
@@ -86,6 +147,7 @@ class TestProviderKeyEnum:
     def test_rejects_invalid_provider_key(self):
         with pytest.raises(ValidationError):
             DeploymentProviderAccountCreateRequest(
+                name="staging",
                 provider_key="unknown-provider",
                 provider_url="https://example.com",
                 api_key="key",
@@ -94,6 +156,7 @@ class TestProviderKeyEnum:
     def test_rejects_empty_string(self):
         with pytest.raises(ValidationError):
             DeploymentProviderAccountCreateRequest(
+                name="staging",
                 provider_key="",
                 provider_url="https://example.com",
                 api_key="key",

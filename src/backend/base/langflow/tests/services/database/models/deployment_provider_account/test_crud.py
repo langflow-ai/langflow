@@ -42,6 +42,7 @@ def _make_provider_account(**overrides) -> SimpleNamespace:
     defaults = {
         "id": uuid4(),
         "user_id": uuid4(),
+        "name": "staging",
         "provider_tenant_id": "tenant-1",
         "provider_key": "watsonx-orchestrate",
         "provider_url": "https://example.com",
@@ -108,12 +109,43 @@ async def test_get_provider_account_by_id_invalid_uuid_raises():
 
 
 @pytest.mark.asyncio
+async def test_create_provider_account_empty_name_raises():
+    db = _make_db()
+    with pytest.raises(ValueError, match="name must not be empty"):
+        await create_provider_account(
+            db,
+            user_id=uuid4(),
+            name="",
+            provider_tenant_id=None,
+            provider_key="watsonx-orchestrate",
+            provider_url="https://example.com",
+            api_key="test-token",  # pragma: allowlist secret
+        )
+
+
+@pytest.mark.asyncio
+async def test_create_provider_account_whitespace_name_raises():
+    db = _make_db()
+    with pytest.raises(ValueError, match="name must not be empty"):
+        await create_provider_account(
+            db,
+            user_id=uuid4(),
+            name="   ",
+            provider_tenant_id=None,
+            provider_key="watsonx-orchestrate",
+            provider_url="https://example.com",
+            api_key="test-token",  # pragma: allowlist secret
+        )
+
+
+@pytest.mark.asyncio
 async def test_create_provider_account_empty_provider_key_raises():
     db = _make_db()
     with pytest.raises(ValueError, match="provider_key must not be empty"):
         await create_provider_account(
             db,
             user_id=uuid4(),
+            name="staging",
             provider_tenant_id=None,
             provider_key="   ",
             provider_url="https://example.com",
@@ -128,6 +160,7 @@ async def test_create_provider_account_empty_provider_url_raises():
         await create_provider_account(
             db,
             user_id=uuid4(),
+            name="staging",
             provider_tenant_id=None,
             provider_key="watsonx-orchestrate",
             provider_url="",
@@ -142,11 +175,28 @@ async def test_create_provider_account_empty_api_key_raises():
         await create_provider_account(
             db,
             user_id=uuid4(),
+            name="staging",
             provider_tenant_id=None,
             provider_key="watsonx-orchestrate",
             provider_url="https://example.com",
             api_key="   ",  # pragma: allowlist secret
         )
+
+
+@pytest.mark.asyncio
+async def test_update_provider_account_empty_name_raises():
+    db = _make_db()
+    acct = _make_provider_account()
+    with pytest.raises(ValueError, match="name must not be empty"):
+        await update_provider_account(db, provider_account=acct, name="")
+
+
+@pytest.mark.asyncio
+async def test_update_provider_account_whitespace_name_raises():
+    db = _make_db()
+    acct = _make_provider_account()
+    with pytest.raises(ValueError, match="name must not be empty"):
+        await update_provider_account(db, provider_account=acct, name="   ")
 
 
 @pytest.mark.asyncio
@@ -199,6 +249,7 @@ async def test_create_provider_account_encryption_value_error():
             await create_provider_account(
                 db,
                 user_id=uuid4(),
+                name="staging",
                 provider_tenant_id=None,
                 provider_key="watsonx-orchestrate",
                 provider_url="https://example.com",
@@ -219,6 +270,7 @@ async def test_create_provider_account_encryption_invalid_token():
             await create_provider_account(
                 db,
                 user_id=uuid4(),
+                name="staging",
                 provider_tenant_id=None,
                 provider_key="watsonx-orchestrate",
                 provider_url="https://example.com",
@@ -264,6 +316,7 @@ async def test_delete_provider_account_integrity_error_raises_value_error():
 async def _create_account(db, user, **overrides):
     defaults = {
         "user_id": user.id,
+        "name": "staging",
         "provider_tenant_id": "tenant-1",
         "provider_key": "watsonx-orchestrate",
         "provider_url": "https://example.com",
@@ -280,11 +333,13 @@ async def test_create_provider_account_strips_whitespace(db, user):
     acct = await _create_account(
         db,
         user,
+        name="  staging  ",
         provider_tenant_id="  tenant-1  ",
         provider_key="  watsonx-orchestrate  ",
         provider_url="  https://example.com  ",
         api_key="  raw-token  ",  # pragma: allowlist secret
     )
+    assert acct.name == "staging"
     assert acct.provider_tenant_id == "tenant-1"
     assert acct.provider_key == DeploymentProviderKey.WATSONX_ORCHESTRATE
     assert acct.provider_url == "https://example.com"
@@ -304,13 +359,20 @@ async def test_create_provider_account_blank_tenant_id_normalizes_to_none(db, us
 
 @pytest.mark.asyncio
 async def test_update_provider_account_set_tenant_to_none(db, user):
-    acct = await _create_account(db, user, provider_tenant_id="old-tenant")
+    acct = await _create_account(db, user, name="set-tenant-none", provider_tenant_id="old-tenant")
     updated = await update_provider_account(db, provider_account=acct, provider_tenant_id=None)
     assert updated.provider_tenant_id is None
 
 
 @pytest.mark.asyncio
 async def test_update_provider_account_empty_tenant_normalizes_to_none(db, user):
-    acct = await _create_account(db, user, provider_tenant_id="old-tenant")
+    acct = await _create_account(db, user, name="empty-tenant", provider_tenant_id="old-tenant")
     updated = await update_provider_account(db, provider_account=acct, provider_tenant_id="   ")
     assert updated.provider_tenant_id is None
+
+
+@pytest.mark.asyncio
+async def test_create_provider_account_duplicate_name_per_provider_raises(db, user):
+    await _create_account(db, user, name="prod")
+    with pytest.raises(ValueError, match="Provider account already exists"):
+        await _create_account(db, user, name="prod", provider_url="https://other.example.com")

@@ -40,6 +40,11 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
             "provider_tenant_id",
             name="uq_deployment_provider_account_user_url_tenant",
         ),
+        UniqueConstraint(
+            "provider_key",
+            "name",
+            name="uq_deployment_provider_account_provider_name",
+        ),
     )
 
     id: UUID | None = Field(default_factory=uuid4, primary_key=True)
@@ -90,10 +95,11 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
             index=True,
         ),
     )
-    provider_url: str = Field()
+    name: str = Field(description="User-chosen display name, unique within a provider_key (e.g. 'staging', 'prod').")
+    provider_url: str = Field(description="Provider service URL used for provider-account resolution.")
     # MUST be stored encrypted; the CRUD layer encrypts via auth_utils before writing
     # and the Read schema intentionally excludes this field.
-    api_key: str = Field()
+    api_key: str = Field(description="Provider credential material. Stored encrypted; never returned in API responses.")
     created_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
@@ -114,7 +120,7 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
     def normalize_tenant_id(cls, v: str | None) -> str | None:
         return normalize_string_or_none(v)
 
-    @field_validator("provider_url", "api_key")
+    @field_validator("name", "provider_url", "api_key")
     @classmethod
     def validate_non_empty(cls, v: str, info: object) -> str:
         return validate_non_empty_string(v, info)
@@ -123,6 +129,7 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
 class DeploymentProviderAccountRead(SQLModel):
     id: UUID
     user_id: UUID
+    name: str
     provider_tenant_id: str | None = None
     provider_key: DeploymentProviderKey
     provider_url: str

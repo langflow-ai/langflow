@@ -142,6 +142,7 @@ async def create_provider_account(
     provider_account = await create_provider_account_row(
         session,
         user_id=current_user.id,
+        name=payload.name,
         provider_tenant_id=resolved_provider_tenant_id,
         provider_key=payload.provider_key,
         provider_url=payload.provider_url,
@@ -216,10 +217,14 @@ async def update_provider_account(
     if provider_account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment provider account not found.")
 
-    # Build update kwargs. For provider_tenant_id, we only pass it when the
-    # caller explicitly included it in the request body so the CRUD _UNSET
-    # sentinel preserves the existing value when omitted.
+    # Build update kwargs.  Fields that default to None (name, provider_url,
+    # api_key) are passed unconditionally; the CRUD layer's ``if x is not
+    # None`` guard skips them when the caller omitted them from the request.
+    # provider_tenant_id uses an explicit ``model_fields_set`` check instead
+    # because the CRUD layer uses a sentinel (``_UNSET``) to distinguish
+    # "omitted" from "explicitly set to None" (which clears the value).
     update_kwargs: dict = {
+        "name": payload.name,
         "provider_url": payload.provider_url,
         "api_key": payload.api_key.get_secret_value() if payload.api_key is not None else None,
     }

@@ -95,6 +95,7 @@ async def create_provider_account(
     db: AsyncSession,
     *,
     user_id: UUID | str,
+    name: str,
     provider_tenant_id: str | None,
     provider_key: str,
     provider_url: str,
@@ -104,6 +105,7 @@ async def create_provider_account(
 
     # The model has its own field validators, but pre-checking here gives
     # clearer errors and avoids constructing the object.
+    name_s = _strip_or_raise(name, "name")
     provider_key_s = _strip_or_raise(provider_key, "provider_key")
     provider_url_s = _strip_or_raise(provider_url, "provider_url")
 
@@ -119,6 +121,7 @@ async def create_provider_account(
         raise
     provider_account = DeploymentProviderAccount(
         user_id=user_uuid,
+        name=name_s,
         provider_tenant_id=normalize_string_or_none(provider_tenant_id),
         provider_key=provider_key_s,
         provider_url=provider_url_s,
@@ -132,14 +135,15 @@ async def create_provider_account(
     except IntegrityError as exc:
         await db.rollback()
         await logger.aerror(
-            "IntegrityError creating provider account (user_id=%s, provider_url=%s, provider_tenant_id=%s)",
+            "IntegrityError creating provider account (user_id=%s, name=%s, provider_url=%s, provider_tenant_id=%s)",
             user_uuid,
+            name_s,
             provider_url_s,
             provider_tenant_id,
         )
         msg = (
             f"Provider account already exists "
-            f"(provider_url={provider_url!r}, provider_tenant_id={provider_tenant_id!r})"
+            f"(name={name!r}, provider_url={provider_url!r}, provider_tenant_id={provider_tenant_id!r})"
         )
         raise ValueError(msg) from exc
     await db.refresh(provider_account)
@@ -150,11 +154,14 @@ async def update_provider_account(
     db: AsyncSession,
     *,
     provider_account: DeploymentProviderAccount,
+    name: str | None = None,
     provider_tenant_id: str | None = _UNSET,  # type: ignore[assignment]
     provider_key: str | None = None,
     provider_url: str | None = None,
     api_key: str | None = None,
 ) -> DeploymentProviderAccount:
+    if name is not None:
+        provider_account.name = _strip_or_raise(name, "name")
     if provider_tenant_id is not _UNSET:
         provider_account.provider_tenant_id = normalize_string_or_none(provider_tenant_id)  # type: ignore[arg-type]
     if provider_key is not None:

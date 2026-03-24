@@ -132,6 +132,9 @@ FlowVersionIdsQuery = Annotated[list[str] | None, AfterValidator(_validate_flow_
 class DeploymentProviderAccountCreateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
+    name: NonEmptyStr = Field(
+        description="User-chosen display name for this provider account. Must be unique within a provider_key.",
+    )
     provider_tenant_id: NonEmptyStr | None = Field(
         default=None,
         description="Provider-owned tenant/organization id. Langflow persists this opaque value.",
@@ -156,6 +159,10 @@ class DeploymentProviderAccountCreateRequest(BaseModel):
 class DeploymentProviderAccountUpdateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
+    name: NonEmptyStr | None = Field(
+        default=None,
+        description="User-chosen display name. Omit to keep existing value; cannot be set to null.",
+    )
     provider_tenant_id: NonEmptyStr | None = Field(
         default=None,
         description="Provider-owned tenant/organization id. Omit to keep existing value, null to clear.",
@@ -184,7 +191,7 @@ class DeploymentProviderAccountUpdateRequest(BaseModel):
             raise ValueError(msg)
         # provider_url and api_key are required-on-create;
         # reject explicit null to prevent clearing these fields.
-        for field_name in ("provider_url", "api_key"):
+        for field_name in ("name", "provider_url", "api_key"):
             if field_name in self.model_fields_set and getattr(self, field_name) is None:
                 msg = f"'{field_name}' cannot be set to null."
                 raise ValueError(msg)
@@ -193,6 +200,7 @@ class DeploymentProviderAccountUpdateRequest(BaseModel):
 
 class DeploymentProviderAccountGetResponse(BaseModel):
     id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
+    name: str = Field(description="User-chosen display name for this provider account.")
     provider_tenant_id: str | None = Field(
         default=None,
         description="Provider-owned tenant/organization identifier persisted as opaque text.",
