@@ -205,10 +205,50 @@ jobs:
             exit 1
           fi
 
+  download-gp-bundle:
+    if: github.repository == 'langflow-ai/langflow'
+    name: Download translations from Globalization Pipeline
+    needs: [validate-inputs, resolve-release-branch, create-nightly-tag]
+    runs-on: ubuntu-latest
+    environment: GP-test
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-release-branch.outputs.branch }}
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r scripts/gp/requirements.txt
+
+      - name: Download translations from GP
+        working-directory: scripts/gp
+        env:
+          GP_ADMIN_USER_ID: ${{ secrets.GP_ADMIN_USER_ID }}
+          GP_ADMIN_PASSWORD: ${{ secrets.GP_ADMIN_PASSWORD }}
+          GP_INSTANCE: ${{ vars.GP_INSTANCE }}
+          GP_BUNDLE: ${{ vars.GP_BUNDLE }}
+        run: python download_translations.py --output ../../src/frontend/src/locales/
+
+      - name: Commit and push translated files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/frontend/src/locales/*.json
+          git diff --staged --quiet || git commit -m "chore: update translations from Globalization Pipeline [skip ci]"
+          git push
+
   frontend-tests-linux:
-    if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
+    if: always() && github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests && needs.download-gp-bundle.result != 'cancelled'
     name: Run Frontend Tests - Linux
-    needs: [resolve-release-branch, create-nightly-tag]
+    needs: [resolve-release-branch, create-nightly-tag, download-gp-bundle]
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: "tests"
@@ -222,9 +262,9 @@ jobs:
       TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
 
   frontend-tests-windows:
-    if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
+    if: always() && github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests && needs.download-gp-bundle.result != 'cancelled'
     name: Run Frontend Tests - Windows
-    needs: [resolve-release-branch, create-nightly-tag]
+    needs: [resolve-release-branch, create-nightly-tag, download-gp-bundle]
     # Windows tests are non-blocking - the release-nightly-build job only checks
     # frontend-tests-linux.result, allowing Windows tests to fail without blocking the build.
     # This gives us visibility into Windows-specific issues while we stabilize the tests.
@@ -265,10 +305,10 @@ jobs:
   #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   release-nightly-build:
-    if: github.repository == 'langflow-ai/langflow' && always() && needs.frontend-tests-linux.result != 'failure' && needs.backend-unit-tests.result != 'failure'
+    if: github.repository == 'langflow-ai/langflow' && always() && needs.frontend-tests-linux.result != 'failure' && needs.backend-unit-tests.result != 'failure' && needs.download-gp-bundle.result != 'failure'
     name: Run Nightly Langflow Build
     needs:
-      [validate-inputs, create-nightly-tag, frontend-tests-linux, frontend-tests-windows, backend-unit-tests]
+      [validate-inputs, create-nightly-tag, frontend-tests-linux, frontend-tests-windows, backend-unit-tests, download-gp-bundle]
     uses: ./.github/workflows/release_nightly.yml
     with:
       build_docker_base: true
