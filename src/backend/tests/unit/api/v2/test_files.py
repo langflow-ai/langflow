@@ -149,6 +149,47 @@ async def test_upload_file(files_client, files_created_api_key):
     assert "id" in response_json
 
 
+async def test_should_not_persist_in_my_files_when_upload_is_ephemeral(files_client, files_created_api_key):
+    """Ephemeral uploads save the file to storage but do NOT create a UserFile DB record.
+
+    This is the expected behavior for chat playground uploads in Desktop,
+    where the file must be servable (for chat history) but should not
+    appear in the user's 'My Files' list.
+    """
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    # Upload with ephemeral=true
+    response = await files_client.post(
+        "api/v2/files",
+        files={"file": ("playground_image.png", b"fake image content")},
+        params={"ephemeral": "true"},
+        headers=headers,
+    )
+    assert response.status_code == 201, f"Expected 201, got {response.status_code}: {response.text}"
+
+    upload_response = response.json()
+    assert "path" in upload_response
+
+    # The file must NOT appear in the user's file list
+    list_response = await files_client.get("api/v2/files", headers=headers)
+    assert list_response.status_code == 200
+    file_names = [f["name"] for f in list_response.json()]
+    assert "playground_image" not in file_names, (
+        f"Ephemeral file should not appear in My Files, but found: {file_names}"
+    )
+
+    # The file must still be downloadable via its path (for chat history rendering)
+    file_path = upload_response["path"]
+    # Use v1 image endpoint which serves by path
+    download_response = await files_client.get(
+        f"api/v1/files/images/{file_path}",
+        headers=headers,
+    )
+    assert download_response.status_code == 200, (
+        f"Ephemeral file should still be servable, got {download_response.status_code}"
+    )
+
+
 async def test_download_file(files_client, files_created_api_key):
     headers = {"x-api-key": files_created_api_key.api_key}
 
