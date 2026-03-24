@@ -13,7 +13,7 @@ jobs:
   upload:
     runs-on: ubuntu-latest
     name: Upload English strings to Globalization Pipeline
-    environment: GP_TEST
+    environment: GP_test
 
     steps:
       - name: Checkout repository
