@@ -31,8 +31,8 @@ jobs:
         env:
           GP_ADMIN_USER_ID: ${{ secrets.GP_ADMIN_USER_ID }}
           GP_ADMIN_PASSWORD: ${{ secrets.GP_ADMIN_PASSWORD }}
-          GP_INSTANCE: ${{ secrets.GP_INSTANCE }}
-          GP_BUNDLE: ${{ secrets.GP_BUNDLE }}
+          GP_INSTANCE: ${{ vars.GP_INSTANCE }}
+          GP_BUNDLE: ${{ vars.GP_BUNDLE }}
         run: |
           python download_translations.py --output ../../src/frontend/src/locales/
 
