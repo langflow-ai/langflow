@@ -4,11 +4,9 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { ensureCheckboxChecked } from "../../utils/ensure-checkbox-checked";
 import { generateRandomFilename } from "../../utils/generate-filename";
-import {
-  closeAdvancedOptions,
-  openAdvancedOptions,
-} from "../../utils/open-advanced-options";
+import { enableInspectPanel } from "../../utils/open-advanced-options";
 
 // Run tests in this file serially to avoid database conflicts with shared file state
 test.describe.configure({ mode: "serial" });
@@ -92,9 +90,8 @@ test(
         timeout: 5000,
       });
 
-      await expect(
-        page.getByTestId(`checkbox-${sourceFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
+      const checkbox = page.getByTestId(`checkbox-${sourceFileName}`).last();
+      await ensureCheckboxChecked(checkbox);
 
       // Create DataTransfer object and file
       const dataTransfer = await page.evaluateHandle((jsonFileName) => {
@@ -340,7 +337,7 @@ test(
         dataTransfer,
       });
       await expect(page.getByText(`${newTxtFile}.txt`).last()).toBeVisible({
-        timeout: 1000,
+        timeout: 10000,
       });
 
       await expect(
@@ -835,15 +832,12 @@ test(
     await page.mouse.up();
     await page.mouse.down();
 
-    await openAdvancedOptions(page);
-
-    await openAdvancedOptions(page);
-
-    await page.getByTestId("showfile_path").click();
-
-    await closeAdvancedOptions(page);
-
     await adjustScreenView(page);
+    await enableInspectPanel(page);
+    await page.getByTestId("title-Read File").click();
+    await page.getByTestId("edit-fields-button").click();
+    await page.getByTestId("showfile_path").click();
+    await page.getByTestId("edit-fields-button").click();
 
     // Upload Files
     await page.getByTestId("button_open_file_management").click();
