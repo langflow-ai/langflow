@@ -102,7 +102,7 @@ def _translate_version_error(exc: FlowVersionError) -> HTTPException:
 async def list_flow_versions(
     flow_id: UUID,
     current_user: CurrentActiveUser,
-    session: DbSession,  # write session: snapshot-level sync may delete stale attachment rows
+    session: DbSession,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
     deployment_ids: Annotated[
@@ -166,7 +166,7 @@ async def get_single_flow_version(
     flow_id: UUID,
     version_id: UUID,
     current_user: CurrentActiveUser,
-    session: DbSession,  # write session: snapshot-level sync may delete stale attachment rows
+    session: DbSession,
 ) -> FlowVersionReadWithData:
     await _get_user_flow(session, flow_id, current_user.id)
 
@@ -187,6 +187,7 @@ async def get_single_flow_version(
         entry = await get_flow_version_entry_or_raise(session, version_id, current_user.id, flow_id=flow_id)
     except FlowVersionNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Version entry not found") from exc
+
     deployed = await is_flow_version_deployed(session, version_id) if has_providers else False
     return _version_to_read_full(entry, strip_keys=True, is_deployed=deployed)
 

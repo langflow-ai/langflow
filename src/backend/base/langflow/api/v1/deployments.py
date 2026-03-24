@@ -521,7 +521,7 @@ async def list_deployment_configs(
 @router.get("/{deployment_id}", response_model=DeploymentGetResponse)
 async def get_deployment(
     deployment_id: DeploymentIdPath,
-    session: DbSession,  # write session: deployment-level and snapshot-level sync may delete stale rows
+    session: DbSession,
     current_user: CurrentActiveUser,
 ):
     deployment_row, deployment_adapter, deployment_mapper = await resolve_adapter_mapper_from_deployment(

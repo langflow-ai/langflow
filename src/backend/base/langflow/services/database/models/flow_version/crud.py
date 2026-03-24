@@ -196,6 +196,7 @@ async def get_flow_version_list(
             select(FlowVersionDeploymentAttachment.flow_version_id)
             .where(
                 FlowVersionDeploymentAttachment.deployment_id.in_(deployment_ids),
+                FlowVersionDeploymentAttachment.user_id == user_id,
             )
             .distinct()
             .subquery()
@@ -235,18 +236,22 @@ async def get_flow_version_entry_or_raise(
 async def is_flow_version_deployed(
     session: AsyncSession,
     flow_version_id: UUID,
+    user_id: UUID | None = None,
 ) -> bool:
     """Return True if the flow version is attached to at least one deployment."""
-    return await has_deployment_attachments(session, flow_version_id)
+    return await has_deployment_attachments(session, flow_version_id, user_id=user_id)
 
 
 async def has_deployment_attachments(
     session: AsyncSession,
     flow_version_id: UUID,
+    user_id: UUID | None = None,
 ) -> bool:
     stmt = select(func.count(FlowVersionDeploymentAttachment.id)).where(
         FlowVersionDeploymentAttachment.flow_version_id == flow_version_id,
     )
+    if user_id is not None:
+        stmt = stmt.where(FlowVersionDeploymentAttachment.user_id == user_id)
     count = (await session.exec(stmt)).one()
     return int(count or 0) > 0
 
@@ -261,7 +266,7 @@ async def delete_flow_version_entry(
         msg = f"Version entry {version_id} not found"
         raise FlowVersionNotFoundError(msg)
 
-    if await has_deployment_attachments(session, version_id):
+    if await has_deployment_attachments(session, version_id, user_id=user_id):
         msg = (
             f"Version entry {version_id} is attached to one or more deployments "
             f"and cannot be deleted. Detach it from all deployments first."
