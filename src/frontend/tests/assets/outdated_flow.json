@@ -523,7 +523,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "dummy_api_key"
+                "value": "this is a test key"
               },
               "code": {
                 "advanced": true,
