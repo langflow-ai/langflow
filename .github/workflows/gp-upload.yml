@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - feat/globalization-pipeline  # temp: remove before merge
     paths:
       - "src/frontend/src/locales/en.json"
   workflow_dispatch:

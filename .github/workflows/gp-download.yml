@@ -1,6 +1,9 @@
 name: GP Download Translations
 
 on:
+  push:
+    branches:
+      - feat/globalization-pipeline  # temp: remove before merge
   schedule:
     - cron: "0 6 * * *"  # Daily at 6am UTC
   workflow_dispatch:
