@@ -48,11 +48,12 @@ from langflow.api.v1.mappers.deployments.helpers import (
 )
 from langflow.api.v1.mappers.deployments.registry import register_mapper
 from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
+    WatsonxApiAgentExecutionCreateResultData,
+    WatsonxApiAgentExecutionStatusResultData,
     WatsonxApiBindOperation,
     WatsonxApiDeploymentCreatePayload,
     WatsonxApiDeploymentUpdatePayload,
     WatsonxApiDeploymentUpdateResultData,
-    WatsonxApiExecutionResultData,
     WatsonxApiFlowArtifactProviderData,
     WatsonxApiRemoveToolOperation,
     WatsonxApiToolAppBinding,
@@ -99,11 +100,11 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             policy=PayloadSlotPolicy.VALIDATE_ONLY,
         ),
         execution_create_result=PayloadSlot(
-            adapter_model=WatsonxApiExecutionResultData,
+            adapter_model=WatsonxApiAgentExecutionCreateResultData,
             policy=PayloadSlotPolicy.VALIDATE_ONLY,
         ),
         execution_status_result=PayloadSlot(
-            adapter_model=WatsonxApiExecutionResultData,
+            adapter_model=WatsonxApiAgentExecutionStatusResultData,
             policy=PayloadSlotPolicy.VALIDATE_ONLY,
         ),
     )
@@ -487,18 +488,19 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             missing_payload_detail="Deployment provider execution result is missing provider_result payload.",
             malformed_payload_detail="Deployment provider execution result contains invalid provider_result payload.",
         )
-        api_provider_result = WatsonxApiExecutionResultData(
-            run_id=adapter_provider_result.run_id,
+        api_provider_result = WatsonxApiAgentExecutionCreateResultData(
             execution_id=adapter_provider_result.execution_id,
             agent_id=adapter_provider_result.agent_id,
-            deployment_id=adapter_provider_result.deployment_id,
+            status=adapter_provider_result.status,
+            result=adapter_provider_result.result,
+            started_at=adapter_provider_result.started_at,
+            completed_at=adapter_provider_result.completed_at,
+            failed_at=adapter_provider_result.failed_at,
+            cancelled_at=adapter_provider_result.cancelled_at,
+            last_error=adapter_provider_result.last_error,
         )
         provider_result = api_provider_result.model_dump(exclude_none=True) or None
         return ExecutionCreateResponse(
-            execution_id=self.util_execution_id(
-                execution_id=result.execution_id,
-                provider_result=provider_result,
-            ),
             deployment_id=deployment_id,
             provider_data=provider_result,
         )
@@ -508,7 +510,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         result: ExecutionStatusResult,
         *,
         deployment_id: UUID,
-        fallback_execution_id: str | None = None,
     ) -> ExecutionStatusResponse:
         adapter_provider_result = self._parse_required_payload_slot(
             slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.execution_status_result,
@@ -517,53 +518,22 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             missing_payload_detail="Deployment provider execution result is missing provider_result payload.",
             malformed_payload_detail="Deployment provider execution result contains invalid provider_result payload.",
         )
-        api_provider_result = WatsonxApiExecutionResultData(
-            run_id=adapter_provider_result.run_id,
+        api_provider_result = WatsonxApiAgentExecutionStatusResultData(
             execution_id=adapter_provider_result.execution_id,
             agent_id=adapter_provider_result.agent_id,
-            deployment_id=adapter_provider_result.deployment_id,
+            status=adapter_provider_result.status,
+            result=adapter_provider_result.result,
+            started_at=adapter_provider_result.started_at,
+            completed_at=adapter_provider_result.completed_at,
+            failed_at=adapter_provider_result.failed_at,
+            cancelled_at=adapter_provider_result.cancelled_at,
+            last_error=adapter_provider_result.last_error,
         )
         provider_result = api_provider_result.model_dump(exclude_none=True) or None
         return ExecutionStatusResponse(
-            execution_id=self.util_execution_id(
-                execution_id=result.execution_id or fallback_execution_id,
-                provider_result=provider_result,
-            ),
             deployment_id=deployment_id,
             provider_data=provider_result,
         )
-
-    def util_execution_id(
-        self,
-        *,
-        execution_id: str | None,
-        provider_result: dict[str, Any] | None,
-    ) -> str | None:
-        execution_slot = self.api_payloads.execution_status_result or self.api_payloads.execution_create_result
-        parsed: WatsonxApiExecutionResultData = self._parse_required_payload_slot(
-            slot=execution_slot,
-            slot_name="execution_status_result/execution_create_result",
-            raw=provider_result,
-            missing_payload_detail="Deployment provider execution result is missing provider_result payload.",
-            malformed_payload_detail="Deployment provider execution result contains invalid provider_result payload.",
-        )
-        return execution_id or parsed.resolved_execution_id()
-
-    def util_execution_deployment_resource_key(
-        self,
-        *,
-        deployment_id: str | None,
-        provider_result: dict[str, Any] | None,
-    ) -> str | None:
-        execution_slot = self.api_payloads.execution_status_result or self.api_payloads.execution_create_result
-        parsed: WatsonxApiExecutionResultData = self._parse_required_payload_slot(
-            slot=execution_slot,
-            slot_name="execution_status_result/execution_create_result",
-            raw=provider_result,
-            missing_payload_detail="Deployment provider execution result is missing provider_result payload.",
-            malformed_payload_detail="Deployment provider execution result contains invalid provider_result payload.",
-        )
-        return (deployment_id or parsed.resolved_deployment_id() or "").strip() or None
 
     def _parse_required_payload_slot(
         self,

@@ -189,30 +189,43 @@ class WatsonxApiDeploymentUpdateResultData(BaseModel):
         return payload or None
 
 
-class WatsonxApiExecutionResultData(BaseModel):
-    """Normalized API-facing provider_result payload for Watsonx execution operations."""
+class _WatsonxApiAgentExecutionResultBase(BaseModel):
+    """Shared fields for API-facing agent execution result payloads.
+
+    All provider-owned identifiers and metadata live here inside
+    ``provider_data``.  The enclosing response only carries Langflow-owned
+    fields (``deployment_id``).  ``deployment_id`` (Langflow DB UUID) is
+    intentionally omitted from this schema to avoid ownership confusion.
+    """
 
     model_config = {"extra": "allow"}
 
-    run_id: str | None = None
     execution_id: str | None = None
     agent_id: str | None = None
-    deployment_id: str | None = None
+    status: str | None = None
+    result: Any | None = None
+    started_at: str | None = None
+    completed_at: str | None = None
+    failed_at: str | None = None
+    cancelled_at: str | None = None
+    last_error: str | None = None
 
-    @field_validator("run_id", "execution_id", "agent_id", "deployment_id", mode="before")
+    @field_validator("execution_id", "agent_id", mode="before")
     @classmethod
     def normalize_optional_id(cls, value: Any) -> str | None:
         normalized = str(value or "").strip()
         return normalized or None
 
     @classmethod
-    def from_provider_result(cls, provider_result: Any) -> WatsonxApiExecutionResultData:
+    def from_provider_result(cls, provider_result: Any) -> _WatsonxApiAgentExecutionResultBase:
         if not isinstance(provider_result, dict):
             return cls()
         return cls.model_validate(provider_result)
 
-    def resolved_execution_id(self) -> str | None:
-        return self.execution_id or self.run_id
 
-    def resolved_deployment_id(self) -> str | None:
-        return self.deployment_id or self.agent_id
+class WatsonxApiAgentExecutionCreateResultData(_WatsonxApiAgentExecutionResultBase):
+    """API-facing provider_result payload returned when an agent execution is created."""
+
+
+class WatsonxApiAgentExecutionStatusResultData(_WatsonxApiAgentExecutionResultBase):
+    """API-facing provider_result payload returned when querying agent execution status."""

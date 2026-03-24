@@ -491,3 +491,36 @@ When rollback is unavailable or fails, provider state may diverge from the DB. S
 
 Routes that perform write-path rollback must call `session.commit()` explicitly after staging all DB writes, rather than relying on `session_scope()` auto-commit. This allows the route to catch commit failures and issue compensating provider calls before re-raising.
 
+## 14) API Response Ownership Boundaries
+
+### 14.1 Do not mix Langflow-owned and provider-owned fields at the same level
+
+API response schemas must keep a clear ownership boundary between Langflow-managed data and provider-managed data.
+
+- **Top-level fields** should be Langflow-owned: identifiers that Langflow persists and controls (e.g. `deployment_id`, `name`, `created_at`).
+- **Provider-owned data** (execution identifiers, agent metadata, status, timestamps, errors) belongs inside the `provider_data` dict.
+
+This prevents future collisions — for example, if Langflow starts persisting its own execution records, a top-level `execution_id` would be ambiguous against the provider's opaque run identifier.
+
+### 14.2 Classification of fields
+
+**Langflow-owned** — fields derived from the Langflow database or assigned by Langflow logic:
+
+- `deployment_id` (DB UUID), `id`, `name`, `description`, `type`
+- `created_at`, `updated_at` (DB timestamps)
+- `resource_key` — provider-originated but stored and indexed by Langflow, so treated as Langflow-owned once persisted.
+
+**Provider-owned** — values returned by the external provider that Langflow passes through without persisting or interpreting:
+
+- `execution_id` (the provider's opaque run identifier)
+- `agent_id`, `status`, `result`, `started_at`, `completed_at`, `failed_at`, `cancelled_at`, `last_error`
+- Any other fields the provider returns in its response payload.
+
+### 14.3 Decision checklist for new response fields
+
+When adding a new field to an execution or deployment response:
+
+1. Is Langflow the source of truth for this value? → top level.
+2. Does this value come from the provider and Langflow just relays it? → inside `provider_data`.
+3. Does the provider supply it but Langflow persists and indexes it (like `resource_key`)? → top level is acceptable.
+

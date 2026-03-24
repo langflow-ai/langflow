@@ -234,7 +234,8 @@ def create_wxo_flow_tool(
             - artifacts: The supporting artifacts (the requirements.txt
                 and the flow json file) for the tool.
     """
-    flow_definition = flow_payload.model_dump()
+    # provider_data might break tool runtime expectations with unexpected top-level keys
+    flow_definition = flow_payload.model_dump(exclude={"provider_data"})
 
     flow_provider_data = flow_payload.provider_data
     if not isinstance(flow_provider_data, WatsonxFlowArtifactProviderData):

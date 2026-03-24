@@ -471,15 +471,23 @@ class WatsonxDeploymentUpdateResultData(BaseModel):
         return [str(snapshot_id).strip() for snapshot_id in value if str(snapshot_id).strip()]
 
 
-class WatsonxExecutionResultData(BaseModel):
-    """Normalized provider result payload for execution create/status."""
+class WatsonxAgentExecutionResultData(BaseModel):
+    """Normalized provider result payload for agent execution create/status."""
 
     model_config = ConfigDict(extra="allow")
 
-    run_id: NormalizedId | None = None
     execution_id: NormalizedId | None = None
-    agent_id: NormalizedId | None = None
-    deployment_id: NormalizedId | None = None
+    agent_id: NormalizedId | None = Field(
+        default=None,
+        description="WXO agent identifier (resource_key in Langflow DB).",
+    )
+    status: str | None = None
+    result: Any | None = None
+    started_at: str | None = None
+    completed_at: str | None = None
+    failed_at: str | None = None
+    cancelled_at: str | None = None
+    last_error: str | None = None
 
 
 class WatsonxProviderUpdateApplyResult(BaseModel):
@@ -513,6 +521,6 @@ PAYLOAD_SCHEMAS = DeploymentPayloadSchemas(
     deployment_create_result=PayloadSlot(WatsonxDeploymentCreateResultData),
     deployment_update=PayloadSlot(WatsonxDeploymentUpdatePayload),
     deployment_update_result=PayloadSlot(WatsonxDeploymentUpdateResultData),
-    execution_create_result=PayloadSlot(WatsonxExecutionResultData),
-    execution_status_result=PayloadSlot(WatsonxExecutionResultData),
+    execution_create_result=PayloadSlot(WatsonxAgentExecutionResultData),
+    execution_status_result=PayloadSlot(WatsonxAgentExecutionResultData),
 )

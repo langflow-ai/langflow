@@ -15,11 +15,11 @@ except ModuleNotFoundError:
     )
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
+    WatsonxAgentExecutionResultData,
     WatsonxDeploymentCreatePayload,
     WatsonxDeploymentCreateResultData,
     WatsonxDeploymentUpdatePayload,
     WatsonxDeploymentUpdateResultData,
-    WatsonxExecutionResultData,
     WatsonxFlowArtifactProviderData,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.service import WatsonxOrchestrateDeploymentService
@@ -60,9 +60,9 @@ def test_payload_schema_slot_registered_for_deployment_update() -> None:
     assert slot.deployment_update_result is not None
     assert slot.deployment_update_result.adapter_model is WatsonxDeploymentUpdateResultData
     assert slot.execution_create_result is not None
-    assert slot.execution_create_result.adapter_model is WatsonxExecutionResultData
+    assert slot.execution_create_result.adapter_model is WatsonxAgentExecutionResultData
     assert slot.execution_status_result is not None
-    assert slot.execution_status_result.adapter_model is WatsonxExecutionResultData
+    assert slot.execution_status_result.adapter_model is WatsonxAgentExecutionResultData
 
 
 def test_create_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> None:

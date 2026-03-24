@@ -400,7 +400,7 @@ def test_base_mapper_shapes_execution_create_result() -> None:
     result = ExecutionCreateResult(
         execution_id="exec-1",
         deployment_id="provider-dep-1",
-        provider_result={"status": "accepted"},
+        provider_result={"execution_id": "exec-1", "status": "accepted"},
     )
 
     shaped = mapper.shape_execution_create_result(
@@ -408,12 +408,11 @@ def test_base_mapper_shapes_execution_create_result() -> None:
         deployment_id=deployment_id,
     )
 
-    assert shaped.execution_id == "exec-1"
     assert shaped.deployment_id == deployment_id
-    assert shaped.provider_data == {"status": "accepted"}
+    assert shaped.provider_data == {"execution_id": "exec-1", "status": "accepted"}
 
 
-def test_base_mapper_shapes_execution_status_result_with_fallback() -> None:
+def test_base_mapper_shapes_execution_status_result_with_none_execution_id() -> None:
     mapper = BaseDeploymentMapper()
     deployment_id = uuid4()
     result = ExecutionStatusResult(
@@ -425,10 +424,8 @@ def test_base_mapper_shapes_execution_status_result_with_fallback() -> None:
     shaped = mapper.shape_execution_status_result(
         result,
         deployment_id=deployment_id,
-        fallback_execution_id="exec-fallback",
     )
 
-    assert shaped.execution_id == "exec-fallback"
     assert shaped.deployment_id == deployment_id
     assert shaped.provider_data == {"status": "running"}
 
@@ -469,11 +466,12 @@ def test_base_mapper_exposes_reconciliation_resolvers() -> None:
     assert isinstance(update_bindings, UpdateSnapshotBindings)
     assert update_bindings.snapshot_bindings == []
 
-    assert mapper.util_execution_id(execution_id="exec-1", provider_result={"run_id": "run-1"}) == "exec-1"
-    assert (
-        mapper.util_execution_deployment_resource_key(deployment_id="dep-1", provider_result={"agent_id": "agent-1"})
-        == "dep-1"
+    exec_result = ExecutionStatusResult(
+        execution_id="e-1",
+        deployment_id="dep-1",
+        provider_result={"agent_id": "agent-1"},
     )
+    assert mapper.util_resource_key_from_execution(exec_result) == "dep-1"
 
 
 def test_base_mapper_resolve_provider_tenant_id_passthrough() -> None:

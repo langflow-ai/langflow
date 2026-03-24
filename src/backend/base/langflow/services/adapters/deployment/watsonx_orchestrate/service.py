@@ -530,7 +530,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             )
 
         return ExecutionCreateResult(
-            execution_id=agent_run_result.get("run_id"),
+            execution_id=agent_run_result.get("execution_id"),
             deployment_id=agent_id,
             provider_result=self.payload_schemas.execution_create_result.parse(agent_run_result).model_dump(
                 exclude_none=True

@@ -15,23 +15,6 @@ if TYPE_CHECKING:
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 
 
-def build_orchestrate_runs_query(provider_input: dict[str, Any] | None) -> str:
-    if not provider_input:
-        return ""
-
-    query_segments: list[str] = []
-    for key in ("stream", "multiple_content", "stream_timeout"):
-        if key not in provider_input or provider_input[key] is None:
-            continue
-        value = provider_input[key]
-        normalized_value = str(value).lower() if isinstance(value, bool) else str(value)
-        query_segments.append(f"{key}={normalized_value}")
-
-    if not query_segments:
-        return ""
-    return f"?{'&'.join(query_segments)}"
-
-
 def build_orchestrate_run_payload(
     *,
     provider_data: dict[str, Any],
@@ -41,26 +24,10 @@ def build_orchestrate_run_payload(
     if message_payload is None:
         message_payload = resolve_execution_message(provider_data.get("input"))
 
-    payload: dict[str, Any] = {
+    return {
         "message": message_payload,
         "agent_id": str(provider_data.get("agent_id") or deployment_id),
     }
-
-    # TODO: remove these extra fields, don't need for MVP.
-    extra_fields = [
-        "thread_id",
-        "llm_params",
-        "guardrails",
-        "context",
-        "additional_parameters",
-        "environment_id",
-        "version",
-        "context_variables",
-    ]
-
-    payload.update({k: v for k in extra_fields if (v := provider_data.get(k)) is not None})
-
-    return payload
 
 
 async def create_agent_run(
@@ -70,7 +37,6 @@ async def create_agent_run(
     deployment_id: str,
 ) -> dict[str, Any]:
     """Create an orchestrate run through the WxOClient wrapper."""
-    query_suffix = build_orchestrate_runs_query(provider_data)
     try:
         run_payload = build_orchestrate_run_payload(
             provider_data=provider_data,
@@ -81,7 +47,6 @@ async def create_agent_run(
     try:
         response = await asyncio.to_thread(
             client.post_run,
-            query_suffix=query_suffix,
             data=run_payload,
         )
     except ClientAPIException as exc:
@@ -131,9 +96,9 @@ def create_agent_run_result(payload: dict[str, Any] | None) -> dict[str, Any]:
     result: dict[str, Any] = {"status": payload.get("status") or "accepted"}
     run_id = str(payload.get("run_id") or payload.get("id") or "").strip()
     if not run_id:
-        msg = "Watsonx Orchestrate accepted the execution but did not return a run_id."
-        raise DeploymentError(message=msg, error_code="missing_run_id")
-    result["run_id"] = run_id
+        msg = "Watsonx Orchestrate accepted the execution but did not return an execution identifier."
+        raise DeploymentError(message=msg, error_code="missing_execution_id")
+    result["execution_id"] = run_id
     return result
 
 
@@ -147,9 +112,10 @@ async def get_agent_run(client: WxOClient, *, run_id: str) -> dict[str, Any]:
     status_value = str(payload.get("status") or "unknown")
     result: dict[str, Any] = {"status": status_value}
 
+    result["execution_id"] = payload.get("id") or run_id
+
     passthrough_fields = [
         "agent_id",
-        "run_id",
         "started_at",
         "completed_at",
         "failed_at",

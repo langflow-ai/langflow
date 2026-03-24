@@ -576,20 +576,23 @@ class ExecutionCreateRequest(BaseModel):
 
 
 class _ExecutionResponseBase(BaseModel):
-    """Shared fields for execution responses."""
+    """Shared fields for execution responses.
 
-    execution_id: str | None = Field(
-        default=None,
-        description=(
-            "When the provider_id query parameter is provided, "
-            "this is the Provider-owned opaque execution identifier. "
-            "May be None when the provider acknowledges the request but has not yet assigned an id."
-        ),
-    )
+    Only Langflow-owned identifiers live at the top level.  All
+    provider-owned data (including the provider's ``execution_id``)
+    is returned inside ``provider_data`` so that ownership boundaries
+    stay clear and a future Langflow-managed execution id won't
+    collide with provider terminology.
+    """
+
     deployment_id: UUID = Field(description="Langflow DB deployment UUID.")
     provider_data: dict[str, Any] | None = Field(
         default=None,
-        description="Provider-owned opaque execution result payload.",
+        description=(
+            "Provider-owned opaque execution result payload.  "
+            "Contains at least ``execution_id`` (the provider's opaque run identifier) "
+            "when the provider has assigned one."
+        ),
     )
 
 

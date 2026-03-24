@@ -503,13 +503,14 @@ def test_watsonx_mapper_resolve_provider_tenant_id_from_url() -> None:
     )
 
 
-def test_watsonx_mapper_resolves_execution_identifiers_from_provider_result() -> None:
-    mapper = WatsonxOrchestrateDeploymentMapper()
-    provider_result = {
-        "run_id": "run-1",
-        "agent_id": "dep-1",
-        "status": "accepted",
-    }
+def test_watsonx_mapper_trusts_top_level_deployment_id() -> None:
+    """WXO mapper inherits base behavior: trust result.deployment_id directly."""
+    from lfx.services.adapters.deployment.schema import ExecutionStatusResult
 
-    assert mapper.util_execution_id(execution_id=None, provider_result=provider_result) == "run-1"
-    assert mapper.util_execution_deployment_resource_key(deployment_id=None, provider_result=provider_result) == "dep-1"
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    result = ExecutionStatusResult(
+        execution_id="e-1",
+        deployment_id="agent-1",
+        provider_result={"agent_id": "agent-1", "status": "accepted"},
+    )
+    assert mapper.util_resource_key_from_execution(result) == "agent-1"

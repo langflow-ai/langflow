@@ -471,13 +471,7 @@ async def get_deployment_execution(
             db=session,
         )
 
-    provider_result = deployment_mapper.shape_execution_status_provider_data(
-        execution_result.provider_result if isinstance(execution_result.provider_result, dict) else None
-    )
-    provider_deployment_id = deployment_mapper.util_execution_deployment_resource_key(
-        deployment_id=str(execution_result.deployment_id or "").strip() or None,
-        provider_result=provider_result,
-    )
+    provider_deployment_id = deployment_mapper.util_resource_key_from_execution(execution_result)
     if not provider_deployment_id:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -495,7 +489,6 @@ async def get_deployment_execution(
     return deployment_mapper.shape_execution_status_result(
         execution_result,
         deployment_id=deployment_row.id,
-        fallback_execution_id=execution_lookup_id,
     )
 
 

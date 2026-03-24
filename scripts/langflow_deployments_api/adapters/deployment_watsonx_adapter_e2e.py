@@ -27,8 +27,14 @@ Live lifecycle scenarios:
 - `live_update_seed_name_description`: updates deployment name/description (expects Success).
 - `live_get_after_update_reflects_name`: confirms updated name is persisted (expects Success).
 - `live_get_status_connected`: confirms status endpoint reports connected deployment (expects Success).
-- `live_create_execution_success`: starts an execution run with valid message payload (expects Success).
-- `live_get_execution_success`: fetches execution by returned execution id (expects Success).
+- `live_create_execution_success`: starts an execution run with valid message payload and validates
+  provider_result contains execution_id (not run_id) and status (expects Success).
+- `live_create_execution_input_string`: creates execution using plain string input (expects Success).
+- `live_create_execution_input_dict_content`: creates execution using dict input with content key (expects Success).
+- `live_get_execution_poll_terminal`: polls execution until terminal status and validates
+  provider_result fields including execution_id, status, and absence of run_id (expects Success).
+- `live_get_execution_terminal_fields`: validates terminal execution has agent_id and
+  appropriate timestamp (completed_at, failed_at, or cancelled_at) (expects Success).
 - `live_delete_seed`: deletes seed deployment agent (expects Success).
 - `live_get_after_delete_not_found`: confirms deleted deployment is no longer fetchable
   (expects DeploymentNotFoundError).
@@ -47,6 +53,8 @@ Live list-snapshots-by-ids scenarios:
 Live negative scenarios:
 - `live_negative_create_seed`: creates a second seed deployment for negative-path checks (expects Success).
 - `live_create_execution_rejects_empty_input`: rejects empty execution input payload (expects InvalidContentError).
+- `live_create_execution_missing_deployment`: rejects execution for non-existent deployment
+  (expects DeploymentNotFoundError).
 - `live_delete_missing_not_found`: delete on unknown deployment id returns not found (expects DeploymentNotFoundError).
 - `live_negative_delete_seed`: cleans up negative-path seed deployment (expects Success).
 
@@ -164,6 +172,9 @@ HTTP_STATUS_NOT_FOUND = 404
 HTTP_STATUS_CONFLICT = 409
 MIN_MIXED_SNAPSHOT_IDS = 2
 DEFAULT_CONCURRENCY_ITERATIONS = 1
+EXECUTION_POLL_INTERVAL_SECS = 2
+EXECUTION_POLL_MAX_ATTEMPTS = 10
+EXECUTION_TERMINAL_STATUSES = {"completed", "failed", "cancelled", "async_completed", "expired", "requires_input"}
 
 _INVALID_WXO_NAME_CHARS = re.compile(r"[^A-Za-z0-9_]")
 
@@ -659,6 +670,26 @@ class WatsonxAdapterDirectE2E:
         else:
             return OUTCOME_SUCCESS, "execution_fetched", result
 
+    async def _poll_execution_terminal(self, execution_id: str) -> tuple[str, str, Any | None]:
+        """Poll get_execution until a terminal status is reached or max attempts exceeded."""
+        result = None
+        for attempt in range(EXECUTION_POLL_MAX_ATTEMPTS):
+            status_code, detail, result = await self._run_get_execution(execution_id)
+            pr = getattr(result, "provider_result", None) or {}
+            current_status = pr.get("status") if isinstance(pr, dict) else None
+            print(
+                f"  [poll {attempt + 1}/{EXECUTION_POLL_MAX_ATTEMPTS}] "
+                f"outcome={status_code} status={current_status} "
+                f"provider_result={pr}"
+            )
+            if status_code != OUTCOME_SUCCESS:
+                return status_code, f"poll attempt {attempt + 1}: {detail}", result
+            if current_status in EXECUTION_TERMINAL_STATUSES:
+                return status_code, f"terminal after {attempt + 1} polls: {current_status}", result
+            await asyncio.sleep(EXECUTION_POLL_INTERVAL_SECS)
+        msg = f"execution did not reach terminal status after {EXECUTION_POLL_MAX_ATTEMPTS} polls"
+        return OUTCOME_FAILURE, msg, result
+
     async def _run_delete(self, deployment_id: str) -> tuple[str, str, Any | None]:
         try:
             result = await self.service.delete(user_id=self.user_id, deployment_id=deployment_id, db=self.db)
@@ -816,16 +847,24 @@ class WatsonxAdapterDirectE2E:
         print("[life/7] live_create_execution_success")
         status_code, detail, execution_create_result = await self._run_create_execution(
             deployment_id,
-            provider_data={"message": {"role": "user", "content": "ping from direct adapter e2e"}},
+            provider_data={"message": {"role": "user", "content": "hi"}},
         )
         has_execution_id = bool(execution_create_result and getattr(execution_create_result, "execution_id", None))
+        create_pr = getattr(execution_create_result, "provider_result", None) or {}
+        create_pr_ok = (
+            has_execution_id
+            and isinstance(create_pr, dict)
+            and "execution_id" in create_pr
+            and "run_id" not in create_pr
+            and create_pr.get("status") is not None
+        )
         results.append(
             self._build_result(
                 name="live_create_execution_success",
                 expected={OUTCOME_SUCCESS},
                 actual_outcome=status_code,
                 detail=detail,
-                ok=status_code == OUTCOME_SUCCESS and has_execution_id,
+                ok=status_code == OUTCOME_SUCCESS and create_pr_ok,
             )
         )
 
@@ -836,19 +875,80 @@ class WatsonxAdapterDirectE2E:
         )
         execution_id = str(execution_id_value) if execution_id_value else None
 
+        print("[life/7b] live_create_execution_input_string")
+        status_code, detail, exec_str_result = await self._run_create_execution(
+            deployment_id,
+            provider_data={"input": "hi again"},
+        )
+        str_ok = bool(
+            status_code == OUTCOME_SUCCESS and exec_str_result and getattr(exec_str_result, "execution_id", None)
+        )
+        results.append(
+            self._build_result(
+                name="live_create_execution_input_string",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=detail,
+                ok=str_ok,
+            )
+        )
+
+        print("[life/7c] live_create_execution_input_dict_content")
+        status_code, detail, exec_dict_result = await self._run_create_execution(
+            deployment_id,
+            provider_data={"input": {"content": "haha"}},
+        )
+        dict_ok = bool(
+            status_code == OUTCOME_SUCCESS and exec_dict_result and getattr(exec_dict_result, "execution_id", None)
+        )
+        results.append(
+            self._build_result(
+                name="live_create_execution_input_dict_content",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=detail,
+                ok=dict_ok,
+            )
+        )
+
         if execution_id:
-            print("[life/8] live_get_execution_success")
-            status_code, detail, execution_status_result = await self._run_get_execution(execution_id)
-            execution_ok = bool(
-                execution_status_result and str(getattr(execution_status_result, "execution_id", "")) == execution_id
+            print("[life/8] live_get_execution_poll_terminal")
+            terminal_result = await self._poll_execution_terminal(execution_id)
+            poll_status_code = terminal_result[0]
+            poll_detail = terminal_result[1]
+            poll_result = terminal_result[2]
+            poll_pr = getattr(poll_result, "provider_result", None) or {}
+            got_terminal = isinstance(poll_pr, dict) and poll_pr.get("status") in EXECUTION_TERMINAL_STATUSES
+            pr_has_execution_id = isinstance(poll_pr, dict) and "execution_id" in poll_pr
+            pr_no_run_id = isinstance(poll_pr, dict) and "run_id" not in poll_pr
+            results.append(
+                self._build_result(
+                    name="live_get_execution_poll_terminal",
+                    expected={OUTCOME_SUCCESS},
+                    actual_outcome=poll_status_code,
+                    detail=poll_detail,
+                    ok=poll_status_code == OUTCOME_SUCCESS and got_terminal and pr_has_execution_id and pr_no_run_id,
+                )
+            )
+
+            print("[life/8b] live_get_execution_terminal_fields")
+            terminal_fields_ok = (
+                got_terminal
+                and isinstance(poll_pr, dict)
+                and poll_pr.get("agent_id") is not None
+                and (
+                    poll_pr.get("completed_at") is not None
+                    or poll_pr.get("failed_at") is not None
+                    or poll_pr.get("cancelled_at") is not None
+                )
             )
             results.append(
                 self._build_result(
-                    name="live_get_execution_success",
+                    name="live_get_execution_terminal_fields",
                     expected={OUTCOME_SUCCESS},
-                    actual_outcome=status_code,
-                    detail=detail,
-                    ok=status_code == OUTCOME_SUCCESS and execution_ok,
+                    actual_outcome=poll_status_code,
+                    detail=f"status={poll_pr.get('status')} has_timestamps={terminal_fields_ok}",
+                    ok=poll_status_code == OUTCOME_SUCCESS and terminal_fields_ok,
                 )
             )
 
@@ -1002,6 +1102,21 @@ class WatsonxAdapterDirectE2E:
                 actual_outcome=status_code,
                 detail=detail,
                 ok=status_code == OUTCOME_INVALID_CONTENT,
+            )
+        )
+
+        print("[neg/2b] live_create_execution_missing_deployment")
+        status_code, detail, _ = await self._run_create_execution(
+            str(uuid4()),
+            provider_data={"input": "uh oh"},
+        )
+        results.append(
+            self._build_result(
+                name="live_create_execution_missing_deployment",
+                expected={OUTCOME_NOT_FOUND},
+                actual_outcome=status_code,
+                detail=detail,
+                ok=status_code == OUTCOME_NOT_FOUND,
             )
         )
 
@@ -1831,7 +1946,7 @@ class WatsonxAdapterDirectE2E:
             {
                 "execution": lambda: self._run_create_execution(
                     exec_delete_id,
-                    provider_data={"message": {"role": "user", "content": "cc execution while delete"}},
+                    provider_data={"message": {"role": "user", "content": "woah"}},
                 ),
                 "delete": lambda: self._run_delete(exec_delete_id),
             }

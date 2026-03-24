@@ -359,10 +359,6 @@ class BaseDeploymentMapper:
             result.provider_result if isinstance(result.provider_result, dict) else None
         )
         return ExecutionCreateResponse(
-            execution_id=self.util_execution_id(
-                execution_id=result.execution_id,
-                provider_result=provider_result,
-            ),
             deployment_id=deployment_id,
             provider_data=provider_result,
         )
@@ -372,39 +368,25 @@ class BaseDeploymentMapper:
         result: ExecutionStatusResult,
         *,
         deployment_id: UUID,
-        fallback_execution_id: str | None = None,
     ) -> ExecutionStatusResponse:
         provider_result = self.shape_execution_status_provider_data(
             result.provider_result if isinstance(result.provider_result, dict) else None
         )
         return ExecutionStatusResponse(
-            execution_id=self.util_execution_id(
-                execution_id=result.execution_id or fallback_execution_id,
-                provider_result=provider_result,
-            ),
             deployment_id=deployment_id,
             provider_data=provider_result,
         )
 
-    def util_execution_id(
+    def util_resource_key_from_execution(
         self,
-        *,
-        execution_id: str | None,
-        provider_result: dict[str, Any] | None,
+        result: ExecutionStatusResult | ExecutionCreateResult,
     ) -> str | None:
-        """Resolve execution identifier for API responses."""
-        _ = provider_result
-        return execution_id
+        """Resolve provider deployment resource key from an execution result.
 
-    def util_execution_deployment_resource_key(
-        self,
-        *,
-        deployment_id: str | None,
-        provider_result: dict[str, Any] | None,
-    ) -> str | None:
-        """Resolve provider deployment resource key from execution result."""
-        _ = provider_result
-        return (deployment_id or "").strip() or None
+        The default trusts the top-level ``result.deployment_id``.  Adapters
+        that carry the identifier only inside ``provider_result`` can override.
+        """
+        return str(result.deployment_id or "").strip() or None
 
     def shape_deployment_item_data(self, provider_data: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_data

@@ -33,6 +33,8 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentUpdate,
     EnvVarValueSpec,
     ExecutionCreate,
+    ExecutionCreateResult,
+    ExecutionStatusResult,
     SnapshotListParams,
 )
 
@@ -249,7 +251,7 @@ def _with_wxo_wrappers(ns):
     """Attach WxOClient SDK wrapper methods to a SimpleNamespace test double."""
     if hasattr(ns, "_base") and ns._base is not None:
         ns.get_agents_raw = lambda params=None: ns._base._get("/agents", params=params)
-        ns.post_run = lambda *, query_suffix="", data: ns._base._post(f"/runs{query_suffix}", data)
+        ns.post_run = lambda *, data: ns._base._post("/runs", data)
         ns.get_run = lambda run_id: ns._base._get(f"/runs/{run_id}")
     return ns
 
@@ -2060,6 +2062,75 @@ def test_create_wxo_flow_tool_keeps_load_from_db_global_values_unprefixed(monkey
     assert template["plain_value"]["value"] == "DO_NOT_TOUCH"
 
 
+def test_create_wxo_flow_tool_excludes_provider_data_from_artifact(monkeypatch):
+    """provider_data must not leak into the flow JSON zipped inside the artifact.
+
+    WxO's tool runtime chokes on unexpected top-level keys like ``provider_data``
+    in the flow definition, causing executions to hang indefinitely.
+    """
+    captured_flow_definition = {}
+
+    flow_payload = BaseFlowArtifact[payloads_module.WatsonxFlowArtifactProviderData](
+        id="00000000-0000-0000-0000-000000000001",
+        name="flow",
+        description="desc",
+        data={
+            "nodes": [
+                {
+                    "data": {
+                        "type": "ChatInput",
+                        "id": "ChatInput-1",
+                        "node": {"template": {"_type": "CustomComponent"}},
+                    }
+                },
+                {
+                    "data": {
+                        "type": "ChatOutput",
+                        "id": "ChatOutput-1",
+                        "node": {"template": {"_type": "CustomComponent"}},
+                    }
+                },
+            ],
+            "edges": [],
+        },
+        tags=[],
+        provider_data=payloads_module.WatsonxFlowArtifactProviderData(
+            project_id="project-123",
+            source_ref="src-ref-1",
+        ),
+    )
+
+    fake_tool = SimpleNamespace(
+        __tool_spec__=SimpleNamespace(
+            model_dump=lambda **kwargs: {"name": "flow"},  # noqa: ARG005
+        )
+    )
+
+    def mock_create_langflow_tool(*, tool_definition, connections, show_details):  # noqa: ARG001
+        captured_flow_definition.update(tool_definition)
+        return fake_tool
+
+    monkeypatch.setattr(tools_module, "create_langflow_tool", mock_create_langflow_tool)
+    monkeypatch.setattr(
+        tools_module,
+        "build_langflow_artifact_bytes",
+        lambda **kwargs: b"artifact",  # noqa: ARG005
+    )
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import create_wxo_flow_tool
+
+    create_wxo_flow_tool(
+        flow_payload=flow_payload,
+        connections={},
+        tool_name_prefix="lf_test_",
+    )
+
+    assert "provider_data" not in captured_flow_definition
+    assert "data" in captured_flow_definition
+    assert "name" in captured_flow_definition
+    assert "description" in captured_flow_definition
+
+
 def test_create_wxo_flow_tool_requires_provider_data_project_id():
     flow_payload = BaseFlowArtifact(
         id="00000000-0000-0000-0000-000000000001",
@@ -2363,18 +2434,17 @@ async def test_create_execution_posts_runs_payload(monkeypatch):
         db=object(),
         payload=ExecutionCreate(
             deployment_id="dep-1",
-            provider_data={"input": "hello from test", "thread_id": "thread-123", "stream": False},
+            provider_data={"input": "hello from test"},
         ),
     )
 
     assert result.deployment_id == "dep-1"
     assert result.execution_id == "run-1"
-    assert result.provider_result == {"status": "accepted", "run_id": "run-1"}
+    assert result.provider_result == {"status": "accepted", "execution_id": "run-1"}
     assert fake_base.post_calls
     path, payload = fake_base.post_calls[0]
-    assert path == "/runs?stream=false"
+    assert path == "/runs"
     assert payload["agent_id"] == "dep-1"
-    assert payload["thread_id"] == "thread-123"
     assert payload["message"] == {"role": "user", "content": "hello from test"}
 
 
@@ -2385,7 +2455,7 @@ async def test_get_execution_returns_completed_output(monkeypatch):
     fake_base = FakeBaseClient(
         get_payloads={
             "/runs/run-1": {
-                "run_id": "run-1",
+                "id": "run-1",
                 "status": "completed",
                 "agent_id": "dep-1",
                 "completed_at": "2026-03-08T18:23:25.277362Z",
@@ -2416,7 +2486,7 @@ async def test_get_execution_returns_completed_output(monkeypatch):
     assert result.execution_id == "run-1"
     assert result.provider_result["status"] == "completed"
     assert result.provider_result["agent_id"] == "dep-1"
-    assert result.provider_result["run_id"] == "run-1"
+    assert result.provider_result["execution_id"] == "run-1"
     assert result.provider_result["completed_at"] == "2026-03-08T18:23:25.277362Z"
 
 
@@ -2427,7 +2497,7 @@ async def test_get_execution_fetches_result_payload(monkeypatch):
     fake_base = FakeBaseClient(
         get_payloads={
             "/runs/run-1": {
-                "run_id": "run-1",
+                "id": "run-1",
                 "status": "completed",
                 "agent_id": "dep-1",
                 "result": {"output": "some result"},
@@ -3636,15 +3706,6 @@ def test_resolve_execution_message_none_raises():
         resolve_execution_message(None)
 
 
-def test_build_orchestrate_runs_query():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import build_orchestrate_runs_query
-
-    assert build_orchestrate_runs_query(None) == ""
-    assert build_orchestrate_runs_query({}) == ""
-    assert "stream=true" in build_orchestrate_runs_query({"stream": True})
-    assert "stream_timeout=30" in build_orchestrate_runs_query({"stream_timeout": 30})
-
-
 def test_create_agent_run_result_empty_raises():
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import create_agent_run_result
 
@@ -3658,7 +3719,7 @@ def test_create_agent_run_result_with_run_id():
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import create_agent_run_result
 
     result = create_agent_run_result({"status": "running", "run_id": "r-1"})
-    assert result == {"status": "running", "run_id": "r-1"}
+    assert result == {"status": "running", "execution_id": "r-1"}
 
 
 # ---------------------------------------------------------------------------
@@ -4231,19 +4292,19 @@ async def test_validate_connection_missing_credentials(monkeypatch):
 
 
 def test_create_agent_run_result_raises_on_missing_run_id():
-    """create_agent_run_result raises DeploymentError when response has no run_id."""
+    """create_agent_run_result raises DeploymentError when response has no execution identifier."""
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import create_agent_run_result
 
-    with pytest.raises(DeploymentError, match="did not return a run_id"):
+    with pytest.raises(DeploymentError, match="did not return an execution identifier"):
         create_agent_run_result({"status": "accepted"})
 
 
 def test_create_agent_run_result_extracts_run_id():
-    """create_agent_run_result successfully extracts run_id from response."""
+    """create_agent_run_result translates WXO run_id to execution_id."""
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import create_agent_run_result
 
     result = create_agent_run_result({"status": "accepted", "run_id": "run-123"})
-    assert result["run_id"] == "run-123"
+    assert result["execution_id"] == "run-123"
     assert result["status"] == "accepted"
 
 
@@ -4252,7 +4313,7 @@ def test_create_agent_run_result_falls_back_to_id_field():
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import create_agent_run_result
 
     result = create_agent_run_result({"status": "running", "id": "id-456"})
-    assert result["run_id"] == "id-456"
+    assert result["execution_id"] == "id-456"
 
 
 # ---------------------------------------------------------------------------
@@ -4352,3 +4413,370 @@ def test_ensure_dict_logs_warning_on_non_dict(caplog):
     assert parent["binding"] == {}
     assert "Expected dict" in caplog.text
     assert "str" in caplog.text
+
+
+# ---------------------------------------------------------------------------
+# get_agent_run — happy path: id → execution_id + passthrough fields
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_get_agent_run_translates_run_id_to_execution_id(monkeypatch):
+    """get_agent_run maps WXO id to execution_id and passes through other fields."""
+    import asyncio as _asyncio
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import get_agent_run
+
+    wxo_payload = {
+        "id": "r-42",
+        "status": "completed",
+        "agent_id": "agent-1",
+        "started_at": "2026-01-01T00:00:00Z",
+        "completed_at": "2026-01-01T00:01:00Z",
+        "result": {"output": "hello"},
+    }
+
+    async def fake_to_thread(fn, *args, **kwargs):  # noqa: ARG001
+        return wxo_payload
+
+    monkeypatch.setattr(_asyncio, "to_thread", fake_to_thread)
+
+    fake_client = SimpleNamespace(get_run=lambda _run_id: wxo_payload)
+    result = await get_agent_run(fake_client, run_id="r-42")
+
+    assert result["execution_id"] == "r-42"
+    assert "run_id" not in result
+    assert result["status"] == "completed"
+    assert result["agent_id"] == "agent-1"
+    assert result["started_at"] == "2026-01-01T00:00:00Z"
+    assert result["completed_at"] == "2026-01-01T00:01:00Z"
+    assert result["result"] == {"output": "hello"}
+
+
+@pytest.mark.anyio
+async def test_get_agent_run_passes_through_error_fields(monkeypatch):
+    """get_agent_run forwards failed_at, cancelled_at, and last_error."""
+    import asyncio as _asyncio
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import get_agent_run
+
+    wxo_payload = {
+        "id": "r-fail",
+        "status": "failed",
+        "failed_at": "2026-01-01T00:02:00Z",
+        "last_error": "timeout exceeded",
+    }
+
+    async def fake_to_thread(fn, *args, **kwargs):  # noqa: ARG001
+        return wxo_payload
+
+    monkeypatch.setattr(_asyncio, "to_thread", fake_to_thread)
+
+    fake_client = SimpleNamespace(get_run=lambda _run_id: wxo_payload)
+    result = await get_agent_run(fake_client, run_id="r-fail")
+
+    assert result["execution_id"] == "r-fail"
+    assert result["status"] == "failed"
+    assert result["failed_at"] == "2026-01-01T00:02:00Z"
+    assert result["last_error"] == "timeout exceeded"
+
+
+# ---------------------------------------------------------------------------
+# get_agent_run — WXO payload omits id
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_get_agent_run_falls_back_to_param_run_id(monkeypatch):
+    """get_agent_run uses the run_id parameter when WXO payload omits id."""
+    import asyncio as _asyncio
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import get_agent_run
+
+    wxo_payload = {"status": "in_progress", "agent_id": "agent-1"}
+
+    async def fake_to_thread(fn, *args, **kwargs):  # noqa: ARG001
+        return wxo_payload
+
+    monkeypatch.setattr(_asyncio, "to_thread", fake_to_thread)
+
+    fake_client = SimpleNamespace(get_run=lambda _run_id: wxo_payload)
+    result = await get_agent_run(fake_client, run_id="r-99")
+
+    assert result["execution_id"] == "r-99"
+    assert result["status"] == "in_progress"
+    assert result["agent_id"] == "agent-1"
+
+
+# ---------------------------------------------------------------------------
+# build_orchestrate_run_payload — simplified MVP payload
+# ---------------------------------------------------------------------------
+
+
+def test_build_orchestrate_run_payload_uses_message_directly():
+    """build_orchestrate_run_payload passes message from provider_data when present."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import build_orchestrate_run_payload
+
+    message = {"role": "user", "content": "direct message"}
+    result = build_orchestrate_run_payload(
+        provider_data={"message": message, "agent_id": "a-1"},
+        deployment_id="dep-fallback",
+    )
+    assert result["message"] is message
+    assert result["agent_id"] == "a-1"
+    assert len(result) == 2
+
+
+def test_build_orchestrate_run_payload_falls_back_to_deployment_id():
+    """build_orchestrate_run_payload uses deployment_id when agent_id is absent."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import build_orchestrate_run_payload
+
+    result = build_orchestrate_run_payload(
+        provider_data={"input": "hello"},
+        deployment_id="dep-fallback",
+    )
+    assert result["agent_id"] == "dep-fallback"
+    assert result["message"] == {"role": "user", "content": "hello"}
+    assert len(result) == 2
+
+
+def test_build_orchestrate_run_payload_excludes_extra_fields():
+    """build_orchestrate_run_payload does not forward extra fields like thread_id."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import build_orchestrate_run_payload
+
+    result = build_orchestrate_run_payload(
+        provider_data={
+            "input": "hi",
+            "thread_id": "t-1",
+            "llm_params": {"model": "gpt-4"},
+            "guardrails": True,
+            "stream": True,
+        },
+        deployment_id="dep-1",
+    )
+    assert "thread_id" not in result
+    assert "llm_params" not in result
+    assert "guardrails" not in result
+    assert "stream" not in result
+    assert len(result) == 2
+
+
+# ---------------------------------------------------------------------------
+# WatsonxAgentExecutionResultData — adapter schema explicit fields
+# ---------------------------------------------------------------------------
+
+
+def test_adapter_execution_schema_parses_all_explicit_fields():
+    """WatsonxAgentExecutionResultData parses all execution response fields."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import WatsonxAgentExecutionResultData
+
+    data = {
+        "execution_id": "e-1",
+        "agent_id": "a-1",
+        "status": "completed",
+        "result": {"output": "answer"},
+        "started_at": "2026-01-01T00:00:00Z",
+        "completed_at": "2026-01-01T00:01:00Z",
+        "failed_at": None,
+        "cancelled_at": None,
+        "last_error": None,
+    }
+    parsed = WatsonxAgentExecutionResultData.model_validate(data)
+    assert parsed.execution_id == "e-1"
+    assert parsed.agent_id == "a-1"
+    assert parsed.status == "completed"
+    assert parsed.result == {"output": "answer"}
+    assert parsed.started_at == "2026-01-01T00:00:00Z"
+    assert parsed.completed_at == "2026-01-01T00:01:00Z"
+
+
+def test_adapter_execution_schema_has_no_run_id_field():
+    """WatsonxAgentExecutionResultData does not expose run_id as a named field."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import WatsonxAgentExecutionResultData
+
+    assert "run_id" not in WatsonxAgentExecutionResultData.model_fields
+
+
+# ---------------------------------------------------------------------------
+# WatsonxApiAgentExecution{Create,Status}ResultData — API schema explicit fields
+# ---------------------------------------------------------------------------
+
+
+def test_api_execution_create_schema_parses_all_explicit_fields():
+    """WatsonxApiAgentExecutionCreateResultData parses all execution response fields."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
+        WatsonxApiAgentExecutionCreateResultData,
+    )
+
+    data = {
+        "execution_id": "e-1",
+        "agent_id": "a-1",
+        "status": "accepted",
+        "result": None,
+        "started_at": "2026-01-01T00:00:00Z",
+    }
+    parsed = WatsonxApiAgentExecutionCreateResultData.model_validate(data)
+    assert parsed.execution_id == "e-1"
+    assert parsed.agent_id == "a-1"
+    assert parsed.status == "accepted"
+    assert parsed.started_at == "2026-01-01T00:00:00Z"
+
+
+def test_api_execution_status_schema_parses_all_explicit_fields():
+    """WatsonxApiAgentExecutionStatusResultData parses all execution response fields."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
+        WatsonxApiAgentExecutionStatusResultData,
+    )
+
+    data = {
+        "execution_id": "e-1",
+        "agent_id": "a-1",
+        "status": "failed",
+        "result": None,
+        "started_at": "2026-01-01T00:00:00Z",
+        "failed_at": "2026-01-01T00:00:05Z",
+        "last_error": "something broke",
+    }
+    parsed = WatsonxApiAgentExecutionStatusResultData.model_validate(data)
+    assert parsed.execution_id == "e-1"
+    assert parsed.agent_id == "a-1"
+    assert parsed.status == "failed"
+    assert parsed.failed_at == "2026-01-01T00:00:05Z"
+    assert parsed.last_error == "something broke"
+
+
+def test_api_execution_schemas_have_no_run_id_field():
+    """Neither create nor status schema exposes run_id as a named field."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
+        WatsonxApiAgentExecutionCreateResultData,
+        WatsonxApiAgentExecutionStatusResultData,
+    )
+
+    assert "run_id" not in WatsonxApiAgentExecutionCreateResultData.model_fields
+    assert "run_id" not in WatsonxApiAgentExecutionStatusResultData.model_fields
+
+
+def test_api_execution_schemas_omit_langflow_owned_fields():
+    """deployment_id (Langflow DB UUID) belongs on the top-level response, not in provider_data."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
+        WatsonxApiAgentExecutionCreateResultData,
+        WatsonxApiAgentExecutionStatusResultData,
+    )
+
+    for schema in (WatsonxApiAgentExecutionCreateResultData, WatsonxApiAgentExecutionStatusResultData):
+        assert "deployment_id" not in schema.model_fields
+        assert "execution_id" in schema.model_fields
+        assert not hasattr(schema, "resolved_deployment_id")
+
+
+def test_api_execution_schema_normalizes_id_fields():
+    """Both create and status schemas strip whitespace and blanks from ID fields."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
+        WatsonxApiAgentExecutionCreateResultData,
+        WatsonxApiAgentExecutionStatusResultData,
+    )
+
+    for schema in (WatsonxApiAgentExecutionCreateResultData, WatsonxApiAgentExecutionStatusResultData):
+        parsed = schema.model_validate(
+            {
+                "execution_id": "  e-1  ",
+                "agent_id": "  a-1  ",
+            }
+        )
+        assert parsed.execution_id == "e-1"
+        assert parsed.agent_id == "a-1"
+
+        parsed_blank = schema.model_validate(
+            {
+                "execution_id": "  ",
+                "agent_id": "",
+            }
+        )
+        assert parsed_blank.execution_id is None
+        assert parsed_blank.agent_id is None
+
+
+# ---------------------------------------------------------------------------
+# Mapper shapers: shape_execution_create_result / shape_execution_status_result
+# ---------------------------------------------------------------------------
+
+
+def test_shape_execution_create_result_maps_all_fields():
+    """shape_execution_create_result maps adapter fields to API response."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper import WatsonxOrchestrateDeploymentMapper
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    deployment_id = UUID("00000000-0000-0000-0000-000000000001")
+
+    adapter_result = ExecutionCreateResult(
+        execution_id="e-1",
+        deployment_id="agent-1",
+        provider_result={
+            "execution_id": "e-1",
+            "agent_id": "agent-1",
+            "status": "accepted",
+            "started_at": "2026-01-01T00:00:00Z",
+        },
+    )
+
+    response = mapper.shape_execution_create_result(adapter_result, deployment_id=deployment_id)
+    assert response.deployment_id == deployment_id
+    assert response.provider_data["execution_id"] == "e-1"
+    assert response.provider_data["status"] == "accepted"
+    assert response.provider_data["started_at"] == "2026-01-01T00:00:00Z"
+    assert response.provider_data["agent_id"] == "agent-1"
+    assert "deployment_id" not in response.provider_data
+    assert "run_id" not in response.provider_data
+
+
+def test_shape_execution_status_result_maps_all_fields():
+    """shape_execution_status_result maps adapter fields to API response."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper import WatsonxOrchestrateDeploymentMapper
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    deployment_id = UUID("00000000-0000-0000-0000-000000000002")
+
+    adapter_result = ExecutionStatusResult(
+        execution_id="e-2",
+        deployment_id="agent-2",
+        provider_result={
+            "execution_id": "e-2",
+            "agent_id": "agent-2",
+            "status": "completed",
+            "result": {"output": "done"},
+            "completed_at": "2026-01-01T00:01:00Z",
+        },
+    )
+
+    response = mapper.shape_execution_status_result(adapter_result, deployment_id=deployment_id)
+    assert response.deployment_id == deployment_id
+    assert response.provider_data["execution_id"] == "e-2"
+    assert response.provider_data["status"] == "completed"
+    assert response.provider_data["result"] == {"output": "done"}
+    assert response.provider_data["completed_at"] == "2026-01-01T00:01:00Z"
+    assert "deployment_id" not in response.provider_data
+    assert "run_id" not in response.provider_data
+
+
+def test_shape_execution_status_result_none_execution_id():
+    """When adapter has no execution_id, provider_data omits the key (exclude_none)."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper import WatsonxOrchestrateDeploymentMapper
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    deployment_id = UUID("00000000-0000-0000-0000-000000000003")
+
+    adapter_result = ExecutionStatusResult(
+        execution_id=None,
+        deployment_id="agent-3",
+        provider_result={
+            "agent_id": "agent-3",
+            "status": "in_progress",
+        },
+    )
+
+    response = mapper.shape_execution_status_result(
+        adapter_result,
+        deployment_id=deployment_id,
+    )
+    assert "execution_id" not in response.provider_data
+    assert response.provider_data["status"] == "in_progress"

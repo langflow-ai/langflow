@@ -55,8 +55,8 @@ class WxOClient:
     def get_agents_raw(self, params: dict[str, Any] | None = None) -> Any:
         return self.base._get("/agents", params=params)  # noqa: SLF001
 
-    def post_run(self, *, query_suffix: str = "", data: dict[str, Any]) -> Any:
-        return self.base._post(f"/runs{query_suffix}", data=data)  # noqa: SLF001
+    def post_run(self, *, data: dict[str, Any]) -> Any:
+        return self.base._post("/runs", data=data)  # noqa: SLF001
 
     def get_run(self, run_id: str) -> Any:
         return self.base._get(f"/runs/{run_id}")  # noqa: SLF001
