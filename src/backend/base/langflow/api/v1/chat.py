@@ -187,7 +187,7 @@ async def build_flow(
         flow = (await session.exec(stmt)).first()
         if not flow:
             await logger.awarning(
-                "IDOR attempt blocked in build_flow: user %s tried to access flow %s",
+                "Flow access denied for user %s: flow %s not found or not owned",
                 current_user.id,
                 flow_id,
             )
