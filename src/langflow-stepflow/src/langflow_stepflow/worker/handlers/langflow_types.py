@@ -13,6 +13,19 @@ from .base import InputHandler, OutputHandler
 
 logger = logging.getLogger(__name__)
 
+# lfx 0.3+ renamed Data→JSON, DataFrame→Table. Map runtime class names
+# back to the canonical Langflow type names used in serialized payloads.
+_CLASS_TO_LANGFLOW_TYPE: dict[str, str] = {
+    "JSON": "Data",
+    "Table": "DataFrame",
+}
+
+
+def _langflow_type_name(value: Any) -> str:
+    """Return the canonical Langflow type name for a value."""
+    cls_name = type(value).__name__
+    return _CLASS_TO_LANGFLOW_TYPE.get(cls_name, cls_name)
+
 
 def _is_langflow_type_dict(value: Any) -> bool:
     """Check if a single value is a dict with a ``__langflow_type__`` marker."""
@@ -174,5 +187,5 @@ class LangflowTypeOutputHandler(OutputHandler):
 
     async def process(self, value: Any) -> Any:
         serialized = value.model_dump(mode="json")
-        serialized["__langflow_type__"] = value.__class__.__name__
+        serialized["__langflow_type__"] = _langflow_type_name(value)
         return serialized

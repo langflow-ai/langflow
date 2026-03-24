@@ -28,8 +28,8 @@ classifiers = [
 ]
 
 dependencies = [
-    "stepflow-py>=0.10.0; python_version >= '3.11'",
-    "stepflow-orchestrator>=0.10.0; python_version >= '3.11'",
+    "stepflow-py>=0.12.0",
+    "stepflow-orchestrator>=0.12.0",
     "pyyaml>=6.0",
     "msgspec>=0.19.0",
     "jsonschema>=4.17.0",
@@ -77,6 +77,7 @@ docstring-code-format = true
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+pythonpath = ["."]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]

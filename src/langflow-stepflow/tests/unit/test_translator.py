@@ -8,31 +8,18 @@ from langflow_stepflow.exceptions import ConversionError
 from langflow_stepflow.translation.translator import LangflowConverter
 
 
-def unwrap_value(value: Any) -> Any:
-    """Recursively unwrap ValueExpr/PrimitiveValue to get the raw value."""
-    if value is None:
-        return None
-    # Unwrap ValueExpr and PrimitiveValue
-    if hasattr(value, "actual_instance"):
-        return unwrap_value(value.actual_instance)
-    # Recursively unwrap dicts
-    if isinstance(value, dict):
-        return {k: unwrap_value(v) for k, v in value.items()}
-    # Recursively unwrap lists
-    if isinstance(value, list):
-        return [unwrap_value(v) for v in value]
-    return value
-
-
 def get_step_input_dict(step) -> dict:
-    """Extract the input dict from a step's ValueExpr wrapper.
+    """Extract the input dict from a step.
 
-    The Step.input field is a Pydantic ValueExpr oneOf wrapper. This helper
-    unwraps it to get the underlying dict for assertions.
+    With the msgspec-based SDK, step.input is already a plain dict.
     """
     if step.input is None:
         return {}
-    return unwrap_value(step.input)
+    if isinstance(step.input, dict):
+        return step.input
+    import msgspec
+
+    return msgspec.to_builtins(step.input)
 
 
 class TestLangflowConverter:
@@ -185,9 +172,6 @@ class TrivialComponent(Component):
             if hasattr(step, "input") and step.input:
                 step_input = get_step_input_dict(step)
                 for _key, value in step_input.items():
-                    # Unwrap ValueExpr if needed
-                    if hasattr(value, "actual_instance"):
-                        value = value.actual_instance
                     if isinstance(value, dict) and "$step" in str(value):
                         from_step = value.get("$step", "")
                         if from_step:
@@ -407,11 +391,15 @@ class CustomComponent(Component):
         blob_data = blob_input.get("data", {})
         assert "code" in blob_data, "Blob should contain component code"
         code_value = blob_data["code"]
-        # Primitives are wrapped in LiteralExpr by the flow builder
-        assert hasattr(code_value, "literal"), "code should be a LiteralExpr"
-        assert "CustomComponent" in code_value.literal, (
-            "Should contain custom component class"
-        )
+        # Code may be a plain string or a $literal wrapper depending on SDK version
+        if isinstance(code_value, dict):
+            assert "CustomComponent" in str(code_value), (
+                "Should contain custom component class"
+            )
+        else:
+            assert "CustomComponent" in code_value, (
+                "Should contain custom component class"
+            )
 
     def test_component_routing_strategy_rejects_incomplete_components(self):
         """Test that components without custom code are rejected (unified approach)."""

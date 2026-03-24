@@ -173,16 +173,15 @@ class LangflowConverter:
         """Convert Flow to YAML string.
 
         Args:
-            workflow: Flow object (Pydantic model from stepflow_py.api.models)
+            workflow: Flow object (msgspec Struct from stepflow_py.worker)
 
         Returns:
             YAML string
         """
         try:
-            # Convert Flow to dict using Pydantic's model_dump
-            # Use by_alias=True to get the JSON field names (camelCase)
-            # Use exclude_unset=True to remove unset values
-            workflow_dict = workflow.model_dump(by_alias=True, exclude_unset=True)
+            import msgspec
+
+            workflow_dict = msgspec.to_builtins(workflow)
 
             # Generate clean YAML
             return yaml.dump(

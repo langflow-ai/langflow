@@ -1,13 +1,13 @@
 """Tests for Stepflow-level tweaks functionality."""
 
 import pytest
-from tests.helpers.tweaks_builder import TweaksBuilder
 
 from langflow_stepflow.translation.stepflow_tweaks import (
     apply_stepflow_tweaks_to_dict,
     convert_tweaks_to_overrides,
 )
 from langflow_stepflow.translation.translator import LangflowConverter
+from tests.helpers.tweaks_builder import TweaksBuilder
 
 
 class TestStepflowTweaks:
@@ -87,7 +87,9 @@ class TestStepflowTweaksIntegration:
                 langflow_data = json.load(f)
             # Convert to Flow object and get dict representation
             flow = converter.convert(langflow_data)
-            return flow.model_dump(mode="json", exclude_none=True)
+            import msgspec
+
+            return msgspec.to_builtins(flow)
         else:
             pytest.skip("basic_prompting.json fixture not found")
 

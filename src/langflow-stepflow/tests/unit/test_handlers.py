@@ -129,7 +129,9 @@ class TestDataFrameConversionInputHandler:
         }
         result = await handler.prepare(fields, None)
         assert "data_input" in result
-        assert result["data_input"].__class__.__name__ == "DataFrame"
+        import pandas
+
+        assert isinstance(result["data_input"], pandas.DataFrame)
 
     @pytest.mark.asyncio
     async def test_skips_empty_list(self):

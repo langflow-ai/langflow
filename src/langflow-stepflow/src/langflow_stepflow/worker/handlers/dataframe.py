@@ -20,7 +20,7 @@ def _is_data_list(value: list[Any]) -> bool:
             isinstance(item, dict)
             and ("text" in item or item.get("__class_name__") == "Data")
         )
-        or (hasattr(item, "__class__") and item.__class__.__name__ == "Data")
+        or (hasattr(item, "__class__") and item.__class__.__name__ in ("Data", "JSON"))
         for item in non_null
     )
 

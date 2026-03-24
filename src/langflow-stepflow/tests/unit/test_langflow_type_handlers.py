@@ -362,7 +362,7 @@ class TestLangflowTypeInputHandlerDataFrame:
         result = await self.handler.prepare(fields, None)
 
         df = result["df_field"]
-        assert df.__class__.__name__ == "DataFrame"
+        assert isinstance(df, pd.DataFrame)
 
     @pytest.mark.asyncio
     async def test_deserialize_dataframe_with_none_values(self):
@@ -381,7 +381,7 @@ class TestLangflowTypeInputHandlerDataFrame:
         fields = {"df_field": (serialized, {})}
         result = await self.handler.prepare(fields, None)
 
-        assert result["df_field"].__class__.__name__ == "DataFrame"
+        assert isinstance(result["df_field"], pd.DataFrame)
 
     @pytest.mark.asyncio
     async def test_deserialize_dataframe_missing_json_data_falls_back(self):
@@ -583,7 +583,7 @@ class TestDataFrameRoundTrip:
         result = await self.input_handler.prepare(fields, None)
 
         restored = result["df"]
-        assert restored.__class__.__name__ == "DataFrame"
+        assert isinstance(restored, pd.DataFrame)
 
     @pytest.mark.asyncio
     async def test_dataframe_round_trip_preserves_text_key(self):
@@ -599,7 +599,7 @@ class TestDataFrameRoundTrip:
         result = await self.input_handler.prepare(fields, None)
 
         restored = result["df"]
-        assert restored.__class__.__name__ == "DataFrame"
+        assert isinstance(restored, pd.DataFrame)
 
 
 class TestPandasDataFrameRoundTrip:
@@ -630,4 +630,4 @@ class TestPandasDataFrameRoundTrip:
         result = await self.input_handler.prepare(fields, None)
 
         restored = result["df"]
-        assert restored.__class__.__name__ == "DataFrame"
+        assert isinstance(restored, pd.DataFrame)

@@ -90,7 +90,9 @@ def test_poc_flow_translation(converter, poc_flow_data):
         )
 
     # Verify the variable schema includes OPENAI_API_KEY with env_var annotation
-    flow_dict = flow.model_dump(by_alias=True, exclude_unset=True, exclude_none=True)
+    import msgspec
+
+    flow_dict = msgspec.to_builtins(flow)
     var_props = (
         flow_dict.get("schemas", {})
         .get("properties", {})

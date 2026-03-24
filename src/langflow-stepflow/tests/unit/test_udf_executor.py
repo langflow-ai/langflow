@@ -786,6 +786,8 @@ class EnhancedTestComponent(Component):
             / "langflow"
             / "basic_prompting.json"
         )
+        if not flow_path.exists():
+            pytest.skip("basic_prompting.json fixture not found")
         with open(flow_path) as f:
             return json.load(f)
 
@@ -836,6 +838,8 @@ class EnhancedTestComponent(Component):
             "langflow",
             "simple_agent.json",
         )
+        if not os.path.exists(fixture_path):
+            pytest.skip("simple_agent.json fixture not found")
         with open(fixture_path) as f:
             flow = json.load(f)
 
