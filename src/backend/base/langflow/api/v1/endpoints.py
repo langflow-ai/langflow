@@ -991,7 +991,7 @@ async def create_upload_file(
 
         return UploadFileResponse(
             flow_id=flow_id_str,
-            file_path=file_path,
+            file_path=file_path.as_posix(),
         )
     except Exception as exc:
         await logger.aexception("Error saving file")
