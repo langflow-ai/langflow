@@ -10,6 +10,12 @@ from typing import Final
 # CometAPI available model list based on actual API offerings
 COMETAPI_MODELS: Final[list[str]] = [
     # GPT series
+    "gpt-5.4",
+    "gpt-5.4-mini",
+    "gpt-5.4-pro",
+    "gpt-5.3",
+    "gpt-5.3-instant",
+    "gpt-5.3-codex",
     "gpt-5-chat-latest",
     "chatgpt-4o-latest",
     "gpt-5-mini",
