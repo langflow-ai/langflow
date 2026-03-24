@@ -22,13 +22,16 @@ Langflow integrates with [Docling](https://docling-project.github.io/docling/) t
 * **Install Docling dependency**:
 The Docling dependency is required to use the Docling components in Langflow.
 
-    * **Langflow version 1.6 and later**: The Docling dependency is included by default for all operating systems except macOS Intel (x86_64).
+    * **Langflow Desktop**: Set `LANGFLOW_DOCLING=True` in your `.env` file to enable Docling dependency installation. For more information, see [Set environment variables for Langflow Desktop](/environment-variables#set-environment-variables-for-langflow-desktop).
 
-        For macOS Intel (x86_64), use the [Docling installation guide](https://docling-project.github.io/docling/installation/) to install the Docling dependency.
+    * **Langflow OSS**:
+        * If you installed `langflow` (`uv pip install langflow`), Docling is included automatically through bundled extras.
+        * If you installed `langflow-base` directly, install Docling with an extra, for example `uv pip install "langflow-base[docling]"`.
 
-    * **Earlier versions**: Langflow versions earlier than 1.6 don't include the Docling dependency.
-    For Langflow OSS, install the Docling extra with `uv pip install 'langflow[docling]'`.
-    For Langflow Desktop, add the Docling dependency to Langflow Desktop's `requirements.txt`.
+    * **macOS Intel (x86_64)**: Use the [Docling installation guide](https://docling-project.github.io/docling/installation/) to install the Docling dependency.
+
+    * **Earlier versions**: Langflow versions earlier than 1.6 don't include the Docling dependency by default.
+
     For more information, see [Install custom dependencies](/install-custom-dependencies).
 
 <PartialDockerDoclingDeps />
