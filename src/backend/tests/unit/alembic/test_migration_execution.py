@@ -198,10 +198,7 @@ def _get_main_branch_head() -> str | None:
     if len(heads) == 1:
         return heads.pop()
     if len(heads) > 1:
-        pytest.fail(
-            f"origin/main has {len(heads)} head revisions — "
-            f"migration branches need merging: {heads}"
-        )
+        pytest.fail(f"origin/main has {len(heads)} head revisions — migration branches need merging: {heads}")
     return None
 
 
