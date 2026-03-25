@@ -63,7 +63,8 @@ def _create_pg_test_database(base_url: str, db_name: str) -> str:
         with engine.connect() as conn:
             conn.execute(
                 text(
-                    f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                    # db_name is generated internally from a hash, not user input
+                    f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity "  # noqa: S608
                     f"WHERE datname = '{db_name}' AND pid <> pg_backend_pid()"
                 )
             )
@@ -81,7 +82,8 @@ def _drop_pg_test_database(base_url: str, db_name: str) -> None:
         with engine.connect() as conn:
             conn.execute(
                 text(
-                    f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                    # db_name is generated internally from a hash, not user input
+                    f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity "  # noqa: S608
                     f"WHERE datname = '{db_name}' AND pid <> pg_backend_pid()"
                 )
             )
