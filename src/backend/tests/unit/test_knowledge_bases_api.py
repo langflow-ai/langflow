@@ -194,8 +194,7 @@ class TestKnowledgeBaseAPI:
         )
 
         assert response.status_code in (400, 403), (
-            f"VULNERABILITY CONFIRMED: create endpoint accepted traversal payload "
-            f"with status {response.status_code}"
+            f"VULNERABILITY CONFIRMED: create endpoint accepted traversal payload with status {response.status_code}"
         )
         assert not victim_dir.exists(), (
             "VULNERABILITY CONFIRMED: path traversal created a directory outside the user's KB root"
