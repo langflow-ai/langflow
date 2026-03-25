@@ -341,11 +341,57 @@ def _engine_url(db_url: str) -> str:
     return db_url
 
 
+# Postgres-only expression indexes from migrations; not mirrored in SQLModel.metadata.
+_MESSAGE_SESSION_METADATA_EXPRESSION_INDEX_NAMES = frozenset(
+    {
+        "ix_message_session_metadata_tenant",
+        "ix_message_session_metadata_user",
+    }
+)
+
+
+def _filter_expression_index_metadata_noise(diffs: list) -> list:
+    """Drop autogenerate index diffs for known migration-only expression indexes."""
+    out: list = []
+    for d in diffs:
+        if isinstance(d, tuple) and len(d) >= 2 and d[0] in {"add_index", "remove_index"}:
+            idx = d[1]
+            name = getattr(idx, "name", None)
+            if name in _MESSAGE_SESSION_METADATA_EXPRESSION_INDEX_NAMES:
+                continue
+        out.append(d)
+    return out
+
+
 def _filter_diffs(diffs: list, db_url: str) -> list:
     """Apply backend-appropriate diff filtering."""
+    filtered_diffs = list(diffs)
     if "sqlite" in db_url:
-        return _filter_sqlite_noise(diffs)
-    return list(diffs)
+        filtered_diffs = _filter_sqlite_noise(filtered_diffs)
+    else:
+        filtered_diffs = _filter_expression_index_metadata_noise(filtered_diffs)
+    return filtered_diffs
+
+
+class TestFilterExpressionIndexMetadataNoise:
+    """Tests for filtering migration-only expression index autogenerate noise."""
+
+    def test_known_session_metadata_indexes_suppressed(self):
+        class _FakeIdx:
+            name = "ix_message_session_metadata_tenant"
+
+        class _FakeIdx2:
+            name = "ix_message_session_metadata_user"
+
+        diffs = [("remove_index", _FakeIdx()), ("remove_index", _FakeIdx2())]
+        assert _filter_expression_index_metadata_noise(diffs) == []
+
+    def test_other_index_diffs_preserved(self):
+        class _FakeIdx:
+            name = "ix_message_session_id"
+
+        diffs = [("remove_index", _FakeIdx())]
+        assert _filter_expression_index_metadata_noise(diffs) == diffs
 
 
 def test_no_phantom_migrations(db_url):
