@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID
 
 from fastapi import HTTPException, Query, status
@@ -541,10 +541,36 @@ async def rollback_provider_create(
     deployment_adapter: DeploymentServiceProtocol,
     provider_id: UUID,
     resource_id: object,
+    provider_result: Any | None = None,
     user_id: UUID,
     db: DbSession,
 ) -> None:
-    """Best-effort compensating delete after a failed DB commit on create."""
+    """Best-effort compensating cleanup after a failed DB commit on create."""
+    rollback_create_result = getattr(deployment_adapter, "rollback_create_result", None)
+    if provider_result is not None and callable(rollback_create_result):
+        try:
+            with deployment_provider_scope(provider_id):
+                await rollback_create_result(
+                    deployment_id=str(resource_id),
+                    provider_result=provider_result,
+                    user_id=user_id,
+                    db=db,
+                )
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "Extended rollback failed for provider resource %s on provider account %s; "
+                "falling back to basic delete.",
+                resource_id,
+                provider_id,
+                exc_info=True,
+            )
+        else:
+            logger.info(
+                "Rolled back provider create result for resource %s on provider account %s after DB commit failure.",
+                resource_id,
+                provider_id,
+            )
+            return
     try:
         with deployment_provider_scope(provider_id):
             await deployment_adapter.delete(

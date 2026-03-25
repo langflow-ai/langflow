@@ -34,6 +34,7 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
             name="uq_deployment_provider_account_user_url_tenant",
         ),
         UniqueConstraint(
+            "user_id",
             "provider_key",
             "name",
             name="uq_deployment_provider_account_provider_name",
@@ -88,7 +89,9 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
             index=True,
         ),
     )
-    name: str = Field(description="User-chosen display name, unique within a provider_key (e.g. 'staging', 'prod').")
+    name: str = Field(
+        description="User-chosen display name, unique per user within a provider_key (e.g. 'staging', 'prod')."
+    )
     provider_url: str = Field(description="Provider service URL used for deployment crud in the account.")
     # MUST be stored encrypted; the CRUD layer encrypts via auth_utils before writing
     # and the Read schema intentionally excludes this field.

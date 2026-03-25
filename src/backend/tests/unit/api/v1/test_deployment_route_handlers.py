@@ -16,6 +16,11 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
+from langflow.api.v1.schemas.deployments import (
+    DeploymentProviderAccountCreateRequest,
+    DeploymentProviderAccountUpdateRequest,
+)
+from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 from lfx.services.adapters.deployment.exceptions import (
     AuthenticationError,
     DeploymentNotFoundError,
@@ -98,7 +103,10 @@ class TestCreateDeploymentRollback:
         pa = _fake_provider_account()
         mock_get_pa.return_value = pa
         adapter = AsyncMock()
-        create_result = DeploymentCreateResult(id="provider-dep-1")
+        create_result = DeploymentCreateResult(
+            id="provider-dep-1",
+            provider_result={"app_ids": ["cfg-1"], "tools_with_refs": [{"tool_id": "tool-1", "source_ref": "fv-1"}]},
+        )
         adapter.create.return_value = create_result
         mock_resolve_adapter.return_value = adapter
         mapper = MagicMock()
@@ -122,6 +130,7 @@ class TestCreateDeploymentRollback:
 
         mock_rollback.assert_awaited_once()
         assert mock_rollback.call_args.kwargs["resource_id"] == create_result.id
+        assert mock_rollback.call_args.kwargs["provider_result"] == create_result.provider_result
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.rollback_provider_create", new_callable=AsyncMock)
@@ -178,6 +187,203 @@ class TestCreateDeploymentRollback:
             await create_deployment(session=session, payload=payload, current_user=_fake_user())
 
         mock_rollback.assert_not_awaited()
+
+
+# ---------------------------------------------------------------------------
+# provider account routes
+# ---------------------------------------------------------------------------
+
+
+class TestProviderAccountRoutes:
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_provider_account_row_by_id", new_callable=AsyncMock)
+    async def test_update_provider_account_rejects_disallowed_url(
+        self,
+        mock_get_provider_account,
+        mock_get_mapper,
+        mock_resolve_adapter,
+    ):
+        """PATCH rejects provider URLs that do not match the provider allowlist."""
+        from langflow.api.v1.deployments import update_provider_account
+
+        mock_get_provider_account.return_value = SimpleNamespace(
+            id=uuid4(),
+            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+            provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+            api_key="encrypted-key",
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await update_provider_account(
+                provider_id=uuid4(),
+                session=AsyncMock(),
+                payload=DeploymentProviderAccountUpdateRequest(provider_url="https://new.example.com/api"),
+                current_user=_fake_user(),
+            )
+
+        assert exc_info.value.status_code == 400
+        mock_get_mapper.assert_not_called()
+        mock_resolve_adapter.assert_not_called()
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.update_provider_account_row", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_provider_account_row_by_id", new_callable=AsyncMock)
+    async def test_update_provider_account_verify_failure_returns_401(
+        self,
+        mock_get_provider_account,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_update_provider_account,
+    ):
+        """PATCH verifies new credentials before persisting them."""
+        from langflow.api.v1.deployments import update_provider_account
+
+        existing_account = SimpleNamespace(
+            id=uuid4(),
+            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+            provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+            api_key="encrypted-key",
+        )
+        mock_get_provider_account.return_value = existing_account
+
+        mapper = MagicMock()
+        mapper.resolve_verify_credentials_for_update.return_value = MagicMock()
+        mock_get_mapper.return_value = mapper
+
+        adapter = AsyncMock()
+        adapter.verify_credentials.side_effect = AuthenticationError(
+            message="bad creds",
+            error_code="authentication_error",
+        )
+        mock_resolve_adapter.return_value = adapter
+
+        with pytest.raises(HTTPException) as exc_info:
+            await update_provider_account(
+                provider_id=existing_account.id,
+                session=AsyncMock(),
+                payload=DeploymentProviderAccountUpdateRequest(provider_data={"api_key": "new-api-key"}),
+                current_user=_fake_user(),
+            )
+
+        assert exc_info.value.status_code == 401
+        mock_update_provider_account.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.create_provider_account_row", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    async def test_create_provider_account_conflict_returns_409(
+        self,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_create_provider_account,
+    ):
+        """POST converts duplicate provider-account conflicts into 409 responses."""
+        from langflow.api.v1.deployments import create_provider_account
+
+        mapper = MagicMock()
+        mapper.resolve_verify_credentials.return_value = MagicMock()
+        mapper.resolve_credential_fields.return_value = {"api_key": "api-key"}
+        mapper.resolve_provider_tenant_id.return_value = "tenant-1"
+        mock_get_mapper.return_value = mapper
+
+        adapter = AsyncMock()
+        mock_resolve_adapter.return_value = adapter
+        mock_create_provider_account.side_effect = ValueError("Provider account already exists")
+
+        payload = DeploymentProviderAccountCreateRequest(
+            name="prod",
+            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+            provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+            provider_data={"api_key": "api-key"},
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await create_provider_account(
+                session=AsyncMock(),
+                payload=payload,
+                current_user=_fake_user(),
+            )
+
+        assert exc_info.value.status_code == 409
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.update_provider_account_row", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_provider_account_row_by_id", new_callable=AsyncMock)
+    async def test_update_provider_account_conflict_returns_409(
+        self,
+        mock_get_provider_account,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_update_provider_account,
+    ):
+        """PATCH converts duplicate provider-account conflicts into 409 responses."""
+        from langflow.api.v1.deployments import update_provider_account
+
+        existing_account = SimpleNamespace(
+            id=uuid4(),
+            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+            provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+            api_key="encrypted-key",
+        )
+        mock_get_provider_account.return_value = existing_account
+
+        mapper = MagicMock()
+        mapper.resolve_verify_credentials_for_update.return_value = None
+        mapper.resolve_provider_account_update.return_value = {"name": "prod"}
+        mock_get_mapper.return_value = mapper
+        mock_resolve_adapter.return_value = AsyncMock()
+        mock_update_provider_account.side_effect = ValueError(
+            "Provider account update conflicts with an existing record"
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await update_provider_account(
+                provider_id=existing_account.id,
+                session=AsyncMock(),
+                payload=DeploymentProviderAccountUpdateRequest(name="prod"),
+                current_user=_fake_user(),
+            )
+
+        assert exc_info.value.status_code == 409
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.delete_provider_account_row", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
+    @patch(f"{ROUTES_MODULE}.get_provider_account_row_by_id", new_callable=AsyncMock)
+    async def test_delete_provider_account_rejects_when_deployments_exist(
+        self,
+        mock_get_provider_account,
+        mock_count_deployments,
+        mock_delete_provider_account,
+    ):
+        """DELETE refuses to remove provider accounts that still own deployments."""
+        from langflow.api.v1.deployments import delete_provider_account
+
+        existing_account = SimpleNamespace(
+            id=uuid4(),
+            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+            provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+            api_key="encrypted-key",
+        )
+        mock_get_provider_account.return_value = existing_account
+
+        with pytest.raises(HTTPException) as exc_info:
+            await delete_provider_account(
+                provider_id=existing_account.id,
+                session=AsyncMock(),
+                current_user=_fake_user(),
+            )
+
+        assert exc_info.value.status_code == 409
+        mock_count_deployments.assert_awaited_once()
+        mock_delete_provider_account.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------
@@ -378,7 +584,13 @@ class TestGetDeploymentSync:
     ):
         """Snapshot-level sync corrects the attached_count in the response."""
         from langflow.api.v1.deployments import get_deployment
-        from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
+
+        class _SnapshotMapper:
+            @staticmethod
+            def util_snapshot_ids_to_verify(attachments):
+                return [
+                    attachment.provider_snapshot_id for attachment in attachments if attachment.provider_snapshot_id
+                ]
 
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
@@ -390,7 +602,7 @@ class TestGetDeploymentSync:
         provider_deployment.updated_at = None
         provider_deployment.model_dump.return_value = {}
         adapter.get.return_value = provider_deployment
-        mock_resolve.return_value = (dep_row, adapter, WatsonxOrchestrateDeploymentMapper())
+        mock_resolve.return_value = (dep_row, adapter, _SnapshotMapper())
 
         att_good = _fake_attachment(provider_snapshot_id="snap-1")
         att_stale = _fake_attachment(provider_snapshot_id="snap-stale")
@@ -419,7 +631,13 @@ class TestGetDeploymentSync:
     ):
         """When no attachments have provider_snapshot_id, snapshot sync is skipped."""
         from langflow.api.v1.deployments import get_deployment
-        from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
+
+        class _SnapshotMapper:
+            @staticmethod
+            def util_snapshot_ids_to_verify(attachments):
+                return [
+                    attachment.provider_snapshot_id for attachment in attachments if attachment.provider_snapshot_id
+                ]
 
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
@@ -431,7 +649,7 @@ class TestGetDeploymentSync:
         provider_deployment.updated_at = None
         provider_deployment.model_dump.return_value = {}
         adapter.get.return_value = provider_deployment
-        mock_resolve.return_value = (dep_row, adapter, WatsonxOrchestrateDeploymentMapper())
+        mock_resolve.return_value = (dep_row, adapter, _SnapshotMapper())
         mock_list_att.return_value = [_fake_attachment(provider_snapshot_id=None)]
 
         session = AsyncMock()
@@ -455,7 +673,13 @@ class TestGetDeploymentSync:
     ):
         """When snapshot-level sync raises, the response uses unverified attachment count."""
         from langflow.api.v1.deployments import get_deployment
-        from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
+
+        class _SnapshotMapper:
+            @staticmethod
+            def util_snapshot_ids_to_verify(attachments):
+                return [
+                    attachment.provider_snapshot_id for attachment in attachments if attachment.provider_snapshot_id
+                ]
 
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
@@ -467,7 +691,7 @@ class TestGetDeploymentSync:
         provider_deployment.updated_at = None
         provider_deployment.model_dump.return_value = {}
         adapter.get.return_value = provider_deployment
-        mock_resolve.return_value = (dep_row, adapter, WatsonxOrchestrateDeploymentMapper())
+        mock_resolve.return_value = (dep_row, adapter, _SnapshotMapper())
 
         att1 = _fake_attachment(provider_snapshot_id="snap-1")
         att2 = _fake_attachment(provider_snapshot_id="snap-2")

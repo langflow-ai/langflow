@@ -20,9 +20,16 @@ from langflow.api.v1.mappers.deployments.contracts import (
     UpdateSnapshotBinding,
     UpdateSnapshotBindings,
 )
-from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
 from langflow.api.v1.schemas.deployments import DeploymentUpdateRequest
 from lfx.services.adapters.deployment.schema import DeploymentCreateResult, DeploymentUpdateResult
+
+try:
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
+except ModuleNotFoundError:
+    pytest.skip(
+        "Skipping Watsonx deployment sync tests: optional IBM SDK dependencies not available.",
+        allow_module_level=True,
+    )
 
 MODULE = "langflow.api.v1.mappers.deployments.helpers"
 
@@ -879,6 +886,48 @@ class TestRollbackProviderCreate:
 
         adapter.delete.assert_awaited_once()
         assert adapter.delete.call_args.kwargs["deployment_id"] == "provider-resource-123"
+
+    @pytest.mark.asyncio
+    async def test_uses_extended_provider_result_rollback_when_available(self):
+        """Adapters can clean up create-time side resources before falling back to delete."""
+        adapter = AsyncMock()
+
+        from langflow.api.v1.mappers.deployments.helpers import rollback_provider_create
+
+        provider_result = {"app_ids": ["app-1"], "tools_with_refs": [{"tool_id": "tool-1", "source_ref": "fv-1"}]}
+
+        await rollback_provider_create(
+            deployment_adapter=adapter,
+            provider_id=uuid4(),
+            resource_id="provider-resource-123",
+            provider_result=provider_result,
+            user_id=uuid4(),
+            db=AsyncMock(),
+        )
+
+        adapter.rollback_create_result.assert_awaited_once()
+        assert adapter.rollback_create_result.call_args.kwargs["provider_result"] == provider_result
+        adapter.delete.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_falls_back_to_delete_when_extended_rollback_fails(self):
+        """If the extended cleanup path fails, the helper still attempts the basic delete."""
+        adapter = AsyncMock()
+        adapter.rollback_create_result.side_effect = RuntimeError("rollback boom")
+
+        from langflow.api.v1.mappers.deployments.helpers import rollback_provider_create
+
+        await rollback_provider_create(
+            deployment_adapter=adapter,
+            provider_id=uuid4(),
+            resource_id="provider-resource-123",
+            provider_result={"app_ids": ["app-1"]},
+            user_id=uuid4(),
+            db=AsyncMock(),
+        )
+
+        adapter.rollback_create_result.assert_awaited_once()
+        adapter.delete.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_swallows_delete_failure(self):

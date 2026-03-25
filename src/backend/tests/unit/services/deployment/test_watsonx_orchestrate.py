@@ -1048,7 +1048,7 @@ async def test_apply_provider_create_plan_rolls_back_successfully_created_raw_co
         msg = "boom-create-connection"
         raise RuntimeError(msg)
 
-    async def mock_rollback_created_resources(*, clients, agent_id, tool_ids, app_ids=None):  # noqa: ARG001
+    async def mock_rollback_created_resources(*, _clients, _agent_id, _tool_ids, app_ids=None):
         captured["rollback_app_ids"] = list(app_ids or [])
 
     monkeypatch.setattr(
@@ -2291,6 +2291,45 @@ async def test_create_wires_provider_apply_result_to_response(monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_rollback_create_result_cleans_up_agent_tools_and_apps(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace()
+    captured: dict[str, object] = {}
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    async def mock_rollback_created_resources(*, clients, agent_id, tool_ids, app_ids=None):
+        captured["clients"] = clients
+        captured["agent_id"] = agent_id
+        captured["tool_ids"] = list(tool_ids)
+        captured["app_ids"] = list(app_ids or [])
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+    monkeypatch.setattr(service_module, "rollback_created_resources", mock_rollback_created_resources)
+
+    await service.rollback_create_result(
+        user_id="user-1",
+        deployment_id="dep-created",
+        provider_result={
+            "app_ids": ["lf_cfg"],
+            "tools_with_refs": [
+                {"source_ref": "fv-1", "tool_id": "tool-1"},
+                {"source_ref": "fv-2", "tool_id": "tool-2"},
+            ],
+        },
+        db=object(),
+    )
+
+    assert captured == {
+        "clients": fake_clients,
+        "agent_id": "dep-created",
+        "tool_ids": ["tool-1", "tool-2"],
+        "app_ids": ["lf_cfg"],
+    }
+
+
+@pytest.mark.anyio
 async def test_create_uses_caller_provided_resource_name_prefix(monkeypatch):
     """Create passes provider_data prefix through the create-plan builder."""
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
@@ -3296,6 +3335,36 @@ async def test_get_provider_clients_rejects_mixed_provider_contexts(monkeypatch)
         await client_module.get_provider_clients(user_id="user-1", db=object())
 
     assert resolve_calls == 1
+
+
+@pytest.mark.anyio
+async def test_resolve_wxo_client_credentials_reads_provider_url_from_account(monkeypatch):
+    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+
+    provider_account = DeploymentProviderAccount(
+        id=UUID("00000000-0000-0000-0000-000000000099"),
+        user_id=UUID("00000000-0000-0000-0000-000000000100"),
+        name="prod",
+        provider_tenant_id="tenant-1",
+        provider_key="watsonx-orchestrate",
+        provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+        api_key="encrypted-api-key",
+    )
+
+    async def mock_get_provider_account_by_id(*args, **kwargs):  # noqa: ARG001
+        return provider_account
+
+    monkeypatch.setattr(client_module, "get_provider_account_by_id", mock_get_provider_account_by_id)
+    monkeypatch.setattr(client_module.auth_utils, "decrypt_api_key", lambda _encrypted_api_key: "decrypted-api-key")
+
+    credentials = await client_module.resolve_wxo_client_credentials(
+        user_id="user-1",
+        db=object(),
+        provider_id=UUID("00000000-0000-0000-0000-000000000001"),
+    )
+
+    assert credentials.instance_url == provider_account.provider_url
+    assert credentials.authenticator is not None
 
 
 def test_wxo_client_initializes_subclients_eagerly(monkeypatch):

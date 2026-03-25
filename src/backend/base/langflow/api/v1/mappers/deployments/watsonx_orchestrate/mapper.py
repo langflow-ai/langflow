@@ -74,6 +74,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     PAYLOAD_SCHEMAS as WXO_ADAPTER_PAYLOAD_SCHEMAS,
 )
+from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.deployment_provider_account.utils import extract_tenant_from_url
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
     list_deployment_attachments_for_flow_version_ids,
@@ -146,6 +147,29 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         return VerifyCredentials(
             base_url=payload.provider_url,
             provider_data=validated,
+        )
+
+    def resolve_verify_credentials_for_update(
+        self,
+        *,
+        payload: DeploymentProviderAccountUpdateRequest,
+        existing_account: DeploymentProviderAccount,
+    ) -> VerifyCredentials | None:
+        url_changed = "provider_url" in payload.model_fields_set
+        provider_data_changed = "provider_data" in payload.model_fields_set
+        if not url_changed and not provider_data_changed:
+            return None
+
+        effective_url = payload.provider_url if url_changed else existing_account.provider_url
+        if provider_data_changed:
+            provider_data = self.resolve_credential_fields(provider_data=payload.provider_data)
+        else:
+            decrypted_api_key = auth_utils.decrypt_api_key((existing_account.api_key or "").strip())
+            provider_data = self.resolve_credential_fields(provider_data={"api_key": decrypted_api_key})
+
+        return VerifyCredentials(
+            base_url=effective_url,
+            provider_data=provider_data,
         )
 
     def resolve_provider_account_update(

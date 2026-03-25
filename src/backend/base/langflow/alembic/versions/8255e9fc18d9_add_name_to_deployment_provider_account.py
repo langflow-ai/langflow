@@ -7,8 +7,8 @@ Create Date: 2026-03-24 19:23:55.194564
 Phase: EXPAND
 
 Adds a ``name`` column (non-nullable) to ``deployment_provider_account``
-and a composite unique constraint on ``(provider_key, name)`` so that
-names are unique within a given provider.
+and a composite unique constraint on ``(user_id, provider_key, name)`` so
+that names are unique per user within a given provider.
 
 Existing rows are backfilled with ``'account-<first-8-chars-of-id>'``
 before the unique constraint is applied.
@@ -17,9 +17,9 @@ Risks
 -----
 * **Backfill collision (extremely unlikely):** The backfill derives names
   from the first 8 hex characters of each row's UUID.  A collision can
-  only occur between two rows that share the same ``provider_key`` *and*
-  whose UUIDs share the same first 8 hex chars which is unlikely given
-  the deployments feature is not officially shipped.
+  only occur between two rows that share the same ``user_id`` and
+  ``provider_key`` *and* whose UUIDs share the same first 8 hex chars.
+  That combination is expected to be extremely rare.
   If this ever triggers an ``IntegrityError`` during migration,
   re-run after manually assigning distinct names to the affected rows.
 
@@ -62,13 +62,14 @@ def upgrade() -> None:
     # Backfill existing rows with a unique name derived from the row id.
     # Uses the SQL-standard ``||`` operator (via SQLAlchemy's .concat())
     # and ``substr()``, both of which work on PostgreSQL and SQLite.
-    # The unique constraint is on (provider_key, name), so collisions can
-    # only happen between rows sharing the same provider_key whose UUID
-    # hex representations share the same first 8 characters
-    # which is unlikely given the deployments feature is not officially shipped.
+    # The unique constraint is on (user_id, provider_key, name), so collisions
+    # can only happen between rows sharing the same user_id and provider_key
+    # whose UUID hex representations share the same first 8 characters.
+    # That makes the backfill collision risk extremely small, but not impossible.
     table = sa.table(
         TABLE_NAME,
         sa.column("id", sa.Uuid()),
+        sa.column("user_id", sa.Uuid()),
         sa.column(COLUMN_NAME, AutoString()),
     )
 
@@ -80,7 +81,7 @@ def upgrade() -> None:
 
     with op.batch_alter_table(TABLE_NAME, schema=None) as batch_op:
         batch_op.alter_column(COLUMN_NAME, nullable=False)
-        batch_op.create_unique_constraint(UNIQUE_CONSTRAINT_NAME, ["provider_key", COLUMN_NAME])
+        batch_op.create_unique_constraint(UNIQUE_CONSTRAINT_NAME, ["user_id", "provider_key", COLUMN_NAME])
 
 
 def downgrade() -> None:

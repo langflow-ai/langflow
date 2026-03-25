@@ -376,3 +376,18 @@ async def test_create_provider_account_duplicate_name_per_provider_raises(db, us
     await _create_account(db, user, name="prod")
     with pytest.raises(ValueError, match="Provider account already exists"):
         await _create_account(db, user, name="prod", provider_url="https://other.example.com")
+
+
+@pytest.mark.asyncio
+async def test_create_provider_account_same_name_same_provider_allowed_for_different_users(db, user):
+    other_user = User(username="otheruser", password=_TEST_PASSWORD, is_active=True)
+    db.add(other_user)
+    await db.commit()
+    await db.refresh(other_user)
+
+    first = await _create_account(db, user, name="prod", provider_url="https://example.com")
+    second = await _create_account(db, other_user, name="prod", provider_url="https://example.com")
+
+    assert first.name == "prod"
+    assert second.name == "prod"
+    assert first.user_id != second.user_id

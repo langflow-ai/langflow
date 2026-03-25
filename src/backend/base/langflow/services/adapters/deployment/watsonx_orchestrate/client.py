@@ -157,7 +157,7 @@ async def resolve_wxo_client_credentials(
             msg = "Failed to find deployment provider account credentials."
             raise CredentialResolutionError(message=msg)
 
-        instance_url = (provider_account.backend_url or "").strip()
+        instance_url = (provider_account.provider_url or "").strip()
         api_key = auth_utils.decrypt_api_key((provider_account.api_key or "").strip())
         if not instance_url or not api_key:
             msg = "Watsonx Orchestrate backend URL and API key must be configured."

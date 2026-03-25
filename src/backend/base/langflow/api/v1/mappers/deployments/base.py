@@ -290,6 +290,24 @@ class BaseDeploymentMapper:
             base_url=payload.provider_url,
         )
 
+    def resolve_verify_credentials_for_update(
+        self,
+        *,
+        payload: DeploymentProviderAccountUpdateRequest,
+        existing_account: DeploymentProviderAccount,
+    ) -> VerifyCredentials | None:
+        """Build adapter verify-credentials input for provider-account updates.
+
+        Returns ``None`` when the update does not touch credentials or URL.
+        Provider-specific mappers must override this when update-time
+        verification is supported.
+        """
+        _ = existing_account
+        if "provider_url" not in payload.model_fields_set and "provider_data" not in payload.model_fields_set:
+            return None
+        msg = "Credential verification for provider account updates is not implemented for this provider."
+        raise NotImplementedError(msg)
+
     def shape_provider_account_response(
         self,
         provider_account: DeploymentProviderAccount,

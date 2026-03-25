@@ -69,7 +69,10 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution im
     create_agent_run,
     get_agent_run,
 )
-from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import retry_create
+from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import (
+    retry_create,
+    rollback_created_resources,
+)
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.status import (
     derive_agent_environment,
     get_deployment_detail_metadata,
@@ -215,6 +218,25 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         return DeploymentCreateResult[WatsonxDeploymentCreateResultData](
             id=apply_result.agent_id,
             provider_result=create_result_slot.parse(create_result_payload),
+        )
+
+    async def rollback_create_result(
+        self,
+        *,
+        user_id: IdLike,
+        deployment_id: IdLike,
+        provider_result: object,
+        db: AsyncSession,
+    ) -> None:
+        """Best-effort cleanup for create-time side resources after a DB failure."""
+        result_data = WatsonxDeploymentCreateResultData.model_validate(provider_result)
+        clients = await self._get_provider_clients(user_id=user_id, db=db)
+        tool_ids = dedupe_list([binding.tool_id for binding in result_data.tools_with_refs])
+        await rollback_created_resources(
+            clients=clients,
+            agent_id=_normalize_and_validate_id(str(deployment_id), field_name="deployment_id"),
+            tool_ids=tool_ids,
+            app_ids=result_data.app_ids,
         )
 
     async def list_types(

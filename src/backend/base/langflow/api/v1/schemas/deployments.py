@@ -145,7 +145,10 @@ class DeploymentProviderAccountCreateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
     name: NonEmptyStr = Field(
-        description="User-chosen display name for this provider account. Must be unique within a provider_key.",
+        description=(
+            "User-chosen display name for this provider account. "
+            "Must be unique per user within a provider_key."
+        ),
     )
     provider_tenant_id: NonEmptyStr | None = Field(
         default=None,
@@ -203,6 +206,14 @@ class DeploymentProviderAccountUpdateRequest(BaseModel):
             if field_name in self.model_fields_set and getattr(self, field_name) is None:
                 msg = f"'{field_name}' cannot be set to null."
                 raise ValueError(msg)
+        return self
+
+    def validate_provider_url_allowed(
+        self,
+        provider_key: DeploymentProviderKey,
+    ) -> DeploymentProviderAccountUpdateRequest:
+        if "provider_url" in self.model_fields_set and self.provider_url is not None:
+            check_provider_url_allowed(self.provider_url, provider_key)
         return self
 
 

@@ -161,6 +161,21 @@ class TestProviderUrlSchemaValidation:
         update = DeploymentProviderAccountUpdateRequest(provider_url="https://new.example.com/api")
         assert update.provider_url == "https://new.example.com/api"
 
+    def test_update_validate_provider_url_allowed_accepts_provider_hostname(self):
+        update = DeploymentProviderAccountUpdateRequest(
+            provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+        )
+
+        validated = update.validate_provider_url_allowed(DeploymentProviderKey.WATSONX_ORCHESTRATE)
+
+        assert validated is update
+
+    def test_update_validate_provider_url_allowed_rejects_disallowed_provider_hostname(self):
+        update = DeploymentProviderAccountUpdateRequest(provider_url="https://new.example.com/api")
+
+        with pytest.raises(ValueError, match="not allowed"):
+            update.validate_provider_url_allowed(DeploymentProviderKey.WATSONX_ORCHESTRATE)
+
     def test_update_rejects_http(self):
         with pytest.raises(ValidationError, match="https"):
             DeploymentProviderAccountUpdateRequest(provider_url="http://example.com")

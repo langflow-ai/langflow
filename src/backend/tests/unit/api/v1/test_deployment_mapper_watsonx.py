@@ -15,18 +15,29 @@ from langflow.api.v1.mappers.deployments.contracts import (
     FlowVersionPatch,
     UpdateSnapshotBindings,
 )
-from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
-from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
-    WatsonxApiDeploymentCreatePayload,
-    WatsonxApiDeploymentUpdatePayload,
-    WatsonxApiDeploymentUpdateResultData,
-)
-from langflow.api.v1.schemas.deployments import DeploymentCreateRequest, DeploymentUpdateRequest
-from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
-    WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
+from langflow.api.v1.schemas.deployments import (
+    DeploymentCreateRequest,
+    DeploymentProviderAccountUpdateRequest,
+    DeploymentUpdateRequest,
 )
 from lfx.services.adapters.deployment.schema import DeploymentCreateResult, DeploymentType, DeploymentUpdateResult
 from lfx.services.adapters.schema import AdapterType
+
+try:
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
+        WatsonxApiDeploymentCreatePayload,
+        WatsonxApiDeploymentUpdatePayload,
+        WatsonxApiDeploymentUpdateResultData,
+    )
+    from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
+        WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
+    )
+except ModuleNotFoundError:
+    pytest.skip(
+        "Skipping Watsonx mapper tests: optional IBM SDK dependencies not available.",
+        allow_module_level=True,
+    )
 
 
 class _FakeExecResult:
@@ -108,6 +119,72 @@ def test_watsonx_api_payload_accepts_flow_version_unbind_and_remove_contract() -
     )
     assert payload.operations[0].op == "unbind"
     assert payload.operations[1].op == "remove_tool"
+
+
+def test_watsonx_mapper_resolve_verify_credentials_for_update_uses_decrypted_stored_key(monkeypatch) -> None:
+    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    existing_account = DeploymentProviderAccount(
+        id=uuid4(),
+        user_id=uuid4(),
+        name="prod",
+        provider_tenant_id="tenant-1",
+        provider_key="watsonx-orchestrate",
+        provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+        api_key="encrypted-api-key",
+    )
+    payload = DeploymentProviderAccountUpdateRequest(
+        provider_url="https://api.eu-de.wxo.cloud.ibm.com/instances/tenant-2",
+    )
+
+    monkeypatch.setattr(
+        "langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper.auth_utils.decrypt_api_key",
+        lambda _encrypted_api_key: "stored-api-key",
+    )
+
+    verify_input = mapper.resolve_verify_credentials_for_update(
+        payload=payload,
+        existing_account=existing_account,
+    )
+
+    assert verify_input is not None
+    assert verify_input.base_url == payload.provider_url
+    assert verify_input.provider_data == {"api_key": "stored-api-key"}
+
+
+def test_watsonx_mapper_resolve_verify_credentials_for_update_prefers_new_provider_data(monkeypatch) -> None:
+    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    existing_account = DeploymentProviderAccount(
+        id=uuid4(),
+        user_id=uuid4(),
+        name="prod",
+        provider_tenant_id="tenant-1",
+        provider_key="watsonx-orchestrate",
+        provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+        api_key="encrypted-api-key",
+    )
+    payload = DeploymentProviderAccountUpdateRequest(provider_data={"api_key": "new-api-key"})
+
+    def _fail_decrypt(_encrypted_api_key: str) -> str:
+        msg = "decrypt_api_key should not be called when new provider_data is supplied"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(
+        "langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper.auth_utils.decrypt_api_key",
+        _fail_decrypt,
+    )
+
+    verify_input = mapper.resolve_verify_credentials_for_update(
+        payload=payload,
+        existing_account=existing_account,
+    )
+
+    assert verify_input is not None
+    assert verify_input.base_url == existing_account.provider_url
+    assert verify_input.provider_data == {"api_key": "new-api-key"}
 
 
 @pytest.mark.asyncio

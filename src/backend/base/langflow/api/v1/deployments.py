@@ -30,6 +30,7 @@ from langflow.api.v1.mappers.deployments.helpers import (
     list_deployments_synced,
     normalize_flow_version_query_ids,
     page_offset,
+    raise_http_for_value_error,
     resolve_adapter_from_deployment,
     resolve_adapter_mapper_from_deployment,
     resolve_adapter_mapper_from_provider_id,
@@ -70,12 +71,13 @@ from langflow.api.v1.schemas.deployments import (
 )
 from langflow.services.adapters.deployment.context import deployment_provider_scope
 from langflow.services.database.models.deployment.crud import (
-    create_deployment as create_deployment_db,
-)
-from langflow.services.database.models.deployment.crud import (
+    count_deployments_by_provider,
     delete_deployment_by_id,
     deployment_name_exists,
     get_deployment_by_resource_key,
+)
+from langflow.services.database.models.deployment.crud import (
+    create_deployment as create_deployment_db,
 )
 from langflow.services.database.models.deployment.crud import (
     update_deployment as update_deployment_db,
@@ -122,6 +124,13 @@ DeploymentIdQuery = Annotated[
 ]
 
 
+def _raise_http_for_provider_account_value_error(exc: ValueError) -> None:
+    message = str(exc).lower()
+    if "already exists" in message or "conflicts with an existing record" in message:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    raise_http_for_value_error(exc)
+
+
 @router.post(
     "/providers",
     response_model=DeploymentProviderAccountGetResponse,
@@ -136,28 +145,31 @@ async def create_provider_account(
     deployment_mapper = get_deployment_mapper(payload.provider_key)
     deployment_adapter = resolve_deployment_adapter(payload.provider_key)
 
-    verify_input = deployment_mapper.resolve_verify_credentials(payload=payload)
     with handle_adapter_errors():
+        verify_input = deployment_mapper.resolve_verify_credentials(payload=payload)
         await deployment_adapter.verify_credentials(
             user_id=current_user.id,
             payload=verify_input,
         )
 
-    resolved_provider_tenant_id = resolve_provider_tenant_id(
-        deployment_mapper=deployment_mapper,
-        provider_url=payload.provider_url,
-        provider_tenant_id=payload.provider_tenant_id,
-    )
-    credential_kwargs = deployment_mapper.resolve_credential_fields(provider_data=payload.provider_data)
-    provider_account = await create_provider_account_row(
-        session,
-        user_id=current_user.id,
-        name=payload.name,
-        provider_tenant_id=resolved_provider_tenant_id,
-        provider_key=payload.provider_key,
-        provider_url=payload.provider_url,
-        **credential_kwargs,
-    )
+    try:
+        resolved_provider_tenant_id = resolve_provider_tenant_id(
+            deployment_mapper=deployment_mapper,
+            provider_url=payload.provider_url,
+            provider_tenant_id=payload.provider_tenant_id,
+        )
+        credential_kwargs = deployment_mapper.resolve_credential_fields(provider_data=payload.provider_data)
+        provider_account = await create_provider_account_row(
+            session,
+            user_id=current_user.id,
+            name=payload.name,
+            provider_tenant_id=resolved_provider_tenant_id,
+            provider_key=payload.provider_key,
+            provider_url=payload.provider_url,
+            **credential_kwargs,
+        )
+    except ValueError as exc:
+        _raise_http_for_provider_account_value_error(exc)
     return to_provider_account_response(provider_account)
 
 
@@ -208,7 +220,20 @@ async def delete_provider_account(
     provider_account = await get_provider_account_row_by_id(session, provider_id=provider_id, user_id=current_user.id)
     if provider_account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment provider account not found.")
-    await delete_provider_account_row(session, provider_account=provider_account)
+    deployment_count = await count_deployments_by_provider(
+        session,
+        user_id=current_user.id,
+        deployment_provider_account_id=provider_id,
+    )
+    if deployment_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot delete provider account while deployments still exist.",
+        )
+    try:
+        await delete_provider_account_row(session, provider_account=provider_account)
+    except ValueError as exc:
+        _raise_http_for_provider_account_value_error(exc)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -227,16 +252,46 @@ async def update_provider_account(
     if provider_account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment provider account not found.")
 
+    try:
+        payload.validate_provider_url_allowed(provider_account.provider_key)
+    except ValueError as exc:
+        _raise_http_for_provider_account_value_error(exc)
+
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
-    update_kwargs = deployment_mapper.resolve_provider_account_update(
-        payload=payload,
-        existing_account=provider_account,
-    )
-    updated = await update_provider_account_row(
-        session,
-        provider_account=provider_account,
-        **update_kwargs,
-    )
+    verify_input = None
+    if "provider_url" in payload.model_fields_set or "provider_data" in payload.model_fields_set:
+        deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
+        try:
+            verify_input = deployment_mapper.resolve_verify_credentials_for_update(
+                payload=payload,
+                existing_account=provider_account,
+            )
+        except ValueError as exc:
+            _raise_http_for_provider_account_value_error(exc)
+        except NotImplementedError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail="This operation is not supported by the deployment provider.",
+            ) from exc
+        if verify_input is not None:
+            with handle_adapter_errors():
+                await deployment_adapter.verify_credentials(
+                    user_id=current_user.id,
+                    payload=verify_input,
+                )
+
+    try:
+        update_kwargs = deployment_mapper.resolve_provider_account_update(
+            payload=payload,
+            existing_account=provider_account,
+        )
+        updated = await update_provider_account_row(
+            session,
+            provider_account=provider_account,
+            **update_kwargs,
+        )
+    except ValueError as exc:
+        _raise_http_for_provider_account_value_error(exc)
     return to_provider_account_response(updated)
 
 
@@ -330,6 +385,7 @@ async def create_deployment(
             deployment_adapter=deployment_adapter,
             provider_id=provider_id,
             resource_id=result.id,
+            provider_result=result.provider_result,
             user_id=current_user.id,
             db=session,
         )
