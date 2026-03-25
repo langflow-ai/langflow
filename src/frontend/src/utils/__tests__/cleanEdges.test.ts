@@ -257,13 +257,12 @@ function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
               (o) => o.name === sourceNode.data.selected_output,
             );
         const outputByFallback = sourceNode.data.node.outputs?.find(
-            (o) =>
-              (o.selected ||
-                (sourceNode.data.node.outputs?.filter(
-                  (out) => !out.group_outputs,
-                )?.length ?? 0) <= 1) &&
-              o.name === name,
-          );
+          (o) =>
+            (o.selected ||
+              (sourceNode.data.node.outputs?.filter((out) => !out.group_outputs)
+                ?.length ?? 0) <= 1) &&
+            o.name === name,
+        );
         const output = outputBySelectedOutput ?? outputByFallback;
 
         if (output) {
