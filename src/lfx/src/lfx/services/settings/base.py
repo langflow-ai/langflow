@@ -151,6 +151,8 @@ class Settings(BaseSettings):
     """The cache type can be 'async' or 'redis'."""
     cache_expire: int = 3600
     """The cache expire in seconds."""
+    cache_dir: str | None = None
+    """The directory to store disk cache. Defaults to config_dir if not set."""
     variable_store: str = "db"
     """The store can be 'db' or 'kubernetes'."""
 
