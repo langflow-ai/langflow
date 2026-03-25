@@ -220,9 +220,8 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
         if (edgeInNewEdges) {
           edgeInNewEdges.targetHandle = expectedTargetHandle;
           if (edgeInNewEdges.data) {
-            edgeInNewEdges.data.targetHandle = scapeJSONParse(
-              expectedTargetHandle,
-            );
+            edgeInNewEdges.data.targetHandle =
+              scapeJSONParse(expectedTargetHandle);
           }
           // Update edge ID to reflect new handles
           edgeInNewEdges.id =
@@ -251,15 +250,14 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
           : sourceNode.data.node!.outputs?.find(
               (output) => output.name === sourceNode.data.selected_output,
             );
-        const outputByFallback =
-          sourceNode.data.node!.outputs?.find(
-            (output) =>
-              (output.selected ||
-                (sourceNode.data.node!.outputs?.filter(
-                  (output) => !output.group_outputs,
-                )?.length ?? 0) <= 1) &&
-              output.name === name,
-          );
+        const outputByFallback = sourceNode.data.node!.outputs?.find(
+          (output) =>
+            (output.selected ||
+              (sourceNode.data.node!.outputs?.filter(
+                (output) => !output.group_outputs,
+              )?.length ?? 0) <= 1) &&
+            output.name === name,
+        );
         const output = outputBySelectedOutput ?? outputByFallback;
 
         if (output) {
@@ -293,9 +291,8 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
             if (edgeInNewEdges) {
               edgeInNewEdges.sourceHandle = expectedSourceHandle;
               if (edgeInNewEdges.data) {
-                edgeInNewEdges.data.sourceHandle = scapeJSONParse(
-                  expectedSourceHandle,
-                );
+                edgeInNewEdges.data.sourceHandle =
+                  scapeJSONParse(expectedSourceHandle);
               }
               // Update edge ID to reflect new handles
               edgeInNewEdges.id =
