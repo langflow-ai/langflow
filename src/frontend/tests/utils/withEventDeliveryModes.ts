@@ -21,7 +21,6 @@ export function withEventDeliveryModes(
 
   for (const eventDelivery of eventDeliveryModes) {
     test(`${title} - ${eventDelivery}`, config, async ({ page }) => {
-
       // Intercept the config request and modify the event_delivery setting
       await page.route("**/api/v1/config", async (route) => {
         const response = await route.fetch();
