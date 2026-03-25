@@ -113,6 +113,7 @@ class AreduceComponent(BaseAgenticComponent):
                 else "\nGenerate a list of instances of the target type following those instructions : ."
                 + self.instructions,
                 llm=llm,
+                areduce_batch_size=100,
             )
 
             output = await (target << source)
