@@ -80,6 +80,11 @@ class YouDotComResearchComponent(Component):
         return "\n".join(lines)
 
     def research_combined(self) -> Message:
+        """Perform research and return combined answer with sources.
+
+        Returns:
+            Message: A Message containing the research answer with citations appended.
+        """
         try:
             research_results = self._call_research_api()
             output = research_results.get("output", {})
@@ -106,6 +111,11 @@ class YouDotComResearchComponent(Component):
         return Message(text=content)
 
     def research_answer(self) -> Message:
+        """Perform research and return the answer only.
+
+        Returns:
+            Message: A Message containing the research answer.
+        """
         try:
             research_results = self._call_research_api()
             output = research_results.get("output", {})
@@ -130,6 +140,11 @@ class YouDotComResearchComponent(Component):
         return Message(text=content)
 
     def research_sources(self) -> DataFrame:
+        """Perform research and return sources as a DataFrame.
+
+        Returns:
+            DataFrame: A DataFrame containing the research sources with titles, URLs, and snippets.
+        """
         try:
             research_results = self._call_research_api()
             output = research_results.get("output", {})

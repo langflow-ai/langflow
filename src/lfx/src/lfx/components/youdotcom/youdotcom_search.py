@@ -182,6 +182,12 @@ class YouDotComSearchComponent(Component):
     ]
 
     def fetch_content(self) -> list[Data]:
+        """Fetch search results from You.com API.
+
+        Returns:
+            list[Data]: A list of Data objects containing search results,
+                        each with title, URL, description, snippets, and optionally contents.
+        """
         try:
             url = "https://ydc-index.io/v1/search"
             headers = {"X-API-Key": self.api_key, "User-Agent": USER_AGENT}
@@ -256,5 +262,10 @@ class YouDotComSearchComponent(Component):
             return data_results
 
     def fetch_content_dataframe(self) -> DataFrame:
+        """Fetch search results as a DataFrame.
+
+        Returns:
+            DataFrame: A DataFrame containing the search results.
+        """
         data = self.fetch_content()
         return DataFrame(data)

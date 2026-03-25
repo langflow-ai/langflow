@@ -54,6 +54,12 @@ class YouDotComContentsComponent(Component):
     ]
 
     def fetch_content(self) -> list[Data]:
+        """Extract content from URLs using You.com API.
+
+        Returns:
+            list[Data]: A list of Data objects containing extracted content,
+                        each with URL, title, and content (markdown/html/metadata).
+        """
         try:
             if self.crawl_timeout is not None and not (1 <= self.crawl_timeout <= MAX_CRAWL_TIMEOUT):
                 msg = f"crawl_timeout must be between 1 and {MAX_CRAWL_TIMEOUT} seconds"
@@ -115,5 +121,10 @@ class YouDotComContentsComponent(Component):
             return data_results
 
     def fetch_content_dataframe(self) -> DataFrame:
+        """Fetch extracted content as a DataFrame.
+
+        Returns:
+            DataFrame: A DataFrame containing the extracted content.
+        """
         data = self.fetch_content()
         return DataFrame(data)
