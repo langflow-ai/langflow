@@ -3,15 +3,31 @@ name: Database Migration Validation
 on:
   pull_request:
     paths:
-      - 'src/backend/base/langflow/alembic/versions/*.py'
-      - 'src/backend/base/langflow/services/database/models/**/*.py'
-      - 'src/backend/tests/unit/alembic/test_migration_execution.py'
+      - 'src/backend/base/langflow/alembic/**'
+      - 'src/backend/base/langflow/services/database/models/**'
+      - 'src/backend/base/langflow/services/database/service.py'
+      - 'src/backend/tests/unit/alembic/**'
       - '.github/workflows/migration-validation.yml'
 
 jobs:
   model-migration-consistency:
     name: Model/Migration Consistency
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: langflow
+          POSTGRES_PASSWORD: langflow
+          POSTGRES_DB: langflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U langflow"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
       - name: Checkout code
@@ -29,11 +45,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync
+          uv sync --extra postgresql
 
       - name: Check model/migration consistency
         env:
           MIGRATION_VALIDATION_CI: "true"
+          LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"
         run: |
           uv run pytest src/backend/tests/unit/alembic/test_migration_execution.py -x -v
 
