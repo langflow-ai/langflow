@@ -20,8 +20,10 @@ class KeycloakSettings(BaseSettings):
     # Redirect URI that Keycloak calls back (must be registered in Keycloak client)
     REDIRECT_URI: str = ""
 
-    # JWT claim that contains the list of groups (e.g. ["groups", "realm_access.roles"])
-    GROUPS_CLAIM: str = "groups"
+    # The single shared Langflow username everyone on this instance logs into.
+    # Authorization (who is allowed) is enforced by Keycloak; anyone who
+    # successfully passes Keycloak lands on this account.
+    SHARED_USERNAME: str = "langflow-shared"
 
     # Text shown on the login button
     BUTTON_TEXT: str = "Login with Keycloak"
@@ -29,6 +31,9 @@ class KeycloakSettings(BaseSettings):
     # Secret for signing the OAuth2 state parameter JWT.
     # Falls back to LANGFLOW_SECRET_KEY at runtime if not set.
     STATE_SECRET: str = Field(default="")
+
+    # Removed: GROUPS_CLAIM — group-based mapping is no longer used.
+    # Authorization is fully delegated to Keycloak (client-level access control).
 
     @property
     def token_endpoint(self) -> str:
