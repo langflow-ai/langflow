@@ -134,6 +134,15 @@ async def create_provider_account(
     current_user: CurrentActiveUser,
 ):
     deployment_mapper = get_deployment_mapper(payload.provider_key)
+    deployment_adapter = resolve_deployment_adapter(payload.provider_key)
+
+    verify_input = deployment_mapper.resolve_verify_credentials(payload=payload)
+    with handle_adapter_errors():
+        await deployment_adapter.verify_credentials(
+            user_id=current_user.id,
+            payload=verify_input,
+        )
+
     resolved_provider_tenant_id = resolve_provider_tenant_id(
         deployment_mapper=deployment_mapper,
         provider_url=payload.provider_url,

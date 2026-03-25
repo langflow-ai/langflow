@@ -18,6 +18,7 @@ from lfx.services.adapters.deployment.schema import (
     ExecutionCreateResult,
     ExecutionStatusResult,
     SnapshotItems,
+    VerifyCredentials,
 )
 from lfx.services.adapters.deployment.schema import (
     DeploymentCreate as AdapterDeploymentCreate,
@@ -29,6 +30,7 @@ from lfx.services.adapters.payload import PayloadSlot
 
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
+    DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountGetResponse,
     DeploymentUpdateRequest,
     DeploymentUpdateResponse,
@@ -209,6 +211,21 @@ class BaseDeploymentMapper:
         """Resolve provider tenant id for provider-account create/update."""
         _ = provider_url
         return provider_tenant_id
+
+    def resolve_verify_credentials(
+        self,
+        *,
+        payload: DeploymentProviderAccountCreateRequest,
+    ) -> VerifyCredentials:
+        """Build adapter verify-credentials input from the API create request.
+
+        The base implementation extracts only ``base_url``.  Credentials
+        are provider-specific and must be packed into ``provider_data`` by
+        provider mapper overrides.
+        """
+        return VerifyCredentials(
+            base_url=payload.provider_url,
+        )
 
     def shape_provider_account_response(
         self,

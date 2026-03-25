@@ -175,6 +175,7 @@ def raise_as_deployment_error(
             status_code=status_code,
             detail=detail,
             message_prefix=error_prefix.value,
+            cause=exc,
         )
     logger.exception(log_msg)
     msg = f"{error_prefix.value} Please check server logs for details."

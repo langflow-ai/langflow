@@ -497,6 +497,7 @@ def test_base_mapper_shapes_provider_account_response() -> None:
     timestamp = datetime.now(tz=UTC)
     account = SimpleNamespace(
         id=uuid4(),
+        name="staging",
         provider_tenant_id="tenant-1",
         provider_key="watsonx-orchestrate",
         provider_url="https://provider.example",
@@ -506,6 +507,7 @@ def test_base_mapper_shapes_provider_account_response() -> None:
 
     shaped = mapper.shape_provider_account_response(account)
     assert shaped.id == account.id
+    assert shaped.name == "staging"
     assert shaped.provider_tenant_id == "tenant-1"
     assert shaped.provider_key == "watsonx-orchestrate"
     assert shaped.provider_url == "https://provider.example"
@@ -550,3 +552,26 @@ def test_mapper_registry_get_returns_cached_instance_for_key() -> None:
     first = registry.get("acme")
     second = registry.get("acme")
     assert first is second
+
+
+# ---------------------------------------------------------------------------
+# resolve_verify_credentials
+# ---------------------------------------------------------------------------
+
+
+def test_base_mapper_resolve_verify_credentials_extracts_provider_url() -> None:
+    """Base mapper builds VerifyCredentials with provider_url only."""
+    from langflow.api.v1.schemas.deployments import DeploymentProviderAccountCreateRequest
+    from lfx.services.adapters.deployment.schema import VerifyCredentials
+
+    mapper = BaseDeploymentMapper()
+    payload = DeploymentProviderAccountCreateRequest(
+        name="test-account",
+        provider_key="watsonx-orchestrate",
+        provider_url="https://api.us-south.wxo.cloud.ibm.com",
+        api_key="secret-key",  # pragma: allowlist secret
+    )
+    result = mapper.resolve_verify_credentials(payload=payload)
+    assert isinstance(result, VerifyCredentials)
+    assert "cloud.ibm.com" in result.base_url
+    assert result.provider_data is None

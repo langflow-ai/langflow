@@ -31,6 +31,8 @@ from lfx.services.adapters.deployment.payloads import (
     T_ProviderResult,
     T_SnapshotListParams,
     T_SnapshotListResult,
+    T_VerifyCredentials,
+    T_VerifyCredentialsResult,
 )
 from lfx.services.adapters.payload import AdapterPayload
 
@@ -613,6 +615,33 @@ class ExecutionStatusResult(ExecutionResultBase[T_ExecutionStatusResult]):
     response types: create responses and status responses represent different API
     stages and may diverge as the contract evolves.
     """
+
+
+class VerifyCredentials(BaseModel, Generic[T_VerifyCredentials]):
+    """Provider-agnostic input for credential verification.
+
+    ``base_url`` is the only provider-agnostic field; actual credentials
+    (API keys, access-key pairs, client secrets, etc.) are carried in
+    ``provider_data`` because different providers use fundamentally different
+    credential shapes.  Each adapter defines its own credential model via the
+    ``T_VerifyCredentials`` type parameter, and the mapper is responsible for
+    packing the appropriate credentials into ``provider_data``.
+    """
+
+    base_url: str = Field(description="Provider service URL to verify against.")
+    provider_data: T_VerifyCredentials | None = Field(
+        None,
+        description="Provider-specific credential payload.",
+    )
+
+
+class VerifyCredentialsResult(BaseModel, Generic[T_VerifyCredentialsResult]):
+    """Provider-agnostic result from credential verification."""
+
+    provider_result: T_VerifyCredentialsResult | None = Field(
+        None,
+        description="Provider-specific result payload.",
+    )
 
 
 class DeploymentListTypesResult(ProviderResultModel[AdapterPayload]):

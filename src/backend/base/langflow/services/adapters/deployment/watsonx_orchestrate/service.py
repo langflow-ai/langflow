@@ -7,6 +7,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException, status
+from ibm_cloud_sdk_core import ApiException
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 from lfx.services.adapters.deployment.base import BaseDeploymentService
 from lfx.services.adapters.deployment.exceptions import (
@@ -20,6 +21,8 @@ from lfx.services.adapters.deployment.exceptions import (
     InvalidDeploymentOperationError,
     InvalidDeploymentTypeError,
     OperationNotSupportedError,
+    ResourceNotFoundError,
+    raise_for_status_and_detail,
 )
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
@@ -46,11 +49,13 @@ from lfx.services.adapters.deployment.schema import (
     SnapshotItem,
     SnapshotListParams,
     SnapshotListResult,
+    VerifyCredentials,
+    VerifyCredentialsResult,
     _normalize_and_validate_id,
 )
 from lfx.services.adapters.payload import AdapterPayloadMissingError, AdapterPayloadValidationError
 
-from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_provider_clients
+from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_authenticator, get_provider_clients
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
     SUPPORTED_ADAPTER_DEPLOYMENT_TYPES,
     ErrorPrefix,
@@ -526,7 +531,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 exc,
                 error_prefix=ErrorPrefix.CREATE_EXECUTION,
                 log_msg="Unexpected error creating wxO deployment execution",
-                pass_through=(AuthenticationError, AuthorizationError, DeploymentNotFoundError, InvalidContentError),
+                pass_through=(AuthenticationError, AuthorizationError, ResourceNotFoundError, InvalidContentError),
             )
 
         return ExecutionCreateResult(
@@ -559,7 +564,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 exc,
                 error_prefix=ErrorPrefix.GET_EXECUTION,
                 log_msg="Unexpected error fetching wxO deployment execution",
-                pass_through=(AuthenticationError, AuthorizationError, DeploymentNotFoundError, InvalidContentError),
+                pass_through=(AuthenticationError, AuthorizationError, ResourceNotFoundError, InvalidContentError),
             )
 
         return ExecutionStatusResult(
@@ -723,6 +728,59 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 log_msg="Unexpected error while verifying wxO tool snapshots by ID",
             )
         return SnapshotListResult(snapshots=snapshots)
+
+    async def verify_credentials(
+        self,
+        *,
+        user_id: IdLike,  # noqa: ARG002
+        payload: VerifyCredentials,
+    ) -> VerifyCredentialsResult:
+        """Verify WXO credentials by obtaining a token from the provider."""
+        verify_slot = self.payload_schemas.verify_credentials
+        if verify_slot is None:
+            msg = "Required slot 'verify_credentials' is not configured."
+            raise DeploymentError(message=msg, error_code="deployment_error")
+
+        provider_creds = verify_slot.parse(payload.provider_data)
+        authenticator = get_authenticator(
+            instance_url=payload.base_url,
+            api_key=provider_creds.api_key,
+        )
+        # AuthSchemeError bubbles up from get_authenticator for unrecognised URLs
+
+        try:
+            authenticator.validate()
+        except ValueError as exc:
+            raise InvalidContentError(
+                message=(
+                    "Provider credentials are malformed. Please ensure the URL and API key are correctly formatted."
+                ),
+                cause=exc,
+            ) from exc
+
+        try:
+            await asyncio.to_thread(authenticator.token_manager.get_token)
+        except ApiException as exc:
+            # Log the raw provider detail for diagnostics but do not
+            # propagate it — the response body could echo secrets.
+            logger.error(  # noqa: TRY400
+                "Credential verification failed (status=%s)",
+                exc.status_code,
+            )
+            raise_for_status_and_detail(
+                status_code=exc.status_code,
+                detail="Credential verification failed.",
+                message_prefix="Credential verification",
+                cause=None,
+            )
+        except Exception as exc:
+            raise DeploymentError(
+                message="Credential verification failed unexpectedly.",
+                error_code="deployment_error",
+                cause=exc,
+            ) from exc
+
+        return VerifyCredentialsResult()
 
     async def teardown(self) -> None:
         """Teardown provider-specific resources."""

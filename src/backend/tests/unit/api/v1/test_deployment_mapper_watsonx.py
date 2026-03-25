@@ -514,3 +514,38 @@ def test_watsonx_mapper_trusts_top_level_deployment_id() -> None:
         provider_result={"agent_id": "agent-1", "status": "accepted"},
     )
     assert mapper.util_resource_key_from_execution(result) == "agent-1"
+
+
+# ---------------------------------------------------------------------------
+# resolve_verify_credentials
+# ---------------------------------------------------------------------------
+
+
+def test_wxo_mapper_resolve_verify_credentials_packs_api_key() -> None:
+    """WXO mapper packs api_key into provider_data via the adapter slot."""
+    from langflow.api.v1.schemas.deployments import DeploymentProviderAccountCreateRequest
+    from lfx.services.adapters.deployment.schema import VerifyCredentials
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    payload = DeploymentProviderAccountCreateRequest(
+        name="test-account",
+        provider_key="watsonx-orchestrate",
+        provider_url="https://api.us-south.wxo.cloud.ibm.com",
+        api_key="my-secret-key",  # pragma: allowlist secret
+    )
+    result = mapper.resolve_verify_credentials(payload=payload)
+    assert isinstance(result, VerifyCredentials)
+    assert "cloud.ibm.com" in result.base_url
+    assert result.provider_data is not None
+    assert result.provider_data["api_key"] == "my-secret-key"  # pragma: allowlist secret
+
+
+def test_wxo_mapper_resolve_verify_credentials_rejects_extra_fields() -> None:
+    """WXO slot uses extra='forbid' so unexpected credential fields are rejected."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import PAYLOAD_SCHEMAS
+    from lfx.services.adapters.payload import AdapterPayloadValidationError
+
+    slot = PAYLOAD_SCHEMAS.verify_credentials
+    assert slot is not None
+    with pytest.raises(AdapterPayloadValidationError):
+        slot.parse({"api_key": "ok", "unexpected": "field"})  # pragma: allowlist secret

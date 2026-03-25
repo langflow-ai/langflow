@@ -19,6 +19,7 @@ from lfx.services.adapters.deployment.exceptions import (
     InvalidContentError,
     InvalidDeploymentOperationError,
     OperationNotSupportedError,
+    ResourceNotFoundError,
 )
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
@@ -3579,7 +3580,7 @@ def test_raise_as_deployment_error_maps_not_found():
     resp = SimpleNamespace(status_code=500, text='{"detail":"Agent \'abc\' not found"}')
     exc = ClientAPIException(response=resp)
 
-    with pytest.raises(DeploymentNotFoundError, match="not found"):
+    with pytest.raises(ResourceNotFoundError, match="not found"):
         raise_as_deployment_error(
             exc,
             error_prefix=ErrorPrefix.UPDATE,
@@ -3970,10 +3971,10 @@ def test_raise_for_status_separates_status_codes_from_string_heuristics():
     Now, the 404 status code check is standalone, and 'not found' string heuristic only
     fires as a fallback for unmapped status codes.
     """
-    from lfx.services.adapters.deployment.exceptions import raise_for_status_and_detail
+    from lfx.services.adapters.deployment.exceptions import ResourceNotFoundError, raise_for_status_and_detail
 
-    # status_code=404 raises DeploymentNotFoundError regardless of detail text
-    with pytest.raises(DeploymentNotFoundError):
+    # status_code=404 raises ResourceNotFoundError regardless of detail text
+    with pytest.raises(ResourceNotFoundError):
         raise_for_status_and_detail(status_code=404, detail="anything", message_prefix="test")
 
     # status_code=409 raises DeploymentConflictError regardless of detail text
@@ -3981,7 +3982,7 @@ def test_raise_for_status_separates_status_codes_from_string_heuristics():
         raise_for_status_and_detail(status_code=409, detail="anything", message_prefix="test")
 
     # String heuristics still work as fallback for unmapped/None status codes
-    with pytest.raises(DeploymentNotFoundError):
+    with pytest.raises(ResourceNotFoundError):
         raise_for_status_and_detail(status_code=None, detail="agent not found", message_prefix="test")
     with pytest.raises(DeploymentConflictError):
         raise_for_status_and_detail(status_code=None, detail="resource already exists", message_prefix="test")
@@ -4780,3 +4781,158 @@ def test_shape_execution_status_result_none_execution_id():
     )
     assert "execution_id" not in response.provider_data
     assert response.provider_data["status"] == "in_progress"
+
+
+# ---------------------------------------------------------------------------
+# verify_credentials
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_verify_credentials_success(monkeypatch):
+    """verify_credentials returns VerifyCredentialsResult on valid credentials."""
+    from lfx.services.adapters.deployment.schema import VerifyCredentials, VerifyCredentialsResult
+
+    class FakeTokenManager:
+        def get_token(self):
+            return "fake-token"
+
+    class FakeAuthenticator:
+        token_manager = FakeTokenManager()
+
+        def validate(self):
+            pass
+
+    monkeypatch.setattr(
+        service_module,
+        "get_authenticator",
+        lambda **_kwargs: FakeAuthenticator(),
+    )
+
+    svc = WatsonxOrchestrateDeploymentService(settings_service=DummySettingsService())
+    payload = VerifyCredentials(
+        base_url="https://api.us-south.wxo.cloud.ibm.com",
+        provider_data={"api_key": "valid-key"},  # pragma: allowlist secret
+    )
+    result = await svc.verify_credentials(user_id="u1", payload=payload)
+    assert isinstance(result, VerifyCredentialsResult)
+
+
+@pytest.mark.anyio
+async def test_verify_credentials_invalid_key_raises(monkeypatch):
+    """verify_credentials raises AuthenticationError when provider rejects credentials."""
+    from ibm_cloud_sdk_core import ApiException
+    from lfx.services.adapters.deployment.exceptions import AuthenticationError
+    from lfx.services.adapters.deployment.schema import VerifyCredentials
+
+    class FakeTokenManager:
+        def get_token(self):
+            raise ApiException(401, message="invalid api key")
+
+    class FailingAuthenticator:
+        token_manager = FakeTokenManager()
+
+        def validate(self):
+            pass
+
+    monkeypatch.setattr(
+        service_module,
+        "get_authenticator",
+        lambda **_kwargs: FailingAuthenticator(),
+    )
+
+    svc = WatsonxOrchestrateDeploymentService(settings_service=DummySettingsService())
+    payload = VerifyCredentials(
+        base_url="https://api.us-south.wxo.cloud.ibm.com",
+        provider_data={"api_key": "bad-key"},  # pragma: allowlist secret
+    )
+    with pytest.raises(AuthenticationError, match="Credential verification"):
+        await svc.verify_credentials(user_id="u1", payload=payload)
+
+
+@pytest.mark.anyio
+async def test_verify_credentials_malformed_key_raises(monkeypatch):
+    """verify_credentials raises InvalidContentError when local validation fails."""
+    from lfx.services.adapters.deployment.exceptions import InvalidContentError
+    from lfx.services.adapters.deployment.schema import VerifyCredentials
+
+    class MalformedAuthenticator:
+        def validate(self):
+            msg = "api key contains bad characters"
+            raise ValueError(msg)
+
+    monkeypatch.setattr(
+        service_module,
+        "get_authenticator",
+        lambda **_kwargs: MalformedAuthenticator(),
+    )
+
+    svc = WatsonxOrchestrateDeploymentService(settings_service=DummySettingsService())
+    payload = VerifyCredentials(
+        base_url="https://api.us-south.wxo.cloud.ibm.com",
+        provider_data={"api_key": "bad\x00key"},  # pragma: allowlist secret
+    )
+    with pytest.raises(InvalidContentError, match="malformed"):
+        await svc.verify_credentials(user_id="u1", payload=payload)
+
+
+@pytest.mark.anyio
+async def test_verify_credentials_missing_provider_data_raises():
+    """verify_credentials raises when provider_data is missing."""
+    from lfx.services.adapters.deployment.schema import VerifyCredentials
+    from lfx.services.adapters.payload import AdapterPayloadMissingError
+
+    svc = WatsonxOrchestrateDeploymentService(settings_service=DummySettingsService())
+    payload = VerifyCredentials(
+        base_url="https://api.us-south.wxo.cloud.ibm.com",
+        provider_data=None,
+    )
+    with pytest.raises(AdapterPayloadMissingError):
+        await svc.verify_credentials(user_id="u1", payload=payload)
+
+
+@pytest.mark.anyio
+async def test_verify_credentials_bad_auth_scheme_raises():
+    """verify_credentials raises AuthSchemeError for unrecognised URLs."""
+    from lfx.services.adapters.deployment.exceptions import AuthSchemeError
+    from lfx.services.adapters.deployment.schema import VerifyCredentials
+
+    svc = WatsonxOrchestrateDeploymentService(settings_service=DummySettingsService())
+    payload = VerifyCredentials(
+        base_url="https://unknown-provider.example.com",
+        provider_data={"api_key": "some-key"},  # pragma: allowlist secret
+    )
+    with pytest.raises(AuthSchemeError):
+        await svc.verify_credentials(user_id="u1", payload=payload)
+
+
+@pytest.mark.anyio
+async def test_verify_credentials_provider_unreachable(monkeypatch):
+    """verify_credentials raises DeploymentError on network failure."""
+    from lfx.services.adapters.deployment.exceptions import DeploymentError
+    from lfx.services.adapters.deployment.schema import VerifyCredentials
+
+    class FakeTokenManager:
+        def get_token(self):
+            msg = "connection refused"
+            raise ConnectionError(msg)
+
+    class UnreachableAuthenticator:
+        token_manager = FakeTokenManager()
+
+        def validate(self):
+            pass
+
+    monkeypatch.setattr(
+        service_module,
+        "get_authenticator",
+        lambda **_kwargs: UnreachableAuthenticator(),
+    )
+
+    svc = WatsonxOrchestrateDeploymentService(settings_service=DummySettingsService())
+    payload = VerifyCredentials(
+        base_url="https://api.us-south.wxo.cloud.ibm.com",
+        provider_data={"api_key": "some-key"},  # pragma: allowlist secret
+    )
+    with pytest.raises(DeploymentError, match="failed unexpectedly"):
+        await svc.verify_credentials(user_id="u1", payload=payload)

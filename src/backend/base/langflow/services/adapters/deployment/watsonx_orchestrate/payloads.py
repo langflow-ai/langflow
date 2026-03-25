@@ -513,6 +513,14 @@ class WatsonxProviderCreateApplyResult(BaseModel):
     display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
+class WatsonxVerifyCredentialsPayload(BaseModel):
+    """WXO credential shape for provider account verification."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    api_key: str
+
+
 # Canonical watsonx deployment payload registry. Adapter service and mapper
 # consume this same object to keep slot ownership explicit and avoid drift.
 PAYLOAD_SCHEMAS = DeploymentPayloadSchemas(
@@ -523,4 +531,5 @@ PAYLOAD_SCHEMAS = DeploymentPayloadSchemas(
     deployment_update_result=PayloadSlot(WatsonxDeploymentUpdateResultData),
     execution_create_result=PayloadSlot(WatsonxAgentExecutionResultData),
     execution_status_result=PayloadSlot(WatsonxAgentExecutionResultData),
+    verify_credentials=PayloadSlot(WatsonxVerifyCredentialsPayload),
 )

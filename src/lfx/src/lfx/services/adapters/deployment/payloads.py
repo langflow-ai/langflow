@@ -39,6 +39,14 @@ T_ConfigListParamsModel = TypeVar("T_ConfigListParamsModel", bound=BaseModel, de
 T_SnapshotListParams = TypeVar("T_SnapshotListParams", default=AdapterPayload)
 T_SnapshotListParamsModel = TypeVar("T_SnapshotListParamsModel", bound=BaseModel, default=BaseModel)
 
+# Verify credentials pairs — credentials are provider-specific and carried
+# in provider_data rather than as top-level fields on the base schema.
+T_VerifyCredentials = TypeVar("T_VerifyCredentials", default=AdapterPayload)
+T_VerifyCredentialsModel = TypeVar("T_VerifyCredentialsModel", bound=BaseModel, default=BaseModel)
+
+T_VerifyCredentialsResult = TypeVar("T_VerifyCredentialsResult", default=AdapterPayload)
+T_VerifyCredentialsResultModel = TypeVar("T_VerifyCredentialsResultModel", bound=BaseModel, default=BaseModel)
+
 # Flow artifact provider_data pair
 T_FlowProviderData = TypeVar("T_FlowProviderData", default=AdapterPayload)
 T_FlowProviderDataModel = TypeVar("T_FlowProviderDataModel", bound=BaseModel, default=BaseModel)
@@ -107,6 +115,7 @@ class DeploymentPayloadFields(ProviderPayloadSchemas):
     config_list_params: PayloadSlot[T_ConfigListParamsModel] | None = None
     snapshot_list_params: PayloadSlot[T_SnapshotListParamsModel] | None = None
     flow_artifact: PayloadSlot[T_FlowProviderDataModel] | None = None
+    verify_credentials: PayloadSlot[T_VerifyCredentialsModel] | None = None
 
     # Outbound (adapter -> response)
     deployment_create_result: PayloadSlot[T_DeploymentCreateResultModel] | None = None
@@ -119,6 +128,7 @@ class DeploymentPayloadFields(ProviderPayloadSchemas):
     execution_status_result: PayloadSlot[T_ExecutionStatusResultModel] | None = None
     deployment_item_data: PayloadSlot[T_DeploymentItemDataModel] | None = None
     deployment_status_data: PayloadSlot[T_DeploymentStatusDataModel] | None = None
+    verify_credentials_result: PayloadSlot[T_VerifyCredentialsResultModel] | None = None
 
 
 @dataclass(frozen=True)

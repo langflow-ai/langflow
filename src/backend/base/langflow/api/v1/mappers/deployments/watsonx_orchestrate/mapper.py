@@ -13,6 +13,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentUpdateResult,
     ExecutionCreateResult,
     ExecutionStatusResult,
+    VerifyCredentials,
 )
 from lfx.services.adapters.deployment.schema import (
     DeploymentCreate as AdapterDeploymentCreate,
@@ -61,6 +62,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
 )
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
+    DeploymentProviderAccountCreateRequest,
     DeploymentUpdateRequest,
     DeploymentUpdateResponse,
     ExecutionCreateResponse,
@@ -122,6 +124,19 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         if account_index >= len(path_segments):
             return None
         return path_segments[account_index].strip() or None
+
+    def resolve_verify_credentials(
+        self,
+        *,
+        payload: DeploymentProviderAccountCreateRequest,
+    ) -> VerifyCredentials:
+        verify_slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.verify_credentials
+        credentials = {"api_key": payload.api_key.get_secret_value()}
+        provider_data = verify_slot.apply(credentials) if verify_slot else credentials
+        return VerifyCredentials(
+            base_url=payload.provider_url,
+            provider_data=provider_data,
+        )
 
     def util_create_flow_artifact_provider_data(
         self,

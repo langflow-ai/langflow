@@ -58,6 +58,10 @@ from lfx.services.adapters.deployment.schema import (
 from pydantic import AfterValidator, BaseModel, Field, SecretStr, ValidationInfo, field_validator, model_validator
 
 from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderKey
+from langflow.services.database.models.deployment_provider_account.utils import (
+    validate_provider_url,
+    validate_provider_url_optional,
+)
 
 # ---------------------------------------------------------------------------
 # Shared validation helpers
@@ -113,6 +117,13 @@ NonEmptyStr = Annotated[str, AfterValidator(_strip_nonempty)]
 """String type that strips whitespace and rejects empty/whitespace-only values."""
 
 
+ValidatedUrl = Annotated[str, AfterValidator(validate_provider_url)]
+"""URL type that enforces HTTPS, blocks private IPs, and normalizes."""
+
+ValidatedUrlOptional = Annotated[str | None, AfterValidator(validate_provider_url_optional)]
+"""Optional URL type that enforces HTTPS, blocks private IPs, and normalizes (None passes through)."""
+
+
 def _validate_flow_version_ids(values: list[str] | None) -> list[str] | None:
     """AfterValidator for optional flow_version_ids query parameter."""
     if values is None:
@@ -140,7 +151,7 @@ class DeploymentProviderAccountCreateRequest(BaseModel):
         description="Provider-owned tenant/organization id. Langflow persists this opaque value.",
     )
     provider_key: DeploymentProviderKey = Field(description="Deployment provider key.")
-    provider_url: NonEmptyStr = Field(
+    provider_url: ValidatedUrl = Field(
         description="Provider service URL persisted in Langflow DB for provider-account resolution.",
     )
     api_key: SecretStr = Field(
@@ -167,7 +178,7 @@ class DeploymentProviderAccountUpdateRequest(BaseModel):
         default=None,
         description="Provider-owned tenant/organization id. Omit to keep existing value, null to clear.",
     )
-    provider_url: NonEmptyStr | None = Field(
+    provider_url: ValidatedUrlOptional = Field(
         default=None,
         description="Provider service URL. Omit to keep existing value; cannot be set to null.",
     )

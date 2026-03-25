@@ -125,6 +125,85 @@ class TestProviderAccountName:
         assert "name" in DeploymentProviderAccountGetResponse.model_fields
 
 
+# ---------------------------------------------------------------------------
+# provider_url URL validation
+# ---------------------------------------------------------------------------
+
+
+class TestProviderUrlSchemaValidation:
+    """URL validation for provider_url on create and update schemas."""
+
+    def test_create_accepts_valid_https_url(self):
+        account = DeploymentProviderAccountCreateRequest(
+            name="staging",
+            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+            provider_url="https://api.example.com/v1",
+            api_key="key",
+        )
+        assert account.provider_url == "https://api.example.com/v1"
+
+    def test_create_normalizes_scheme_and_host(self):
+        account = DeploymentProviderAccountCreateRequest(
+            name="staging",
+            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+            provider_url="HTTPS://API.Example.COM/v1",
+            api_key="key",
+        )
+        assert account.provider_url == "https://api.example.com/v1"
+
+    def test_create_rejects_http(self):
+        with pytest.raises(ValidationError, match="https"):
+            DeploymentProviderAccountCreateRequest(
+                name="staging",
+                provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+                provider_url="http://example.com",
+                api_key="key",
+            )
+
+    def test_create_rejects_private_ip(self):
+        with pytest.raises(ValidationError, match="private"):
+            DeploymentProviderAccountCreateRequest(
+                name="staging",
+                provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+                provider_url="https://127.0.0.1/api",
+                api_key="key",
+            )
+
+    def test_create_rejects_10_network(self):
+        with pytest.raises(ValidationError, match="private"):
+            DeploymentProviderAccountCreateRequest(
+                name="staging",
+                provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+                provider_url="https://10.0.0.1/api",
+                api_key="key",
+            )
+
+    def test_create_rejects_no_scheme(self):
+        with pytest.raises(ValidationError, match="https"):
+            DeploymentProviderAccountCreateRequest(
+                name="staging",
+                provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+                provider_url="example.com",
+                api_key="key",
+            )
+
+    def test_update_accepts_valid_https_url(self):
+        update = DeploymentProviderAccountUpdateRequest(provider_url="https://new.example.com/api")
+        assert update.provider_url == "https://new.example.com/api"
+
+    def test_update_rejects_http(self):
+        with pytest.raises(ValidationError, match="https"):
+            DeploymentProviderAccountUpdateRequest(provider_url="http://example.com")
+
+    def test_update_rejects_private_ip(self):
+        with pytest.raises(ValidationError, match="private"):
+            DeploymentProviderAccountUpdateRequest(provider_url="https://192.168.1.1/api")
+
+    def test_update_omits_url_without_error(self):
+        update = DeploymentProviderAccountUpdateRequest(name="new-name")
+        assert update.provider_url is None
+
+
 class TestProviderKeyEnum:
     def test_accepts_valid_enum_value(self):
         account = DeploymentProviderAccountCreateRequest(

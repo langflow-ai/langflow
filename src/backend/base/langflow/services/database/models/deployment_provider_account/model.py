@@ -10,6 +10,7 @@ from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
 from langflow.schema.serialize import UUIDstr
+from langflow.services.database.models.deployment_provider_account.utils import validate_provider_url
 from langflow.services.database.utils import (
     normalize_string_or_none,
     validate_non_empty_string,
@@ -96,7 +97,7 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
         ),
     )
     name: str = Field(description="User-chosen display name, unique within a provider_key (e.g. 'staging', 'prod').")
-    provider_url: str = Field(description="Provider service URL used for provider-account resolution.")
+    provider_url: str = Field(description="Provider service URL used for deployment crud in the account.")
     # MUST be stored encrypted; the CRUD layer encrypts via auth_utils before writing
     # and the Read schema intentionally excludes this field.
     api_key: str = Field(description="Provider credential material. Stored encrypted; never returned in API responses.")
@@ -120,10 +121,15 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
     def normalize_tenant_id(cls, v: str | None) -> str | None:
         return normalize_string_or_none(v)
 
-    @field_validator("name", "provider_url", "api_key")
+    @field_validator("name", "api_key")
     @classmethod
     def validate_non_empty(cls, v: str, info: object) -> str:
         return validate_non_empty_string(v, info)
+
+    @field_validator("provider_url")
+    @classmethod
+    def validate_url(cls, v: str, info: object) -> str:
+        return validate_provider_url(v, info)
 
 
 class DeploymentProviderAccountRead(SQLModel):

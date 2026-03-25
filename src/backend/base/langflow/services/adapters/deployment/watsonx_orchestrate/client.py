@@ -20,7 +20,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
-from ibm_cloud_sdk_core.authenticators import Authenticator, IAMAuthenticator, MCSPAuthenticator
+from ibm_cloud_sdk_core.authenticators import IAMAuthenticator, MCSPAuthenticator
 from ibm_watsonx_orchestrate_core.types.connections import KeyValueConnectionCredentials
 from lfx.services.adapters.deployment.exceptions import AuthSchemeError, CredentialResolutionError
 from lfx.services.adapters.deployment.schema import EnvVarSource, EnvVarValueSpec, IdLike
@@ -125,7 +125,7 @@ def set_request_context_provider_clients(*, provider_id: UUID, user_id: UUID | s
     WxOProviderClientsRequestContext.set_current(context)
 
 
-def get_authenticator(instance_url: str, api_key: str) -> Authenticator:
+def get_authenticator(instance_url: str, api_key: str) -> IAMAuthenticator | MCSPAuthenticator:
     """Return the appropriate authenticator for the Watsonx Orchestrate API."""
     if ".cloud.ibm.com" in instance_url:
         return IAMAuthenticator(apikey=api_key, url=WxOAuthURL.IBM_IAM.value)
