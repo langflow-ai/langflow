@@ -11,6 +11,12 @@ USER_AGENT = "langflow-youdotcom/1.0"
 MAX_CRAWL_TIMEOUT = 60
 
 
+class InputValidationError(ValueError):
+    """Raised when input validation fails."""
+
+    pass
+
+
 class YouDotComContentsComponent(Component):
     display_name = "You.com Contents"
     description = (
@@ -63,7 +69,7 @@ class YouDotComContentsComponent(Component):
         try:
             if self.crawl_timeout is not None and not (1 <= self.crawl_timeout <= MAX_CRAWL_TIMEOUT):
                 msg = f"crawl_timeout must be between 1 and {MAX_CRAWL_TIMEOUT} seconds"
-                raise ValueError(msg)
+                raise InputValidationError(msg)
 
             url = "https://ydc-index.io/v1/contents"
             headers = {
@@ -73,6 +79,9 @@ class YouDotComContentsComponent(Component):
             }
 
             url_list = [u.strip() for u in self.urls.split(",") if u.strip()]
+            if not url_list:
+                msg = "urls cannot be empty. Please provide at least one valid URL."
+                raise InputValidationError(msg)
 
             payload: dict = {
                 "urls": url_list,
@@ -110,6 +119,10 @@ class YouDotComContentsComponent(Component):
             return [Data(text=error_message, data={"error": error_message})]
         except httpx.RequestError as exc:
             error_message = f"Request error occurred: {exc}"
+            logger.error(error_message)
+            return [Data(text=error_message, data={"error": error_message})]
+        except InputValidationError as exc:
+            error_message = f"Input validation error: {exc}"
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
         except ValueError as exc:
