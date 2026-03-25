@@ -59,8 +59,8 @@ export function useFlowEvents(flowId: string | undefined): UseFlowEventsReturn {
         clearInterval_();
         intervalRef.current = setInterval(poll, IDLE_INTERVAL);
       }
-    } catch {
-      // Polling is best-effort
+    } catch (error) {
+      console.warn("[useFlowEvents] Poll failed:", error);
     }
   }, [flowId, clearInterval_]);
 
