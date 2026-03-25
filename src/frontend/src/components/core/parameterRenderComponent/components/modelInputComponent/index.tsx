@@ -304,12 +304,8 @@ export default function ModelInputComponent({
     return null;
   }
 
-  // Loading state (skip if showEmptyState is true - we want to show the empty dropdown instead)
-  if (
-    ((!options || options.length === 0) && !showEmptyState) ||
-    isRefreshingAfterClose ||
-    refreshOptions
-  ) {
+  // Show loading indicator only when actually loading data, not when options are genuinely empty
+  if (isLoading || isRefreshingAfterClose || refreshOptions) {
     return <div className="w-full">{renderLoadingButton()}</div>;
   }
 

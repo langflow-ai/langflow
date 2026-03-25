@@ -902,6 +902,7 @@ help_test: ## show testing commands
 	@echo "$(GREEN)Combined Tests:$(NC)"
 	@echo "  $(GREEN)make tests$(NC)               - Run all tests (unit + integration + coverage)"
 	@echo "  $(GREEN)make coverage$(NC)            - Run tests and generate coverage report"
+	@echo "  $(GREEN)make test_frontend_coverage_full$(NC)            - Run tests and generate coverage report"
 	@echo ''
 	@echo "$(GREEN)Frontend Tests:$(NC)"
 	@echo "  $(GREEN)make tests_frontend$(NC)      - Run Playwright e2e tests"
@@ -918,6 +919,9 @@ help_test: ## show testing commands
 	@echo "  $(GREEN)make test_frontend_pattern pattern$(NC) - Run tests matching pattern"
 	@echo "  $(GREEN)make test_frontend_snapshots$(NC) - Update Jest snapshots"
 	@echo "  $(GREEN)make test_frontend_config$(NC) - Show Jest configuration"
+	@echo ''
+	@echo "$(GREEN)Combined Frontend Test Coverage:$(NC)"
+	@echo "  $(GREEN)make test_frontend_coverage_full$(NC) - Run frontend tests and generate coverage report"
 	@echo ''
 	@echo "$(GREEN)Load Testing:$(NC)"
 	@echo "  $(GREEN)make locust$(NC)              - Run locust load tests"
