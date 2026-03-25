@@ -1,5 +1,4 @@
 from datetime import datetime
-from enum import Enum
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
@@ -10,6 +9,7 @@ from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
 from langflow.schema.serialize import UUIDstr
+from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 from langflow.services.database.models.deployment_provider_account.utils import validate_provider_url
 from langflow.services.database.utils import (
     normalize_string_or_none,
@@ -19,17 +19,6 @@ from langflow.services.database.utils import (
 if TYPE_CHECKING:
     from langflow.services.database.models.deployment.model import Deployment
     from langflow.services.database.models.user.model import User
-
-
-class DeploymentProviderKey(str, Enum):
-    """Deployment provider identifiers recognised by Langflow.
-
-    Each member value must match the adapter registry key used by
-    ``get_deployment_adapter(adapter_key)`` in LFX and the corresponding
-    mapper registration in the Langflow mapper registry.
-    """
-
-    WATSONX_ORCHESTRATE = "watsonx-orchestrate"
 
 
 class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]

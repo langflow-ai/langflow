@@ -19,7 +19,7 @@ from langflow.api.v1.schemas.deployments import (
     FlowVersionsAttach,
     FlowVersionsPatch,
 )
-from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderKey
+from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 from pydantic import SecretStr, ValidationError
 
 # ---------------------------------------------------------------------------
@@ -40,7 +40,7 @@ class TestApiKeyWriteOnly:
             id=uuid4(),
             name="staging",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_url="https://example.com",
+            provider_url="https://api.us-south.wxo.cloud.ibm.com",
         )
         dumped = response.model_dump()
         assert "api_key" not in dumped
@@ -50,7 +50,7 @@ class TestApiKeyWriteOnly:
         account = DeploymentProviderAccountCreateRequest(
             name="staging",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_url="https://example.com",
+            provider_url="https://api.us-south.wxo.cloud.ibm.com",
             api_key="super-secret-key",
         )
         assert isinstance(account.api_key, SecretStr)
@@ -73,7 +73,7 @@ class TestProviderAccountName:
         account = DeploymentProviderAccountCreateRequest(
             name="production",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_url="https://example.com",
+            provider_url="https://api.us-south.wxo.cloud.ibm.com",
             api_key="key",
         )
         assert account.name == "production"
@@ -82,7 +82,7 @@ class TestProviderAccountName:
         account = DeploymentProviderAccountCreateRequest(
             name="  staging  ",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_url="https://example.com",
+            provider_url="https://api.us-south.wxo.cloud.ibm.com",
             api_key="key",
         )
         assert account.name == "staging"
@@ -137,19 +137,19 @@ class TestProviderUrlSchemaValidation:
         account = DeploymentProviderAccountCreateRequest(
             name="staging",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_url="https://api.example.com/v1",
+            provider_url="https://api.us-south.wxo.cloud.ibm.com/v1",
             api_key="key",
         )
-        assert account.provider_url == "https://api.example.com/v1"
+        assert account.provider_url == "https://api.us-south.wxo.cloud.ibm.com/v1"
 
     def test_create_normalizes_scheme_and_host(self):
         account = DeploymentProviderAccountCreateRequest(
             name="staging",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_url="HTTPS://API.Example.COM/v1",
+            provider_url="HTTPS://API.US-SOUTH.WXO.CLOUD.IBM.COM/v1",
             api_key="key",
         )
-        assert account.provider_url == "https://api.example.com/v1"
+        assert account.provider_url == "https://api.us-south.wxo.cloud.ibm.com/v1"
 
     def test_create_rejects_http(self):
         with pytest.raises(ValidationError, match="https"):
@@ -157,24 +157,6 @@ class TestProviderUrlSchemaValidation:
                 name="staging",
                 provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
                 provider_url="http://example.com",
-                api_key="key",
-            )
-
-    def test_create_rejects_private_ip(self):
-        with pytest.raises(ValidationError, match="private"):
-            DeploymentProviderAccountCreateRequest(
-                name="staging",
-                provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-                provider_url="https://127.0.0.1/api",
-                api_key="key",
-            )
-
-    def test_create_rejects_10_network(self):
-        with pytest.raises(ValidationError, match="private"):
-            DeploymentProviderAccountCreateRequest(
-                name="staging",
-                provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-                provider_url="https://10.0.0.1/api",
                 api_key="key",
             )
 
@@ -195,10 +177,6 @@ class TestProviderUrlSchemaValidation:
         with pytest.raises(ValidationError, match="https"):
             DeploymentProviderAccountUpdateRequest(provider_url="http://example.com")
 
-    def test_update_rejects_private_ip(self):
-        with pytest.raises(ValidationError, match="private"):
-            DeploymentProviderAccountUpdateRequest(provider_url="https://192.168.1.1/api")
-
     def test_update_omits_url_without_error(self):
         update = DeploymentProviderAccountUpdateRequest(name="new-name")
         assert update.provider_url is None
@@ -209,7 +187,7 @@ class TestProviderKeyEnum:
         account = DeploymentProviderAccountCreateRequest(
             name="staging",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_url="https://example.com",
+            provider_url="https://api.us-south.wxo.cloud.ibm.com",
             api_key="key",
         )
         assert account.provider_key == DeploymentProviderKey.WATSONX_ORCHESTRATE
@@ -218,7 +196,7 @@ class TestProviderKeyEnum:
         account = DeploymentProviderAccountCreateRequest(
             name="staging",
             provider_key="watsonx-orchestrate",
-            provider_url="https://example.com",
+            provider_url="https://api.us-south.wxo.cloud.ibm.com",
             api_key="key",
         )
         assert account.provider_key == DeploymentProviderKey.WATSONX_ORCHESTRATE

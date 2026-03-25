@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from langflow.services.database.models.deployment_provider_account.utils import (
+    check_provider_url_allowed,
     validate_provider_url,
     validate_provider_url_optional,
 )
@@ -78,93 +79,12 @@ class TestValidateProviderUrl:
         with pytest.raises(ValueError, match="must use the https scheme"):
             validate_provider_url("javascript:alert(1)", self._info())
 
-    # -- private / reserved IP blocking --
-
-    def test_rejects_loopback_v4(self):
-        with pytest.raises(ValueError, match="private or reserved"):
-            validate_provider_url("https://127.0.0.1/api", self._info())
-
-    def test_rejects_loopback_v6(self):
-        with pytest.raises(ValueError, match="private or reserved"):
-            validate_provider_url("https://[::1]/api", self._info())
-
-    def test_rejects_10_network(self):
-        with pytest.raises(ValueError, match="private or reserved"):
-            validate_provider_url("https://10.0.0.1/api", self._info())
-
-    def test_rejects_172_16_network(self):
-        with pytest.raises(ValueError, match="private or reserved"):
-            validate_provider_url("https://172.16.0.1/api", self._info())
-
-    def test_rejects_192_168_network(self):
-        with pytest.raises(ValueError, match="private or reserved"):
-            validate_provider_url("https://192.168.1.1/api", self._info())
-
-    def test_rejects_link_local(self):
-        with pytest.raises(ValueError, match="private or reserved"):
-            validate_provider_url("https://169.254.1.1/api", self._info())
-
-    def test_rejects_0_0_0_0(self):
-        with pytest.raises(ValueError, match="private or reserved"):
-            validate_provider_url("https://0.0.0.0/api", self._info())
-
-    def test_rejects_cgn_100_64(self):
-        with pytest.raises(ValueError, match="private or reserved"):
-            validate_provider_url("https://100.64.0.1/api", self._info())
-
-    def test_rejects_multicast_v4(self):
-        with pytest.raises(ValueError, match="private or reserved"):
-            validate_provider_url("https://224.0.0.1/api", self._info())
-
-    def test_rejects_reserved_v4(self):
-        with pytest.raises(ValueError, match="private or reserved"):
-            validate_provider_url("https://240.0.0.1/api", self._info())
-
-    def test_rejects_ipv6_unspecified(self):
-        with pytest.raises(ValueError, match="private or reserved"):
-            validate_provider_url("https://[::]/api", self._info())
-
-    def test_rejects_multicast_v6(self):
-        with pytest.raises(ValueError, match="private or reserved"):
-            validate_provider_url("https://[ff02::1]/api", self._info())
-
-    # -- IPv6-mapped IPv4 bypass --
-
-    def test_rejects_ipv6_mapped_loopback(self):
-        with pytest.raises(ValueError, match="private or reserved"):
-            validate_provider_url("https://[::ffff:127.0.0.1]/api", self._info())
-
-    def test_rejects_ipv6_mapped_10_network(self):
-        with pytest.raises(ValueError, match="private or reserved"):
-            validate_provider_url("https://[::ffff:10.0.0.1]/api", self._info())
-
-    def test_rejects_ipv6_mapped_192_168(self):
-        with pytest.raises(ValueError, match="private or reserved"):
-            validate_provider_url("https://[::ffff:192.168.1.1]/api", self._info())
-
-    def test_accepts_ipv6_mapped_public_ip(self):
-        result = validate_provider_url("https://[::ffff:8.8.8.8]/api", self._info())
-        assert "8.8.8.8" in result
-
-    # -- localhost hostname --
-
-    def test_rejects_localhost(self):
-        with pytest.raises(ValueError, match="local-only hostname"):
-            validate_provider_url("https://localhost/api", self._info())
-
-    def test_rejects_localhost_localdomain(self):
-        with pytest.raises(ValueError, match="local-only hostname"):
-            validate_provider_url("https://localhost.localdomain/api", self._info())
-
-    def test_rejects_subdomain_of_localhost(self):
-        with pytest.raises(ValueError, match="local-only hostname"):
-            validate_provider_url("https://app.localhost/api", self._info())
-
     # -- userinfo --
 
     def test_rejects_url_with_userinfo(self):
+        url = "https://user:pass@example.com/api"  # pragma: allowlist secret
         with pytest.raises(ValueError, match="must not contain user credentials"):
-            validate_provider_url("https://user:pass@example.com/api", self._info())  # pragma: allowlist secret
+            validate_provider_url(url, self._info())
 
     def test_rejects_url_with_username_only(self):
         with pytest.raises(ValueError, match="must not contain user credentials"):
@@ -207,3 +127,50 @@ class TestValidateProviderUrlOptional:
     def test_invalid_url_rejected(self):
         with pytest.raises(ValueError, match="must use the https scheme"):
             validate_provider_url_optional("http://example.com", self._info())
+
+
+class TestCheckProviderUrlAllowed:
+    """Tests for check_provider_url_allowed."""
+
+    # -- WXO accepted hostnames --
+
+    def test_wxo_accepts_cloud_ibm_com(self):
+        check_provider_url_allowed("https://api.us-south.wxo.cloud.ibm.com/v1", "watsonx-orchestrate")
+
+    def test_wxo_accepts_ibm_com_subdomain(self):
+        check_provider_url_allowed("https://dl.watson.ibm.com/api", "watsonx-orchestrate")
+
+    def test_wxo_accepts_bare_ibm_com(self):
+        check_provider_url_allowed("https://ibm.com/api", "watsonx-orchestrate")
+
+    # -- WXO rejected hostnames --
+
+    def test_wxo_rejects_non_ibm_hostname(self):
+        with pytest.raises(ValueError, match="not allowed for provider"):
+            check_provider_url_allowed("https://evil.example.com/api", "watsonx-orchestrate")
+
+    def test_wxo_rejects_ibm_com_suffix_trick(self):
+        with pytest.raises(ValueError, match="not allowed for provider"):
+            check_provider_url_allowed("https://not-ibm.com/api", "watsonx-orchestrate")
+
+    def test_wxo_rejects_ibm_in_path_only(self):
+        with pytest.raises(ValueError, match="not allowed for provider"):
+            check_provider_url_allowed("https://evil.com/ibm.com", "watsonx-orchestrate")
+
+    def test_wxo_rejects_spoofed_subdomain(self):
+        with pytest.raises(ValueError, match="not allowed for provider"):
+            check_provider_url_allowed("https://ibm.com.evil.com/api", "watsonx-orchestrate")
+
+    def test_wxo_rejects_private_ip(self):
+        with pytest.raises(ValueError, match="not allowed for provider"):
+            check_provider_url_allowed("https://127.0.0.1/api", "watsonx-orchestrate")
+
+    def test_wxo_rejects_localhost(self):
+        with pytest.raises(ValueError, match="not allowed for provider"):
+            check_provider_url_allowed("https://localhost/api", "watsonx-orchestrate")
+
+    # -- closed-by-default --
+
+    def test_unknown_provider_rejected(self):
+        with pytest.raises(ValueError, match="is not a valid DeploymentProviderKey"):
+            check_provider_url_allowed("https://anything.example.com", "unknown-provider")

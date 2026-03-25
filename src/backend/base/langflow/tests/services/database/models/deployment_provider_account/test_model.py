@@ -124,46 +124,10 @@ class TestProviderUrlValidation:
         with pytest.raises(ValueError, match="must use the https scheme"):
             DeploymentProviderAccount.validate_url("javascript:alert(1)", self._make_info())
 
-    def test_rejects_loopback_v4(self):
-        with pytest.raises(ValueError, match="must not point to a private or reserved IP address"):
-            DeploymentProviderAccount.validate_url("https://127.0.0.1/api", self._make_info())
-
-    def test_rejects_loopback_ipv6(self):
-        with pytest.raises(ValueError, match="must not point to a private or reserved IP address"):
-            DeploymentProviderAccount.validate_url("https://[::1]/api", self._make_info())
-
-    def test_rejects_10_network(self):
-        with pytest.raises(ValueError, match="must not point to a private or reserved IP address"):
-            DeploymentProviderAccount.validate_url("https://10.0.0.1/api", self._make_info())
-
-    def test_rejects_172_16_network(self):
-        with pytest.raises(ValueError, match="must not point to a private or reserved IP address"):
-            DeploymentProviderAccount.validate_url("https://172.16.0.1/api", self._make_info())
-
-    def test_rejects_192_168_network(self):
-        with pytest.raises(ValueError, match="must not point to a private or reserved IP address"):
-            DeploymentProviderAccount.validate_url("https://192.168.1.1/api", self._make_info())
-
-    def test_rejects_link_local(self):
-        with pytest.raises(ValueError, match="must not point to a private or reserved IP address"):
-            DeploymentProviderAccount.validate_url("https://169.254.1.1/api", self._make_info())
-
-    def test_rejects_0_0_0_0(self):
-        with pytest.raises(ValueError, match="must not point to a private or reserved IP address"):
-            DeploymentProviderAccount.validate_url("https://0.0.0.0/api", self._make_info())
-
     def test_rejects_url_exceeding_max_length(self):
         long_path = "a" * 2049
         with pytest.raises(ValueError, match="exceeds maximum length"):
             DeploymentProviderAccount.validate_url(f"https://example.com/{long_path}", self._make_info())
-
-    def test_rejects_ipv6_mapped_loopback(self):
-        with pytest.raises(ValueError, match="must not point to a private or reserved IP address"):
-            DeploymentProviderAccount.validate_url("https://[::ffff:127.0.0.1]/api", self._make_info())
-
-    def test_rejects_localhost_hostname(self):
-        with pytest.raises(ValueError, match="local-only hostname"):
-            DeploymentProviderAccount.validate_url("https://localhost/api", self._make_info())
 
     def test_rejects_userinfo(self):
         url = "https://user:pass@example.com/api"  # pragma: allowlist secret

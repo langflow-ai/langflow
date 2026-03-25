@@ -1,8 +1,8 @@
 from .model import (
     DeploymentProviderAccount,
     DeploymentProviderAccountRead,
-    DeploymentProviderKey,
 )
+from .schemas import DeploymentProviderKey
 
 __all__ = [
     "DeploymentProviderAccount",

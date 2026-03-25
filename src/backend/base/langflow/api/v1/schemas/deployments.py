@@ -57,8 +57,9 @@ from lfx.services.adapters.deployment.schema import (
 )
 from pydantic import AfterValidator, BaseModel, Field, SecretStr, ValidationInfo, field_validator, model_validator
 
-from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderKey
+from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 from langflow.services.database.models.deployment_provider_account.utils import (
+    check_provider_url_allowed,
     validate_provider_url,
     validate_provider_url_optional,
 )
@@ -160,6 +161,11 @@ class DeploymentProviderAccountCreateRequest(BaseModel):
             "Provider credential material. Stored by Langflow as secret data and never returned in read responses."
         ),
     )
+
+    @model_validator(mode="after")
+    def validate_provider_url_allowed(self) -> DeploymentProviderAccountCreateRequest:
+        check_provider_url_allowed(self.provider_url, self.provider_key)
+        return self
 
     @field_validator("api_key", mode="before")
     @classmethod
