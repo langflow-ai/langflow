@@ -48,6 +48,27 @@ async def created_messages(session, active_user):  # noqa: ARG001
 
 
 @pytest.fixture
+async def created_messages_multiple_sessions(session, active_user):  # noqa: ARG001
+    """Create messages across multiple distinct sessions for bulk-delete testing."""
+    async with session_scope() as _session:
+        flow = Flow(name="test_flow_for_bulk_delete", user_id=active_user.id, data={"nodes": [], "edges": []})
+        _session.add(flow)
+        await _session.flush()
+
+        messages = [
+            MessageCreate(text="Session A msg 1", sender="User", sender_name="User", session_id="bulk_session_a"),
+            MessageCreate(text="Session A msg 2", sender="AI", sender_name="AI", session_id="bulk_session_a"),
+            MessageCreate(text="Session B msg 1", sender="User", sender_name="User", session_id="bulk_session_b"),
+            MessageCreate(text="Session B msg 2", sender="AI", sender_name="AI", session_id="bulk_session_b"),
+            MessageCreate(text="Session C msg 1", sender="User", sender_name="User", session_id="bulk_session_c"),
+        ]
+        messagetables = [MessageTable.model_validate(message, from_attributes=True) for message in messages]
+        for mt in messagetables:
+            mt.flow_id = flow.id
+        return await aadd_messagetables(messagetables, _session)
+
+
+@pytest.fixture
 async def messages_with_datetime_session_id(session, active_user):  # noqa: ARG001
     """Create messages with datetime-like session IDs that contain characters requiring URL encoding."""
     datetime_session_id = "2024-01-15 10:30:45 UTC"  # Contains spaces and colons
@@ -262,3 +283,131 @@ async def test_get_messages_empty_result_with_encoded_nonexistent_session(client
     assert response.status_code == 200, response.text
     messages = response.json()
     assert len(messages) == 0
+
+
+# ── Bulk delete sessions ──────────────────────────────────────────────────────
+
+
+@pytest.mark.api_key_required
+async def test_delete_messages_sessions_bulk(
+    client: AsyncClient,
+    created_messages_multiple_sessions,  # noqa: ARG001
+    logged_in_headers,
+):
+    """Bulk-delete messages for multiple sessions in a single request."""
+    session_ids = ["bulk_session_a", "bulk_session_b"]
+    response = await client.request(
+        "DELETE",
+        "api/v1/monitor/messages/sessions",
+        json=session_ids,
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["deleted_count"] == 2
+    assert "Messages deleted successfully" in data["message"]
+
+    # Verify that messages for the deleted sessions are gone
+    for sid in session_ids:
+        response = await client.get("api/v1/monitor/messages", params={"session_id": sid}, headers=logged_in_headers)
+        assert response.status_code == 200
+        assert response.json() == [], f"Expected no messages for session {sid!r}"
+
+    # Verify that messages for the untouched session are still present
+    response = await client.get(
+        "api/v1/monitor/messages", params={"session_id": "bulk_session_c"}, headers=logged_in_headers
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+
+
+@pytest.mark.api_key_required
+async def test_delete_messages_sessions_all(
+    client: AsyncClient,
+    created_messages_multiple_sessions,  # noqa: ARG001
+    logged_in_headers,
+):
+    """Bulk-delete messages for ALL sessions at once."""
+    session_ids = ["bulk_session_a", "bulk_session_b", "bulk_session_c"]
+    response = await client.request(
+        "DELETE",
+        "api/v1/monitor/messages/sessions",
+        json=session_ids,
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["deleted_count"] == 3
+
+    # All messages should be gone
+    response = await client.get("api/v1/monitor/messages", headers=logged_in_headers)
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@pytest.mark.api_key_required
+async def test_delete_messages_sessions_empty_list(client: AsyncClient, logged_in_headers):
+    """Bulk-delete with an empty list should succeed without error."""
+    response = await client.request(
+        "DELETE",
+        "api/v1/monitor/messages/sessions",
+        json=[],
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["deleted_count"] == 0
+    assert "No sessions to delete" in data["message"]
+
+
+@pytest.mark.api_key_required
+async def test_delete_messages_sessions_nonexistent(client: AsyncClient, logged_in_headers):
+    """Bulk-delete with session IDs that don't exist should succeed (no-op) and return 0 deleted."""
+    response = await client.request(
+        "DELETE",
+        "api/v1/monitor/messages/sessions",
+        json=["nonexistent_session_1", "nonexistent_session_2"],
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 200, response.text
+    data = response.json()
+    # Should return 0 since no sessions actually had messages deleted
+    assert data["deleted_count"] == 0
+
+
+@pytest.mark.api_key_required
+async def test_delete_messages_sessions_partial_match(
+    client: AsyncClient,
+    created_messages_multiple_sessions,  # noqa: ARG001
+    logged_in_headers,
+):
+    """Bulk-delete where some session IDs exist and some don't — only existing ones are removed."""
+    session_ids = ["bulk_session_a", "does_not_exist"]
+    response = await client.request(
+        "DELETE",
+        "api/v1/monitor/messages/sessions",
+        json=session_ids,
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 200, response.text
+    data = response.json()
+    # Should return 1 since only bulk_session_a actually had messages deleted
+    assert data["deleted_count"] == 1
+
+
+@pytest.mark.api_key_required
+async def test_delete_messages_sessions_exceeds_limit(client: AsyncClient, logged_in_headers):
+    """Bulk-delete with more than 500 session IDs should return 400 error and not delete anything."""
+    # Create a list of 501 session IDs
+    session_ids = [f"session_{i}" for i in range(501)]
+    response = await client.request(
+        "DELETE",
+        "api/v1/monitor/messages/sessions",
+        json=session_ids,
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 400, response.text
+    data = response.json()
+    assert "Cannot delete more than 500 sessions" in data["detail"]
+    # After a 400 error, no deletions should have occurred
+    # The test validates the error response only

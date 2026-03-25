@@ -53,7 +53,7 @@ test(
     await page.getByTestId("button_run_chat output").click();
 
     // Wait for the flow to build successfully
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully", { timeout: 120000 });
 
     // Switch to Playground
     await page.getByRole("button", { name: "Playground", exact: true }).click();

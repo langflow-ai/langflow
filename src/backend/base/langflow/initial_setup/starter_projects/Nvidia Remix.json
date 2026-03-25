@@ -1208,10 +1208,10 @@
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
                       "reasoning_models": [
-                        "gpt-5.2"
+                        "gpt-5.4"
                       ]
                     },
-                    "name": "gpt-5.2",
+                    "name": "gpt-5.4",
                     "provider": "OpenAI"
                   },
                   {
