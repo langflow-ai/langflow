@@ -27,9 +27,12 @@ jest.mock("@/controllers/API/queries/file-management/use-delete-files", () => ({
   useDeleteFilesV2: () => ({ mutate: jest.fn(), isPending: false }),
 }));
 
-jest.mock("@/controllers/API/queries/file-management/use-put-rename-file", () => ({
-  usePostRenameFileV2: () => ({ mutate: jest.fn() }),
-}));
+jest.mock(
+  "@/controllers/API/queries/file-management/use-put-rename-file",
+  () => ({
+    usePostRenameFileV2: () => ({ mutate: jest.fn() }),
+  }),
+);
 
 jest.mock("@/customization/hooks/use-custom-post-upload-file", () => ({
   customPostUploadFileV2: () => ({ mutate: jest.fn() }),
@@ -40,23 +43,31 @@ const mockSetErrorData = jest.fn();
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
   default: (selector: any) =>
-    selector({ setErrorData: mockSetErrorData, setSuccessData: mockSetSuccessData }),
+    selector({
+      setErrorData: mockSetErrorData,
+      setSuccessData: mockSetSuccessData,
+    }),
 }));
 
-jest.mock("@/components/core/parameterRenderComponent/components/tableComponent", () => ({
-  __esModule: true,
-  default: ({ rowData }: any) => (
-    <div data-testid="mock-table">
-      {rowData?.map((row: any) => (
-        <div key={row.id}>{row.name}</div>
-      ))}
-    </div>
-  ),
-}));
+jest.mock(
+  "@/components/core/parameterRenderComponent/components/tableComponent",
+  () => ({
+    __esModule: true,
+    default: ({ rowData }: any) => (
+      <div data-testid="mock-table">
+        {rowData?.map((row: any) => (
+          <div key={row.id}>{row.name}</div>
+        ))}
+      </div>
+    ),
+  }),
+);
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: ({ name }: { name: string }) => <span data-testid={`icon-${name}`} />,
+  default: ({ name }: { name: string }) => (
+    <span data-testid={`icon-${name}`} />
+  ),
 }));
 
 jest.mock("@/components/common/shadTooltipComponent", () => ({
@@ -91,10 +102,13 @@ jest.mock("@/modals/deleteConfirmationModal", () => ({
   default: ({ children }: any) => <>{children}</>,
 }));
 
-jest.mock("@/modals/fileManagerModal/components/filesContextMenuComponent", () => ({
-  __esModule: true,
-  default: ({ children }: any) => <>{children}</>,
-}));
+jest.mock(
+  "@/modals/fileManagerModal/components/filesContextMenuComponent",
+  () => ({
+    __esModule: true,
+    default: ({ children }: any) => <>{children}</>,
+  }),
+);
 
 jest.mock("../dragWrapComponent", () => ({
   __esModule: true,
@@ -156,7 +170,10 @@ describe("FilesTab upload success notification", () => {
   });
 
   it("shows 'Files uploaded successfully' when multiple files are uploaded", async () => {
-    mockUploadFile.mockResolvedValue(["path/to/file1.txt", "path/to/file2.txt"]);
+    mockUploadFile.mockResolvedValue([
+      "path/to/file1.txt",
+      "path/to/file2.txt",
+    ]);
 
     render(<FilesTab {...defaultProps} />, { wrapper: createWrapper() });
 
