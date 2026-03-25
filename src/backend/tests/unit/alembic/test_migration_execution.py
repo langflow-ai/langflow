@@ -1,5 +1,6 @@
 import errno
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -112,98 +113,96 @@ def db_url(request):
         _drop_pg_test_database(base_url, db_name)
 
 
+def _parse_revision_values(line: str) -> list[str]:
+    """Extract revision ID(s) from a line like ``revision: str = "abc123"``.
+
+    Handles single strings, tuples of strings, and None.  Returns a list of
+    zero or more revision ID strings.
+    """
+    if "=" not in line:
+        return []
+    raw = line.split("=", 1)[1]
+    # Strip inline comments (e.g. "# pragma: allowlist secret")
+    if "#" in raw:
+        raw = raw[: raw.index("#")]
+    raw = raw.strip()
+    if raw == "None":
+        return []
+    # Extract all quoted strings from the value (handles both single values
+    # and tuples like ("abc", "def"))
+    return re.findall(r"""["']([a-f0-9]+)["']""", raw)
+
+
 def _get_main_branch_head() -> str | None:
     """Get the alembic head revision that origin/main is at.
 
-    Finds migration files new on this branch (not on origin/main), then looks up
-    their down_revision to determine where main's DB would be. Uses the current
-    branch's alembic ScriptDirectory since it already contains all migrations.
+    Uses ``git grep`` to read the ``revision`` and ``down_revision`` variables
+    directly from migration files on origin/main, then walks the chain to find
+    the head revision.  This avoids relying on filename conventions (which may
+    not match the actual revision IDs inside the files) and works regardless of
+    whether the branch adds, modifies, or deletes migration files.
 
     Returns None if git operations fail (e.g. shallow clone without origin/main).
     """
-    from alembic.script import ScriptDirectory
-
     git = shutil.which("git")
     if git is None:
         return None
 
-    # Find migration files that are new on this branch vs origin/main
-    try:
-        result = subprocess.run(  # noqa: S603
-            [
-                git,
-                "diff",
-                "--name-only",
-                "--diff-filter=A",
-                "origin/main...HEAD",
-                "--",
-                "src/backend/base/langflow/alembic/versions/*.py",
-            ],
-            capture_output=True,
-            text=True,
-            check=True,
-            cwd=_WORKSPACE_ROOT,
-        )
-    except subprocess.CalledProcessError as exc:
-        import warnings
-
-        warnings.warn(f"git diff failed (rc={exc.returncode}): {exc.stderr.strip()}", stacklevel=2)
-        return None
-    except OSError as exc:
-        if exc.errno == errno.ENOENT:
-            return None  # git binary not found at resolved path
-        raise  # unexpected OS error (disk full, permissions, etc.)
-
-    new_files = [f for f in result.stdout.strip().splitlines() if f.endswith(".py")]
-
-    alembic_cfg = Config()
-    alembic_cfg.set_main_option("script_location", str(_SCRIPT_LOCATION))
-    script = ScriptDirectory.from_config(alembic_cfg)
-
-    if not new_files:
-        # No new migrations on this branch — head is same as main
-        heads = script.get_heads()
-        if len(heads) == 1:
-            return heads[0]
-        if len(heads) > 1:
-            pytest.fail(f"Alembic has {len(heads)} head revisions — migration branches need merging: {heads}")
-        return None
-
-    # Collect revision IDs of all new migrations
-    new_rev_ids = set()
-    for fpath in new_files:
-        filename = Path(fpath).name
-        new_rev_ids.add(filename.split("_", 1)[0])
-
-    # Find down_revisions that point outside the new migrations (i.e. into main)
-    main_revisions = set()
-    for rev_id in new_rev_ids:
-        rev_script = script.get_revision(rev_id)
-        if rev_script is None:
-            msg = (
-                f"New migration file matched revision ID '{rev_id}' "
-                f"but Alembic has no such revision — check filename convention"
+    def _git_grep(pattern: str) -> str | None:
+        try:
+            result = subprocess.run(  # noqa: S603
+                [
+                    git,
+                    "grep",
+                    "-h",
+                    pattern,
+                    "origin/main",
+                    "--",
+                    "src/backend/base/langflow/alembic/versions/",
+                ],
+                capture_output=True,
+                text=True,
+                check=True,
+                cwd=_WORKSPACE_ROOT,
             )
-            raise ValueError(msg)
-        if rev_script.down_revision is None:
-            msg = f"New migration {rev_id} has down_revision=None — it must chain from an existing migration"
-            raise ValueError(msg)
-        down = rev_script.down_revision
-        downs = set(down) if isinstance(down, (tuple, list)) else {down}
-        # Only keep down_revisions that are NOT themselves new migrations
-        main_revisions.update(downs - new_rev_ids)
+        except subprocess.CalledProcessError:
+            return None
+        except OSError as exc:
+            if exc.errno == errno.ENOENT:
+                return None
+            raise
+        return result.stdout
 
-    if len(main_revisions) > 1:
+    # Extract all revision IDs from origin/main's migration files
+    rev_output = _git_grep("^revision:")
+    if not rev_output:
+        return None
+
+    main_rev_ids: set[str] = set()
+    for line in rev_output.strip().splitlines():
+        main_rev_ids.update(_parse_revision_values(line))
+
+    if not main_rev_ids:
+        return None
+
+    # Extract all down_revision IDs to determine the chain
+    down_output = _git_grep("^down_revision:")
+    referenced: set[str] = set()
+    if down_output:
+        for line in down_output.strip().splitlines():
+            referenced.update(_parse_revision_values(line))
+
+    # Head = revisions not referenced as down_revision by any other revision
+    heads = main_rev_ids - referenced
+
+    if len(heads) == 1:
+        return heads.pop()
+    if len(heads) > 1:
         pytest.fail(
-            f"New migrations descend from {len(main_revisions)} different base revisions — "
-            f"they must share a single parent on main: {main_revisions}"
+            f"origin/main has {len(heads)} head revisions — "
+            f"migration branches need merging: {heads}"
         )
-    if not main_revisions:
-        pytest.fail(
-            f"New migrations {new_rev_ids} form a disconnected chain — "
-            f"none of their down_revisions point to an existing migration on main"
-        )
-    return main_revisions.pop()
+    return None
 
 
 def _filter_sqlite_noise(diffs: list) -> list:
@@ -387,11 +386,27 @@ def test_upgrade_from_main_branch(db_url):
     upgrades to a branch with new migrations. The upgrade must succeed, the resulting
     schema must match the models, and downgrade back to main must also succeed.
     """
+    from alembic.script import ScriptDirectory
+
     main_head = _get_main_branch_head()
     if main_head is None:
         if os.environ.get("MIGRATION_VALIDATION_CI"):
             pytest.fail("Could not determine main branch head revision — ensure fetch-depth: 0 and origin/main exists")
         pytest.skip("Could not determine main branch head revision (shallow clone or no origin/main)")
+
+    # Check if main and branch share the same alembic head (no new migrations).
+    # In that case this test is a no-op — alembic won't re-run already-applied
+    # migrations, so upgrade(main_head) -> upgrade(head) does nothing.
+    # Modified migrations are exercised by test_no_phantom_migrations instead.
+    branch_cfg = Config()
+    branch_cfg.set_main_option("script_location", str(_SCRIPT_LOCATION))
+    branch_script = ScriptDirectory.from_config(branch_cfg)
+    branch_heads = branch_script.get_heads()
+    if len(branch_heads) == 1 and branch_heads[0] == main_head:
+        pytest.skip(
+            "No new migrations on this branch — main and branch share the same "
+            "alembic head. Modified migrations are tested by test_no_phantom_migrations."
+        )
 
     alembic_cfg = _make_alembic_cfg(db_url)
 
