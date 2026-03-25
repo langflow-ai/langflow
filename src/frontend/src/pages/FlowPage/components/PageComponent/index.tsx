@@ -19,6 +19,7 @@ import {
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShallow } from "zustand/react/shallow";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
 import {
   COLOR_OPTIONS,
@@ -26,9 +27,11 @@ import {
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
+import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import CustomLoader from "@/customization/components/custom-loader";
 import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
+import { useFlowEvents } from "@/hooks/flows/use-flow-events";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
 import InspectionPanel from "@/pages/FlowPage/components/InspectionPanel";
@@ -67,6 +70,7 @@ import ConnectionLineComponent from "../ConnectionLineComponent";
 import FlowBuildingComponent from "../flowBuildingComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import UpdateAllComponents from "../UpdateAllComponents";
+import { CanvasBadge } from "./components/CanvasBanner";
 import HelperLines from "./components/helper-lines";
 import VersionPreviewOverlay from "./components/VersionPreviewOverlay";
 import {
@@ -143,6 +147,36 @@ export default function Page({
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+
+  const { isAgentWorking, events, lastSettledAt } = useFlowEvents(
+    currentFlowId || undefined,
+  );
+  const effectiveLocked = isLocked || isAgentWorking;
+  const { mutate: reloadFlow } = useGetFlow();
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const prevSettledRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (
+      lastSettledAt &&
+      lastSettledAt !== prevSettledRef.current &&
+      currentFlowId
+    ) {
+      prevSettledRef.current = lastSettledAt;
+
+      reloadFlow({ id: currentFlowId });
+
+      const nonSettleEvents = events.filter((e) => e.type !== "flow_settled");
+      if (nonSettleEvents.length > 0) {
+        const summaries = nonSettleEvents.map((e) => e.summary).filter(Boolean);
+        const title =
+          summaries.length > 0
+            ? `Agent updated flow: ${summaries.join(", ")}`
+            : `Agent made ${nonSettleEvents.length} change(s) to this flow`;
+        setSuccessData({ title });
+      }
+    }
+  }, [lastSettledAt]);
 
   useEffect(() => {
     if (currentFlowId !== "") {
@@ -315,7 +349,7 @@ export default function Page({
 
   function handleDelete(e: KeyboardEvent) {
     if (isPreviewActive) return;
-    if (isLocked) return;
+    if (effectiveLocked) return;
     if (!isWrappedWithClass(e, "nodelete") && lastSelection) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -507,7 +541,7 @@ export default function Page({
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
-      if (isLocked) return;
+      if (effectiveLocked) return;
       const grabbingElement =
         document.getElementsByClassName("cursor-grabbing");
       if (grabbingElement.length > 0) {
@@ -611,7 +645,7 @@ export default function Page({
   const onNodeContextMenu = useCallback(
     (event: React.MouseEvent, node: AllNodeType) => {
       event.preventDefault();
-      if (isLocked) return;
+      if (effectiveLocked) return;
 
       // Set the right-clicked node ID to show its dropdown menu
       setRightClickedNodeId(node.id);
@@ -624,7 +658,7 @@ export default function Page({
         }));
       });
     },
-    [isLocked, setRightClickedNodeId, setNodes],
+    [effectiveLocked, setRightClickedNodeId, setNodes],
   );
 
   const onPaneClick = useCallback(
@@ -681,7 +715,7 @@ export default function Page({
   );
 
   const handleEdgeClick = (event, edge) => {
-    if (isLocked) {
+    if (effectiveLocked) {
       event.preventDefault();
       event.stopPropagation();
       return;
@@ -694,7 +728,7 @@ export default function Page({
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (isLocked) {
+    if (effectiveLocked) {
       e.preventDefault();
       e.stopPropagation();
     }
@@ -812,23 +846,27 @@ export default function Page({
               edges={edges}
               onNodesChange={onNodesChangeWithHelperLines}
               onEdgesChange={onEdgesChange}
-              onConnect={isLocked || isPreviewActive ? undefined : onConnectMod}
+              onConnect={
+                effectiveLocked || isPreviewActive ? undefined : onConnectMod
+              }
               disableKeyboardA11y={true}
-              nodesFocusable={!isLocked && !isPreviewActive}
-              edgesFocusable={!isLocked && !isPreviewActive}
+              nodesFocusable={!effectiveLocked && !isPreviewActive}
+              edgesFocusable={!effectiveLocked && !isPreviewActive}
               nodesDraggable={!isPreviewActive}
               nodesConnectable={!isPreviewActive}
               elementsSelectable={!isPreviewActive}
               onInit={setReactFlowInstance}
               nodeTypes={nodeTypes}
               onReconnect={
-                isLocked || isPreviewActive ? undefined : onEdgeUpdate
+                effectiveLocked || isPreviewActive ? undefined : onEdgeUpdate
               }
               onReconnectStart={
-                isLocked || isPreviewActive ? undefined : onEdgeUpdateStart
+                effectiveLocked || isPreviewActive
+                  ? undefined
+                  : onEdgeUpdateStart
               }
               onReconnectEnd={
-                isLocked || isPreviewActive ? undefined : onEdgeUpdateEnd
+                effectiveLocked || isPreviewActive ? undefined : onEdgeUpdateEnd
               }
               onNodeDrag={isPreviewActive ? undefined : onNodeDrag}
               onNodeDragStart={isPreviewActive ? undefined : onNodeDragStart}
@@ -849,7 +887,7 @@ export default function Page({
               fitView={isEmptyFlow.current ? false : true}
               fitViewOptions={fitViewOptions}
               className="theme-attribution"
-              tabIndex={isLocked ? -1 : undefined}
+              tabIndex={effectiveLocked ? -1 : undefined}
               minZoom={MIN_ZOOM}
               maxZoom={MAX_ZOOM}
               zoomOnScroll={!view}
@@ -868,6 +906,19 @@ export default function Page({
               {helperLineEnabled && <HelperLines helperLines={helperLines} />}
             </ReactFlow>
             <FlowBuildingComponent />
+            {isAgentWorking && (
+              <div className="pointer-events-none absolute inset-0 z-50">
+                <CanvasBadge>
+                  <ForwardedIconComponent
+                    name="Loader2"
+                    className="h-4 w-4 animate-spin"
+                  />
+                  <span className="text-sm">
+                    Agent is working on this flow...
+                  </span>
+                </CanvasBadge>
+              </div>
+            )}
             {isPreviewActive && <VersionPreviewOverlay />}
           </div>
           <div
