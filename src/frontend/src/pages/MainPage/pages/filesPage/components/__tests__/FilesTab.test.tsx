@@ -208,4 +208,23 @@ describe("FilesTab upload success notification", () => {
 
     expect(mockSetSuccessData).not.toHaveBeenCalled();
   });
+
+  // Ensure fallback error message is shown when error has no message property.
+  it("shows fallback error message when error has no message property", async () => {
+    mockUploadFile.mockRejectedValue({});
+
+    render(<FilesTab {...defaultProps} />, { wrapper: createWrapper() });
+
+    const uploadBtn = screen.getByTestId("upload-file-btn");
+    await userEvent.click(uploadBtn);
+
+    await waitFor(() => {
+      expect(mockSetErrorData).toHaveBeenCalledWith({
+        title: "Error uploading file",
+        list: ["An error occurred while uploading the file"],
+      });
+    });
+
+    expect(mockSetSuccessData).not.toHaveBeenCalled();
+  });
 });
