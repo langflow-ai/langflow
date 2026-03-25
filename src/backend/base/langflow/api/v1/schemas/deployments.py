@@ -119,10 +119,10 @@ NonEmptyStr = Annotated[str, AfterValidator(_strip_nonempty)]
 
 
 ValidatedUrl = Annotated[str, AfterValidator(validate_provider_url)]
-"""URL type that enforces HTTPS, blocks private IPs, and normalizes."""
+"""URL type that enforces HTTPS and normalizes."""
 
 ValidatedUrlOptional = Annotated[str | None, AfterValidator(validate_provider_url_optional)]
-"""Optional URL type that enforces HTTPS, blocks private IPs, and normalizes (None passes through)."""
+"""Optional URL type that enforces HTTPS and normalizes (None passes through)."""
 
 
 def _validate_flow_version_ids(values: list[str] | None) -> list[str] | None:
