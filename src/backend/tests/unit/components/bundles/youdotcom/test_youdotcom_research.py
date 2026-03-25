@@ -112,6 +112,9 @@ class TestYouDotComResearchComponent(ComponentTestBaseWithoutClient):
 
         assert df is not None
         assert len(df) == 2
+        assert "url" in df.columns
+        assert "title" in df.columns
+        assert "snippets" in df.columns
         assert df.iloc[0]["url"] == "https://example.com/quantum"
         assert df.iloc[0]["title"] == "Quantum Computing Research"
         assert df.iloc[1]["url"] == "https://example.org/physics"

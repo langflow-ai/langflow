@@ -12,6 +12,20 @@ USER_AGENT = "langflow-youdotcom/1.0"
 
 
 class YouDotComResearchComponent(Component):
+    """You.com Research component for multi-step reasoning with comprehensive web research.
+
+    This component calls the You.com Research API to perform multi-step reasoning
+    with comprehensive web research. It takes a complex question and returns a
+    detailed markdown answer with inline citations and sources.
+
+    Attributes:
+        display_name: Human-readable name for the component.
+        description: Description of what the component does.
+        icon: Icon identifier for the UI.
+        inputs: List of input parameters (api_key, query, research_effort).
+        outputs: List of output methods (research_combined, research_answer, research_sources).
+    """
+
     display_name = "You.com Research"
     description = (
         "**You.com Research** performs multi-step reasoning with comprehensive web research. "

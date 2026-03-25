@@ -8,9 +8,30 @@ from lfx.schema.dataframe import DataFrame
 from lfx.template.field.base import Output
 
 USER_AGENT = "langflow-youdotcom/1.0"
+MAX_RESULTS_MIN = 1
+MAX_RESULTS_MAX = 100
+
+
+class InputValidationError(ValueError):
+    """Raised when input validation fails."""
+
 
 
 class YouDotComSearchComponent(Component):
+    """You.com Search component for web search optimized for LLMs and RAG.
+
+    This component calls the You.com Search API to perform web searches
+    and returns structured results as Data objects with titles, URLs,
+    descriptions, and snippets. Results are also available as a DataFrame.
+
+    Attributes:
+        display_name: Human-readable name for the component.
+        description: Description of what the component does.
+        icon: Icon identifier for the UI.
+        inputs: List of input parameters (api_key, query, max_results, etc.).
+        outputs: List of output methods (fetch_content_dataframe).
+    """
+
     display_name = "You.com Search"
     description = (
         "**You.com Search** is a web search API optimized for LLMs and RAG. "
@@ -187,8 +208,15 @@ class YouDotComSearchComponent(Component):
         Returns:
             list[Data]: A list of Data objects containing search results,
                         each with title, URL, description, snippets, and optionally contents.
+
+        Raises:
+            InputValidationError: If max_results is outside the valid range (1-100).
         """
         try:
+            if self.max_results is not None and not (MAX_RESULTS_MIN <= self.max_results <= MAX_RESULTS_MAX):
+                msg = f"max_results must be between {MAX_RESULTS_MIN} and {MAX_RESULTS_MAX}"
+                raise InputValidationError(msg)
+
             url = "https://ydc-index.io/v1/search"
             headers = {"X-API-Key": self.api_key, "User-Agent": USER_AGENT}
             params: dict = {"query": self.query, "count": self.max_results}
@@ -251,6 +279,10 @@ class YouDotComSearchComponent(Component):
             return [Data(text=error_message, data={"error": error_message})]
         except httpx.RequestError as exc:
             error_message = f"Request error occurred: {exc}"
+            logger.error(error_message)
+            return [Data(text=error_message, data={"error": error_message})]
+        except InputValidationError as exc:
+            error_message = f"Input validation error: {exc}"
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
         except ValueError as exc:

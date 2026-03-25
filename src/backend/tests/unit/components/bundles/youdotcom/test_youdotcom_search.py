@@ -214,3 +214,105 @@ class TestYouDotComSearchComponent(ComponentTestBaseWithoutClient):
         df = component.fetch_content_dataframe()
 
         assert df is not None
+        assert len(df) == 1
+
+    @patch("lfx.components.youdotcom.youdotcom_search.httpx.Client")
+    def test_max_results_boundary_min_valid(self, mock_client_class, component_class, default_kwargs):
+        """Test max_results=1 is valid (boundary at lower end)."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"results": {"web": []}}
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.get.return_value = mock_response
+        mock_client_class.return_value = mock_client
+
+        default_kwargs["max_results"] = 1
+        component = component_class()
+        component.set_attributes(default_kwargs)
+        component.fetch_content()
+
+        params = mock_client.get.call_args[1]["params"]
+        assert params["count"] == 1
+
+    @patch("lfx.components.youdotcom.youdotcom_search.httpx.Client")
+    def test_max_results_boundary_max_valid(self, mock_client_class, component_class, default_kwargs):
+        """Test max_results=100 is valid (boundary at upper end)."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"results": {"web": []}}
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.get.return_value = mock_response
+        mock_client_class.return_value = mock_client
+
+        default_kwargs["max_results"] = 100
+        component = component_class()
+        component.set_attributes(default_kwargs)
+        component.fetch_content()
+
+        params = mock_client.get.call_args[1]["params"]
+        assert params["count"] == 100
+
+    def test_max_results_below_min_returns_error(self, component_class, default_kwargs):
+        """Test max_results=0 returns validation error."""
+        default_kwargs["max_results"] = 0
+        component = component_class()
+        component.set_attributes(default_kwargs)
+        results = component.fetch_content()
+
+        assert len(results) == 1
+        assert "error" in results[0].data
+        assert "max_results must be between 1 and 100" in results[0].text
+
+    def test_max_results_above_max_returns_error(self, component_class, default_kwargs):
+        """Test max_results=101 returns validation error."""
+        default_kwargs["max_results"] = 101
+        component = component_class()
+        component.set_attributes(default_kwargs)
+        results = component.fetch_content()
+
+        assert len(results) == 1
+        assert "error" in results[0].data
+        assert "max_results must be between 1 and 100" in results[0].text
+
+    @patch("lfx.components.youdotcom.youdotcom_search.httpx.Client")
+    def test_fetch_content_dataframe_structure(self, mock_client_class, component_class, default_kwargs):
+        """Test DataFrame has correct structure with expected columns."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "results": {
+                "web": [
+                    {
+                        "title": "Test Result",
+                        "url": "https://example.com",
+                        "description": "A test result description",
+                        "snippets": ["snippet 1"],
+                    },
+                ],
+            },
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.get.return_value = mock_response
+        mock_client_class.return_value = mock_client
+
+        component = component_class()
+        component.set_attributes(default_kwargs)
+        df = component.fetch_content_dataframe()
+
+        assert df is not None
+        assert len(df) == 1
+        assert "title" in df.columns
+        assert "url" in df.columns
+        assert "description" in df.columns
+        assert "snippets" in df.columns
+        assert df.iloc[0]["title"] == "Test Result"
+        assert df.iloc[0]["url"] == "https://example.com"

@@ -14,10 +14,23 @@ MAX_CRAWL_TIMEOUT = 60
 class InputValidationError(ValueError):
     """Raised when input validation fails."""
 
-    pass
 
 
 class YouDotComContentsComponent(Component):
+    """You.com Contents component for extracting clean content from URLs.
+
+    This component calls the You.com Contents API to extract clean content
+    from any URL in various formats (markdown, HTML, or metadata).
+    Useful for RAG pipelines and content processing.
+
+    Attributes:
+        display_name: Human-readable name for the component.
+        description: Description of what the component does.
+        icon: Icon identifier for the UI.
+        inputs: List of input parameters (api_key, urls, formats, crawl_timeout).
+        outputs: List of output methods (fetch_content_dataframe).
+    """
+
     display_name = "You.com Contents"
     description = (
         "**You.com Contents** extracts clean HTML, markdown, or metadata from any URL. "

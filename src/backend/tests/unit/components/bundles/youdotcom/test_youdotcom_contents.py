@@ -181,3 +181,78 @@ class TestYouDotComContentsComponent(ComponentTestBaseWithoutClient):
         assert len(results) == 1
         assert "422" in results[0].text
         assert "error" in results[0].data
+
+    def test_empty_urls_returns_error(self, component_class, default_kwargs):
+        """Test that empty URLs returns validation error."""
+        default_kwargs["urls"] = ""
+        component = component_class()
+        component.set_attributes(default_kwargs)
+        results = component.fetch_content()
+
+        assert len(results) == 1
+        assert "error" in results[0].data
+        assert "urls cannot be empty" in results[0].text.lower()
+
+    def test_whitespace_only_urls_returns_error(self, component_class, default_kwargs):
+        """Test that whitespace-only URLs returns validation error."""
+        default_kwargs["urls"] = "   ,   ,   "
+        component = component_class()
+        component.set_attributes(default_kwargs)
+        results = component.fetch_content()
+
+        assert len(results) == 1
+        assert "error" in results[0].data
+        assert "urls cannot be empty" in results[0].text.lower()
+
+    def test_crawl_timeout_below_min_returns_error(self, component_class, default_kwargs):
+        """Test that crawl_timeout=0 returns validation error."""
+        default_kwargs["crawl_timeout"] = 0
+        component = component_class()
+        component.set_attributes(default_kwargs)
+        results = component.fetch_content()
+
+        assert len(results) == 1
+        assert "error" in results[0].data
+        assert "crawl_timeout must be between 1 and 60" in results[0].text
+
+    def test_crawl_timeout_above_max_returns_error(self, component_class, default_kwargs):
+        """Test that crawl_timeout=61 returns validation error."""
+        default_kwargs["crawl_timeout"] = 61
+        component = component_class()
+        component.set_attributes(default_kwargs)
+        results = component.fetch_content()
+
+        assert len(results) == 1
+        assert "error" in results[0].data
+        assert "crawl_timeout must be between 1 and 60" in results[0].text
+
+    @patch("lfx.components.youdotcom.youdotcom_contents.httpx.Client")
+    def test_fetch_content_dataframe_structure(self, mock_client_class, component_class, default_kwargs):
+        """Test DataFrame has correct structure with expected columns."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = [
+            {
+                "url": "https://example.com",
+                "title": "Example Page",
+                "markdown": "# Hello World",
+            },
+        ]
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.post.return_value = mock_response
+        mock_client_class.return_value = mock_client
+
+        component = component_class()
+        component.set_attributes(default_kwargs)
+        df = component.fetch_content_dataframe()
+
+        assert df is not None
+        assert len(df) == 1
+        assert "url" in df.columns
+        assert "title" in df.columns
+        assert "content" in df.columns
+        assert df.iloc[0]["url"] == "https://example.com"
+        assert df.iloc[0]["title"] == "Example Page"
