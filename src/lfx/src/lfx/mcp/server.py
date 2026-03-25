@@ -329,6 +329,9 @@ async def create_flow_from_spec(spec: str, *, validate: bool = True) -> dict[str
             await delete_flow(flow_id)
         raise
 
+    # Signal that the batch creation is complete
+    await _get_client().post_event(flow_id, "flow_settled", "Created flow from spec")
+
     # Return flow info
     info = await get_flow_info(flow_id)
     info["node_id_map"] = id_map
@@ -471,6 +474,7 @@ async def add_component(flow_id: str, component_type: str) -> dict[str, Any]:
     result = fb_add_component(flow, component_type, registry)
     layout_flow(flow)
     await _patch_flow(flow_id, flow)
+    await _get_client().post_event(flow_id, "component_added", f"Added {component_type}")
     return result
 
 
@@ -486,6 +490,7 @@ async def remove_component(flow_id: str, component_id: str) -> dict[str, str]:
     fb_remove_component(flow, component_id)
     layout_flow(flow)
     await _patch_flow(flow_id, flow)
+    await _get_client().post_event(flow_id, "component_removed", f"Removed {component_id}")
     return {"removed": component_id}
 
 
@@ -591,6 +596,7 @@ async def configure_component(
         fb_configure(flow, component_id, static_params)
 
     await _patch_flow(flow_id, flow)
+    await _get_client().post_event(flow_id, "component_configured", f"Configured {component_id}")
     result: dict[str, Any] = {"component_id": component_id, "configured": list(params.keys())}
     if warnings:
         result["warnings"] = warnings
@@ -765,6 +771,7 @@ async def connect_components(
     fb_add_connection(flow, source_id, source_output, target_id, target_input)
     layout_flow(flow)
     await _patch_flow(flow_id, flow)
+    await _get_client().post_event(flow_id, "connection_added", f"Connected {source_id} to {target_id}")
     return {
         "source_id": source_id,
         "source_output": source_output,
@@ -799,6 +806,7 @@ async def disconnect_components(
         raise ValueError(msg)
     layout_flow(flow)
     await _patch_flow(flow_id, flow)
+    await _get_client().post_event(flow_id, "connection_removed", f"Disconnected {source_id} from {target_id}")
     return {"removed_count": removed}
 
 
@@ -1126,6 +1134,7 @@ async def update_flow_from_spec(flow_id: str, spec: str) -> dict[str, Any]:
         patch_data["name"] = parsed["name"]
 
     await _get_client().patch(f"/flows/{flow_id}", json_data=patch_data)
+    await _get_client().post_event(flow_id, "flow_updated", "Updated flow from spec")
 
     return {
         "id": flow_id,
@@ -1167,7 +1176,9 @@ async def freeze_component(flow_id: str, component_id: str) -> dict[str, str]:
         flow_id: The flow UUID.
         component_id: The component ID to freeze.
     """
-    return await _set_frozen(flow_id, component_id, frozen=True)
+    result = await _set_frozen(flow_id, component_id, frozen=True)
+    await _get_client().post_event(flow_id, "component_configured", f"Froze {component_id}")
+    return result
 
 
 @mcp.tool()
@@ -1178,7 +1189,9 @@ async def unfreeze_component(flow_id: str, component_id: str) -> dict[str, str]:
         flow_id: The flow UUID.
         component_id: The component ID to unfreeze.
     """
-    return await _set_frozen(flow_id, component_id, frozen=False)
+    result = await _set_frozen(flow_id, component_id, frozen=False)
+    await _get_client().post_event(flow_id, "component_configured", f"Unfroze {component_id}")
+    return result
 
 
 @mcp.tool()
@@ -1193,7 +1206,23 @@ async def layout_flow_tool(flow_id: str) -> dict[str, str]:
     flow = await _get_flow(flow_id)
     layout_flow(flow)
     await _patch_flow(flow_id, flow)
+    await _get_client().post_event(flow_id, "flow_updated", "Re-laid out flow")
     return {"laid_out": flow_id}
+
+
+@mcp.tool()
+async def notify_done(flow_id: str, summary: str | None = None) -> dict[str, str]:
+    """Signal that you are done modifying a flow.
+
+    Call this after completing a series of modifications so the UI updates immediately.
+    If you don't call this, the UI will still update after a short timeout.
+
+    Args:
+        flow_id: The flow UUID you were modifying.
+        summary: Optional human-readable summary of what you did (e.g. "Built a RAG pipeline with OpenAI and Pinecone").
+    """
+    await _get_client().post_event(flow_id, "flow_settled", summary or "")
+    return {"status": "ok", "flow_id": flow_id}
 
 
 # ---------------------------------------------------------------------------
@@ -1238,6 +1267,7 @@ def _get_tool_map() -> dict[str, Any]:
             "freeze_component": freeze_component,
             "unfreeze_component": unfreeze_component,
             "layout_flow": layout_flow_tool,
+            "notify_done": notify_done,
         }
     return _TOOL_MAP
 

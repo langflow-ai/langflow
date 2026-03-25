@@ -7,6 +7,7 @@ for non-blocking operations inside the MCP server.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import os
@@ -185,3 +186,8 @@ class LangflowClient:
             msg = f"Login failed: {exc}"
             raise RuntimeError(msg) from exc
         return self.api_key
+
+    async def post_event(self, flow_id: str, event_type: str, summary: str = "") -> None:
+        """Post an event to the flow events queue. Best-effort -- does not raise on failure."""
+        with contextlib.suppress(Exception):
+            await self.post(f"/flows/{flow_id}/events", json_data={"type": event_type, "summary": summary})
