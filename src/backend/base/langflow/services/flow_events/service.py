@@ -7,7 +7,7 @@ from threading import Lock
 from langflow.services.base import Service
 
 
-@dataclass
+@dataclass(frozen=True)
 class FlowEvent:
     type: str
     timestamp: float
@@ -37,27 +37,24 @@ class FlowEventsService(Service):
         """Return (events_after_since, settled).
 
         settled is True if:
+        - No events exist for this flow, OR
         - A flow_settled event exists after `since`, OR
-        - Events exist but the most recent one is older than SETTLE_TIMEOUT seconds.
+        - The most recent event is older than SETTLE_TIMEOUT seconds.
         """
         with self._lock:
             self._cleanup(flow_id)
-            all_events = self._events.get(flow_id, [])
+            all_events = list(self._events.get(flow_id, []))
 
         after = [e for e in all_events if e.timestamp > since]
 
         if not after and not all_events:
             return [], True
 
-        has_settled_event = any(e.type == "flow_settled" for e in after)
-        if has_settled_event:
+        if any(e.type == "flow_settled" for e in after):
             return after, True
 
-        if all_events:
-            last_event_age = time.time() - all_events[-1].timestamp
-            settled = last_event_age >= self.SETTLE_TIMEOUT
-        else:
-            settled = True
+        last_event_age = time.time() - all_events[-1].timestamp
+        settled = last_event_age >= self.SETTLE_TIMEOUT
 
         return after, settled
 
