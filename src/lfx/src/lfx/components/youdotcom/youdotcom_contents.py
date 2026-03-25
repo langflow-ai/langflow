@@ -55,7 +55,7 @@ class YouDotComContentsComponent(Component):
 
     def fetch_content(self) -> list[Data]:
         try:
-            if self.crawl_timeout and not (1 <= self.crawl_timeout <= MAX_CRAWL_TIMEOUT):
+            if self.crawl_timeout is not None and not (1 <= self.crawl_timeout <= MAX_CRAWL_TIMEOUT):
                 msg = f"crawl_timeout must be between 1 and {MAX_CRAWL_TIMEOUT} seconds"
                 raise ValueError(msg)
 
@@ -72,7 +72,7 @@ class YouDotComContentsComponent(Component):
                 "urls": url_list,
                 "formats": [self.formats],
             }
-            if self.crawl_timeout:
+            if self.crawl_timeout is not None:
                 payload["crawl_timeout"] = self.crawl_timeout
 
             with httpx.Client(timeout=60.0) as client:
