@@ -141,6 +141,48 @@ def _raise_http_for_provider_account_value_error(exc: ValueError) -> None:
     raise_http_for_value_error(exc)
 
 
+async def _delete_local_deployment_row_with_commit_retry(
+    *,
+    session: DbSession,
+    deployment_id: UUID,
+    user_id: UUID,
+    resource_key: str,
+) -> None:
+    """Delete the local deployment row, retrying once if the commit fails.
+
+    Delete is provider-first, so by the time this helper runs the provider
+    resource is already gone (or was already missing). If the first DB commit
+    fails, retry the local delete once after a rollback so we do not strand a
+    stale Langflow row that still blocks later reads or provider-account
+    deletion.
+    """
+    try:
+        await delete_deployment_by_id(session, user_id=user_id, deployment_id=deployment_id)
+        await session.commit()
+    except Exception:  # noqa: BLE001
+        await session.rollback()
+        logger.warning(
+            "Local deployment cleanup failed for deployment %s (resource_key=%s) after provider delete; retrying.",
+            deployment_id,
+            resource_key,
+            exc_info=True,
+        )
+        try:
+            await delete_deployment_by_id(session, user_id=user_id, deployment_id=deployment_id)
+            await session.commit()
+        except Exception as exc:
+            await session.rollback()
+            logger.exception(
+                "Retrying local deployment cleanup failed for deployment %s (resource_key=%s) after provider delete.",
+                deployment_id,
+                resource_key,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Deployment was deleted from the provider, but local cleanup failed. Retry the delete request.",
+            ) from exc
+
+
 @router.post(
     "/providers",
     response_model=DeploymentProviderAccountGetResponse,
@@ -787,13 +829,28 @@ async def delete_deployment(
         user_id=current_user.id,
         db=session,
     )
-    with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
-        await deployment_adapter.delete(
-            deployment_id=deployment_row.resource_key,
-            user_id=current_user.id,
-            db=session,
+    try:
+        with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
+            await deployment_adapter.delete(
+                deployment_id=deployment_row.resource_key,
+                user_id=current_user.id,
+                db=session,
+            )
+    except HTTPException as exc:
+        if exc.status_code != status.HTTP_404_NOT_FOUND:
+            raise
+        logger.warning(
+            "Deployment %s (resource_key=%s) already missing on provider %s during delete; deleting stale row.",
+            deployment_row.id,
+            deployment_row.resource_key,
+            deployment_row.deployment_provider_account_id,
         )
-    await delete_deployment_by_id(session, user_id=current_user.id, deployment_id=deployment_row.id)
+    await _delete_local_deployment_row_with_commit_retry(
+        session=session,
+        deployment_id=deployment_row.id,
+        user_id=current_user.id,
+        resource_key=deployment_row.resource_key,
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

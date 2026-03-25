@@ -771,6 +771,116 @@ class TestGetDeploymentSync:
 
 
 # ---------------------------------------------------------------------------
+# delete_deployment: stale-row cleanup + commit retry
+# ---------------------------------------------------------------------------
+
+
+class TestDeleteDeployment:
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.delete_deployment_by_id", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_adapter_from_deployment", new_callable=AsyncMock)
+    async def test_provider_not_found_still_deletes_local_row(
+        self,
+        mock_resolve,
+        mock_delete_row,
+    ):
+        """Delete is idempotent when the provider agent is already gone."""
+        from langflow.api.v1.deployments import delete_deployment
+
+        dep_row = _fake_deployment_row()
+        adapter = AsyncMock()
+        adapter.delete.side_effect = DeploymentNotFoundError(message="gone")
+        mock_resolve.return_value = (dep_row, adapter)
+
+        user = _fake_user()
+        session = AsyncMock()
+
+        response = await delete_deployment(deployment_id=dep_row.id, session=session, current_user=user)
+
+        assert response.status_code == 204
+        mock_delete_row.assert_awaited_once_with(session, user_id=user.id, deployment_id=dep_row.id)
+        session.commit.assert_awaited_once()
+        session.rollback.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.delete_deployment_by_id", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_adapter_from_deployment", new_callable=AsyncMock)
+    async def test_non_404_provider_error_does_not_delete_local_row(
+        self,
+        mock_resolve,
+        mock_delete_row,
+    ):
+        """Delete keeps the DB row when the provider call fails for non-404 reasons."""
+        from langflow.api.v1.deployments import delete_deployment
+
+        dep_row = _fake_deployment_row()
+        adapter = AsyncMock()
+        adapter.delete.side_effect = AuthenticationError(message="bad creds", error_code="authentication_error")
+        mock_resolve.return_value = (dep_row, adapter)
+
+        session = AsyncMock()
+
+        with pytest.raises(HTTPException) as exc_info:
+            await delete_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
+
+        assert exc_info.value.status_code == 401
+        mock_delete_row.assert_not_awaited()
+        session.commit.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.delete_deployment_by_id", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_adapter_from_deployment", new_callable=AsyncMock)
+    async def test_commit_failure_retries_local_cleanup_once(
+        self,
+        mock_resolve,
+        mock_delete_row,
+    ):
+        """A failed local commit after provider delete triggers one cleanup retry."""
+        from langflow.api.v1.deployments import delete_deployment
+
+        dep_row = _fake_deployment_row()
+        adapter = AsyncMock()
+        mock_resolve.return_value = (dep_row, adapter)
+
+        user = _fake_user()
+        session = AsyncMock()
+        session.commit.side_effect = [RuntimeError("commit failed"), None]
+
+        response = await delete_deployment(deployment_id=dep_row.id, session=session, current_user=user)
+
+        assert response.status_code == 204
+        assert mock_delete_row.await_count == 2
+        session.rollback.assert_awaited_once()
+        assert session.commit.await_count == 2
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.delete_deployment_by_id", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_adapter_from_deployment", new_callable=AsyncMock)
+    async def test_repeated_local_cleanup_failure_returns_500(
+        self,
+        mock_resolve,
+        mock_delete_row,
+    ):
+        """If cleanup still fails after retry, the route surfaces a 500."""
+        from langflow.api.v1.deployments import delete_deployment
+
+        dep_row = _fake_deployment_row()
+        adapter = AsyncMock()
+        mock_resolve.return_value = (dep_row, adapter)
+
+        session = AsyncMock()
+        session.commit.side_effect = [RuntimeError("commit failed"), RuntimeError("still failing")]
+
+        with pytest.raises(HTTPException) as exc_info:
+            await delete_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
+
+        assert exc_info.value.status_code == 500
+        assert mock_delete_row.await_count == 2
+        assert session.rollback.await_count == 2
+        assert session.commit.await_count == 2
+
+
+# ---------------------------------------------------------------------------
 # create_deployment: duplicate name returns 409
 # ---------------------------------------------------------------------------
 
