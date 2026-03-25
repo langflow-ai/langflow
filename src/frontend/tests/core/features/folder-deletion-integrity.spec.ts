@@ -65,6 +65,9 @@ test(
 
     // Delete the folder
     await folderBeforeDelete.hover();
+    await page
+      .getByTestId("more-options-button_test-folder-to-delete")
+      .waitFor({ state: "visible", timeout: 5000 });
     await page.getByTestId("more-options-button_test-folder-to-delete").click();
     await page.getByTestId("btn-delete-project").click();
     await page.getByText("Delete").last().click();
@@ -164,6 +167,9 @@ test(
     // Delete the first folder
     const folderAlpha = page.getByTestId("sidebar-nav-folder-alpha");
     await folderAlpha.hover();
+    await page
+      .getByTestId("more-options-button_folder-alpha")
+      .waitFor({ state: "visible", timeout: 5000 });
     await page.getByTestId("more-options-button_folder-alpha").click();
     await page.getByTestId("btn-delete-project").click();
     await page.getByText("Delete").last().click();
@@ -192,6 +198,9 @@ test(
 
     // Clean up - delete the remaining folder
     await folderBeta.hover();
+    await page
+      .getByTestId("more-options-button_folder-beta")
+      .waitFor({ state: "visible", timeout: 5000 });
     await page.getByTestId("more-options-button_folder-beta").click();
     await page.getByTestId("btn-delete-project").click();
     await page.getByText("Delete").last().click();
@@ -249,6 +258,9 @@ test(
     // Delete the folder
     const folderOne = page.getByTestId("sidebar-nav-folder-one");
     await folderOne.hover();
+    await page
+      .getByTestId("more-options-button_folder-one")
+      .waitFor({ state: "visible", timeout: 5000 });
     await page.getByTestId("more-options-button_folder-one").click();
     await page.getByTestId("btn-delete-project").click();
     await page.getByText("Delete").last().click();
@@ -291,6 +303,9 @@ test(
 
     // Clean up
     await folderTwo.hover();
+    await page
+      .getByTestId("more-options-button_folder-two")
+      .waitFor({ state: "visible", timeout: 5000 });
     await page.getByTestId("more-options-button_folder-two").click();
     await page.getByTestId("btn-delete-project").click();
     await page.getByText("Delete").last().click();
@@ -340,13 +355,16 @@ test(
         `more-options-button_${kebabName}`,
       );
 
-      if (await moreOptionsButton.isVisible()) {
+      // Wait for the button to appear after hover
+      try {
+        await moreOptionsButton.waitFor({ state: "visible", timeout: 5000 });
         await moreOptionsButton.click();
-      } else {
+      } catch {
         // Try with the original name format
         const altMoreOptions = page
           .locator(`[data-testid^="more-options-button_"]`)
           .first();
+        await altMoreOptions.waitFor({ state: "visible", timeout: 5000 });
         await altMoreOptions.click();
       }
 
