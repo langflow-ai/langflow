@@ -86,16 +86,16 @@ def test_filter_by_model_type_embeddings():
 
 
 def test_update_model_options_with_custom_field_name():
-    """Test that update_model_options_in_build_config works with custom field names."""
+    """Test that update_model_options_in_build_config populates the 'model' field with embedding options."""
     # Create mock component
     mock_component = MagicMock()
     mock_component.user_id = "test-user-123"
     mock_component.cache = {}
     mock_component.log = MagicMock()
 
-    # Create build_config with custom field name
+    # Create build_config using the standard 'model' field (used for embeddings too)
     build_config = {
-        "embedding_model": {
+        "model": {
             "options": [],
             "value": "",
             "input_types": ["Embeddings"],
@@ -109,25 +109,24 @@ def test_update_model_options_with_custom_field_name():
             {"name": "embed-english-v3.0", "provider": "Cohere"},
         ]
 
-    # Call with custom field name
+    # Call with embedding cache key prefix
     result = update_model_options_in_build_config(
         component=mock_component,
         build_config=build_config,
-        cache_key_prefix="test_embedding_options",
+        cache_key_prefix="embedding_model_options",
         get_options_func=mock_get_options,
         field_name=None,
         field_value="",
-        model_field_name="embedding_model",
     )
 
-    # Verify options were populated in the custom field
-    assert "embedding_model" in result
-    assert len(result["embedding_model"]["options"]) == 2
-    assert result["embedding_model"]["options"][0]["name"] == "text-embedding-ada-002"
-    assert result["embedding_model"]["options"][1]["provider"] == "Cohere"
+    # Verify options were populated in the model field
+    assert "model" in result
+    assert len(result["model"]["options"]) == 2
+    assert result["model"]["options"][0]["name"] == "text-embedding-ada-002"
+    assert result["model"]["options"][1]["provider"] == "Cohere"
 
     # Verify default value was set
-    assert result["embedding_model"]["value"] == [result["embedding_model"]["options"][0]]
+    assert result["model"]["value"] == [result["model"]["options"][0]]
 
 
 def test_update_model_options_default_field_name():
