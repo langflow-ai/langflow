@@ -341,8 +341,7 @@ def _engine_url(db_url: str) -> str:
     return db_url
 
 
-# Postgres expression indexes on JSON paths are created in migrations but are not
-# represented in SQLModel.metadata; compare_metadata always reports them as extra.
+# Postgres-only expression indexes from migrations; not mirrored in SQLModel.metadata.
 _MESSAGE_SESSION_METADATA_EXPRESSION_INDEX_NAMES = frozenset(
     {
         "ix_message_session_metadata_tenant",
@@ -366,12 +365,16 @@ def _filter_expression_index_metadata_noise(diffs: list) -> list:
 
 def _filter_diffs(diffs: list, db_url: str) -> list:
     """Apply backend-appropriate diff filtering."""
-    diffs = _filter_sqlite_noise(diffs) if "sqlite" in db_url else list(diffs)
-    return _filter_expression_index_metadata_noise(diffs)
+    filtered_diffs = list(diffs)
+    if "sqlite" in db_url:
+        filtered_diffs = _filter_sqlite_noise(filtered_diffs)
+    else:
+        filtered_diffs = _filter_expression_index_metadata_noise(filtered_diffs)
+    return filtered_diffs
 
 
 class TestFilterExpressionIndexMetadataNoise:
-    """Tests for filtering migration-only JSON expression index autogenerate noise."""
+    """Tests for filtering migration-only expression index autogenerate noise."""
 
     def test_known_session_metadata_indexes_suppressed(self):
         class _FakeIdx:
