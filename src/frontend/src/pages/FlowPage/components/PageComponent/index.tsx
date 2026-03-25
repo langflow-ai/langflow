@@ -179,10 +179,14 @@ export default function Page({
               const summaries = nonSettleEvents
                 .map((e) => e.summary)
                 .filter(Boolean);
-              const title =
-                summaries.length > 0
-                  ? `Agent updated flow: ${summaries.join(", ")}`
-                  : `Agent made ${nonSettleEvents.length} change(s) to this flow`;
+              let title: string;
+              if (summaries.length === 0) {
+                title = `Agent made ${nonSettleEvents.length} change(s) to this flow`;
+              } else if (summaries.length <= 3) {
+                title = `Agent updated flow: ${summaries.join(", ")}`;
+              } else {
+                title = `Agent updated flow: ${summaries.slice(0, 3).join(", ")} and ${summaries.length - 3} more`;
+              }
               setSuccessData({ title });
             }
           },
@@ -273,7 +277,7 @@ export default function Page({
   }, [autoSaveFlow]);
 
   function handleUndo(e: KeyboardEvent) {
-    if (isPreviewActive) return;
+    if (isPreviewActive || effectiveLocked) return;
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -282,7 +286,7 @@ export default function Page({
   }
 
   function handleRedo(e: KeyboardEvent) {
-    if (isPreviewActive) return;
+    if (isPreviewActive || effectiveLocked) return;
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -291,7 +295,7 @@ export default function Page({
   }
 
   function handleGroup(e: KeyboardEvent) {
-    if (isPreviewActive) return;
+    if (isPreviewActive || effectiveLocked) return;
     if (selectionMenuVisible) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -300,7 +304,7 @@ export default function Page({
   }
 
   function handleDuplicate(e: KeyboardEvent) {
-    if (isPreviewActive) return;
+    if (isPreviewActive || effectiveLocked) return;
     e.preventDefault();
     e.stopPropagation();
     (e as unknown as Event).stopImmediatePropagation();
@@ -337,7 +341,7 @@ export default function Page({
   }
 
   function handleCut(e: KeyboardEvent) {
-    if (isPreviewActive) return;
+    if (isPreviewActive || effectiveLocked) return;
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -348,7 +352,7 @@ export default function Page({
   }
 
   function handlePaste(e: KeyboardEvent) {
-    if (isPreviewActive) return;
+    if (isPreviewActive || effectiveLocked) return;
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();

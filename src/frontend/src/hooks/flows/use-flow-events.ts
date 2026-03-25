@@ -20,6 +20,8 @@ export function useFlowEvents(flowId: string | undefined): UseFlowEventsReturn {
   const cursorRef = useRef<number>(Date.now() / 1000);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isActiveRef = useRef(false);
+  const isPollingRef = useRef(false);
+  const mountedRef = useRef(true);
 
   const clearInterval_ = useCallback(() => {
     if (intervalRef.current) {
@@ -29,13 +31,17 @@ export function useFlowEvents(flowId: string | undefined): UseFlowEventsReturn {
   }, []);
 
   const poll = useCallback(async () => {
-    if (!flowId) return;
+    if (!flowId || isPollingRef.current) return;
 
+    isPollingRef.current = true;
     try {
       const response = await api.get<FlowEventsResponse>(
         `${getURL("FLOWS")}/${flowId}/events`,
         { params: { since: cursorRef.current } },
       );
+
+      if (!mountedRef.current) return;
+
       const { events: newEvents, settled } = response.data;
 
       if (newEvents.length > 0) {
@@ -56,27 +62,37 @@ export function useFlowEvents(flowId: string | undefined): UseFlowEventsReturn {
         isActiveRef.current = false;
         setIsAgentWorking(false);
         setLastSettledAt(Date.now() / 1000);
+        setEvents([]);
         clearInterval_();
         intervalRef.current = setInterval(poll, IDLE_INTERVAL);
       }
     } catch (error) {
       console.warn("[useFlowEvents] Poll failed:", error);
+    } finally {
+      isPollingRef.current = false;
     }
   }, [flowId, clearInterval_]);
 
   useEffect(() => {
     if (!flowId) return;
 
+    mountedRef.current = true;
     cursorRef.current = Date.now() / 1000;
     setEvents([]);
     setIsAgentWorking(false);
     setLastSettledAt(null);
     isActiveRef.current = false;
+    isPollingRef.current = false;
 
+    // Poll immediately on mount, then at idle interval
+    poll();
     clearInterval_();
     intervalRef.current = setInterval(poll, IDLE_INTERVAL);
 
-    return clearInterval_;
+    return () => {
+      mountedRef.current = false;
+      clearInterval_();
+    };
   }, [flowId, poll, clearInterval_]);
 
   return { isAgentWorking, events, lastSettledAt };

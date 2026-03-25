@@ -12,66 +12,73 @@ jest.mock("@/controllers/API/helpers/constants", () => ({
 
 import { useFlowEvents } from "../use-flow-events";
 
+const EMPTY_RESPONSE = { data: { events: [], settled: true } };
+
 describe("useFlowEvents", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
-    apiGetMock.mockResolvedValue({
-      data: { events: [], settled: true },
-    });
+    apiGetMock.mockResolvedValue(EMPTY_RESPONSE);
   });
 
   afterEach(() => {
     jest.useRealTimers();
   });
 
-  it("should start in idle state", () => {
-    const { result } = renderHook(() => useFlowEvents("flow-1"));
+  async function mountHook(flowId: string | undefined = "flow-1") {
+    const hook = renderHook(
+      ({ id }: { id: string | undefined }) => useFlowEvents(id),
+      { initialProps: { id: flowId } },
+    );
+    // Flush the immediate initial poll
+    await act(async () => {});
+    return hook;
+  }
+
+  it("should start in idle state", async () => {
+    const { result } = await mountHook();
 
     expect(result.current.isAgentWorking).toBe(false);
     expect(result.current.events).toEqual([]);
     expect(result.current.lastSettledAt).toBeNull();
   });
 
-  it("should not poll when flowId is undefined", () => {
+  it("should not poll when flowId is undefined", async () => {
+    apiGetMock.mockClear();
     renderHook(() => useFlowEvents(undefined));
 
-    act(() => {
+    await act(async () => {
       jest.advanceTimersByTime(10000);
     });
 
     expect(apiGetMock).not.toHaveBeenCalled();
   });
 
-  it("should poll at idle interval (5s)", async () => {
-    renderHook(() => useFlowEvents("flow-1"));
+  it("should poll immediately on mount", async () => {
+    await mountHook();
 
-    // First poll at 5s
-    await act(async () => {
-      jest.advanceTimersByTime(5000);
-    });
+    // Initial poll should have fired already
     expect(apiGetMock).toHaveBeenCalledTimes(1);
+  });
 
-    // Second poll at 10s
+  it("should poll at idle interval (5s)", async () => {
+    await mountHook();
+
+    const initialCalls = apiGetMock.mock.calls.length;
+
     await act(async () => {
       jest.advanceTimersByTime(5000);
     });
-    expect(apiGetMock).toHaveBeenCalledTimes(2);
+    expect(apiGetMock).toHaveBeenCalledTimes(initialCalls + 1);
+
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+    expect(apiGetMock).toHaveBeenCalledTimes(initialCalls + 2);
   });
 
   it("should detect agent working when events arrive", async () => {
-    const { result } = renderHook(() => useFlowEvents("flow-1"));
-
-    // First poll returns no events
-    apiGetMock.mockResolvedValueOnce({
-      data: { events: [], settled: true },
-    });
-
-    await act(async () => {
-      jest.advanceTimersByTime(5000);
-    });
-
-    expect(result.current.isAgentWorking).toBe(false);
+    const { result } = await mountHook();
 
     // Next poll returns events
     apiGetMock.mockResolvedValueOnce({
@@ -97,15 +104,14 @@ describe("useFlowEvents", () => {
   });
 
   it("should accumulate events across polls", async () => {
-    const { result } = renderHook(() => useFlowEvents("flow-1"));
+    const { result } = await mountHook();
 
-    const ts1 = Date.now() / 1000;
+    const ts = Date.now() / 1000;
 
-    // First poll with event
     apiGetMock.mockResolvedValueOnce({
       data: {
         events: [
-          { type: "component_added", timestamp: ts1, summary: "Added A" },
+          { type: "component_added", timestamp: ts, summary: "Added A" },
         ],
         settled: false,
       },
@@ -115,13 +121,12 @@ describe("useFlowEvents", () => {
       jest.advanceTimersByTime(5000);
     });
 
-    // Second poll with another event (now at active interval)
     apiGetMock.mockResolvedValueOnce({
       data: {
         events: [
           {
             type: "connection_added",
-            timestamp: ts1 + 1,
+            timestamp: ts + 1,
             summary: "Connected A to B",
           },
         ],
@@ -138,12 +143,11 @@ describe("useFlowEvents", () => {
     expect(result.current.events[1].summary).toBe("Connected A to B");
   });
 
-  it("should settle when flow_settled event arrives", async () => {
-    const { result } = renderHook(() => useFlowEvents("flow-1"));
+  it("should settle and clear events", async () => {
+    const { result } = await mountHook();
 
     const ts = Date.now() / 1000;
 
-    // First poll: agent starts working
     apiGetMock.mockResolvedValueOnce({
       data: {
         events: [
@@ -159,7 +163,6 @@ describe("useFlowEvents", () => {
 
     expect(result.current.isAgentWorking).toBe(true);
 
-    // Second poll: settled
     apiGetMock.mockResolvedValueOnce({
       data: {
         events: [{ type: "flow_settled", timestamp: ts + 1, summary: "Done" }],
@@ -173,14 +176,11 @@ describe("useFlowEvents", () => {
 
     expect(result.current.isAgentWorking).toBe(false);
     expect(result.current.lastSettledAt).not.toBeNull();
+    expect(result.current.events).toEqual([]); // Events cleared after settle
   });
 
   it("should pass since cursor in poll requests", async () => {
-    renderHook(() => useFlowEvents("flow-1"));
-
-    await act(async () => {
-      jest.advanceTimersByTime(5000);
-    });
+    await mountHook();
 
     expect(apiGetMock).toHaveBeenCalledWith(
       expect.stringContaining("/flow-1/events"),
@@ -191,14 +191,10 @@ describe("useFlowEvents", () => {
   });
 
   it("should reset state when flowId changes", async () => {
-    const { result, rerender } = renderHook(
-      ({ id }: { id: string | undefined }) => useFlowEvents(id),
-      { initialProps: { id: "flow-1" as string | undefined } },
-    );
+    const { result, rerender } = await mountHook();
 
     const ts = Date.now() / 1000;
 
-    // Get some events
     apiGetMock.mockResolvedValueOnce({
       data: {
         events: [
@@ -214,8 +210,9 @@ describe("useFlowEvents", () => {
 
     expect(result.current.events).toHaveLength(1);
 
-    // Change flowId
-    rerender({ id: "flow-2" });
+    await act(async () => {
+      rerender({ id: "flow-2" });
+    });
 
     expect(result.current.events).toEqual([]);
     expect(result.current.isAgentWorking).toBe(false);
@@ -223,11 +220,10 @@ describe("useFlowEvents", () => {
   });
 
   it("should continue polling at idle interval after settle", async () => {
-    const { result } = renderHook(() => useFlowEvents("flow-1"));
+    const { result } = await mountHook();
 
     const ts = Date.now() / 1000;
 
-    // Activate
     apiGetMock.mockResolvedValueOnce({
       data: {
         events: [
@@ -241,9 +237,6 @@ describe("useFlowEvents", () => {
       jest.advanceTimersByTime(5000);
     });
 
-    expect(result.current.isAgentWorking).toBe(true);
-
-    // Settle
     apiGetMock.mockResolvedValueOnce({
       data: {
         events: [{ type: "flow_settled", timestamp: ts + 1, summary: "Done" }],
@@ -258,11 +251,6 @@ describe("useFlowEvents", () => {
     expect(result.current.isAgentWorking).toBe(false);
     const callCountAfterSettle = apiGetMock.mock.calls.length;
 
-    // Should resume polling at idle interval (5s)
-    apiGetMock.mockResolvedValue({
-      data: { events: [], settled: true },
-    });
-
     await act(async () => {
       jest.advanceTimersByTime(5000);
     });
@@ -271,11 +259,10 @@ describe("useFlowEvents", () => {
   });
 
   it("should handle events and settled arriving in same poll", async () => {
-    const { result } = renderHook(() => useFlowEvents("flow-1"));
+    const { result } = await mountHook();
 
     const ts = Date.now() / 1000;
 
-    // First poll returns events AND settled=true simultaneously
     apiGetMock.mockResolvedValueOnce({
       data: {
         events: [
@@ -290,14 +277,14 @@ describe("useFlowEvents", () => {
       jest.advanceTimersByTime(5000);
     });
 
-    // Should have transitioned through active to settled
     expect(result.current.isAgentWorking).toBe(false);
     expect(result.current.lastSettledAt).not.toBeNull();
-    expect(result.current.events).toHaveLength(2);
+    // Events cleared after settle
+    expect(result.current.events).toEqual([]);
   });
 
   it("should handle API errors gracefully", async () => {
-    const { result } = renderHook(() => useFlowEvents("flow-1"));
+    const { result } = await mountHook();
 
     apiGetMock.mockRejectedValueOnce(new Error("Network error"));
 
@@ -305,7 +292,6 @@ describe("useFlowEvents", () => {
       jest.advanceTimersByTime(5000);
     });
 
-    // Should not crash, stays in idle state
     expect(result.current.isAgentWorking).toBe(false);
     expect(result.current.events).toEqual([]);
   });
