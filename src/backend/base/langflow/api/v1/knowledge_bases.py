@@ -36,12 +36,32 @@ router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases", include_
 
 
 def _resolve_kb_path(kb_name: str, current_user: CurrentActiveUser) -> Path:
-    """Resolve and validate KB path, raising 404 if not found."""
+    """Resolve and validate KB path.
+
+    Raises 500 if root path not configured.
+    Raises 403 if path traversal is detected (kb_name escapes the user directory).
+    Raises 404 if the KB directory does not exist.
+    """
     kb_root_path = KBStorageHelper.get_root_path()
     if not kb_root_path:
         raise HTTPException(status_code=500, detail="Knowledge base root path not configured")
     kb_user = current_user.username
-    kb_path = kb_root_path / kb_user / kb_name
+    kb_user_path = (kb_root_path / kb_user).resolve()
+    kb_path = (kb_user_path / kb_name).resolve()
+
+    # Security: use is_relative_to() instead of startswith() to prevent path traversal attacks.
+    # startswith() has a prefix-ambiguity bug: a user named "alice" would incorrectly allow
+    # paths under "alice_evil/" because the string starts with "alice". is_relative_to() performs
+    # proper path containment checking.
+    if not kb_path.is_relative_to(kb_user_path):
+        logger.warning(
+            "Path traversal attempt blocked: user=%s kb_name=%r resolved_path=%s",
+            kb_user,
+            kb_name,
+            kb_path,
+        )
+        raise HTTPException(status_code=403, detail=f"Access denied for knowledge base '{kb_name}'.")
+
     if not kb_path.exists() or not kb_path.is_dir():
         raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
     return kb_path
@@ -622,17 +642,17 @@ async def delete_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -
 async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: CurrentActiveUser) -> dict[str, object]:
     """Delete multiple knowledge bases."""
     try:
-        kb_root_path = KBStorageHelper.get_root_path()
-        kb_user_path = kb_root_path / current_user.username
         deleted_count = 0
         not_found_kbs = []
 
         for kb_name in request.kb_names:
-            kb_path = kb_user_path / kb_name
-
-            if not kb_path.exists() or not kb_path.is_dir():
-                not_found_kbs.append(kb_name)
-                continue
+            try:
+                kb_path = _resolve_kb_path(kb_name, current_user)
+            except HTTPException as exc:
+                if exc.status_code == HTTPStatus.NOT_FOUND:
+                    not_found_kbs.append(kb_name)
+                    continue
+                raise  # Re-raise 403 (traversal) and 500 errors
 
             try:
                 if KBStorageHelper.delete_storage(kb_path, kb_name):
