@@ -63,9 +63,7 @@ from langflow.services.deps import (
 def update_projects_components_with_latest_component_versions(project_data, all_types_dict):
     # Flatten the all_types_dict for easy access
     all_types_dict_flat = {
-        key: component
-        for category in all_types_dict.values()
-        for key, component in category.items()
+        key: component for category in all_types_dict.values() for key, component in category.items()
     }
 
     node_changes_log = defaultdict(list)
