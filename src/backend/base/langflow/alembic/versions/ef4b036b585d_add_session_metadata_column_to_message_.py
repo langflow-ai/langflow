@@ -24,34 +24,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    conn = op.get_bind()
-    
     with op.batch_alter_table('message', schema=None) as batch_op:
         batch_op.add_column(sa.Column('session_metadata', sa.JSON(), nullable=True))
-    
-    if conn.dialect.name == 'postgresql':
-        op.create_index(
-            'ix_message_session_metadata_tenant',
-            'message',
-            [sa.text("(session_metadata->>'tenant_id')")],
-            postgresql_using='btree',
-            if_not_exists=True
-        )
-        op.create_index(
-            'ix_message_session_metadata_user',
-            'message',
-            [sa.text("(session_metadata->>'user_id')")],
-            postgresql_using='btree',
-            if_not_exists=True
-        )
 
 
 def downgrade() -> None:
-    conn = op.get_bind()
-    
-    if conn.dialect.name == 'postgresql':
-        op.drop_index('ix_message_session_metadata_user', table_name='message', if_exists=True)
-        op.drop_index('ix_message_session_metadata_tenant', table_name='message', if_exists=True)
-    
     with op.batch_alter_table('message', schema=None) as batch_op:
         batch_op.drop_column('session_metadata')
