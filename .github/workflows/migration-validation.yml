@@ -45,7 +45,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync
+          uv sync --extra postgresql
 
       - name: Check model/migration consistency
         env:
