@@ -16,7 +16,6 @@ class InputValidationError(ValueError):
     """Raised when input validation fails."""
 
 
-
 class YouDotComSearchComponent(Component):
     """You.com Search component for web search optimized for LLMs and RAG.
 

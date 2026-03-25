@@ -15,7 +15,6 @@ class InputValidationError(ValueError):
     """Raised when input validation fails."""
 
 
-
 class YouDotComContentsComponent(Component):
     """You.com Contents component for extracting clean content from URLs.
 
