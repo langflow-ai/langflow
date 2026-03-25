@@ -31,10 +31,10 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
         BoolInput(
             name="allow_dangerous_deserialization",
             display_name="Allow Dangerous Deserialization",
-            info="Set to True to allow loading pickle files from untrusted sources. "
-            "Only enable this if you trust the source of the data.",
+            info="Set to True to allow loading pickle files. WARNING: Only enable this if you trust the source "
+            "of the data. Malicious pickle files can execute arbitrary code on your system.",
             advanced=True,
-            value=True,
+            value=False,
         ),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
