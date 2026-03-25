@@ -146,8 +146,7 @@ class DeploymentProviderAccountCreateRequest(BaseModel):
 
     name: NonEmptyStr = Field(
         description=(
-            "User-chosen display name for this provider account. "
-            "Must be unique per user within a provider_key."
+            "User-chosen display name for this provider account. Must be unique per user within a provider_key."
         ),
     )
     provider_tenant_id: NonEmptyStr | None = Field(
