@@ -222,6 +222,80 @@ describe("useFlowEvents", () => {
     expect(result.current.lastSettledAt).toBeNull();
   });
 
+  it("should continue polling at idle interval after settle", async () => {
+    const { result } = renderHook(() => useFlowEvents("flow-1"));
+
+    const ts = Date.now() / 1000;
+
+    // Activate
+    apiGetMock.mockResolvedValueOnce({
+      data: {
+        events: [
+          { type: "component_added", timestamp: ts, summary: "Added A" },
+        ],
+        settled: false,
+      },
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+
+    expect(result.current.isAgentWorking).toBe(true);
+
+    // Settle
+    apiGetMock.mockResolvedValueOnce({
+      data: {
+        events: [{ type: "flow_settled", timestamp: ts + 1, summary: "Done" }],
+        settled: true,
+      },
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    expect(result.current.isAgentWorking).toBe(false);
+    const callCountAfterSettle = apiGetMock.mock.calls.length;
+
+    // Should resume polling at idle interval (5s)
+    apiGetMock.mockResolvedValue({
+      data: { events: [], settled: true },
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+
+    expect(apiGetMock.mock.calls.length).toBeGreaterThan(callCountAfterSettle);
+  });
+
+  it("should handle events and settled arriving in same poll", async () => {
+    const { result } = renderHook(() => useFlowEvents("flow-1"));
+
+    const ts = Date.now() / 1000;
+
+    // First poll returns events AND settled=true simultaneously
+    apiGetMock.mockResolvedValueOnce({
+      data: {
+        events: [
+          { type: "component_added", timestamp: ts, summary: "Added A" },
+          { type: "flow_settled", timestamp: ts + 0.1, summary: "Done" },
+        ],
+        settled: true,
+      },
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+
+    // Should have transitioned through active to settled
+    expect(result.current.isAgentWorking).toBe(false);
+    expect(result.current.lastSettledAt).not.toBeNull();
+    expect(result.current.events).toHaveLength(2);
+  });
+
   it("should handle API errors gracefully", async () => {
     const { result } = renderHook(() => useFlowEvents("flow-1"));
 

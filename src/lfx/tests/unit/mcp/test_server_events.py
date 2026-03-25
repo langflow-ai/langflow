@@ -211,6 +211,36 @@ class TestUpdateFlowFromSpecEmitsEvent:
         mock_client.post_event.assert_called_once_with("flow-123", "flow_updated", "Updated flow from spec")
 
 
+class TestCreateFlowFromSpecEmitsSettled:
+    async def test_emits_flow_settled_after_batch(self, mock_client, mock_registry):
+        from lfx.mcp.server import create_flow_from_spec
+
+        parsed = {
+            "name": "Test",
+            "description": "",
+            "nodes": [{"id": "A", "type": "ChatInput"}],
+            "edges": [],
+            "config": {},
+        }
+
+        created_flow = {"id": "flow-new", "name": "Test", "description": ""}
+
+        with (
+            patch("lfx.mcp.server._get_client", return_value=mock_client),
+            patch("lfx.mcp.server._get_registry", new_callable=AsyncMock, return_value=mock_registry),
+            patch("lfx.mcp.server.parse_flow_spec", return_value=parsed),
+            patch("lfx.mcp.server.validate_spec_references"),
+            patch("lfx.mcp.server.create_flow", new_callable=AsyncMock, return_value=created_flow),
+            patch("lfx.mcp.server.add_component", new_callable=AsyncMock, return_value={"id": "ChatInput-abc"}),
+            patch("lfx.mcp.server.build_flow", new_callable=AsyncMock),
+            patch("lfx.mcp.server.get_flow_info", new_callable=AsyncMock, return_value={"id": "flow-new"}),
+        ):
+            await create_flow_from_spec("nodes:\n  A: ChatInput")
+
+        # Should emit flow_settled after all sub-operations complete
+        mock_client.post_event.assert_called_with("flow-new", "flow_settled", "Created flow from spec")
+
+
 class TestNotifyDone:
     async def test_emits_flow_settled_event(self, mock_client):
         from lfx.mcp.server import notify_done

@@ -85,6 +85,17 @@ def test_cursor_ahead_of_all_events_settled_after_timeout():
     assert settled is True  # last event is past SETTLE_TIMEOUT
 
 
+def test_flow_settled_before_cursor_does_not_settle():
+    svc = FlowEventsService()
+    settled_event = svc.append("flow-1", "flow_settled", "Done")
+    svc.append("flow-1", "component_added", "Added after settle")
+
+    events, settled = svc.get_since("flow-1", settled_event.timestamp)
+    assert len(events) == 1
+    assert events[0].type == "component_added"
+    assert settled is False  # flow_settled is before cursor, should not trigger
+
+
 def test_different_flows_isolated():
     svc = FlowEventsService()
     svc.append("flow-1", "component_added", "Flow 1")
