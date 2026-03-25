@@ -89,6 +89,7 @@ async def provider_account(db: AsyncSession, user: User) -> DeploymentProviderAc
         user_id=user.id,
         provider_tenant_id="tenant-1",
         provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+        name="test-provider-account",
         provider_url="https://provider.example.com",
         api_key="encrypted-value",  # pragma: allowlist secret
     )
@@ -472,7 +473,7 @@ class TestListAttachmentsForFlowWithProviderInfo:
         )
         await db.commit()
 
-        results = await list_attachments_for_flow_with_provider_info(db, user_id=user.id, flow_id=flow.id)
+        results = await list_attachments_for_flow_with_provider_info(db, user_id=user.id, flow_ids=[flow.id])
         assert len(results) == 1
         attachment, provider_account_id, provider_key = results[0]
         assert attachment.flow_version_id == flow_version.id
@@ -480,7 +481,7 @@ class TestListAttachmentsForFlowWithProviderInfo:
         assert provider_key == DeploymentProviderKey.WATSONX_ORCHESTRATE
 
     async def test_no_attachments_returns_empty(self, db: AsyncSession, user: User, flow: Flow):
-        results = await list_attachments_for_flow_with_provider_info(db, user_id=user.id, flow_id=flow.id)
+        results = await list_attachments_for_flow_with_provider_info(db, user_id=user.id, flow_ids=[flow.id])
         assert results == []
 
     async def test_multiple_versions_same_flow(
@@ -504,7 +505,7 @@ class TestListAttachmentsForFlowWithProviderInfo:
         await create_deployment_attachment(db, user_id=user.id, flow_version_id=fv2.id, deployment_id=deployment.id)
         await db.commit()
 
-        results = await list_attachments_for_flow_with_provider_info(db, user_id=user.id, flow_id=flow.id)
+        results = await list_attachments_for_flow_with_provider_info(db, user_id=user.id, flow_ids=[flow.id])
         assert len(results) == 2
 
 

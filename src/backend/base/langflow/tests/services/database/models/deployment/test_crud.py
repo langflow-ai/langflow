@@ -97,6 +97,7 @@ async def provider_account(db: AsyncSession, user: User) -> DeploymentProviderAc
         user_id=user.id,
         provider_tenant_id="tenant-1",
         provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+        name="test-provider-account",
         provider_url="https://provider.example.com",
         api_key="encrypted-value",  # pragma: allowlist secret
     )

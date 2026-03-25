@@ -11,6 +11,7 @@ from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.utils import get_current_active_superuser
+from langflow.services.database.models.deployment.exceptions import DeploymentGuardError, parse_deployment_guard_error
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
 from langflow.services.database.models.user.model import User, UserCreate, UserRead, UserUpdate
 from langflow.services.deps import get_auth_service, get_settings_service
@@ -152,5 +153,17 @@ async def delete_user(
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")
 
-    await session.delete(user_db)
+    try:
+        await session.delete(user_db)
+        # Flush eagerly so DB triggers/constraints run inside this handler.
+        # This ensures guard violations are converted to DeploymentGuardError
+        # here, instead of surfacing later at dependency teardown commit.
+        await session.flush()
+    except DeploymentGuardError:
+        raise
+    except Exception as exc:
+        guard_error = parse_deployment_guard_error(exc)
+        if guard_error:
+            raise guard_error from exc
+        raise
     return {"detail": "User deleted"}

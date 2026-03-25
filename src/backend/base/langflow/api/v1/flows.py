@@ -23,10 +23,12 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
 from langflow.api.utils.zip_utils import extract_flows_from_zip
+from langflow.api.v1.mappers.deployments.helpers import sync_flow_deployment_state
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
+from langflow.services.database.models.deployment.exceptions import DeploymentGuardError, parse_deployment_guard_error
 from langflow.services.database.models.flow.model import (
     AccessTypeEnum,
     Flow,
@@ -488,6 +490,17 @@ async def update_flow(
         if settings_service.settings.remove_api_keys:
             update_data = remove_api_keys(update_data)
 
+        folder_id_will_change = "folder_id" in update_data and update_data.get("folder_id") != db_flow.folder_id
+        if folder_id_will_change:
+            try:
+                await sync_flow_deployment_state(db=session, flow_ids=[flow_id], user_id=current_user.id)
+            except Exception:  # noqa: BLE001
+                await logger.awarning(
+                    "Best-effort sync failed before moving flow %s; continuing with DB guard enforcement.",
+                    flow_id,
+                    exc_info=True,
+                )
+
         for key, value in update_data.items():
             setattr(db_flow, key, value)
 
@@ -522,7 +535,12 @@ async def update_flow(
         # Convert to FlowRead while session is still active to avoid detached instance errors
         flow_read = FlowRead.model_validate(db_flow, from_attributes=True)
 
+    except DeploymentGuardError:
+        raise
     except Exception as e:
+        guard_error = parse_deployment_guard_error(e)
+        if guard_error:
+            raise guard_error from e
         if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
             columns = str(e).split("UNIQUE constraint failed: ")[1].split(".")[1].split("\n")[0]
@@ -593,9 +611,14 @@ async def upsert_flow(
 
         return JSONResponse(status_code=status_code, content=jsonable_encoder(flow_read))
 
+    except DeploymentGuardError:
+        raise
     except HTTPException:
         raise
     except Exception as e:
+        guard_error = parse_deployment_guard_error(e)
+        if guard_error:
+            raise guard_error from e
         if "UNIQUE constraint failed" in str(e):
             columns = str(e).split("UNIQUE constraint failed: ")[1].split(".")[1].split("\n")[0]
             column = columns.split(",")[1] if "id" in columns.split(",")[0] else columns.split(",")[0]
@@ -665,6 +688,17 @@ async def _update_existing_flow(
     # Build update data
     update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 
+    folder_id_will_change = "folder_id" in update_data and update_data.get("folder_id") != existing_flow.folder_id
+    if folder_id_will_change:
+        try:
+            await sync_flow_deployment_state(db=session, flow_ids=[existing_flow.id], user_id=user_id)
+        except Exception:  # noqa: BLE001
+            await logger.awarning(
+                "Best-effort sync failed before moving flow %s; continuing with DB guard enforcement.",
+                existing_flow.id,
+                exc_info=True,
+            )
+
     # Handle endpoint_name explicitly set to null or empty string (allow clearing)
     if flow.endpoint_name is None or flow.endpoint_name == "":
         update_data["endpoint_name"] = None
@@ -710,6 +744,14 @@ async def delete_flow(
     )
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
+    try:
+        await sync_flow_deployment_state(db=session, flow_ids=[flow.id], user_id=current_user.id)
+    except Exception:  # noqa: BLE001
+        await logger.awarning(
+            "Best-effort sync failed before deleting flow %s; continuing with DB guard enforcement.",
+            flow.id,
+            exc_info=True,
+        )
     await cascade_delete_flow(session, flow.id)
     return {"message": "Flow deleted successfully"}
 
@@ -825,6 +867,14 @@ async def delete_multiple_flows(
 
     """
     try:
+        if flow_ids:
+            try:
+                await sync_flow_deployment_state(db=db, flow_ids=flow_ids, user_id=user.id)
+            except Exception:  # noqa: BLE001
+                await logger.awarning(
+                    "Best-effort sync failed before deleting multiple flows; continuing with DB guard enforcement.",
+                    exc_info=True,
+                )
         flows_to_delete = (
             await db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)).where(Flow.user_id == user.id))
         ).all()
@@ -833,6 +883,8 @@ async def delete_multiple_flows(
 
         await db.flush()
         return {"deleted": len(flows_to_delete)}
+    except DeploymentGuardError:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 

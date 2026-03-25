@@ -23,6 +23,7 @@ from langflow.api.utils.mcp.config_utils import validate_mcp_server_for_project
 from langflow.api.utils.zip_utils import extract_flows_from_zip
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.api.v1.flows import create_flows
+from langflow.api.v1.mappers.deployments.helpers import sync_flow_deployment_state, sync_project_deployments
 from langflow.api.v1.mcp_projects import (
     get_project_sse_url,  # noqa: F401
     get_project_streamable_http_url,
@@ -36,6 +37,7 @@ from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLD
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.database.models.api_key.crud import create_api_key
 from langflow.services.database.models.api_key.model import ApiKeyCreate
+from langflow.services.database.models.deployment.exceptions import DeploymentGuardError, parse_deployment_guard_error
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
@@ -191,6 +193,18 @@ async def create_project(
                 msg = f"Failed to auto-register MCP server for project {new_project.id}: {e}"
                 await logger.aexception(msg, exc_info=True)
 
+        flow_ids_for_sync = list(dict.fromkeys((project.flows_list or []) + (project.components_list or [])))
+        if flow_ids_for_sync:
+            try:
+                await sync_flow_deployment_state(db=session, flow_ids=flow_ids_for_sync, user_id=current_user.id)
+            except Exception:  # noqa: BLE001
+                await logger.awarning(
+                    "Best-effort sync failed before moving flows into new project %s; "
+                    "continuing with DB guard enforcement.",
+                    new_project.id,
+                    exc_info=True,
+                )
+
         if project.components_list:
             update_statement_components = (
                 update(Flow).where(Flow.id.in_(project.components_list)).values(folder_id=new_project.id)  # type: ignore[attr-defined]
@@ -205,10 +219,15 @@ async def create_project(
 
         # Convert to FolderRead while session is still active to avoid detached instance errors
         folder_read = FolderRead.model_validate(new_project, from_attributes=True)
+    except DeploymentGuardError:
+        raise
     except HTTPException:
         # Re-raise HTTP exceptions (like 409 conflicts) without modification
         raise
     except Exception as e:
+        guard_error = parse_deployment_guard_error(e)
+        if guard_error:
+            raise guard_error from e
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return folder_read
@@ -467,6 +486,16 @@ async def update_project(
 
         my_collection_project = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
         if my_collection_project:
+            if excluded_flows:
+                try:
+                    await sync_flow_deployment_state(db=session, flow_ids=excluded_flows, user_id=current_user.id)
+                except Exception:  # noqa: BLE001
+                    await logger.awarning(
+                        "Best-effort sync failed before moving flows out of project %s; "
+                        "continuing with DB guard enforcement.",
+                        existing_project.id,
+                        exc_info=True,
+                    )
             update_statement_my_collection = (
                 update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_project.id)  # type: ignore[attr-defined]
             )
@@ -481,10 +510,15 @@ async def update_project(
         # Convert to FolderRead while session is still active to avoid detached instance errors
         folder_read = FolderRead.model_validate(existing_project, from_attributes=True)
 
+    except DeploymentGuardError:
+        raise
     except HTTPException:
         # Re-raise HTTP exceptions (like 409 conflicts) without modification
         raise
     except Exception as e:
+        guard_error = parse_deployment_guard_error(e)
+        if guard_error:
+            raise guard_error from e
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return folder_read
@@ -498,6 +532,15 @@ async def delete_project(
     current_user: CurrentActiveUser,
 ):
     try:
+        await sync_project_deployments(db=session, project_id=project_id, user_id=current_user.id)
+    except Exception:  # noqa: BLE001
+        await logger.awarning(
+            "Best-effort sync failed before deleting project %s; continuing with DB guard enforcement.",
+            project_id,
+            exc_info=True,
+        )
+
+    try:
         flows = (
             await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == current_user.id))
         ).all()
@@ -508,6 +551,8 @@ async def delete_project(
         project = (
             await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
         ).first()
+    except DeploymentGuardError:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -581,8 +626,17 @@ async def delete_project(
 
     try:
         await session.delete(project)
+        # Flush eagerly so DB triggers/constraints run before returning 204.
+        # Without this, trigger errors may surface only during teardown commit,
+        # bypassing our endpoint-level DeploymentGuardError translation path.
+        await session.flush()
         return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except DeploymentGuardError:
+        raise
     except Exception as e:
+        guard_error = parse_deployment_guard_error(e)
+        if guard_error:
+            raise guard_error from e
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

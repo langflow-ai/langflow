@@ -227,6 +227,78 @@ async def list_deployments_page(
     ]
 
 
+async def list_deployments_for_flows_with_provider_info(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    flow_ids: list[UUID],
+) -> list[tuple[Deployment, str]]:
+    """Return distinct deployments linked to any flow in *flow_ids* with provider key."""
+    if not flow_ids:
+        return []
+
+    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+    from langflow.services.database.models.flow_version.model import FlowVersion
+
+    deployment_ids_subquery = (
+        select(FlowVersionDeploymentAttachment.deployment_id)
+        .join(
+            FlowVersion,
+            FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id,
+        )
+        .where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            FlowVersion.flow_id.in_(flow_ids),
+        )
+        .distinct()
+        .subquery()
+    )
+
+    stmt = (
+        select(Deployment, DeploymentProviderAccount.provider_key)
+        .join(deployment_ids_subquery, deployment_ids_subquery.c.deployment_id == Deployment.id)
+        .join(
+            DeploymentProviderAccount,
+            DeploymentProviderAccount.id == Deployment.deployment_provider_account_id,
+        )
+        .where(Deployment.user_id == user_id)
+        .order_by(
+            Deployment.deployment_provider_account_id,
+            DeploymentProviderAccount.provider_key,
+            Deployment.id,
+        )
+    )
+    return list((await db.exec(stmt)).all())
+
+
+async def list_project_deployments_with_provider_info(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    project_id: UUID,
+) -> list[tuple[Deployment, str]]:
+    """Return project deployments with provider key for provider-scoped sync."""
+    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+
+    stmt = (
+        select(Deployment, DeploymentProviderAccount.provider_key)
+        .join(
+            DeploymentProviderAccount,
+            DeploymentProviderAccount.id == Deployment.deployment_provider_account_id,
+        )
+        .where(
+            Deployment.user_id == user_id,
+            Deployment.project_id == project_id,
+        )
+        .order_by(
+            Deployment.deployment_provider_account_id,
+            DeploymentProviderAccount.provider_key,
+            Deployment.id,
+        )
+    )
+    return list((await db.exec(stmt)).all())
+
+
 async def count_deployments_by_provider(
     db: AsyncSession,
     *,

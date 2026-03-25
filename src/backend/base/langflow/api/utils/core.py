@@ -16,6 +16,7 @@ from sqlalchemy import delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth.utils import get_current_active_user, get_current_active_user_mcp
+from langflow.services.database.models.deployment.exceptions import parse_deployment_guard_error
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.message.model import MessageTable
@@ -365,6 +366,9 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
         await session.exec(delete(FlowVersion).where(FlowVersion.flow_id == flow_id))
         await session.exec(delete(Flow).where(Flow.id == flow_id))
     except Exception as e:
+        guard_error = parse_deployment_guard_error(e)
+        if guard_error:
+            raise guard_error from e
         msg = f"Unable to cascade delete flow: {flow_id}"
         raise RuntimeError(msg, e) from e
 

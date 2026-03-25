@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections import defaultdict
 from contextlib import contextmanager
+from itertools import groupby
 from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID
 
@@ -40,7 +41,9 @@ from langflow.services.adapters.deployment.context import deployment_provider_sc
 from langflow.services.database.models.deployment.crud import (
     count_deployments_by_provider,
     delete_deployment_by_id,
+    list_deployments_for_flows_with_provider_info,
     list_deployments_page,
+    list_project_deployments_with_provider_info,
 )
 from langflow.services.database.models.deployment.crud import (
     get_deployment as get_deployment_db,
@@ -57,6 +60,7 @@ from langflow.services.database.models.flow_version_deployment_attachment.crud i
     delete_deployment_attachment,
     get_deployment_attachment,
     list_attachments_by_deployment_ids,
+    list_attachments_for_flow_with_provider_info,
     update_deployment_attachment_provider_snapshot_id,
 )
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
@@ -825,14 +829,9 @@ async def sync_flow_version_attachments(
     logged and skipped so that a single provider outage does not block the
     flow version read path.
     """
-    from collections import defaultdict
-
     from langflow.api.v1.mappers.deployments.registry import get_deployment_mapper
-    from langflow.services.database.models.flow_version_deployment_attachment.crud import (
-        list_attachments_for_flow_with_provider_info,
-    )
 
-    rows = await list_attachments_for_flow_with_provider_info(db, user_id=user_id, flow_id=flow_id)
+    rows = await list_attachments_for_flow_with_provider_info(db, user_id=user_id, flow_ids=[flow_id])
     if not rows:
         return
 
@@ -868,6 +867,148 @@ async def sync_flow_version_attachments(
                 "Snapshot-level sync failed for provider %s (flow %s); skipping",
                 provider_account_id,
                 flow_id,
+                exc_info=True,
+            )
+
+
+async def sync_flow_deployment_state(
+    *,
+    db: DbSession,
+    flow_ids: list[UUID],
+    user_id: UUID,
+) -> None:
+    """Best-effort deployment and snapshot sync for one or more flows."""
+    from langflow.api.v1.mappers.deployments.registry import get_deployment_mapper
+
+    if not flow_ids:
+        return
+
+    deduplicated_flow_ids = list(dict.fromkeys(flow_ids))
+    deployments_with_provider = await list_deployments_for_flows_with_provider_info(
+        db,
+        user_id=user_id,
+        flow_ids=deduplicated_flow_ids,
+    )
+    if not deployments_with_provider:
+        return
+
+    for (provider_account_id, provider_key), grouped_items in groupby(
+        deployments_with_provider,
+        key=lambda item: (item[0].deployment_provider_account_id, item[1]),
+    ):
+        grouped_deployments = [deployment for deployment, _provider_key in grouped_items]
+        try:
+            deployment_adapter = get_deployment_adapter(provider_key)
+            with deployment_provider_scope(provider_account_id):
+                known_resource_keys = await fetch_provider_resource_keys(
+                    deployment_adapter=deployment_adapter,
+                    user_id=user_id,
+                    provider_id=provider_account_id,
+                    db=db,
+                    resource_keys=[deployment.resource_key for deployment in grouped_deployments],
+                )
+
+            for deployment in grouped_deployments:
+                if deployment.resource_key in known_resource_keys:
+                    continue
+                await logger.awarning(
+                    "Deployment %s (resource_key=%s) is stale during flow sync; deleting local row",
+                    deployment.id,
+                    deployment.resource_key,
+                )
+                await delete_deployment_by_id(db, user_id=user_id, deployment_id=deployment.id)
+        except Exception:  # noqa: BLE001
+            await logger.awarning(
+                "Deployment-level flow sync failed for provider %s (flows=%s); continuing without sync",
+                provider_account_id,
+                deduplicated_flow_ids,
+                exc_info=True,
+            )
+
+    rows_after_deployment_sync = await list_attachments_for_flow_with_provider_info(
+        db, user_id=user_id, flow_ids=deduplicated_flow_ids
+    )
+    if not rows_after_deployment_sync:
+        return
+
+    attachments_grouped_by_provider: dict[tuple[UUID, str], list[FlowVersionDeploymentAttachment]] = defaultdict(list)
+    for attachment, provider_account_id, provider_key in rows_after_deployment_sync:
+        attachments_grouped_by_provider[(provider_account_id, provider_key)].append(attachment)
+
+    for (provider_account_id, provider_key), attachments in attachments_grouped_by_provider.items():
+        try:
+            deployment_adapter = get_deployment_adapter(provider_key)
+            deployment_mapper = get_deployment_mapper(provider_key)
+            snapshot_ids = list(dict.fromkeys(deployment_mapper.util_snapshot_ids_to_verify(attachments)))
+            if not snapshot_ids:
+                continue
+
+            with deployment_provider_scope(provider_account_id):
+                known_snapshot_ids = await fetch_provider_snapshot_keys(
+                    deployment_adapter=deployment_adapter,
+                    user_id=user_id,
+                    provider_id=provider_account_id,
+                    db=db,
+                    snapshot_ids=snapshot_ids,
+                )
+
+            await sync_attachment_snapshot_ids(
+                user_id=user_id,
+                deployment_ids=list({attachment.deployment_id for attachment in attachments}),
+                attachments=attachments,
+                known_snapshot_ids=known_snapshot_ids,
+                db=db,
+            )
+        except Exception:  # noqa: BLE001
+            await logger.awarning(
+                "Snapshot-level flow sync failed for provider %s (flows=%s); continuing without sync",
+                provider_account_id,
+                deduplicated_flow_ids,
+                exc_info=True,
+            )
+
+
+async def sync_project_deployments(
+    *,
+    db: DbSession,
+    project_id: UUID,
+    user_id: UUID,
+) -> None:
+    """Best-effort deployment-level sync for a single project."""
+    rows = await list_project_deployments_with_provider_info(db, user_id=user_id, project_id=project_id)
+    if not rows:
+        return
+
+    for (provider_account_id, provider_key), grouped_items in groupby(
+        rows,
+        key=lambda item: (item[0].deployment_provider_account_id, item[1]),
+    ):
+        deployments = [deployment for deployment, _provider_key in grouped_items]
+        try:
+            deployment_adapter = get_deployment_adapter(provider_key)
+            with deployment_provider_scope(provider_account_id):
+                known_resource_keys = await fetch_provider_resource_keys(
+                    deployment_adapter=deployment_adapter,
+                    user_id=user_id,
+                    provider_id=provider_account_id,
+                    db=db,
+                    resource_keys=[deployment.resource_key for deployment in deployments],
+                )
+
+            for deployment in deployments:
+                if deployment.resource_key in known_resource_keys:
+                    continue
+                await logger.awarning(
+                    "Deployment %s (resource_key=%s) is stale during project sync; deleting local row",
+                    deployment.id,
+                    deployment.resource_key,
+                )
+                await delete_deployment_by_id(db, user_id=user_id, deployment_id=deployment.id)
+        except Exception:  # noqa: BLE001
+            await logger.awarning(
+                "Project deployment sync failed for provider %s (project=%s); continuing without sync",
+                provider_account_id,
+                project_id,
                 exc_info=True,
             )
 

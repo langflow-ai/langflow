@@ -40,6 +40,7 @@ from langflow.initial_setup.setup import (
 )
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.plugin_routes import load_plugin_routes
+from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.deps import (
     get_queue_service,
@@ -538,6 +539,11 @@ def create_app():
 
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
+        if isinstance(exc, DeploymentGuardError):
+            return JSONResponse(
+                status_code=HTTPStatus.CONFLICT,
+                content={"detail": exc.detail},
+            )
         if isinstance(exc, HTTPException):
             await logger.aerror(f"HTTPException: {exc}", exc_info=exc)
             return JSONResponse(
