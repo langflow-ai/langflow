@@ -165,3 +165,29 @@ async def keycloak_callback(
         domain=auth_settings.COOKIE_DOMAIN,
     )
     return redirect
+
+
+@router.get("/logout", include_in_schema=False)
+async def keycloak_logout():
+    """Clear Langflow session cookies and redirect to the login page.
+
+    Using a server-side redirect (rather than a JS fetch) guarantees that the
+    Set-Cookie headers that expire the cookies are delivered to the browser
+    even when the frontend's IS_AUTO_LOGIN constant skips the normal logout
+    API call.
+    """
+    auth_settings = get_settings_service().auth_settings
+    redirect = RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+    for name, httponly, samesite, secure in [
+        ("refresh_token_lf", auth_settings.REFRESH_HTTPONLY, auth_settings.REFRESH_SAME_SITE, auth_settings.REFRESH_SECURE),
+        ("access_token_lf", auth_settings.ACCESS_HTTPONLY, auth_settings.ACCESS_SAME_SITE, auth_settings.ACCESS_SECURE),
+        ("apikey_tkn_lflw", auth_settings.ACCESS_HTTPONLY, auth_settings.ACCESS_SAME_SITE, auth_settings.ACCESS_SECURE),
+    ]:
+        redirect.delete_cookie(
+            name,
+            httponly=httponly,
+            samesite=samesite,
+            secure=secure,
+            domain=auth_settings.COOKIE_DOMAIN,
+        )
+    return redirect

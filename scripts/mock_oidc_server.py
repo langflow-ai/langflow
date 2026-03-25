@@ -1,30 +1,30 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#   "fastapi>=0.111",
+#   "uvicorn[standard]>=0.29",
+#   "cryptography>=42",
+#   "python-multipart>=0.0.9",
+#   "pyjwt>=2.8",
+# ]
+# ///
+
 """Mock OIDC server for testing the Keycloak SSO plugin.
 
-Simulates Keycloak's client-level access control with 10 employees:
-  - Some have access to all projects (all Langflow instances)
-  - Some have access to only one project
-  - Some have no access at all
+Simulates Keycloak's group-based client access control:
 
-Each Langflow instance uses a different KEYCLOAK_CLIENT_ID to represent its project.
-Keycloak enforces authorization at the client level — only users assigned to a
-client can obtain a token for it. This mock replicates that behaviour.
+  Groups
+  ├── langflow-admins     → 모든 Langflow 인스턴스 접근 가능
+  ├── project-a-members   → langflow-project-a 만 접근 가능
+  └── project-b-members   → langflow-project-b 만 접근 가능
+
+  Employees without any group → 접근 불가
 
 Usage:
-    python scripts/mock_oidc_server.py
+    uv run scripts/mock_oidc_server.py
 
-Langflow instance for project-a:
-    KEYCLOAK_ENABLED=true
-    KEYCLOAK_SERVER_URL=http://localhost:9000
-    KEYCLOAK_REALM=company
-    KEYCLOAK_CLIENT_ID=langflow-project-a
-    KEYCLOAK_CLIENT_SECRET=mock-secret
-    KEYCLOAK_SHARED_USERNAME=project-a-shared
-    KEYCLOAK_REDIRECT_URI=http://localhost:7860/api/v1/keycloak/callback
-
-Langflow instance for project-b:
-    KEYCLOAK_CLIENT_ID=langflow-project-b
-    KEYCLOAK_SHARED_USERNAME=project-b-shared
-    KEYCLOAK_REDIRECT_URI=http://localhost:7861/api/v1/keycloak/callback
+Then start Langflow instances:
+    bash scripts/start_dev.sh
 """
 
 import base64
@@ -48,44 +48,64 @@ BASE_URL = f"http://localhost:{PORT}"
 REALM = "company"
 
 # ---------------------------------------------------------------------------
-# 10 employees — username = 사번 (EMP001~EMP010)
-#
-# projects: which Langflow client_ids this employee can access
-#   - "all"       → access to every client (superuser / platform admin)
-#   - ["project-a"] → access only to langflow-project-a
-#   - []          → no Langflow access at all
+# 10 employees (사번 EMP001~EMP010)
 # ---------------------------------------------------------------------------
 
 EMPLOYEES: dict[str, dict] = {
-    # ── 모든 프로젝트 접근 가능 (2명) ──────────────────────────────────────
-    "EMP001": {"password": "pass001", "name": "김철수", "projects": "all"},
-    "EMP002": {"password": "pass002", "name": "이영희", "projects": "all"},
-    # ── project-a 전용 (3명) ──────────────────────────────────────────────
-    "EMP003": {"password": "pass003", "name": "박민준", "projects": ["project-a"]},
-    "EMP004": {"password": "pass004", "name": "최지은", "projects": ["project-a"]},
-    "EMP005": {"password": "pass005", "name": "정우진", "projects": ["project-a"]},
-    # ── project-b 전용 (3명) ──────────────────────────────────────────────
-    "EMP006": {"password": "pass006", "name": "강수현", "projects": ["project-b"]},
-    "EMP007": {"password": "pass007", "name": "윤서연", "projects": ["project-b"]},
-    "EMP008": {"password": "pass008", "name": "임도현", "projects": ["project-b"]},
-    # ── 접근 권한 없음 (2명) ─────────────────────────────────────────────
-    "EMP009": {"password": "pass009", "name": "한지우", "projects": []},
-    "EMP010": {"password": "pass010", "name": "오세훈", "projects": []},
+    "EMP001": {"password": "pass001", "name": "김철수"},
+    "EMP002": {"password": "pass002", "name": "이영희"},
+    "EMP003": {"password": "pass003", "name": "박민준"},
+    "EMP004": {"password": "pass004", "name": "최지은"},
+    "EMP005": {"password": "pass005", "name": "정우진"},
+    "EMP006": {"password": "pass006", "name": "강수현"},
+    "EMP007": {"password": "pass007", "name": "윤서연"},
+    "EMP008": {"password": "pass008", "name": "임도현"},
+    "EMP009": {"password": "pass009", "name": "한지우"},
+    "EMP010": {"password": "pass010", "name": "오세훈"},
+}
+
+# ---------------------------------------------------------------------------
+# Groups — mirrors Keycloak group / client-scope assignment
+#
+# clients: "all"            → 모든 Langflow 클라이언트 접근 허용 (전사 관리자)
+#          ["client-id",…]  → 지정된 클라이언트만 허용
+# ---------------------------------------------------------------------------
+
+GROUPS: dict[str, dict] = {
+    "langflow-admins": {
+        "label": "전사 관리자",
+        "members": ["EMP001", "EMP002"],
+        "clients": "all",
+    },
+    "project-a-members": {
+        "label": "Project-A 멤버",
+        "members": ["EMP003", "EMP004", "EMP005"],
+        "clients": ["langflow-project-a"],
+    },
+    "project-b-members": {
+        "label": "Project-B 멤버",
+        "members": ["EMP006", "EMP007", "EMP008"],
+        "clients": ["langflow-project-b"],
+    },
+    # EMP009, EMP010 은 어느 그룹에도 속하지 않음 → 접근 불가
 }
 
 
-def _has_access(employee: dict, client_id: str) -> bool:
-    """Return True if this employee can authenticate against the given client."""
-    projects = employee["projects"]
-    if projects == "all":
-        return True
-    # client_id convention: "langflow-{project-name}"
-    project = client_id.removeprefix("langflow-")
-    return project in projects
+def _get_employee_groups(employee_id: str) -> list[str]:
+    return [name for name, g in GROUPS.items() if employee_id in g["members"]]
+
+
+def _has_client_access(employee_id: str, client_id: str) -> bool:
+    """Return True if the employee has access to the given Keycloak client."""
+    for group_name in _get_employee_groups(employee_id):
+        clients = GROUPS[group_name]["clients"]
+        if clients == "all" or client_id in clients:
+            return True
+    return False
 
 
 # ---------------------------------------------------------------------------
-# RSA key pair (generated once at startup)
+# RSA key pair
 # ---------------------------------------------------------------------------
 
 _private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -95,7 +115,6 @@ _private_pem = _private_key.private_bytes(
     serialization.PrivateFormat.TraditionalOpenSSL,
     serialization.NoEncryption(),
 )
-
 _pub_numbers = _public_key.public_numbers()
 _KID = "mock-key-1"
 
@@ -108,25 +127,15 @@ def _b64url(n: int) -> str:
 JWKS = {
     "keys": [
         {
-            "kty": "RSA",
-            "use": "sig",
-            "kid": _KID,
-            "alg": "RS256",
+            "kty": "RSA", "use": "sig", "kid": _KID, "alg": "RS256",
             "n": _b64url(_pub_numbers.n),
             "e": _b64url(_pub_numbers.e),
         }
     ]
 }
 
-# ---------------------------------------------------------------------------
-# In-memory auth code store  { code -> (employee_id, client_id) }
-# ---------------------------------------------------------------------------
-
+# In-memory auth code store: code → (employee_id, client_id)
 _codes: dict[str, tuple[str, str]] = {}
-
-# ---------------------------------------------------------------------------
-# JWT helper
-# ---------------------------------------------------------------------------
 
 
 def _issue_token(employee_id: str, client_id: str) -> str:
@@ -134,22 +143,26 @@ def _issue_token(employee_id: str, client_id: str) -> str:
 
     emp = EMPLOYEES[employee_id]
     now = int(time.time())
-    payload = {
-        "iss": f"{BASE_URL}/realms/{REALM}",
-        "sub": employee_id,
-        "aud": client_id,
-        "iat": now,
-        "exp": now + 3600,
-        "preferred_username": employee_id,
-        "name": emp["name"],
-        "email": f"{employee_id.lower()}@company.com",
-        "jti": str(uuid.uuid4()),
-    }
-    return jwt.encode(payload, _private_pem, algorithm="RS256", headers={"kid": _KID})
+    return jwt.encode(
+        {
+            "iss": f"{BASE_URL}/realms/{REALM}",
+            "sub": employee_id,
+            "aud": client_id,
+            "iat": now,
+            "exp": now + 3600,
+            "preferred_username": employee_id,
+            "name": emp["name"],
+            "email": f"{employee_id.lower()}@company.com",
+            "jti": str(uuid.uuid4()),
+        },
+        _private_pem,
+        algorithm="RS256",
+        headers={"kid": _KID},
+    )
 
 
 # ---------------------------------------------------------------------------
-# FastAPI app
+# App
 # ---------------------------------------------------------------------------
 
 REALM_BASE = f"/realms/{REALM}/protocol/openid-connect"
@@ -159,17 +172,10 @@ REALM_BASE = f"/realms/{REALM}/protocol/openid-connect"
 async def _lifespan(app: FastAPI):
     print(f"""
 ╭──────────────────────────────────────────────────────────────────╮
-│  Mock Keycloak running at {BASE_URL}  (realm: {REALM})
+│  Mock Keycloak  {BASE_URL}  (realm: {REALM})
+│  Admin 페이지:  {BASE_URL}/admin
 │
-│  Langflow project-a 인스턴스 환경변수:
-│    KEYCLOAK_CLIENT_ID=langflow-project-a
-│    KEYCLOAK_SHARED_USERNAME=project-a-shared
-│
-│  Langflow project-b 인스턴스 환경변수:
-│    KEYCLOAK_CLIENT_ID=langflow-project-b
-│    KEYCLOAK_SHARED_USERNAME=project-b-shared
-│
-│  Admin 페이지: {BASE_URL}/admin
+│  Langflow 인스턴스 실행: bash scripts/start_dev.sh
 ╰──────────────────────────────────────────────────────────────────╯
 """)
     yield
@@ -208,7 +214,6 @@ async def authorization(
     scope: str = "openid",
     state: str = "",
 ):
-    """Show login form. client_id determines which project is being accessed."""
     project = client_id.removeprefix("langflow-")
     state_input = f'<input type="hidden" name="state" value="{state}">'
     redirect_input = f'<input type="hidden" name="redirect_uri" value="{urllib.parse.quote(redirect_uri)}">'
@@ -217,13 +222,17 @@ async def authorization(
     html = f"""
     <html><head><title>Mock Keycloak — {project}</title>
     <style>
-      body {{ font-family: sans-serif; display:flex; justify-content:center; padding-top:80px; background:#f0f4f8; }}
-      .box {{ background:#fff; padding:32px; border-radius:8px; box-shadow:0 2px 12px rgba(0,0,0,.12); width:380px; }}
-      h2 {{ margin-top:0; color:#333; }} .project {{ color:#4a90d9; font-weight:bold; }}
-      input[type=text],input[type=password] {{ width:100%; padding:8px; margin:6px 0 14px;
+      body {{ font-family: sans-serif; display:flex; justify-content:center;
+              padding-top:80px; background:#f0f4f8; }}
+      .box {{ background:#fff; padding:32px; border-radius:8px;
+              box-shadow:0 2px 12px rgba(0,0,0,.12); width:380px; }}
+      h2 {{ margin-top:0; color:#333; }}
+      .project {{ color:#4a90d9; font-weight:bold; }}
+      input[type=text], input[type=password] {{
+        width:100%; padding:8px; margin:6px 0 14px;
         box-sizing:border-box; border:1px solid #ccc; border-radius:4px; }}
-      button {{ width:100%; padding:10px; background:#4a90d9; color:#fff; border:none;
-        border-radius:4px; cursor:pointer; font-size:15px; }}
+      button {{ width:100%; padding:10px; background:#4a90d9; color:#fff;
+                border:none; border-radius:4px; cursor:pointer; font-size:15px; }}
       button:hover {{ background:#357abd; }}
       .hint {{ margin-top:16px; font-size:12px; color:#888; }}
       a {{ color:#4a90d9; text-decoration:none; }}
@@ -232,13 +241,16 @@ async def authorization(
       <h2>🔑 Mock Keycloak<br><span class="project">{project}</span></h2>
       <form method="POST" action="{REALM_BASE}/auth/submit">
         {state_input}{redirect_input}{client_input}
-        <label>사번 (Username)</label>
+        <label>사번</label>
         <input type="text" name="username" placeholder="예: EMP001" autofocus required>
         <label>Password</label>
         <input type="password" name="password" required>
         <button type="submit">로그인</button>
       </form>
-      <p class="hint">접근 권한이 없으면 로그인이 거부됩니다. <a href="/admin" target="_blank">계정 목록 보기 →</a></p>
+      <p class="hint">
+        접근 권한이 없으면 로그인이 거부됩니다.
+        <a href="/admin" target="_blank">계정 목록 →</a>
+      </p>
     </div></body></html>
     """
     return HTMLResponse(html)
@@ -253,23 +265,27 @@ async def authorization_submit(
     redirect_uri: str = Form(...),
 ):
     redirect_uri = urllib.parse.unquote(redirect_uri)
-    emp = EMPLOYEES.get(username.upper())
+    emp_id = username.upper()
+    emp = EMPLOYEES.get(emp_id)
 
-    # 1. 사번/비밀번호 확인
     if not emp or emp["password"] != password:
         return HTMLResponse(_error_page("사번 또는 비밀번호가 올바르지 않습니다."), status_code=401)
 
-    # 2. 클라이언트(프로젝트) 접근 권한 확인 — 실제 Keycloak의 client-level access control
-    if not _has_access(emp, client_id):
+    if not _has_client_access(emp_id, client_id):
         project = client_id.removeprefix("langflow-")
+        groups = _get_employee_groups(emp_id)
+        reason = f"소속 그룹 없음" if not groups else f"소속 그룹: {', '.join(groups)}"
         return HTMLResponse(
-            _error_page(f"'{emp['name']} ({username})' 계정은 <b>{project}</b> 프로젝트에 접근 권한이 없습니다."),
+            _error_page(
+                f"<b>{emp['name']} ({emp_id})</b> 계정은 "
+                f"<b>{project}</b> 프로젝트에 접근 권한이 없습니다.<br>"
+                f"<small style='color:#999'>({reason})</small>"
+            ),
             status_code=403,
         )
 
-    # 3. 인증 코드 발급
     code = str(uuid.uuid4())
-    _codes[code] = (username.upper(), client_id)
+    _codes[code] = (emp_id, client_id)
     params = {"code": code, **({"state": state} if state else {})}
     sep = "&" if "?" in redirect_uri else "?"
     return RedirectResponse(url=redirect_uri + sep + urllib.parse.urlencode(params), status_code=302)
@@ -291,9 +307,8 @@ async def token(
         return JSONResponse({"error": "invalid_grant", "error_description": "Code not found or already used"}, status_code=400)
 
     employee_id, issued_client_id = entry
-    access_token = _issue_token(employee_id, issued_client_id)
     return {
-        "access_token": access_token,
+        "access_token": _issue_token(employee_id, issued_client_id),
         "token_type": "Bearer",
         "expires_in": 3600,
         "scope": "openid email profile",
@@ -302,43 +317,74 @@ async def token(
 
 @app.get("/admin", include_in_schema=False)
 async def admin_page():
-    """Read-only page showing all employees and their project access."""
-    def _badge(projects) -> str:
-        if projects == "all":
-            return '<span class="all">모든 프로젝트</span>'
-        if not projects:
-            return '<span class="none">접근 권한 없음</span>'
-        return "".join(f'<span class="tag">{p}</span>' for p in projects)
+    """Read-only page: employees, groups, and client access."""
 
-    rows = "".join(
+    # ── Group table ───────────────────────────────────────────────────────
+    group_rows = ""
+    for gname, g in GROUPS.items():
+        clients_display = "모든 프로젝트" if g["clients"] == "all" else ", ".join(g["clients"])
+        badge_class = "all" if g["clients"] == "all" else "tag"
+        members = ", ".join(f"<code>{m}</code>" for m in g["members"])
+        group_rows += (
+            f"<tr><td><code>{gname}</code></td>"
+            f"<td>{g['label']}</td>"
+            f"<td>{members}</td>"
+            f"<td><span class='{badge_class}'>{clients_display}</span></td></tr>"
+        )
+
+    # ── Employee table ────────────────────────────────────────────────────
+    def _access_badge(emp_id: str) -> str:
+        groups = _get_employee_groups(emp_id)
+        if not groups:
+            return '<span class="none">접근 권한 없음</span>'
+        parts = []
+        for gname in groups:
+            clients = GROUPS[gname]["clients"]
+            label = "모든 프로젝트" if clients == "all" else " + ".join(c.removeprefix("langflow-") for c in clients)
+            cls = "all" if clients == "all" else "tag"
+            parts.append(f'<span class="{cls}">{label}</span>')
+        return " ".join(parts)
+
+    emp_rows = "".join(
         f"<tr><td><code>{eid}</code></td><td>{e['name']}</td>"
-        f"<td><code>{e['password']}</code></td><td>{_badge(e['projects'])}</td></tr>"
+        f"<td><code>{e['password']}</code></td><td>{_access_badge(eid)}</td></tr>"
         for eid, e in EMPLOYEES.items()
     )
+
     html = f"""
     <html><head><title>Mock Keycloak Admin</title>
     <style>
       body {{ font-family: sans-serif; padding:40px; background:#f0f4f8; }}
-      h1 {{ color:#333; margin-bottom:4px; }} .sub {{ color:#888; font-size:13px; margin-bottom:24px; }}
+      h1 {{ color:#333; margin-bottom:4px; }}
+      h2 {{ color:#555; margin:32px 0 12px; font-size:16px; }}
+      .sub {{ color:#888; font-size:13px; margin-bottom:24px; }}
       table {{ border-collapse:collapse; background:#fff; border-radius:8px;
-               box-shadow:0 2px 8px rgba(0,0,0,.1); width:100%; max-width:780px; }}
-      th {{ background:#4a90d9; color:#fff; padding:12px 16px; text-align:left; }}
-      td {{ padding:10px 16px; border-bottom:1px solid #eee; vertical-align:middle; }}
+               box-shadow:0 2px 8px rgba(0,0,0,.08); width:100%; max-width:820px; margin-bottom:16px; }}
+      th {{ background:#4a90d9; color:#fff; padding:10px 14px; text-align:left; font-size:13px; }}
+      td {{ padding:9px 14px; border-bottom:1px solid #eee; vertical-align:middle; font-size:13px; }}
       tr:last-child td {{ border-bottom:none; }}
       .tag {{ display:inline-block; background:#e8f0fe; color:#1a56db;
-              border-radius:12px; padding:2px 10px; font-size:12px; margin:2px; }}
+              border-radius:10px; padding:1px 9px; font-size:12px; margin:1px; }}
       .all {{ display:inline-block; background:#d1fae5; color:#065f46;
-              border-radius:12px; padding:2px 10px; font-size:12px; }}
+              border-radius:10px; padding:1px 9px; font-size:12px; }}
       .none {{ display:inline-block; background:#fee2e2; color:#991b1b;
-               border-radius:12px; padding:2px 10px; font-size:12px; }}
-      code {{ background:#f0f0f0; padding:2px 6px; border-radius:4px; font-size:13px; }}
+               border-radius:10px; padding:1px 9px; font-size:12px; }}
+      code {{ background:#f0f0f0; padding:1px 5px; border-radius:3px; font-size:12px; }}
     </style></head>
     <body>
       <h1>🔑 Mock Keycloak Admin</h1>
       <p class="sub">Realm: <b>{REALM}</b> &nbsp;|&nbsp; {BASE_URL}</p>
+
+      <h2>그룹 및 클라이언트 접근 권한</h2>
+      <table>
+        <thead><tr><th>Group</th><th>역할</th><th>멤버</th><th>접근 가능 클라이언트</th></tr></thead>
+        <tbody>{group_rows}</tbody>
+      </table>
+
+      <h2>직원 목록 (EMP001~EMP010)</h2>
       <table>
         <thead><tr><th>사번</th><th>이름</th><th>Password</th><th>접근 가능 프로젝트</th></tr></thead>
-        <tbody>{rows}</tbody>
+        <tbody>{emp_rows}</tbody>
       </table>
     </body></html>
     """
@@ -349,10 +395,12 @@ def _error_page(message: str) -> str:
     return f"""
     <html><head><title>접근 거부</title>
     <style>
-      body {{ font-family:sans-serif; display:flex; justify-content:center; padding-top:80px; background:#f0f4f8; }}
-      .box {{ background:#fff; padding:32px; border-radius:8px; box-shadow:0 2px 12px rgba(0,0,0,.12);
-              width:380px; text-align:center; }}
-      h3 {{ color:#dc2626; }} p {{ color:#555; }} a {{ color:#4a90d9; }}
+      body {{ font-family:sans-serif; display:flex; justify-content:center;
+              padding-top:80px; background:#f0f4f8; }}
+      .box {{ background:#fff; padding:32px; border-radius:8px;
+              box-shadow:0 2px 12px rgba(0,0,0,.12); width:380px; text-align:center; }}
+      h3 {{ color:#dc2626; }} p {{ color:#555; line-height:1.6; }}
+      a {{ color:#4a90d9; }}
     </style></head>
     <body><div class="box">
       <h3>❌ 로그인 실패</h3>
