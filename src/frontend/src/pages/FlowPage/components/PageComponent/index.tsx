@@ -155,6 +155,8 @@ export default function Page({
   const { mutate: reloadFlow } = useGetFlow();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const prevSettledRef = useRef<number | null>(null);
+  const eventsRef = useRef(events);
+  eventsRef.current = events;
 
   useEffect(() => {
     if (
@@ -164,19 +166,35 @@ export default function Page({
     ) {
       prevSettledRef.current = lastSettledAt;
 
-      reloadFlow({ id: currentFlowId });
+      const settleEvents = eventsRef.current;
 
-      const nonSettleEvents = events.filter((e) => e.type !== "flow_settled");
-      if (nonSettleEvents.length > 0) {
-        const summaries = nonSettleEvents.map((e) => e.summary).filter(Boolean);
-        const title =
-          summaries.length > 0
-            ? `Agent updated flow: ${summaries.join(", ")}`
-            : `Agent made ${nonSettleEvents.length} change(s) to this flow`;
-        setSuccessData({ title });
-      }
+      reloadFlow(
+        { id: currentFlowId },
+        {
+          onSuccess: () => {
+            const nonSettleEvents = settleEvents.filter(
+              (e) => e.type !== "flow_settled",
+            );
+            if (nonSettleEvents.length > 0) {
+              const summaries = nonSettleEvents
+                .map((e) => e.summary)
+                .filter(Boolean);
+              const title =
+                summaries.length > 0
+                  ? `Agent updated flow: ${summaries.join(", ")}`
+                  : `Agent made ${nonSettleEvents.length} change(s) to this flow`;
+              setSuccessData({ title });
+            }
+          },
+          onError: () => {
+            setErrorData({
+              title: "Failed to reload flow after agent changes",
+            });
+          },
+        },
+      );
     }
-  }, [lastSettledAt]);
+  }, [lastSettledAt, currentFlowId, reloadFlow, setSuccessData, setErrorData]);
 
   useEffect(() => {
     if (currentFlowId !== "") {
