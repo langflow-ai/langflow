@@ -742,10 +742,15 @@ class Graph:
             # If the vertex is not in the input_components list
             if input_components and (vertex_id not in input_components and vertex.display_name not in input_components):
                 continue
-            # If the input_type is not any and the input_type is not in the vertex id
-            # Example: input_type = "chat" and vertex.id = "OpenAI-19ddn"
-            if input_type is not None and input_type != "any" and input_type not in vertex.id.lower():
-                continue
+            # If input_type is constrained, filter by semantic input capability first.
+            # Custom chat-input components may not contain "chat" in the vertex id.
+            if input_type is not None and input_type != "any":
+                if input_type == "chat":
+                    template = getattr(vertex, "data", {}).get("node", {}).get("template", {})
+                    if not (vertex.is_input and "input_value" in template):
+                        continue
+                elif input_type not in vertex.id.lower():
+                    continue
             if vertex is None:
                 msg = f"Vertex {vertex_id} not found"
                 raise ValueError(msg)

@@ -704,7 +704,10 @@ class Vertex:
         self.build_params()
 
     def _is_chat_input(self) -> bool:
-        return False
+        if not self.is_input:
+            return False
+        template = self.data.get("node", {}).get("template", {})
+        return "input_value" in template
 
     def build_inactive(self) -> None:
         # Just set the results to None
@@ -767,7 +770,7 @@ class Vertex:
                     and inputs.get("input_value") is not None
                 ):
                     chat_input.update({"input_value": inputs.get(INPUT_FIELD_NAME, "")})
-                if files:
+                if files and "files" in self.data.get("node", {}).get("template", {}):
                     chat_input.update({"files": files})
 
                 self.update_raw_params(chat_input, overwrite=True)

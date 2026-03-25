@@ -453,7 +453,12 @@ class InterfaceVertex(ComponentVertex):
             pass
 
     def _is_chat_input(self):
-        return self.vertex_type == InterfaceComponentTypes.ChatInput and self.is_input
+        if self.vertex_type == InterfaceComponentTypes.ChatInput and self.is_input:
+            return True
+        if not self.is_input:
+            return False
+        template = self.data.get("node", {}).get("template", {})
+        return "input_value" in template
 
 
 class StateVertex(ComponentVertex):
