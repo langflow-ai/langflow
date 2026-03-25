@@ -34,11 +34,18 @@ Not allowed in routes:
 
 ### 1.2 Mapper is the API-boundary translation and reconciliation owner
 
+The mapper translates API payloads to Adapters and the Langflow DB:
+
+- **API → Adapter** — reshapes the API request's `provider_data` into adapter-layer input models (e.g. `VerifyCredentials`, `AdapterDeploymentCreate`). The adapter then makes the actual provider SDK/network calls.
+- **API → DB** — extracts provider-specific fields from the API request and returns a flat `dict[str, Any]` of DB column-value pairs that the route spreads into CRUD kwargs (e.g. `resolve_credential_fields` returns `{"api_key": "..."}`, `resolve_provider_account_update` returns the full update diff).
+
 Mapper responsibility includes:
 
 - API payload validation and translation into adapter payloads
 - Provider-specific interpretation of adapter result payloads
 - Reconciliation extraction needed by Langflow persistence logic
+- Extraction and validation of provider credentials from `provider_data` for DB storage
+- Assembly of provider-account update kwargs with provider-specific cross-field logic
 
 Mapper responsibility excludes:
 
@@ -279,6 +286,27 @@ Rules:
 - Place adapter-neutral/shared domain contracts in `schema.py`.
 - Helper modules may use these contracts, but should not own them.
 
+### 6.5 Provider-account credential and update contract
+
+The mapper is the **single** component that understands a provider's credential shape and cross-field update rules. The API schema, the DB model, and the route are all intentionally unaware of provider-specific credential semantics.
+
+**Credential flow (API → DB):**
+
+- The API schema exposes credentials as an opaque `provider_data: dict[str, Any]`. It does not validate the dict's contents.
+- The mapper's `resolve_credential_fields(provider_data=...)` validates, extracts, and returns a `dict[str, Any]` of DB column-value pairs (e.g. `{"api_key": "..."}` for WXO today). The route spreads these into the CRUD layer's keyword arguments.
+- The DB model keeps a fixed column set (currently `api_key: str`). If a future provider requires a different storage layout (multiple columns, a serialised JSON blob, etc.), only the mapper and CRUD layer need to evolve — the route and schema remain unchanged.
+
+**Update assembly (API → DB):**
+
+- The mapper's `resolve_provider_account_update(payload=..., existing_account=...)` assembles the complete update kwargs dict. Only fields present in `payload.model_fields_set` are included so the CRUD layer receives a minimal diff.
+- Provider mappers override this method to add cross-field logic. For example, WXO's override re-derives `provider_tenant_id` whenever `provider_url` changes, because the tenant is embedded in the URL path and the two must stay consistent.
+- The base mapper provides a concrete default that handles name, URL, credentials, and tenant independently. Provider overrides call `super()` for the common fields and only add their own cross-field rules.
+
+**Defense-in-depth (DB model validator):**
+
+- The `DeploymentProviderAccount` model has a `model_validator` that calls `validate_tenant_url_consistency()`. This catches inconsistent tenant/URL pairs regardless of entry point — even if a future code path bypasses the mapper.
+- The validation logic lives in `deployment_provider_account/utils.py` as the single source of truth. Both the model validator and the WXO mapper's `resolve_provider_tenant_id` delegate to the same `extract_tenant_from_url()` function.
+
 ---
 
 ## 7) Route Orchestration Rules
@@ -380,6 +408,10 @@ Use this checklist before merge:
 - [ ] Mapper boundary result signatures are not over-narrowed to dict-only generics without contract guarantees
 - [ ] Method names follow semantic families (`resolve_*`, `shape_*`, `util_*`)
 - [ ] Registry/contracts/base files remain separated by purpose
+- [ ] Provider-account update logic lives in mapper, not in route conditionals
+- [ ] Provider-specific cross-field rules (e.g. tenant/URL coupling) are implemented as mapper overrides calling `super()`, not as base-class conditionals
+- [ ] Credential extraction uses `resolve_credential_fields`, not route-level assumptions about `provider_data` contents
+- [ ] DB-level consistency validators exist as defense-in-depth for cross-field invariants
 - [ ] Tests cover both base mapper defaults and provider overrides
 - [ ] Failure cases for missing/unexpected bindings are covered
 

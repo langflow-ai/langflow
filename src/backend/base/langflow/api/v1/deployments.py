@@ -148,6 +148,7 @@ async def create_provider_account(
         provider_url=payload.provider_url,
         provider_tenant_id=payload.provider_tenant_id,
     )
+    credential_kwargs = deployment_mapper.resolve_credential_fields(provider_data=payload.provider_data)
     provider_account = await create_provider_account_row(
         session,
         user_id=current_user.id,
@@ -155,7 +156,7 @@ async def create_provider_account(
         provider_tenant_id=resolved_provider_tenant_id,
         provider_key=payload.provider_key,
         provider_url=payload.provider_url,
-        api_key=payload.api_key.get_secret_value(),
+        **credential_kwargs,
     )
     return to_provider_account_response(provider_account)
 
@@ -226,25 +227,11 @@ async def update_provider_account(
     if provider_account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment provider account not found.")
 
-    # Build update kwargs.  Fields that default to None (name, provider_url,
-    # api_key) are passed unconditionally; the CRUD layer's ``if x is not
-    # None`` guard skips them when the caller omitted them from the request.
-    # provider_tenant_id uses an explicit ``model_fields_set`` check instead
-    # because the CRUD layer uses a sentinel (``_UNSET``) to distinguish
-    # "omitted" from "explicitly set to None" (which clears the value).
-    update_kwargs: dict = {
-        "name": payload.name,
-        "provider_url": payload.provider_url,
-        "api_key": payload.api_key.get_secret_value() if payload.api_key is not None else None,
-    }
-    if "provider_tenant_id" in payload.model_fields_set:
-        deployment_mapper = get_deployment_mapper(provider_account.provider_key)
-        resolved_provider_tenant_id = resolve_provider_tenant_id(
-            deployment_mapper=deployment_mapper,
-            provider_url=payload.provider_url or provider_account.provider_url,
-            provider_tenant_id=payload.provider_tenant_id,
-        )
-        update_kwargs["provider_tenant_id"] = resolved_provider_tenant_id
+    deployment_mapper = get_deployment_mapper(provider_account.provider_key)
+    update_kwargs = deployment_mapper.resolve_provider_account_update(
+        payload=payload,
+        existing_account=provider_account,
+    )
     updated = await update_provider_account_row(
         session,
         provider_account=provider_account,

@@ -569,9 +569,86 @@ def test_base_mapper_resolve_verify_credentials_extracts_provider_url() -> None:
         name="test-account",
         provider_key="watsonx-orchestrate",
         provider_url="https://api.us-south.wxo.cloud.ibm.com",
-        api_key="secret-key",  # pragma: allowlist secret
+        provider_data={"api_key": "secret-key"},  # pragma: allowlist secret
     )
     result = mapper.resolve_verify_credentials(payload=payload)
     assert isinstance(result, VerifyCredentials)
     assert "cloud.ibm.com" in result.base_url
     assert result.provider_data is None
+
+
+def test_base_mapper_resolve_credential_fields_raises_not_implemented() -> None:
+    """Base mapper does not implement resolve_credential_fields."""
+    mapper = BaseDeploymentMapper()
+    with pytest.raises(NotImplementedError):
+        mapper.resolve_credential_fields(provider_data={"api_key": "key"})  # pragma: allowlist secret
+
+
+# ---------------------------------------------------------------------------
+# resolve_provider_account_update
+# ---------------------------------------------------------------------------
+
+
+def _make_existing_account():
+    """Build a minimal fake existing DeploymentProviderAccount."""
+    return SimpleNamespace(
+        provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/old-tenant/agents",
+        provider_tenant_id="old-tenant",
+        provider_key="watsonx-orchestrate",
+    )
+
+
+def test_base_mapper_resolve_provider_account_update_name_only() -> None:
+    """Only name is set; no other fields should appear."""
+    from langflow.api.v1.schemas.deployments import DeploymentProviderAccountUpdateRequest
+
+    mapper = BaseDeploymentMapper()
+    payload = DeploymentProviderAccountUpdateRequest(name="new-name")
+    result = mapper.resolve_provider_account_update(
+        payload=payload,
+        existing_account=_make_existing_account(),
+    )
+    assert result == {"name": "new-name"}
+
+
+def test_base_mapper_resolve_provider_account_update_url_only() -> None:
+    """Only provider_url is set."""
+    from langflow.api.v1.schemas.deployments import DeploymentProviderAccountUpdateRequest
+
+    mapper = BaseDeploymentMapper()
+    payload = DeploymentProviderAccountUpdateRequest(
+        provider_url="https://api.eu-de.wxo.cloud.ibm.com/instances/new-tenant/agents",
+    )
+    result = mapper.resolve_provider_account_update(
+        payload=payload,
+        existing_account=_make_existing_account(),
+    )
+    assert "provider_url" in result
+    assert "name" not in result
+    assert "provider_tenant_id" not in result
+
+
+def test_base_mapper_resolve_provider_account_update_tenant_uses_existing_url() -> None:
+    """When only tenant is set, resolve uses existing_account.provider_url."""
+    from langflow.api.v1.schemas.deployments import DeploymentProviderAccountUpdateRequest
+
+    mapper = BaseDeploymentMapper()
+    payload = DeploymentProviderAccountUpdateRequest(provider_tenant_id="explicit-tenant")
+    result = mapper.resolve_provider_account_update(
+        payload=payload,
+        existing_account=_make_existing_account(),
+    )
+    assert result["provider_tenant_id"] == "explicit-tenant"
+
+
+def test_base_mapper_resolve_provider_account_update_provider_data_raises() -> None:
+    """Base mapper cannot resolve provider_data — raises NotImplementedError."""
+    from langflow.api.v1.schemas.deployments import DeploymentProviderAccountUpdateRequest
+
+    mapper = BaseDeploymentMapper()
+    payload = DeploymentProviderAccountUpdateRequest(provider_data={"api_key": "key"})
+    with pytest.raises(NotImplementedError):
+        mapper.resolve_provider_account_update(
+            payload=payload,
+            existing_account=_make_existing_account(),
+        )

@@ -10,8 +10,8 @@ Two identifier domains coexist in these schemas:
 
 * **Provider-owned (str)** -- ``reference_id``, ``config_id``,
   ``resource_key``, ``execution_id``, ``provider_tenant_id``,
-  ``provider_key``, ``provider_url``, and ``api_key``. Opaque values
-  assigned or consumed by the external deployment provider.
+  ``provider_key``, and ``provider_url``. Opaque values assigned or
+  consumed by the external deployment provider.
 
 ``provider_data`` dicts are opaque pass-through containers whose contents
 are defined by the provider adapter. Langflow forwards them without
@@ -55,7 +55,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentConfig,
     DeploymentType,
 )
-from pydantic import AfterValidator, BaseModel, Field, SecretStr, ValidationInfo, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, field_validator, model_validator
 
 from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 from langflow.services.database.models.deployment_provider_account.utils import (
@@ -155,10 +155,12 @@ class DeploymentProviderAccountCreateRequest(BaseModel):
     provider_url: ValidatedUrl = Field(
         description="Provider service URL persisted in Langflow DB for provider-account resolution.",
     )
-    api_key: SecretStr = Field(
+    provider_data: dict[str, Any] = Field(
         min_length=1,
         description=(
-            "Provider credential material. Stored by Langflow as secret data and never returned in read responses."
+            "Provider-specific credential payload. "
+            "Contents are opaque to the API schema; the deployment mapper "
+            "for the target provider_key validates and extracts credentials."
         ),
     )
 
@@ -166,11 +168,6 @@ class DeploymentProviderAccountCreateRequest(BaseModel):
     def validate_provider_url_allowed(self) -> DeploymentProviderAccountCreateRequest:
         check_provider_url_allowed(self.provider_url, self.provider_key)
         return self
-
-    @field_validator("api_key", mode="before")
-    @classmethod
-    def normalize_api_key(cls, value: str, info: ValidationInfo) -> str:
-        return _normalize_str(value, field_name=info.field_name)
 
 
 class DeploymentProviderAccountUpdateRequest(BaseModel):
@@ -188,27 +185,21 @@ class DeploymentProviderAccountUpdateRequest(BaseModel):
         default=None,
         description="Provider service URL. Omit to keep existing value; cannot be set to null.",
     )
-    api_key: SecretStr | None = Field(
+    provider_data: dict[str, Any] | None = Field(
         default=None,
         description=(
-            "Provider credential material. Omit to keep existing value; "
-            "provided value replaces stored secret. Cannot be set to null."
+            "Provider-specific credential payload. "
+            "Omit to keep existing credentials; provided value replaces stored credentials. "
+            "Cannot be set to null."
         ),
     )
-
-    @field_validator("api_key", mode="before")
-    @classmethod
-    def normalize_api_key(cls, value: str | None, info: ValidationInfo) -> str | None:
-        return _normalize_optional_str(value, field_name=info.field_name)
 
     @model_validator(mode="after")
     def ensure_any_field_provided(self) -> DeploymentProviderAccountUpdateRequest:
         if not self.model_fields_set:
             msg = "At least one field must be provided for update."
             raise ValueError(msg)
-        # provider_url and api_key are required-on-create;
-        # reject explicit null to prevent clearing these fields.
-        for field_name in ("name", "provider_url", "api_key"):
+        for field_name in ("name", "provider_url", "provider_data"):
             if field_name in self.model_fields_set and getattr(self, field_name) is None:
                 msg = f"'{field_name}' cannot be set to null."
                 raise ValueError(msg)

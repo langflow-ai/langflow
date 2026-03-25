@@ -135,6 +135,61 @@ class TestProviderUrlValidation:
             DeploymentProviderAccount.validate_url(url, self._make_info())
 
 
+class TestDeploymentProviderAccountTenantConsistency:
+    """Tests for the model_validator that checks tenant/URL consistency.
+
+    SQLModel table models bypass Pydantic validators in __init__ (ORM compat),
+    so we use model_validate to trigger the model_validator.
+    """
+
+    _BASE = {
+        "user_id": "00000000-0000-0000-0000-000000000000",
+        "name": "test",
+        "api_key": "secret",  # pragma: allowlist secret
+        "provider_key": DeploymentProviderKey.WATSONX_ORCHESTRATE,
+    }
+
+    def test_rejects_inconsistent_tenant_and_url(self):
+        with pytest.raises(Exception, match="does not match"):
+            DeploymentProviderAccount.model_validate(
+                {
+                    **self._BASE,
+                    "provider_url": "https://api.us-south.wxo.cloud.ibm.com/instances/acct-123/agents",
+                    "provider_tenant_id": "wrong-tenant",
+                }
+            )
+
+    def test_accepts_consistent_tenant_and_url(self):
+        account = DeploymentProviderAccount.model_validate(
+            {
+                **self._BASE,
+                "provider_url": "https://api.us-south.wxo.cloud.ibm.com/instances/acct-123/agents",
+                "provider_tenant_id": "acct-123",
+            }
+        )
+        assert account.provider_tenant_id == "acct-123"
+
+    def test_accepts_none_tenant(self):
+        account = DeploymentProviderAccount.model_validate(
+            {
+                **self._BASE,
+                "provider_url": "https://api.us-south.wxo.cloud.ibm.com/instances/acct-123/agents",
+                "provider_tenant_id": None,
+            }
+        )
+        assert account.provider_tenant_id is None
+
+    def test_accepts_url_without_tenant_segment(self):
+        account = DeploymentProviderAccount.model_validate(
+            {
+                **self._BASE,
+                "provider_url": "https://api.us-south.wxo.cloud.ibm.com/api/v1",
+                "provider_tenant_id": "any-tenant",
+            }
+        )
+        assert account.provider_tenant_id == "any-tenant"
+
+
 class TestDeploymentProviderAccountRead:
     """Tests for DeploymentProviderAccountRead schema."""
 

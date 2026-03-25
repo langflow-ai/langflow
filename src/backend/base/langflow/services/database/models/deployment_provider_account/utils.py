@@ -12,11 +12,23 @@ URL validation enforces two things:
    are rejected (closed-by-default).  The check is called from the API route
    *before* ``verify_credentials`` so that a spoofed endpoint is blocked before
    any credential exchange occurs.
+
+Tenant/URL consistency
+----------------------
+:func:`extract_tenant_from_url` derives the provider tenant identifier from
+a URL using per-provider extraction logic.  :func:`validate_tenant_url_consistency`
+verifies that a stored ``provider_tenant_id`` matches what the URL implies.
+Both are used by the ``DeploymentProviderAccount`` model validator and the
+deployment mapper layer.
 """
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from urllib.parse import urlparse, urlunparse
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 from langflow.services.database.utils import validate_non_empty_string
@@ -78,7 +90,7 @@ def validate_provider_url_optional(v: str | None, info: object) -> str | None:
 
 _PROVIDER_HOSTNAME_ALLOWLIST: dict[DeploymentProviderKey, tuple[str, ...]] = {
     # https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-endpoint
-    DeploymentProviderKey.WATSONX_ORCHESTRATE: (".ibm.com",), # note: on-prem is not supported
+    DeploymentProviderKey.WATSONX_ORCHESTRATE: (".ibm.com",),  # note: on-prem is not supported
 }
 
 
@@ -100,3 +112,68 @@ def check_provider_url_allowed(url: str, provider_key: str | DeploymentProviderK
 
     msg = f"URL hostname '{hostname}' is not allowed for provider '{key.value}'"
     raise ValueError(msg)
+
+
+# ---------------------------------------------------------------------------
+# Per-provider tenant extraction from URL
+# ---------------------------------------------------------------------------
+
+
+def _extract_wxo_tenant_from_url(url: str) -> str | None:
+    """Extract the tenant/instance id from a WXO URL path.
+
+    WXO URLs embed the tenant in the path as ``/instances/{tenant_id}/...``.
+    Returns ``None`` if the path does not contain an ``instances`` segment.
+    """
+    parsed = urlparse(url)
+    path_segments = [segment for segment in parsed.path.split("/") if segment]
+    try:
+        instances_index = path_segments.index("instances")
+    except ValueError:
+        return None
+    account_index = instances_index + 1
+    if account_index >= len(path_segments):
+        return None
+    return path_segments[account_index].strip() or None
+
+
+_PROVIDER_TENANT_EXTRACTORS: dict[DeploymentProviderKey, Callable[[str], str | None]] = {
+    DeploymentProviderKey.WATSONX_ORCHESTRATE: _extract_wxo_tenant_from_url,
+}
+
+
+def extract_tenant_from_url(provider_url: str, provider_key: str | DeploymentProviderKey) -> str | None:
+    """Derive the provider tenant identifier from a URL.
+
+    Uses the per-provider extractor registered in
+    ``_PROVIDER_TENANT_EXTRACTORS``.  Returns ``None`` for providers without
+    a registered extractor (tenant is not embedded in the URL).
+    """
+    key = DeploymentProviderKey(provider_key)
+    extractor = _PROVIDER_TENANT_EXTRACTORS.get(key)
+    if extractor is None:
+        return None
+    return extractor(provider_url)
+
+
+def validate_tenant_url_consistency(
+    provider_url: str,
+    provider_tenant_id: str | None,
+    provider_key: str | DeploymentProviderKey,
+) -> None:
+    """Raise ``ValueError`` if *provider_tenant_id* contradicts the URL.
+
+    If the URL implies a tenant (via the per-provider extractor) and
+    *provider_tenant_id* is set to a **different** value, the pair is
+    inconsistent and must be rejected.  When either value is ``None``
+    the check passes — the mapper is responsible for derivation.
+    """
+    url_tenant = extract_tenant_from_url(provider_url, provider_key)
+    if url_tenant is None or provider_tenant_id is None:
+        return
+    if url_tenant != provider_tenant_id:
+        msg = (
+            f"provider_tenant_id '{provider_tenant_id}' does not match "
+            f"the tenant '{url_tenant}' embedded in provider_url"
+        )
+        raise ValueError(msg)

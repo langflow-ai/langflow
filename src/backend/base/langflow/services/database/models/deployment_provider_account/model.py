@@ -1,16 +1,19 @@
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 from uuid import UUID, uuid4
 
 import sqlalchemy as sa
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
 from langflow.schema.serialize import UUIDstr
 from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
-from langflow.services.database.models.deployment_provider_account.utils import validate_provider_url
+from langflow.services.database.models.deployment_provider_account.utils import (
+    validate_provider_url,
+    validate_tenant_url_consistency,
+)
 from langflow.services.database.utils import (
     normalize_string_or_none,
     validate_non_empty_string,
@@ -119,6 +122,11 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
     @classmethod
     def validate_url(cls, v: str, info: object) -> str:
         return validate_provider_url(v, info)
+
+    @model_validator(mode="after")
+    def validate_tenant_consistency(self) -> Self:
+        validate_tenant_url_consistency(self.provider_url, self.provider_tenant_id, self.provider_key)
+        return self
 
 
 class DeploymentProviderAccountRead(SQLModel):

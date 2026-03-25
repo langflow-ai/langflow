@@ -20,22 +20,26 @@ from langflow.api.v1.schemas.deployments import (
     FlowVersionsPatch,
 )
 from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
-from pydantic import SecretStr, ValidationError
+from pydantic import ValidationError
 
 # ---------------------------------------------------------------------------
-# Security: api_key must never appear in response schemas
+# Security: credentials must never appear in response schemas
 # ---------------------------------------------------------------------------
 
 
-class TestApiKeyWriteOnly:
-    """Ensure api_key is excluded from every response model."""
+class TestCredentialSecurity:
+    """Ensure credentials are excluded from every response model."""
 
     def test_provider_account_response_excludes_api_key(self):
         """DeploymentProviderAccountGetResponse.model_fields must not contain api_key."""
         assert "api_key" not in DeploymentProviderAccountGetResponse.model_fields
 
-    def test_provider_account_response_dump_excludes_api_key(self):
-        """model_dump() on a response instance must never contain api_key."""
+    def test_provider_account_response_excludes_provider_data(self):
+        """DeploymentProviderAccountGetResponse.model_fields must not contain provider_data."""
+        assert "provider_data" not in DeploymentProviderAccountGetResponse.model_fields
+
+    def test_provider_account_response_dump_excludes_credentials(self):
+        """model_dump() on a response instance must never contain credential fields."""
         response = DeploymentProviderAccountGetResponse(
             id=uuid4(),
             name="staging",
@@ -44,23 +48,7 @@ class TestApiKeyWriteOnly:
         )
         dumped = response.model_dump()
         assert "api_key" not in dumped
-
-    def test_create_schema_masks_api_key_in_repr(self):
-        """SecretStr should mask the value in string representations."""
-        account = DeploymentProviderAccountCreateRequest(
-            name="staging",
-            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_url="https://api.us-south.wxo.cloud.ibm.com",
-            api_key="super-secret-key",
-        )
-        assert isinstance(account.api_key, SecretStr)
-        assert "super-secret-key" not in repr(account)
-
-    def test_update_schema_masks_api_key_in_repr(self):
-        """SecretStr should mask the value in string representations on update."""
-        account = DeploymentProviderAccountUpdateRequest(api_key="new-secret")
-        assert isinstance(account.api_key, SecretStr)
-        assert "new-secret" not in repr(account)
+        assert "provider_data" not in dumped
 
 
 # ---------------------------------------------------------------------------
@@ -74,7 +62,7 @@ class TestProviderAccountName:
             name="production",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
             provider_url="https://api.us-south.wxo.cloud.ibm.com",
-            api_key="key",
+            provider_data={"api_key": "key"},
         )
         assert account.name == "production"
 
@@ -83,7 +71,7 @@ class TestProviderAccountName:
             name="  staging  ",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
             provider_url="https://api.us-south.wxo.cloud.ibm.com",
-            api_key="key",
+            provider_data={"api_key": "key"},
         )
         assert account.name == "staging"
 
@@ -93,7 +81,7 @@ class TestProviderAccountName:
                 name="",
                 provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
                 provider_url="https://example.com",
-                api_key="key",
+                provider_data={"api_key": "key"},
             )
 
     def test_create_rejects_whitespace_only_name(self):
@@ -102,7 +90,7 @@ class TestProviderAccountName:
                 name="   ",
                 provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
                 provider_url="https://example.com",
-                api_key="key",
+                provider_data={"api_key": "key"},
             )
 
     def test_create_rejects_missing_name(self):
@@ -110,7 +98,7 @@ class TestProviderAccountName:
             DeploymentProviderAccountCreateRequest(
                 provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
                 provider_url="https://example.com",
-                api_key="key",
+                provider_data={"api_key": "key"},
             )
 
     def test_update_accepts_name(self):
@@ -138,7 +126,7 @@ class TestProviderUrlSchemaValidation:
             name="staging",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
             provider_url="https://api.us-south.wxo.cloud.ibm.com/v1",
-            api_key="key",
+            provider_data={"api_key": "key"},
         )
         assert account.provider_url == "https://api.us-south.wxo.cloud.ibm.com/v1"
 
@@ -147,7 +135,7 @@ class TestProviderUrlSchemaValidation:
             name="staging",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
             provider_url="HTTPS://API.US-SOUTH.WXO.CLOUD.IBM.COM/v1",
-            api_key="key",
+            provider_data={"api_key": "key"},
         )
         assert account.provider_url == "https://api.us-south.wxo.cloud.ibm.com/v1"
 
@@ -157,7 +145,7 @@ class TestProviderUrlSchemaValidation:
                 name="staging",
                 provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
                 provider_url="http://example.com",
-                api_key="key",
+                provider_data={"api_key": "key"},
             )
 
     def test_create_rejects_no_scheme(self):
@@ -166,7 +154,7 @@ class TestProviderUrlSchemaValidation:
                 name="staging",
                 provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
                 provider_url="example.com",
-                api_key="key",
+                provider_data={"api_key": "key"},
             )
 
     def test_update_accepts_valid_https_url(self):
@@ -188,7 +176,7 @@ class TestProviderKeyEnum:
             name="staging",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
             provider_url="https://api.us-south.wxo.cloud.ibm.com",
-            api_key="key",
+            provider_data={"api_key": "key"},
         )
         assert account.provider_key == DeploymentProviderKey.WATSONX_ORCHESTRATE
 
@@ -197,7 +185,7 @@ class TestProviderKeyEnum:
             name="staging",
             provider_key="watsonx-orchestrate",
             provider_url="https://api.us-south.wxo.cloud.ibm.com",
-            api_key="key",
+            provider_data={"api_key": "key"},
         )
         assert account.provider_key == DeploymentProviderKey.WATSONX_ORCHESTRATE
 
@@ -207,7 +195,7 @@ class TestProviderKeyEnum:
                 name="staging",
                 provider_key="unknown-provider",
                 provider_url="https://example.com",
-                api_key="key",
+                provider_data={"api_key": "key"},
             )
 
     def test_rejects_empty_string(self):
@@ -216,7 +204,7 @@ class TestProviderKeyEnum:
                 name="staging",
                 provider_key="",
                 provider_url="https://example.com",
-                api_key="key",
+                provider_data={"api_key": "key"},
             )
 
 

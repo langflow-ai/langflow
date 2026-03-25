@@ -521,8 +521,8 @@ def test_watsonx_mapper_trusts_top_level_deployment_id() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_wxo_mapper_resolve_verify_credentials_packs_api_key() -> None:
-    """WXO mapper packs api_key into provider_data via the adapter slot."""
+def test_wxo_mapper_resolve_verify_credentials_forwards_provider_data() -> None:
+    """WXO mapper forwards provider_data through the adapter slot."""
     from langflow.api.v1.schemas.deployments import DeploymentProviderAccountCreateRequest
     from lfx.services.adapters.deployment.schema import VerifyCredentials
 
@@ -531,13 +531,118 @@ def test_wxo_mapper_resolve_verify_credentials_packs_api_key() -> None:
         name="test-account",
         provider_key="watsonx-orchestrate",
         provider_url="https://api.us-south.wxo.cloud.ibm.com",
-        api_key="my-secret-key",  # pragma: allowlist secret
+        provider_data={"api_key": "my-secret-key"},  # pragma: allowlist secret
     )
     result = mapper.resolve_verify_credentials(payload=payload)
     assert isinstance(result, VerifyCredentials)
     assert "cloud.ibm.com" in result.base_url
     assert result.provider_data is not None
     assert result.provider_data["api_key"] == "my-secret-key"  # pragma: allowlist secret
+
+
+def test_wxo_mapper_resolve_credential_fields_returns_api_key() -> None:
+    """WXO mapper extracts api_key from provider_data for DB storage."""
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    result = mapper.resolve_credential_fields(provider_data={"api_key": "my-key"})  # pragma: allowlist secret
+    assert result == {"api_key": "my-key"}  # pragma: allowlist secret
+
+
+def test_wxo_mapper_resolve_credential_fields_strips_whitespace() -> None:
+    """WXO mapper strips whitespace from api_key."""
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    result = mapper.resolve_credential_fields(provider_data={"api_key": "  my-key  "})  # pragma: allowlist secret
+    assert result == {"api_key": "my-key"}  # pragma: allowlist secret
+
+
+def test_wxo_mapper_resolve_credential_fields_rejects_empty() -> None:
+    """WXO mapper rejects empty api_key in provider_data."""
+    from lfx.services.adapters.payload import AdapterPayloadValidationError
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    with pytest.raises(ValueError, match="non-empty"):
+        mapper.resolve_credential_fields(provider_data={"api_key": ""})
+
+    with pytest.raises(ValueError, match="non-empty"):
+        mapper.resolve_credential_fields(provider_data={"api_key": "   "})
+
+    with pytest.raises(AdapterPayloadValidationError):
+        mapper.resolve_credential_fields(provider_data={})
+
+
+# ---------------------------------------------------------------------------
+# resolve_provider_account_update (WXO override)
+# ---------------------------------------------------------------------------
+
+
+def _make_wxo_existing_account():
+    """Build a minimal fake existing WXO DeploymentProviderAccount."""
+    return SimpleNamespace(
+        provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/old-tenant/agents",
+        provider_tenant_id="old-tenant",
+        provider_key="watsonx-orchestrate",
+    )
+
+
+def test_wxo_mapper_update_rederives_tenant_when_url_changes() -> None:
+    """Changing provider_url re-derives tenant even if provider_tenant_id is not set."""
+    from langflow.api.v1.schemas.deployments import DeploymentProviderAccountUpdateRequest
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    payload = DeploymentProviderAccountUpdateRequest(
+        provider_url="https://api.eu-de.wxo.cloud.ibm.com/instances/new-tenant/agents",
+    )
+    result = mapper.resolve_provider_account_update(
+        payload=payload,
+        existing_account=_make_wxo_existing_account(),
+    )
+    assert result["provider_tenant_id"] == "new-tenant"
+    assert "provider_url" in result
+
+
+def test_wxo_mapper_update_uses_existing_url_when_only_tenant_changes() -> None:
+    """Changing only provider_tenant_id still uses existing URL for resolution."""
+    from langflow.api.v1.schemas.deployments import DeploymentProviderAccountUpdateRequest
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    payload = DeploymentProviderAccountUpdateRequest(
+        provider_tenant_id="explicit-override",
+    )
+    result = mapper.resolve_provider_account_update(
+        payload=payload,
+        existing_account=_make_wxo_existing_account(),
+    )
+    assert result["provider_tenant_id"] == "explicit-override"
+    assert "provider_url" not in result
+
+
+def test_wxo_mapper_update_leaves_tenant_untouched_when_neither_set() -> None:
+    """When neither provider_url nor provider_tenant_id is set, tenant is not in kwargs."""
+    from langflow.api.v1.schemas.deployments import DeploymentProviderAccountUpdateRequest
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    payload = DeploymentProviderAccountUpdateRequest(name="renamed")
+    result = mapper.resolve_provider_account_update(
+        payload=payload,
+        existing_account=_make_wxo_existing_account(),
+    )
+    assert "provider_tenant_id" not in result
+    assert result["name"] == "renamed"
+
+
+def test_wxo_mapper_update_with_url_and_explicit_tenant() -> None:
+    """When both provider_url and provider_tenant_id are set, explicit tenant wins."""
+    from langflow.api.v1.schemas.deployments import DeploymentProviderAccountUpdateRequest
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    payload = DeploymentProviderAccountUpdateRequest(
+        provider_url="https://api.eu-de.wxo.cloud.ibm.com/instances/url-tenant/agents",
+        provider_tenant_id="explicit-tenant",
+    )
+    result = mapper.resolve_provider_account_update(
+        payload=payload,
+        existing_account=_make_wxo_existing_account(),
+    )
+    assert result["provider_tenant_id"] == "explicit-tenant"
 
 
 def test_wxo_mapper_resolve_verify_credentials_rejects_extra_fields() -> None:

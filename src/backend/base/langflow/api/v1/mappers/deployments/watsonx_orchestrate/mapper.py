@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
-from urllib.parse import urlparse
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -63,6 +62,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
     DeploymentProviderAccountCreateRequest,
+    DeploymentProviderAccountUpdateRequest,
     DeploymentUpdateRequest,
     DeploymentUpdateResponse,
     ExecutionCreateResponse,
@@ -74,6 +74,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     PAYLOAD_SCHEMAS as WXO_ADAPTER_PAYLOAD_SCHEMAS,
 )
+from langflow.services.database.models.deployment_provider_account.utils import extract_tenant_from_url
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
     list_deployment_attachments_for_flow_version_ids,
 )
@@ -82,6 +83,7 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from langflow.services.database.models.deployment.model import Deployment
+    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 
 
 @register_mapper(AdapterType.DEPLOYMENT, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
@@ -114,29 +116,65 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     def resolve_provider_tenant_id(self, *, provider_url: str, provider_tenant_id: str | None) -> str | None:
         if provider_tenant_id:
             return provider_tenant_id
-        parsed = urlparse(provider_url)
-        path_segments = [segment for segment in parsed.path.split("/") if segment]
-        try:
-            instances_index = path_segments.index("instances")
-        except ValueError:
-            return None
-        account_index = instances_index + 1
-        if account_index >= len(path_segments):
-            return None
-        return path_segments[account_index].strip() or None
+        return extract_tenant_from_url(provider_url, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
+
+    def _validate_provider_data(self, provider_data: dict[str, Any]) -> dict[str, Any]:
+        verify_slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.verify_credentials
+        if verify_slot:
+            validated = verify_slot.apply(provider_data)
+            return validated if isinstance(validated, dict) else dict(validated)
+        return provider_data
+
+    def resolve_credential_fields(
+        self,
+        *,
+        provider_data: dict[str, Any],
+    ) -> dict[str, Any]:
+        validated = self._validate_provider_data(provider_data)
+        api_key = validated.get("api_key")
+        if not api_key or not isinstance(api_key, str) or not api_key.strip():
+            msg = "provider_data must contain a non-empty 'api_key' string"
+            raise ValueError(msg)
+        return {"api_key": api_key.strip()}
 
     def resolve_verify_credentials(
         self,
         *,
         payload: DeploymentProviderAccountCreateRequest,
     ) -> VerifyCredentials:
-        verify_slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.verify_credentials
-        credentials = {"api_key": payload.api_key.get_secret_value()}
-        provider_data = verify_slot.apply(credentials) if verify_slot else credentials
+        validated = self._validate_provider_data(payload.provider_data)
         return VerifyCredentials(
             base_url=payload.provider_url,
-            provider_data=provider_data,
+            provider_data=validated,
         )
+
+    def resolve_provider_account_update(
+        self,
+        *,
+        payload: DeploymentProviderAccountUpdateRequest,
+        existing_account: DeploymentProviderAccount,
+    ) -> dict[str, Any]:
+        """WXO override: re-derive tenant when provider_url changes.
+
+        For WXO the tenant id is embedded in the URL path, so changing the URL
+        without updating the tenant would create an inconsistent pair.  This
+        override always re-resolves the tenant whenever *either*
+        ``provider_url`` or ``provider_tenant_id`` is in the update set.
+        """
+        update_kwargs = super().resolve_provider_account_update(
+            payload=payload,
+            existing_account=existing_account,
+        )
+        url_changed = "provider_url" in payload.model_fields_set
+        tenant_changed = "provider_tenant_id" in payload.model_fields_set
+        if url_changed or tenant_changed:
+            effective_url = payload.provider_url if url_changed else existing_account.provider_url
+            effective_tenant = payload.provider_tenant_id if tenant_changed else None
+            update_kwargs["provider_tenant_id"] = self.resolve_provider_tenant_id(
+                provider_url=effective_url,
+                provider_tenant_id=effective_tenant,
+            )
+        return update_kwargs
 
     def util_create_flow_artifact_provider_data(
         self,

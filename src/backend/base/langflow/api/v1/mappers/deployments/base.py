@@ -1,5 +1,27 @@
 # ruff: noqa: ARG002
-"""Base deployment payload mapper contracts for API <-> adapter transforms."""
+"""Base deployment payload mapper contracts for API <-> adapter transforms.
+
+Provider-account credential contract
+-------------------------------------
+Provider credentials arrive in the API request as an opaque
+``provider_data: dict`` and leave via two mapper methods:
+
+* **API -> Adapter** (``resolve_verify_credentials``): packs the request's
+  ``provider_data`` into the adapter-layer ``VerifyCredentials`` model so the
+  deployment adapter can validate the credentials against the provider.
+
+* **API -> DB** (``resolve_credential_fields``): extracts credentials from
+  ``provider_data`` and returns a ``dict[str, Any]`` of DB column-value
+  pairs (e.g. ``{"api_key": "..."}``).  The route spreads these into the
+  CRUD layer's keyword arguments.
+
+The mapper is the **single** component that understands a provider's
+credential shape.  The API schema treats ``provider_data`` as opaque and
+the DB model keeps a fixed column set (currently ``api_key: str``).  If a
+future provider requires a different storage layout (multiple columns, a
+serialised JSON blob, etc.), only the mapper and CRUD layer need to evolve
+-- the route and schema remain unchanged.
+"""
 
 from __future__ import annotations
 
@@ -32,6 +54,7 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountGetResponse,
+    DeploymentProviderAccountUpdateRequest,
     DeploymentUpdateRequest,
     DeploymentUpdateResponse,
     ExecutionCreateRequest,
@@ -211,6 +234,46 @@ class BaseDeploymentMapper:
         """Resolve provider tenant id for provider-account create/update."""
         _ = provider_url
         return provider_tenant_id
+
+    def resolve_credential_fields(
+        self,
+        *,
+        provider_data: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Extract credentials from provider_data and return DB column->value pairs.
+
+        Provider mappers must override this.  The returned dict is spread into
+        the CRUD layer's keyword arguments (e.g. ``{"api_key": "..."}`` today;
+        a future provider could return multiple columns or a serialized JSON
+        blob).
+        """
+        raise NotImplementedError
+
+    def resolve_provider_account_update(
+        self,
+        *,
+        payload: DeploymentProviderAccountUpdateRequest,
+        existing_account: DeploymentProviderAccount,
+    ) -> dict[str, Any]:
+        """Assemble DB column-value kwargs for a provider-account update.
+
+        Only fields present in ``payload.model_fields_set`` are included so
+        the CRUD layer receives a minimal diff.  Provider mappers may override
+        to add cross-field logic (e.g. re-deriving tenant from URL).
+        """
+        update_kwargs: dict[str, Any] = {}
+        if "name" in payload.model_fields_set:
+            update_kwargs["name"] = payload.name
+        if "provider_url" in payload.model_fields_set:
+            update_kwargs["provider_url"] = payload.provider_url
+        if "provider_data" in payload.model_fields_set:
+            update_kwargs.update(self.resolve_credential_fields(provider_data=payload.provider_data))
+        if "provider_tenant_id" in payload.model_fields_set:
+            update_kwargs["provider_tenant_id"] = self.resolve_provider_tenant_id(
+                provider_url=payload.provider_url or existing_account.provider_url,
+                provider_tenant_id=payload.provider_tenant_id,
+            )
+        return update_kwargs
 
     def resolve_verify_credentials(
         self,
