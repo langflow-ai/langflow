@@ -64,6 +64,27 @@ def test_ttl_cleanup():
     assert len(events) == 0
 
 
+def test_cursor_ahead_of_all_events_not_settled():
+    svc = FlowEventsService()
+    e = svc.append("flow-1", "component_added", "Added something")
+
+    events, settled = svc.get_since("flow-1", e.timestamp + 1.0)
+    assert events == []
+    assert settled is False  # last event is recent, not past SETTLE_TIMEOUT
+
+
+def test_cursor_ahead_of_all_events_settled_after_timeout():
+    svc = FlowEventsService()
+    svc.SETTLE_TIMEOUT = 0.1
+    svc.append("flow-1", "component_added", "Added something")
+
+    time.sleep(0.15)
+
+    events, settled = svc.get_since("flow-1", time.time())
+    assert events == []
+    assert settled is True  # last event is past SETTLE_TIMEOUT
+
+
 def test_different_flows_isolated():
     svc = FlowEventsService()
     svc.append("flow-1", "component_added", "Flow 1")

@@ -139,6 +139,78 @@ class TestDisconnectComponentsEmitsEvent:
         mock_client.post_event.assert_called_once_with("flow-123", "connection_removed", "Disconnected A-1 from B-1")
 
 
+class TestFreezeComponentEmitsEvent:
+    async def test_emits_component_configured_event(self, mock_client, mock_registry, mock_flow):
+        from lfx.mcp.server import freeze_component
+
+        mock_flow["data"]["nodes"] = [
+            {"id": "node-1", "data": {"id": "ChatInput-abc", "node": {"frozen": False}}},
+        ]
+
+        with (
+            _patch_server(mock_client, mock_registry, mock_flow),
+        ):
+            await freeze_component("flow-123", "ChatInput-abc")
+
+        mock_client.post_event.assert_called_once_with("flow-123", "component_configured", "Froze ChatInput-abc")
+
+
+class TestUnfreezeComponentEmitsEvent:
+    async def test_emits_component_configured_event(self, mock_client, mock_registry, mock_flow):
+        from lfx.mcp.server import unfreeze_component
+
+        mock_flow["data"]["nodes"] = [
+            {"id": "node-1", "data": {"id": "ChatInput-abc", "node": {"frozen": True}}},
+        ]
+
+        with (
+            _patch_server(mock_client, mock_registry, mock_flow),
+        ):
+            await unfreeze_component("flow-123", "ChatInput-abc")
+
+        mock_client.post_event.assert_called_once_with("flow-123", "component_configured", "Unfroze ChatInput-abc")
+
+
+class TestLayoutFlowToolEmitsEvent:
+    async def test_emits_flow_updated_event(self, mock_client, mock_registry, mock_flow):
+        from lfx.mcp.server import layout_flow_tool
+
+        with (
+            _patch_server(mock_client, mock_registry, mock_flow),
+            patch("lfx.mcp.server.layout_flow"),
+        ):
+            await layout_flow_tool("flow-123")
+
+        mock_client.post_event.assert_called_once_with("flow-123", "flow_updated", "Re-laid out flow")
+
+
+class TestUpdateFlowFromSpecEmitsEvent:
+    async def test_emits_flow_updated_event(self, mock_client, mock_registry, mock_flow):
+        from lfx.mcp.server import update_flow_from_spec
+
+        parsed = {
+            "name": "Test",
+            "description": "",
+            "nodes": [{"id": "A", "type": "ChatInput"}],
+            "edges": [],
+            "config": {},
+        }
+
+        with (
+            patch("lfx.mcp.server._get_client", return_value=mock_client),
+            patch("lfx.mcp.server._get_registry", new_callable=AsyncMock, return_value=mock_registry),
+            patch("lfx.mcp.server.parse_flow_spec", return_value=parsed),
+            patch("lfx.mcp.server.validate_spec_references"),
+            patch("lfx.mcp.server.empty_flow", return_value=mock_flow),
+            patch("lfx.mcp.server.fb_add_component", return_value={"id": "ChatInput-abc"}),
+            patch("lfx.mcp.server.layout_flow"),
+            patch("lfx.mcp.server.fb_spec_summary", return_value="A: ChatInput"),
+        ):
+            await update_flow_from_spec("flow-123", "nodes:\n  A: ChatInput")
+
+        mock_client.post_event.assert_called_once_with("flow-123", "flow_updated", "Updated flow from spec")
+
+
 class TestNotifyDone:
     async def test_emits_flow_settled_event(self, mock_client):
         from lfx.mcp.server import notify_done

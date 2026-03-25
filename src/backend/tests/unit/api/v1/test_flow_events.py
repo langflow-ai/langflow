@@ -2,8 +2,19 @@ from httpx import AsyncClient
 from starlette import status
 
 
+async def _create_flow(client: AsyncClient, headers: dict) -> str:
+    """Create a minimal flow and return its id."""
+    response = await client.post(
+        "api/v1/flows/",
+        json={"name": "event-test-flow", "data": {}},
+        headers=headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    return response.json()["id"]
+
+
 async def test_create_and_get_flow_events(client: AsyncClient, logged_in_headers):
-    flow_id = "test-flow-123"
+    flow_id = await _create_flow(client, logged_in_headers)
 
     response = await client.post(
         f"api/v1/flows/{flow_id}/events",
@@ -29,7 +40,7 @@ async def test_create_and_get_flow_events(client: AsyncClient, logged_in_headers
 
 
 async def test_get_events_cursor_based(client: AsyncClient, logged_in_headers):
-    flow_id = "test-flow-cursor"
+    flow_id = await _create_flow(client, logged_in_headers)
 
     r1 = await client.post(
         f"api/v1/flows/{flow_id}/events",
@@ -55,7 +66,7 @@ async def test_get_events_cursor_based(client: AsyncClient, logged_in_headers):
 
 
 async def test_settled_on_flow_settled_event(client: AsyncClient, logged_in_headers):
-    flow_id = "test-flow-settled"
+    flow_id = await _create_flow(client, logged_in_headers)
 
     await client.post(
         f"api/v1/flows/{flow_id}/events",
@@ -79,7 +90,7 @@ async def test_settled_on_flow_settled_event(client: AsyncClient, logged_in_head
 
 async def test_full_event_lifecycle(client: AsyncClient, logged_in_headers):
     """Simulate: MCP emits events -> frontend polls -> detects settle."""
-    flow_id = "integration-test-flow"
+    flow_id = await _create_flow(client, logged_in_headers)
 
     await client.post(
         f"api/v1/flows/{flow_id}/events",
@@ -116,3 +127,21 @@ async def test_full_event_lifecycle(client: AsyncClient, logged_in_headers):
     assert len(data["events"]) == 3
     assert data["settled"] is True
     assert any(e["type"] == "flow_settled" for e in data["events"])
+
+
+async def test_nonexistent_flow_returns_404(client: AsyncClient, logged_in_headers):
+    fake_id = "00000000-0000-0000-0000-000000000000"
+
+    response = await client.get(
+        f"api/v1/flows/{fake_id}/events",
+        params={"since": 0.0},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    response = await client.post(
+        f"api/v1/flows/{fake_id}/events",
+        json={"type": "component_added", "summary": "Should fail"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
