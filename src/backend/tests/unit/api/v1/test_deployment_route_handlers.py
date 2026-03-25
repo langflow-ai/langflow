@@ -19,6 +19,7 @@ from fastapi import HTTPException
 from langflow.api.v1.schemas.deployments import (
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountUpdateRequest,
+    DeploymentUpdateRequest,
 )
 from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 from lfx.services.adapters.deployment.exceptions import (
@@ -483,6 +484,70 @@ class TestUpdateDeploymentRollback:
         )
 
         mock_rollback.assert_not_awaited()
+
+
+class TestUpdateDeploymentMetadataPersistence:
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.update_deployment_db", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.apply_flow_version_patch_attachments", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_added_snapshot_bindings_for_update", return_value=[])
+    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_flow_version_patch_for_update", return_value=([], []))
+    @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
+    async def test_explicit_null_description_is_persisted(
+        self,
+        mock_resolve_amm,
+        mock_resolve_fvp,  # noqa: ARG002
+        mock_validate_fv,  # noqa: ARG002
+        mock_resolve_snap,  # noqa: ARG002
+        mock_apply_patch,  # noqa: ARG002
+        mock_update_db,
+    ):
+        """PATCH should persist an explicitly-cleared description alongside other spec updates."""
+        from langflow.api.v1.deployments import update_deployment
+
+        dep_row = _fake_deployment_row(name="old-name", description="old-description")
+        updated_row = _fake_deployment_row(
+            id=dep_row.id,
+            resource_key=dep_row.resource_key,
+            name="renamed",
+            description=None,
+            deployment_provider_account_id=dep_row.deployment_provider_account_id,
+            project_id=dep_row.project_id,
+        )
+        adapter = AsyncMock()
+        mapper = MagicMock()
+        update_result = DeploymentUpdateResult(id="provider-dep-1")
+        adapter.update.return_value = update_result
+        mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
+        mapper.shape_deployment_update_result.return_value = MagicMock()
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper)
+        mock_update_db.return_value = updated_row
+
+        session = AsyncMock()
+        session.commit.return_value = None
+
+        payload = DeploymentUpdateRequest.model_validate(
+            {
+                "spec": {
+                    "name": "renamed",
+                    "description": None,
+                }
+            }
+        )
+
+        await update_deployment(
+            deployment_id=dep_row.id,
+            session=session,
+            payload=payload,
+            current_user=_fake_user(),
+        )
+
+        mock_update_db.assert_awaited_once()
+        update_kwargs = mock_update_db.call_args.kwargs
+        assert update_kwargs["name"] == "renamed"
+        assert "description" in update_kwargs
+        assert update_kwargs["description"] is None
 
 
 # ---------------------------------------------------------------------------

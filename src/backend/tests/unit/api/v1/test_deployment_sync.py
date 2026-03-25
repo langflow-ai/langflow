@@ -51,6 +51,14 @@ def _mock_deployment_row(resource_key: str, deployment_type: str | None = None) 
     return SimpleNamespace(id=uuid4(), resource_key=resource_key, deployment_type=deployment_type)
 
 
+class _AsyncNoopSavepoint:
+    async def __aenter__(self):
+        return None
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return False
+
+
 # ---------------------------------------------------------------------------
 # fetch_provider_resource_keys
 # ---------------------------------------------------------------------------
@@ -864,6 +872,55 @@ class TestSyncAttachmentSnapshotIds:
 
 
 # ---------------------------------------------------------------------------
+# sync_flow_version_attachments
+# ---------------------------------------------------------------------------
+
+
+class TestSyncFlowVersionAttachments:
+    @pytest.mark.asyncio
+    @patch(f"{MODULE}.sync_attachment_snapshot_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.fetch_provider_snapshot_keys", new_callable=AsyncMock)
+    @patch(f"{MODULE}.get_deployment_adapter")
+    @patch("langflow.api.v1.mappers.deployments.registry.get_deployment_mapper")
+    @patch(
+        "langflow.services.database.models.flow_version_deployment_attachment.crud.list_attachments_for_flow_with_provider_info",
+        new_callable=AsyncMock,
+    )
+    async def test_snapshot_cleanup_runs_inside_savepoint(
+        self,
+        mock_list_rows,
+        mock_get_mapper,
+        mock_get_adapter,
+        mock_fetch_snapshots,
+        mock_sync_snapshots,
+    ):
+        """Attachment pruning is isolated so a failed best-effort sync cannot dirty the outer transaction."""
+        attachment = _mock_attachment(provider_snapshot_id="snap-1")
+        provider_account_id = uuid4()
+        mock_list_rows.return_value = [(attachment, provider_account_id, "watsonx-orchestrate")]
+        mapper = MagicMock()
+        mapper.util_snapshot_ids_to_verify.return_value = ["snap-1"]
+        mock_get_mapper.return_value = mapper
+        mock_get_adapter.return_value = AsyncMock()
+        mock_fetch_snapshots.return_value = {"snap-1"}
+        mock_sync_snapshots.side_effect = RuntimeError("delete failed")
+
+        db = MagicMock()
+        db.begin_nested.return_value = _AsyncNoopSavepoint()
+
+        from langflow.api.v1.mappers.deployments.helpers import sync_flow_version_attachments
+
+        await sync_flow_version_attachments(
+            db=db,
+            flow_id=uuid4(),
+            user_id=uuid4(),
+        )
+
+        db.begin_nested.assert_called_once()
+        mock_sync_snapshots.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
 # rollback_provider_create
 # ---------------------------------------------------------------------------
 
@@ -1160,6 +1217,8 @@ class TestListDeploymentsSyncedSnapshotPhase:
         ]
         mock_fetch_snap.return_value = {"snap-1", "snap-2"}
         mock_sync_snap.return_value = {row.id: 2}
+        db = MagicMock()
+        db.begin_nested.return_value = _AsyncNoopSavepoint()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
 
@@ -1168,7 +1227,7 @@ class TestListDeploymentsSyncedSnapshotPhase:
             deployment_mapper=WatsonxOrchestrateDeploymentMapper(),
             user_id=uuid4(),
             provider_id=uuid4(),
-            db=AsyncMock(),
+            db=db,
             page=1,
             size=10,
             deployment_type=None,
@@ -1176,6 +1235,7 @@ class TestListDeploymentsSyncedSnapshotPhase:
 
         assert len(accepted) == 1
         assert accepted[0][1] == 2  # corrected count
+        db.begin_nested.assert_called_once()
 
     @pytest.mark.asyncio
     @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
@@ -1254,3 +1314,48 @@ class TestListDeploymentsSyncedSnapshotPhase:
 
         assert len(accepted) == 1
         assert accepted[0][1] == 3  # original count preserved, not corrected
+
+    @pytest.mark.asyncio
+    @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
+    @patch(f"{MODULE}.sync_attachment_snapshot_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.fetch_provider_snapshot_keys", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_attachments_by_deployment_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
+    async def test_snapshot_cleanup_runs_inside_savepoint(
+        self,
+        mock_list,
+        mock_fetch_rk,
+        mock_list_att,
+        mock_fetch_snap,
+        mock_sync_snap,
+        mock_count,  # noqa: ARG002
+    ):
+        """Phase 2 snapshot cleanup uses a savepoint so failures don't leak partial writes."""
+        row = _mock_deployment_row("rk-1")
+        mock_list.side_effect = [[(row, 3, [])], []]
+        mock_fetch_rk.return_value = {"rk-1"}
+        mock_list_att.return_value = [
+            _mock_attachment(provider_snapshot_id="snap-1", deployment_id=row.id),
+        ]
+        mock_fetch_snap.return_value = {"snap-1"}
+        mock_sync_snap.side_effect = RuntimeError("delete failed")
+        db = MagicMock()
+        db.begin_nested.return_value = _AsyncNoopSavepoint()
+
+        from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
+
+        accepted, _ = await list_deployments_synced(
+            deployment_adapter=AsyncMock(),
+            deployment_mapper=WatsonxOrchestrateDeploymentMapper(),
+            user_id=uuid4(),
+            provider_id=uuid4(),
+            db=db,
+            page=1,
+            size=10,
+            deployment_type=None,
+        )
+
+        assert len(accepted) == 1
+        assert accepted[0][1] == 3
+        db.begin_nested.assert_called_once()

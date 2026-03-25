@@ -826,13 +826,14 @@ async def sync_flow_version_attachments(
                     snapshot_ids=snapshot_ids,
                 )
             deployment_ids = list({a.deployment_id for a in attachments})
-            await sync_attachment_snapshot_ids(
-                user_id=user_id,
-                deployment_ids=deployment_ids,
-                attachments=attachments,
-                known_snapshot_ids=known_snapshots,
-                db=db,
-            )
+            async with db.begin_nested():
+                await sync_attachment_snapshot_ids(
+                    user_id=user_id,
+                    deployment_ids=deployment_ids,
+                    attachments=attachments,
+                    known_snapshot_ids=known_snapshots,
+                    db=db,
+                )
         except Exception:  # noqa: BLE001
             logger.warning(
                 "Snapshot-level sync failed for provider %s (flow %s); skipping",
@@ -921,13 +922,14 @@ async def list_deployments_synced(
                     db=db,
                     snapshot_ids=all_snapshot_ids,
                 )
-                corrected_counts = await sync_attachment_snapshot_ids(
-                    user_id=user_id,
-                    deployment_ids=deployment_ids_for_sync,
-                    attachments=all_attachments,
-                    known_snapshot_ids=known_snapshots,
-                    db=db,
-                )
+                async with db.begin_nested():
+                    corrected_counts = await sync_attachment_snapshot_ids(
+                        user_id=user_id,
+                        deployment_ids=deployment_ids_for_sync,
+                        attachments=all_attachments,
+                        known_snapshot_ids=known_snapshots,
+                        db=db,
+                    )
                 accepted = [(row, corrected_counts[row.id], matched) for row, _attached_count, matched in accepted]
             # else: no attachments carry a provider-verifiable snapshot ID,
             # so there is nothing to check against the provider.  The

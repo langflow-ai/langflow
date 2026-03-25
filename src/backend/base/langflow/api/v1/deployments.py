@@ -124,6 +124,16 @@ DeploymentIdQuery = Annotated[
 ]
 
 
+def _field_was_explicitly_set(model: object, field_name: str) -> bool:
+    """Return True when a Pydantic-style model explicitly received *field_name*.
+
+    Falls back to False for mocks and non-Pydantic objects so route handler unit
+    tests that use ``MagicMock`` payloads keep their previous behavior.
+    """
+    fields_set = getattr(model, "model_fields_set", None)
+    return isinstance(fields_set, set) and field_name in fields_set
+
+
 def _raise_http_for_provider_account_value_error(exc: ValueError) -> None:
     message = str(exc).lower()
     if "already exists" in message or "conflicts with an existing record" in message:
@@ -731,7 +741,10 @@ async def update_deployment(
             update_kwargs: dict = {}
             if payload.spec.name is not None and payload.spec.name != deployment_row.name:
                 update_kwargs["name"] = payload.spec.name
-            if payload.spec.description is not None and payload.spec.description != deployment_row.description:
+            if _field_was_explicitly_set(payload.spec, "description"):
+                if payload.spec.description != deployment_row.description:
+                    update_kwargs["description"] = payload.spec.description
+            elif payload.spec.description is not None and payload.spec.description != deployment_row.description:
                 update_kwargs["description"] = payload.spec.description
             if update_kwargs:
                 deployment_row = await update_deployment_db(
