@@ -66,9 +66,7 @@ RUN ARCH=$(dpkg --print-architecture) \
                     | grep -oP "node-v\K[0-9]+\.[0-9]+\.[0-9]+(?=-linux-${NODE_ARCH}\.tar\.xz)" \
                     | head -1) \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
-    | tar -xJ -C /usr/local --strip-components=1 \
-    && npm install -g npm@latest \
-    && npm cache clean --force
+    | tar -xJ -C /usr/local --strip-components=1
 
 # Create non-root user
 RUN useradd --uid 1000 --gid 0 --no-create-home --home-dir /app/data user

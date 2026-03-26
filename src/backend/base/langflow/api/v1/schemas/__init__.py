@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 from enum import Enum
-from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
 
@@ -179,7 +178,7 @@ class UploadFileResponse(BaseModel):
     """Upload file response schema."""
 
     flow_id: str = Field(serialization_alias="flowId")
-    file_path: Path
+    file_path: str
 
 
 class StreamData(BaseModel):

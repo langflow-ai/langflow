@@ -221,7 +221,7 @@ export default function RecentFilesComponent({
           });
           setSelectedFiles([]);
         },
-        onError: (error: any) => {
+        onError: (error: Error) => {
           setErrorData({
             title: "Error deleting files",
             list: [
@@ -234,7 +234,7 @@ export default function RecentFilesComponent({
   };
 
   return (
-    <div className="flex flex-col gap-4 overflow-hidden">
+    <div className="flex h-full flex-col gap-4 overflow-hidden">
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <Input
@@ -273,7 +273,7 @@ export default function RecentFilesComponent({
         </div> */}
       </div>
       <div
-        className={`flex h-80 min-h-80 flex-col gap-1 overflow-y-auto overflow-x-hidden`}
+        className={`flex flex-1 min-h-0 flex-col gap-1 overflow-y-auto overflow-x-hidden`}
       >
         {searchResults.length > 0 ? (
           isHierarchyView ? (
