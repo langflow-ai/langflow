@@ -6,6 +6,7 @@ Usage:
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 from gp_client import TARGET_LANGS, get_strings
@@ -19,6 +20,7 @@ def main():
     output_dir = Path(args.output)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    failed = []
     for lang in TARGET_LANGS:
         print(f"Downloading '{lang}' translations...")
         try:
@@ -44,6 +46,11 @@ def main():
 
         except Exception as e:  # noqa: BLE001
             print(f"  Error downloading '{lang}': {e}")
+            failed.append(lang)
+
+    if failed:
+        print(f"\nFAILED languages: {failed}")
+        sys.exit(1)
 
     print("\nDone.")
 

@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { SUPPORTED_LANGUAGES } from "@/constants/languages";
 import { useTypesStore } from "@/stores/typesStore";
 import {
   Card,
@@ -8,16 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "../../../../../../components/ui/card";
-
-const LANGUAGES = [
-  { code: "en", label: "English" },
-  { code: "fr", label: "Français" },
-  { code: "es", label: "Español" },
-  { code: "de", label: "Deutsch" },
-  { code: "pt", label: "Português" },
-  { code: "ja", label: "日本語" },
-  { code: "zh-Hans", label: "中文" },
-];
 
 const LanguageFormComponent = () => {
   const { t, i18n } = useTranslation();
@@ -39,11 +30,12 @@ const LanguageFormComponent = () => {
       </CardHeader>
       <CardContent>
         <select
+          aria-label={t("settings.languageSelectAriaLabel")}
           value={i18n.language}
           onChange={(e) => handleChange(e.target.value)}
           className="rounded border border-border bg-background px-2 py-1.5 text-sm text-foreground"
         >
-          {LANGUAGES.map((lang) => (
+          {SUPPORTED_LANGUAGES.map((lang) => (
             <option key={lang.code} value={lang.code}>
               {lang.label}
               {lang.code === "en"

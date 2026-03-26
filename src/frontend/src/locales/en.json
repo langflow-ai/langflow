@@ -176,6 +176,7 @@
   "settings.languageTitle": "Language",
   "settings.languageDescription": "Choose the display language for the Langflow interface.",
   "settings.languageRecommended": "Recommended",
+  "settings.languageSelectAriaLabel": "Select language",
   "settings.profilePictureTitle": "Profile Picture",
   "settings.profilePictureDescription": "Choose the image that appears as your profile picture.",
   "settings.apiKeysTitle": "Langflow API Keys",
