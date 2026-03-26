@@ -1,7 +1,7 @@
 """add flow_version_deployment_attachment table, deployment_type and description columns
 
 Revision ID: c0d2ce43b315
-Revises: fc7f696a57bf
+Revises: ef4b036b585d
 Create Date: 2026-03-09 00:00:00.000000
 
 Phase: EXPAND
@@ -15,7 +15,7 @@ from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
 revision: str = "c0d2ce43b315"  # pragma: allowlist secret
-down_revision: str | None = "0e6138e7a0c2"  # pragma: allowlist secret
+down_revision: str | None = "ef4b036b585d"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
