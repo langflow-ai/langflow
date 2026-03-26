@@ -307,9 +307,11 @@ async def delete_provider_account(
     session: DbSession,
     current_user: CurrentActiveUser,
 ):
-    provider_account = await get_provider_account_row_by_id(session, provider_id=provider_id, user_id=current_user.id)
-    if provider_account is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment provider account not found.")
+    provider_account = await get_owned_provider_account_or_404(
+        provider_id=provider_id,
+        user_id=current_user.id,
+        db=session,
+    )
     deployment_count = await _count_provider_deployments_after_reconciliation(
         session=session,
         provider_account=provider_account,
@@ -338,9 +340,11 @@ async def update_provider_account(
     payload: DeploymentProviderAccountUpdateRequest,
     current_user: CurrentActiveUser,
 ):
-    provider_account = await get_provider_account_row_by_id(session, provider_id=provider_id, user_id=current_user.id)
-    if provider_account is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment provider account not found.")
+    provider_account = await get_owned_provider_account_or_404(
+        provider_id=provider_id,
+        user_id=current_user.id,
+        db=session,
+    )
 
     try:
         payload.validate_provider_url_allowed(provider_account.provider_key)
@@ -349,7 +353,7 @@ async def update_provider_account(
 
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
     verify_input = None
-    if "provider_url" in payload.model_fields_set or "provider_data" in payload.model_fields_set:
+    if _field_was_explicitly_set(payload, "provider_url") or _field_was_explicitly_set(payload, "provider_data"):
         deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
         try:
             verify_input = deployment_mapper.resolve_verify_credentials_for_update(
