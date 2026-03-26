@@ -71,7 +71,7 @@ class LangflowApplication(BaseApplication):
         super().__init__()
 
     def load_config(self) -> None:
-        # Apply GUNICORN_CMD_ARGS env var (and any gunicorn config file) before programmatic options
+        # Apply options from GUNICORN_CMD_ARGS env var before programmatic options
         parser = self.cfg.parser()
         env_args = parser.parse_args(self.cfg.get_cmd_args_from_env())
         for k, v in vars(env_args).items():
