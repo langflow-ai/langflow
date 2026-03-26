@@ -950,13 +950,24 @@ def api_key_banner(unmasked_api_key) -> None:
     is_mac = platform.system() == "Darwin"
     import pyperclip
 
-    pyperclip.copy(unmasked_api_key.api_key)
+    clipboard_available = False
+    try:
+        pyperclip.copy(unmasked_api_key.api_key)
+        clipboard_available = True
+    except Exception:  # noqa: BLE001
+        pass
+
+    clipboard_hint = (
+        f"The API key has been copied to your clipboard. [bold]{['Ctrl', 'Cmd'][is_mac]} + V[/bold] to paste it."
+        if clipboard_available
+        else "Store this key securely — it will not be displayed again."
+    )
     panel = Panel(
         f"[bold]API Key Created Successfully:[/bold]\n\n"
         f"[bold blue]{unmasked_api_key.api_key}[/bold blue]\n\n"
         "This is the only time the API key will be displayed. \n"
         "Make sure to store it in a secure location. \n\n"
-        f"The API key has been copied to your clipboard. [bold]{['Ctrl', 'Cmd'][is_mac]} + V[/bold] to paste it.",
+        f"{clipboard_hint}",
         box=box.ROUNDED,
         border_style="blue",
         expand=False,
@@ -972,8 +983,9 @@ def api_key_banner(unmasked_api_key) -> None:
         logger.info(unmasked_api_key.api_key)
         logger.info("This is the only time the API key will be displayed.")
         logger.info("Make sure to store it in a secure location.")
-        ctrl_cmd = "Ctrl" if not is_mac else "Cmd"
-        logger.info(f"The API key has been copied to your clipboard. {ctrl_cmd} + V to paste it.")
+        if clipboard_available:
+            ctrl_cmd = "Ctrl" if not is_mac else "Cmd"
+            logger.info(f"The API key has been copied to your clipboard. {ctrl_cmd} + V to paste it.")
 
 
 def main() -> None:
