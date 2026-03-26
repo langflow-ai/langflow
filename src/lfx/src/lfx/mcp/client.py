@@ -56,9 +56,8 @@ class LangflowClient:
 
     def _headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
-        token = self.access_token or self.api_key
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
+        if self.access_token:
+            headers["Authorization"] = f"Bearer {self.access_token}"
         if self.api_key:
             headers["x-api-key"] = self.api_key
         return headers
