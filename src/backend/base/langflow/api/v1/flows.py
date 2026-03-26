@@ -163,6 +163,21 @@ async def _save_flow_to_fs(flow: Flow, user_id: UUID, storage_service: StorageSe
         raise HTTPException(status_code=500, detail=f"Failed to write flow to filesystem: {e}") from e
 
 
+async def _try_flow_deployment_sync(
+    *,
+    db: AsyncSession,
+    flow_ids: list[UUID],
+    user_id: UUID,
+    warning_message: str,
+    warning_args: tuple[object, ...] = (),
+) -> None:
+    """Sync deployment state without blocking guarded flow operations on failure."""
+    try:
+        await sync_flow_deployment_state(db=db, flow_ids=flow_ids, user_id=user_id)
+    except Exception:  # noqa: BLE001
+        await logger.awarning(warning_message, *warning_args, exc_info=True)
+
+
 async def _new_flow(
     *,
     session: AsyncSession,
@@ -492,14 +507,15 @@ async def update_flow(
 
         folder_id_will_change = "folder_id" in update_data and update_data.get("folder_id") != db_flow.folder_id
         if folder_id_will_change:
-            try:
-                await sync_flow_deployment_state(db=session, flow_ids=[flow_id], user_id=current_user.id)
-            except Exception:  # noqa: BLE001
-                await logger.awarning(
-                    "Best-effort sync failed before moving flow %s; continuing with DB guard enforcement.",
-                    flow_id,
-                    exc_info=True,
-                )
+            await _try_flow_deployment_sync(
+                db=session,
+                flow_ids=[flow_id],
+                user_id=current_user.id,
+                warning_message=(
+                    "Best-effort sync failed before moving flow %s; continuing with DB guard enforcement."
+                ),
+                warning_args=(flow_id,),
+            )
 
         for key, value in update_data.items():
             setattr(db_flow, key, value)
@@ -690,14 +706,13 @@ async def _update_existing_flow(
 
     folder_id_will_change = "folder_id" in update_data and update_data.get("folder_id") != existing_flow.folder_id
     if folder_id_will_change:
-        try:
-            await sync_flow_deployment_state(db=session, flow_ids=[existing_flow.id], user_id=user_id)
-        except Exception:  # noqa: BLE001
-            await logger.awarning(
-                "Best-effort sync failed before moving flow %s; continuing with DB guard enforcement.",
-                existing_flow.id,
-                exc_info=True,
-            )
+        await _try_flow_deployment_sync(
+            db=session,
+            flow_ids=[existing_flow.id],
+            user_id=user_id,
+            warning_message="Best-effort sync failed before moving flow %s; continuing with DB guard enforcement.",
+            warning_args=(existing_flow.id,),
+        )
 
     # Handle endpoint_name explicitly set to null or empty string (allow clearing)
     if flow.endpoint_name is None or flow.endpoint_name == "":
@@ -744,14 +759,13 @@ async def delete_flow(
     )
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
-    try:
-        await sync_flow_deployment_state(db=session, flow_ids=[flow.id], user_id=current_user.id)
-    except Exception:  # noqa: BLE001
-        await logger.awarning(
-            "Best-effort sync failed before deleting flow %s; continuing with DB guard enforcement.",
-            flow.id,
-            exc_info=True,
-        )
+    await _try_flow_deployment_sync(
+        db=session,
+        flow_ids=[flow.id],
+        user_id=current_user.id,
+        warning_message="Best-effort sync failed before deleting flow %s; continuing with DB guard enforcement.",
+        warning_args=(flow.id,),
+    )
     await cascade_delete_flow(session, flow.id)
     return {"message": "Flow deleted successfully"}
 
@@ -868,13 +882,14 @@ async def delete_multiple_flows(
     """
     try:
         if flow_ids:
-            try:
-                await sync_flow_deployment_state(db=db, flow_ids=flow_ids, user_id=user.id)
-            except Exception:  # noqa: BLE001
-                await logger.awarning(
-                    "Best-effort sync failed before deleting multiple flows; continuing with DB guard enforcement.",
-                    exc_info=True,
-                )
+            await _try_flow_deployment_sync(
+                db=db,
+                flow_ids=flow_ids,
+                user_id=user.id,
+                warning_message=(
+                    "Best-effort sync failed before deleting multiple flows; continuing with DB guard enforcement."
+                ),
+            )
         flows_to_delete = (
             await db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)).where(Flow.user_id == user.id))
         ).all()
