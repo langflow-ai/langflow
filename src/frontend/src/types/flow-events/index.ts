@@ -1,4 +1,4 @@
-export type FlowEventType =
+type FlowEventType =
   | "component_added"
   | "component_removed"
   | "component_configured"

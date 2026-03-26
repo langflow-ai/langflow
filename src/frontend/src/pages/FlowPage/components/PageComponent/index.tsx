@@ -234,14 +234,10 @@ export default function Page({
               counts[key] = (counts[key] || 0) + 1;
             }
             const parts = Object.entries(counts).map(([action, count]) => {
-              const noun =
-                action === "connected" || action === "disconnected"
-                  ? count === 1
-                    ? "connection"
-                    : "connections"
-                  : count === 1
-                    ? "component"
-                    : "components";
+              const isConnection =
+                action === "connected" || action === "disconnected";
+              const base = isConnection ? "connection" : "component";
+              const noun = count === 1 ? base : `${base}s`;
               return `${action} ${count} ${noun}`;
             });
             setSuccessData({
