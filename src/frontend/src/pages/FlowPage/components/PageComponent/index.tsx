@@ -26,10 +26,12 @@ import {
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
+import { api } from "@/controllers/API/api";
+import { getURL } from "@/controllers/API/helpers/constants";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
-import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import CustomLoader from "@/customization/components/custom-loader";
 import { track } from "@/customization/utils/analytics";
+import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import { useFlowEvents } from "@/hooks/flows/use-flow-events";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
@@ -54,6 +56,7 @@ import type { APIClassType } from "../../../../types/api";
 import type {
   AllNodeType,
   EdgeType,
+  FlowType,
   NoteNodeType,
 } from "../../../../types/flow";
 import {
@@ -61,6 +64,7 @@ import {
   generateNodeFromFlow,
   getNodeId,
   isValidConnection,
+  processFlows,
   scapeJSONParse,
   updateIds,
   validateSelection,
@@ -148,7 +152,7 @@ export default function Page({
     useState<OnSelectionChangeParams | null>(null);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
-  const { isAgentWorking, events, lastSettledAt } = useFlowEvents(
+  const { isAgentWorking, events, lastSettledAt, clearEvents } = useFlowEvents(
     currentFlowId || undefined,
   );
   const effectiveLocked = isLocked || isAgentWorking;
@@ -185,11 +189,9 @@ export default function Page({
       return () => clearTimeout(timer);
     }
   }, [isAgentWorking]);
-  const { mutate: reloadFlow } = useGetFlow();
+  const applyFlowToCanvas = useApplyFlowToCanvas();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const prevSettledRef = useRef<number | null>(null);
-  const eventsRef = useRef(events);
-  eventsRef.current = events;
 
   useEffect(() => {
     if (
@@ -199,39 +201,64 @@ export default function Page({
     ) {
       prevSettledRef.current = lastSettledAt;
 
-      const settleEvents = eventsRef.current;
+      // Capture events before clearing
+      const settleEvents = [...events];
+      clearEvents();
 
-      reloadFlow(
-        { id: currentFlowId },
-        {
-          onSuccess: () => {
-            const nonSettleEvents = settleEvents.filter(
-              (e) => e.type !== "flow_settled",
-            );
-            if (nonSettleEvents.length > 0) {
-              const summaries = nonSettleEvents
-                .map((e) => e.summary)
-                .filter(Boolean);
-              let title: string;
-              if (summaries.length === 0) {
-                title = `Agent made ${nonSettleEvents.length} change(s) to this flow`;
-              } else if (summaries.length <= 3) {
-                title = `Agent updated flow: ${summaries.join(", ")}`;
-              } else {
-                title = `Agent updated flow: ${summaries.slice(0, 3).join(", ")} and ${summaries.length - 3} more`;
-              }
-              setSuccessData({ title });
-            }
-          },
-          onError: () => {
-            setErrorData({
-              title: "Failed to reload flow after agent changes",
+      api
+        .get<FlowType>(`${getURL("FLOWS")}/${currentFlowId}`)
+        .then((response) => {
+          const flowsArray = [response.data];
+          const { flows } = processFlows(flowsArray);
+          applyFlowToCanvas(flows[0]);
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              reactFlowInstance?.fitView({
+                padding: { left: "20px", right: "20px", top: "80px" },
+              });
             });
-          },
-        },
-      );
+          });
+
+          const nonSettleEvents = settleEvents.filter(
+            (e) => e.type !== "flow_settled",
+          );
+          if (nonSettleEvents.length > 0) {
+            const counts: Record<string, number> = {};
+            for (const e of nonSettleEvents) {
+              const key =
+                {
+                  component_added: "added",
+                  component_removed: "removed",
+                  component_configured: "configured",
+                  connection_added: "connected",
+                  connection_removed: "disconnected",
+                  flow_updated: "updated",
+                }[e.type] || "changed";
+              counts[key] = (counts[key] || 0) + 1;
+            }
+            const parts = Object.entries(counts).map(
+              ([action, count]) =>
+                `${action} ${count} ${count === 1 ? "component" : "components"}`,
+            );
+            setSuccessData({
+              title: `Agent ${parts.join(", ")}`,
+            });
+          }
+        })
+        .catch(() => {
+          setErrorData({
+            title: "Failed to reload flow after agent changes",
+          });
+        });
     }
-  }, [lastSettledAt, currentFlowId, reloadFlow, setSuccessData, setErrorData]);
+  }, [
+    lastSettledAt,
+    currentFlowId,
+    applyFlowToCanvas,
+    setSuccessData,
+    setErrorData,
+    clearEvents,
+  ]);
 
   useEffect(() => {
     if (currentFlowId !== "") {
@@ -882,6 +909,7 @@ export default function Page({
                   setIsAddingNote={setIsAddingNote}
                   shadowBoxWidth={shadowBoxWidth}
                   shadowBoxHeight={shadowBoxHeight}
+                  isAgentWorking={isAgentWorking}
                 />
                 {!isPreviewActive && <FlowToolbar />}
                 {inspectionPanelVisible && (
@@ -907,9 +935,9 @@ export default function Page({
               disableKeyboardA11y={true}
               nodesFocusable={!effectiveLocked && !isPreviewActive}
               edgesFocusable={!effectiveLocked && !isPreviewActive}
-              nodesDraggable={!isPreviewActive}
-              nodesConnectable={!isPreviewActive}
-              elementsSelectable={!isPreviewActive}
+              nodesDraggable={!isPreviewActive && !effectiveLocked}
+              nodesConnectable={!isPreviewActive && !effectiveLocked}
+              elementsSelectable={!isPreviewActive && !effectiveLocked}
               onInit={setReactFlowInstance}
               nodeTypes={nodeTypes}
               onReconnect={

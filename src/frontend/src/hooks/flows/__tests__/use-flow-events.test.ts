@@ -181,7 +181,13 @@ describe("useFlowEvents", () => {
 
     expect(result.current.isAgentWorking).toBe(false);
     expect(result.current.lastSettledAt).not.toBeNull();
-    expect(result.current.events).toEqual([]); // Events cleared after settle
+    // Events are preserved for consumer to read, then cleared via clearEvents
+    expect(result.current.events).toHaveLength(2);
+
+    act(() => {
+      result.current.clearEvents();
+    });
+    expect(result.current.events).toEqual([]);
   });
 
   it("should pass since cursor in poll requests", async () => {
@@ -297,7 +303,7 @@ describe("useFlowEvents", () => {
 
     expect(result.current.isAgentWorking).toBe(false);
     expect(result.current.lastSettledAt).not.toBeNull();
-    expect(result.current.events).toEqual([]);
+    expect(result.current.events).toHaveLength(2);
   });
 
   it("should handle API errors gracefully", async () => {

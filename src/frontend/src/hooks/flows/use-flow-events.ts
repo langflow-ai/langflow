@@ -11,6 +11,7 @@ type UseFlowEventsReturn = {
   isAgentWorking: boolean;
   events: FlowEvent[];
   lastSettledAt: number | null;
+  clearEvents: () => void;
 };
 
 export function useFlowEvents(flowId: string | undefined): UseFlowEventsReturn {
@@ -25,6 +26,7 @@ export function useFlowEvents(flowId: string | undefined): UseFlowEventsReturn {
   const mountedRef = useRef(true);
   const activeSinceRef = useRef<number>(0);
   const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollRef = useRef<() => Promise<void>>();
 
   const clearInterval_ = useCallback(() => {
     if (intervalRef.current) {
@@ -33,17 +35,24 @@ export function useFlowEvents(flowId: string | undefined): UseFlowEventsReturn {
     }
   }, []);
 
-  const doSettle = useCallback(() => {
+  const startIdlePolling = useCallback(() => {
+    clearInterval_();
+    intervalRef.current = setInterval(() => {
+      pollRef.current?.();
+    }, IDLE_INTERVAL);
+  }, [clearInterval_]);
+
+  const settle = useCallback(() => {
     if (!mountedRef.current) return;
     isActiveRef.current = false;
     setIsAgentWorking(false);
     setLastSettledAt(Date.now() / 1000);
+    startIdlePolling();
+  }, [startIdlePolling]);
+
+  const clearEvents = useCallback(() => {
     setEvents([]);
-    clearInterval_();
-    intervalRef.current = setInterval(() => {
-      // Re-poll at idle interval (indirect to avoid stale ref)
-    }, IDLE_INTERVAL);
-  }, [clearInterval_]);
+  }, []);
 
   const poll = useCallback(async () => {
     if (!flowId || isPollingRef.current) return;
@@ -70,7 +79,9 @@ export function useFlowEvents(flowId: string | undefined): UseFlowEventsReturn {
           activeSinceRef.current = Date.now();
           setIsAgentWorking(true);
           clearInterval_();
-          intervalRef.current = setInterval(poll, ACTIVE_INTERVAL);
+          intervalRef.current = setInterval(() => {
+            pollRef.current?.();
+          }, ACTIVE_INTERVAL);
         }
       }
 
@@ -79,20 +90,13 @@ export function useFlowEvents(flowId: string | undefined): UseFlowEventsReturn {
         const remaining = MIN_BANNER_DISPLAY_MS - elapsed;
 
         if (remaining > 0) {
-          // Delay settle so the banner is visible for at least MIN_BANNER_DISPLAY_MS
+          clearInterval_();
           settleTimerRef.current = setTimeout(() => {
             settleTimerRef.current = null;
-            doSettle();
-            // Restart idle polling after delayed settle
-            clearInterval_();
-            intervalRef.current = setInterval(poll, IDLE_INTERVAL);
+            settle();
           }, remaining);
-          // Stop active polling while waiting
-          clearInterval_();
         } else {
-          doSettle();
-          clearInterval_();
-          intervalRef.current = setInterval(poll, IDLE_INTERVAL);
+          settle();
         }
       }
     } catch (error) {
@@ -100,7 +104,10 @@ export function useFlowEvents(flowId: string | undefined): UseFlowEventsReturn {
     } finally {
       isPollingRef.current = false;
     }
-  }, [flowId, clearInterval_, doSettle]);
+  }, [flowId, clearInterval_, settle]);
+
+  // Keep pollRef current so interval callbacks use latest poll
+  pollRef.current = poll;
 
   useEffect(() => {
     if (!flowId) return;
@@ -120,8 +127,7 @@ export function useFlowEvents(flowId: string | undefined): UseFlowEventsReturn {
     }
 
     poll();
-    clearInterval_();
-    intervalRef.current = setInterval(poll, IDLE_INTERVAL);
+    startIdlePolling();
 
     return () => {
       mountedRef.current = false;
@@ -131,7 +137,7 @@ export function useFlowEvents(flowId: string | undefined): UseFlowEventsReturn {
         settleTimerRef.current = null;
       }
     };
-  }, [flowId, poll, clearInterval_]);
+  }, [flowId, poll, clearInterval_, startIdlePolling]);
 
-  return { isAgentWorking, events, lastSettledAt };
+  return { isAgentWorking, events, lastSettledAt, clearEvents };
 }
