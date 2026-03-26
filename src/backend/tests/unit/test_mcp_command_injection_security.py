@@ -60,6 +60,23 @@ class TestMCPCommandInjectionSecurity:
             assert "not allowed" in error_msg.lower()
             assert cmd in error_msg
 
+    def test_command_with_arguments_in_string_accepted(self):
+        """Test that commands with arguments in a single string are accepted (frontend compatibility).
+
+        Frontend tests pass commands like "uvx mcp-server-fetch" as a single string.
+        The validation should extract only the base command (uvx) for allowlist checking.
+        """
+        # This is how the frontend test passes the command
+        config = MCPServerConfig(command="uvx mcp-server-fetch", args=None)
+        assert config.command == "uvx mcp-server-fetch"
+
+        # Other examples
+        config = MCPServerConfig(command="npx @modelcontextprotocol/server-fetch", args=None)
+        assert config.command == "npx @modelcontextprotocol/server-fetch"
+
+        config = MCPServerConfig(command="python -m mcp_server", args=None)
+        assert config.command == "python -m mcp_server"
+
     def test_command_injection_via_semicolon_rejected(self):
         """Test that command injection via semicolon is rejected."""
         with pytest.raises(ValidationError) as exc_info:

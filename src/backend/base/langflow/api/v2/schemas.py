@@ -227,8 +227,27 @@ def _extract_base_command(command: str) -> str:
 
     Handles Unix paths (``/usr/bin/node``), Windows paths
     (``C:\\Program Files\\nodejs\\node.exe``), and bare names (``node``).
+
+    Also handles commands with arguments (e.g., "uvx mcp-server-fetch" or
+    "npx @scope/package") by extracting only the first token before any
+    whitespace, unless it's an actual file path.
     """
-    normalized_path = command.replace("\\", "/")
+    # Check if this looks like an actual file path (not an npm scoped package)
+    # File paths either:
+    # - Start with / (Unix absolute)
+    # - Start with ./ or ../ (relative)
+    # - Contain \ (Windows)
+    # - Match drive letter pattern like C:\ (Windows absolute)
+    drive_letter_len = 3
+    is_file_path = (
+        command.startswith(("/", "./", "../"))
+        or "\\" in command
+        or (len(command) >= drive_letter_len and command[1:3] == ":\\")  # Windows drive letter
+    )
+
+    command_only = command.split()[0] if not is_file_path and command.strip() else command
+
+    normalized_path = command_only.replace("\\", "/")
     base_command = Path(normalized_path).name
 
     if base_command.lower().endswith(".exe"):
