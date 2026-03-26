@@ -1,7 +1,6 @@
 """Tests for download_translations.py."""
 
 import json
-import sys
 from unittest.mock import patch
 
 import pytest
@@ -12,7 +11,7 @@ def _run_main(output_dir: str):
     with patch("sys.argv", ["download_translations.py", "--output", output_dir]):
         import importlib
 
-        import scripts.gp.download_translations as dl_mod  # noqa: PLC0415
+        import scripts.gp.download_translations as dl_mod
 
         importlib.reload(dl_mod)
         dl_mod.main()
@@ -64,9 +63,9 @@ class TestDownloadTranslations:
         with (
             patch("scripts.gp.download_translations.get_strings", side_effect=_get_strings),
             patch("scripts.gp.download_translations.TARGET_LANGS", ["fr", "de"]),
+            pytest.raises(SystemExit) as exc_info,
         ):
-            with pytest.raises(SystemExit) as exc_info:
-                _run_main(str(tmp_path))
+            _run_main(str(tmp_path))
 
         assert exc_info.value.code == 1
         # Successful language should still have been written
