@@ -14,14 +14,14 @@ from uuid import uuid4
 class TestGetApiKeyForProviderDbFallback:
     """Tests for get_api_key_for_provider when api_key param is None (second path)."""
 
-    @patch("lfx.base.models.unified_models.get_model_provider_variable_mapping")
-    @patch("lfx.base.models.unified_models.run_until_complete")
+    @patch("lfx.base.models.unified_models.credentials.get_model_provider_variable_mapping")
+    @patch("lfx.base.models.unified_models.credentials.run_until_complete")
     def test_should_fallback_to_env_when_db_lookup_raises_value_error(self, mock_run, mock_mapping, monkeypatch):
         """When variable_service.get_variable raises ValueError (variable not found in DB).
 
         get_api_key_for_provider should fall back to os.getenv() instead of returning None.
         """
-        from lfx.base.models.unified_models import get_api_key_for_provider
+        from lfx.base.models.unified_models.credentials import get_api_key_for_provider
 
         user_id = str(uuid4())
         mock_mapping.return_value = {"OpenAI": "OPENAI_API_KEY"}
@@ -33,14 +33,14 @@ class TestGetApiKeyForProviderDbFallback:
 
         assert result == "sk-test-env-key"
 
-    @patch("lfx.base.models.unified_models.get_model_provider_variable_mapping")
-    @patch("lfx.base.models.unified_models.run_until_complete")
+    @patch("lfx.base.models.unified_models.credentials.get_model_provider_variable_mapping")
+    @patch("lfx.base.models.unified_models.credentials.run_until_complete")
     def test_should_fallback_to_env_when_db_lookup_returns_empty_string(self, mock_run, mock_mapping, monkeypatch):
         """When decryption fails, get_variable returns empty string.
 
         get_api_key_for_provider should fall back to os.getenv().
         """
-        from lfx.base.models.unified_models import get_api_key_for_provider
+        from lfx.base.models.unified_models.credentials import get_api_key_for_provider
 
         user_id = str(uuid4())
         mock_mapping.return_value = {"OpenAI": "OPENAI_API_KEY"}
@@ -52,14 +52,14 @@ class TestGetApiKeyForProviderDbFallback:
 
         assert result == "sk-test-env-key"
 
-    @patch("lfx.base.models.unified_models.get_model_provider_variable_mapping")
-    @patch("lfx.base.models.unified_models.run_until_complete")
+    @patch("lfx.base.models.unified_models.credentials.get_model_provider_variable_mapping")
+    @patch("lfx.base.models.unified_models.credentials.run_until_complete")
     def test_should_fallback_to_env_when_variable_service_is_none(self, mock_run, mock_mapping, monkeypatch):
         """When variable_service is None (service not available in thread context).
 
         get_api_key_for_provider should fall back to os.getenv().
         """
-        from lfx.base.models.unified_models import get_api_key_for_provider
+        from lfx.base.models.unified_models.credentials import get_api_key_for_provider
 
         user_id = str(uuid4())
         mock_mapping.return_value = {"OpenAI": "OPENAI_API_KEY"}
@@ -71,11 +71,11 @@ class TestGetApiKeyForProviderDbFallback:
 
         assert result == "sk-test-env-key"
 
-    @patch("lfx.base.models.unified_models.get_model_provider_variable_mapping")
-    @patch("lfx.base.models.unified_models.run_until_complete")
+    @patch("lfx.base.models.unified_models.credentials.get_model_provider_variable_mapping")
+    @patch("lfx.base.models.unified_models.credentials.run_until_complete")
     def test_should_return_none_when_both_db_and_env_unavailable(self, mock_run, mock_mapping, monkeypatch):
         """When both DB lookup and env var are unavailable, should return None."""
-        from lfx.base.models.unified_models import get_api_key_for_provider
+        from lfx.base.models.unified_models.credentials import get_api_key_for_provider
 
         user_id = str(uuid4())
         mock_mapping.return_value = {"OpenAI": "OPENAI_API_KEY"}
@@ -87,11 +87,11 @@ class TestGetApiKeyForProviderDbFallback:
 
         assert result is None
 
-    @patch("lfx.base.models.unified_models.get_model_provider_variable_mapping")
-    @patch("lfx.base.models.unified_models.run_until_complete")
+    @patch("lfx.base.models.unified_models.credentials.get_model_provider_variable_mapping")
+    @patch("lfx.base.models.unified_models.credentials.run_until_complete")
     def test_should_return_db_value_when_db_lookup_succeeds(self, mock_run, mock_mapping):
         """When DB lookup succeeds, should return the DB value (no env fallback needed)."""
-        from lfx.base.models.unified_models import get_api_key_for_provider
+        from lfx.base.models.unified_models.credentials import get_api_key_for_provider
 
         user_id = str(uuid4())
         mock_mapping.return_value = {"OpenAI": "OPENAI_API_KEY"}
