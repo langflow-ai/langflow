@@ -18,7 +18,7 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v6
       - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"

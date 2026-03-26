@@ -37,8 +37,10 @@ jobs:
                   exit 1
               fi
           }
-          validate_branch_name "${{ github.event.pull_request.head.ref }}"
+          validate_branch_name "${PR_HEAD_REF}"
 
+        env:
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
       - name: Extract Branch Names
         id: extract_branch
         run: |
@@ -56,7 +58,7 @@ jobs:
           }
 
           # Transform branch names in form of `refs/heads/main` to `main`
-          draft_branch=$(extract_branch "${{ github.event.pull_request.head.ref }}")
+          draft_branch=$(extract_branch "${PR_HEAD_REF}")
 
           # Replace / with - in the draft branch name to use as a directory name
           draft_directory=$(echo "$draft_branch" | tr / -)
@@ -67,6 +69,8 @@ jobs:
               echo "draft_directory=$draft_directory"
           } >> "$GITHUB_OUTPUT"
 
+        env:
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
       - name: Set Draft URL
         id: draft_url
         if: success()
@@ -143,7 +147,7 @@ jobs:
 
       - name: Create Build Success Comment
         if: success()
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: "${{ env.BUILD_SUCCESS_COMMENT }}"
@@ -151,7 +155,7 @@ jobs:
 
       - name: Create Build Failure Comment
         if: failure()
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
@@ -162,7 +166,7 @@ jobs:
       - name: Find Comment
         id: fc
         if: success()
-        uses: peter-evans/find-comment@v3
+        uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e # v3
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body-includes: Build successful!
@@ -171,10 +175,13 @@ jobs:
       - name: Configure AWS CLI
         if: success()
         run: |
-          aws configure set aws_access_key_id ${{ secrets.DOCS_AWS_ACCESS_KEY_ID }}
-          aws configure set aws_secret_access_key ${{ secrets.DOCS_AWS_SECRET_ACCESS_KEY }}
+          aws configure set aws_access_key_id ${DOCS_AWS_ACCESS_KEY_ID}
+          aws configure set aws_secret_access_key ${DOCS_AWS_SECRET_ACCESS_KEY}
           aws configure set region us-west-2
 
+        env:
+          DOCS_AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_AWS_ACCESS_KEY_ID }}
+          DOCS_AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_AWS_SECRET_ACCESS_KEY }}
       - name: Check for New Assets
         run: |
           set -o pipefail
@@ -251,7 +258,7 @@ jobs:
 
       - name: Update Comment
         if: ${{ steps.fc.outputs.comment-id != '' }}
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4
         with:
           comment-id: ${{ steps.fc.outputs.comment-id }}
           body: |
