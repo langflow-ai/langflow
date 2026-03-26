@@ -47,7 +47,7 @@ class YouDotComContentsComponent(Component):
         MessageTextInput(
             name="urls",
             display_name="URLs",
-            info="Comma-separated list of URLs to extract content from.",
+            info='Newline-separated URLs or JSON array (e.g., ["https://example.com"]).',
             tool_mode=True,
         ),
         DropdownInput(
@@ -90,7 +90,25 @@ class YouDotComContentsComponent(Component):
                 "Content-Type": "application/json",
             }
 
-            url_list = [u.strip() for u in self.urls.split(",") if u.strip()]
+            if not isinstance(self.urls, str):
+                msg = "urls must be a string. Please provide valid URLs."
+                raise InputValidationError(msg)
+
+            urls_input = self.urls.strip()
+            if urls_input.startswith("["):
+                import json
+
+                try:
+                    url_list = json.loads(urls_input)
+                except json.JSONDecodeError as e:
+                    msg = f"Invalid JSON array format: {e}"
+                    raise InputValidationError(msg) from e
+                if not isinstance(url_list, list):
+                    msg = "JSON input must be a list"
+                    raise TypeError(msg)
+            else:
+                url_list = [u.strip() for u in urls_input.split("\n") if u.strip()]
+
             if not url_list:
                 msg = "urls cannot be empty. Please provide at least one valid URL."
                 raise InputValidationError(msg)
@@ -108,8 +126,15 @@ class YouDotComContentsComponent(Component):
             response.raise_for_status()
             contents_results = response.json()
 
+            if not isinstance(contents_results, list):
+                msg = "Invalid response format: expected a list of results"
+                raise TypeError(msg)
+
             data_results = []
             for item in contents_results:
+                if not isinstance(item, dict):
+                    msg = "Invalid response format: each result must be a dictionary"
+                    raise TypeError(msg)
                 content = item.get("markdown") or item.get("html") or ""
                 result_data = {
                     "url": item.get("url"),

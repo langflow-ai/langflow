@@ -216,9 +216,13 @@ class YouDotComSearchComponent(Component):
                 msg = f"max_results must be between {MAX_RESULTS_MIN} and {MAX_RESULTS_MAX}"
                 raise InputValidationError(msg)
 
+            if not self.query or not self.query.strip():
+                msg = "Search query cannot be empty. Please provide a valid search query."
+                raise InputValidationError(msg)
+
             url = "https://ydc-index.io/v1/search"
             headers = {"X-API-Key": self.api_key, "User-Agent": USER_AGENT}
-            params: dict = {"query": self.query, "count": self.max_results}
+            params: dict = {"query": self.query.strip(), "count": self.max_results}
 
             if self.country:
                 params["country"] = self.country

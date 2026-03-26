@@ -85,7 +85,7 @@ class TestYouDotComContentsComponent(ComponentTestBaseWithoutClient):
         mock_client.post.return_value = mock_response
         mock_client_class.return_value = mock_client
 
-        default_kwargs["urls"] = "https://example.com, https://example.org"
+        default_kwargs["urls"] = "https://example.com\nhttps://example.org"
         component = component_class()
         component.set_attributes(default_kwargs)
         results = component.fetch_content()
@@ -195,7 +195,7 @@ class TestYouDotComContentsComponent(ComponentTestBaseWithoutClient):
 
     def test_whitespace_only_urls_returns_error(self, component_class, default_kwargs):
         """Test that whitespace-only URLs returns validation error."""
-        default_kwargs["urls"] = "   ,   ,   "
+        default_kwargs["urls"] = "   \n   \n   "
         component = component_class()
         component.set_attributes(default_kwargs)
         results = component.fetch_content()
