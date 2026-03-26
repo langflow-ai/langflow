@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 import sqlalchemy as sa
@@ -7,6 +7,7 @@ from pydantic import field_validator, model_validator
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
+from typing_extensions import Self
 
 from langflow.schema.serialize import UUIDstr
 from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey

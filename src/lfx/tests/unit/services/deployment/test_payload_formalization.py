@@ -44,6 +44,11 @@ class _SpecModelCompat(BaseModel):
     region: str
 
 
+class _SpecModelWithExtra(BaseModel):
+    region: str
+    zone: str
+
+
 class _StatusModel(BaseModel):
     healthy: bool
 
@@ -105,13 +110,18 @@ def test_payload_slot_parse_accepts_same_model_instance() -> None:
     assert parsed.region == "us-east-1"
 
 
-def test_payload_slot_parse_accepts_compatible_model_instance() -> None:
+def test_payload_slot_parse_rejects_compatible_model_instance() -> None:
     slot = PayloadSlot(_SpecModel)
 
-    parsed = slot.parse(_SpecModelCompat(region="us-east-1"))
+    with pytest.raises(AdapterPayloadValidationError, match="Invalid payload"):
+        slot.parse(_SpecModelCompat(region="us-east-1"))
 
-    assert isinstance(parsed, _SpecModel)
-    assert parsed.region == "us-east-1"
+
+def test_payload_slot_parse_rejects_non_matching_model_instance() -> None:
+    slot = PayloadSlot(_SpecModel)
+
+    with pytest.raises(AdapterPayloadValidationError, match="Invalid payload"):
+        slot.parse(_SpecModelWithExtra(region="us-east-1", zone="1a"))
 
 
 def test_payload_slot_raises_typed_validation_error() -> None:
