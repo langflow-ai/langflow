@@ -12,7 +12,13 @@ import {
 } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -25,8 +31,12 @@ import {
   DEFAULT_TABLE_ALERT_MSG,
   DEFAULT_TABLE_ALERT_TITLE,
 } from "@/constants/constants";
-import { useGetTracesQuery } from "@/controllers/API/queries/traces";
+import {
+  useDeleteTracesMutation,
+  useGetTracesQuery,
+} from "@/controllers/API/queries/traces";
 import { TraceListItem } from "@/controllers/API/queries/traces/types";
+import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
 import { createFlowTracesColumns } from "./config/flowTraceColumns";
@@ -60,8 +70,32 @@ export function FlowInsightsContent({
   const [startDate, setStartDate] = useState<string>("");
   const [endDateValue, setEndDateValue] = useState<string>("");
   const [groupBySession, setGroupBySession] = useState<boolean>(false);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const flowIdFromUrl = searchParams.get("id");
   const resolvedFlowId = flowId ?? currentFlowId ?? flowIdFromUrl;
+
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+
+  const { mutate: deleteTraces } = useDeleteTracesMutation({
+    onSuccess: () => {
+      setSuccessData({ title: "Records cleared successfully" });
+      refetch();
+    },
+    onError: (error) => {
+      setErrorData({
+        title: "Error clearing records",
+        list: [error.message],
+      });
+    },
+  });
+
+  const handleClearAll = useCallback(() => {
+    const trustedFlowId = flowId ?? currentFlowId;
+    if (trustedFlowId) {
+      deleteTraces({ flow_id: trustedFlowId });
+    }
+  }, [flowId, currentFlowId, deleteTraces]);
 
   const resolvedFlowName = useFlowsManagerStore((state) => {
     if (!resolvedFlowId) return state.currentFlow?.name;
@@ -99,15 +133,13 @@ export function FlowInsightsContent({
         size: pageSize,
       },
     },
-    { enabled: !!resolvedFlowId },
+    {
+      enabled: !!resolvedFlowId,
+      refetchOnMount: refreshOnMount ? "always" : true,
+    },
   );
 
   const rows = tracesData?.traces ?? [];
-
-  useEffect(() => {
-    if (!refreshOnMount) return;
-    refetch();
-  }, [refreshOnMount, refetch]);
 
   useEffect(() => {
     if (!initialTraceId) return;
@@ -285,6 +317,55 @@ export function FlowInsightsContent({
               onStartDateChange={setStartDate}
               onEndDateChange={setEndDateValue}
             />
+
+            {totalRuns > 0 && (
+              <Button
+                variant="ghost"
+                className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                aria-label="Clear All"
+                onClick={(e) => {
+                  (e.currentTarget as HTMLButtonElement).blur();
+                  setClearConfirmOpen(true);
+                }}
+              >
+                <IconComponent name="Trash2" className="h-4 w-4" />
+              </Button>
+            )}
+            <Dialog open={clearConfirmOpen} onOpenChange={setClearConfirmOpen}>
+              <DialogContent className="max-w-sm">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <IconComponent
+                      name="Trash2"
+                      className="h-5 w-5 text-destructive"
+                    />
+                    Clear All Records
+                  </DialogTitle>
+                </DialogHeader>
+                <p className="text-sm text-muted-foreground">
+                  Are you sure you want to clear all records? This will
+                  permanently delete all related Flow Activity Traces and cannot
+                  be undone.
+                </p>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setClearConfirmOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      handleClearAll();
+                      setClearConfirmOpen(false);
+                    }}
+                  >
+                    Clear All
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             <Button
               variant="ghost"
