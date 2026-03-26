@@ -8,25 +8,30 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from fastapi import HTTPException, status
-from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 from lfx.services.adapters.deployment.exceptions import (
-    DeploymentConflictError,
     InvalidContentError,
     InvalidDeploymentOperationError,
 )
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import ErrorPrefix
-from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import create_config, validate_connection
+from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import (
-    delete_config_if_exists,
-    retry_create,
     retry_rollback,
     retry_update,
     rollback_update_resources,
 )
+from langflow.services.adapters.deployment.watsonx_orchestrate.core.shared import (
+    ConnectionCreateBatchError,
+    OrderedUniqueStrs,
+    RawConnectionCreatePlan,
+    RawToolCreatePlan,
+    create_connection_with_conflict_mapping,
+    create_raw_tools_with_bindings,
+    log_batch_errors,
+    resolve_connections_for_operations,
+    rollback_created_app_ids,
+)
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
-    FlowToolBindingSpec,
     ToolUploadBatchError,
     create_and_upload_wxo_flow_tools_with_bindings,
     ensure_langflow_connections_binding,
@@ -34,24 +39,22 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxBindOperation,
-    WatsonxConnectionRawPayload,
     WatsonxDeploymentUpdatePayload,
+    WatsonxProviderUpdateApplyResult,
     WatsonxRemoveToolOperation,
+    WatsonxResultToolRefBinding,
     WatsonxUnbindOperation,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     dedupe_list,
     extract_agent_tool_ids,
-    extract_error_detail,
+    resolve_resource_name_prefix,
     validate_wxo_name,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
-
     from lfx.services.adapters.deployment.schema import (
         BaseDeploymentDataUpdate,
-        BaseFlowArtifact,
         DeploymentUpdate,
         IdLike,
     )
@@ -60,44 +63,6 @@ if TYPE_CHECKING:
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 
 logger = logging.getLogger(__name__)
-
-
-class OrderedUniqueStrs:
-    """Ordered, de-duplicating string collection used for deterministic update plans.
-
-    We intentionally avoid a plain list to avoid repeated O(n) membership checks.
-    Using a dictionary keeps membership/update checks O(1) while preserving insertion order.
-
-    Deterministic order is primarily for rollback correctness
-    Stable ordering ensures we undo the exact resources we created
-    in the correct (reverse) sequence.
-    """
-
-    def __init__(self, items: dict[str, None] | None = None) -> None:
-        self._items: dict[str, None] = items or {}
-
-    @classmethod
-    def from_values(cls, values: list[str]) -> OrderedUniqueStrs:
-        ordered = cls()
-        ordered.extend(values)
-        return ordered
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self._items)
-
-    def to_list(self) -> list[str]:
-        # Snapshot keys only at list-boundary call sites.
-        return list(self._items)
-
-    def add(self, value: str) -> None:
-        self._items.setdefault(value, None)
-
-    def extend(self, values: list[str]) -> None:
-        for value in values:
-            self.add(value)
-
-    def discard(self, value: str) -> None:
-        self._items.pop(value, None)
 
 
 class ToolConnectionOps:
@@ -120,20 +85,6 @@ def _get_or_create_tool_connection_ops(
 
 
 @dataclass(slots=True)
-class RawConnectionCreatePlan:
-    operation_app_id: str
-    provider_app_id: str
-    payload: WatsonxConnectionRawPayload
-
-
-@dataclass(slots=True)
-class RawToolCreatePlan:
-    raw_name: str
-    payload: BaseFlowArtifact
-    app_ids: list[str]
-
-
-@dataclass(slots=True)
 class ProviderUpdatePlan:
     resource_prefix: str
     existing_app_ids: list[str]
@@ -142,10 +93,11 @@ class ProviderUpdatePlan:
     raw_tools_to_create: list[RawToolCreatePlan]
     final_existing_tool_ids: list[str]
     bind_existing_tool_ids: list[str]
+    existing_tool_refs: list[WatsonxResultToolRefBinding]
 
 
 def validate_provider_update_request_sections(payload: DeploymentUpdate) -> None:
-    """Reject legacy top-level update sections in watsonx clean-break mode."""
+    """Reject top-level update sections in watsonx."""
     if payload.snapshot is not None or payload.config is not None:
         msg = (
             "Top-level 'snapshot' and 'config' update sections are no longer supported for "
@@ -160,23 +112,53 @@ def build_provider_update_plan(
     provider_update: WatsonxDeploymentUpdatePayload,
 ) -> ProviderUpdatePlan:
     """Build a deterministic CPU-only plan for provider_data update operations."""
-    resource_prefix = (provider_update.resource_name_prefix or "").strip()
+    # put_tools is a standalone full replacement of the agent's tool list
+    # (no operations accompany it).
+    if provider_update.put_tools is not None:
+        return ProviderUpdatePlan(
+            resource_prefix="",
+            existing_app_ids=[],
+            raw_connections_to_create=[],
+            existing_tool_deltas={},
+            raw_tools_to_create=[],
+            final_existing_tool_ids=list(dict.fromkeys(provider_update.put_tools)),
+            bind_existing_tool_ids=[],
+            existing_tool_refs=[],
+        )
+
+    resource_prefix = (
+        resolve_resource_name_prefix(caller_prefix=provider_update.resource_name_prefix)
+        if provider_update.resource_name_prefix is not None
+        else ""
+    )
     agent_tool_ids = extract_agent_tool_ids(agent)
     final_existing_tool_ids = OrderedUniqueStrs.from_values(agent_tool_ids)
 
-    # Per existing tool_id, track app_ids to bind/unbind during this update.
+    # existing_tool_deltas: per existing tool_id, tracks app_ids to bind/unbind.
     existing_tool_deltas: dict[str, ToolConnectionOps] = {}
-    # Existing tool_ids explicitly referenced by bind operations (for added snapshot reporting).
+    # bind_existing_tool_ids: existing tool_ids explicitly referenced by bind
+    #   operations (used for added-snapshot reporting in the result).
     bind_existing_tool_ids = OrderedUniqueStrs()
-    # Per raw tool name, collect app_ids that should be bound when the raw tool is created.
+    # raw_tool_app_ids: per raw tool name, collects operation app_ids to bind
+    #   when the raw tool is created.
     raw_tool_app_ids: dict[str, OrderedUniqueStrs] = {}
+    # existing_tool_refs: source_ref ↔ tool_id correlations (created=False)
+    #   collected from all operations that reference existing tools (bind,
+    #   unbind, remove_tool). Deduped by tool_id before storing in the plan,
+    #   then merged directly into the update result alongside newly-created
+    #   snapshot bindings.
+    existing_tool_refs: list[WatsonxResultToolRefBinding] = []
 
     for operation in provider_update.operations:
         if isinstance(operation, WatsonxBindOperation):
-            if operation.tool.reference_id is not None:
-                tool_id = operation.tool.reference_id
+            if operation.tool.tool_id_with_ref is not None:
+                ref = operation.tool.tool_id_with_ref
+                tool_id = ref.tool_id
                 bind_existing_tool_ids.add(tool_id)
                 final_existing_tool_ids.add(tool_id)
+                existing_tool_refs.append(
+                    WatsonxResultToolRefBinding(source_ref=ref.source_ref, tool_id=tool_id, created=False)
+                )
                 delta = _get_or_create_tool_connection_ops(existing_tool_deltas, tool_id=tool_id)
                 delta.bind.extend(operation.app_ids)
                 continue
@@ -187,19 +169,29 @@ def build_provider_update_plan(
             continue
 
         if isinstance(operation, WatsonxUnbindOperation):
-            tool_id = operation.tool_id
+            tool_id = operation.tool.tool_id
+            existing_tool_refs.append(
+                WatsonxResultToolRefBinding(source_ref=operation.tool.source_ref, tool_id=tool_id, created=False)
+            )
             delta = _get_or_create_tool_connection_ops(existing_tool_deltas, tool_id=tool_id)
             delta.unbind.extend(operation.app_ids)
             continue
 
         if isinstance(operation, WatsonxRemoveToolOperation):
-            final_existing_tool_ids.discard(operation.tool_id)
+            existing_tool_refs.append(
+                WatsonxResultToolRefBinding(
+                    source_ref=operation.tool.source_ref,
+                    tool_id=operation.tool.tool_id,
+                    created=False,
+                )
+            )
+            final_existing_tool_ids.discard(operation.tool.tool_id)
             continue
 
     raw_connections_to_create = [
         RawConnectionCreatePlan(
             operation_app_id=raw_payload.app_id,
-            provider_app_id=f"{resource_prefix}{raw_payload.app_id}",
+            provider_app_id=raw_payload.app_id,
             payload=raw_payload,
         )
         for raw_payload in (provider_update.connections.raw_payloads or [])
@@ -211,6 +203,11 @@ def build_provider_update_plan(
         for raw_name, app_ids in raw_tool_app_ids.items()
     ]
 
+    seen_ref_ids: dict[str, WatsonxResultToolRefBinding] = {}
+    for ref in existing_tool_refs:
+        seen_ref_ids.setdefault(ref.tool_id, ref)
+    deduped_existing_tool_refs = list(seen_ref_ids.values())
+
     return ProviderUpdatePlan(
         resource_prefix=resource_prefix,
         existing_app_ids=list(provider_update.connections.existing_app_ids or []),
@@ -219,45 +216,8 @@ def build_provider_update_plan(
         raw_tools_to_create=raw_tools_to_create,
         final_existing_tool_ids=final_existing_tool_ids.to_list(),
         bind_existing_tool_ids=bind_existing_tool_ids.to_list(),
+        existing_tool_refs=deduped_existing_tool_refs,
     )
-
-
-async def _create_update_connection_with_conflict_mapping(
-    *,
-    clients: WxOClient,
-    app_id: str,
-    payload: WatsonxConnectionRawPayload,
-    user_id: IdLike,
-    db: AsyncSession,
-) -> str:
-    from lfx.services.adapters.deployment.schema import DeploymentConfig
-
-    config_payload = DeploymentConfig(
-        name=app_id,
-        description=None,
-        environment_variables=payload.environment_variables,
-        provider_config=payload.provider_config,
-    )
-    try:
-        return await retry_create(
-            create_config,
-            clients=clients,
-            config=config_payload,
-            user_id=user_id,
-            db=db,
-        )
-    except (ClientAPIException, HTTPException) as exc:
-        if isinstance(exc, ClientAPIException):
-            status_code = exc.response.status_code
-            error_detail = str(extract_error_detail(exc.response.text))
-        else:
-            status_code = exc.status_code
-            error_detail = str(extract_error_detail(str(exc.detail)))
-        is_conflict = status_code == status.HTTP_409_CONFLICT or "already exists" in error_detail.lower()
-        if is_conflict:
-            msg = f"{ErrorPrefix.UPDATE.value} error details: {error_detail}"
-            raise DeploymentConflictError(message=msg) from exc
-        raise
 
 
 async def _update_existing_tool_connection_deltas(
@@ -265,6 +225,7 @@ async def _update_existing_tool_connection_deltas(
     clients: WxOClient,
     existing_tool_deltas: dict[str, ToolConnectionOps],
     resolved_connections: dict[str, str],
+    operation_to_provider_app_id: dict[str, str],
     original_tools: dict[str, dict[str, Any]],
 ) -> None:
     if not existing_tool_deltas:
@@ -288,13 +249,18 @@ async def _update_existing_tool_connection_deltas(
         connections = ensure_langflow_connections_binding(writable_tool)
 
         for app_id in delta.unbind:
-            connections.pop(app_id, None)
+            provider_app_id = operation_to_provider_app_id.get(app_id, app_id)
+            connections.pop(provider_app_id, None)
         for app_id in delta.bind:
-            connection_id = resolved_connections.get(app_id)
+            provider_app_id_opt = operation_to_provider_app_id.get(app_id)
+            if not provider_app_id_opt:
+                msg = f"No provider app id available for operation app_id '{app_id}'."
+                raise InvalidContentError(message=msg)
+            connection_id = resolved_connections.get(provider_app_id_opt)
             if not connection_id:
                 msg = f"No resolved connection id available for app_id '{app_id}'."
                 raise InvalidContentError(message=msg)
-            connections[app_id] = connection_id
+            connections[provider_app_id_opt] = connection_id
         tool_updates.append((tool_id, writable_tool))
 
     await asyncio.gather(
@@ -303,18 +269,6 @@ async def _update_existing_tool_connection_deltas(
             for tool_id, writable_tool in tool_updates
         )
     )
-
-
-async def _rollback_created_app_ids(
-    *,
-    clients: WxOClient,
-    created_app_ids: list[str],
-) -> None:
-    for app_id in reversed(created_app_ids):
-        try:
-            await retry_rollback(delete_config_if_exists, clients, app_id=app_id)
-        except Exception:
-            logger.exception("Rollback failed for created app_id=%s — resource may be orphaned", app_id)
 
 
 def _build_agent_rollback_payload(*, agent: dict[str, Any], final_update_payload: dict[str, Any]) -> dict[str, Any]:
@@ -350,9 +304,9 @@ async def apply_provider_update_plan_with_rollback(
     agent: dict[str, Any],
     update_payload: dict[str, Any],
     plan: ProviderUpdatePlan,
-) -> list[str]:
+) -> WatsonxProviderUpdateApplyResult:
     """Apply provider_data update operations with rollback protection."""
-    # Rollback journals:
+    # Rollback journals — tracked so partial failures can undo side-effects:
     # - created_tool_ids: provider tool ids created during this update.
     # - created_app_ids: provider app ids created during this update.
     # - original_tools: writable pre-update payloads for mutated existing tools.
@@ -361,88 +315,65 @@ async def apply_provider_update_plan_with_rollback(
     original_tools: dict[str, dict[str, Any]] = {}
 
     # Working state:
-    # - resolved_connections: app_id -> connection_id map used for bind/update calls.
-    # - added_snapshot_ids: snapshot/tool ids to return in update result.
+    # - resolved_connections: provider_app_id → connection_id map for bind/update calls.
+    # - operation_to_provider_app_id: operation app_id → provider app_id
+    #     (identity mapping for both existing and raw-created connections).
+    # - added_snapshot_ids: snapshot/tool ids to return in the update result.
+    # - created_snapshot_bindings: source_ref ↔ tool_id bindings for newly
+    #     created tools (created=True); combined with existing refs in the result.
     # - final_update_payload: outbound agent patch payload (spec + tools).
-    # - rollback_agent_payload: best-effort restore payload for agent update rollback.
+    # - rollback_agent_payload: best-effort restore payload for agent rollback.
     resolved_connections: dict[str, str] = {}
+    operation_to_provider_app_id: dict[str, str] = {app_id: app_id for app_id in plan.existing_app_ids}
     added_snapshot_ids: list[str] = []
+    created_snapshot_bindings: list[WatsonxResultToolRefBinding] = []
     final_update_payload = dict(update_payload)
     rollback_agent_payload: dict[str, Any] = {}
 
     try:
-        if plan.existing_app_ids:
-            existing_connections = await asyncio.gather(
-                *(
-                    retry_create(validate_connection, clients.connections, app_id=app_id)
-                    for app_id in plan.existing_app_ids
-                )
+        try:
+            connection_result = await resolve_connections_for_operations(
+                clients=clients,
+                user_id=user_id,
+                db=db,
+                existing_app_ids=plan.existing_app_ids,
+                raw_connections_to_create=plan.raw_connections_to_create,
+                error_prefix=ErrorPrefix.UPDATE.value,
+                validate_connection_fn=validate_connection,
+                create_connection_fn=create_connection_with_conflict_mapping,
             )
-            for app_id, connection in zip(plan.existing_app_ids, existing_connections, strict=True):
-                resolved_connections[app_id] = connection.connection_id
+            operation_to_provider_app_id = connection_result.operation_to_provider_app_id
+            resolved_connections.update(connection_result.resolved_connections)
+            created_app_ids.extend(connection_result.created_app_ids)
+        except ConnectionCreateBatchError as exc:
+            created_app_ids.extend(exc.created_app_ids)
+            log_batch_errors(error_label="Connection create batch error", errors=exc.errors)
+            raise exc.errors[0] from exc
 
-        if plan.raw_connections_to_create:
-            created_connections = await asyncio.gather(
-                *(
-                    _create_update_connection_with_conflict_mapping(
-                        clients=clients,
-                        app_id=create_plan.provider_app_id,
-                        payload=create_plan.payload,
-                        user_id=user_id,
-                        db=db,
-                    )
-                    for create_plan in plan.raw_connections_to_create
-                )
+        try:
+            tool_create_result = await create_raw_tools_with_bindings(
+                clients=clients,
+                raw_tools_to_create=plan.raw_tools_to_create,
+                operation_to_provider_app_id=operation_to_provider_app_id,
+                resolved_connections=resolved_connections,
+                resource_prefix=plan.resource_prefix,
+                create_and_upload_tools_fn=create_and_upload_wxo_flow_tools_with_bindings,
             )
-            created_app_ids.extend(created_connections)
-            validated_created_connections = await asyncio.gather(
-                *(
-                    retry_create(
-                        validate_connection,
-                        clients.connections,
-                        app_id=create_plan.provider_app_id,
-                    )
-                    for create_plan in plan.raw_connections_to_create
-                )
-            )
-            for create_plan, connection in zip(
-                plan.raw_connections_to_create, validated_created_connections, strict=True
-            ):
-                resolved_connections[create_plan.operation_app_id] = connection.connection_id
-
-        if plan.raw_tools_to_create:
-            tool_bindings = [
-                FlowToolBindingSpec(
-                    flow_payload=raw_plan.payload,
-                    connections={app_id: resolved_connections[app_id] for app_id in raw_plan.app_ids},
-                )
-                for raw_plan in plan.raw_tools_to_create
-            ]
-            try:
-                raw_create_results = await create_and_upload_wxo_flow_tools_with_bindings(
-                    clients=clients,
-                    tool_bindings=tool_bindings,
-                    tool_name_prefix=plan.resource_prefix,
-                )
-            except ToolUploadBatchError as exc:
-                created_tool_ids.extend(exc.created_tool_ids)
-                added_snapshot_ids.extend(exc.created_tool_ids)
-                for i, err in enumerate(exc.errors):
-                    logger.exception("Tool upload batch error [%d/%d]: %s", i + 1, len(exc.errors), err)
-                raise exc.errors[0] from exc
-            for raw_plan, created_tool_id in zip(plan.raw_tools_to_create, raw_create_results, strict=True):
-                tool_id = str(created_tool_id).strip()
-                if not tool_id:
-                    msg = f"Failed to create tool for raw payload '{raw_plan.raw_name}'."
-                    raise InvalidContentError(message=msg)
-                created_tool_ids.append(tool_id)
-                added_snapshot_ids.append(tool_id)
+            created_tool_ids.extend(tool_create_result.created_tool_ids)
+            added_snapshot_ids.extend(tool_create_result.created_tool_ids)
+            created_snapshot_bindings.extend(tool_create_result.snapshot_bindings)
+        except ToolUploadBatchError as exc:
+            created_tool_ids.extend(exc.created_tool_ids)
+            added_snapshot_ids.extend(exc.created_tool_ids)
+            log_batch_errors(error_label="Tool upload batch error", errors=exc.errors)
+            raise exc.errors[0] from exc
 
         if plan.existing_tool_deltas:
             await _update_existing_tool_connection_deltas(
                 clients=clients,
                 existing_tool_deltas=plan.existing_tool_deltas,
                 resolved_connections=resolved_connections,
+                operation_to_provider_app_id=operation_to_provider_app_id,
                 original_tools=original_tools,
             )
 
@@ -467,13 +398,17 @@ async def apply_provider_update_plan_with_rollback(
             created_app_id=None,
             original_tools=original_tools,
         )
-        await _rollback_created_app_ids(
+        await rollback_created_app_ids(
             clients=clients,
             created_app_ids=created_app_ids,
         )
         raise
 
-    return dedupe_list(added_snapshot_ids)
+    return WatsonxProviderUpdateApplyResult(
+        created_app_ids=dedupe_list(created_app_ids),
+        added_snapshot_ids=dedupe_list(added_snapshot_ids),
+        added_snapshot_bindings=[*plan.existing_tool_refs, *created_snapshot_bindings],
+    )
 
 
 def build_update_payload_from_spec(spec: BaseDeploymentDataUpdate | None) -> dict[str, Any]:

@@ -34,6 +34,8 @@ if TYPE_CHECKING:
         RedeployResult,
         SnapshotListParams,
         SnapshotListResult,
+        VerifyCredentials,
+        VerifyCredentialsResult,
     )
 
 
@@ -186,6 +188,15 @@ class DeploymentService(BaseDeploymentService):
     ) -> SnapshotListResult:
         """List snapshots visible to this adapter."""
         raise DeploymentNotConfiguredError(method="list_snapshots")
+
+    async def verify_credentials(
+        self,
+        *,
+        user_id: IdLike,
+        payload: VerifyCredentials,
+    ) -> VerifyCredentialsResult:
+        """Verify provider credentials before account creation."""
+        raise DeploymentNotConfiguredError(method="verify_credentials")
 
     async def teardown(self) -> None:
         logger.debug("Deployment service teardown")
