@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -500,7 +500,7 @@ def test_watsonx_update_result_data_normalizes_fields() -> None:
 
 def test_watsonx_mapper_shapes_update_response_from_result_schema() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
-    timestamp = datetime.now(tz=UTC)
+    timestamp = datetime.now(tz=timezone.utc)
     deployment_id = uuid4()
     deployment_row = SimpleNamespace(
         id=deployment_id,
@@ -542,7 +542,7 @@ def test_watsonx_mapper_shapes_update_response_from_result_schema() -> None:
 def test_watsonx_mapper_update_response_raises_on_invalid_source_ref() -> None:
     """Non-UUID source_ref in snapshot bindings raises HTTP 500."""
     mapper = WatsonxOrchestrateDeploymentMapper()
-    timestamp = datetime.now(tz=UTC)
+    timestamp = datetime.now(tz=timezone.utc)
     deployment_row = SimpleNamespace(
         id=uuid4(),
         name="WXO Deployment",
@@ -573,7 +573,7 @@ def test_watsonx_mapper_update_response_raises_on_invalid_source_ref() -> None:
 def test_watsonx_mapper_update_response_raises_on_unmapped_tool_binding() -> None:
     """tool_app_binding whose tool_id has no matching snapshot ref raises HTTP 500."""
     mapper = WatsonxOrchestrateDeploymentMapper()
-    timestamp = datetime.now(tz=UTC)
+    timestamp = datetime.now(tz=timezone.utc)
     mapped_fv_id = uuid4()
     deployment_row = SimpleNamespace(
         id=uuid4(),

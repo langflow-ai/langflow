@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -7,7 +7,7 @@ from lfx.services.adapters.deployment.schema import DeploymentCreateResult, Depl
 
 
 def test_to_deployment_create_response_maps_db_identity_and_provider_result() -> None:
-    now = datetime.now(UTC)
+    now = datetime.now(timezone.utc)
     deployment_row = SimpleNamespace(
         id=uuid4(),
         name="db-deployment-name",

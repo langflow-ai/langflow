@@ -53,11 +53,9 @@ def upgrade() -> None:
     if not migration.table_exists(TABLE_NAME, conn):
         return
 
-    if migration.column_exists(TABLE_NAME, COLUMN_NAME, conn):
-        return
-
-    with op.batch_alter_table(TABLE_NAME, schema=None) as batch_op:
-        batch_op.add_column(sa.Column(COLUMN_NAME, AutoString(), nullable=True))
+    if not migration.column_exists(TABLE_NAME, COLUMN_NAME, conn):
+        with op.batch_alter_table(TABLE_NAME, schema=None) as batch_op:
+            batch_op.add_column(sa.Column(COLUMN_NAME, AutoString(), nullable=True))
 
     # Backfill existing rows with a unique name derived from the row id.
     # Uses the SQL-standard ``||`` operator (via SQLAlchemy's .concat())
@@ -81,7 +79,10 @@ def upgrade() -> None:
 
     with op.batch_alter_table(TABLE_NAME, schema=None) as batch_op:
         batch_op.alter_column(COLUMN_NAME, nullable=False)
-        batch_op.create_unique_constraint(UNIQUE_CONSTRAINT_NAME, ["user_id", "provider_key", COLUMN_NAME])
+
+    if not migration.constraint_exists(TABLE_NAME, UNIQUE_CONSTRAINT_NAME, conn):
+        with op.batch_alter_table(TABLE_NAME, schema=None) as batch_op:
+            batch_op.create_unique_constraint(UNIQUE_CONSTRAINT_NAME, ["user_id", "provider_key", COLUMN_NAME])
 
 
 def downgrade() -> None:
@@ -92,5 +93,6 @@ def downgrade() -> None:
         return
 
     with op.batch_alter_table(TABLE_NAME, schema=None) as batch_op:
-        batch_op.drop_constraint(UNIQUE_CONSTRAINT_NAME, type_="unique")
+        if migration.constraint_exists(TABLE_NAME, UNIQUE_CONSTRAINT_NAME, conn):
+            batch_op.drop_constraint(UNIQUE_CONSTRAINT_NAME, type_="unique")
         batch_op.drop_column(COLUMN_NAME)

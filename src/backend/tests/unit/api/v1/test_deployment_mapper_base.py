@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import fields
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -371,7 +371,7 @@ def test_base_mapper_execution_provider_data_shapers_passthrough() -> None:
 def test_base_mapper_shapes_deployment_update_result() -> None:
     mapper = BaseDeploymentMapper()
     deployment_id = uuid4()
-    timestamp = datetime.now(tz=UTC)
+    timestamp = datetime.now(tz=timezone.utc)
     result = DeploymentUpdateResult(id="provider-id", provider_result={"ok": True})
     deployment_row = SimpleNamespace(
         id=deployment_id,
@@ -494,7 +494,7 @@ def test_base_mapper_resolve_provider_tenant_id_passthrough() -> None:
 
 def test_base_mapper_shapes_provider_account_response() -> None:
     mapper = BaseDeploymentMapper()
-    timestamp = datetime.now(tz=UTC)
+    timestamp = datetime.now(tz=timezone.utc)
     account = SimpleNamespace(
         id=uuid4(),
         name="staging",

@@ -116,7 +116,7 @@ import textwrap
 import types
 from contextlib import suppress
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from types import MethodType, SimpleNamespace
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
@@ -217,7 +217,7 @@ class WatsonxAdapterDirectE2E:
         self.project_id = project_id
         self.mode = mode
         self.keep_resources = keep_resources
-        self.run_suffix = datetime.now(UTC).strftime("%Y%m%d%H%M%S") + "-" + uuid4().hex[:8]
+        self.run_suffix = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + "-" + uuid4().hex[:8]
 
         self.user_id = str(uuid4())
         self.db = object()
