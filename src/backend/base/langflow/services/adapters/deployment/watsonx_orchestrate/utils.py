@@ -23,6 +23,9 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
     WXO_TRANSLATE,
     ErrorPrefix,
 )
+from langflow.services.adapters.deployment.watsonx_orchestrate.resource_name_prefix import (
+    validate_resource_name_prefix_for_provider,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -56,18 +59,11 @@ def resolve_resource_name_prefix(
     *,
     caller_prefix: str,
 ) -> str:
-    """Validate and return the caller-supplied resource name prefix for WxO resource creation."""
-    if not isinstance(caller_prefix, str) or not caller_prefix.strip():
-        msg = "resource_name_prefix must be a non-empty string."
-        raise InvalidContentError(message=msg)
-    validated = normalize_wxo_name(caller_prefix)
-    if not validated:
-        msg = "resource_name_prefix must contain at least one alphanumeric character."
-        raise InvalidContentError(message=msg)
-    if not validated[0].isalpha():
-        msg = "resource_name_prefix must start with a letter."
-        raise InvalidContentError(message=msg)
-    return validated
+    """Validate caller prefix and return WxO create prefix with enforced ``lf_`` namespace."""
+    try:
+        return validate_resource_name_prefix_for_provider(caller_prefix)
+    except ValueError as exc:
+        raise InvalidContentError(message=str(exc)) from exc
 
 
 def require_tool_id(tool_response: dict[str, Any]) -> str:
@@ -175,6 +171,7 @@ def raise_as_deployment_error(
             status_code=status_code,
             detail=detail,
             message_prefix=error_prefix.value,
+            cause=exc,
         )
     logger.exception(log_msg)
     msg = f"{error_prefix.value} Please check server logs for details."
@@ -189,10 +186,27 @@ def build_agent_payload(
     if data.provider_spec is None:
         msg = "Deployment data must include provider_spec with a non-empty name and display_name."
         raise InvalidContentError(message=msg)
+    return build_agent_payload_from_values(
+        agent_name=str(data.provider_spec["name"]),
+        agent_display_name=str(data.provider_spec["display_name"]),
+        deployment_name=str(data.name),
+        description=str(data.description or ""),
+        tool_ids=tool_ids,
+    )
+
+
+def build_agent_payload_from_values(
+    *,
+    agent_name: str,
+    agent_display_name: str,
+    deployment_name: str,
+    description: str,
+    tool_ids: Sequence[str],
+) -> dict[str, Any]:
     return {
-        "name": data.provider_spec["name"],
-        "display_name": data.provider_spec["display_name"],
-        "description": str(data.description or "").strip() or f"Langflow deployment {data.name}",
+        "name": agent_name,
+        "display_name": agent_display_name,
+        "description": str(description).strip() or f"Langflow deployment {deployment_name}",
         "tools": list(tool_ids),
         "style": "default",
         # TODO: make configurable; the llm field is required by the wxO api

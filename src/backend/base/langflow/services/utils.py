@@ -288,6 +288,14 @@ def register_builtin_adapters() -> None:
         logger.info("Skipping Watsonx Orchestrate adapter registration: %s", exc)
 
 
+def register_builtin_deployment_mappers() -> None:
+    """Import built-in deployment mapper modules so registration side effects fire."""
+    try:
+        import langflow.api.v1.mappers.deployments.watsonx_orchestrate  # noqa: F401
+    except ModuleNotFoundError as exc:
+        logger.info("Skipping Watsonx Orchestrate deployment mapper registration: %s", exc)
+
+
 async def initialize_services(*, fix_migration: bool = False) -> None:
     """Initialize all the services needed."""
     from langflow.helpers.windows_postgres_helper import configure_windows_postgres_event_loop
@@ -297,6 +305,7 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
     # Register all service factories first
     register_all_service_factories()
     register_builtin_adapters()
+    register_builtin_deployment_mappers()
 
     cache_service = get_service(ServiceType.CACHE_SERVICE, default=CacheServiceFactory())
     # Test external cache connection
