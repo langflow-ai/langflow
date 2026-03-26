@@ -14,6 +14,7 @@ except ModuleNotFoundError:
         allow_module_level=True,
     )
 
+from langflow.services.adapters.deployment.watsonx_orchestrate.constants import WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxAgentExecutionResultData,
     WatsonxDeploymentCreatePayload,
@@ -147,6 +148,24 @@ def test_create_schema_rejects_blank_resource_name_prefix() -> None:
     assert "String should have at least 1 character" in str(exc.value.error)
 
 
+def test_create_schema_rejects_too_long_resource_name_prefix() -> None:
+    with pytest.raises(AdapterPayloadValidationError) as exc:
+        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_create.apply(  # type: ignore[union-attr]
+            {
+                "resource_name_prefix": "a" * (WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH - len("lf_") + 1),
+                "operations": [
+                    {
+                        "op": "bind",
+                        "tool": {"tool_id_with_ref": {"source_ref": "fv-1", "tool_id": "tool-existing-1"}},
+                        "app_ids": ["app-existing-1"],
+                    }
+                ],
+                "connections": {"existing_app_ids": ["app-existing-1"]},
+            }
+        )
+    assert "cannot exceed" in str(exc.value.error)
+
+
 def test_update_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> None:
     slot = WatsonxOrchestrateDeploymentService.payload_schemas
     assert slot is not None
@@ -178,6 +197,24 @@ def test_update_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> Non
     applied = slot.deployment_update.apply(payload)
     assert applied["operations"][0]["tool"]["name_of_raw"] == "tool-new-1"
     assert applied["operations"][1]["tool"]["tool_id_with_ref"]["tool_id"] == "tool-existing-1"
+
+
+def test_update_schema_rejects_too_long_resource_name_prefix() -> None:
+    with pytest.raises(AdapterPayloadValidationError) as exc:
+        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
+            {
+                "resource_name_prefix": "a" * (WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH - len("lf_") + 1),
+                "connections": {"existing_app_ids": ["app-existing-1"]},
+                "operations": [
+                    {
+                        "op": "bind",
+                        "tool": {"tool_id_with_ref": {"source_ref": "fv-1", "tool_id": "tool-existing-1"}},
+                        "app_ids": ["app-existing-1"],
+                    }
+                ],
+            }
+        )
+    assert "cannot exceed" in str(exc.value.error)
 
 
 def test_update_schema_rejects_prefixed_app_id_collisions() -> None:

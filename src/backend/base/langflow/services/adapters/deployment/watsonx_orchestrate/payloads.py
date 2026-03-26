@@ -10,7 +10,18 @@ from lfx.services.adapters.deployment.schema import BaseFlowArtifact, EnvVarKey,
 from lfx.services.adapters.payload import AdapterPayload, PayloadSlot
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
+from langflow.services.adapters.deployment.watsonx_orchestrate.resource_name_prefix import (
+    validate_resource_name_prefix_for_provider,
+)
+
 RawToolName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+ResourceNamePrefixInput = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+    ),
+]
 
 
 class WatsonxFlowArtifactProviderData(BaseModel):
@@ -28,9 +39,7 @@ class WatsonxConnectionRawPayload(BaseModel):
     """Connection payload for creating a new watsonx connection/config."""
 
     app_id: NormalizedId = Field(
-        description=(
-            "App id used for operation references. resource_name_prefix is applied only when creating resources."
-        )
+        description=("App id used for operation references. Newly created connections preserve this app_id.")
     )
     environment_variables: dict[EnvVarKey, EnvVarValueSpec] | None = Field(None, description="Environment variables.")
     provider_config: AdapterPayload | None = Field(None, description="Provider-specific connection configuration.")
@@ -69,9 +78,7 @@ class WatsonxUpdateConnections(BaseModel):
     )
     raw_payloads: list[WatsonxConnectionRawPayload] | None = Field(
         default=None,
-        description=(
-            "Raw connection payloads keyed by app_id. resource_name_prefix is applied only when resources are created."
-        ),
+        description=("Raw connection payloads keyed by app_id. Newly created connections preserve this app_id."),
     )
 
     @field_validator("existing_app_ids")
@@ -247,7 +254,8 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
     Notes:
     - operations[*].app_ids are operation-side ids.
     - resource_name_prefix is applied only when creating resources
-      (for raw connections and raw tools).
+      (for raw tool names).
+    - resource_name_prefix is a provider-specific naming/deconfliction hint.
     - put_tools performs a standalone full replacement of the agent's tool
       list.  The agent will have exactly these tool IDs and no others.
       It cannot be combined with operations, tools, connections, or
@@ -258,11 +266,11 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    resource_name_prefix: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)] | None = Field(
+    resource_name_prefix: ResourceNamePrefixInput | None = Field(
         default=None,
         description=(
-            "Prefix applied only when creating resources: "
-            "derived app ids from connections.raw_payloads[*].app_id and created tool names."
+            "Provider-specific naming/deconfliction hint applied only when creating resources: "
+            "applied to created tool names."
         ),
     )
     tools: WatsonxUpdateTools = Field(default_factory=WatsonxUpdateTools)
@@ -284,6 +292,14 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
         if value is None:
             return None
         return list(dict.fromkeys(value))
+
+    @field_validator("resource_name_prefix")
+    @classmethod
+    def validate_resource_name_prefix(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        validate_resource_name_prefix_for_provider(value)
+        return value
 
     @model_validator(mode="after")
     def validate_has_work(self) -> WatsonxDeploymentUpdatePayload:
@@ -355,15 +371,21 @@ class WatsonxDeploymentCreatePayload(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    resource_name_prefix: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)] = Field(
+    resource_name_prefix: ResourceNamePrefixInput = Field(
         description=(
-            "Prefix applied only when creating resources: "
-            "derived app ids from connections.raw_payloads[*].app_id and created tool names."
+            "Provider-specific naming/deconfliction hint applied only when creating resources: "
+            "applied to created tool names and deployment names."
         )
     )
     tools: WatsonxUpdateTools = Field(default_factory=WatsonxUpdateTools)
     connections: WatsonxUpdateConnections = Field(default_factory=WatsonxUpdateConnections)
     operations: list[WatsonxBindOperation] = Field(min_length=1)
+
+    @field_validator("resource_name_prefix")
+    @classmethod
+    def validate_resource_name_prefix(cls, value: str) -> str:
+        validate_resource_name_prefix_for_provider(value)
+        return value
 
     @model_validator(mode="after")
     def validate_operation_references(self) -> WatsonxDeploymentCreatePayload:

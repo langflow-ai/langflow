@@ -48,6 +48,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     dedupe_list,
     extract_agent_tool_ids,
+    resolve_resource_name_prefix,
     validate_wxo_name,
 )
 
@@ -125,7 +126,11 @@ def build_provider_update_plan(
             existing_tool_refs=[],
         )
 
-    resource_prefix = (provider_update.resource_name_prefix or "").strip()
+    resource_prefix = (
+        resolve_resource_name_prefix(caller_prefix=provider_update.resource_name_prefix)
+        if provider_update.resource_name_prefix is not None
+        else ""
+    )
     agent_tool_ids = extract_agent_tool_ids(agent)
     final_existing_tool_ids = OrderedUniqueStrs.from_values(agent_tool_ids)
 
@@ -186,7 +191,7 @@ def build_provider_update_plan(
     raw_connections_to_create = [
         RawConnectionCreatePlan(
             operation_app_id=raw_payload.app_id,
-            provider_app_id=f"{resource_prefix}{raw_payload.app_id}",
+            provider_app_id=raw_payload.app_id,
             payload=raw_payload,
         )
         for raw_payload in (provider_update.connections.raw_payloads or [])
@@ -312,7 +317,7 @@ async def apply_provider_update_plan_with_rollback(
     # Working state:
     # - resolved_connections: provider_app_id → connection_id map for bind/update calls.
     # - operation_to_provider_app_id: operation app_id → provider app_id
-    #     (identity for existing, prefixed for raw-created connections).
+    #     (identity mapping for both existing and raw-created connections).
     # - added_snapshot_ids: snapshot/tool ids to return in the update result.
     # - created_snapshot_bindings: source_ref ↔ tool_id bindings for newly
     #     created tools (created=True); combined with existing refs in the result.

@@ -133,7 +133,7 @@ def build_provider_create_plan(
     raw_connections_to_create = [
         RawConnectionCreatePlan(
             operation_app_id=raw_payload.app_id,
-            provider_app_id=f"{resource_prefix}{raw_payload.app_id}",
+            provider_app_id=raw_payload.app_id,
             payload=raw_payload,
         )
         for raw_payload in (provider_create.connections.raw_payloads or [])
@@ -181,7 +181,7 @@ async def apply_provider_create_plan_with_rollback(
     #     connections were wired to each tool; returned in the create result.
     # - agent_create_response: wxO agent creation response (carries agent_id).
     # - operation_to_provider_app_id: operation app_id → provider app_id
-    #     (identity for existing, prefixed for raw-created connections).
+    #     (identity mapping for both existing and raw-created connections).
     # - resolved_connections: provider_app_id → connection_id map for bind calls.
     created_snapshot_bindings: list[WatsonxToolRefBinding] = []
     created_tool_app_bindings: list[WatsonxToolAppBinding] = []

@@ -32,6 +32,7 @@ try:
     )
     from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
         WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
+        WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH,
     )
 except ModuleNotFoundError:
     pytest.skip(
@@ -80,6 +81,61 @@ def test_watsonx_api_payload_accepts_flow_version_create_bind_contract() -> None
         }
     )
     assert payload.operations[0].op == "bind"
+    assert payload.resource_name_prefix == "lf_abc_"
+
+
+def test_watsonx_api_payload_strips_resource_name_prefix_whitespace() -> None:
+    flow_version_id = uuid4()
+    payload = WatsonxApiDeploymentCreatePayload.model_validate(
+        {
+            "resource_name_prefix": "  custom_prefix  ",
+            "connections": {"existing_app_ids": ["app-one"]},
+            "operations": [
+                {
+                    "op": "bind",
+                    "flow_version_id": str(flow_version_id),
+                    "app_ids": ["app-one"],
+                }
+            ],
+        }
+    )
+    assert payload.resource_name_prefix == "custom_prefix"
+
+
+def test_watsonx_api_payload_rejects_non_alpha_resource_name_prefix() -> None:
+    flow_version_id = uuid4()
+    with pytest.raises(ValueError, match="must start with a letter"):
+        WatsonxApiDeploymentCreatePayload.model_validate(
+            {
+                "resource_name_prefix": "123_prefix",
+                "connections": {"existing_app_ids": ["app-one"]},
+                "operations": [
+                    {
+                        "op": "bind",
+                        "flow_version_id": str(flow_version_id),
+                        "app_ids": ["app-one"],
+                    }
+                ],
+            }
+        )
+
+
+def test_watsonx_api_payload_rejects_effective_too_long_resource_name_prefix() -> None:
+    flow_version_id = uuid4()
+    with pytest.raises(ValueError, match="cannot exceed"):
+        WatsonxApiDeploymentCreatePayload.model_validate(
+            {
+                "resource_name_prefix": "a" * (WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH - len("lf_") + 1),
+                "connections": {"existing_app_ids": ["app-one"]},
+                "operations": [
+                    {
+                        "op": "bind",
+                        "flow_version_id": str(flow_version_id),
+                        "app_ids": ["app-one"],
+                    }
+                ],
+            }
+        )
 
 
 def test_watsonx_api_payload_accepts_flow_version_bind_contract() -> None:
@@ -97,6 +153,42 @@ def test_watsonx_api_payload_accepts_flow_version_bind_contract() -> None:
         }
     )
     assert payload.operations[0].op == "bind"
+
+
+def test_watsonx_update_payload_rejects_non_alpha_resource_name_prefix() -> None:
+    flow_version_id = uuid4()
+    with pytest.raises(ValueError, match="must start with a letter"):
+        WatsonxApiDeploymentUpdatePayload.model_validate(
+            {
+                "resource_name_prefix": "123_prefix",
+                "connections": {"existing_app_ids": ["app-one"]},
+                "operations": [
+                    {
+                        "op": "bind",
+                        "flow_version_id": str(flow_version_id),
+                        "app_ids": ["app-one"],
+                    }
+                ],
+            }
+        )
+
+
+def test_watsonx_update_payload_rejects_effective_too_long_resource_name_prefix() -> None:
+    flow_version_id = uuid4()
+    with pytest.raises(ValueError, match="cannot exceed"):
+        WatsonxApiDeploymentUpdatePayload.model_validate(
+            {
+                "resource_name_prefix": "a" * (WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH - len("lf_") + 1),
+                "connections": {"existing_app_ids": ["app-one"]},
+                "operations": [
+                    {
+                        "op": "bind",
+                        "flow_version_id": str(flow_version_id),
+                        "app_ids": ["app-one"],
+                    }
+                ],
+            }
+        )
 
 
 def test_watsonx_api_payload_accepts_flow_version_unbind_and_remove_contract() -> None:
@@ -132,7 +224,7 @@ def test_watsonx_mapper_resolve_verify_credentials_for_update_uses_decrypted_sto
         provider_tenant_id="tenant-1",
         provider_key="watsonx-orchestrate",
         provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
-        api_key="encrypted-api-key",
+        api_key="encrypted-api-key",  # pragma: allowlist secret
     )
     payload = DeploymentProviderAccountUpdateRequest(
         provider_url="https://api.eu-de.wxo.cloud.ibm.com/instances/tenant-2",
@@ -140,7 +232,7 @@ def test_watsonx_mapper_resolve_verify_credentials_for_update_uses_decrypted_sto
 
     monkeypatch.setattr(
         "langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper.auth_utils.decrypt_api_key",
-        lambda _encrypted_api_key: "stored-api-key",
+        lambda _encrypted_api_key: "stored-api-key",  # pragma: allowlist secret
     )
 
     verify_input = mapper.resolve_verify_credentials_for_update(
@@ -150,7 +242,7 @@ def test_watsonx_mapper_resolve_verify_credentials_for_update_uses_decrypted_sto
 
     assert verify_input is not None
     assert verify_input.base_url == payload.provider_url
-    assert verify_input.provider_data == {"api_key": "stored-api-key"}
+    assert verify_input.provider_data == {"api_key": "stored-api-key"}  # pragma: allowlist secret
 
 
 def test_watsonx_mapper_resolve_verify_credentials_for_update_prefers_new_provider_data(monkeypatch) -> None:
@@ -164,7 +256,7 @@ def test_watsonx_mapper_resolve_verify_credentials_for_update_prefers_new_provid
         provider_tenant_id="tenant-1",
         provider_key="watsonx-orchestrate",
         provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
-        api_key="encrypted-api-key",
+        api_key="encrypted-api-key",  # pragma: allowlist secret
     )
     payload = DeploymentProviderAccountUpdateRequest(provider_data={"api_key": "new-api-key"})
 
@@ -184,7 +276,7 @@ def test_watsonx_mapper_resolve_verify_credentials_for_update_prefers_new_provid
 
     assert verify_input is not None
     assert verify_input.base_url == existing_account.provider_url
-    assert verify_input.provider_data == {"api_key": "new-api-key"}
+    assert verify_input.provider_data == {"api_key": "new-api-key"}  # pragma: allowlist secret
 
 
 @pytest.mark.asyncio
@@ -300,6 +392,7 @@ async def test_watsonx_mapper_translates_flow_version_bind_into_raw_tool_payload
     )
     payload = DeploymentUpdateRequest(
         provider_data={
+            "resource_name_prefix": "lf_test_",
             "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
                 {
@@ -319,6 +412,7 @@ async def test_watsonx_mapper_translates_flow_version_bind_into_raw_tool_payload
     )
     provider_data = resolved.provider_data or {}
 
+    assert provider_data["resource_name_prefix"] == "lf_test_"
     assert provider_data["tools"]["raw_payloads"][0]["name"] == "Flow A_v1"
     assert provider_data["tools"]["raw_payloads"][0]["provider_data"] == {
         "project_id": str(project_id),

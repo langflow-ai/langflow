@@ -5,9 +5,20 @@ from __future__ import annotations
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, StringConstraints, field_validator, model_validator
 
 from langflow.api.v1.mappers.deployments.contracts import CreateFlowArtifactProviderData
+from langflow.services.adapters.deployment.watsonx_orchestrate.resource_name_prefix import (
+    validate_resource_name_prefix_for_provider,
+)
+
+WatsonxApiResourceNamePrefix = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+    ),
+]
 
 
 class WatsonxApiFlowArtifactProviderData(CreateFlowArtifactProviderData):
@@ -129,21 +140,37 @@ class WatsonxApiDeploymentPayloadBase(BaseModel):
 class WatsonxApiDeploymentUpdatePayload(WatsonxApiDeploymentPayloadBase):
     """Watsonx provider_data API contract for deployment update operations."""
 
-    resource_name_prefix: str | None = None
+    resource_name_prefix: WatsonxApiResourceNamePrefix | None = Field(
+        default=None,
+        description=("Provider-specific naming/deconfliction hint applied only when creating resources."),
+    )
     operations: list[WatsonxApiUpdateOperation] = Field(min_length=1)
+
+    @field_validator("resource_name_prefix")
+    @classmethod
+    def validate_resource_name_prefix(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        validate_resource_name_prefix_for_provider(value)
+        return value
 
 
 class WatsonxApiDeploymentCreatePayload(WatsonxApiDeploymentPayloadBase):
     """Watsonx provider_data API contract for deployment create operations."""
 
-    resource_name_prefix: str = Field(
-        min_length=1,
+    resource_name_prefix: WatsonxApiResourceNamePrefix = Field(
         description=(
-            "Prefix applied only when creating resources: "
-            "applied to app ids from connections.raw_payloads[*].app_id and names of created tools."
+            "Provider-specific naming/deconfliction hint applied only when creating resources: "
+            "applied to names of created tools and deployments."
         ),
     )
     operations: list[WatsonxApiBindOperation] = Field(min_length=1)
+
+    @field_validator("resource_name_prefix")
+    @classmethod
+    def validate_resource_name_prefix(cls, value: str) -> str:
+        validate_resource_name_prefix_for_provider(value)
+        return value
 
 
 class WatsonxApiToolAppBinding(BaseModel):
