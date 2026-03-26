@@ -141,6 +141,44 @@ def _raise_http_for_provider_account_value_error(exc: ValueError) -> None:
     raise_http_for_value_error(exc)
 
 
+async def _count_provider_deployments_after_reconciliation(
+    *,
+    session: DbSession,
+    provider_account,
+    user_id: UUID,
+) -> int:
+    """Return remaining deployments after best-effort stale-row reconciliation."""
+    deployment_count = await count_deployments_by_provider(
+        session,
+        user_id=user_id,
+        deployment_provider_account_id=provider_account.id,
+    )
+    if deployment_count <= 0:
+        return 0
+
+    try:
+        deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
+        deployment_mapper = get_deployment_mapper(provider_account.provider_key)
+        _, deployment_count = await list_deployments_synced(
+            deployment_adapter=deployment_adapter,
+            deployment_mapper=deployment_mapper,
+            user_id=user_id,
+            provider_id=provider_account.id,
+            db=session,
+            page=1,
+            size=deployment_count,
+            deployment_type=None,
+        )
+    except Exception:  # noqa: BLE001
+        logger.warning(
+            "Failed to reconcile deployments before deleting provider account %s; falling back to local count.",
+            provider_account.id,
+            exc_info=True,
+        )
+
+    return deployment_count
+
+
 async def _delete_local_deployment_row_with_commit_retry(
     *,
     session: DbSession,
@@ -272,10 +310,10 @@ async def delete_provider_account(
     provider_account = await get_provider_account_row_by_id(session, provider_id=provider_id, user_id=current_user.id)
     if provider_account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment provider account not found.")
-    deployment_count = await count_deployments_by_provider(
-        session,
+    deployment_count = await _count_provider_deployments_after_reconciliation(
+        session=session,
+        provider_account=provider_account,
         user_id=current_user.id,
-        deployment_provider_account_id=provider_id,
     )
     if deployment_count > 0:
         raise HTTPException(

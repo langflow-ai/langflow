@@ -135,6 +135,28 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         """
         return await get_provider_clients(user_id=user_id, db=db)
 
+    def _parse_provider_payload(
+        self,
+        *,
+        slot,
+        slot_name: str,
+        provider_data: object,
+        error_prefix: ErrorPrefix,
+    ):
+        if slot is None:
+            msg = f"{error_prefix.value} Required slot '{slot_name}' is not configured."
+            raise DeploymentError(message=msg, error_code="deployment_error")
+
+        try:
+            return slot.parse(provider_data)
+        except (AdapterPayloadMissingError, AdapterPayloadValidationError) as exc:
+            if isinstance(exc, AdapterPayloadValidationError):
+                first_error = exc.error.errors()[0] if exc.error.errors() else {}
+                msg = str(first_error.get("msg") or exc)
+            else:
+                msg = str(exc)
+            raise InvalidContentError(message=msg) from None
+
     async def create(
         self,
         *,
@@ -158,20 +180,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             validate_provider_create_request_sections(payload)
             deployment_create_slot = self.payload_schemas.deployment_create
 
-            if deployment_create_slot is None:
-                msg = f"{ErrorPrefix.CREATE.value} Required slot 'deployment_create' is not configured."
-                raise DeploymentError(message=msg, error_code="deployment_error")
-
-            provider_create: WatsonxDeploymentCreatePayload
-            try:
-                provider_create = deployment_create_slot.parse(payload.provider_data)
-            except (AdapterPayloadMissingError, AdapterPayloadValidationError) as exc:
-                if isinstance(exc, AdapterPayloadValidationError):
-                    first_error = exc.error.errors()[0] if exc.error.errors() else {}
-                    msg = str(first_error.get("msg") or exc)
-                else:
-                    msg = str(exc)
-                raise InvalidContentError(message=msg) from None
+            provider_create: WatsonxDeploymentCreatePayload = self._parse_provider_payload(
+                slot=deployment_create_slot,
+                slot_name="deployment_create",
+                provider_data=payload.provider_data,
+                error_prefix=ErrorPrefix.CREATE,
+            )
 
             clients = await self._get_provider_clients(user_id=user_id, db=db)
             provider_plan = build_provider_create_plan(
@@ -377,15 +391,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 )
                 return DeploymentUpdateResult(id=deployment_id)
 
-            try:
-                provider_update = self.payload_schemas.deployment_update.parse(payload.provider_data)
-            except (AdapterPayloadMissingError, AdapterPayloadValidationError) as exc:
-                if isinstance(exc, AdapterPayloadValidationError):
-                    first_error = exc.error.errors()[0] if exc.error.errors() else {}
-                    msg = str(first_error.get("msg") or exc)
-                else:
-                    msg = str(exc)
-                raise InvalidContentError(message=msg) from None
+            provider_update = self._parse_provider_payload(
+                slot=self.payload_schemas.deployment_update,
+                slot_name="deployment_update",
+                provider_data=payload.provider_data,
+                error_prefix=ErrorPrefix.UPDATE,
+            )
 
             provider_plan = build_provider_update_plan(
                 agent=agent,

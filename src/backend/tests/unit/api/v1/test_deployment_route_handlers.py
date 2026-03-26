@@ -38,8 +38,18 @@ HELPERS_MODULE = "langflow.api.v1.mappers.deployments.helpers"
 # ---------------------------------------------------------------------------
 
 
-def _fake_provider_account(*, provider_key: str = "watsonx_orchestrate") -> SimpleNamespace:
-    return SimpleNamespace(id=uuid4(), provider_key=provider_key)
+def _fake_provider_account(
+    *,
+    provider_key: str = DeploymentProviderKey.WATSONX_ORCHESTRATE,
+    provider_url: str = "https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+    api_key: str = "encrypted-key",
+) -> SimpleNamespace:
+    return SimpleNamespace(
+        id=uuid4(),
+        provider_key=provider_key,
+        provider_url=provider_url,
+        api_key=api_key,
+    )
 
 
 def _fake_deployment_row(**overrides) -> SimpleNamespace:
@@ -199,7 +209,7 @@ class TestProviderAccountRoutes:
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
-    @patch(f"{ROUTES_MODULE}.get_provider_account_row_by_id", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
     async def test_update_provider_account_rejects_disallowed_url(
         self,
         mock_get_provider_account,
@@ -209,12 +219,7 @@ class TestProviderAccountRoutes:
         """PATCH rejects provider URLs that do not match the provider allowlist."""
         from langflow.api.v1.deployments import update_provider_account
 
-        mock_get_provider_account.return_value = SimpleNamespace(
-            id=uuid4(),
-            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
-            api_key="encrypted-key",
-        )
+        mock_get_provider_account.return_value = _fake_provider_account()
 
         with pytest.raises(HTTPException) as exc_info:
             await update_provider_account(
@@ -232,7 +237,7 @@ class TestProviderAccountRoutes:
     @patch(f"{ROUTES_MODULE}.update_provider_account_row", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
-    @patch(f"{ROUTES_MODULE}.get_provider_account_row_by_id", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
     async def test_update_provider_account_verify_failure_returns_401(
         self,
         mock_get_provider_account,
@@ -243,12 +248,7 @@ class TestProviderAccountRoutes:
         """PATCH verifies new credentials before persisting them."""
         from langflow.api.v1.deployments import update_provider_account
 
-        existing_account = SimpleNamespace(
-            id=uuid4(),
-            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
-            api_key="encrypted-key",
-        )
+        existing_account = _fake_provider_account()
         mock_get_provider_account.return_value = existing_account
 
         mapper = MagicMock()
@@ -316,7 +316,7 @@ class TestProviderAccountRoutes:
     @patch(f"{ROUTES_MODULE}.update_provider_account_row", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
-    @patch(f"{ROUTES_MODULE}.get_provider_account_row_by_id", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
     async def test_update_provider_account_conflict_returns_409(
         self,
         mock_get_provider_account,
@@ -327,12 +327,7 @@ class TestProviderAccountRoutes:
         """PATCH converts duplicate provider-account conflicts into 409 responses."""
         from langflow.api.v1.deployments import update_provider_account
 
-        existing_account = SimpleNamespace(
-            id=uuid4(),
-            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
-            api_key="encrypted-key",
-        )
+        existing_account = _fake_provider_account()
         mock_get_provider_account.return_value = existing_account
 
         mapper = MagicMock()
@@ -356,24 +351,27 @@ class TestProviderAccountRoutes:
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.delete_provider_account_row", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock, return_value=([], 1))
     @patch(f"{ROUTES_MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
-    @patch(f"{ROUTES_MODULE}.get_provider_account_row_by_id", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
     async def test_delete_provider_account_rejects_when_deployments_exist(
         self,
         mock_get_provider_account,
+        mock_get_mapper,
+        mock_resolve_adapter,
         mock_count_deployments,
+        mock_list_synced,
         mock_delete_provider_account,
     ):
         """DELETE refuses to remove provider accounts that still own deployments."""
         from langflow.api.v1.deployments import delete_provider_account
 
-        existing_account = SimpleNamespace(
-            id=uuid4(),
-            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
-            api_key="encrypted-key",
-        )
+        existing_account = _fake_provider_account()
         mock_get_provider_account.return_value = existing_account
+        mock_get_mapper.return_value = MagicMock()
+        mock_resolve_adapter.return_value = AsyncMock()
 
         with pytest.raises(HTTPException) as exc_info:
             await delete_provider_account(
@@ -384,7 +382,47 @@ class TestProviderAccountRoutes:
 
         assert exc_info.value.status_code == 409
         mock_count_deployments.assert_awaited_once()
+        mock_list_synced.assert_awaited_once()
         mock_delete_provider_account.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.delete_provider_account_row", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock, return_value=([], 0))
+    @patch(f"{ROUTES_MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_delete_provider_account_prunes_stale_rows_before_delete(
+        self,
+        mock_get_provider_account,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_count_deployments,
+        mock_list_synced,
+        mock_delete_provider_account,
+    ):
+        """DELETE can proceed when reconciliation shows only stale local deployments remain."""
+        from langflow.api.v1.deployments import delete_provider_account
+
+        existing_account = _fake_provider_account()
+        mock_get_provider_account.return_value = existing_account
+        mock_get_mapper.return_value = MagicMock()
+        mock_resolve_adapter.return_value = AsyncMock()
+        session = AsyncMock()
+
+        response = await delete_provider_account(
+            provider_id=existing_account.id,
+            session=session,
+            current_user=_fake_user(),
+        )
+
+        assert response.status_code == 204
+        mock_count_deployments.assert_awaited_once()
+        mock_list_synced.assert_awaited_once()
+        mock_delete_provider_account.assert_awaited_once_with(
+            session,
+            provider_account=existing_account,
+        )
 
 
 # ---------------------------------------------------------------------------

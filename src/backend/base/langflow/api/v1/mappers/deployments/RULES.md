@@ -555,4 +555,3 @@ When adding a new field to an execution or deployment response:
 1. Is Langflow the source of truth for this value? → top level.
 2. Does this value come from the provider and Langflow just relays it? → inside `provider_data`.
 3. Does the provider supply it but Langflow persists and indexes it (like `resource_key`)? → top level is acceptable.
-

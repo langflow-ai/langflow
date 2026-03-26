@@ -770,6 +770,46 @@ async def sync_attachment_snapshot_ids(
     return corrected_counts
 
 
+async def sync_provider_attachment_snapshots(
+    *,
+    deployment_adapter: DeploymentServiceProtocol,
+    deployment_mapper: BaseDeploymentMapper,
+    user_id: UUID,
+    provider_id: UUID,
+    db: DbSession,
+    attachments: list[FlowVersionDeploymentAttachment],
+    deployment_ids: list[UUID] | None = None,
+) -> dict[UUID, int] | None:
+    """Validate attachment snapshot IDs against the provider inside a savepoint.
+
+    Returns corrected ``deployment_id -> attached_count`` values, or ``None``
+    when none of the supplied attachments carry provider-verifiable snapshot
+    IDs.
+    """
+    snapshot_ids = list(dict.fromkeys(deployment_mapper.util_snapshot_ids_to_verify(attachments)))
+    if not snapshot_ids:
+        return None
+
+    known_snapshots = await fetch_provider_snapshot_keys(
+        deployment_adapter=deployment_adapter,
+        user_id=user_id,
+        provider_id=provider_id,
+        db=db,
+        snapshot_ids=snapshot_ids,
+    )
+    if deployment_ids is None:
+        deployment_ids = list(dict.fromkeys(attachment.deployment_id for attachment in attachments))
+
+    async with db.begin_nested():
+        return await sync_attachment_snapshot_ids(
+            user_id=user_id,
+            deployment_ids=deployment_ids,
+            attachments=attachments,
+            known_snapshot_ids=known_snapshots,
+            db=db,
+        )
+
+
 async def sync_flow_version_attachments(
     *,
     db: DbSession,
@@ -812,27 +852,15 @@ async def sync_flow_version_attachments(
             )
             continue
 
-        snapshot_ids = list(dict.fromkeys(deployment_mapper.util_snapshot_ids_to_verify(attachments)))
-        if not snapshot_ids:
-            continue
-
         try:
             with deployment_provider_scope(provider_account_id):
-                known_snapshots = await fetch_provider_snapshot_keys(
+                await sync_provider_attachment_snapshots(
                     deployment_adapter=deployment_adapter,
+                    deployment_mapper=deployment_mapper,
                     user_id=user_id,
                     provider_id=provider_account_id,
                     db=db,
-                    snapshot_ids=snapshot_ids,
-                )
-            deployment_ids = list({a.deployment_id for a in attachments})
-            async with db.begin_nested():
-                await sync_attachment_snapshot_ids(
-                    user_id=user_id,
-                    deployment_ids=deployment_ids,
                     attachments=attachments,
-                    known_snapshot_ids=known_snapshots,
-                    db=db,
                 )
         except Exception:  # noqa: BLE001
             logger.warning(
@@ -912,27 +940,19 @@ async def list_deployments_synced(
             all_attachments = await list_attachments_by_deployment_ids(
                 db, user_id=user_id, deployment_ids=deployment_ids_for_sync
             )
-            all_snapshot_ids = list(dict.fromkeys(deployment_mapper.util_snapshot_ids_to_verify(all_attachments)))
-
-            if all_snapshot_ids:
-                known_snapshots = await fetch_provider_snapshot_keys(
-                    deployment_adapter=deployment_adapter,
-                    user_id=user_id,
-                    provider_id=provider_id,
-                    db=db,
-                    snapshot_ids=all_snapshot_ids,
-                )
-                async with db.begin_nested():
-                    corrected_counts = await sync_attachment_snapshot_ids(
-                        user_id=user_id,
-                        deployment_ids=deployment_ids_for_sync,
-                        attachments=all_attachments,
-                        known_snapshot_ids=known_snapshots,
-                        db=db,
-                    )
+            corrected_counts = await sync_provider_attachment_snapshots(
+                deployment_adapter=deployment_adapter,
+                deployment_mapper=deployment_mapper,
+                user_id=user_id,
+                provider_id=provider_id,
+                db=db,
+                attachments=all_attachments,
+                deployment_ids=deployment_ids_for_sync,
+            )
+            if corrected_counts is not None:
                 accepted = [(row, corrected_counts[row.id], matched) for row, _attached_count, matched in accepted]
             # else: no attachments carry a provider-verifiable snapshot ID,
-            # so there is nothing to check against the provider.  The
+            # so there is nothing to check against the provider. The
             # original attached_count from the DB is kept as-is.
         except Exception:  # noqa: BLE001
             logger.warning(
