@@ -94,7 +94,7 @@ jobs:
       - name: Confirm branch
         run: git branch --show-current
       - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -344,8 +344,10 @@ jobs:
                 ]
               }
             ]
-          }" ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
+          }" ${LANGFLOW_ENG_SLACK_WEBHOOK_URL}
 
+        env:
+          LANGFLOW_ENG_SLACK_WEBHOOK_URL: ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
       - name: Send success notification to Slack
         if: ${{ !inputs.skip_slack && needs.release-nightly-build.result == 'success' }}
         run: |
@@ -390,3 +392,6 @@ jobs:
               }
             ]
           }' ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
+
+        env:
+          LANGFLOW_ENG_SLACK_WEBHOOK_URL: ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}

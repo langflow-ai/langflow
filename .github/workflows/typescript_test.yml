@@ -88,7 +88,7 @@ jobs:
 
       - name: Paths Filter
         id: filter
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
         with:
           filters: .github/changes-filter.yaml
 
@@ -328,7 +328,7 @@ jobs:
           npx playwright install chromium
 
       - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -342,10 +342,12 @@ jobs:
         shell: bash
         run: |
           touch .env
-          echo "${{ secrets.ENV_VARS }}" > .env
+          echo "${ENV_VARS}" > .env
 
+        env:
+          ENV_VARS: ${{ secrets.ENV_VARS }}
       - name: Execute Playwright Tests
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3
         with:
           timeout_minutes: 12
           max_attempts: 2
