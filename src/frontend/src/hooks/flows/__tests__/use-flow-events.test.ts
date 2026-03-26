@@ -174,6 +174,11 @@ describe("useFlowEvents", () => {
       jest.advanceTimersByTime(1000);
     });
 
+    // Advance past MIN_BANNER_DISPLAY_MS for delayed settle
+    await act(async () => {
+      jest.advanceTimersByTime(2000);
+    });
+
     expect(result.current.isAgentWorking).toBe(false);
     expect(result.current.lastSettledAt).not.toBeNull();
     expect(result.current.events).toEqual([]); // Events cleared after settle
@@ -248,6 +253,11 @@ describe("useFlowEvents", () => {
       jest.advanceTimersByTime(1000);
     });
 
+    // Advance past MIN_BANNER_DISPLAY_MS for delayed settle
+    await act(async () => {
+      jest.advanceTimersByTime(2000);
+    });
+
     expect(result.current.isAgentWorking).toBe(false);
     const callCountAfterSettle = apiGetMock.mock.calls.length;
 
@@ -277,9 +287,16 @@ describe("useFlowEvents", () => {
       jest.advanceTimersByTime(5000);
     });
 
+    // Banner shows briefly (MIN_BANNER_DISPLAY_MS)
+    expect(result.current.isAgentWorking).toBe(true);
+
+    // Advance past MIN_BANNER_DISPLAY_MS for delayed settle
+    await act(async () => {
+      jest.advanceTimersByTime(2000);
+    });
+
     expect(result.current.isAgentWorking).toBe(false);
     expect(result.current.lastSettledAt).not.toBeNull();
-    // Events cleared after settle
     expect(result.current.events).toEqual([]);
   });
 

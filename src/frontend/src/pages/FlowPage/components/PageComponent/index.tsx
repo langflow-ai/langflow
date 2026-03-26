@@ -152,6 +152,39 @@ export default function Page({
     currentFlowId || undefined,
   );
   const effectiveLocked = isLocked || isAgentWorking;
+
+  // Keep banner mounted during exit animation, preserve last text
+  const [bannerVisible, setBannerVisible] = useState(false);
+  const [bannerExiting, setBannerExiting] = useState(false);
+  const [bannerText, setBannerText] = useState(
+    "Agent is working on this flow...",
+  );
+
+  // Update banner text while active (not during exit)
+  useEffect(() => {
+    if (isAgentWorking && events.length > 0) {
+      const last = events[events.length - 1];
+      if (last.summary) {
+        setBannerText(`Agent: ${last.summary}`);
+      }
+    }
+  }, [isAgentWorking, events]);
+
+  useEffect(() => {
+    if (isAgentWorking) {
+      setBannerExiting(false);
+      setBannerVisible(true);
+    } else if (bannerVisible) {
+      // bannerText is already frozen - don't update it during exit
+      setBannerExiting(true);
+      const timer = setTimeout(() => {
+        setBannerVisible(false);
+        setBannerExiting(false);
+        setBannerText("Agent is working on this flow...");
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [isAgentWorking]);
   const { mutate: reloadFlow } = useGetFlow();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const prevSettledRef = useRef<number | null>(null);
@@ -928,15 +961,22 @@ export default function Page({
               {helperLineEnabled && <HelperLines helperLines={helperLines} />}
             </ReactFlow>
             <FlowBuildingComponent />
-            {isAgentWorking && (
-              <div className="pointer-events-none absolute inset-0 z-50">
+            {bannerVisible && (
+              <div
+                className={`pointer-events-none absolute inset-0 z-50 ${bannerExiting ? "agent-badge-exit" : "agent-badge-enter"}`}
+              >
                 <CanvasBadge>
                   <ForwardedIconComponent
                     name="Loader2"
                     className="h-4 w-4 animate-spin"
                   />
-                  <span className="text-sm">
-                    Agent is working on this flow...
+                  <span
+                    key={bannerExiting ? "exit" : bannerText}
+                    className={
+                      bannerExiting ? "text-sm" : "agent-text-enter text-sm"
+                    }
+                  >
+                    {bannerText}
                   </span>
                 </CanvasBadge>
               </div>
