@@ -16,6 +16,7 @@ import {
 } from "@/customization/utils/custom-buildUtils";
 import { customPollBuildEvents } from "@/customization/utils/custom-poll-build-events";
 import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
+import { transformBuildErrorMessages } from "@/customization/utils/custom-build-error-transform";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
@@ -470,9 +471,11 @@ export function processEndVertexEvent(
         },
       );
       onBuildError &&
-        onBuildError("Error Building Component", errorMessages, [
-          { id: buildData.id },
-        ]);
+        onBuildError(
+          "Error Building Component",
+          transformBuildErrorMessages(errorMessages),
+          [{ id: buildData.id }],
+        );
       onBuildUpdate(buildData, BuildStatus.ERROR, "");
       buildResults.push(false);
       return false;
@@ -958,7 +961,7 @@ async function buildVertex({
         });
         onBuildError!(
           "Error Building Component",
-          errorMessages,
+          transformBuildErrorMessages(errorMessages.flat()),
           verticesIds.map((id) => ({ id })),
         );
         stopBuild();
@@ -980,7 +983,7 @@ async function buildVertex({
     }
     onBuildError!(
       "Error Building Component",
-      errorMessage,
+      transformBuildErrorMessages(errorMessage),
       verticesIds.map((id) => ({ id })),
     );
     buildResults.push(false);
