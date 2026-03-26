@@ -5,7 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlmodel import select
+from sqlmodel import or_, select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.database.models.flow.model import Flow
@@ -32,7 +32,12 @@ class FlowEventCreate(BaseModel):
 
 
 async def _verify_flow_owner(session: DbSession, flow_id: UUID, user_id: UUID) -> None:
-    result = await session.exec(select(Flow).where(Flow.id == flow_id, Flow.user_id == user_id))
+    result = await session.exec(
+        select(Flow).where(
+            Flow.id == flow_id,
+            or_(Flow.user_id == user_id, Flow.user_id == None),  # noqa: E711
+        )
+    )
     if not result.first():
         raise HTTPException(status_code=404, detail="Flow not found")
 

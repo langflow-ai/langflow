@@ -64,7 +64,6 @@ import {
   generateNodeFromFlow,
   getNodeId,
   isValidConnection,
-  processFlows,
   scapeJSONParse,
   updateIds,
   validateSelection,
@@ -208,9 +207,7 @@ export default function Page({
       api
         .get<FlowType>(`${getURL("FLOWS")}/${currentFlowId}`)
         .then((response) => {
-          const flowsArray = [response.data];
-          const { flows } = processFlows(flowsArray);
-          applyFlowToCanvas(flows[0]);
+          applyFlowToCanvas(response.data);
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
               reactFlowInstance?.fitView({
@@ -236,16 +233,27 @@ export default function Page({
                 }[e.type] || "changed";
               counts[key] = (counts[key] || 0) + 1;
             }
-            const parts = Object.entries(counts).map(
-              ([action, count]) =>
-                `${action} ${count} ${count === 1 ? "component" : "components"}`,
-            );
+            const parts = Object.entries(counts).map(([action, count]) => {
+              const noun =
+                action === "connected" || action === "disconnected"
+                  ? count === 1
+                    ? "connection"
+                    : "connections"
+                  : count === 1
+                    ? "component"
+                    : "components";
+              return `${action} ${count} ${noun}`;
+            });
             setSuccessData({
               title: `Agent ${parts.join(", ")}`,
             });
           }
         })
-        .catch(() => {
+        .catch((error) => {
+          console.warn(
+            "[FlowPage] Failed to reload flow after agent changes:",
+            error,
+          );
           setErrorData({
             title: "Failed to reload flow after agent changes",
           });
