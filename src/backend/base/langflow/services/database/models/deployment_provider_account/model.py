@@ -42,7 +42,7 @@ class DeploymentProviderAccount(SQLModel, table=True):  # type: ignore[call-arg]
         ),
     )
 
-    id: UUID | None = Field(default_factory=uuid4, primary_key=True)
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
     user_id: UUIDstr = Field(
         sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
     )

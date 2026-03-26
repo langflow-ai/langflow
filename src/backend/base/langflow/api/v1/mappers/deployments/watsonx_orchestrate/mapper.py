@@ -161,7 +161,13 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             return None
 
         effective_url = payload.provider_url if url_changed else existing_account.provider_url
+        if effective_url is None:
+            msg = "'provider_url' cannot be null when provided."
+            raise ValueError(msg)
         if provider_data_changed:
+            if payload.provider_data is None:
+                msg = "'provider_data' cannot be null when provided."
+                raise ValueError(msg)
             provider_data = self.resolve_credential_fields(provider_data=payload.provider_data)
         else:
             decrypted_api_key = auth_utils.decrypt_api_key((existing_account.api_key or "").strip())
@@ -193,6 +199,9 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         tenant_changed = "provider_tenant_id" in payload.model_fields_set
         if url_changed or tenant_changed:
             effective_url = payload.provider_url if url_changed else existing_account.provider_url
+            if effective_url is None:
+                msg = "'provider_url' cannot be null when provided."
+                raise ValueError(msg)
             effective_tenant = payload.provider_tenant_id if tenant_changed else None
             update_kwargs["provider_tenant_id"] = self.resolve_provider_tenant_id(
                 provider_url=effective_url,

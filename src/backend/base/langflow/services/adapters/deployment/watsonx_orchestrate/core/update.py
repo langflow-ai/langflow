@@ -252,15 +252,15 @@ async def _update_existing_tool_connection_deltas(
             provider_app_id = operation_to_provider_app_id.get(app_id, app_id)
             connections.pop(provider_app_id, None)
         for app_id in delta.bind:
-            provider_app_id = operation_to_provider_app_id.get(app_id)
-            if not provider_app_id:
+            provider_app_id_opt = operation_to_provider_app_id.get(app_id)
+            if not provider_app_id_opt:
                 msg = f"No provider app id available for operation app_id '{app_id}'."
                 raise InvalidContentError(message=msg)
-            connection_id = resolved_connections.get(provider_app_id)
+            connection_id = resolved_connections.get(provider_app_id_opt)
             if not connection_id:
                 msg = f"No resolved connection id available for app_id '{app_id}'."
                 raise InvalidContentError(message=msg)
-            connections[provider_app_id] = connection_id
+            connections[provider_app_id_opt] = connection_id
         tool_updates.append((tool_id, writable_tool))
 
     await asyncio.gather(

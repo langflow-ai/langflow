@@ -334,6 +334,7 @@ class TestProviderAccountCRUD:
             acct = await create_provider_account(
                 db,
                 user_id=user.id,
+                name="acct-1",
                 provider_tenant_id="t1",
                 provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE.value,
                 provider_url="https://api.example.com",
@@ -355,6 +356,7 @@ class TestProviderAccountCRUD:
                 await create_provider_account(
                     db,
                     user_id=user.id,
+                    name=f"acct-{i}",
                     provider_tenant_id=f"t-{i}",
                     provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE.value,
                     provider_url=f"https://p{i}.example.com",
@@ -371,6 +373,7 @@ class TestProviderAccountCRUD:
             acct = await create_provider_account(
                 db,
                 user_id=user.id,
+                name="acct-update",
                 provider_tenant_id=None,
                 provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE.value,
                 provider_url="https://p.example.com",
@@ -394,6 +397,7 @@ class TestProviderAccountCRUD:
             acct = await create_provider_account(
                 db,
                 user_id=user.id,
+                name="acct-delete",
                 provider_tenant_id=None,
                 provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE.value,
                 provider_url="https://p.example.com",
@@ -414,6 +418,7 @@ class TestProviderAccountCRUD:
             await create_provider_account(
                 db,
                 user_id=user.id,
+                name="acct-dupe-1",
                 provider_tenant_id="t1",
                 provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE.value,
                 provider_url="https://p.example.com",
@@ -425,6 +430,7 @@ class TestProviderAccountCRUD:
                 await create_provider_account(
                     db,
                     user_id=user.id,
+                    name="acct-dupe-2",
                     provider_tenant_id="t1",
                     provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE.value,
                     provider_url="https://p.example.com",

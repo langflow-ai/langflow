@@ -103,6 +103,7 @@ from langflow.services.deps import get_settings_service
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from typing import Any
 
     from lfx.services.settings.service import SettingsService
@@ -744,7 +745,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         self,
         *,
         user_id: IdLike,
-        snapshot_ids: list[str],
+        snapshot_ids: Sequence[str],
         db: AsyncSession,
     ) -> SnapshotListResult:
         """Fetch tools directly by ID to verify which ones still exist."""
@@ -753,7 +754,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         clients = await self._get_provider_clients(user_id=user_id, db=db)
         try:
-            snapshots = await verify_tools_by_ids(clients, snapshot_ids)
+            snapshots = await verify_tools_by_ids(clients, list(snapshot_ids))
         except Exception as exc:  # noqa: BLE001
             raise_as_deployment_error(
                 exc,

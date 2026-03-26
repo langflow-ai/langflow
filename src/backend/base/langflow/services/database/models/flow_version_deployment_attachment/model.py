@@ -14,7 +14,7 @@ class FlowVersionDeploymentAttachment(SQLModel, table=True):  # type: ignore[cal
     __tablename__ = "flow_version_deployment_attachment"
     __table_args__ = (UniqueConstraint("flow_version_id", "deployment_id", name="uq_flow_version_deployment"),)
 
-    id: UUID | None = Field(default_factory=uuid4, primary_key=True)
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
     user_id: UUID = Field(sa_column=Column(ForeignKey("user.id", ondelete="CASCADE"), index=True, nullable=False))
     flow_version_id: UUID = Field(
         sa_column=Column(ForeignKey("flow_version.id", ondelete="CASCADE"), index=True, nullable=False),

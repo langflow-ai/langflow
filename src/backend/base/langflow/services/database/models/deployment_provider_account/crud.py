@@ -10,6 +10,7 @@ from sqlmodel import col, select
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 from langflow.services.database.utils import normalize_string_or_none, parse_uuid
 
 if TYPE_CHECKING:
@@ -40,6 +41,17 @@ def _encrypt_api_key(raw: str) -> str:
     except (ValueError, InvalidToken, TypeError, AttributeError) as e:
         msg = "Failed to encrypt API key -- check server encryption configuration"
         raise RuntimeError(msg) from e
+
+
+def _coerce_provider_key(value: str | DeploymentProviderKey) -> DeploymentProviderKey:
+    if isinstance(value, DeploymentProviderKey):
+        return value
+    normalized = _strip_or_raise(value, "provider_key")
+    try:
+        return DeploymentProviderKey(normalized)
+    except ValueError as exc:
+        msg = f"Unsupported provider_key: {normalized}"
+        raise ValueError(msg) from exc
 
 
 async def get_provider_account_by_id(
@@ -97,7 +109,7 @@ async def create_provider_account(
     user_id: UUID | str,
     name: str,
     provider_tenant_id: str | None,
-    provider_key: str,
+    provider_key: str | DeploymentProviderKey,
     provider_url: str,
     api_key: str,
 ) -> DeploymentProviderAccount:
@@ -106,7 +118,7 @@ async def create_provider_account(
     # The model has its own field validators, but pre-checking here gives
     # clearer errors and avoids constructing the object.
     name_s = _strip_or_raise(name, "name")
-    provider_key_s = _strip_or_raise(provider_key, "provider_key")
+    provider_key_enum = _coerce_provider_key(provider_key)
     provider_url_s = _strip_or_raise(provider_url, "provider_url")
 
     now = datetime.now(timezone.utc)
@@ -123,7 +135,7 @@ async def create_provider_account(
         user_id=user_uuid,
         name=name_s,
         provider_tenant_id=normalize_string_or_none(provider_tenant_id),
-        provider_key=provider_key_s,
+        provider_key=provider_key_enum,
         provider_url=provider_url_s,
         api_key=encrypted_key,
         created_at=now,
@@ -156,7 +168,7 @@ async def update_provider_account(
     provider_account: DeploymentProviderAccount,
     name: str | None = None,
     provider_tenant_id: str | None = _UNSET,  # type: ignore[assignment]
-    provider_key: str | None = None,
+    provider_key: str | DeploymentProviderKey | None = None,
     provider_url: str | None = None,
     api_key: str | None = None,
 ) -> DeploymentProviderAccount:
@@ -165,7 +177,7 @@ async def update_provider_account(
     if provider_tenant_id is not _UNSET:
         provider_account.provider_tenant_id = normalize_string_or_none(provider_tenant_id)  # type: ignore[arg-type]
     if provider_key is not None:
-        provider_account.provider_key = _strip_or_raise(provider_key, "provider_key")
+        provider_account.provider_key = _coerce_provider_key(provider_key)
     if provider_url is not None:
         provider_account.provider_url = _strip_or_raise(provider_url, "provider_url")
     if api_key is not None:

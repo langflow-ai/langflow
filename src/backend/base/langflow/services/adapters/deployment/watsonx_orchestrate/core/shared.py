@@ -25,7 +25,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import W
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import extract_error_detail
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Awaitable, Callable, Iterator
 
     from lfx.services.adapters.deployment.schema import BaseFlowArtifact, IdLike
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -157,14 +157,14 @@ async def resolve_connections_for_operations(
     existing_app_ids: list[str],
     raw_connections_to_create: list[RawConnectionCreatePlan],
     error_prefix: str,
-    validate_connection_fn: Callable[..., object] = validate_connection,
-    create_connection_fn: Callable[..., object] = create_connection_with_conflict_mapping,
+    validate_connection_fn: Callable[..., Awaitable[object]] = validate_connection,
+    create_connection_fn: Callable[..., Awaitable[str]] = create_connection_with_conflict_mapping,
 ) -> ConnectionResolutionResult:
     operation_to_provider_app_id = {app_id: app_id for app_id in existing_app_ids}
     resolved_connections: dict[str, str] = {}
 
     if existing_app_ids:
-        existing_connections = await asyncio.gather(
+        existing_connections: list[object] = await asyncio.gather(
             *(retry_create(validate_connection_fn, clients.connections, app_id=app_id) for app_id in existing_app_ids)
         )
         for app_id, connection in zip(existing_app_ids, existing_connections, strict=True):
@@ -208,7 +208,7 @@ async def resolve_connections_for_operations(
     if create_connection_errors:
         raise ConnectionCreateBatchError(created_app_ids=created_app_ids, errors=create_connection_errors)
 
-    validated_created_connections = await asyncio.gather(
+    validated_created_connections: list[object] = await asyncio.gather(
         *(
             retry_create(
                 validate_connection_fn,
@@ -264,7 +264,7 @@ async def create_raw_tools_with_bindings(
     operation_to_provider_app_id: dict[str, str],
     resolved_connections: dict[str, str],
     resource_prefix: str,
-    create_and_upload_tools_fn: Callable[..., object] = create_and_upload_wxo_flow_tools_with_bindings,
+    create_and_upload_tools_fn: Callable[..., Awaitable[list[str]]] = create_and_upload_wxo_flow_tools_with_bindings,
 ) -> RawToolCreateResult:
     if not raw_tools_to_create:
         return RawToolCreateResult(created_tool_ids=[], snapshot_bindings=[])

@@ -267,6 +267,9 @@ class BaseDeploymentMapper:
         if "provider_url" in payload.model_fields_set:
             update_kwargs["provider_url"] = payload.provider_url
         if "provider_data" in payload.model_fields_set:
+            if payload.provider_data is None:
+                msg = "'provider_data' cannot be null when provided."
+                raise ValueError(msg)
             update_kwargs.update(self.resolve_credential_fields(provider_data=payload.provider_data))
         if "provider_tenant_id" in payload.model_fields_set:
             update_kwargs["provider_tenant_id"] = self.resolve_provider_tenant_id(

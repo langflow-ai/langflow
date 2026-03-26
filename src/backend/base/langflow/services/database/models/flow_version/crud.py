@@ -100,7 +100,7 @@ async def create_flow_version_entry(
         deployed_version_ids = (
             select(FlowVersionDeploymentAttachment.flow_version_id)
             .where(
-                FlowVersionDeploymentAttachment.flow_version_id.in_(
+                col(FlowVersionDeploymentAttachment.flow_version_id).in_(
                     select(FlowVersion.id).where(FlowVersion.flow_id == flow_id)
                 )
             )
@@ -176,7 +176,7 @@ async def get_flow_version_list(
     deployed_subquery = (
         select(FlowVersionDeploymentAttachment.flow_version_id)
         .where(
-            FlowVersionDeploymentAttachment.flow_version_id.in_(
+            col(FlowVersionDeploymentAttachment.flow_version_id).in_(
                 select(FlowVersion.id).where(FlowVersion.flow_id == flow_id)
             )
         )
@@ -195,7 +195,7 @@ async def get_flow_version_list(
         filter_subquery = (
             select(FlowVersionDeploymentAttachment.flow_version_id)
             .where(
-                FlowVersionDeploymentAttachment.deployment_id.in_(deployment_ids),
+                col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
                 FlowVersionDeploymentAttachment.user_id == user_id,
             )
             .distinct()

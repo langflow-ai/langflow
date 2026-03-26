@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID
@@ -26,7 +27,7 @@ from lfx.services.adapters.deployment.schema import (
 from lfx.services.deps import get_deployment_adapter
 from lfx.services.interfaces import DeploymentServiceProtocol
 from sqlalchemy import and_, literal, union_all
-from sqlmodel import func, select
+from sqlmodel import col, func, select
 
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
@@ -69,7 +70,7 @@ if TYPE_CHECKING:
     from .base import BaseDeploymentMapper
 
 
-def parse_flow_version_reference_ids(reference_ids: list[UUID | str]) -> list[UUID]:
+def parse_flow_version_reference_ids(reference_ids: Sequence[UUID | str]) -> list[UUID]:
     """Normalize UUID/string references into validated flow-version UUIDs."""
     flow_version_ids: list[UUID] = []
     for flow_version_ref in reference_ids:
@@ -111,14 +112,14 @@ async def build_flow_artifacts_from_flow_versions(
     statement = (
         select(
             indexed_flow_version_ids_cte.c.position,
-            FlowVersion.id.label("flow_version_id"),
-            FlowVersion.data.label("flow_version_data"),
-            FlowVersion.version_number.label("flow_version_number"),
-            Flow.folder_id.label("project_id"),
-            Flow.id.label("flow_id"),
-            Flow.name.label("flow_name"),
-            Flow.description.label("flow_description"),
-            Flow.tags.label("flow_tags"),
+            col(FlowVersion.id).label("flow_version_id"),
+            col(FlowVersion.data).label("flow_version_data"),
+            col(FlowVersion.version_number).label("flow_version_number"),
+            col(Flow.folder_id).label("project_id"),
+            col(Flow.id).label("flow_id"),
+            col(Flow.name).label("flow_name"),
+            col(Flow.description).label("flow_description"),
+            col(Flow.tags).label("flow_tags"),
         )
         .select_from(indexed_flow_version_ids_cte)
         .join(
@@ -177,7 +178,7 @@ async def build_project_scoped_flow_artifacts_from_flow_versions(
     db,
     user_id: UUID,
     project_id: UUID,
-    reference_ids: list[UUID | str],
+    reference_ids: Sequence[UUID | str],
 ) -> list[tuple[UUID, BaseFlowArtifact]]:
     """Resolve project-scoped flow version references preserving input order."""
     flow_version_ids = parse_flow_version_reference_ids(reference_ids)
@@ -188,12 +189,12 @@ async def build_project_scoped_flow_artifacts_from_flow_versions(
     statement = (
         select(
             indexed_flow_version_ids_cte.c.position,
-            FlowVersion.id.label("flow_version_id"),
-            FlowVersion.data.label("flow_version_data"),
-            Flow.id.label("flow_id"),
-            Flow.name.label("flow_name"),
-            Flow.description.label("flow_description"),
-            Flow.tags.label("flow_tags"),
+            col(FlowVersion.id).label("flow_version_id"),
+            col(FlowVersion.data).label("flow_version_data"),
+            col(Flow.id).label("flow_id"),
+            col(Flow.name).label("flow_name"),
+            col(Flow.description).label("flow_description"),
+            col(Flow.tags).label("flow_tags"),
         )
         .select_from(indexed_flow_version_ids_cte)
         .join(
@@ -264,7 +265,7 @@ async def validate_project_scoped_flow_version_ids(
                 )
                 .where(
                     FlowVersion.user_id == user_id,
-                    FlowVersion.id.in_(unique_flow_version_ids),
+                    col(FlowVersion.id).in_(unique_flow_version_ids),
                 )
             )
         ).one()

@@ -248,6 +248,7 @@ async def test_delete_by_id_none_rowcount_logs_error():
 async def test_create_deployment_strips_whitespace(
     db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
 ):
+    assert folder.id is not None
     row = await create_deployment(
         db,
         user_id=user.id,
@@ -269,6 +270,7 @@ async def test_create_deployment_strips_whitespace(
 async def test_update_deployment_strips_whitespace(
     db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
 ):
+    assert folder.id is not None
     row = await create_deployment(
         db,
         user_id=user.id,
@@ -292,6 +294,7 @@ async def test_update_deployment_strips_whitespace(
 async def test_deployment_name_exists_returns_true_when_found(
     db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
 ):
+    assert folder.id is not None
     await create_deployment(
         db,
         user_id=user.id,
@@ -329,6 +332,7 @@ async def test_deployment_name_exists_returns_false_when_not_found(
 async def test_deployment_name_exists_strips_whitespace(
     db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
 ):
+    assert folder.id is not None
     await create_deployment(
         db,
         user_id=user.id,

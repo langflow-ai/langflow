@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import delete, func, select
+from sqlmodel import col, delete, func, select
 
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
     FlowVersionDeploymentAttachment,
@@ -93,7 +93,7 @@ async def list_deployment_attachments_for_flow_version_ids(
     stmt = select(FlowVersionDeploymentAttachment).where(
         FlowVersionDeploymentAttachment.user_id == user_id,
         FlowVersionDeploymentAttachment.deployment_id == deployment_id,
-        FlowVersionDeploymentAttachment.flow_version_id.in_(flow_version_ids),
+        col(FlowVersionDeploymentAttachment.flow_version_id).in_(flow_version_ids),
     )
     return list((await db.exec(stmt)).all())
 
@@ -153,7 +153,7 @@ async def list_attachments_by_deployment_ids(
         select(FlowVersionDeploymentAttachment)
         .where(
             FlowVersionDeploymentAttachment.user_id == user_id,
-            FlowVersionDeploymentAttachment.deployment_id.in_(deployment_ids),
+            col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
         )
         .order_by(FlowVersionDeploymentAttachment.created_at)
     )
@@ -190,7 +190,7 @@ async def list_attachments_for_flow_with_provider_info(
         .join(DeploymentProviderAccount, DeploymentProviderAccount.id == Deployment.deployment_provider_account_id)
         .where(
             FlowVersionDeploymentAttachment.user_id == user_id,
-            FlowVersionDeploymentAttachment.flow_version_id.in_(
+            col(FlowVersionDeploymentAttachment.flow_version_id).in_(
                 select(FlowVersion.id).where(FlowVersion.flow_id == flow_id)
             ),
         )
@@ -216,7 +216,7 @@ async def count_attachments_by_deployment_ids(
         )
         .where(
             FlowVersionDeploymentAttachment.user_id == user_id,
-            FlowVersionDeploymentAttachment.deployment_id.in_(deployment_ids),
+            col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
         )
         .group_by(FlowVersionDeploymentAttachment.deployment_id)
     )

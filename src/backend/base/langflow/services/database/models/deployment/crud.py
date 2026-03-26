@@ -159,7 +159,7 @@ async def list_deployments_page(
 
     attachment_counts_subquery = (
         select(
-            FlowVersionDeploymentAttachment.deployment_id.label("deployment_id"),
+            col(FlowVersionDeploymentAttachment.deployment_id).label("deployment_id"),
             func.count(func.distinct(FlowVersionDeploymentAttachment.flow_version_id)).label("attached_count"),
         )
         .where(FlowVersionDeploymentAttachment.user_id == user_id)
@@ -182,7 +182,7 @@ async def list_deployments_page(
             select(FlowVersionDeploymentAttachment.deployment_id)
             .where(
                 FlowVersionDeploymentAttachment.user_id == user_id,
-                FlowVersionDeploymentAttachment.flow_version_id.in_(flow_version_ids),
+                col(FlowVersionDeploymentAttachment.flow_version_id).in_(flow_version_ids),
             )
             .group_by(FlowVersionDeploymentAttachment.deployment_id)
             .subquery()
@@ -205,8 +205,8 @@ async def list_deployments_page(
                 FlowVersionDeploymentAttachment.flow_version_id,
             ).where(
                 FlowVersionDeploymentAttachment.user_id == user_id,
-                FlowVersionDeploymentAttachment.deployment_id.in_(deployment_ids),
-                FlowVersionDeploymentAttachment.flow_version_id.in_(flow_version_ids),
+                col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
+                col(FlowVersionDeploymentAttachment.flow_version_id).in_(flow_version_ids),
             )
         )
     ).all()
@@ -243,7 +243,7 @@ async def count_deployments_by_provider(
             select(FlowVersionDeploymentAttachment.deployment_id)
             .where(
                 FlowVersionDeploymentAttachment.user_id == user_id,
-                FlowVersionDeploymentAttachment.flow_version_id.in_(flow_version_ids),
+                col(FlowVersionDeploymentAttachment.flow_version_id).in_(flow_version_ids),
             )
             .group_by(FlowVersionDeploymentAttachment.deployment_id)
             .subquery()
