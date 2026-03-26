@@ -888,10 +888,11 @@ async def _create_provider_account_row(session, *, user_id):
     return await create_provider_account(
         session,
         user_id=user_id,
+        name="test-provider-account",
         provider_tenant_id=None,
         provider_key="watsonx-orchestrate",
         provider_url="https://test.example.com",
-        api_key="test-key",
+        api_key="test-key",  # pragma: allowlist secret
     )
 
 
