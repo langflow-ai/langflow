@@ -1,8 +1,6 @@
 name: GP Download Translations
 
 on:
-  schedule:
-    - cron: "0 6 * * *"  # Daily at 6am UTC
   workflow_dispatch:
 
 jobs:

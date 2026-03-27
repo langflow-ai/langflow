@@ -3,7 +3,7 @@ name: GP Upload Strings
 on:
   push:
     branches:
-      - main
+      - "release-*"
     paths:
       - "src/frontend/src/locales/en.json"
   workflow_dispatch:
