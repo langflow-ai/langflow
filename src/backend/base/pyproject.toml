@@ -99,6 +99,7 @@ dependencies = [
     "onnxruntime>=1.20,<1.24", # >=1.24 does not support Python 3.10; allow 1.23.x for agent-lifecycle-toolkit compatibility
     "dynaconf>=3.2.13,<4.0.0",
     "pyasn1>=0.6.3,<0.7.0",
+    "langgraph-checkpoint>4.0.0,<5.0.0",
 ]
 
 [dependency-groups]
