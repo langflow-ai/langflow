@@ -363,8 +363,6 @@ class BaseConfigResponse(BaseModel):
 
     Contains fields that are safe to expose publicly and needed by the frontend
     for basic functionality (file uploads, event delivery, voice mode, timeouts).
-    Feature flags are included here so unauthenticated UIs can fail closed on
-    gated capabilities such as public publishing and deployments.
     """
 
     feature_flags: FeatureFlags
