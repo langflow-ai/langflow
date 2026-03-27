@@ -96,7 +96,7 @@ dependencies = [
     "langchain-chroma~=0.2.6",
     "jaraco-context>=6.1.0",
     "wheel>=0.46.2,<1.0.0",
-    "onnxruntime>=1.20,<=1.23" # >=1.24 does not support Python 3.10
+    "onnxruntime>=1.20,<1.24" # >=1.24 does not support Python 3.10; allow 1.23.x for agent-lifecycle-toolkit compatibility
 ]
 
 [dependency-groups]
@@ -313,7 +313,9 @@ apify = ["apify-client>=1.8.1"]
 spider = ["spider-client>=0.0.27,<1.0.0"]
 
 # ALTK (Agent Lifecycle Toolkit)
-altk = ["agent-lifecycle-toolkit~=0.4.4"]
+# Updated to 0.10.1+ for PyTorch 2.6.0 compatibility (addresses torch.load RCE vulnerability)
+# Upper bound prevents breaking changes in future major versions
+altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0"]
 
 # Additional LangChain integrations
 langchain-huggingface = ["langchain-huggingface~=1.2.0"]

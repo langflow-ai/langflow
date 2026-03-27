@@ -70,7 +70,7 @@ dev = [
     "pyyaml>=6.0.2",
     "pyleak>=0.1.14",
     "mcp-server-fetch>=2025.1.17",
-    "onnxruntime>=1.20,<=1.23" # >=1.24 does not support Python 3.10
+    "onnxruntime>=1.20,<1.24" # >=1.24 does not support Python 3.10; <1.24 allows 1.23.x for agent-lifecycle-toolkit
 ]
 
 [[tool.uv.index]]
@@ -107,8 +107,9 @@ docling = [
     "ocrmac>=1.0.0; sys_platform == 'darwin'",
     # CPU-only PyTorch required for docling features
     # Loose version ranges intentionally used to avoid conflicts with transitive dependencies (e.g., altk)
-    "torch>=2.0.0",
-    "torchvision>=0.15.0",
+    # Updated to 2.6.0+ to address CVE: RCE vulnerability in torch.load() with weights_only=True
+    "torch>=2.6.0",
+    "torchvision>=0.21.0",  # torchvision 0.21+ is compatible with PyTorch 2.6+
 ]
 
 audio = [
