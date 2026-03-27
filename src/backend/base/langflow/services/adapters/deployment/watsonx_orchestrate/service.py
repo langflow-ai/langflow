@@ -13,6 +13,7 @@ from lfx.services.adapters.deployment.base import BaseDeploymentService
 from lfx.services.adapters.deployment.exceptions import (
     AuthenticationError,
     AuthorizationError,
+    AuthSchemeError,
     DeploymentConflictError,
     DeploymentError,
     DeploymentNotFoundError,
@@ -776,27 +777,35 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             raise DeploymentError(message=msg, error_code="deployment_error")
 
         provider_creds = verify_slot.parse(payload.provider_data)
-        authenticator = get_authenticator(
-            instance_url=payload.base_url,
-            api_key=provider_creds.api_key,
+
+        malformed_credentials_msg = (
+            "Provider credentials are malformed. Please ensure the URL and API key are correctly formatted."
         )
-        # AuthSchemeError bubbles up from get_authenticator for unrecognised URLs
 
         try:
-            authenticator.validate()
+            authenticator = get_authenticator(
+                instance_url=payload.base_url,
+                api_key=provider_creds.api_key,
+            )
         except ValueError as exc:
             raise InvalidContentError(
-                message=(
-                    "Provider credentials are malformed. Please ensure the URL and API key are correctly formatted."
-                ),
+                message=malformed_credentials_msg,
+                cause=exc,
+            ) from exc
+        except AuthSchemeError:
+            raise
+        except Exception as exc:
+            raise DeploymentError(
+                message="Credential verification failed unexpectedly.",
+                error_code="deployment_error",
                 cause=exc,
             ) from exc
 
         try:
             await asyncio.to_thread(authenticator.token_manager.get_token)
         except ApiException as exc:
-            # Log the raw provider detail for diagnostics but do not
-            # propagate it — the response body could echo secrets.
+            # Log only the status code for diagnostics and avoid exposing
+            # provider response details that could include sensitive values.
             logger.error(  # noqa: TRY400
                 "Credential verification failed (status=%s)",
                 exc.status_code,

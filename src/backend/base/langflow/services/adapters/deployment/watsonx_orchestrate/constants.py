@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from enum import Enum
 
@@ -25,10 +26,29 @@ WXO_TRANSLATE = str.maketrans({" ": "_", "-": "_"})
 ERROR_PREFIX = "An error occurred while"
 ERROR_SUFFIX_IN = "in Watsonx Orchestrate."
 
+IBM_IAM_MCSP_PRODUCTION_URL = "https://iam.platform.saas.ibm.com"
+IBM_IAM_PRODUCTION_URL = "https://iam.cloud.ibm.com"
+
 
 class WxOAuthURL(str, Enum):
-    MCSP = "https://iam.platform.saas.ibm.com"
-    IBM_IAM = "https://iam.cloud.ibm.com"
+    """IAM token endpoint URLs used to authenticate against Watsonx Orchestrate.
+
+    Non-production wxO environments consume from a different IAM endpoint than
+    production environments. These cannot be exposed in plain text so
+    environment variables are surfaced instead.
+    Set ``IBM_IAM_MCSP_DEV_URL_OVERRIDE`` for AWS wxO environments,
+    ``IBM_IAM_DEV_URL_OVERRIDE`` for IBM Cloud.
+    When unset, the production URLs are used
+    ("https://iam.platform.saas.ibm.com" and "https://iam.cloud.ibm.com" respectively).
+
+    Please note: The IAM endpoints cannot be changed during runtime,
+    Langflow does not dynamically resolve the IAM endpoint based on
+    the wxO environment of a given tenant.
+    The environment variables are solely for internal testing and development.
+    """
+
+    MCSP = os.getenv("IBM_IAM_MCSP_DEV_URL_OVERRIDE", "").strip() or IBM_IAM_MCSP_PRODUCTION_URL
+    IBM_IAM = os.getenv("IBM_IAM_DEV_URL_OVERRIDE", "").strip() or IBM_IAM_PRODUCTION_URL
 
 
 class ErrorPrefix(str, Enum):
