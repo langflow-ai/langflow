@@ -246,8 +246,12 @@ jobs:
           git diff --staged --quiet || git commit -m "chore: update translations from Globalization Pipeline [skip ci]"
           git push
 
+      - name: Report GP download failure
+        if: failure()
+        run: echo "::warning::GP translation download failed — translations may be out of date. Check the 'Download translations from GP' step above for details."
+
   frontend-tests-linux:
-    if: always() && github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
+    if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
     name: Run Frontend Tests - Linux
     needs: [resolve-release-branch, create-nightly-tag]
     uses: ./.github/workflows/typescript_test.yml
@@ -263,7 +267,7 @@ jobs:
       TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
 
   frontend-tests-windows:
-    if: always() && github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
+    if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
     name: Run Frontend Tests - Windows
     needs: [resolve-release-branch, create-nightly-tag]
     # Windows tests are non-blocking - the release-nightly-build job only checks

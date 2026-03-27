@@ -5,15 +5,11 @@ from unittest.mock import patch
 
 import pytest
 
+import download_translations as dl_mod
+
 
 def _run_main(output_dir: str):
-    """Helper to invoke download_translations.main() with an --output argument."""
     with patch("sys.argv", ["download_translations.py", "--output", output_dir]):
-        import importlib
-
-        import scripts.gp.download_translations as dl_mod
-
-        importlib.reload(dl_mod)
         dl_mod.main()
 
 
@@ -28,8 +24,8 @@ SAMPLE_RESPONSE = {
 class TestDownloadTranslations:
     def test_writes_json_files_for_each_language(self, tmp_path):
         with (
-            patch("scripts.gp.download_translations.get_strings", return_value=SAMPLE_RESPONSE),
-            patch("scripts.gp.download_translations.TARGET_LANGS", ["fr", "es"]),
+            patch.object(dl_mod, "get_strings", return_value=SAMPLE_RESPONSE),
+            patch.object(dl_mod, "TARGET_LANGS", ["fr", "es"]),
         ):
             _run_main(str(tmp_path))
 
@@ -46,8 +42,8 @@ class TestDownloadTranslations:
             return SAMPLE_RESPONSE
 
         with (
-            patch("scripts.gp.download_translations.get_strings", side_effect=_get_strings),
-            patch("scripts.gp.download_translations.TARGET_LANGS", ["fr", "ja"]),
+            patch.object(dl_mod, "get_strings", side_effect=_get_strings),
+            patch.object(dl_mod, "TARGET_LANGS", ["fr", "ja"]),
         ):
             _run_main(str(tmp_path))
 
@@ -61,22 +57,20 @@ class TestDownloadTranslations:
             return SAMPLE_RESPONSE
 
         with (
-            patch("scripts.gp.download_translations.get_strings", side_effect=_get_strings),
-            patch("scripts.gp.download_translations.TARGET_LANGS", ["fr", "de"]),
+            patch.object(dl_mod, "get_strings", side_effect=_get_strings),
+            patch.object(dl_mod, "TARGET_LANGS", ["fr", "de"]),
             pytest.raises(SystemExit) as exc_info,
         ):
             _run_main(str(tmp_path))
 
         assert exc_info.value.code == 1
-        # Successful language should still have been written
         assert (tmp_path / "fr.json").exists()
 
     def test_exits_cleanly_when_all_succeed(self, tmp_path):
         with (
-            patch("scripts.gp.download_translations.get_strings", return_value=SAMPLE_RESPONSE),
-            patch("scripts.gp.download_translations.TARGET_LANGS", ["fr"]),
+            patch.object(dl_mod, "get_strings", return_value=SAMPLE_RESPONSE),
+            patch.object(dl_mod, "TARGET_LANGS", ["fr"]),
         ):
-            # Should not raise
             _run_main(str(tmp_path))
 
         assert (tmp_path / "fr.json").exists()
@@ -90,8 +84,8 @@ class TestDownloadTranslations:
         }
 
         with (
-            patch("scripts.gp.download_translations.get_strings", return_value=flat_response),
-            patch("scripts.gp.download_translations.TARGET_LANGS", ["es"]),
+            patch.object(dl_mod, "get_strings", return_value=flat_response),
+            patch.object(dl_mod, "TARGET_LANGS", ["es"]),
         ):
             _run_main(str(tmp_path))
 

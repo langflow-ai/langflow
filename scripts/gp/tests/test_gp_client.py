@@ -3,9 +3,13 @@
 import base64
 import hashlib
 import hmac
+import importlib
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+import gp_client
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -28,16 +32,8 @@ def _expected_signature(password: str, message: str) -> str:
 
 class TestGetHeaders:
     def test_get_request_authorization_format(self):
-        with patch.dict(
-            "os.environ",
-            {"GP_ADMIN_USER_ID": "user123", "GP_ADMIN_PASSWORD": "secret"},
-        ):
-            import importlib
-
-            from scripts.gp import gp_client
-
+        with patch.dict("os.environ", {"GP_ADMIN_USER_ID": "user123", "GP_ADMIN_PASSWORD": "secret"}):
             importlib.reload(gp_client)
-
             headers = gp_client.get_headers("https://example.com/api", "GET")
 
         assert headers["Authorization"].startswith("GP-HMAC user123:")
@@ -46,49 +42,24 @@ class TestGetHeaders:
         assert "Content-Type" not in headers
 
     def test_put_request_includes_content_type(self):
-        with patch.dict(
-            "os.environ",
-            {"GP_ADMIN_USER_ID": "user123", "GP_ADMIN_PASSWORD": "secret"},
-        ):
-            import importlib
-
-            from scripts.gp import gp_client
-
+        with patch.dict("os.environ", {"GP_ADMIN_USER_ID": "user123", "GP_ADMIN_PASSWORD": "secret"}):
             importlib.reload(gp_client)
-
             headers = gp_client.get_headers("https://example.com/api", "PUT", {"key": "val"})
 
         assert headers["Content-Type"] == "application/json"
 
     def test_patch_request_uses_merge_patch_content_type(self):
-        with patch.dict(
-            "os.environ",
-            {"GP_ADMIN_USER_ID": "user123", "GP_ADMIN_PASSWORD": "secret"},
-        ):
-            import importlib
-
-            from scripts.gp import gp_client
-
+        with patch.dict("os.environ", {"GP_ADMIN_USER_ID": "user123", "GP_ADMIN_PASSWORD": "secret"}):
             importlib.reload(gp_client)
-
             headers = gp_client.get_headers("https://example.com/api", "PATCH", {})
 
         assert headers["Content-Type"] == "application/merge-patch+json"
 
     def test_hmac_signature_is_deterministic_for_same_inputs(self):
-        with patch.dict(
-            "os.environ",
-            {"GP_ADMIN_USER_ID": "user123", "GP_ADMIN_PASSWORD": "secret"},
-        ):
-            import importlib
-
-            from scripts.gp import gp_client
-
+        with patch.dict("os.environ", {"GP_ADMIN_USER_ID": "user123", "GP_ADMIN_PASSWORD": "secret"}):
             importlib.reload(gp_client)
-
-            with patch("scripts.gp.gp_client.datetime") as mock_dt:
+            with patch("gp_client.datetime") as mock_dt:
                 mock_dt.now.return_value.strftime.return_value = "Thu, 26 Mar 2026 12:00:00 UTC"
-
                 h1 = gp_client.get_headers("https://example.com", "GET")
                 h2 = gp_client.get_headers("https://example.com", "GET")
 
@@ -106,18 +77,10 @@ class TestListBundles:
         mock_response.json.return_value = {"bundleIds": ["langflow-ui"]}
 
         with (
-            patch.dict(
-                "os.environ",
-                {"GP_ADMIN_USER_ID": "u", "GP_ADMIN_PASSWORD": "p"},
-            ),
-            patch("scripts.gp.gp_client.requests.get", return_value=mock_response) as mock_get,
+            patch.dict("os.environ", {"GP_ADMIN_USER_ID": "u", "GP_ADMIN_PASSWORD": "p"}),
+            patch("gp_client.requests.get", return_value=mock_response) as mock_get,
         ):
-            import importlib
-
-            from scripts.gp import gp_client
-
             importlib.reload(gp_client)
-
             result = gp_client.list_bundles()
 
         mock_get.assert_called_once()
@@ -131,18 +94,10 @@ class TestListBundles:
         mock_response.raise_for_status.side_effect = req.exceptions.HTTPError("401 Unauthorized")
 
         with (
-            patch.dict(
-                "os.environ",
-                {"GP_ADMIN_USER_ID": "u", "GP_ADMIN_PASSWORD": "p"},
-            ),
-            patch("scripts.gp.gp_client.requests.get", return_value=mock_response),
+            patch.dict("os.environ", {"GP_ADMIN_USER_ID": "u", "GP_ADMIN_PASSWORD": "p"}),
+            patch("gp_client.requests.get", return_value=mock_response),
         ):
-            import importlib
-
-            from scripts.gp import gp_client
-
             importlib.reload(gp_client)
-
             with pytest.raises(req.exceptions.HTTPError):
                 gp_client.list_bundles()
 
@@ -150,21 +105,10 @@ class TestListBundles:
         import requests as req
 
         with (
-            patch.dict(
-                "os.environ",
-                {"GP_ADMIN_USER_ID": "u", "GP_ADMIN_PASSWORD": "p"},
-            ),
-            patch(
-                "scripts.gp.gp_client.requests.get",
-                side_effect=req.exceptions.Timeout,
-            ),
+            patch.dict("os.environ", {"GP_ADMIN_USER_ID": "u", "GP_ADMIN_PASSWORD": "p"}),
+            patch("gp_client.requests.get", side_effect=req.exceptions.Timeout),
         ):
-            import importlib
-
-            from scripts.gp import gp_client
-
             importlib.reload(gp_client)
-
             with pytest.raises(req.exceptions.Timeout):
                 gp_client.list_bundles()
 
@@ -180,18 +124,10 @@ class TestUploadStrings:
         mock_response.json.return_value = {"status": "ok"}
 
         with (
-            patch.dict(
-                "os.environ",
-                {"GP_ADMIN_USER_ID": "u", "GP_ADMIN_PASSWORD": "p"},
-            ),
-            patch("scripts.gp.gp_client.requests.put", return_value=mock_response) as mock_put,
+            patch.dict("os.environ", {"GP_ADMIN_USER_ID": "u", "GP_ADMIN_PASSWORD": "p"}),
+            patch("gp_client.requests.put", return_value=mock_response) as mock_put,
         ):
-            import importlib
-
-            from scripts.gp import gp_client
-
             importlib.reload(gp_client)
-
             result = gp_client.upload_strings({"hello": "Hello"})
 
         mock_put.assert_called_once()
@@ -204,18 +140,10 @@ class TestUploadStrings:
         mock_response.raise_for_status.side_effect = req.exceptions.HTTPError("500")
 
         with (
-            patch.dict(
-                "os.environ",
-                {"GP_ADMIN_USER_ID": "u", "GP_ADMIN_PASSWORD": "p"},
-            ),
-            patch("scripts.gp.gp_client.requests.put", return_value=mock_response),
+            patch.dict("os.environ", {"GP_ADMIN_USER_ID": "u", "GP_ADMIN_PASSWORD": "p"}),
+            patch("gp_client.requests.put", return_value=mock_response),
         ):
-            import importlib
-
-            from scripts.gp import gp_client
-
             importlib.reload(gp_client)
-
             with pytest.raises(req.exceptions.HTTPError):
                 gp_client.upload_strings({"hello": "Hello"})
 
@@ -231,18 +159,10 @@ class TestGetStrings:
         mock_response.json.return_value = {"resourceStrings": {"hello": {"value": "Bonjour"}}}
 
         with (
-            patch.dict(
-                "os.environ",
-                {"GP_ADMIN_USER_ID": "u", "GP_ADMIN_PASSWORD": "p"},
-            ),
-            patch("scripts.gp.gp_client.requests.get", return_value=mock_response),
+            patch.dict("os.environ", {"GP_ADMIN_USER_ID": "u", "GP_ADMIN_PASSWORD": "p"}),
+            patch("gp_client.requests.get", return_value=mock_response),
         ):
-            import importlib
-
-            from scripts.gp import gp_client
-
             importlib.reload(gp_client)
-
             result = gp_client.get_strings("fr")
 
         assert result["resourceStrings"]["hello"]["value"] == "Bonjour"
@@ -254,17 +174,9 @@ class TestGetStrings:
         mock_response.raise_for_status.side_effect = req.exceptions.HTTPError("403 Forbidden")
 
         with (
-            patch.dict(
-                "os.environ",
-                {"GP_ADMIN_USER_ID": "u", "GP_ADMIN_PASSWORD": "p"},
-            ),
-            patch("scripts.gp.gp_client.requests.get", return_value=mock_response),
+            patch.dict("os.environ", {"GP_ADMIN_USER_ID": "u", "GP_ADMIN_PASSWORD": "p"}),
+            patch("gp_client.requests.get", return_value=mock_response),
         ):
-            import importlib
-
-            from scripts.gp import gp_client
-
             importlib.reload(gp_client)
-
             with pytest.raises(req.exceptions.HTTPError):
                 gp_client.get_strings("fr")

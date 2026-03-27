@@ -5,15 +5,11 @@ from unittest.mock import patch
 
 import pytest
 
+import upload_strings as upload_mod
+
 
 def _run_main(source_path: str):
-    """Helper to invoke upload_strings.main() with a --source argument."""
     with patch("sys.argv", ["upload_strings.py", "--source", source_path]):
-        import importlib
-
-        import scripts.gp.upload_strings as upload_mod
-
-        importlib.reload(upload_mod)
         upload_mod.main()
 
 
@@ -23,10 +19,10 @@ class TestUploadStrings:
         source.write_text(json.dumps({"hello": "Hello", "bye": "Bye"}), encoding="utf-8")
 
         with (
-            patch("scripts.gp.upload_strings.list_bundles", return_value={"bundleIds": ["langflow-ui"]}),
-            patch("scripts.gp.upload_strings.create_bundle") as mock_create,
-            patch("scripts.gp.upload_strings.upload_strings") as mock_upload,
-            patch("scripts.gp.upload_strings.GP_BUNDLE", "langflow-ui"),
+            patch.object(upload_mod, "list_bundles", return_value={"bundleIds": ["langflow-ui"]}),
+            patch.object(upload_mod, "create_bundle") as mock_create,
+            patch.object(upload_mod, "upload_strings") as mock_upload,
+            patch.object(upload_mod, "GP_BUNDLE", "langflow-ui"),
         ):
             _run_main(str(source))
 
@@ -38,10 +34,10 @@ class TestUploadStrings:
         source.write_text(json.dumps({"hello": "Hello"}), encoding="utf-8")
 
         with (
-            patch("scripts.gp.upload_strings.list_bundles", return_value={"bundleIds": []}),
-            patch("scripts.gp.upload_strings.create_bundle") as mock_create,
-            patch("scripts.gp.upload_strings.upload_strings") as mock_upload,
-            patch("scripts.gp.upload_strings.GP_BUNDLE", "langflow-ui"),
+            patch.object(upload_mod, "list_bundles", return_value={"bundleIds": []}),
+            patch.object(upload_mod, "create_bundle") as mock_create,
+            patch.object(upload_mod, "upload_strings") as mock_upload,
+            patch.object(upload_mod, "GP_BUNDLE", "langflow-ui"),
         ):
             _run_main(str(source))
 
@@ -53,10 +49,10 @@ class TestUploadStrings:
         source.write_text("{}", encoding="utf-8")
 
         with (
-            patch("scripts.gp.upload_strings.list_bundles", return_value={"bundleIds": ["langflow-ui"]}),
-            patch("scripts.gp.upload_strings.create_bundle"),
-            patch("scripts.gp.upload_strings.upload_strings") as mock_upload,
-            patch("scripts.gp.upload_strings.GP_BUNDLE", "langflow-ui"),
+            patch.object(upload_mod, "list_bundles", return_value={"bundleIds": ["langflow-ui"]}),
+            patch.object(upload_mod, "create_bundle"),
+            patch.object(upload_mod, "upload_strings") as mock_upload,
+            patch.object(upload_mod, "GP_BUNDLE", "langflow-ui"),
         ):
             _run_main(str(source))
 
@@ -66,9 +62,9 @@ class TestUploadStrings:
         missing = str(tmp_path / "missing.json")
 
         with (
-            patch("scripts.gp.upload_strings.list_bundles", return_value={"bundleIds": []}),
-            patch("scripts.gp.upload_strings.create_bundle"),
-            patch("scripts.gp.upload_strings.upload_strings"),
+            patch.object(upload_mod, "list_bundles", return_value={"bundleIds": []}),
+            patch.object(upload_mod, "create_bundle"),
+            patch.object(upload_mod, "upload_strings"),
             pytest.raises(FileNotFoundError),
         ):
             _run_main(missing)
