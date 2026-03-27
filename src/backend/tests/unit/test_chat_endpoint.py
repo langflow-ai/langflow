@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import json
 import uuid
 from uuid import UUID
@@ -486,7 +487,7 @@ async def test_build_flow_cross_user_blocked(client, json_memory_chatbot_no_llm,
     """
     victim_flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
 
-    login_data = {"username": user_two.username, "password": "hashed_password"}
+    login_data = {"username": user_two.username, "password": "hashed_password"}  # pragma: allowlist secret
     response = await client.post("api/v1/login", data=login_data)
     assert response.status_code == 200
     attacker_headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
@@ -527,7 +528,7 @@ async def test_build_events_cross_user_blocked(client, json_memory_chatbot_no_ll
     build_response = await build_flow(client, flow_id, logged_in_headers)
     job_id = build_response["job_id"]
 
-    login_data = {"username": user_two.username, "password": "hashed_password"}
+    login_data = {"username": user_two.username, "password": "hashed_password"}  # pragma: allowlist secret
     response = await client.post("api/v1/login", data=login_data)
     assert response.status_code == 200
     attacker_headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
@@ -554,7 +555,7 @@ async def test_build_flow_public_flow_accessible_by_other_user(
     )
     assert patch_response.status_code == 200
 
-    login_data = {"username": user_two.username, "password": "hashed_password"}
+    login_data = {"username": user_two.username, "password": "hashed_password"}  # pragma: allowlist secret
     response = await client.post("api/v1/login", data=login_data)
     assert response.status_code == 200
     other_headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
@@ -575,7 +576,7 @@ async def test_cancel_build_cross_user_blocked(client, json_memory_chatbot_no_ll
     build_response = await build_flow(client, flow_id, logged_in_headers)
     job_id = build_response["job_id"]
 
-    login_data = {"username": user_two.username, "password": "hashed_password"}
+    login_data = {"username": user_two.username, "password": "hashed_password"}  # pragma: allowlist secret
     response = await client.post("api/v1/login", data=login_data)
     assert response.status_code == 200
     attacker_headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
@@ -645,7 +646,7 @@ async def test_get_build_events_public_tmp_job_accessible_by_any_auth_user(
     assert start_response.status_code == codes.OK
     job_id = start_response.json()["job_id"]
 
-    login_data = {"username": user_two.username, "password": "hashed_password"}
+    login_data = {"username": user_two.username, "password": "hashed_password"}  # pragma: allowlist secret
     login_response = await client.post("api/v1/login", data=login_data)
     assert login_response.status_code == codes.OK
     other_headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}
@@ -688,7 +689,7 @@ async def test_cancel_build_public_tmp_job_accessible_by_any_auth_user(
     assert start_response.status_code == codes.OK
     job_id = start_response.json()["job_id"]
 
-    login_data = {"username": user_two.username, "password": "hashed_password"}
+    login_data = {"username": user_two.username, "password": "hashed_password"}  # pragma: allowlist secret
     login_response = await client.post("api/v1/login", data=login_data)
     assert login_response.status_code == codes.OK
     other_headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}
@@ -734,7 +735,5 @@ async def test_job_owner_cleaned_up_after_cleanup_job():
         service._closed = True
         if service._cleanup_task:
             service._cleanup_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError, Exception):
                 await service._cleanup_task
-            except (asyncio.CancelledError, Exception):
-                pass
