@@ -7,12 +7,16 @@ from enum import Enum
 
 from lfx.services.adapters.deployment.schema import DeploymentType
 
+from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
+
 SUPPORTED_ADAPTER_DEPLOYMENT_TYPES: frozenset[DeploymentType] = frozenset({DeploymentType.AGENT})
 CREATE_MAX_RETRIES = 3
 UPDATE_MAX_RETRIES = 3
 ROLLBACK_MAX_RETRIES = 5
 RETRY_INITIAL_DELAY_SECONDS = 0.5
 PROVIDER_SPEC_RESOURCE_NAME_PREFIX_KEY = "resource_name_prefix"
+WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH = 64
+WXO_RESOURCE_NAME_PREFIX_NAMESPACE = "lf_"
 DEFAULT_WXO_AGENT_LLM = "groq/openai/gpt-oss-120b"
 
 WXO_SANITIZE_RE = re.compile(r"[^a-zA-Z0-9_]")
@@ -45,6 +49,4 @@ class ErrorPrefix(str, Enum):
     GET_EXECUTION = f"{ERROR_PREFIX} getting a deployment execution {ERROR_SUFFIX_IN}"
 
 
-# NOTE: this key must match the value of the provider_key column
-# in the deployment_provider_account table.
-WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY = "watsonx-orchestrate"
+WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY = DeploymentProviderKey.WATSONX_ORCHESTRATE.value
