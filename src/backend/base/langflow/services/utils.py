@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+from importlib import import_module
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from sqlalchemy import delete
 from sqlalchemy import exc as sqlalchemy_exc
 from sqlmodel import col, select
@@ -282,16 +284,24 @@ def register_builtin_adapters() -> None:
     Keep direct adapter imports limited to guarded paths and maintain CI
     coverage that confirms Watsonx tests run (not skip) in eligible environments.
     """
+    if not FEATURE_FLAGS.wxo_deployments:
+        logger.debug("Skipping deployment adapter registration: wxo_deployments feature flag disabled")
+        return
+
     try:
-        import langflow.services.adapters.deployment.watsonx_orchestrate  # noqa: F401
+        import_module("langflow.services.adapters.deployment.watsonx_orchestrate")
     except ModuleNotFoundError as exc:
         logger.info("Skipping Watsonx Orchestrate adapter registration: %s", exc)
 
 
 def register_builtin_deployment_mappers() -> None:
     """Import built-in deployment mapper modules so registration side effects fire."""
+    if not FEATURE_FLAGS.wxo_deployments:
+        logger.debug("Skipping deployment mapper registration: wxo_deployments feature flag disabled")
+        return
+
     try:
-        import langflow.api.v1.mappers.deployments.watsonx_orchestrate  # noqa: F401
+        import_module("langflow.api.v1.mappers.deployments.watsonx_orchestrate")
     except ModuleNotFoundError as exc:
         logger.info("Skipping Watsonx Orchestrate deployment mapper registration: %s", exc)
 
