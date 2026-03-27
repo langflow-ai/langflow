@@ -28,14 +28,14 @@ ERROR_SUFFIX_IN = "in Watsonx Orchestrate."
 
 # The IAM endpoints below generate
 # authentication tokens for production
-# wxO environments and are documented publically:
+# wxO environments and are documented publicly:
 # Documentation: https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-generating-jwt-aws
 IBM_IAM_MCSP_PRODUCTION_URL = "https://iam.platform.saas.ibm.com"
 # Documentation: https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-generating-access-token-cloud
 IBM_IAM_PRODUCTION_URL = "https://iam.cloud.ibm.com"
 # Non-production wxO environments use different
-# IAM URLs, which are not documented publically
-# and must not be used publically in plain text.
+# IAM URLs, which are not documented publicly
+# and must not be used publicly in plain text.
 
 
 class WxOAuthURL(str, Enum):
