@@ -22,20 +22,9 @@ from langflow.api.v1.validate import router as validate_router
 from langflow.api.v1.variable import router as variables_router
 from langflow.api.v1.voice_mode import router as voice_mode_router
 
-
-def __getattr__(name: str):
-    if name == "deployment_router":
-        from langflow.api.v1.deployments import router as deployment_router
-
-        return deployment_router
-    msg = f"module {__name__!r} has no attribute {name!r}"
-    raise AttributeError(msg)
-
-
 __all__ = [
     "api_key_router",
     "chat_router",
-    "deployment_router",
     "endpoints_router",
     "files_router",
     "flow_version_router",

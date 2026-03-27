@@ -297,7 +297,7 @@ def register_builtin_adapters() -> None:
 def register_builtin_deployment_mappers() -> None:
     """Import built-in deployment mapper modules so registration side effects fire."""
     if not FEATURE_FLAGS.wxo_deployments:
-        logger.info("Skipping deployment mapper registration: wxo_deployments feature flag disabled")
+        logger.debug("Skipping deployment mapper registration: wxo_deployments feature flag disabled")
         return
 
     try:

@@ -918,8 +918,8 @@ async def test_list_versions_with_deployment_ids_returns_404_when_feature_disabl
         params={"deployment_ids": fake_deployment_id},
         headers=logged_in_headers,
     )
-    assert resp.status_code == status.HTTP_404_NOT_FOUND
-    assert resp.json()["detail"] == "This endpoint is not available"
+    assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    assert resp.json()["detail"] == "Cannot filter by deployment_ids: the wxo_deployments feature flag is disabled"
 
 
 async def test_list_versions_includes_is_deployed_false_by_default(client: AsyncClient, logged_in_headers, monkeypatch):
@@ -1277,8 +1277,8 @@ async def test_list_versions_rejects_deployment_ids_when_feature_disabled(
         headers=logged_in_headers,
     )
 
-    assert resp.status_code == status.HTTP_404_NOT_FOUND
-    assert resp.json()["detail"] == "This endpoint is not available"
+    assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    assert resp.json()["detail"] == "Cannot filter by deployment_ids: the wxo_deployments feature flag is disabled"
 
 
 # ---------------------------------------------------------------------------

@@ -101,7 +101,8 @@ def _translate_version_error(exc: FlowVersionError) -> HTTPException:
 
 def _ensure_deployments_enabled_for_filters(deployment_ids: list[UUID] | None) -> None:
     if deployment_ids and not FEATURE_FLAGS.wxo_deployments:
-        raise HTTPException(status_code=404, detail="This endpoint is not available")
+        msg = "Cannot filter by deployment_ids: the wxo_deployments feature flag is disabled"
+        raise HTTPException(status_code=400, detail=msg)
 
 
 @router.get("/")
