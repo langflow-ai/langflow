@@ -155,7 +155,7 @@
     "@testing-library/user-event": "^14.5.2",
     "@types/jest": "^29.5.12",
     "@types/lodash": "4.17.5",
-    "@types/node": "^20.14.2",
+    "@types/node": "^25.5.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@types/sortablejs": "^1.15.8",
