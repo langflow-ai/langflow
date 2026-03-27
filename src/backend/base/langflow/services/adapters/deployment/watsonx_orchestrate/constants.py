@@ -33,7 +33,7 @@ ERROR_SUFFIX_IN = "in Watsonx Orchestrate."
 IBM_IAM_MCSP_PRODUCTION_URL = "https://iam.platform.saas.ibm.com"
 # Documentation: https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-generating-access-token-cloud
 IBM_IAM_PRODUCTION_URL = "https://iam.cloud.ibm.com"
-# Non-production wxO environments consume from different
+# Non-production wxO environments use different
 # IAM URLs, which are not documented publically
 # and must not be used publically in plain text.
 
@@ -41,7 +41,7 @@ IBM_IAM_PRODUCTION_URL = "https://iam.cloud.ibm.com"
 class WxOAuthURL(str, Enum):
     """IAM token endpoint URLs used to authenticate against Watsonx Orchestrate.
 
-    Non-production wxO environments consume from a different IAM URL than
+    Non-production wxO environments use a different IAM URL than
     production environments. These cannot be exposed in plain text so
     environment variables are surfaced instead.
     Set ``IBM_IAM_MCSP_DEV_URL_OVERRIDE`` for AWS wxO environments,
