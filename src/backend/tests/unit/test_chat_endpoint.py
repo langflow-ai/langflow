@@ -6,6 +6,7 @@ from uuid import UUID
 import pytest
 from httpx import codes
 from langflow.services.database.models.flow import FlowUpdate
+from langflow.services.job_queue.service import JobQueueService
 from lfx.log.logger import logger
 from lfx.memory import aget_messages
 
@@ -476,6 +477,7 @@ async def test_build_public_tmp_ignores_data_parameter(client, json_memory_chatb
 
 
 @pytest.mark.benchmark
+@pytest.mark.security
 async def test_build_flow_cross_user_blocked(client, json_memory_chatbot_no_llm, logged_in_headers, user_two):
     """Security (GHSA-qj98-rhf8-v93f): authenticated user cannot build another user's private flow.
 
@@ -494,6 +496,7 @@ async def test_build_flow_cross_user_blocked(client, json_memory_chatbot_no_llm,
 
 
 @pytest.mark.benchmark
+@pytest.mark.security
 async def test_build_flow_unauthenticated_blocked(client, json_memory_chatbot_no_llm, logged_in_headers):
     """Unauthenticated request to build_flow must be rejected (4xx — no valid credentials)."""
     flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
@@ -504,6 +507,7 @@ async def test_build_flow_unauthenticated_blocked(client, json_memory_chatbot_no
 
 
 @pytest.mark.benchmark
+@pytest.mark.security
 async def test_build_flow_nonexistent_flow_returns_404(client, logged_in_headers):
     """Non-existent flow UUID must return 404."""
     nonexistent_id = uuid.uuid4()
@@ -512,6 +516,7 @@ async def test_build_flow_nonexistent_flow_returns_404(client, logged_in_headers
 
 
 @pytest.mark.benchmark
+@pytest.mark.security
 async def test_build_events_cross_user_blocked(client, json_memory_chatbot_no_llm, logged_in_headers, user_two):
     """Security (GHSA-qj98-rhf8-v93f): user cannot poll build events owned by another user.
 
@@ -532,6 +537,7 @@ async def test_build_events_cross_user_blocked(client, json_memory_chatbot_no_ll
 
 
 @pytest.mark.benchmark
+@pytest.mark.security
 async def test_build_flow_public_flow_accessible_by_other_user(
     client, json_memory_chatbot_no_llm, logged_in_headers, user_two
 ):
@@ -558,6 +564,7 @@ async def test_build_flow_public_flow_accessible_by_other_user(
 
 
 @pytest.mark.benchmark
+@pytest.mark.security
 async def test_cancel_build_cross_user_blocked(client, json_memory_chatbot_no_llm, logged_in_headers, user_two):
     """Security: authenticated user cannot cancel a build job owned by another user.
 
@@ -610,3 +617,124 @@ async def test_build_public_tmp_without_data_parameter(client, json_memory_chatb
     assert response.status_code == codes.OK
     response_data = response.json()
     assert "job_id" in response_data
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_get_build_events_public_tmp_job_accessible_by_any_auth_user(
+    client, json_memory_chatbot_no_llm, logged_in_headers, user_two, monkeypatch
+):
+    """A job started via build_public_tmp has no registered owner and is accessible to any authenticated user.
+
+    Verifies that get_build_events skips the ownership check when get_job_owner returns None.
+    """
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-public-tmp-events-client")
+    start_response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={},
+        headers={"Content-Type": "application/json"},
+    )
+    assert start_response.status_code == codes.OK
+    job_id = start_response.json()["job_id"]
+
+    login_data = {"username": user_two.username, "password": "hashed_password"}
+    login_response = await client.post("api/v1/login", data=login_data)
+    assert login_response.status_code == codes.OK
+    other_headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}
+
+    import langflow.api.v1.chat
+    from fastapi import Response
+
+    async def mock_get_flow_events_response(**_kwargs):
+        return Response(content="", media_type="application/x-ndjson")
+
+    monkeypatch.setattr(langflow.api.v1.chat, "get_flow_events_response", mock_get_flow_events_response)
+
+    events_response = await get_build_events(client, job_id, other_headers)
+    assert events_response.status_code == codes.OK
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_cancel_build_public_tmp_job_accessible_by_any_auth_user(
+    client, json_memory_chatbot_no_llm, logged_in_headers, user_two, monkeypatch
+):
+    """A job started via build_public_tmp has no registered owner and can be cancelled by any authenticated user.
+
+    Verifies that cancel_build skips the ownership check when get_job_owner returns None.
+    """
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-public-tmp-cancel-client")
+    start_response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={},
+        headers={"Content-Type": "application/json"},
+    )
+    assert start_response.status_code == codes.OK
+    job_id = start_response.json()["job_id"]
+
+    login_data = {"username": user_two.username, "password": "hashed_password"}
+    login_response = await client.post("api/v1/login", data=login_data)
+    assert login_response.status_code == codes.OK
+    other_headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}
+
+    import langflow.api.v1.chat
+
+    async def mock_cancel_flow_build(*_args, **_kwargs):
+        return True
+
+    monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", mock_cancel_flow_build)
+
+    cancel_response = await client.post(f"api/v1/build/{job_id}/cancel", headers=other_headers)
+    assert cancel_response.status_code == codes.OK
+    assert cancel_response.json()["success"] is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.security
+async def test_job_owner_cleaned_up_after_cleanup_job():
+    """JobQueueService.cleanup_job removes the _job_owners entry for the job."""
+    service = JobQueueService()
+    service.start()
+
+    try:
+        job_id = str(uuid.uuid4())
+        user_id = uuid.uuid4()
+
+        service.create_queue(job_id)
+
+        async def _noop():
+            await asyncio.sleep(0)
+
+        service.start_job(job_id, _noop())
+        await asyncio.sleep(0.05)
+        service.register_job_owner(job_id, user_id)
+
+        assert service.get_job_owner(job_id) == user_id
+
+        await service.cleanup_job(job_id)
+
+        assert service.get_job_owner(job_id) is None
+    finally:
+        service._closed = True
+        if service._cleanup_task:
+            service._cleanup_task.cancel()
+            try:
+                await service._cleanup_task
+            except (asyncio.CancelledError, Exception):
+                pass

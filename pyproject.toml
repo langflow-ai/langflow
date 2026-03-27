@@ -176,7 +176,8 @@ markers = [
     "benchmark",
     "unit: Unit tests",
     "integration: Integration tests",
-    "slow: Slow-running tests"
+    "slow: Slow-running tests",
+    "security: Security regression tests (IDOR, auth, access control)"
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

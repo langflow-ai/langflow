@@ -56,6 +56,22 @@ if TYPE_CHECKING:
 router = APIRouter(tags=["Chat"])
 
 
+async def _verify_job_ownership(job_id: str, current_user: CurrentActiveUser, queue_service: JobQueueService) -> None:
+    """Raise HTTP 404 if the requesting user does not own the job.
+
+    Jobs with no registered owner (build_public_tmp) are accessible to any authenticated user.
+    """
+    job_owner = queue_service.get_job_owner(job_id)
+    if job_owner is not None and job_owner != current_user.id:
+        await logger.awarning(
+            "Ownership check failed: user %s tried to access job %s owned by %s",
+            current_user.id,
+            job_id,
+            job_owner,
+        )
+        raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
+
+
 @router.post(
     "/build/{flow_id}/vertices",
     deprecated=True,
@@ -234,15 +250,7 @@ async def get_build_events(
     Jobs started via build_public_tmp have no registered owner and remain accessible
     to any authenticated user.
     """
-    job_owner = queue_service.get_job_owner(job_id)
-    if job_owner is not None and job_owner != current_user.id:
-        await logger.awarning(
-            "IDOR attempt blocked in get_build_events: user %s tried to access job %s owned by %s",
-            current_user.id,
-            job_id,
-            job_owner,
-        )
-        raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
+    await _verify_job_ownership(job_id, current_user, queue_service)
     return await get_flow_events_response(
         job_id=job_id,
         queue_service=queue_service,
@@ -266,15 +274,7 @@ async def cancel_build(
     Jobs with no registered owner (build_public_tmp) are accessible to any
     authenticated user, consistent with get_build_events.
     """
-    job_owner = queue_service.get_job_owner(job_id)
-    if job_owner is not None and job_owner != current_user.id:
-        await logger.awarning(
-            "Unauthorized cancel attempt blocked: user %s tried to cancel job %s owned by %s",
-            current_user.id,
-            job_id,
-            job_owner,
-        )
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job not found: {job_id}")
+    await _verify_job_ownership(job_id, current_user, queue_service)
     try:
         # Cancel the flow build and check if it was successful
         cancellation_success = await cancel_flow_build(job_id=job_id, queue_service=queue_service)
