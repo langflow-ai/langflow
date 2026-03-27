@@ -89,8 +89,9 @@ RUN ARCH=$(dpkg --print-architecture) \
        elif [ "$ARCH" = "arm64" ]; then NODE_ARCH="arm64"; \
        else NODE_ARCH="$ARCH"; fi \
     && NODE_VERSION=$(curl -fsSL https://nodejs.org/dist/latest-v22.x/ \
-                    | grep -oP "node-v\K[0-9]+\.[0-9]+\.[0-9]+(?=-linux-${NODE_ARCH}\.tar\.xz)" \
+                    | sed -nE "s/.*node-v([0-9]+\.[0-9]+\.[0-9]+)-linux-${NODE_ARCH}\.tar\.xz.*/\1/p" \
                     | head -1) \
+    && if [ -z "$NODE_VERSION" ]; then echo "ERROR: Could not determine Node.js version" && exit 1; fi \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
     | tar -xJ -C /usr/local --strip-components=1
 RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
