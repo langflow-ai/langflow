@@ -53,11 +53,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # ── Application source ────────────────────────────────────────────────────────
 COPY ./src /app/src
 
-# ── Install keycloak-sso plugin (not in uv workspace / lockfile) ─────────────
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --python /app/.venv \
-        ./src/backend/langflow-keycloak-sso
-
 # ── Build frontend ────────────────────────────────────────────────────────────
 COPY ./src/frontend /tmp/src/frontend
 WORKDIR /tmp/src/frontend
@@ -73,33 +68,31 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-editable \
         --extra postgresql --no-group dev
 
+# ── Install keycloak-sso plugin AFTER uv sync (not in lockfile) ──────────────
+# Must come after uv sync to prevent being removed by --frozen cleanup
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --python /app/.venv \
+        ./src/backend/langflow-keycloak-sso
+
 ################################
 # RUNTIME
 ################################
 FROM python:3.12.12-slim-trixie AS runtime
 
+# Install system deps + Node.js via nodesource (avoids grep -P regex issues)
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install --no-install-recommends -y \
-        curl git libpq5 gnupg xz-utils \
+        curl git libpq5 gnupg xz-utils ca-certificates \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g npm@latest \
+    && npm cache clean --force \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/local/bin/uv  /usr/local/bin/uv
 COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
-
-# Install Node.js (required for MCP stdio servers)
-RUN ARCH=$(dpkg --print-architecture) \
-    && if [ "$ARCH" = "amd64" ]; then NODE_ARCH="x64"; \
-       elif [ "$ARCH" = "arm64" ]; then NODE_ARCH="arm64"; \
-       else NODE_ARCH="$ARCH"; fi \
-    && NODE_VERSION=$(curl -fsSL https://nodejs.org/dist/latest-v22.x/ \
-                    | grep -oP "node-v\K[0-9]+\.[0-9]+\.[0-9]+(?=-linux-${NODE_ARCH}\.tar\.xz)" \
-                    | head -1) \
-    && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
-    | tar -xJ -C /usr/local --strip-components=1 \
-    && npm install -g npm@latest \
-    && npm cache clean --force
 
 RUN useradd --uid 1000 --gid 0 --no-create-home --home-dir /app/data user
 
