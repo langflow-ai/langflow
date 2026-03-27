@@ -25,7 +25,7 @@ export type ChatMessageType = {
   icon?: string;
   category?: string;
   properties?: PropertiesType;
-  content_blocks?: ContentBlock[];
+  content_blocks?: ContentBlockItem[];
 };
 
 export type SourceType = {
@@ -126,6 +126,59 @@ export interface ToolContent extends BaseContent {
   error?: JSONValue | string;
 }
 
+export interface ImageContent extends BaseContent {
+  type: "image";
+  urls?: string[];
+  base64?: string;
+  mime_type?: string;
+  caption?: string;
+}
+
+export interface AudioContent extends BaseContent {
+  type: "audio";
+  urls?: string[];
+  base64?: string;
+  mime_type?: string;
+  duration?: number;
+  transcript?: string;
+}
+
+export interface VideoContent extends BaseContent {
+  type: "video";
+  urls?: string[];
+  base64?: string;
+  mime_type?: string;
+  duration?: number;
+}
+
+export interface FileContent extends BaseContent {
+  type: "file";
+  urls?: string[];
+  mime_type?: string;
+  filename?: string;
+}
+
+export interface ReasoningContent extends BaseContent {
+  type: "reasoning";
+  text: string;
+}
+
+export interface UsageContent extends BaseContent {
+  type: "usage";
+  input_tokens?: number;
+  output_tokens?: number;
+  model?: string;
+}
+
+export interface CitationContent extends BaseContent {
+  type: "citation";
+  url?: string;
+  title?: string;
+  cited_text?: string;
+  start_index?: number;
+  end_index?: number;
+}
+
 // Union type for all content types
 export type ContentType =
   | ErrorContent
@@ -133,7 +186,14 @@ export type ContentType =
   | MediaContent
   | JSONContent
   | CodeContent
-  | ToolContent;
+  | ToolContent
+  | ImageContent
+  | AudioContent
+  | VideoContent
+  | FileContent
+  | ReasoningContent
+  | UsageContent
+  | CitationContent;
 
 // Updated ContentBlock interface
 export interface ContentBlock {
@@ -144,6 +204,9 @@ export interface ContentBlock {
   component: string;
 }
 
+// A content block item can be either a grouped ContentBlock or a flat ContentType
+export type ContentBlockItem = ContentType | ContentBlock;
+
 export interface PlaygroundEvent {
   event_type: "message" | "error" | "warning" | "info" | "token";
   background_color?: string;
@@ -151,7 +214,7 @@ export interface PlaygroundEvent {
   allow_markdown?: boolean;
   icon?: string | null;
   sender_name: string;
-  content_blocks?: ContentBlock[] | null;
+  content_blocks?: ContentBlockItem[] | null;
   files?: string[];
   text?: string;
   timestamp?: string;
