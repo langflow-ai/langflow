@@ -23,16 +23,25 @@ jest.mock("@tanstack/react-query", () => ({
 }));
 
 jest.mock("@/stores/typesStore", () => ({
-  useTypesStore: (selector: (s: { setTypes: typeof mockSetTypes }) => unknown) =>
-    selector({ setTypes: mockSetTypes }),
+  useTypesStore: (
+    selector: (s: { setTypes: typeof mockSetTypes }) => unknown,
+  ) => selector({ setTypes: mockSetTypes }),
 }));
 
 jest.mock("@/components/ui/card", () => ({
   Card: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  CardHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  CardTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  CardDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  CardContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardHeader: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  CardTitle: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  CardDescription: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  CardContent: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
 }));
 
 import LanguageFormComponent from "../index";
@@ -49,7 +58,9 @@ describe("LanguageFormComponent", () => {
     const options = select.querySelectorAll("option");
     expect(options).toHaveLength(SUPPORTED_LANGUAGES.length);
     SUPPORTED_LANGUAGES.forEach((lang) => {
-      expect(screen.getByRole("option", { name: new RegExp(lang.label) })).toBeInTheDocument();
+      expect(
+        screen.getByRole("option", { name: new RegExp(lang.label) }),
+      ).toBeInTheDocument();
     });
   });
 
