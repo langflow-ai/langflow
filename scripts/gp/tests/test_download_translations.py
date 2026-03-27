@@ -3,9 +3,8 @@
 import json
 from unittest.mock import patch
 
-import pytest
-
 import download_translations as dl_mod
+import pytest
 
 
 def _run_main(output_dir: str):

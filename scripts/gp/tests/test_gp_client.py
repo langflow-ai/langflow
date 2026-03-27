@@ -6,10 +6,8 @@ import hmac
 import importlib
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 import gp_client
-
+import pytest
 
 # ---------------------------------------------------------------------------
 # Helpers
