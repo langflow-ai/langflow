@@ -13,6 +13,7 @@ from lfx.graph.utils import log_vertex_build
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest, OutputValue
 from lfx.services.cache.utils import CacheMiss
+from sqlmodel import select
 
 from langflow.api.build import cancel_flow_build, get_flow_events_response, start_flow_build
 from langflow.api.limited_background_tasks import LimitVertexBuildBackgroundTasks
@@ -39,7 +40,7 @@ from langflow.api.v1.schemas import (
 from langflow.exceptions.component import ComponentBuildError
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.deps import (
     get_chat_service,
     get_queue_service,
@@ -53,6 +54,22 @@ if TYPE_CHECKING:
     from lfx.graph.vertex.vertex_types import InterfaceVertex
 
 router = APIRouter(tags=["Chat"])
+
+
+async def _verify_job_ownership(job_id: str, current_user: CurrentActiveUser, queue_service: JobQueueService) -> None:
+    """Raise HTTP 404 if the requesting user does not own the job.
+
+    Jobs with no registered owner (build_public_tmp) are accessible to any authenticated user.
+    """
+    job_owner = queue_service.get_job_owner(job_id)
+    if job_owner is not None and job_owner != current_user.id:
+        await logger.awarning(
+            "Ownership check failed: user %s tried to access job %s owned by %s",
+            current_user.id,
+            job_id,
+            job_owner,
+        )
+        raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
 
 
 @router.post(
@@ -173,10 +190,23 @@ async def build_flow(
     Returns:
         Dict with job_id that can be used to poll for build status
     """
-    # First verify the flow exists
+    # Verify the flow exists and belongs to the requesting user (or is public).
+    # Returns 404 for both "not found" and "not owned" to avoid UUID enumeration.
+    # Note: intentionally extends _read_flow (flows.py) to also allow PUBLIC flows,
+    # since build is a valid operation on shared flows.
     async with session_scope() as session:
-        flow = await session.get(Flow, flow_id)
+        stmt = (
+            select(Flow)
+            .where(Flow.id == flow_id)
+            .where((Flow.user_id == current_user.id) | (Flow.access_type == AccessTypeEnum.PUBLIC))
+        )
+        flow = (await session.exec(stmt)).first()
         if not flow:
+            await logger.awarning(
+                "Flow access denied for user %s: flow %s not found or not owned",
+                current_user.id,
+                flow_id,
+            )
             raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
 
     job_id = await start_flow_build(
@@ -192,6 +222,7 @@ async def build_flow(
         queue_service=queue_service,
         flow_name=flow_name,
     )
+    queue_service.register_job_owner(job_id, current_user.id)
 
     # This is required to support FE tests - we need to be able to set the event delivery to direct
     if event_delivery != EventDeliveryType.DIRECT:
@@ -203,17 +234,23 @@ async def build_flow(
     )
 
 
-@router.get("/build/{job_id}/events", dependencies=[Depends(get_current_active_user)])
+@router.get("/build/{job_id}/events")
 async def get_build_events(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
+    current_user: CurrentActiveUser,
     *,
     event_delivery: EventDeliveryType = EventDeliveryType.STREAMING,
 ):
     """Get events for a specific build job.
 
-    Requires authentication to prevent unauthorized access to build events.
+    Requires authentication and ownership verification. A job owner is registered
+    when build_flow is called; if a registered owner does not match the requesting
+    user the endpoint returns 404 to avoid leaking job existence.
+    Jobs started via build_public_tmp have no registered owner and remain accessible
+    to any authenticated user.
     """
+    await _verify_job_ownership(job_id, current_user, queue_service)
     return await get_flow_events_response(
         job_id=job_id,
         queue_service=queue_service,
@@ -224,16 +261,20 @@ async def get_build_events(
 @router.post(
     "/build/{job_id}/cancel",
     response_model=CancelFlowResponse,
-    dependencies=[Depends(get_current_active_user)],
 )
 async def cancel_build(
     job_id: str,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
+    current_user: CurrentActiveUser,
 ):
     """Cancel a specific build job.
 
-    Requires authentication to prevent unauthorized build cancellation.
+    Requires authentication and ownership verification to prevent a user from
+    aborting another user's running build (DoS via job cancellation).
+    Jobs with no registered owner (build_public_tmp) are accessible to any
+    authenticated user, consistent with get_build_events.
     """
+    await _verify_job_ownership(job_id, current_user, queue_service)
     try:
         # Cancel the flow build and check if it was successful
         cancellation_success = await cancel_flow_build(job_id=job_id, queue_service=queue_service)
