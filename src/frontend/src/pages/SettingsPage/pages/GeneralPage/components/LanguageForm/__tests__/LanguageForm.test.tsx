@@ -5,6 +5,11 @@ import { SUPPORTED_LANGUAGES } from "@/constants/languages";
 const mockChangeLanguage = jest.fn();
 const mockInvalidateQueries = jest.fn();
 const mockSetTypes = jest.fn();
+const mockLoadLanguage = jest.fn().mockResolvedValue(undefined);
+
+jest.mock("@/i18n", () => ({
+  loadLanguage: mockLoadLanguage,
+}));
 
 jest.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -88,5 +93,13 @@ describe("LanguageFormComponent", () => {
     render(<LanguageFormComponent />);
     const frOption = screen.getByRole("option", { name: /Français/i });
     expect(frOption.textContent).not.toContain("settings.languageRecommended");
+  });
+
+  it("calls loadLanguage before changeLanguage when switching languages", async () => {
+    const user = userEvent.setup();
+    render(<LanguageFormComponent />);
+    await user.selectOptions(screen.getByRole("combobox"), "fr");
+    expect(mockLoadLanguage).toHaveBeenCalledWith("fr");
+    expect(mockChangeLanguage).toHaveBeenCalledWith("fr");
   });
 });
