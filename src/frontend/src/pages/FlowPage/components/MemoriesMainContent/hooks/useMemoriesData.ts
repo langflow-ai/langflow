@@ -78,6 +78,14 @@ export function useMemoriesData({
     }
   }, [isError, selectedMemoryId, onSelectMemory]);
 
+  useEffect(() => {
+    setSelectedSession(null);
+    setSelectedDocument(null);
+    setDocumentPanelOpen(false);
+    setActiveSearch("");
+    setSearchQuery("");
+  }, [selectedMemoryId]);
+
   const docsData = useMemo(() => {
     const rawDocuments = memory?.documents ?? [];
     const q = activeSearch.trim().toLowerCase();

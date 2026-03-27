@@ -1,6 +1,8 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { formatTimestamp } from "../helpers";
 import { MemoryDocumentPanelProps } from "../types";
+
+const PANEL_TITLE_ID = "memories-document-panel-title";
 
 export function MemoryDocumentPanel({
   open,
@@ -10,6 +12,7 @@ export function MemoryDocumentPanel({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        aria-labelledby={PANEL_TITLE_ID}
         className={
           "right-0 top-[3rem] h-[calc(100dvh-3rem)] w-full max-w-none rounded-l-xl rounded-r-none p-0 sm:w-[80vw] " +
           "data-[state=open]:animate-in data-[state=closed]:animate-out " +
@@ -18,6 +21,9 @@ export function MemoryDocumentPanel({
         closeButtonClassName="top-1"
         data-testid="memories-document-panel"
       >
+        <DialogTitle id={PANEL_TITLE_ID} className="sr-only">
+          Memory chunk details
+        </DialogTitle>
         {!selectedDocument ? (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
             No chunk selected.

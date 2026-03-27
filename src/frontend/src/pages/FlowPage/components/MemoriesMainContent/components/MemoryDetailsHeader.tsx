@@ -41,6 +41,7 @@ export function MemoryDetailsHeader({
             checked={memory.is_active}
             onCheckedChange={handleToggleActive}
             disabled={updateMemoryMutation.isPending}
+            aria-label="Auto-capture for this memory"
           />
           <span
             className={cn(
@@ -54,15 +55,6 @@ export function MemoryDetailsHeader({
       </div>
 
       <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleManualUpdate}
-          disabled={isProcessing || manualUpdateMutation.isPending}
-        >
-          <IconComponent name="RefreshCw" className="mr-1.5 h-3.5 w-3.5" />
-          Update Memory
-        </Button>
         <DeleteConfirmationModal
           description={`memory \"${memory.name}\"`}
           onConfirm={(e) => {

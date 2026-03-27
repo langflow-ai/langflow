@@ -15,6 +15,14 @@ export const useAddMessagesToMemory: useMutationFunctionType<
   const addMessagesFn = async (
     params: AddMessagesToMemoryParams,
   ): Promise<MemoryInfo> => {
+    if (!params?.memoryId) {
+      throw new Error("addMessagesToMemory: missing memoryId");
+    }
+    if (!Array.isArray(params.message_ids) || params.message_ids.length === 0) {
+      throw new Error(
+        "addMessagesToMemory: message_ids must be a non-empty array",
+      );
+    }
     const response = isMockMemoriesEnabled()
       ? {
           data: await mockMemoriesApi.addMessages(

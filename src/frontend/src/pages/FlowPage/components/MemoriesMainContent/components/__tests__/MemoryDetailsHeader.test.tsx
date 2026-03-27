@@ -30,43 +30,45 @@ jest.mock("@/modals/deleteConfirmationModal", () => ({
 }));
 
 describe("MemoryDetailsHeader", () => {
-  const baseProps = {
-    memory: {
-      id: "m1",
-      name: "Memory One",
-      description: "desc",
-      status: "idle",
-      is_active: true,
-    },
-    isProcessing: false,
-    manualUpdateMutation: { mutate: jest.fn(), isPending: false },
-    handleManualUpdate: jest.fn(),
-    deleteMutation: { mutate: jest.fn(), isPending: false },
-    updateMemoryMutation: { isPending: false },
-    handleToggleActive: jest.fn(),
-  } as any;
+  const makeProps = (overrides: Partial<any> = {}) =>
+    ({
+      memory: {
+        id: "m1",
+        name: "Memory One",
+        description: "desc",
+        status: "idle",
+        is_active: true,
+      },
+      isProcessing: false,
+      manualUpdateMutation: { mutate: jest.fn(), isPending: false },
+      handleManualUpdate: jest.fn(),
+      deleteMutation: { mutate: jest.fn(), isPending: false },
+      updateMemoryMutation: { isPending: false },
+      handleToggleActive: jest.fn(),
+      ...overrides,
+    }) as any;
 
   it("renders memory information", () => {
-    render(<MemoryDetailsHeader {...baseProps} />);
+    const props = makeProps();
+    render(<MemoryDetailsHeader {...props} />);
     expect(screen.getByText("Memory One")).toBeInTheDocument();
     expect(screen.getByText("Auto-capture on")).toBeInTheDocument();
   });
 
   it("calls mutate handlers for actions", () => {
-    render(<MemoryDetailsHeader {...baseProps} />);
-
-    fireEvent.click(screen.getByText("Update Memory"));
-    expect(baseProps.handleManualUpdate).toHaveBeenCalled();
+    const props = makeProps();
+    render(<MemoryDetailsHeader {...props} />);
 
     fireEvent.click(screen.getByText("confirm-delete"));
-    expect(baseProps.deleteMutation.mutate).toHaveBeenCalledWith({
+    expect(props.deleteMutation.mutate).toHaveBeenCalledWith({
       memoryId: "m1",
     });
   });
 
   it("toggles auto-capture", () => {
-    render(<MemoryDetailsHeader {...baseProps} />);
+    const props = makeProps();
+    render(<MemoryDetailsHeader {...props} />);
     fireEvent.click(screen.getByLabelText("auto-capture"));
-    expect(baseProps.handleToggleActive).toHaveBeenCalled();
+    expect(props.handleToggleActive).toHaveBeenCalled();
   });
 });

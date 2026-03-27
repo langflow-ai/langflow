@@ -17,10 +17,12 @@ export const useGetMemories: useQueryFunctionType<
       return await mockMemoriesApi.list(params?.flowId);
     }
 
-    const url = params?.flowId
-      ? `${getURL("MEMORIES")}/?flow_id=${params.flowId}`
-      : `${getURL("MEMORIES")}/`;
-    const res = await api.get(url);
+    const baseUrl = getURL("MEMORIES");
+    const url = new URL(baseUrl, window.location.origin);
+    if (params?.flowId) {
+      url.searchParams.set("flow_id", params.flowId);
+    }
+    const res = await api.get(url.toString());
     return res.data;
   };
 

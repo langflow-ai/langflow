@@ -7,7 +7,7 @@ import { isMockMemoriesEnabled, mockMemoriesApi } from "../../mocks/memories";
 import type { CreateMemoryPayload, MemoryInfo } from "./types";
 
 export const useCreateMemory: useMutationFunctionType<
-  undefined,
+  MemoryInfo,
   CreateMemoryPayload
 > = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();

@@ -38,7 +38,11 @@ export function useCreateMemoryModal({
         .filter((provider) => provider.is_enabled)
         .flatMap((provider) =>
           provider.models
-            .filter((model) => model.metadata?.model_type === "embeddings")
+            .filter(
+              (model) =>
+                model.metadata?.model_type === "embeddings" ||
+                model.metadata?.model_type === "embedding",
+            )
             .map((model) => ({
               id: model.model_name,
               name: model.model_name,
@@ -97,6 +101,13 @@ export function useCreateMemoryModal({
   });
 
   const handleSubmit = () => {
+    if (!flowId) {
+      setErrorData({
+        title: "Validation error",
+        list: ["No flow selected"],
+      });
+      return;
+    }
     if (!name.trim()) {
       setErrorData({
         title: "Validation error",

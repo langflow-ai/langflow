@@ -51,7 +51,10 @@ export const applySearch = (docs: MemoryDocumentItem[], search?: string) => {
 };
 
 export const normalizeBatchSize = (n: unknown) => {
-  const parsed = typeof n === "number" ? n : parseInt(String(n ?? ""), 10);
+  const parsedRaw =
+    typeof n === "number" ? n : parseInt(String(n ?? ""), 10);
+
+  const parsed = typeof parsedRaw === "number" ? Math.trunc(parsedRaw) : NaN;
   return Number.isFinite(parsed) && parsed >= 1 ? parsed : 1;
 };
 
