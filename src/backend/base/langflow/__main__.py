@@ -413,6 +413,7 @@ def run(
                 "certfile": ssl_cert_file_path,
                 "keyfile": ssl_key_file_path,
                 "log_level": log_level.lower() if log_level is not None else "info",
+                "preload_app": True,
             }
             server = LangflowApplication(app, options)
 
