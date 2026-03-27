@@ -50,6 +50,23 @@ def test_parse_deployment_guard_error_strips_newline_sql_block() -> None:
     assert parsed.detail == "Cannot delete flow version because it is attached."
 
 
+def test_parse_deployment_guard_error_deployment_project_move() -> None:
+    message = (
+        "DEPLOYMENT_GUARD:DEPLOYMENT_PROJECT_MOVE:"
+        "Cannot move deployment to a different project. "
+        "Delete it and re-create in the target project instead."
+    )
+    exc = _SimulatedDbError(message)
+
+    parsed = parse_deployment_guard_error(exc)
+
+    assert isinstance(parsed, DeploymentGuardError)
+    assert (
+        parsed.detail
+        == "Cannot move deployment to a different project. Delete it and re-create in the target project instead."
+    )
+
+
 def test_parse_deployment_guard_error_returns_none_when_absent() -> None:
     parsed = parse_deployment_guard_error(Exception("plain error"))
     assert parsed is None
