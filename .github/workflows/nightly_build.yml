@@ -73,7 +73,7 @@ jobs:
            echo "Using release branch: $BRANCH"
   create-nightly-tag:
     if: github.repository == 'langflow-ai/langflow'
-    needs: [validate-inputs, resolve-release-branch]
+    needs: [validate-inputs, resolve-release-branch, download-gp-bundle]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -208,7 +208,7 @@ jobs:
   download-gp-bundle:
     if: github.repository == 'langflow-ai/langflow'
     name: Download translations from Globalization Pipeline
-    needs: [validate-inputs, resolve-release-branch, create-nightly-tag]
+    needs: [validate-inputs, resolve-release-branch]
     runs-on: ubuntu-latest
     continue-on-error: true
     environment: GP-test
