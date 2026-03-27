@@ -29,7 +29,7 @@ from langflow.exceptions.component import ComponentBuildError
 from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.deps import get_chat_service, get_telemetry_service, session_scope
+from langflow.services.deps import get_chat_service, get_memory_base_service, get_task_service, get_telemetry_service, session_scope
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
 from langflow.services.telemetry.schema import ComponentInputsPayload, ComponentPayload, PlaygroundPayload
 
@@ -530,6 +530,23 @@ async def generate_flow_events(
     build_duration = sum(vertex_timedeltas)
     event_manager.on_end(data={"build_duration": build_duration})
     await graph.end_all_traces()
+
+    # Fire memory-base auto-capture hook — non-blocking background effect.
+    # Must use fire_and_forget_task (not background_tasks.add_task) because
+    # generate_flow_events runs as an asyncio task; by the time the flow
+    # finishes, FastAPI has already drained the background_tasks queue and any
+    # tasks added after that point are silently dropped.
+    try:
+        _run_id_uuid = uuid.UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
+        await get_task_service().fire_and_forget_task(
+            get_memory_base_service().on_flow_output,
+            flow_id=flow_id,
+            session_id=graph.session_id or str(flow_id),
+            run_id=_run_id_uuid,
+        )
+    except Exception:
+        await logger.awarning("Memory base hook scheduling failed for flow %s", flow_id, exc_info=True)
+
     await event_manager.queue.put((None, None, time.time()))
 
 

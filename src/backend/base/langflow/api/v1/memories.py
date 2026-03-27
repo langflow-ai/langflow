@@ -19,7 +19,6 @@ Edge cases enforced:
 
 from __future__ import annotations
 
-import os
 import uuid
 from http import HTTPStatus
 from typing import Annotated
@@ -36,38 +35,13 @@ from langflow.services.database.models.memory_base.model import (
     MemoryBaseSessionRead,
     MemoryBaseUpdate,
 )
-from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.deps import session_scope
 from langflow.services.memory_base.service import MemoryBaseService
 
 router = APIRouter(tags=["Memories"], prefix="/memories", include_in_schema=False)
 
 # Module-level singleton – lightweight; no DB state stored on instance
 _service = MemoryBaseService()
-
-# ------------------------------------------------------------------ #
-#  Auth override for integration tests                                  #
-# ------------------------------------------------------------------ #
-
-
-async def get_current_user_integration(
-    current_user: CurrentActiveUser | None = None,
-) -> CurrentActiveUser:
-    """Helper to bypass auth in LFX_DEV mode for integration testing."""
-    get_settings_service().settings  # noqa: B018 — side-effect: ensures settings loaded
-    if os.getenv("LFX_DEV") == "1" and not current_user:
-        from sqlmodel import select
-
-        async with session_scope() as db:
-            user = (await db.exec(select(User).where(User.username == "integration_test_user"))).first()
-        if user:
-            return user
-    if current_user is None:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    return current_user
-
-
-CurrentTestUser = Annotated[User, Depends(get_current_user_integration)]
 
 
 # ------------------------------------------------------------------ #
@@ -95,7 +69,7 @@ class RegenerateResponse(BaseModel):
 @router.post("", status_code=HTTPStatus.CREATED)
 @router.post("/", status_code=HTTPStatus.CREATED)
 async def create_memory_base(
-    current_user: CurrentTestUser,
+    current_user: CurrentActiveUser,
     payload: MemoryBaseCreate = Body(..., embed=False),
 ) -> MemoryBaseRead:
     """Create a new Memory Base.
@@ -115,7 +89,7 @@ async def create_memory_base(
 @router.get("", status_code=HTTPStatus.OK)
 @router.get("/", status_code=HTTPStatus.OK)
 async def list_memory_bases(
-    current_user: CurrentTestUser,
+    current_user: CurrentActiveUser,
     params: Annotated[Params, Depends()],
 ) -> Page[MemoryBaseRead]:
     """List all Memory Bases owned by the current user (paginated).
@@ -134,7 +108,7 @@ async def list_memory_bases(
 @router.get("/{memory_base_id}", status_code=HTTPStatus.OK)
 async def get_memory_base(
     memory_base_id: uuid.UUID,
-    current_user: CurrentTestUser,
+    current_user: CurrentActiveUser,
 ) -> MemoryBaseRead:
     """Get details for a specific Memory Base."""
     mb = await _service.get(memory_base_id, user_id=current_user.id)
@@ -146,7 +120,7 @@ async def get_memory_base(
 @router.get("/{memory_base_id}/sessions", status_code=HTTPStatus.OK)
 async def list_sessions(
     memory_base_id: uuid.UUID,
-    current_user: CurrentTestUser,
+    current_user: CurrentActiveUser,
 ) -> list[MemoryBaseSessionRead]:
     """List all sessions tracked by this Memory Base.
 
@@ -167,7 +141,7 @@ async def list_sessions(
 @router.patch("/{memory_base_id}", status_code=HTTPStatus.OK)
 async def update_memory_base(
     memory_base_id: uuid.UUID,
-    current_user: CurrentTestUser,
+    current_user: CurrentActiveUser,
     patch: MemoryBaseUpdate = Body(..., embed=False),
 ) -> MemoryBaseRead:
     """Update mutable parameters (threshold, auto_capture, preprocessing, etc.).
@@ -184,7 +158,7 @@ async def update_memory_base(
 @router.delete("/{memory_base_id}", status_code=HTTPStatus.NO_CONTENT)
 async def delete_memory_base(
     memory_base_id: uuid.UUID,
-    current_user: CurrentTestUser,
+    current_user: CurrentActiveUser,
 ) -> None:
     """Delete a Memory Base.
 
@@ -205,7 +179,7 @@ async def delete_memory_base(
 @router.post("/{memory_base_id}/flush", status_code=HTTPStatus.ACCEPTED)
 async def flush_memory_base(
     memory_base_id: uuid.UUID,
-    current_user: CurrentTestUser,
+    current_user: CurrentActiveUser,
     body: FlushRequest = Body(..., embed=False),
 ) -> dict:
     """Manually trigger an ingestion / sync job regardless of the threshold.
@@ -235,7 +209,7 @@ async def flush_memory_base(
 @router.get("/{memory_base_id}/mismatch", status_code=HTTPStatus.OK)
 async def check_mismatch(
     memory_base_id: uuid.UUID,
-    current_user: CurrentTestUser,
+    current_user: CurrentActiveUser,
 ) -> MismatchResponse:
     """Detect if the vector store is empty while metadata records processed messages.
 
@@ -251,7 +225,7 @@ async def check_mismatch(
 @router.post("/{memory_base_id}/regenerate", status_code=HTTPStatus.ACCEPTED)
 async def regenerate_memory_base(
     memory_base_id: uuid.UUID,
-    current_user: CurrentTestUser,
+    current_user: CurrentActiveUser,
 ) -> RegenerateResponse:
     """Regenerate the Knowledge Base by resetting all session cursors and re-ingesting.
 

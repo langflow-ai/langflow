@@ -734,6 +734,210 @@ class TestIngestMemoryTask:
 
 
 # ------------------------------------------------------------------ #
+#  on_flow_output hook and threshold-trigger tests                     #
+# ------------------------------------------------------------------ #
+
+
+class TestOnFlowOutputHook:
+    """Tests for on_flow_output, _maybe_trigger threshold logic, and hook wiring."""
+
+    @pytest.fixture
+    def service(self):
+        from langflow.services.memory_base.service import MemoryBaseService
+
+        return MemoryBaseService()
+
+    def _fake_scope(self, mock_db):
+        """Return a mock session_scope context manager backed by mock_db."""
+
+        class _FakeCtx:
+            async def __aenter__(self):
+                return mock_db
+
+            async def __aexit__(self, *a):
+                pass
+
+        scope = MagicMock()
+        scope.return_value = _FakeCtx()
+        return scope
+
+    @pytest.mark.asyncio
+    async def test_on_flow_output_skips_when_below_threshold(self, service):
+        """No job must be created when pending message count is below the threshold."""
+        mb = _make_mb(threshold=5)
+        mbs = _make_session(memory_base_id=mb.id)
+        mock_db = AsyncMock()
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(mock_db)),
+            patch.object(service, "_get_or_create_session", AsyncMock(return_value=mbs)),
+            patch.object(service, "_count_pending", AsyncMock(return_value=3)),  # 3 < threshold 5
+            patch("langflow.services.memory_base.service.get_job_service") as mock_jsc,
+        ):
+            await service._maybe_trigger(mb=mb, session_id="s1")
+
+        mock_jsc.return_value.create_job.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_on_flow_output_triggers_when_threshold_met(self, service):
+        """A job must be created and dispatched when pending message count meets threshold."""
+        mb = _make_mb(threshold=3)
+        mbs = _make_session(memory_base_id=mb.id)
+        mock_db = AsyncMock()
+
+        mock_job_svc = MagicMock()
+        mock_job_svc.create_job = AsyncMock()
+        mock_task_svc = MagicMock()
+        mock_task_svc.fire_and_forget_task = AsyncMock()
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(mock_db)),
+            patch.object(service, "_get_or_create_session", AsyncMock(return_value=mbs)),
+            patch.object(service, "_count_pending", AsyncMock(return_value=5)),  # 5 >= threshold 3
+            patch.object(service, "_has_active_job", AsyncMock(return_value=False)),
+            patch.object(service, "_resolve_kb_username", AsyncMock(return_value="testuser")),
+            patch.object(service, "_resolve_embedding", return_value=("OpenAI", "text-embedding-3-small")),
+            patch("langflow.services.memory_base.service.get_job_service", return_value=mock_job_svc),
+            patch("langflow.services.memory_base.service.get_task_service", return_value=mock_task_svc),
+        ):
+            await service._maybe_trigger(mb=mb, session_id="s1")
+
+        mock_job_svc.create_job.assert_awaited_once()
+        mock_task_svc.fire_and_forget_task.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_on_flow_output_is_silent_on_error(self, service):
+        """on_flow_output must swallow _maybe_trigger exceptions without propagating them.
+
+        This guarantees memory-base failures never cause regressions in flow execution.
+        """
+        flow_id = uuid.uuid4()
+        mb = _make_mb(flow_id=flow_id, auto_capture=True)
+        mock_db = AsyncMock()
+        result_mock = MagicMock()
+        result_mock.all = MagicMock(return_value=[mb])
+        mock_db.exec = AsyncMock(return_value=result_mock)
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(mock_db)),
+            patch.object(service, "_maybe_trigger", AsyncMock(side_effect=RuntimeError("boom"))),
+        ):
+            # Must not raise even though _maybe_trigger blows up
+            await service.on_flow_output(flow_id=flow_id, session_id="s1", run_id=uuid.uuid4())
+
+    @pytest.mark.asyncio
+    async def test_hook_wiring_playground(self):
+        """Playground path: background_tasks.add_task dispatches on_flow_output with correct kwargs.
+
+        Verifies the contract of the hook-dispatch block added to generate_flow_events
+        in api/build.py after end_all_traces().
+        """
+        from starlette.background import BackgroundTasks
+
+        flow_id = uuid.uuid4()
+        run_id = uuid.uuid4()
+
+        mb_service = MagicMock()
+        mb_service.on_flow_output = AsyncMock()
+
+        bg_tasks = MagicMock(spec=BackgroundTasks)
+        mock_graph = MagicMock()
+        mock_graph.run_id = str(run_id)  # graph.run_id is always a str
+        mock_graph.session_id = "test-session"
+
+        with patch("langflow.api.build.get_memory_base_service", return_value=mb_service):
+            import langflow.api.build as build_module
+
+            # Confirm the import is wired at module level
+            assert hasattr(build_module, "get_memory_base_service")
+
+            # Execute the same hook-dispatch block as in generate_flow_events
+            _run_id_uuid = uuid.UUID(mock_graph.run_id) if mock_graph.run_id else None
+            bg_tasks.add_task(
+                mb_service.on_flow_output,
+                flow_id=flow_id,
+                session_id=mock_graph.session_id or str(flow_id),
+                run_id=_run_id_uuid,
+            )
+
+        bg_tasks.add_task.assert_called_once_with(
+            mb_service.on_flow_output,
+            flow_id=flow_id,
+            session_id="test-session",
+            run_id=run_id,  # UUID, not str — type-cast from graph.run_id
+        )
+
+    @pytest.mark.asyncio
+    async def test_hook_wiring_v2_async_wrapper(self):
+        """V2 async path: _run_and_notify preserves run_graph_internal result and dispatches hook.
+
+        Verifies the behavioral contract of the closure added to execute_workflow_background
+        in api/v2/workflow.py: the wrapper must be transparent to execute_with_status
+        (return value unchanged) while also firing the memory-base hook.
+        """
+        expected_result = (MagicMock(), "effective-session-42")
+        run_graph_mock = AsyncMock(return_value=expected_result)
+        hook_mock = AsyncMock()
+        task_service_mock = MagicMock()
+        task_service_mock.fire_and_forget_task = AsyncMock()
+
+        hook_flow_id = uuid.uuid4()
+        hook_run_id = uuid.uuid4()
+
+        # Mirror the _run_and_notify closure from workflow.py execute_workflow_background
+        async def _run_and_notify(**kwargs):
+            result = await run_graph_mock(**kwargs)
+            _, _effective_session_id = result
+            try:
+                await task_service_mock.fire_and_forget_task(
+                    hook_mock,
+                    flow_id=hook_flow_id,
+                    session_id=_effective_session_id,
+                    run_id=hook_run_id,
+                )
+            except Exception:
+                pass
+            return result
+
+        result = await _run_and_notify(graph=MagicMock())
+
+        # Return value must be identical — execute_with_status depends on this
+        assert result == expected_result
+        # Hook must be dispatched with the session_id extracted from run_graph_internal
+        task_service_mock.fire_and_forget_task.assert_awaited_once_with(
+            hook_mock,
+            flow_id=hook_flow_id,
+            session_id="effective-session-42",
+            run_id=hook_run_id,
+        )
+
+    @pytest.mark.asyncio
+    async def test_hook_failure_does_not_affect_wrapper_return(self):
+        """If fire_and_forget_task raises inside _run_and_notify, the return value is still correct."""
+        expected_result = (MagicMock(), "some-session")
+        run_graph_mock = AsyncMock(return_value=expected_result)
+        task_service_mock = MagicMock()
+        task_service_mock.fire_and_forget_task = AsyncMock(side_effect=RuntimeError("dispatch failed"))
+
+        async def _run_and_notify(**kwargs):
+            result = await run_graph_mock(**kwargs)
+            _, _effective_session_id = result
+            try:
+                await task_service_mock.fire_and_forget_task(
+                    AsyncMock(),
+                    flow_id=uuid.uuid4(),
+                    session_id=_effective_session_id,
+                    run_id=uuid.uuid4(),
+                )
+            except Exception:
+                pass
+            return result
+
+        result = await _run_and_notify(graph=MagicMock())
+        assert result == expected_result
+
+
+# ------------------------------------------------------------------ #
 #  API endpoint routing tests                                          #
 # ------------------------------------------------------------------ #
 

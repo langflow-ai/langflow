@@ -29,6 +29,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
 from lfx.graph.graph.base import Graph
+from lfx.log.logger import logger
 from lfx.schema.workflow import (
     WORKFLOW_EXECUTION_RESPONSES,
     WORKFLOW_STATUS_RESPONSES,
@@ -65,7 +66,7 @@ from langflow.services.auth.utils import api_key_security
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import UserRead
-from langflow.services.deps import get_job_service, get_task_service
+from langflow.services.deps import get_job_service, get_memory_base_service, get_task_service
 
 # Configuration constants
 EXECUTION_TIMEOUT = 300  # 5 minutes default timeout for sync execution
@@ -391,6 +392,18 @@ async def execute_sync_workflow(
             stream=False,
         )
 
+        # Fire memory-base auto-capture hook — non-blocking background effect.
+        try:
+            _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
+            await get_task_service().fire_and_forget_task(
+                get_memory_base_service().on_flow_output,
+                flow_id=flow.id,
+                session_id=execution_session_id,
+                run_id=_run_id_uuid,
+            )
+        except Exception:
+            await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
+
         # Build RunResponse
         run_response = RunResponse(outputs=task_result, session_id=execution_session_id)
         # Convert to WorkflowExecutionResponse
@@ -469,10 +482,36 @@ async def execute_workflow_background(
             flow_id=flow_id_str,
         )
 
+        # Closure captures flow identity for the memory-base hook.
+        # run_id is the same as job_id — graph.set_run_id(job_id) was called above.
+        _hook_flow_id = flow.id
+        _hook_run_id = job_id
+
+        async def _run_and_notify(**kwargs):
+            """Thin wrapper: execute graph then fire memory-base hook as a background effect.
+
+            The hook is dispatched non-blocking after graph completion.  Any failure in
+            the hook is swallowed so it never affects the job status of the graph run.
+            """
+            result = await run_graph_internal(**kwargs)
+            _, _effective_session_id = result
+            try:
+                await get_task_service().fire_and_forget_task(
+                    get_memory_base_service().on_flow_output,
+                    flow_id=_hook_flow_id,
+                    session_id=_effective_session_id,
+                    run_id=_hook_run_id,
+                )
+            except Exception:
+                await logger.awarning(
+                    "Memory base hook scheduling failed for flow %s", _hook_flow_id, exc_info=True
+                )
+            return result
+
         await task_service.fire_and_forget_task(
             job_service.execute_with_status,
             job_id=job_id,
-            run_coro_func=run_graph_internal,
+            run_coro_func=_run_and_notify,
             graph=graph,
             flow_id=flow_id_str,
             session_id=session_id,

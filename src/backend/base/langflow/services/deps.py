@@ -263,3 +263,20 @@ def get_job_service():
     from langflow.services.jobs.factory import JobServiceFactory
 
     return get_service(ServiceType.JOB_SERVICE, JobServiceFactory())
+
+
+_memory_base_service = None
+
+
+def get_memory_base_service():
+    """Returns the singleton MemoryBaseService instance.
+
+    MemoryBaseService is stateless (all state lives in the DB) so a module-level
+    singleton is sufficient — no service manager or factory required.
+    """
+    global _memory_base_service
+    if _memory_base_service is None:
+        from langflow.services.memory_base.service import MemoryBaseService
+
+        _memory_base_service = MemoryBaseService()
+    return _memory_base_service

@@ -162,13 +162,16 @@ async def _fetch_pending_messages(
     session_id: str,
     cursor_id: uuid.UUID | None,
 ) -> list[MessageTable]:
-    """Fetch is_output messages for this session that come after cursor_id."""
+    """Fetch all messages for this session that come after cursor_id.
+
+    is_output filtering is intentionally omitted so the full conversation
+    batch (user turns + model turns) is ingested into the KB.
+    """
     async with session_scope() as db:
         stmt = (
             select(MessageTable)
             .where(MessageTable.flow_id == flow_id)
             .where(MessageTable.session_id == session_id)
-            .where(MessageTable.is_output == True)  # noqa: E712
             .order_by(col(MessageTable.timestamp).asc())
         )
         if cursor_id is not None:

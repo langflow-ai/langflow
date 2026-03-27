@@ -248,8 +248,10 @@ class MemoryBaseService:
     async def get_sessions(self, memory_base_id: uuid.UUID, user_id: uuid.UUID) -> list[MemoryBaseSessionRead]:
         """Return all sessions with pending message counts.
 
-        Includes sessions that have output messages in MessageTable for the
-        associated flow but no MemoryBaseSession record yet (i.e. never synced).
+        Includes sessions that have messages in MessageTable for the associated
+        flow but no MemoryBaseSession record yet (i.e. never synced).
+        All messages are counted (not just is_output) to match the full
+        conversation batch ingestion approach.
         """
         async with session_scope() as db:
             # Verify ownership
@@ -261,10 +263,9 @@ class MemoryBaseService:
             tracked = list(result.all())
             tracked_ids = {s.session_id for s in tracked}
 
-            # All sessions that have flow output messages (may include untracked ones)
+            # All sessions that have any flow messages (may include untracked ones)
             dist_stmt = select(distinct(MessageTable.session_id)).where(
                 MessageTable.flow_id == mb.flow_id,
-                MessageTable.is_output == True,  # noqa: E712
             )
             dist_result = await db.exec(dist_stmt)
             all_session_ids: set[str] = {row for row in dist_result.all() if row}
@@ -286,14 +287,13 @@ class MemoryBaseService:
                     )
                 )
 
-            # Untracked sessions — all their output messages are pending
+            # Untracked sessions — all their messages are pending
             for sid in sorted(all_session_ids - tracked_ids):
                 count_stmt = (
                     select(func.count())
                     .select_from(MessageTable)
                     .where(MessageTable.flow_id == mb.flow_id)
                     .where(MessageTable.session_id == sid)
-                    .where(MessageTable.is_output == True)  # noqa: E712
                 )
                 count_result = await db.exec(count_stmt)
                 pending = count_result.one()
@@ -449,6 +449,7 @@ class MemoryBaseService:
             flow_id=mb.flow_id,
             kb_name=mb.kb_name,
             kb_username=kb_username,
+            user_id=mb.user_id,
             embedding_provider=embedding_provider,
             embedding_model=embedding_model,
             cursor_id=cursor_id_snapshot,
@@ -547,13 +548,18 @@ class MemoryBaseService:
         return mbs
 
     async def _count_pending(self, db: AsyncSession, mb: MemoryBase, mbs: MemoryBaseSession) -> int:
-        """Count is_output messages for this session that come after the cursor."""
+        """Count all messages for this session that come after the cursor.
+
+        is_output filtering is intentionally omitted: we ingest the full
+        conversation batch (both user and model turns) so the KB reflects the
+        complete context of each run.  is_output-only filtering will be
+        re-evaluated in a future iteration once the flag is reliably set.
+        """
         stmt = (
             select(func.count())
             .select_from(MessageTable)
             .where(MessageTable.flow_id == mb.flow_id)
             .where(MessageTable.session_id == mbs.session_id)
-            .where(MessageTable.is_output == True)  # noqa: E712
         )
         if mbs.cursor_id is not None:
             cursor_stmt = select(MessageTable.timestamp).where(MessageTable.id == mbs.cursor_id)
