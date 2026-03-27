@@ -125,7 +125,9 @@ async def list_flow_versions(
     await _get_user_flow(session, flow_id, current_user.id)
     _ensure_deployments_enabled_for_filters(deployment_ids)
 
-    has_providers = FEATURE_FLAGS.wxo_deployments and await count_provider_accounts(session, user_id=current_user.id) > 0
+    has_providers = (
+        FEATURE_FLAGS.wxo_deployments and await count_provider_accounts(session, user_id=current_user.id) > 0
+    )
 
     if has_providers:
         # Best-effort snapshot-level sync: prune attachment rows whose
@@ -177,7 +179,9 @@ async def get_single_flow_version(
 ) -> FlowVersionReadWithData:
     await _get_user_flow(session, flow_id, current_user.id)
 
-    has_providers = FEATURE_FLAGS.wxo_deployments and await count_provider_accounts(session, user_id=current_user.id) > 0
+    has_providers = (
+        FEATURE_FLAGS.wxo_deployments and await count_provider_accounts(session, user_id=current_user.id) > 0
+    )
 
     if has_providers:
         # Best-effort snapshot-level sync (same as list endpoint).
