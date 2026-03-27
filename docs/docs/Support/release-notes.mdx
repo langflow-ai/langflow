@@ -119,6 +119,21 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     For more information, see [Upgrade the Langflow Docker image](/deployment-docker#upgrade-the-langflow-docker-image).
 
+-   Disabled tool calling for Gemini 3 preview models
+
+    Tool calling is temporarily disabled for the following Google Gemini 3 preview models:
+    `gemini-3.1-pro-preview`, `gemini-3-pro-preview`, `gemini-3-flash-preview`, and `gemini-3-pro-image-preview`.
+    
+-   Docling installation behavior differs between Desktop and OSS
+
+    In Langflow 1.8.0, Docling behavior depends on how Langflow is installed.
+
+    For Langflow Desktop installations, you need to set `LANGFLOW_DOCLING=True` in your `.env` file to enable Docling dependency installation. For more information, see [Set environment variables for Langflow Desktop](/environment-variables#set-environment-variables-for-langflow-desktop).
+
+    For Langflow OSS installations with `uv pip install langflow`, Docling is included with the Langflow package.
+
+    For Langflow OSS installations with `uv pip install langflow-base`, install Docling explicitly as an extra with `uv pip install "langflow-base[docling]"`.
+
 ### New features and enhancements
 
 - Global model provider configuration
