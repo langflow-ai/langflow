@@ -26,14 +26,22 @@ WXO_TRANSLATE = str.maketrans({" ": "_", "-": "_"})
 ERROR_PREFIX = "An error occurred while"
 ERROR_SUFFIX_IN = "in Watsonx Orchestrate."
 
+# The IAM endpoints below generate
+# authentication tokens for production
+# wxO environments and are documented publically:
+# Documentation: https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-generating-jwt-aws
 IBM_IAM_MCSP_PRODUCTION_URL = "https://iam.platform.saas.ibm.com"
+# Documentation: https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-generating-access-token-cloud
 IBM_IAM_PRODUCTION_URL = "https://iam.cloud.ibm.com"
+# Non-production wxO environments consume from different
+# IAM URLs, which are not documented publically
+# and must not be used publically in plain text.
 
 
 class WxOAuthURL(str, Enum):
     """IAM token endpoint URLs used to authenticate against Watsonx Orchestrate.
 
-    Non-production wxO environments consume from a different IAM endpoint than
+    Non-production wxO environments consume from a different IAM URL than
     production environments. These cannot be exposed in plain text so
     environment variables are surfaced instead.
     Set ``IBM_IAM_MCSP_DEV_URL_OVERRIDE`` for AWS wxO environments,
@@ -41,10 +49,16 @@ class WxOAuthURL(str, Enum):
     When unset, the production URLs are used
     ("https://iam.platform.saas.ibm.com" and "https://iam.cloud.ibm.com" respectively).
 
-    Please note: The IAM endpoints cannot be changed during runtime,
-    Langflow does not dynamically resolve the IAM endpoint based on
-    the wxO environment of a given tenant.
-    The environment variables are solely for internal testing and development.
+    Please note:
+    - The stated environment variables are solely for
+    internal testing and development purposes,
+    and must be left unset when shipping Langflow
+    for general availability.
+    - The IAM URLs cannot be changed during runtime,
+    and Langflow does not dynamically resolve the IAM URL based on
+    the environment of a given wxO tenant. It simply uses the
+    default production IAM URLs, or the environment variable
+    overrides if set.
     """
 
     MCSP = os.getenv("IBM_IAM_MCSP_DEV_URL_OVERRIDE", "").strip() or IBM_IAM_MCSP_PRODUCTION_URL
