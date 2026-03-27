@@ -8,10 +8,10 @@ authors = [
 ]
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    "langchain-core~=1.2.3",
+    "langchain-core>=1.2.3,<2.0.0",
     "pandas>=2.0.0,<3.0.0",
     "pydantic>=2.0.0,<3.0.0",
-    "pillow>=10.0.0,<13.0.0",
+    "pillow>=11.1.0,<13.0.0",
     "fastapi>=0.135.0,<1.0.0",
     "uvicorn>=0.34.3,<1.0.0",
     "typer>=0.16.0,<1.0.0",

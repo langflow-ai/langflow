@@ -25,7 +25,7 @@ dependencies = [
     "gunicorn>=22.0.0,<23.0.0",
     "langchain~=1.2.0",
     "langchain-community~=0.4.1",
-    "langchain-core~=1.2.3",
+    "langchain-core>=1.2.3,<2.0.0",
     "langchainhub~=0.1.15",
     "loguru>=0.7.1,<1.0.0",
     "structlog>=25.4.0,<26.0.0",
@@ -39,11 +39,11 @@ dependencies = [
     "cachetools>=6.0.0",
     "platformdirs>=4.2.0,<5.0.0",
     "python-multipart>=0.0.12,<1.0.0",
-    "orjson==3.10.15",
+    "orjson>=3.10.15,<4.0.0",
     "alembic>=1.13.0,<2.0.0",
     "passlib>=1.7.4,<2.0.0",
     "bcrypt==4.0.1",
-    "pillow>=11.1.0,<12.0.0",
+    "pillow>=11.1.0,<13.0.0",
     "docstring-parser>=0.16,<1.0.0",
     "PyJWT>=2.12.1",
     "pandas==2.2.3",
@@ -67,7 +67,7 @@ dependencies = [
     "opentelemetry-instrumentation-fastapi>=0.50b0,<1.0.0",
     "prometheus-client>=0.20.0,<1.0.0",
     "aiofiles>=24.1.0,<25.0.0",
-    "pip>=25.3,<26.0.0",
+    "pip>=26.0.0,<27.0.0",
     "setuptools>=80.0.0,<81.0.0",
     "nanoid>=2.0.0,<3.0.0",
     "filelock>=3.20.1,<4.0.0",
@@ -248,7 +248,7 @@ langsmith = ["langsmith>=0.3.42,<1.0.0"]
 arize = ["arize-phoenix-otel>=0.6.1"]
 
 # Individual document loaders
-pypdf = ["pypdf~=6.6.2"]
+pypdf = ["pypdf>=6.4.0,<7.0.0"]
 docx = ["python-docx>=1.1.0"]
 pytube = ["pytube==15.0.0"]
 
@@ -275,7 +275,7 @@ fastavro = [
     'fastavro>=1.9.8,<2.0.0; python_version >= "3.13"',
 ]
 gitpython = ["GitPython==3.1.43"]
-nltk = ["nltk==3.9.3"]
+nltk = ["nltk>=3.9.3"]
 lark = ["lark==1.2.2"]
 
 # Additional dependencies from requirements
@@ -286,11 +286,11 @@ markup = ["MarkupSafe==3.0.2"]
 aws = ["boto3>=1.34.162,<2.0.0", "langchain-aws~=1.1.0"]
 numexpr = ["numexpr==2.10.2"]
 qianfan = ["qianfan==0.3.5"]
-pgvector = ["pgvector==0.3.6"]
+pgvector = ["pgvector>=0.4.2"]
 litellm = ["litellm>=1.60.2,<2.0.0"]
 zep = ["zep-python==2.0.2"]
 youtube = ["youtube-transcript-api>=1.0.0,<2.0.0"]
-markdown = ["Markdown==3.7"]
+markdown = ["Markdown>=3.8.0"]
 kubernetes = ["kubernetes==31.0.0"]
 json-repair = ["json_repair==0.30.3"]
 astra = ["astra-assistants[tools]>=2.2.13,<3.0.0"]
@@ -347,7 +347,7 @@ fastparquet = ["fastparquet>=2024.11.0,<2025.0.0"]
 
 # Vision / ML
 vlmrun = ["vlmrun[all]>=0.2.0"]
-cuga = ["cuga~=0.2.9"]
+cuga = ["cuga>=0.2.10"]
 mlx = [
     "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
     "mlx-vlm~=0.3.9; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
