@@ -25,7 +25,7 @@ dependencies = [
     "gunicorn>=22.0.0,<23.0.0",
     "langchain~=1.2.0",
     "langchain-community~=0.4.1",
-    "langchain-core>=1.2.3,<2.0.0",
+    "langchain-core>=1.2.22,<2.0.0",
     "langchainhub~=0.1.15",
     "loguru>=0.7.1,<1.0.0",
     "structlog>=25.4.0,<26.0.0",
@@ -39,7 +39,7 @@ dependencies = [
     "cachetools>=6.0.0",
     "platformdirs>=4.2.0,<5.0.0",
     "python-multipart>=0.0.12,<1.0.0",
-    "orjson>=3.10.15,<4.0.0",
+    "orjson>=3.11.6,<4.0.0",
     "alembic>=1.13.0,<2.0.0",
     "passlib>=1.7.4,<2.0.0",
     "bcrypt==4.0.1",
@@ -248,7 +248,7 @@ langsmith = ["langsmith>=0.3.42,<1.0.0"]
 arize = ["arize-phoenix-otel>=0.6.1"]
 
 # Individual document loaders
-pypdf = ["pypdf>=6.4.0,<7.0.0"]
+pypdf = ["pypdf>=6.9.0,<7.0.0"]
 docx = ["python-docx>=1.1.0"]
 pytube = ["pytube==15.0.0"]
 
@@ -275,7 +275,7 @@ fastavro = [
     'fastavro>=1.9.8,<2.0.0; python_version >= "3.13"',
 ]
 gitpython = ["GitPython==3.1.43"]
-nltk = ["nltk>=3.9.3"]
+nltk = ["nltk>=3.9.4"]
 lark = ["lark==1.2.2"]
 
 # Additional dependencies from requirements
