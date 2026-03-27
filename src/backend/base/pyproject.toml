@@ -96,7 +96,9 @@ dependencies = [
     "langchain-chroma~=0.2.6",
     "jaraco-context>=6.1.0",
     "wheel>=0.46.2,<1.0.0",
-    "onnxruntime>=1.20,<1.24" # >=1.24 does not support Python 3.10; allow 1.23.x for agent-lifecycle-toolkit compatibility
+    "onnxruntime>=1.20,<1.24", # >=1.24 does not support Python 3.10; allow 1.23.x for agent-lifecycle-toolkit compatibility
+    "dynaconf>=3.2.13,<4.0.0",
+    "pyasn1>=0.6.3,<0.7.0",
 ]
 
 [dependency-groups]
