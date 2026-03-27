@@ -4,6 +4,7 @@ import importlib
 import io
 import zipfile
 from types import SimpleNamespace
+from typing import Any
 from uuid import UUID
 
 import pytest
@@ -18,6 +19,7 @@ from lfx.services.adapters.deployment.exceptions import (
     InvalidContentError,
     InvalidDeploymentOperationError,
     OperationNotSupportedError,
+    ResourceNotFoundError,
 )
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
@@ -32,9 +34,11 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentUpdate,
     EnvVarValueSpec,
     ExecutionCreate,
-    SnapshotItems,
+    ExecutionCreateResult,
+    ExecutionStatusResult,
     SnapshotListParams,
 )
+from pydantic import ValidationError
 
 try:
     import langflow.services.adapters.deployment.watsonx_orchestrate  # noqa: F401
@@ -46,9 +50,9 @@ except ModuleNotFoundError:
 
 tools_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.core.tools")
 service_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.service")
-update_helpers_module = importlib.import_module(
-    "langflow.services.adapters.deployment.watsonx_orchestrate.update_helpers"
-)
+update_core_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.core.update")
+create_core_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.core.create")
+shared_core_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.core.shared")
 payloads_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.payloads")
 client_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.client")
 types_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.types")
@@ -59,6 +63,16 @@ WatsonxOrchestrateDeploymentService = importlib.import_module(
 WxOCredentials = importlib.import_module(
     "langflow.services.adapters.deployment.watsonx_orchestrate.types"
 ).WxOCredentials
+
+
+def _tool_refs(*tool_ids: str) -> list[dict[str, str]]:
+    """Build WatsonxToolRefBinding dicts for test data."""
+    return [{"source_ref": f"fv-{tid}", "tool_id": tid} for tid in tool_ids]
+
+
+def _tool_ref(tool_id: str) -> dict[str, str]:
+    """Build a single WatsonxToolRefBinding dict for test data."""
+    return {"source_ref": f"fv-{tool_id}", "tool_id": tool_id}
 
 
 class DummySettingsService:
@@ -72,10 +86,14 @@ class FakeAgentClient:
         deployment: dict,
         listed_agents: list[dict] | None = None,
         get_payloads: dict[str, dict | list[dict]] | None = None,
+        create_response: object | None = None,
+        create_exception: Exception | None = None,
     ):
         self._deployment = deployment
         self._listed_agents = listed_agents or []
         self._get_payloads = get_payloads or {}
+        self._create_response = create_response or SimpleNamespace(id="dep-created")
+        self._create_exception = create_exception
         self.update_calls: list[tuple[str, dict]] = []
         self.post_calls: list[tuple[str, dict]] = []
         self.create_calls: list[dict] = []
@@ -101,7 +119,9 @@ class FakeAgentClient:
 
     def create(self, payload: dict):
         self.create_calls.append(payload)
-        return SimpleNamespace(id="dep-created")
+        if self._create_exception is not None:
+            raise self._create_exception
+        return self._create_response
 
     def delete(self, deployment_id: str):
         self.delete_calls.append(deployment_id)
@@ -182,7 +202,9 @@ class FakeConnectionsClient:
         return None
 
     def get_config(self, app_id: str, env):  # noqa: ARG002
-        return SimpleNamespace(security_scheme="key_value")
+        from ibm_watsonx_orchestrate_core.types.connections import ConnectionSecurityScheme
+
+        return SimpleNamespace(security_scheme=ConnectionSecurityScheme.KEY_VALUE)
 
     def get_credentials(self, app_id: str, env, *, use_app_credentials: bool):  # noqa: ARG002
         return {"runtime_credentials": {"TOKEN": "value"}}
@@ -235,13 +257,58 @@ class FakeBaseClient:
         return self._get_payloads.get(path, {})
 
 
+class FakeWXOClients(SimpleNamespace):
+    def __init__(self, *, agent=None, tool=None, connections=None):
+        super().__init__(
+            agent=agent or FakeAgentClient({"id": "dep-1", "tools": []}),
+            tool=tool or FakeToolClient([]),
+            connections=connections or FakeConnectionsClient(),
+        )
+        self.upload_tool_artifact_calls: list[str] = []
+
+    def upload_tool_artifact(self, tool_id: str, files: dict[str, tuple[str, io.BytesIO, str, dict[str, str]]]):
+        file_obj = files["file"][1]
+        file_obj.read()
+        self.upload_tool_artifact_calls.append(tool_id)
+        return {"id": tool_id}
+
+
 def _with_wxo_wrappers(ns):
     """Attach WxOClient SDK wrapper methods to a SimpleNamespace test double."""
     if hasattr(ns, "_base") and ns._base is not None:
         ns.get_agents_raw = lambda params=None: ns._base._get("/agents", params=params)
-        ns.post_run = lambda *, query_suffix="", data: ns._base._post(f"/runs{query_suffix}", data)
+        ns.post_run = lambda *, data: ns._base._post("/runs", data)
         ns.get_run = lambda run_id: ns._base._get(f"/runs/{run_id}")
     return ns
+
+
+def _attach_provider_clients(service: WatsonxOrchestrateDeploymentService, clients: object) -> None:
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return clients
+
+    service._get_provider_clients = mock_get_provider_clients
+
+
+def _create_provider_spec(
+    *,
+    resource_name_prefix: str = "lf_test_",
+    existing_tool_ids: list[str] | None = None,
+    existing_app_ids: list[str] | None = None,
+) -> dict:
+    tool_ids = existing_tool_ids or ["tool-existing-1"]
+    app_ids = existing_app_ids or ["app-existing-1"]
+    return {
+        "resource_name_prefix": resource_name_prefix,
+        "tools": {},
+        "connections": {"existing_app_ids": app_ids},
+        "operations": [
+            {
+                "op": "bind",
+                "tool": {"tool_id_with_ref": _tool_ref(tool_ids[0])},
+                "app_ids": [app_ids[0]],
+            }
+        ],
+    }
 
 
 @pytest.mark.anyio
@@ -294,7 +361,7 @@ async def test_process_config_rejects_reference_id():
 
 
 @pytest.mark.anyio
-async def test_create_rejects_config_reference_before_name_precheck(monkeypatch):
+async def test_create_rejects_legacy_top_level_config_section(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient({"id": "dep-1", "tools": []}),
@@ -307,7 +374,7 @@ async def test_create_rejects_config_reference_before_name_precheck(monkeypatch)
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    with pytest.raises(InvalidDeploymentOperationError, match="Config reference binding is not supported"):
+    with pytest.raises(InvalidDeploymentOperationError, match="Top-level 'snapshot' and 'config' create sections"):
         await service.create(
             user_id="user-1",
             db=object(),
@@ -317,6 +384,7 @@ async def test_create_rejects_config_reference_before_name_precheck(monkeypatch)
                     description="desc",
                     type=DeploymentType.AGENT,
                 ),
+                provider_data=_create_provider_spec(),
                 config=ConfigItem(reference_id="existing-config"),
             ),
         )
@@ -326,7 +394,7 @@ async def test_create_rejects_config_reference_before_name_precheck(monkeypatch)
 async def test_create_rejects_missing_resource_name_prefix():
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
 
-    with pytest.raises(InvalidContentError, match="resource_name_prefix"):
+    with pytest.raises(InvalidContentError, match="Field required"):
         await service.create(
             user_id="user-1",
             db=object(),
@@ -336,6 +404,17 @@ async def test_create_rejects_missing_resource_name_prefix():
                     description="desc",
                     type=DeploymentType.AGENT,
                 ),
+                provider_data={
+                    "tools": {},
+                    "connections": {"existing_app_ids": ["app-existing-1"]},
+                    "operations": [
+                        {
+                            "op": "bind",
+                            "tool": {"tool_id_with_ref": _tool_ref("tool-existing-1")},
+                            "app_ids": ["app-existing-1"],
+                        }
+                    ],
+                },
             ),
         )
 
@@ -390,6 +469,28 @@ async def test_update_rejects_legacy_top_level_snapshot_or_config(monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_update_rejects_legacy_top_level_config_section(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]}),
+        tool=FakeToolClient([{"id": "tool-1", "binding": {"langflow": {"connections": {}}}}]),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+    with pytest.raises(InvalidDeploymentOperationError, match="no longer supported"):
+        await service.update(
+            user_id="user-1",
+            deployment_id="dep-1",
+            payload=DeploymentUpdate(config={"config_id": "cfg-legacy"}),
+            db=object(),
+        )
+
+
+@pytest.mark.anyio
 async def test_update_provider_data_binds_existing_tool_and_updates_agent_tools(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
@@ -413,19 +514,19 @@ async def test_update_provider_data_binds_existing_tool_and_updates_agent_tools(
         return SimpleNamespace(connection_id="conn-new")
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-    monkeypatch.setattr(update_helpers_module, "validate_connection", mock_validate_connection)
+    monkeypatch.setattr(update_core_module, "validate_connection", mock_validate_connection)
 
     result = await service.update(
         user_id="user-1",
         deployment_id="dep-1",
         payload=DeploymentUpdate(
             provider_data={
-                "tools": {"existing_ids": ["tool-3"]},
+                "tools": {},
                 "connections": {"existing_app_ids": ["cfg-new"]},
                 "operations": [
                     {
                         "op": "bind",
-                        "tool": {"reference_id": "tool-3"},
+                        "tool": {"tool_id_with_ref": _tool_ref("tool-3")},
                         "app_ids": ["cfg-new"],
                     }
                 ],
@@ -434,7 +535,9 @@ async def test_update_provider_data_binds_existing_tool_and_updates_agent_tools(
         db=object(),
     )
 
-    assert result.snapshot_ids == ["tool-3"]
+    assert result.provider_result is not None
+    assert result.provider_result.created_app_ids == []
+    assert result.provider_result.created_snapshot_ids == ["tool-3"]
     assert [tool_id for tool_id, _payload in fake_tool.update_calls] == ["tool-3"]
     _, updated_tool_payload = fake_tool.update_calls[0]
     assert updated_tool_payload["binding"]["langflow"]["connections"]["cfg-new"] == "conn-new"
@@ -474,10 +577,10 @@ async def test_update_provider_data_creates_raw_connection_and_raw_tool(monkeypa
         return ["new-tool-1"]
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-    monkeypatch.setattr(update_helpers_module, "create_config", mock_create_config)
-    monkeypatch.setattr(update_helpers_module, "validate_connection", mock_validate_connection)
+    monkeypatch.setattr(shared_core_module, "create_config", mock_create_config)
+    monkeypatch.setattr(update_core_module, "validate_connection", mock_validate_connection)
     monkeypatch.setattr(
-        update_helpers_module,
+        update_core_module,
         "create_and_upload_wxo_flow_tools_with_bindings",
         mock_create_and_upload,
     )
@@ -496,7 +599,7 @@ async def test_update_provider_data_creates_raw_connection_and_raw_tool(monkeypa
                             "description": "desc",
                             "data": {"nodes": [], "edges": []},
                             "tags": [],
-                            "provider_data": {"project_id": "project-1"},
+                            "provider_data": {"project_id": "project-1", "source_ref": "fv-update-1"},
                         }
                     ]
                 },
@@ -520,12 +623,75 @@ async def test_update_provider_data_creates_raw_connection_and_raw_tool(monkeypa
         db=object(),
     )
 
-    assert captured["created_app_id"] == "lf_cfg"
-    assert captured["connections"] == {"cfg": "conn-lf_cfg"}
+    assert captured["created_app_id"] == "cfg"
+    assert captured["connections"] == {"cfg": "conn-cfg"}
     assert captured["tool_name_prefix"] == "lf_"
-    assert result.snapshot_ids == ["new-tool-1"]
+    assert result.provider_result is not None
+    assert result.provider_result.created_app_ids == ["cfg"]
+    assert result.provider_result.created_snapshot_ids == ["new-tool-1"]
     _, agent_payload = fake_agent.update_calls[0]
     assert agent_payload["tools"] == ["tool-1", "new-tool-1"]
+
+
+@pytest.mark.anyio
+async def test_update_provider_data_binds_existing_tool_using_provider_app_id_for_raw_connection(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
+    fake_tool = FakeToolClient([{"id": "tool-1", "name": "tool-1", "binding": {"langflow": {"connections": {}}}}])
+    fake_connections = FakeConnectionsClient()
+    fake_clients = SimpleNamespace(
+        agent=fake_agent,
+        tool=fake_tool,
+        connections=fake_connections,
+    )
+    captured: dict[str, str] = {}
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    async def mock_create_config(*, clients, config, user_id, db):  # noqa: ARG001
+        captured["created_app_id"] = config.name
+        fake_connections._connections_by_app_id[config.name] = f"conn-{config.name}"
+        return config.name
+
+    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+        return SimpleNamespace(connection_id=f"conn-{app_id}")
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+    monkeypatch.setattr(shared_core_module, "create_config", mock_create_config)
+    monkeypatch.setattr(update_core_module, "validate_connection", mock_validate_connection)
+
+    await service.update(
+        user_id="user-1",
+        deployment_id="dep-1",
+        payload=DeploymentUpdate(
+            provider_data={
+                "resource_name_prefix": "lf_",
+                "tools": {},
+                "connections": {
+                    "raw_payloads": [
+                        {
+                            "app_id": "cfg",
+                            "environment_variables": {"API_KEY": {"source": "raw", "value": "secret"}},
+                        }
+                    ]
+                },
+                "operations": [
+                    {
+                        "op": "bind",
+                        "tool": {"tool_id_with_ref": _tool_ref("tool-1")},
+                        "app_ids": ["cfg"],
+                    }
+                ],
+            }
+        ),
+        db=object(),
+    )
+
+    assert [tool_id for tool_id, _payload in fake_tool.update_calls] == ["tool-1"]
+    _, updated_tool_payload = fake_tool.update_calls[0]
+    assert updated_tool_payload["binding"]["langflow"]["connections"] == {"cfg": "conn-cfg"}
+    assert captured["created_app_id"] == "cfg"
 
 
 @pytest.mark.anyio
@@ -558,19 +724,19 @@ async def test_update_provider_data_mixed_operations_preserve_encounter_order(mo
         return SimpleNamespace(connection_id=f"conn-{app_id}")
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-    monkeypatch.setattr(update_helpers_module, "validate_connection", mock_validate_connection)
+    monkeypatch.setattr(update_core_module, "validate_connection", mock_validate_connection)
 
     result = await service.update(
         user_id="user-1",
         deployment_id="dep-1",
         payload=DeploymentUpdate(
             provider_data={
-                "tools": {"existing_ids": ["tool-1", "tool-2", "tool-3"]},
+                "tools": {},
                 "connections": {"existing_app_ids": ["cfg-1", "cfg-2"]},
                 "operations": [
-                    {"op": "bind", "tool": {"reference_id": "tool-3"}, "app_ids": ["cfg-2", "cfg-1"]},
-                    {"op": "unbind", "tool_id": "tool-1", "app_ids": ["cfg-1", "cfg-2"]},
-                    {"op": "remove_tool", "tool_id": "tool-2"},
+                    {"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-3")}, "app_ids": ["cfg-2", "cfg-1"]},
+                    {"op": "unbind", "tool": _tool_ref("tool-1"), "app_ids": ["cfg-1", "cfg-2"]},
+                    {"op": "remove_tool", "tool": _tool_ref("tool-2")},
                 ],
             }
         ),
@@ -578,7 +744,9 @@ async def test_update_provider_data_mixed_operations_preserve_encounter_order(mo
     )
 
     assert validate_calls == ["cfg-1", "cfg-2"]
-    assert result.snapshot_ids == ["tool-3"]
+    assert result.provider_result is not None
+    assert result.provider_result.created_app_ids == []
+    assert result.provider_result.created_snapshot_ids == ["tool-3"]
 
     # Existing tool updates should follow first encounter order: bind(tool-3) then unbind(tool-1).
     assert [tool_id for tool_id, _payload in fake_tool.update_calls] == ["tool-3", "tool-1"]
@@ -595,7 +763,7 @@ async def test_update_provider_data_mixed_operations_preserve_encounter_order(mo
 
 
 def test_ordered_unique_strs_preserves_encounter_order_and_safe_discard():
-    ordered = update_helpers_module.OrderedUniqueStrs()
+    ordered = update_core_module.OrderedUniqueStrs()
     ordered.extend(["b", "a", "b", "c"])
     ordered.add("a")
     ordered.add("d")
@@ -610,7 +778,6 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
         {
             "resource_name_prefix": "lf_",
             "tools": {
-                "existing_ids": ["tool-a", "tool-b", "tool-c"],
                 "raw_payloads": [
                     {
                         "id": str(UUID("00000000-0000-0000-0000-000000000041")),
@@ -618,7 +785,7 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
                         "description": "desc",
                         "data": {"nodes": [], "edges": []},
                         "tags": [],
-                        "provider_data": {"project_id": "project-1"},
+                        "provider_data": {"project_id": "project-1", "source_ref": "fv-plan-1"},
                     }
                 ],
             },
@@ -630,15 +797,19 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
                 ],
             },
             "operations": [
-                {"op": "bind", "tool": {"reference_id": "tool-c"}, "app_ids": ["cfg-2", "cfg-1", "cfg-2"]},
-                {"op": "bind", "tool": {"reference_id": "tool-a"}, "app_ids": ["cfg-1"]},
-                {"op": "unbind", "tool_id": "tool-c", "app_ids": ["cfg-3", "cfg-1", "cfg-3"]},
-                {"op": "remove_tool", "tool_id": "tool-b"},
+                {
+                    "op": "bind",
+                    "tool": {"tool_id_with_ref": _tool_ref("tool-c")},
+                    "app_ids": ["cfg-2", "cfg-1", "cfg-2"],
+                },
+                {"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-a")}, "app_ids": ["cfg-1"]},
+                {"op": "unbind", "tool": _tool_ref("tool-c"), "app_ids": ["cfg-3", "cfg-1", "cfg-3"]},
+                {"op": "remove_tool", "tool": _tool_ref("tool-b")},
                 {"op": "bind", "tool": {"name_of_raw": "snapshot-raw-1"}, "app_ids": ["cfg-raw-2", "cfg-raw-1"]},
             ],
         }
     )
-    plan = update_helpers_module.build_provider_update_plan(
+    plan = update_core_module.build_provider_update_plan(
         agent={"id": "dep-1", "tools": ["tool-a", "tool-b"]},
         provider_update=provider_update,
     )
@@ -647,7 +818,7 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
     assert plan.final_existing_tool_ids == ["tool-a", "tool-c"]
     assert plan.existing_app_ids == ["cfg-1", "cfg-2", "cfg-3"]
     assert [item.operation_app_id for item in plan.raw_connections_to_create] == ["cfg-raw-1", "cfg-raw-2"]
-    assert [item.provider_app_id for item in plan.raw_connections_to_create] == ["lf_cfg-raw-1", "lf_cfg-raw-2"]
+    assert [item.provider_app_id for item in plan.raw_connections_to_create] == ["cfg-raw-1", "cfg-raw-2"]
     assert len(plan.raw_tools_to_create) == 1
     assert plan.raw_tools_to_create[0].app_ids == ["cfg-raw-2", "cfg-raw-1"]
 
@@ -656,20 +827,578 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
     assert delta.unbind.to_list() == ["cfg-3", "cfg-1"]
 
 
+def test_build_provider_update_plan_normalizes_resource_name_prefix():
+    provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
+        {
+            "resource_name_prefix": "my-prefix!",
+            "connections": {"existing_app_ids": ["cfg-1"]},
+            "operations": [{"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-a")}, "app_ids": ["cfg-1"]}],
+        }
+    )
+    plan = update_core_module.build_provider_update_plan(
+        agent={"id": "dep-1", "tools": []},
+        provider_update=provider_update,
+    )
+
+    assert plan.resource_prefix == "lf_my_prefix"
+
+
+def test_build_provider_update_plan_rejects_non_alpha_resource_name_prefix():
+    with pytest.raises(ValidationError, match="start with a letter"):
+        payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
+            {
+                "resource_name_prefix": "123-prefix",
+                "connections": {"existing_app_ids": ["cfg-1"]},
+                "operations": [{"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-a")}, "app_ids": ["cfg-1"]}],
+            }
+        )
+
+
+def test_build_provider_update_plan_put_tools_replaces_agent_tool_list():
+    """put_tools standalone path seeds final_existing_tool_ids from the payload, not the agent."""
+    provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
+        {"put_tools": ["tool-x", "tool-y", "tool-z"]}
+    )
+    plan = update_core_module.build_provider_update_plan(
+        agent={"id": "dep-1", "tools": ["tool-a", "tool-b"]},
+        provider_update=provider_update,
+    )
+
+    assert plan.final_existing_tool_ids == ["tool-x", "tool-y", "tool-z"]
+    assert plan.bind_existing_tool_ids == []
+    assert plan.raw_tools_to_create == []
+    assert plan.existing_tool_deltas == {}
+
+
+def test_build_provider_update_plan_put_tools_deduplicates():
+    """Duplicate IDs in put_tools are collapsed (validator + OrderedUniqueStrs)."""
+    provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
+        {"put_tools": ["tool-a", "tool-b", "tool-a"]}
+    )
+    plan = update_core_module.build_provider_update_plan(
+        agent={"id": "dep-1", "tools": []},
+        provider_update=provider_update,
+    )
+
+    assert plan.final_existing_tool_ids == ["tool-a", "tool-b"]
+
+
+def test_build_provider_update_plan_put_tools_empty_clears_all():
+    """An empty put_tools list clears the agent's tool list entirely."""
+    provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate({"put_tools": []})
+    plan = update_core_module.build_provider_update_plan(
+        agent={"id": "dep-1", "tools": ["tool-a", "tool-b"]},
+        provider_update=provider_update,
+    )
+
+    assert plan.final_existing_tool_ids == []
+
+
 @pytest.mark.anyio
 async def test_update_existing_tool_connection_deltas_uses_bind_order_in_errors():
     fake_tool = FakeToolClient([{"id": "tool-c", "name": "tool-c", "binding": {"langflow": {"connections": {}}}}])
     clients = SimpleNamespace(tool=fake_tool)
-    delta = update_helpers_module.ToolConnectionOps()
+    delta = update_core_module.ToolConnectionOps()
     delta.bind.extend(["cfg-missing-first", "cfg-present"])
 
     with pytest.raises(InvalidContentError, match="cfg-missing-first"):
-        await update_helpers_module._update_existing_tool_connection_deltas(
+        await update_core_module._update_existing_tool_connection_deltas(
             clients=clients,
             existing_tool_deltas={"tool-c": delta},
             resolved_connections={"cfg-present": "conn-present"},
+            operation_to_provider_app_id={},
             original_tools={},
         )
+
+
+@pytest.mark.anyio
+async def test_apply_provider_create_plan_binds_raw_tools_with_provider_app_ids(monkeypatch):
+    provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
+        {
+            "resource_name_prefix": "lf_",
+            "tools": {
+                "raw_payloads": [
+                    {
+                        "id": str(UUID("00000000-0000-0000-0000-000000000081")),
+                        "name": "snapshot-raw-1",
+                        "description": "desc",
+                        "data": {"nodes": [], "edges": []},
+                        "tags": [],
+                        "provider_data": {"project_id": "project-1", "source_ref": "fv-create-1"},
+                    }
+                ]
+            },
+            "connections": {
+                "raw_payloads": [
+                    {"app_id": "cfg", "environment_variables": {"API_KEY": {"source": "raw", "value": "x"}}}
+                ]
+            },
+            "operations": [
+                {"op": "bind", "tool": {"name_of_raw": "snapshot-raw-1"}, "app_ids": ["cfg"]},
+            ],
+        }
+    )
+    plan = create_core_module.build_provider_create_plan(
+        deployment_name="my deployment",
+        provider_create=provider_create,
+    )
+
+    fake_clients = FakeWXOClients(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+    captured: dict[str, Any] = {}
+
+    async def mock_create_and_upload(*, clients, tool_bindings, tool_name_prefix):
+        _ = clients
+        first_binding = tool_bindings[0]
+        captured["connections"] = first_binding.connections
+        captured["tool_name_prefix"] = tool_name_prefix
+        return ["created-tool-1"]
+
+    monkeypatch.setattr(
+        create_core_module,
+        "create_and_upload_wxo_flow_tools_with_bindings",
+        mock_create_and_upload,
+    )
+
+    result = await create_core_module.apply_provider_create_plan_with_rollback(
+        clients=fake_clients,
+        user_id="user-1",
+        db=object(),
+        deployment_spec=BaseDeploymentData(
+            name="my deployment",
+            description="desc",
+            type=DeploymentType.AGENT,
+        ),
+        plan=plan,
+    )
+
+    assert fake_clients.connections.create_calls == [{"app_id": "cfg"}]
+    assert captured["connections"] == {"cfg": "conn-cfg"}
+    assert captured["tool_name_prefix"] == "lf_"
+    assert fake_clients.agent.create_calls
+    assert fake_clients.agent.create_calls[0]["name"] == "lf_my_deployment"
+    assert fake_clients.agent.create_calls[0]["tools"] == ["created-tool-1"]
+    assert result.agent_id == "dep-created"
+    assert result.app_ids == ["cfg"]
+    assert [(binding.tool_id, binding.app_ids) for binding in result.tool_app_bindings] == [("created-tool-1", ["cfg"])]
+    assert [(binding.source_ref, binding.tool_id) for binding in result.tools_with_refs] == [
+        ("fv-create-1", "created-tool-1")
+    ]
+
+
+@pytest.mark.anyio
+async def test_apply_provider_create_plan_rolls_back_mutated_existing_tools_with_writable_payload(monkeypatch):
+    provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
+        {
+            "resource_name_prefix": "lf_",
+            "tools": {},
+            "connections": {"existing_app_ids": ["cfg-1"]},
+            "operations": [{"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-1")}, "app_ids": ["cfg-1"]}],
+        }
+    )
+    plan = create_core_module.build_provider_create_plan(
+        deployment_name="my deployment",
+        provider_create=provider_create,
+    )
+    fake_tool = FakeToolClient(
+        [
+            {
+                "id": "tool-1",
+                "name": "tool-1",
+                "display_name": "Tool 1",
+                "description": "desc",
+                "binding": {"langflow": {"connections": {"old": "conn-old"}}},
+                "created_at": "read-only-field",
+            }
+        ]
+    )
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]}),
+        tool=fake_tool,
+        connections=FakeConnectionsClient(existing_app_id="cfg-1"),
+    )
+
+    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+        return SimpleNamespace(connection_id="conn-new")
+
+    async def mock_create_agent_deployment(
+        *,
+        clients,  # noqa: ARG001
+        tool_ids,  # noqa: ARG001
+        agent_name,  # noqa: ARG001
+        agent_display_name,  # noqa: ARG001
+        deployment_name,  # noqa: ARG001
+        description,  # noqa: ARG001
+    ):
+        msg = "create failed"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(create_core_module, "validate_connection", mock_validate_connection)
+    monkeypatch.setattr(create_core_module, "create_agent_deployment", mock_create_agent_deployment)
+
+    with pytest.raises(RuntimeError, match="create failed"):
+        await create_core_module.apply_provider_create_plan_with_rollback(
+            clients=fake_clients,
+            user_id="user-1",
+            db=object(),
+            deployment_spec=BaseDeploymentData(
+                name="my deployment",
+                description="desc",
+                type=DeploymentType.AGENT,
+            ),
+            plan=plan,
+        )
+
+    assert len(fake_tool.update_calls) == 2
+    first_payload = fake_tool.update_calls[0][1]
+    rollback_payload = fake_tool.update_calls[1][1]
+    assert "id" not in first_payload
+    assert "created_at" not in first_payload
+    assert first_payload["binding"]["langflow"]["connections"]["cfg-1"] == "conn-new"
+    assert rollback_payload["binding"]["langflow"]["connections"] == {"old": "conn-old"}
+
+
+@pytest.mark.anyio
+async def test_apply_provider_create_plan_rolls_back_successfully_created_raw_connections_on_partial_batch_failure(
+    monkeypatch,
+):
+    provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
+        {
+            "resource_name_prefix": "lf_",
+            "tools": {},
+            "connections": {
+                "raw_payloads": [
+                    {"app_id": "cfg-a", "environment_variables": {"API_KEY": {"source": "raw", "value": "x"}}},
+                    {"app_id": "cfg-b", "environment_variables": {"API_KEY": {"source": "raw", "value": "y"}}},
+                ]
+            },
+            "operations": [
+                {
+                    "op": "bind",
+                    "tool": {"tool_id_with_ref": _tool_ref("tool-existing-1")},
+                    "app_ids": ["cfg-a", "cfg-b"],
+                },
+            ],
+        }
+    )
+    plan = create_core_module.build_provider_create_plan(
+        deployment_name="my deployment",
+        provider_create=provider_create,
+    )
+    fake_clients = SimpleNamespace(connections=FakeConnectionsClient())
+    captured: dict[str, Any] = {}
+
+    async def mock_create_connection_with_conflict_mapping(*, clients, app_id, payload, user_id, db, error_prefix):  # noqa: ARG001
+        if app_id.endswith("cfg-a"):
+            return app_id
+        msg = "boom-create-connection"
+        raise RuntimeError(msg)
+
+    async def mock_rollback_created_resources(*, clients, agent_id, tool_ids, app_ids=None):  # noqa: ARG001
+        captured["rollback_app_ids"] = list(app_ids or [])
+
+    monkeypatch.setattr(
+        create_core_module,
+        "create_connection_with_conflict_mapping",
+        mock_create_connection_with_conflict_mapping,
+    )
+    monkeypatch.setattr(create_core_module, "rollback_created_resources", mock_rollback_created_resources)
+
+    with pytest.raises(RuntimeError, match="boom-create-connection"):
+        await create_core_module.apply_provider_create_plan_with_rollback(
+            clients=fake_clients,
+            user_id="user-1",
+            db=object(),
+            deployment_spec=BaseDeploymentData(
+                name="my deployment",
+                description="desc",
+                type=DeploymentType.AGENT,
+            ),
+            plan=plan,
+        )
+
+    assert captured.get("rollback_app_ids") == ["cfg-a"]
+
+
+@pytest.mark.anyio
+async def test_apply_provider_create_plan_rolls_back_all_journaled_raw_connections_when_multiple_succeed_then_fail(
+    monkeypatch,
+):
+    provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
+        {
+            "resource_name_prefix": "lf_",
+            "tools": {},
+            "connections": {
+                "raw_payloads": [
+                    {"app_id": "cfg-a", "environment_variables": {"API_KEY": {"source": "raw", "value": "x"}}},
+                    {"app_id": "cfg-b", "environment_variables": {"API_KEY": {"source": "raw", "value": "y"}}},
+                    {"app_id": "cfg-c", "environment_variables": {"API_KEY": {"source": "raw", "value": "z"}}},
+                ]
+            },
+            "operations": [
+                {
+                    "op": "bind",
+                    "tool": {"tool_id_with_ref": _tool_ref("tool-existing-1")},
+                    "app_ids": ["cfg-a", "cfg-b", "cfg-c"],
+                },
+            ],
+        }
+    )
+    plan = create_core_module.build_provider_create_plan(
+        deployment_name="my deployment",
+        provider_create=provider_create,
+    )
+    fake_clients = SimpleNamespace(connections=FakeConnectionsClient())
+    captured: dict[str, Any] = {}
+
+    async def mock_create_connection_with_conflict_mapping(*, clients, app_id, payload, user_id, db, error_prefix):  # noqa: ARG001
+        if app_id.endswith("cfg-c"):
+            msg = "boom-create-connection"
+            raise RuntimeError(msg)
+        return app_id
+
+    async def mock_rollback_created_resources(*, clients, agent_id, tool_ids, app_ids=None):  # noqa: ARG001
+        captured["rollback_app_ids"] = list(app_ids or [])
+
+    monkeypatch.setattr(
+        create_core_module,
+        "create_connection_with_conflict_mapping",
+        mock_create_connection_with_conflict_mapping,
+    )
+    monkeypatch.setattr(create_core_module, "rollback_created_resources", mock_rollback_created_resources)
+
+    with pytest.raises(RuntimeError, match="boom-create-connection"):
+        await create_core_module.apply_provider_create_plan_with_rollback(
+            clients=fake_clients,
+            user_id="user-1",
+            db=object(),
+            deployment_spec=BaseDeploymentData(
+                name="my deployment",
+                description="desc",
+                type=DeploymentType.AGENT,
+            ),
+            plan=plan,
+        )
+
+    assert captured["rollback_app_ids"] == ["cfg-a", "cfg-b"]
+
+
+@pytest.mark.anyio
+async def test_apply_provider_update_plan_rolls_back_successfully_created_raw_connections_on_partial_batch_failure(
+    monkeypatch,
+):
+    provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
+        {
+            "resource_name_prefix": "lf_",
+            "tools": {},
+            "connections": {
+                "raw_payloads": [
+                    {"app_id": "cfg-a", "environment_variables": {"API_KEY": {"source": "raw", "value": "x"}}},
+                    {"app_id": "cfg-b", "environment_variables": {"API_KEY": {"source": "raw", "value": "y"}}},
+                ]
+            },
+            "operations": [
+                {
+                    "op": "bind",
+                    "tool": {"tool_id_with_ref": _tool_ref("tool-existing-1")},
+                    "app_ids": ["cfg-a", "cfg-b"],
+                },
+            ],
+        }
+    )
+    plan = update_core_module.build_provider_update_plan(
+        agent={"id": "dep-1", "tools": ["tool-existing-1"]},
+        provider_update=provider_update,
+    )
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-existing-1"]}),
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+    captured: dict[str, Any] = {}
+
+    async def mock_create_connection_with_conflict_mapping(*, clients, app_id, payload, user_id, db, error_prefix):  # noqa: ARG001
+        if app_id.endswith("cfg-a"):
+            return app_id
+        msg = "boom-update-connection"
+        raise RuntimeError(msg)
+
+    async def mock_rollback_update_resources(*, clients, created_tool_ids, created_app_id, original_tools):  # noqa: ARG001
+        _ = (created_tool_ids, created_app_id, original_tools)
+
+    async def mock_rollback_created_app_ids(*, clients, created_app_ids):  # noqa: ARG001
+        captured["rolled_back_app_ids"] = list(created_app_ids)
+
+    monkeypatch.setattr(
+        update_core_module,
+        "create_connection_with_conflict_mapping",
+        mock_create_connection_with_conflict_mapping,
+    )
+    monkeypatch.setattr(update_core_module, "rollback_update_resources", mock_rollback_update_resources)
+    monkeypatch.setattr(update_core_module, "rollback_created_app_ids", mock_rollback_created_app_ids)
+
+    with pytest.raises(RuntimeError, match="boom-update-connection"):
+        await update_core_module.apply_provider_update_plan_with_rollback(
+            clients=fake_clients,
+            user_id="user-1",
+            db=object(),
+            agent_id="dep-1",
+            agent={"id": "dep-1", "tools": ["tool-existing-1"]},
+            update_payload={},
+            plan=plan,
+        )
+
+    assert captured["rolled_back_app_ids"] == ["cfg-a"]
+
+
+@pytest.mark.anyio
+async def test_apply_provider_update_plan_rolls_back_all_journaled_raw_connections_when_multiple_succeed_then_fail(
+    monkeypatch,
+):
+    provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
+        {
+            "resource_name_prefix": "lf_",
+            "tools": {},
+            "connections": {
+                "raw_payloads": [
+                    {"app_id": "cfg-a", "environment_variables": {"API_KEY": {"source": "raw", "value": "x"}}},
+                    {"app_id": "cfg-b", "environment_variables": {"API_KEY": {"source": "raw", "value": "y"}}},
+                    {"app_id": "cfg-c", "environment_variables": {"API_KEY": {"source": "raw", "value": "z"}}},
+                ]
+            },
+            "operations": [
+                {
+                    "op": "bind",
+                    "tool": {"tool_id_with_ref": _tool_ref("tool-existing-1")},
+                    "app_ids": ["cfg-a", "cfg-b", "cfg-c"],
+                },
+            ],
+        }
+    )
+    plan = update_core_module.build_provider_update_plan(
+        agent={"id": "dep-1", "tools": ["tool-existing-1"]},
+        provider_update=provider_update,
+    )
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-existing-1"]}),
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+    captured: dict[str, Any] = {}
+
+    async def mock_create_connection_with_conflict_mapping(*, clients, app_id, payload, user_id, db, error_prefix):  # noqa: ARG001
+        if app_id.endswith("cfg-c"):
+            msg = "boom-update-connection"
+            raise RuntimeError(msg)
+        return app_id
+
+    async def mock_rollback_update_resources(*, clients, created_tool_ids, created_app_id, original_tools):  # noqa: ARG001
+        _ = (created_tool_ids, created_app_id, original_tools)
+
+    async def mock_rollback_created_app_ids(*, clients, created_app_ids):  # noqa: ARG001
+        captured["rolled_back_app_ids"] = list(created_app_ids)
+
+    monkeypatch.setattr(
+        update_core_module,
+        "create_connection_with_conflict_mapping",
+        mock_create_connection_with_conflict_mapping,
+    )
+    monkeypatch.setattr(update_core_module, "rollback_update_resources", mock_rollback_update_resources)
+    monkeypatch.setattr(update_core_module, "rollback_created_app_ids", mock_rollback_created_app_ids)
+
+    with pytest.raises(RuntimeError, match="boom-update-connection"):
+        await update_core_module.apply_provider_update_plan_with_rollback(
+            clients=fake_clients,
+            user_id="user-1",
+            db=object(),
+            agent_id="dep-1",
+            agent={"id": "dep-1", "tools": ["tool-existing-1"]},
+            update_payload={},
+            plan=plan,
+        )
+
+    assert captured["rolled_back_app_ids"] == ["cfg-a", "cfg-b"]
+
+
+@pytest.mark.anyio
+async def test_create_provider_data_prefixes_tool_and_deployment_names_but_not_connection_app_ids(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = FakeWXOClients(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+    captured: dict[str, Any] = {}
+
+    async def mock_create_and_upload(*, clients, tool_bindings, tool_name_prefix):
+        _ = clients
+        first_binding = tool_bindings[0]
+        captured["connections"] = first_binding.connections
+        captured["tool_name_prefix"] = tool_name_prefix
+        return ["created-tool-1"]
+
+    _attach_provider_clients(service, fake_clients)
+    monkeypatch.setattr(
+        create_core_module,
+        "create_and_upload_wxo_flow_tools_with_bindings",
+        mock_create_and_upload,
+    )
+
+    result = await service.create(
+        user_id="user-1",
+        payload=DeploymentCreate(
+            spec=BaseDeploymentData(
+                name="my deployment",
+                description="desc",
+                type=DeploymentType.AGENT,
+            ),
+            provider_data={
+                "resource_name_prefix": "lf_",
+                "tools": {
+                    "raw_payloads": [
+                        {
+                            "id": str(UUID("00000000-0000-0000-0000-000000000091")),
+                            "name": "snapshot-new-1",
+                            "description": "desc",
+                            "data": {"nodes": [], "edges": []},
+                            "tags": [],
+                            "provider_data": {"project_id": "project-1", "source_ref": "fv-create-service-1"},
+                        }
+                    ]
+                },
+                "connections": {
+                    "raw_payloads": [
+                        {"app_id": "cfg", "environment_variables": {"API_KEY": {"source": "raw", "value": "x"}}}
+                    ]
+                },
+                "operations": [
+                    {"op": "bind", "tool": {"name_of_raw": "snapshot-new-1"}, "app_ids": ["cfg"]},
+                ],
+            },
+        ),
+        db=object(),
+    )
+
+    assert fake_clients.connections.create_calls == [{"app_id": "cfg"}]
+    assert captured["connections"] == {"cfg": "conn-cfg"}
+    assert captured["tool_name_prefix"] == "lf_"
+    assert fake_clients.agent.create_calls
+    assert fake_clients.agent.create_calls[0]["name"] == "lf_my_deployment"
+    assert fake_clients.agent.create_calls[0]["display_name"] == "my deployment"
+    assert fake_clients.agent.create_calls[0]["description"] == "desc"
+    assert fake_clients.agent.create_calls[0]["tools"] == ["created-tool-1"]
+    assert result.config_id is None
+    assert result.snapshot_ids == []
+    assert result.provider_result is not None
+    provider_result = (
+        result.provider_result.model_dump() if hasattr(result.provider_result, "model_dump") else result.provider_result
+    )
+    assert provider_result["app_ids"] == ["cfg"]
+    assert provider_result["tool_app_bindings"] == [{"tool_id": "created-tool-1", "app_ids": ["cfg"]}]
+    assert provider_result["tools_with_refs"] == [{"source_ref": "fv-create-service-1", "tool_id": "created-tool-1"}]
 
 
 @pytest.mark.anyio
@@ -728,7 +1457,7 @@ async def test_update_provider_data_maps_raw_connection_conflict_to_deployment_c
         raise ClientAPIException(response=response)
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-    monkeypatch.setattr(update_helpers_module, "create_config", mock_create_config)
+    monkeypatch.setattr(shared_core_module, "create_config", mock_create_config)
 
     with pytest.raises(DeploymentConflictError, match="error details"):
         await service.update(
@@ -745,7 +1474,7 @@ async def test_update_provider_data_maps_raw_connection_conflict_to_deployment_c
                                 "description": "desc",
                                 "data": {"nodes": [], "edges": []},
                                 "tags": [],
-                                "provider_data": {"project_id": "project-1"},
+                                "provider_data": {"project_id": "project-1", "source_ref": "fv-conflict-1"},
                             }
                         ]
                     },
@@ -771,36 +1500,91 @@ async def test_update_provider_data_maps_raw_connection_conflict_to_deployment_c
 
 
 @pytest.mark.anyio
+async def test_create_provider_data_maps_raw_connection_conflict_to_deployment_conflict(monkeypatch):
+    from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = FakeWXOClients(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+    captured: dict[str, str] = {}
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    async def mock_create_config(*, clients, config, user_id, db):  # noqa: ARG001
+        captured["attempted_app_id"] = config.name
+        response = SimpleNamespace(status_code=409, text='{"detail":"already exists"}')
+        raise ClientAPIException(response=response)
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+    monkeypatch.setattr(shared_core_module, "create_config", mock_create_config)
+
+    with pytest.raises(DeploymentConflictError, match="error details"):
+        await service.create(
+            user_id="user-1",
+            payload=DeploymentCreate(
+                spec=BaseDeploymentData(
+                    name="my deployment",
+                    description="desc",
+                    type=DeploymentType.AGENT,
+                ),
+                provider_data={
+                    "resource_name_prefix": "lf_",
+                    "tools": {
+                        "raw_payloads": [
+                            {
+                                "id": str(UUID("00000000-0000-0000-0000-000000000013")),
+                                "name": "snapshot-new-1",
+                                "description": "desc",
+                                "data": {"nodes": [], "edges": []},
+                                "tags": [],
+                                "provider_data": {"project_id": "project-1", "source_ref": "fv-create-conflict-1"},
+                            }
+                        ]
+                    },
+                    "connections": {
+                        "raw_payloads": [
+                            {
+                                "app_id": "cfg",
+                                "environment_variables": {"API_KEY": {"source": "raw", "value": "secret"}},
+                            }
+                        ]
+                    },
+                    "operations": [
+                        {
+                            "op": "bind",
+                            "tool": {"name_of_raw": "snapshot-new-1"},
+                            "app_ids": ["cfg"],
+                        }
+                    ],
+                },
+            ),
+            db=object(),
+        )
+
+    assert captured["attempted_app_id"] == "cfg"
+
+
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     ("provider_data", "error_message"),
     [
         (
             {
-                "tools": {"existing_ids": ["tool-1"]},
+                "tools": {},
                 "operations": [
                     {
                         "op": "bind",
-                        "tool": {"reference_id": "tool-1"},
+                        "tool": {"tool_id_with_ref": _tool_ref("tool-1")},
                         "app_ids": ["undeclared_app_for_bind"],
                     }
                 ],
             },
             "operation app_ids must be declared in connections\\.existing_app_ids or "
             "connections\\.raw_payloads\\[\\*\\]\\.app_id",
-        ),
-        (
-            {
-                "tools": {"existing_ids": ["tool-1"]},
-                "connections": {"existing_app_ids": ["cfg-1"]},
-                "operations": [
-                    {
-                        "op": "bind",
-                        "tool": {"reference_id": "tool-missing"},
-                        "app_ids": ["cfg-1"],
-                    }
-                ],
-            },
-            "bind.tool.reference_id not found in tools.existing_ids",
         ),
     ],
 )
@@ -863,7 +1647,7 @@ async def test_update_provider_data_rolls_back_mutated_tools_with_writable_paylo
         return SimpleNamespace(connection_id="conn-new")
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-    monkeypatch.setattr(update_helpers_module, "validate_connection", mock_validate_connection)
+    monkeypatch.setattr(update_core_module, "validate_connection", mock_validate_connection)
 
     with pytest.raises(DeploymentError, match="Please check server logs for details"):
         await service.update(
@@ -872,12 +1656,12 @@ async def test_update_provider_data_rolls_back_mutated_tools_with_writable_paylo
             payload=DeploymentUpdate(
                 spec=BaseDeploymentDataUpdate(description="trigger update"),
                 provider_data={
-                    "tools": {"existing_ids": ["tool-1"]},
+                    "tools": {},
                     "connections": {"existing_app_ids": ["cfg-1"]},
                     "operations": [
                         {
                             "op": "bind",
-                            "tool": {"reference_id": "tool-1"},
+                            "tool": {"tool_id_with_ref": _tool_ref("tool-1")},
                             "app_ids": ["cfg-1"],
                         }
                     ],
@@ -926,10 +1710,10 @@ async def test_update_provider_data_rolls_back_partially_created_raw_tools(monke
         )
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-    monkeypatch.setattr(update_helpers_module, "create_config", mock_create_config)
-    monkeypatch.setattr(update_helpers_module, "validate_connection", mock_validate_connection)
+    monkeypatch.setattr(shared_core_module, "create_config", mock_create_config)
+    monkeypatch.setattr(update_core_module, "validate_connection", mock_validate_connection)
     monkeypatch.setattr(
-        update_helpers_module,
+        update_core_module,
         "create_and_upload_wxo_flow_tools_with_bindings",
         mock_create_and_upload_with_bindings,
     )
@@ -949,7 +1733,7 @@ async def test_update_provider_data_rolls_back_partially_created_raw_tools(monke
                                 "description": "desc",
                                 "data": {"nodes": [], "edges": []},
                                 "tags": [],
-                                "provider_data": {"project_id": "project-1"},
+                                "provider_data": {"project_id": "project-1", "source_ref": "fv-rollback-1"},
                             }
                         ]
                     },
@@ -974,7 +1758,98 @@ async def test_update_provider_data_rolls_back_partially_created_raw_tools(monke
         )
 
     assert fake_tool.delete_calls == ["created-tool-1"]
-    assert fake_connections.delete_calls == ["lf_cfg"]
+    assert fake_connections.delete_calls == ["cfg"]
+
+
+@pytest.mark.anyio
+async def test_create_provider_data_rolls_back_partially_created_raw_tools(monkeypatch):
+    core_tools_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.core.tools")
+
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_connections = FakeConnectionsClient()
+    fake_tool = FakeToolClient([])
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=fake_tool,
+        connections=fake_connections,
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    async def mock_create_connection_with_conflict_mapping(*, clients, app_id, payload, user_id, db, error_prefix):  # noqa: ARG001
+        fake_connections._connections_by_app_id[app_id] = f"conn-{app_id}"
+        return app_id
+
+    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+        return SimpleNamespace(connection_id=f"conn-{app_id}")
+
+    async def mock_create_and_upload_with_bindings(*, clients, tool_bindings, tool_name_prefix):
+        _ = clients, tool_bindings, tool_name_prefix
+        msg = "upload failed"
+        raise core_tools_module.ToolUploadBatchError(
+            created_tool_ids=["created-tool-1"],
+            errors=[RuntimeError(msg)],
+        )
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+    monkeypatch.setattr(
+        create_core_module,
+        "create_connection_with_conflict_mapping",
+        mock_create_connection_with_conflict_mapping,
+    )
+    monkeypatch.setattr(create_core_module, "validate_connection", mock_validate_connection)
+    monkeypatch.setattr(
+        create_core_module,
+        "create_and_upload_wxo_flow_tools_with_bindings",
+        mock_create_and_upload_with_bindings,
+    )
+
+    with pytest.raises(DeploymentError, match="Please check server logs for details"):
+        await service.create(
+            user_id="user-1",
+            payload=DeploymentCreate(
+                spec=BaseDeploymentData(
+                    name="my deployment",
+                    description="desc",
+                    type=DeploymentType.AGENT,
+                ),
+                provider_data={
+                    "resource_name_prefix": "lf_",
+                    "tools": {
+                        "raw_payloads": [
+                            {
+                                "id": str(UUID("00000000-0000-0000-0000-000000000023")),
+                                "name": "snapshot-new-1",
+                                "description": "desc",
+                                "data": {"nodes": [], "edges": []},
+                                "tags": [],
+                                "provider_data": {"project_id": "project-1", "source_ref": "fv-create-rollback-1"},
+                            }
+                        ]
+                    },
+                    "connections": {
+                        "raw_payloads": [
+                            {
+                                "app_id": "cfg",
+                                "environment_variables": {"API_KEY": {"source": "raw", "value": "secret"}},
+                            }
+                        ]
+                    },
+                    "operations": [
+                        {
+                            "op": "bind",
+                            "tool": {"name_of_raw": "snapshot-new-1"},
+                            "app_ids": ["cfg"],
+                        }
+                    ],
+                },
+            ),
+            db=object(),
+        )
+
+    assert fake_tool.delete_calls == ["created-tool-1"]
+    assert fake_connections.delete_calls == ["cfg"]
 
 
 @pytest.mark.anyio
@@ -1001,7 +1876,7 @@ async def test_process_raw_flows_with_app_id_awaits_connection_validation(monkey
         captured["flow_payloads"] = flow_payloads
         captured["connections"] = connections
         captured["tool_name_prefix"] = tool_name_prefix
-        return ["tool-1"]
+        return []
 
     monkeypatch.setattr(
         "langflow.services.adapters.deployment.watsonx_orchestrate.core.config.validate_connection",
@@ -1020,14 +1895,200 @@ async def test_process_raw_flows_with_app_id_awaits_connection_validation(monkey
         tool_name_prefix="lf_test_",
     )
 
-    assert result == ["tool-1"]
+    assert result == []
     assert captured["connections"] == {"app-1": "conn-123"}
     assert captured["tool_name_prefix"] == "lf_test_"
 
 
+@pytest.mark.anyio
+async def test_process_raw_flows_with_app_id_returns_source_ref_bindings(monkeypatch):
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core import tools as tools_core_module
+
+    fake_clients = SimpleNamespace(
+        tool=SimpleNamespace(),
+        connections=SimpleNamespace(),
+    )
+
+    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+        return SimpleNamespace(connection_id="conn-123")
+
+    async def mock_create_and_upload_wxo_flow_tools(
+        *,
+        clients,  # noqa: ARG001
+        flow_payloads,  # noqa: ARG001
+        connections,  # noqa: ARG001
+        tool_name_prefix,  # noqa: ARG001
+    ):
+        return ["tool-1", "tool-2"]
+
+    monkeypatch.setattr(
+        "langflow.services.adapters.deployment.watsonx_orchestrate.core.config.validate_connection",
+        mock_validate_connection,
+    )
+    monkeypatch.setattr(
+        tools_core_module,
+        "create_and_upload_wxo_flow_tools",
+        mock_create_and_upload_wxo_flow_tools,
+    )
+
+    result = await tools_core_module.process_raw_flows_with_app_id(
+        clients=fake_clients,
+        app_id="app-1",
+        flows=[
+            BaseFlowArtifact[payloads_module.WatsonxFlowArtifactProviderData](
+                id=UUID("00000000-0000-0000-0000-000000000001"),
+                name="snapshot-one",
+                description="desc",
+                data={"nodes": [], "edges": []},
+                tags=[],
+                provider_data=payloads_module.WatsonxFlowArtifactProviderData(
+                    project_id="project-1",
+                    source_ref="fv-1",
+                ),
+            ),
+            BaseFlowArtifact[payloads_module.WatsonxFlowArtifactProviderData](
+                id=UUID("00000000-0000-0000-0000-000000000002"),
+                name="snapshot-two",
+                description="desc",
+                data={"nodes": [], "edges": []},
+                tags=[],
+                provider_data=payloads_module.WatsonxFlowArtifactProviderData(
+                    project_id="project-1",
+                    source_ref="fv-2",
+                ),
+            ),
+        ],
+        tool_name_prefix="lf_test_",
+    )
+
+    assert [
+        {
+            "source_ref": binding.source_ref,
+            "tool_id": binding.tool_id,
+        }
+        for binding in result
+    ] == [
+        {
+            "source_ref": "fv-1",
+            "tool_id": "tool-1",
+        },
+        {
+            "source_ref": "fv-2",
+            "tool_id": "tool-2",
+        },
+    ]
+
+
+@pytest.mark.anyio
+async def test_process_raw_flows_with_app_id_accepts_typed_provider_data(monkeypatch):
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core import tools as tools_core_module
+
+    fake_clients = SimpleNamespace(
+        tool=SimpleNamespace(),
+        connections=SimpleNamespace(),
+    )
+
+    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+        return SimpleNamespace(connection_id="conn-123")
+
+    async def mock_create_and_upload_wxo_flow_tools(
+        *,
+        clients,  # noqa: ARG001
+        flow_payloads,  # noqa: ARG001
+        connections,  # noqa: ARG001
+        tool_name_prefix,  # noqa: ARG001
+    ):
+        return ["tool-1"]
+
+    monkeypatch.setattr(
+        "langflow.services.adapters.deployment.watsonx_orchestrate.core.config.validate_connection",
+        mock_validate_connection,
+    )
+    monkeypatch.setattr(
+        tools_core_module,
+        "create_and_upload_wxo_flow_tools",
+        mock_create_and_upload_wxo_flow_tools,
+    )
+
+    result = await tools_core_module.process_raw_flows_with_app_id(
+        clients=fake_clients,
+        app_id="app-1",
+        flows=[
+            BaseFlowArtifact[payloads_module.WatsonxFlowArtifactProviderData](
+                id=UUID("00000000-0000-0000-0000-000000000001"),
+                name="snapshot-one",
+                description="desc",
+                data={"nodes": [], "edges": []},
+                tags=[],
+                provider_data=payloads_module.WatsonxFlowArtifactProviderData(
+                    project_id="project-1",
+                    source_ref="fv-typed-1",
+                ),
+            ),
+        ],
+        tool_name_prefix="lf_test_",
+    )
+
+    assert len(result) == 1
+    assert result[0].source_ref == "fv-typed-1"
+    assert result[0].tool_id == "tool-1"
+
+
+@pytest.mark.anyio
+async def test_process_raw_flows_with_app_id_rejects_plain_dict_provider_data(monkeypatch):
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core import tools as tools_core_module
+
+    fake_clients = SimpleNamespace(
+        tool=SimpleNamespace(),
+        connections=SimpleNamespace(),
+    )
+
+    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+        return SimpleNamespace(connection_id="conn-123")
+
+    async def mock_create_and_upload_wxo_flow_tools(
+        *,
+        clients,  # noqa: ARG001
+        flow_payloads,  # noqa: ARG001
+        connections,  # noqa: ARG001
+        tool_name_prefix,  # noqa: ARG001
+    ):
+        return ["tool-1"]
+
+    monkeypatch.setattr(
+        "langflow.services.adapters.deployment.watsonx_orchestrate.core.config.validate_connection",
+        mock_validate_connection,
+    )
+    monkeypatch.setattr(
+        tools_core_module,
+        "create_and_upload_wxo_flow_tools",
+        mock_create_and_upload_wxo_flow_tools,
+    )
+
+    with pytest.raises(
+        InvalidContentError,
+        match=r"Flow payload provider_data must be a WatsonxFlowArtifactProviderData model instance\.",
+    ):
+        await tools_core_module.process_raw_flows_with_app_id(
+            clients=fake_clients,
+            app_id="app-1",
+            flows=[
+                BaseFlowArtifact(
+                    id=UUID("00000000-0000-0000-0000-000000000001"),
+                    name="snapshot-one",
+                    description="desc",
+                    data={"nodes": [], "edges": []},
+                    tags=[],
+                    provider_data={"project_id": "project-1", "source_ref": "fv-dict-1"},
+                ),
+            ],
+            tool_name_prefix="lf_test_",
+        )
+
+
 def test_create_wxo_flow_tool_keeps_load_from_db_global_values_unprefixed(monkeypatch):
     captured_tool_definition = {}
-    flow_payload = BaseFlowArtifact(
+    flow_payload = BaseFlowArtifact[payloads_module.WatsonxFlowArtifactProviderData](
         id="00000000-0000-0000-0000-000000000001",
         name="flow",
         description="desc",
@@ -1053,7 +2114,10 @@ def test_create_wxo_flow_tool_keeps_load_from_db_global_values_unprefixed(monkey
             "edges": [],
         },
         tags=[],
-        provider_data={"project_id": "project-123"},
+        provider_data=payloads_module.WatsonxFlowArtifactProviderData(
+            project_id="project-123",
+            source_ref="fv-flow-template-1",
+        ),
     )
 
     fake_tool = SimpleNamespace(
@@ -1086,6 +2150,75 @@ def test_create_wxo_flow_tool_keeps_load_from_db_global_values_unprefixed(monkey
     assert template["plain_value"]["value"] == "DO_NOT_TOUCH"
 
 
+def test_create_wxo_flow_tool_excludes_provider_data_from_artifact(monkeypatch):
+    """provider_data must not leak into the flow JSON zipped inside the artifact.
+
+    WxO's tool runtime chokes on unexpected top-level keys like ``provider_data``
+    in the flow definition, causing executions to hang indefinitely.
+    """
+    captured_flow_definition = {}
+
+    flow_payload = BaseFlowArtifact[payloads_module.WatsonxFlowArtifactProviderData](
+        id="00000000-0000-0000-0000-000000000001",
+        name="flow",
+        description="desc",
+        data={
+            "nodes": [
+                {
+                    "data": {
+                        "type": "ChatInput",
+                        "id": "ChatInput-1",
+                        "node": {"template": {"_type": "CustomComponent"}},
+                    }
+                },
+                {
+                    "data": {
+                        "type": "ChatOutput",
+                        "id": "ChatOutput-1",
+                        "node": {"template": {"_type": "CustomComponent"}},
+                    }
+                },
+            ],
+            "edges": [],
+        },
+        tags=[],
+        provider_data=payloads_module.WatsonxFlowArtifactProviderData(
+            project_id="project-123",
+            source_ref="src-ref-1",
+        ),
+    )
+
+    fake_tool = SimpleNamespace(
+        __tool_spec__=SimpleNamespace(
+            model_dump=lambda **kwargs: {"name": "flow"},  # noqa: ARG005
+        )
+    )
+
+    def mock_create_langflow_tool(*, tool_definition, connections, show_details):  # noqa: ARG001
+        captured_flow_definition.update(tool_definition)
+        return fake_tool
+
+    monkeypatch.setattr(tools_module, "create_langflow_tool", mock_create_langflow_tool)
+    monkeypatch.setattr(
+        tools_module,
+        "build_langflow_artifact_bytes",
+        lambda **kwargs: b"artifact",  # noqa: ARG005
+    )
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import create_wxo_flow_tool
+
+    create_wxo_flow_tool(
+        flow_payload=flow_payload,
+        connections={},
+        tool_name_prefix="lf_test_",
+    )
+
+    assert "provider_data" not in captured_flow_definition
+    assert "data" in captured_flow_definition
+    assert "name" in captured_flow_definition
+    assert "description" in captured_flow_definition
+
+
 def test_create_wxo_flow_tool_requires_provider_data_project_id():
     flow_payload = BaseFlowArtifact(
         id="00000000-0000-0000-0000-000000000001",
@@ -1099,7 +2232,7 @@ def test_create_wxo_flow_tool_requires_provider_data_project_id():
 
     with pytest.raises(
         InvalidContentError,
-        match="Flow payload must include provider_data with a non-empty project_id",
+        match=r"Flow payload provider_data must be a WatsonxFlowArtifactProviderData model instance\.",
     ):
         create_wxo_flow_tool(
             flow_payload=flow_payload,
@@ -1109,13 +2242,16 @@ def test_create_wxo_flow_tool_requires_provider_data_project_id():
 
 
 def test_create_wxo_flow_tool_prefixes_name_for_raw_payload(monkeypatch):
-    flow_payload = BaseFlowArtifact(
+    flow_payload = BaseFlowArtifact[payloads_module.WatsonxFlowArtifactProviderData](
         id="00000000-0000-0000-0000-000000000001",
         name="basicllmwxo",
         description="desc",
         data={"nodes": [], "edges": []},
         tags=[],
-        provider_data={"project_id": "project-123"},
+        provider_data=payloads_module.WatsonxFlowArtifactProviderData(
+            project_id="project-123",
+            source_ref="fv-prefix-1",
+        ),
     )
 
     fake_tool = SimpleNamespace(
@@ -1148,259 +2284,42 @@ def test_create_wxo_flow_tool_prefixes_name_for_raw_payload(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_create_wires_snapshot_ids_to_agent_and_prefixed_names(monkeypatch):
+async def test_rollback_create_result_cleans_up_agent_tools_and_apps(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_clients = SimpleNamespace(
-        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
-        tool=FakeToolClient([]),
-        connections=FakeConnectionsClient(),
-    )
+    fake_clients = SimpleNamespace()
     captured: dict[str, object] = {}
 
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
         return fake_clients
 
+    async def mock_rollback_created_resources(*, clients, agent_id, tool_ids, app_ids=None):
+        captured["clients"] = clients
+        captured["agent_id"] = agent_id
+        captured["tool_ids"] = list(tool_ids)
+        captured["app_ids"] = list(app_ids or [])
+
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+    monkeypatch.setattr(service_module, "rollback_created_resources", mock_rollback_created_resources)
 
-    async def mock_process_config(user_id, db, deployment_name, config, *, clients):  # noqa: ARG001
-        captured["config_deployment_name"] = deployment_name
-        return deployment_name
-
-    monkeypatch.setattr(
-        service_module,
-        "process_config",
-        mock_process_config,
-    )
-
-    async def mock_process_raw_flows_with_app_id(
-        clients,  # noqa: ARG001
-        app_id,
-        flows,
-        tool_name_prefix,
-    ):
-        captured["snapshot_app_id"] = app_id
-        captured["snapshot_flows"] = flows
-        captured["tool_name_prefix"] = tool_name_prefix
-        return ["tool-1", "tool-2"]
-
-    monkeypatch.setattr(
-        service_module,
-        "process_raw_flows_with_app_id",
-        mock_process_raw_flows_with_app_id,
-    )
-
-    deployment_payload = DeploymentCreate(
-        spec=BaseDeploymentData(
-            name="my deployment",
-            description="desc",
-            type=DeploymentType.AGENT,
-            provider_spec={"resource_name_prefix": "lf_abcdef_"},
-        ),
-        config=ConfigItem(
-            raw_payload=DeploymentConfig(
-                name="ignored",
-                description="from payload",
-                environment_variables=None,
-            )
-        ),
-        snapshot=SnapshotItems(
-            raw_payloads=[
-                BaseFlowArtifact(
-                    id=UUID("00000000-0000-0000-0000-000000000001"),
-                    name="snapshot-one",
-                    description="desc",
-                    data={"nodes": [], "edges": []},
-                    tags=[],
-                    provider_data={"project_id": "project-123"},
-                )
-            ]
-        ),
-    )
-
-    result = await service.create(
+    await service.rollback_create_result(
         user_id="user-1",
-        payload=deployment_payload,
+        deployment_id="dep-created",
+        provider_result={
+            "app_ids": ["cfg"],
+            "tools_with_refs": [
+                {"source_ref": "fv-1", "tool_id": "tool-1"},
+                {"source_ref": "fv-2", "tool_id": "tool-2"},
+            ],
+        },
         db=object(),
     )
 
-    assert result.id == "dep-created"
-    assert result.config_id == "lf_abcdef_my_deployment_ignored_app_id"
-    assert result.snapshot_ids == ["tool-1", "tool-2"]
-    assert captured["config_deployment_name"] == "lf_abcdef_my_deployment_ignored_app_id"
-    assert captured["snapshot_app_id"] == "lf_abcdef_my_deployment_ignored_app_id"
-    assert len(captured["snapshot_flows"]) == 1
-    assert captured["tool_name_prefix"] == "lf_abcdef_"
-
-    assert fake_clients.agent.create_calls
-    assert fake_clients.agent.create_calls[0]["tools"] == ["tool-1", "tool-2"]
-    assert fake_clients.agent.create_calls[0]["name"] == "lf_abcdef_my_deployment"
-
-
-@pytest.mark.anyio
-async def test_create_uses_caller_provided_resource_name_prefix(monkeypatch):
-    """When provider_spec includes resource_name_prefix, the service uses it."""
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_clients = SimpleNamespace(
-        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
-        tool=FakeToolClient([]),
-        connections=FakeConnectionsClient(),
-    )
-    captured: dict[str, object] = {}
-
-    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        return fake_clients
-
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-
-    async def mock_process_config(user_id, db, deployment_name, config, *, clients):  # noqa: ARG001
-        captured["config_deployment_name"] = deployment_name
-        return deployment_name
-
-    monkeypatch.setattr(
-        service_module,
-        "process_config",
-        mock_process_config,
-    )
-
-    async def mock_process_raw_flows_with_app_id(
-        clients,  # noqa: ARG001
-        app_id,
-        flows,
-        tool_name_prefix,
-    ):
-        captured["snapshot_app_id"] = app_id
-        captured["snapshot_flows"] = flows
-        captured["tool_name_prefix"] = tool_name_prefix
-        return ["tool-1", "tool-2"]
-
-    monkeypatch.setattr(
-        service_module,
-        "process_raw_flows_with_app_id",
-        mock_process_raw_flows_with_app_id,
-    )
-
-    deployment_payload = DeploymentCreate(
-        spec=BaseDeploymentData(
-            name="my deployment",
-            description="desc",
-            type=DeploymentType.AGENT,
-            provider_spec={"resource_name_prefix": "idempotent_abc_"},
-        ),
-        config=ConfigItem(
-            raw_payload=DeploymentConfig(
-                name="ignored",
-                description="from payload",
-                environment_variables=None,
-            )
-        ),
-        snapshot=SnapshotItems(
-            raw_payloads=[
-                BaseFlowArtifact(
-                    id=UUID("00000000-0000-0000-0000-000000000001"),
-                    name="snapshot-one",
-                    description="desc",
-                    data={"nodes": [], "edges": []},
-                    tags=[],
-                    provider_data={"project_id": "project-123"},
-                )
-            ]
-        ),
-    )
-
-    result = await service.create(
-        user_id="user-1",
-        payload=deployment_payload,
-        db=object(),
-    )
-
-    assert result.id == "dep-created"
-    assert captured["config_deployment_name"] == "idempotent_abc_my_deployment_ignored_app_id"
-    assert captured["snapshot_app_id"] == "idempotent_abc_my_deployment_ignored_app_id"
-    assert captured["tool_name_prefix"] == "idempotent_abc_"
-
-    assert fake_clients.agent.create_calls
-    assert fake_clients.agent.create_calls[0]["name"] == "idempotent_abc_my_deployment"
-
-
-@pytest.mark.anyio
-async def test_create_rolls_back_and_preserves_original_error_when_cleanup_fails(monkeypatch):
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_connections = FakeConnectionsClient()
-    fake_clients = SimpleNamespace(
-        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
-        tool=FakeToolClient([]),
-        connections=fake_connections,
-    )
-
-    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        return fake_clients
-
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-
-    async def mock_process_config(user_id, db, deployment_name, config, *, clients):  # noqa: ARG001
-        return deployment_name
-
-    monkeypatch.setattr(
-        service_module,
-        "process_config",
-        mock_process_config,
-    )
-
-    async def mock_process_raw_flows_with_app_id(
-        clients,  # noqa: ARG001
-        app_id,  # noqa: ARG001
-        flows,  # noqa: ARG001
-        tool_name_prefix,  # noqa: ARG001
-    ):
-        msg = "boom"
-        raise RuntimeError(msg)
-
-    def failing_delete(app_id: str):
-        _ = app_id
-        msg = "cleanup failed"
-        raise RuntimeError(msg)
-
-    monkeypatch.setattr(
-        service_module,
-        "process_raw_flows_with_app_id",
-        mock_process_raw_flows_with_app_id,
-    )
-    monkeypatch.setattr(fake_connections, "delete", failing_delete)
-
-    deployment_payload = DeploymentCreate(
-        spec=BaseDeploymentData(
-            name="my deployment",
-            description="desc",
-            type=DeploymentType.AGENT,
-            provider_spec={"resource_name_prefix": "lf_abcdef_"},
-        ),
-        config=ConfigItem(
-            raw_payload=DeploymentConfig(
-                name="ignored",
-                description="from payload",
-                environment_variables=None,
-            )
-        ),
-        snapshot=SnapshotItems(
-            raw_payloads=[
-                BaseFlowArtifact(
-                    id=UUID("00000000-0000-0000-0000-000000000001"),
-                    name="snapshot-one",
-                    description="desc",
-                    data={"nodes": [], "edges": []},
-                    tags=[],
-                    provider_data={"project_id": "project-123"},
-                )
-            ]
-        ),
-    )
-
-    with pytest.raises(DeploymentError, match="Please check server logs for details"):
-        await service.create(
-            user_id="user-1",
-            payload=deployment_payload,
-            db=object(),
-        )
+    assert captured == {
+        "clients": fake_clients,
+        "agent_id": "dep-created",
+        "tool_ids": ["tool-1", "tool-2"],
+        "app_ids": ["cfg"],
+    }
 
 
 @pytest.mark.anyio
@@ -1427,18 +2346,17 @@ async def test_create_execution_posts_runs_payload(monkeypatch):
         db=object(),
         payload=ExecutionCreate(
             deployment_id="dep-1",
-            provider_data={"input": "hello from test", "thread_id": "thread-123", "stream": False},
+            provider_data={"input": "hello from test"},
         ),
     )
 
     assert result.deployment_id == "dep-1"
     assert result.execution_id == "run-1"
-    assert result.provider_result == {"status": "accepted", "run_id": "run-1"}
+    assert result.provider_result == {"status": "accepted", "execution_id": "run-1"}
     assert fake_base.post_calls
     path, payload = fake_base.post_calls[0]
-    assert path == "/runs?stream=false"
+    assert path == "/runs"
     assert payload["agent_id"] == "dep-1"
-    assert payload["thread_id"] == "thread-123"
     assert payload["message"] == {"role": "user", "content": "hello from test"}
 
 
@@ -1449,7 +2367,7 @@ async def test_get_execution_returns_completed_output(monkeypatch):
     fake_base = FakeBaseClient(
         get_payloads={
             "/runs/run-1": {
-                "run_id": "run-1",
+                "id": "run-1",
                 "status": "completed",
                 "agent_id": "dep-1",
                 "completed_at": "2026-03-08T18:23:25.277362Z",
@@ -1480,7 +2398,7 @@ async def test_get_execution_returns_completed_output(monkeypatch):
     assert result.execution_id == "run-1"
     assert result.provider_result["status"] == "completed"
     assert result.provider_result["agent_id"] == "dep-1"
-    assert result.provider_result["run_id"] == "run-1"
+    assert result.provider_result["execution_id"] == "run-1"
     assert result.provider_result["completed_at"] == "2026-03-08T18:23:25.277362Z"
 
 
@@ -1491,7 +2409,7 @@ async def test_get_execution_fetches_result_payload(monkeypatch):
     fake_base = FakeBaseClient(
         get_payloads={
             "/runs/run-1": {
-                "run_id": "run-1",
+                "id": "run-1",
                 "status": "completed",
                 "agent_id": "dep-1",
                 "result": {"output": "some result"},
@@ -1846,7 +2764,7 @@ async def test_rollback_created_resources_deletes_all(monkeypatch):
         clients=fake_clients,
         agent_id="agent-1",
         tool_ids=["tool-1", "tool-2"],
-        app_id="app-1",
+        app_ids=["app-1"],
     )
 
     assert deleted["agents"] == ["agent-1"]
@@ -1881,7 +2799,7 @@ async def test_rollback_continues_after_individual_failures(monkeypatch):
         clients=fake_clients,
         agent_id="agent-1",
         tool_ids=["tool-1"],
-        app_id="app-1",
+        app_ids=["app-1"],
     )
 
     assert deleted["configs"] == ["app-1"]
@@ -2291,6 +3209,40 @@ async def test_get_provider_clients_rejects_mixed_provider_contexts(monkeypatch)
     assert resolve_calls == 1
 
 
+@pytest.mark.anyio
+async def test_resolve_wxo_client_credentials_reads_provider_url_from_account(monkeypatch):
+    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+
+    provider_account = DeploymentProviderAccount(
+        id=UUID("00000000-0000-0000-0000-000000000099"),
+        user_id=UUID("00000000-0000-0000-0000-000000000100"),
+        name="prod",
+        provider_tenant_id="tenant-1",
+        provider_key="watsonx-orchestrate",
+        provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+        api_key="encrypted-api-key",  # pragma: allowlist secret
+    )
+
+    async def mock_get_provider_account_by_id(*args, **kwargs):  # noqa: ARG001
+        return provider_account
+
+    monkeypatch.setattr(client_module, "get_provider_account_by_id", mock_get_provider_account_by_id)
+    monkeypatch.setattr(
+        client_module.auth_utils,
+        "decrypt_api_key",
+        lambda _encrypted_api_key: "decrypted-api-key",  # pragma: allowlist secret
+    )
+
+    credentials = await client_module.resolve_wxo_client_credentials(
+        user_id="user-1",
+        db=object(),
+        provider_id=UUID("00000000-0000-0000-0000-000000000001"),
+    )
+
+    assert credentials.instance_url == provider_account.provider_url
+    assert credentials.authenticator is not None
+
+
 def test_wxo_client_initializes_subclients_eagerly(monkeypatch):
     init_counts = {"tool": 0, "connections": 0, "agent": 0, "base": 0}
 
@@ -2400,7 +3352,7 @@ async def test_create_and_upload_wxo_flow_tools_with_bindings_journals_created_i
                 description="desc",
                 data={"nodes": [], "edges": []},
                 tags=[],
-                provider_data={"project_id": "project-1"},
+                provider_data={"project_id": "project-1", "source_ref": "fv-binding-1"},
             ),
             connections={"cfg-1": "conn-1"},
         ),
@@ -2411,7 +3363,7 @@ async def test_create_and_upload_wxo_flow_tools_with_bindings_journals_created_i
                 description="desc",
                 data={"nodes": [], "edges": []},
                 tags=[],
-                provider_data={"project_id": "project-1"},
+                provider_data={"project_id": "project-1", "source_ref": "fv-binding-2"},
             ),
             connections={"cfg-1": "conn-1"},
         ),
@@ -2431,7 +3383,13 @@ async def test_create_and_upload_wxo_flow_tools_with_bindings_journals_created_i
 def test_resolve_resource_name_prefix_uses_caller_provided_prefix():
     from langflow.services.adapters.deployment.watsonx_orchestrate.utils import resolve_resource_name_prefix
 
-    assert resolve_resource_name_prefix(caller_prefix="custom_abc_") == "custom_abc_"
+    assert resolve_resource_name_prefix(caller_prefix="custom_abc_") == "lf_custom_abc_"
+
+
+def test_resolve_resource_name_prefix_does_not_double_prefix_lf_namespace():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import resolve_resource_name_prefix
+
+    assert resolve_resource_name_prefix(caller_prefix="lf_custom_abc_") == "lf_custom_abc_"
 
 
 def test_resolve_resource_name_prefix_rejects_empty_string():
@@ -2458,7 +3416,23 @@ def test_resolve_resource_name_prefix_rejects_only_special_chars():
 def test_resolve_resource_name_prefix_normalizes_caller_prefix():
     from langflow.services.adapters.deployment.watsonx_orchestrate.utils import resolve_resource_name_prefix
 
-    assert resolve_resource_name_prefix(caller_prefix="my-prefix!") == "my_prefix"
+    assert resolve_resource_name_prefix(caller_prefix="my-prefix!") == "lf_my_prefix"
+
+
+def test_resolve_resource_name_prefix_rejects_too_long_prefix():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.constants import WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH
+    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import resolve_resource_name_prefix
+
+    with pytest.raises(InvalidContentError, match="cannot exceed"):
+        resolve_resource_name_prefix(caller_prefix="a" * (WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH - len("lf_") + 1))
+
+
+def test_resolve_resource_name_prefix_accepts_max_length_when_already_prefixed():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.constants import WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH
+    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import resolve_resource_name_prefix
+
+    caller_prefix = "lf_" + ("a" * (WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH - len("lf_")))
+    assert resolve_resource_name_prefix(caller_prefix=caller_prefix) == caller_prefix
 
 
 def test_extract_error_detail_json_string():
@@ -2573,7 +3547,7 @@ def test_raise_as_deployment_error_maps_not_found():
     resp = SimpleNamespace(status_code=500, text='{"detail":"Agent \'abc\' not found"}')
     exc = ClientAPIException(response=resp)
 
-    with pytest.raises(DeploymentNotFoundError, match="not found"):
+    with pytest.raises(ResourceNotFoundError, match="not found"):
         raise_as_deployment_error(
             exc,
             error_prefix=ErrorPrefix.UPDATE,
@@ -2700,15 +3674,6 @@ def test_resolve_execution_message_none_raises():
         resolve_execution_message(None)
 
 
-def test_build_orchestrate_runs_query():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import build_orchestrate_runs_query
-
-    assert build_orchestrate_runs_query(None) == ""
-    assert build_orchestrate_runs_query({}) == ""
-    assert "stream=true" in build_orchestrate_runs_query({"stream": True})
-    assert "stream_timeout=30" in build_orchestrate_runs_query({"stream_timeout": 30})
-
-
 def test_create_agent_run_result_empty_raises():
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import create_agent_run_result
 
@@ -2722,7 +3687,7 @@ def test_create_agent_run_result_with_run_id():
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import create_agent_run_result
 
     result = create_agent_run_result({"status": "running", "run_id": "r-1"})
-    assert result == {"status": "running", "run_id": "r-1"}
+    assert result == {"status": "running", "execution_id": "r-1"}
 
 
 # ---------------------------------------------------------------------------
@@ -2973,10 +3938,10 @@ def test_raise_for_status_separates_status_codes_from_string_heuristics():
     Now, the 404 status code check is standalone, and 'not found' string heuristic only
     fires as a fallback for unmapped status codes.
     """
-    from lfx.services.adapters.deployment.exceptions import raise_for_status_and_detail
+    from lfx.services.adapters.deployment.exceptions import ResourceNotFoundError, raise_for_status_and_detail
 
-    # status_code=404 raises DeploymentNotFoundError regardless of detail text
-    with pytest.raises(DeploymentNotFoundError):
+    # status_code=404 raises ResourceNotFoundError regardless of detail text
+    with pytest.raises(ResourceNotFoundError):
         raise_for_status_and_detail(status_code=404, detail="anything", message_prefix="test")
 
     # status_code=409 raises DeploymentConflictError regardless of detail text
@@ -2984,7 +3949,7 @@ def test_raise_for_status_separates_status_codes_from_string_heuristics():
         raise_for_status_and_detail(status_code=409, detail="anything", message_prefix="test")
 
     # String heuristics still work as fallback for unmapped/None status codes
-    with pytest.raises(DeploymentNotFoundError):
+    with pytest.raises(ResourceNotFoundError):
         raise_for_status_and_detail(status_code=None, detail="agent not found", message_prefix="test")
     with pytest.raises(DeploymentConflictError):
         raise_for_status_and_detail(status_code=None, detail="resource already exists", message_prefix="test")
@@ -2996,28 +3961,22 @@ def test_raise_for_status_separates_status_codes_from_string_heuristics():
 
 
 @pytest.mark.anyio
-async def test_create_maps_409_conflict_to_deployment_conflict_error(monkeypatch):
-    """Create raises DeploymentConflictError when retry_create gets a 409 from the provider."""
+async def test_create_maps_409_conflict_to_deployment_conflict_error():
+    """Create raises DeploymentConflictError when the provider agent create returns a 409."""
     from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-
-    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        return SimpleNamespace(
-            agent=FakeAgentClient({"id": "dep-1", "tools": []}),
-            tool=FakeToolClient([]),
-            connections=FakeConnectionsClient(),
-        )
-
-    async def mock_process_config(*args, **kwargs):  # noqa: ARG001
-        response = SimpleNamespace(status_code=409, text='{"detail":"already exists"}')
-        raise ClientAPIException(response=response)
-
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-    monkeypatch.setattr(
-        "langflow.services.adapters.deployment.watsonx_orchestrate.service.process_config",
-        mock_process_config,
+    clients = FakeWXOClients(
+        agent=FakeAgentClient(
+            {"id": "dep-1", "tools": []},
+            create_exception=ClientAPIException(
+                response=SimpleNamespace(status_code=409, text='{"detail":"already exists"}')
+            ),
+        ),
+        tool=FakeToolClient([{"id": "tool-existing-1"}]),
+        connections=FakeConnectionsClient(existing_app_id="app-existing-1"),
     )
+    _attach_provider_clients(service, clients)
 
     with pytest.raises(DeploymentConflictError, match="already exist"):
         await service.create(
@@ -3028,37 +3987,31 @@ async def test_create_maps_409_conflict_to_deployment_conflict_error(monkeypatch
                     name="my_deployment",
                     description="desc",
                     type=DeploymentType.AGENT,
-                    provider_spec={"resource_name_prefix": "lf_test_"},
                 ),
+                provider_data=_create_provider_spec(resource_name_prefix="lf_test_"),
             ),
         )
 
 
 @pytest.mark.anyio
-async def test_create_maps_422_to_invalid_content_error(monkeypatch):
-    """Create raises InvalidContentError when retry_create gets a 422 from the provider."""
+async def test_create_maps_422_to_invalid_content_error():
+    """Create raises InvalidContentError when the provider agent create returns a 422."""
     from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-
-    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        return SimpleNamespace(
-            agent=FakeAgentClient({"id": "dep-1", "tools": []}),
-            tool=FakeToolClient([]),
-            connections=FakeConnectionsClient(),
-        )
-
-    async def mock_process_config(*args, **kwargs):  # noqa: ARG001
-        response = SimpleNamespace(status_code=422, text='{"detail":"validation error"}')
-        raise ClientAPIException(response=response)
-
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-    monkeypatch.setattr(
-        "langflow.services.adapters.deployment.watsonx_orchestrate.service.process_config",
-        mock_process_config,
+    clients = FakeWXOClients(
+        agent=FakeAgentClient(
+            {"id": "dep-1", "tools": []},
+            create_exception=ClientAPIException(
+                response=SimpleNamespace(status_code=422, text='{"detail":"validation error"}')
+            ),
+        ),
+        tool=FakeToolClient([{"id": "tool-existing-1"}]),
+        connections=FakeConnectionsClient(existing_app_id="app-existing-1"),
     )
+    _attach_provider_clients(service, clients)
 
-    with pytest.raises(InvalidContentError, match="unprocessable"):
+    with pytest.raises(InvalidContentError, match="validation error"):
         await service.create(
             user_id="user-1",
             db=object(),
@@ -3067,8 +4020,8 @@ async def test_create_maps_422_to_invalid_content_error(monkeypatch):
                     name="my_deployment",
                     description="desc",
                     type=DeploymentType.AGENT,
-                    provider_spec={"resource_name_prefix": "lf_test_"},
                 ),
+                provider_data=_create_provider_spec(resource_name_prefix="lf_test_"),
             ),
         )
 
@@ -3089,7 +4042,6 @@ async def test_create_rejects_unsupported_deployment_type(monkeypatch):
         name="my_deployment",
         description="desc",
         type=DeploymentType.AGENT,
-        provider_spec={"resource_name_prefix": "lf_test_"},
     )
     # Override the type to a fake unsupported value after construction
     monkeypatch.setattr(spec, "type", SimpleNamespace(value="unsupported_type"))
@@ -3284,19 +4236,19 @@ async def test_validate_connection_missing_credentials(monkeypatch):
 
 
 def test_create_agent_run_result_raises_on_missing_run_id():
-    """create_agent_run_result raises DeploymentError when response has no run_id."""
+    """create_agent_run_result raises DeploymentError when response has no execution identifier."""
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import create_agent_run_result
 
-    with pytest.raises(DeploymentError, match="did not return a run_id"):
+    with pytest.raises(DeploymentError, match="did not return an execution identifier"):
         create_agent_run_result({"status": "accepted"})
 
 
 def test_create_agent_run_result_extracts_run_id():
-    """create_agent_run_result successfully extracts run_id from response."""
+    """create_agent_run_result translates WXO run_id to execution_id."""
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import create_agent_run_result
 
     result = create_agent_run_result({"status": "accepted", "run_id": "run-123"})
-    assert result["run_id"] == "run-123"
+    assert result["execution_id"] == "run-123"
     assert result["status"] == "accepted"
 
 
@@ -3305,7 +4257,7 @@ def test_create_agent_run_result_falls_back_to_id_field():
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import create_agent_run_result
 
     result = create_agent_run_result({"status": "running", "id": "id-456"})
-    assert result["run_id"] == "id-456"
+    assert result["execution_id"] == "id-456"
 
 
 # ---------------------------------------------------------------------------
@@ -3328,18 +4280,19 @@ def test_require_single_deployment_id_rejects_multiple_ids():
 
 
 @pytest.mark.anyio
-async def test_create_preserves_exception_chain_on_unexpected_error(monkeypatch):
+async def test_create_preserves_exception_chain_on_unexpected_error():
     """Create preserves exception chain with 'from exc' instead of 'from None'."""
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
 
     original_error = RuntimeError("unexpected db error")
+    clients = FakeWXOClients(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}, create_exception=original_error),
+        tool=FakeToolClient([{"id": "tool-existing-1"}]),
+        connections=FakeConnectionsClient(existing_app_id="app-existing-1"),
+    )
+    _attach_provider_clients(service, clients)
 
-    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        raise original_error
-
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-
-    with pytest.raises(DeploymentError) as exc_info:
+    with pytest.raises(DeploymentError, match="Please check server logs for details") as exc_info:
         await service.create(
             user_id="user-1",
             db=object(),
@@ -3348,8 +4301,8 @@ async def test_create_preserves_exception_chain_on_unexpected_error(monkeypatch)
                     name="my_deployment",
                     description="desc",
                     type=DeploymentType.AGENT,
-                    provider_spec={"resource_name_prefix": "lf_test_"},
                 ),
+                provider_data=_create_provider_spec(resource_name_prefix="lf_test_"),
             ),
         )
 
@@ -3405,3 +4358,525 @@ def test_ensure_dict_logs_warning_on_non_dict(caplog):
     assert parent["binding"] == {}
     assert "Expected dict" in caplog.text
     assert "str" in caplog.text
+
+
+# ---------------------------------------------------------------------------
+# get_agent_run — happy path: id → execution_id + passthrough fields
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_get_agent_run_translates_run_id_to_execution_id(monkeypatch):
+    """get_agent_run maps WXO id to execution_id and passes through other fields."""
+    import asyncio as _asyncio
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import get_agent_run
+
+    wxo_payload = {
+        "id": "r-42",
+        "status": "completed",
+        "agent_id": "agent-1",
+        "started_at": "2026-01-01T00:00:00Z",
+        "completed_at": "2026-01-01T00:01:00Z",
+        "result": {"output": "hello"},
+    }
+
+    async def fake_to_thread(fn, *args, **kwargs):  # noqa: ARG001
+        return wxo_payload
+
+    monkeypatch.setattr(_asyncio, "to_thread", fake_to_thread)
+
+    fake_client = SimpleNamespace(get_run=lambda _run_id: wxo_payload)
+    result = await get_agent_run(fake_client, run_id="r-42")
+
+    assert result["execution_id"] == "r-42"
+    assert "run_id" not in result
+    assert result["status"] == "completed"
+    assert result["agent_id"] == "agent-1"
+    assert result["started_at"] == "2026-01-01T00:00:00Z"
+    assert result["completed_at"] == "2026-01-01T00:01:00Z"
+    assert result["result"] == {"output": "hello"}
+
+
+@pytest.mark.anyio
+async def test_get_agent_run_passes_through_error_fields(monkeypatch):
+    """get_agent_run forwards failed_at, cancelled_at, and last_error."""
+    import asyncio as _asyncio
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import get_agent_run
+
+    wxo_payload = {
+        "id": "r-fail",
+        "status": "failed",
+        "failed_at": "2026-01-01T00:02:00Z",
+        "last_error": "timeout exceeded",
+    }
+
+    async def fake_to_thread(fn, *args, **kwargs):  # noqa: ARG001
+        return wxo_payload
+
+    monkeypatch.setattr(_asyncio, "to_thread", fake_to_thread)
+
+    fake_client = SimpleNamespace(get_run=lambda _run_id: wxo_payload)
+    result = await get_agent_run(fake_client, run_id="r-fail")
+
+    assert result["execution_id"] == "r-fail"
+    assert result["status"] == "failed"
+    assert result["failed_at"] == "2026-01-01T00:02:00Z"
+    assert result["last_error"] == "timeout exceeded"
+
+
+# ---------------------------------------------------------------------------
+# get_agent_run — WXO payload omits id
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_get_agent_run_falls_back_to_param_run_id(monkeypatch):
+    """get_agent_run uses the run_id parameter when WXO payload omits id."""
+    import asyncio as _asyncio
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import get_agent_run
+
+    wxo_payload = {"status": "in_progress", "agent_id": "agent-1"}
+
+    async def fake_to_thread(fn, *args, **kwargs):  # noqa: ARG001
+        return wxo_payload
+
+    monkeypatch.setattr(_asyncio, "to_thread", fake_to_thread)
+
+    fake_client = SimpleNamespace(get_run=lambda _run_id: wxo_payload)
+    result = await get_agent_run(fake_client, run_id="r-99")
+
+    assert result["execution_id"] == "r-99"
+    assert result["status"] == "in_progress"
+    assert result["agent_id"] == "agent-1"
+
+
+# ---------------------------------------------------------------------------
+# build_orchestrate_run_payload — simplified MVP payload
+# ---------------------------------------------------------------------------
+
+
+def test_build_orchestrate_run_payload_uses_message_directly():
+    """build_orchestrate_run_payload passes message from provider_data when present."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import build_orchestrate_run_payload
+
+    message = {"role": "user", "content": "direct message"}
+    result = build_orchestrate_run_payload(
+        provider_data={"message": message, "agent_id": "a-1"},
+        deployment_id="dep-fallback",
+    )
+    assert result["message"] is message
+    assert result["agent_id"] == "a-1"
+    assert len(result) == 2
+
+
+def test_build_orchestrate_run_payload_falls_back_to_deployment_id():
+    """build_orchestrate_run_payload uses deployment_id when agent_id is absent."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import build_orchestrate_run_payload
+
+    result = build_orchestrate_run_payload(
+        provider_data={"input": "hello"},
+        deployment_id="dep-fallback",
+    )
+    assert result["agent_id"] == "dep-fallback"
+    assert result["message"] == {"role": "user", "content": "hello"}
+    assert len(result) == 2
+
+
+def test_build_orchestrate_run_payload_excludes_extra_fields():
+    """build_orchestrate_run_payload does not forward extra fields like thread_id."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import build_orchestrate_run_payload
+
+    result = build_orchestrate_run_payload(
+        provider_data={
+            "input": "hi",
+            "thread_id": "t-1",
+            "llm_params": {"model": "gpt-4"},
+            "guardrails": True,
+            "stream": True,
+        },
+        deployment_id="dep-1",
+    )
+    assert "thread_id" not in result
+    assert "llm_params" not in result
+    assert "guardrails" not in result
+    assert "stream" not in result
+    assert len(result) == 2
+
+
+# ---------------------------------------------------------------------------
+# WatsonxAgentExecutionResultData — adapter schema explicit fields
+# ---------------------------------------------------------------------------
+
+
+def test_adapter_execution_schema_parses_all_explicit_fields():
+    """WatsonxAgentExecutionResultData parses all execution response fields."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import WatsonxAgentExecutionResultData
+
+    data = {
+        "execution_id": "e-1",
+        "agent_id": "a-1",
+        "status": "completed",
+        "result": {"output": "answer"},
+        "started_at": "2026-01-01T00:00:00Z",
+        "completed_at": "2026-01-01T00:01:00Z",
+        "failed_at": None,
+        "cancelled_at": None,
+        "last_error": None,
+    }
+    parsed = WatsonxAgentExecutionResultData.model_validate(data)
+    assert parsed.execution_id == "e-1"
+    assert parsed.agent_id == "a-1"
+    assert parsed.status == "completed"
+    assert parsed.result == {"output": "answer"}
+    assert parsed.started_at == "2026-01-01T00:00:00Z"
+    assert parsed.completed_at == "2026-01-01T00:01:00Z"
+
+
+def test_adapter_execution_schema_has_no_run_id_field():
+    """WatsonxAgentExecutionResultData does not expose run_id as a named field."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import WatsonxAgentExecutionResultData
+
+    assert "run_id" not in WatsonxAgentExecutionResultData.model_fields
+
+
+# ---------------------------------------------------------------------------
+# WatsonxApiAgentExecution{Create,Status}ResultData — API schema explicit fields
+# ---------------------------------------------------------------------------
+
+
+def test_api_execution_create_schema_parses_all_explicit_fields():
+    """WatsonxApiAgentExecutionCreateResultData parses all execution response fields."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
+        WatsonxApiAgentExecutionCreateResultData,
+    )
+
+    data = {
+        "execution_id": "e-1",
+        "agent_id": "a-1",
+        "status": "accepted",
+        "result": None,
+        "started_at": "2026-01-01T00:00:00Z",
+    }
+    parsed = WatsonxApiAgentExecutionCreateResultData.model_validate(data)
+    assert parsed.execution_id == "e-1"
+    assert parsed.agent_id == "a-1"
+    assert parsed.status == "accepted"
+    assert parsed.started_at == "2026-01-01T00:00:00Z"
+
+
+def test_api_execution_status_schema_parses_all_explicit_fields():
+    """WatsonxApiAgentExecutionStatusResultData parses all execution response fields."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
+        WatsonxApiAgentExecutionStatusResultData,
+    )
+
+    data = {
+        "execution_id": "e-1",
+        "agent_id": "a-1",
+        "status": "failed",
+        "result": None,
+        "started_at": "2026-01-01T00:00:00Z",
+        "failed_at": "2026-01-01T00:00:05Z",
+        "last_error": "something broke",
+    }
+    parsed = WatsonxApiAgentExecutionStatusResultData.model_validate(data)
+    assert parsed.execution_id == "e-1"
+    assert parsed.agent_id == "a-1"
+    assert parsed.status == "failed"
+    assert parsed.failed_at == "2026-01-01T00:00:05Z"
+    assert parsed.last_error == "something broke"
+
+
+def test_api_execution_schemas_have_no_run_id_field():
+    """Neither create nor status schema exposes run_id as a named field."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
+        WatsonxApiAgentExecutionCreateResultData,
+        WatsonxApiAgentExecutionStatusResultData,
+    )
+
+    assert "run_id" not in WatsonxApiAgentExecutionCreateResultData.model_fields
+    assert "run_id" not in WatsonxApiAgentExecutionStatusResultData.model_fields
+
+
+def test_api_execution_schemas_omit_langflow_owned_fields():
+    """deployment_id (Langflow DB UUID) belongs on the top-level response, not in provider_data."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
+        WatsonxApiAgentExecutionCreateResultData,
+        WatsonxApiAgentExecutionStatusResultData,
+    )
+
+    for schema in (WatsonxApiAgentExecutionCreateResultData, WatsonxApiAgentExecutionStatusResultData):
+        assert "deployment_id" not in schema.model_fields
+        assert "execution_id" in schema.model_fields
+        assert not hasattr(schema, "resolved_deployment_id")
+
+
+def test_api_execution_schema_normalizes_id_fields():
+    """Both create and status schemas strip whitespace and blanks from ID fields."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
+        WatsonxApiAgentExecutionCreateResultData,
+        WatsonxApiAgentExecutionStatusResultData,
+    )
+
+    for schema in (WatsonxApiAgentExecutionCreateResultData, WatsonxApiAgentExecutionStatusResultData):
+        parsed = schema.model_validate(
+            {
+                "execution_id": "  e-1  ",
+                "agent_id": "  a-1  ",
+            }
+        )
+        assert parsed.execution_id == "e-1"
+        assert parsed.agent_id == "a-1"
+
+        parsed_blank = schema.model_validate(
+            {
+                "execution_id": "  ",
+                "agent_id": "",
+            }
+        )
+        assert parsed_blank.execution_id is None
+        assert parsed_blank.agent_id is None
+
+
+# ---------------------------------------------------------------------------
+# Mapper shapers: shape_execution_create_result / shape_execution_status_result
+# ---------------------------------------------------------------------------
+
+
+def test_shape_execution_create_result_maps_all_fields():
+    """shape_execution_create_result maps adapter fields to API response."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper import WatsonxOrchestrateDeploymentMapper
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    deployment_id = UUID("00000000-0000-0000-0000-000000000001")
+
+    adapter_result = ExecutionCreateResult(
+        execution_id="e-1",
+        deployment_id="agent-1",
+        provider_result={
+            "execution_id": "e-1",
+            "agent_id": "agent-1",
+            "status": "accepted",
+            "started_at": "2026-01-01T00:00:00Z",
+        },
+    )
+
+    response = mapper.shape_execution_create_result(adapter_result, deployment_id=deployment_id)
+    assert response.deployment_id == deployment_id
+    assert response.provider_data["execution_id"] == "e-1"
+    assert response.provider_data["status"] == "accepted"
+    assert response.provider_data["started_at"] == "2026-01-01T00:00:00Z"
+    assert response.provider_data["agent_id"] == "agent-1"
+    assert "deployment_id" not in response.provider_data
+    assert "run_id" not in response.provider_data
+
+
+def test_shape_execution_status_result_maps_all_fields():
+    """shape_execution_status_result maps adapter fields to API response."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper import WatsonxOrchestrateDeploymentMapper
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    deployment_id = UUID("00000000-0000-0000-0000-000000000002")
+
+    adapter_result = ExecutionStatusResult(
+        execution_id="e-2",
+        deployment_id="agent-2",
+        provider_result={
+            "execution_id": "e-2",
+            "agent_id": "agent-2",
+            "status": "completed",
+            "result": {"output": "done"},
+            "completed_at": "2026-01-01T00:01:00Z",
+        },
+    )
+
+    response = mapper.shape_execution_status_result(adapter_result, deployment_id=deployment_id)
+    assert response.deployment_id == deployment_id
+    assert response.provider_data["execution_id"] == "e-2"
+    assert response.provider_data["status"] == "completed"
+    assert response.provider_data["result"] == {"output": "done"}
+    assert response.provider_data["completed_at"] == "2026-01-01T00:01:00Z"
+    assert "deployment_id" not in response.provider_data
+    assert "run_id" not in response.provider_data
+
+
+def test_shape_execution_status_result_none_execution_id():
+    """When adapter has no execution_id, provider_data omits the key (exclude_none)."""
+    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper import WatsonxOrchestrateDeploymentMapper
+
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    deployment_id = UUID("00000000-0000-0000-0000-000000000003")
+
+    adapter_result = ExecutionStatusResult(
+        execution_id=None,
+        deployment_id="agent-3",
+        provider_result={
+            "agent_id": "agent-3",
+            "status": "in_progress",
+        },
+    )
+
+    response = mapper.shape_execution_status_result(
+        adapter_result,
+        deployment_id=deployment_id,
+    )
+    assert "execution_id" not in response.provider_data
+    assert response.provider_data["status"] == "in_progress"
+
+
+# ---------------------------------------------------------------------------
+# verify_credentials
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_verify_credentials_success(monkeypatch):
+    """verify_credentials returns VerifyCredentialsResult on valid credentials."""
+    from lfx.services.adapters.deployment.schema import VerifyCredentials, VerifyCredentialsResult
+
+    class FakeTokenManager:
+        def get_token(self):
+            return "fake-token"
+
+    class FakeAuthenticator:
+        token_manager = FakeTokenManager()
+
+        def validate(self):
+            pass
+
+    monkeypatch.setattr(
+        service_module,
+        "get_authenticator",
+        lambda **_kwargs: FakeAuthenticator(),
+    )
+
+    svc = WatsonxOrchestrateDeploymentService(settings_service=DummySettingsService())
+    payload = VerifyCredentials(
+        base_url="https://api.us-south.wxo.cloud.ibm.com",
+        provider_data={"api_key": "valid-key"},  # pragma: allowlist secret
+    )
+    result = await svc.verify_credentials(user_id="u1", payload=payload)
+    assert isinstance(result, VerifyCredentialsResult)
+
+
+@pytest.mark.anyio
+async def test_verify_credentials_invalid_key_raises(monkeypatch):
+    """verify_credentials raises AuthenticationError when provider rejects credentials."""
+    from ibm_cloud_sdk_core import ApiException
+    from lfx.services.adapters.deployment.exceptions import AuthenticationError
+    from lfx.services.adapters.deployment.schema import VerifyCredentials
+
+    class FakeTokenManager:
+        def get_token(self):
+            raise ApiException(401, message="invalid api key")
+
+    class FailingAuthenticator:
+        token_manager = FakeTokenManager()
+
+        def validate(self):
+            pass
+
+    monkeypatch.setattr(
+        service_module,
+        "get_authenticator",
+        lambda **_kwargs: FailingAuthenticator(),
+    )
+
+    svc = WatsonxOrchestrateDeploymentService(settings_service=DummySettingsService())
+    payload = VerifyCredentials(
+        base_url="https://api.us-south.wxo.cloud.ibm.com",
+        provider_data={"api_key": "bad-key"},  # pragma: allowlist secret
+    )
+    with pytest.raises(AuthenticationError, match="Credential verification"):
+        await svc.verify_credentials(user_id="u1", payload=payload)
+
+
+@pytest.mark.anyio
+async def test_verify_credentials_malformed_key_raises(monkeypatch):
+    """verify_credentials raises InvalidContentError when local validation fails."""
+    from lfx.services.adapters.deployment.exceptions import InvalidContentError
+    from lfx.services.adapters.deployment.schema import VerifyCredentials
+
+    class MalformedAuthenticator:
+        def validate(self):
+            msg = "api key contains bad characters"
+            raise ValueError(msg)
+
+    monkeypatch.setattr(
+        service_module,
+        "get_authenticator",
+        lambda **_kwargs: MalformedAuthenticator(),
+    )
+
+    svc = WatsonxOrchestrateDeploymentService(settings_service=DummySettingsService())
+    payload = VerifyCredentials(
+        base_url="https://api.us-south.wxo.cloud.ibm.com",
+        provider_data={"api_key": "bad\x00key"},  # pragma: allowlist secret
+    )
+    with pytest.raises(InvalidContentError, match="malformed"):
+        await svc.verify_credentials(user_id="u1", payload=payload)
+
+
+@pytest.mark.anyio
+async def test_verify_credentials_missing_provider_data_raises():
+    """verify_credentials raises when provider_data is missing."""
+    from lfx.services.adapters.deployment.schema import VerifyCredentials
+    from lfx.services.adapters.payload import AdapterPayloadMissingError
+
+    svc = WatsonxOrchestrateDeploymentService(settings_service=DummySettingsService())
+    payload = VerifyCredentials(
+        base_url="https://api.us-south.wxo.cloud.ibm.com",
+        provider_data=None,
+    )
+    with pytest.raises(AdapterPayloadMissingError):
+        await svc.verify_credentials(user_id="u1", payload=payload)
+
+
+@pytest.mark.anyio
+async def test_verify_credentials_bad_auth_scheme_raises():
+    """verify_credentials raises AuthSchemeError for unrecognised URLs."""
+    from lfx.services.adapters.deployment.exceptions import AuthSchemeError
+    from lfx.services.adapters.deployment.schema import VerifyCredentials
+
+    svc = WatsonxOrchestrateDeploymentService(settings_service=DummySettingsService())
+    payload = VerifyCredentials(
+        base_url="https://unknown-provider.example.com",
+        provider_data={"api_key": "some-key"},  # pragma: allowlist secret
+    )
+    with pytest.raises(AuthSchemeError):
+        await svc.verify_credentials(user_id="u1", payload=payload)
+
+
+@pytest.mark.anyio
+async def test_verify_credentials_provider_unreachable(monkeypatch):
+    """verify_credentials raises DeploymentError on network failure."""
+    from lfx.services.adapters.deployment.exceptions import DeploymentError
+    from lfx.services.adapters.deployment.schema import VerifyCredentials
+
+    class FakeTokenManager:
+        def get_token(self):
+            msg = "connection refused"
+            raise ConnectionError(msg)
+
+    class UnreachableAuthenticator:
+        token_manager = FakeTokenManager()
+
+        def validate(self):
+            pass
+
+    monkeypatch.setattr(
+        service_module,
+        "get_authenticator",
+        lambda **_kwargs: UnreachableAuthenticator(),
+    )
+
+    svc = WatsonxOrchestrateDeploymentService(settings_service=DummySettingsService())
+    payload = VerifyCredentials(
+        base_url="https://api.us-south.wxo.cloud.ibm.com",
+        provider_data={"api_key": "some-key"},  # pragma: allowlist secret
+    )
+    with pytest.raises(DeploymentError, match="failed unexpectedly"):
+        await svc.verify_credentials(user_id="u1", payload=payload)
