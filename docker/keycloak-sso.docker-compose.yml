@@ -1,0 +1,94 @@
+# Multi-instance Langflow + Mock OIDC for local SSO testing
+#
+# Usage:
+#   docker compose -f docker/keycloak-sso.docker-compose.yml up
+#
+# Access:
+#   http://localhost:7860  → project-a
+#   http://localhost:7861  → project-b
+#   http://localhost:9000/admin  → Mock OIDC admin page
+#
+# Test accounts (password = employee ID, e.g. EMP001):
+#   EMP001, EMP002  → both instances (langflow-admins)
+#   EMP003–EMP005   → project-a only
+#   EMP006–EMP008   → project-b only
+#   EMP009, EMP010  → no access
+
+services:
+
+  # ── Mock OIDC server ──────────────────────────────────────────────────────
+  mock-oidc:
+    image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+    working_dir: /app
+    volumes:
+      - ../scripts/mock_oidc_server.py:/app/mock_oidc_server.py:ro
+    command: >
+      bash -c "
+        uv pip install --system fastapi uvicorn[standard] cryptography python-multipart pyjwt &&
+        python mock_oidc_server.py
+      "
+    ports:
+      - "9000:9000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/.well-known/openid-configuration"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ── project-a instance ────────────────────────────────────────────────────
+  langflow-project-a:
+    build:
+      context: ..
+      dockerfile: docker/keycloak-sso.Dockerfile
+    ports:
+      - "7860:7860"
+    environment:
+      KEYCLOAK_ENABLED: "true"
+      KEYCLOAK_SERVER_URL: "http://mock-oidc:9000"
+      KEYCLOAK_REALM: "company"
+      KEYCLOAK_CLIENT_ID: "langflow-project-a"
+      KEYCLOAK_CLIENT_SECRET: "secret-project-a"
+      KEYCLOAK_REDIRECT_URI: "http://localhost:7860/api/v1/keycloak/callback"
+      KEYCLOAK_SHARED_USERNAME: "langflow-shared-project-a"
+      LANGFLOW_SECRET_KEY: "dev-secret-project-a-000000000000"
+      LANGFLOW_DATABASE_URL: "sqlite+aiosqlite:////app/data/langflow_project_a.db"
+      LANGFLOW_REFRESH_SECURE: "false"
+      LANGFLOW_REFRESH_SAME_SITE: "lax"
+      LANGFLOW_ACCESS_SECURE: "false"
+      LANGFLOW_ACCESS_SAME_SITE: "lax"
+    volumes:
+      - langflow-project-a-data:/app/data
+    depends_on:
+      mock-oidc:
+        condition: service_healthy
+
+  # ── project-b instance ────────────────────────────────────────────────────
+  langflow-project-b:
+    build:
+      context: ..
+      dockerfile: docker/keycloak-sso.Dockerfile
+    ports:
+      - "7861:7860"
+    environment:
+      KEYCLOAK_ENABLED: "true"
+      KEYCLOAK_SERVER_URL: "http://mock-oidc:9000"
+      KEYCLOAK_REALM: "company"
+      KEYCLOAK_CLIENT_ID: "langflow-project-b"
+      KEYCLOAK_CLIENT_SECRET: "secret-project-b"
+      KEYCLOAK_REDIRECT_URI: "http://localhost:7861/api/v1/keycloak/callback"
+      KEYCLOAK_SHARED_USERNAME: "langflow-shared-project-b"
+      LANGFLOW_SECRET_KEY: "dev-secret-project-b-000000000000"
+      LANGFLOW_DATABASE_URL: "sqlite+aiosqlite:////app/data/langflow_project_b.db"
+      LANGFLOW_REFRESH_SECURE: "false"
+      LANGFLOW_REFRESH_SAME_SITE: "lax"
+      LANGFLOW_ACCESS_SECURE: "false"
+      LANGFLOW_ACCESS_SAME_SITE: "lax"
+    volumes:
+      - langflow-project-b-data:/app/data
+    depends_on:
+      mock-oidc:
+        condition: service_healthy
+
+volumes:
+  langflow-project-a-data:
+  langflow-project-b-data:
