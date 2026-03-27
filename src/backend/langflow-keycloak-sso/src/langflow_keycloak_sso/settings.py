@@ -11,11 +11,18 @@ class KeycloakSettings(BaseSettings):
 
     ENABLED: bool = False
 
-    # Keycloak connection
+    # Keycloak connection (backend → Keycloak, e.g. token exchange, JWKS)
     SERVER_URL: str = ""
     REALM: str = ""
     CLIENT_ID: str = ""
     CLIENT_SECRET: str = ""
+
+    # Browser-facing Keycloak URL for the authorization redirect.
+    # Set this when SERVER_URL is an internal Docker/k8s hostname that the
+    # browser cannot reach (e.g. SERVER_URL=http://keycloak:8080 but browser
+    # must use http://keycloak.company.com).
+    # Falls back to SERVER_URL when not set.
+    EXTERNAL_SERVER_URL: str = ""
 
     # Redirect URI that Keycloak calls back (must be registered in Keycloak client)
     REDIRECT_URI: str = ""
@@ -41,7 +48,8 @@ class KeycloakSettings(BaseSettings):
 
     @property
     def authorization_endpoint(self) -> str:
-        return f"{self.SERVER_URL}/realms/{self.REALM}/protocol/openid-connect/auth"
+        base = self.EXTERNAL_SERVER_URL or self.SERVER_URL
+        return f"{base}/realms/{self.REALM}/protocol/openid-connect/auth"
 
     @property
     def jwks_uri(self) -> str:

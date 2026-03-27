@@ -30,10 +30,10 @@ services:
     ports:
       - "9000:9000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/.well-known/openid-configuration"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/.well-known/openid-configuration')"]
       interval: 5s
       timeout: 3s
-      retries: 10
+      retries: 15
 
   # ── project-a instance ────────────────────────────────────────────────────
   langflow-project-a:
@@ -44,7 +44,8 @@ services:
       - "7860:7860"
     environment:
       KEYCLOAK_ENABLED: "true"
-      KEYCLOAK_SERVER_URL: "http://mock-oidc:9000"
+      KEYCLOAK_SERVER_URL: "http://mock-oidc:9000"          # backend → OIDC (internal)
+      KEYCLOAK_EXTERNAL_SERVER_URL: "http://localhost:9000" # browser → OIDC (host)
       KEYCLOAK_REALM: "company"
       KEYCLOAK_CLIENT_ID: "langflow-project-a"
       KEYCLOAK_CLIENT_SECRET: "secret-project-a"
@@ -71,7 +72,8 @@ services:
       - "7861:7860"
     environment:
       KEYCLOAK_ENABLED: "true"
-      KEYCLOAK_SERVER_URL: "http://mock-oidc:9000"
+      KEYCLOAK_SERVER_URL: "http://mock-oidc:9000"          # backend → OIDC (internal)
+      KEYCLOAK_EXTERNAL_SERVER_URL: "http://localhost:9000" # browser → OIDC (host)
       KEYCLOAK_REALM: "company"
       KEYCLOAK_CLIENT_ID: "langflow-project-b"
       KEYCLOAK_CLIENT_SECRET: "secret-project-b"
