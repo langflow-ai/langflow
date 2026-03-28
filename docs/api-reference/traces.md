@@ -58,12 +58,18 @@ Returns:
 | `traces` | array[object] | - |
 | `total` | integer | - |
 | `pages` | integer | - |
+**`traces`** — Array of `object`
+
+
 
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -102,6 +108,9 @@ Args:
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -144,7 +153,7 @@ Returns:
 |------|------|-------------|
 | `id` | string (uuid) | - |
 | `name` | string | - |
-| `status` | string | OpenTelemetry status codes.
+| `status` | string = `unset` \| `ok` \| `error` | OpenTelemetry status codes.
 
 - UNSET: Default status, span has not ended yet
 - OK: Span completed successfully
@@ -158,12 +167,18 @@ Returns:
 | `input` | object | - |
 | `output` | object | - |
 | `spans` | array[object] | - |
+**`spans`** — Array of `object`
+
+
 
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -202,6 +217,9 @@ Args:
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
