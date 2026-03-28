@@ -43,6 +43,7 @@
   | `auth_settings` | object | ❌ No | Authentication settings for the folder/project |
   | `components_list` | array[string] | ❌ No | - |
   | `flows_list` | array[string] | ❌ No | - |
+  
 
 
 
@@ -63,11 +64,15 @@
 | `id` | string (uuid) | - |
 | `parent_id` | string (uuid) | - |
 
+
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -109,12 +114,18 @@
 | `id` | string (uuid) | - |
 | `parent_id` | string (uuid) | - |
 | `flows` | array[object] | - |
+**`flows`** — Array of `object`
+
+
 
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -146,6 +157,7 @@
   | `components` | array[string] | ❌ No | - |
   | `flows` | array[string] | ❌ No | - |
   | `auth_settings` | object | ❌ No | - |
+  
 
 
 
@@ -166,11 +178,15 @@
 | `id` | string (uuid) | - |
 | `parent_id` | string (uuid) | - |
 
+
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -202,6 +218,9 @@
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -236,6 +255,9 @@ Download all flows from project as a zip file.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -259,6 +281,7 @@ Upload flows from a file.
   | Name | Type | Required | Description |
   |------|------|----------|-------------|
   | `file` | string | ✅ Yes | - |
+  
 
 
 
@@ -274,6 +297,9 @@ Upload flows from a file.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
