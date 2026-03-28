@@ -27,6 +27,7 @@ Execute a workflow with support for sync, stream, and background modes
   | `stream` | boolean | ❌ No | - |
   | `flow_id` | string | ✅ Yes | - |
   | `inputs` | object | ❌ No | Component-specific inputs in flat format: 'component_id.param_name': value |
+  
 
 
 
@@ -45,10 +46,13 @@ Execute a workflow with support for sync, stream, and background modes
 | `job_id` | string | - |
 | `object` | string | - |
 | `created_timestamp` | string | - |
-| `status` | string | Job execution status. |
+| `status` | string = `queued` \| `in_progress` \| `completed` \| `failed` \| `cancelled` \| `timed_out` | Job execution status. |
 | `errors` | array[object] | - |
 | `inputs` | object | - |
 | `outputs` | object | - |
+**`errors`** — Array of `object`
+
+
 
 **Response Body** (text/event-stream):
 
@@ -59,11 +63,15 @@ Execute a workflow with support for sync, stream, and background modes
 | `timestamp` | integer | - |
 | `raw_event` | object | - |
 
+
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -101,10 +109,13 @@ Get status of workflow job by job ID
 | `job_id` | string | - |
 | `object` | string | - |
 | `created_timestamp` | string | - |
-| `status` | string | Job execution status. |
+| `status` | string = `queued` \| `in_progress` \| `completed` \| `failed` \| `cancelled` \| `timed_out` | Job execution status. |
 | `errors` | array[object] | - |
 | `inputs` | object | - |
 | `outputs` | object | - |
+**`errors`** — Array of `object`
+
+
 
 **Response Body** (text/event-stream):
 
@@ -115,11 +126,15 @@ Get status of workflow job by job ID
 | `timestamp` | integer | - |
 | `raw_event` | object | - |
 
+
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -143,6 +158,7 @@ Stop a running workflow execution
   | Name | Type | Required | Description |
   |------|------|----------|-------------|
   | `job_id` | string | ✅ Yes | - |
+  
 
 
 
@@ -160,11 +176,15 @@ Stop a running workflow execution
 | `job_id` | string | - |
 | `message` | string | - |
 
+
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
