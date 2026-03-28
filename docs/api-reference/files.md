@@ -19,6 +19,13 @@
 | `flow_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `multipart/form-data` | ✅ |
+
 ### Request Body
 
 - **Required:** Yes
@@ -282,6 +289,13 @@ Upload a file for the current user and track it in the database.
 | `append` | **query** | boolean | ❌ No | - |
 
 
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `multipart/form-data` | ✅ |
+
 ### Request Body
 
 - **Required:** Yes
@@ -383,6 +397,13 @@ Upload a file for the current user and track it in the database.
 | `append` | **query** | boolean | ❌ No | - |
 
 
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `multipart/form-data` | ✅ |
+
 ### Request Body
 
 - **Required:** Yes
@@ -478,6 +499,13 @@ Download multiple files as a zip file by their IDs.
 
 
 
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `application/json` | ✅ |
+
 ### Request Body
 
 - **Required:** Yes
@@ -515,6 +543,13 @@ Delete multiple files by their IDs.
 **Operation ID:** `delete_files_batch_api_v2_files_batch__delete`
 
 
+
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `application/json` | ✅ |
 
 ### Request Body
 
