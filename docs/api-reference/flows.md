@@ -17,6 +17,30 @@
 
 - **Required:** Yes
 
+- **Content-Type:** `application/json`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `name` | string | ✅ Yes | - |
+  | `description` | string | ❌ No | - |
+  | `icon` | string | ❌ No | - |
+  | `icon_bg_color` | string | ❌ No | - |
+  | `gradient` | string | ❌ No | - |
+  | `data` | object | ❌ No | - |
+  | `is_component` | boolean | ❌ No | - |
+  | `updated_at` | string (date-time) | ❌ No | - |
+  | `webhook` | boolean | ❌ No | Can be used on the webhook endpoint |
+  | `endpoint_name` | string | ❌ No | - |
+  | `tags` | array[string] | ❌ No | - |
+  | `locked` | boolean | ❌ No | - |
+  | `mcp_enabled` | boolean | ❌ No | Can be exposed in the MCP server |
+  | `action_name` | string | ❌ No | The name of the action associated with the flow |
+  | `action_description` | string | ❌ No | The description of the action associated with the flow |
+  | `access_type` | string | ❌ No | - |
+  | `user_id` | string (uuid) | ❌ No | - |
+  | `folder_id` | string (uuid) | ❌ No | - |
+  | `fs_path` | string | ❌ No | - |
+
+
 
 ### Responses
 
@@ -25,6 +49,36 @@
 | **201** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `name` | string | - |
+| `description` | string | - |
+| `icon` | string | - |
+| `icon_bg_color` | string | - |
+| `gradient` | string | - |
+| `data` | object | - |
+| `is_component` | boolean | - |
+| `updated_at` | string (date-time) | - |
+| `webhook` | boolean | Can be used on the webhook endpoint |
+| `endpoint_name` | string | - |
+| `tags` | array[string] | The tags of the flow |
+| `locked` | boolean | - |
+| `mcp_enabled` | boolean | Can be exposed in the MCP server |
+| `action_name` | string | The name of the action associated with the flow |
+| `action_description` | string | The description of the action associated with the flow |
+| `access_type` | string | - |
+| `id` | string (uuid) | - |
+| `user_id` | string (uuid) | - |
+| `folder_id` | string (uuid) | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ## `GET` /api/v1/flows/
@@ -32,7 +86,25 @@
 > Read Flows
 
 
-Retrieve a list of flows with pagination support.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    current_user (User): The current authenticated user.&lt;br&gt;    session (Session): The database session.&lt;br&gt;    settings_service (SettingsService): The settings service.&lt;br&gt;    components_only (bool, optional): Whether to return only components. Defaults to False.&lt;br&gt;&lt;br&gt;    get_all (bool, optional): Whether to return all flows without pagination. Defaults to True.&lt;br&gt;    **This field must be True because of backward compatibility with the frontend - Release: 1.0.20**&lt;br&gt;&lt;br&gt;    folder_id (UUID, optional): The project ID. Defaults to None.&lt;br&gt;    params (Params): Pagination parameters.&lt;br&gt;    remove_example_flows (bool, optional): Whether to remove example flows. Defaults to False.&lt;br&gt;    header_flows (bool, optional): Whether to return only specific headers of the flows. Defaults to False.&lt;br&gt;&lt;br&gt;Returns:&lt;br&gt;    list[FlowRead] | Page[FlowRead] | list[FlowHeader]&lt;br&gt;    A list of flows or a paginated response containing the list of flows or a list of flow headers.
+Retrieve a list of flows with pagination support.
+
+Args:
+    current_user (User): The current authenticated user.
+    session (Session): The database session.
+    settings_service (SettingsService): The settings service.
+    components_only (bool, optional): Whether to return only components. Defaults to False.
+
+    get_all (bool, optional): Whether to return all flows without pagination. Defaults to True.
+    **This field must be True because of backward compatibility with the frontend - Release: 1.0.20**
+
+    folder_id (UUID, optional): The project ID. Defaults to None.
+    params (Params): Pagination parameters.
+    remove_example_flows (bool, optional): Whether to remove example flows. Defaults to False.
+    header_flows (bool, optional): Whether to return only specific headers of the flows. Defaults to False.
+
+Returns:
+    list[FlowRead] | Page[FlowRead] | list[FlowHeader]
+    A list of flows or a paginated response containing the list of flows or a list of flow headers.
 
 
 **Operation ID:** `read_flows_api_v1_flows__get`
@@ -42,13 +114,13 @@ Retrieve a list of flows with pagination support.&lt;br&gt;&lt;br&gt;Args:&lt;br
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `remove_example_flows` | **query** |  (boolean) | ❌ No | - |
-| `components_only` | **query** |  (boolean) | ❌ No | - |
-| `get_all` | **query** |  (boolean) | ❌ No | - |
-| `folder_id` | **query** |  | ❌ No | - |
-| `header_flows` | **query** |  (boolean) | ❌ No | - |
-| `page` | **query** |  (integer) | ❌ No | - |
-| `size` | **query** |  (integer) | ❌ No | - |
+| `remove_example_flows` | **query** | boolean | ❌ No | - |
+| `components_only` | **query** | boolean | ❌ No | - |
+| `get_all` | **query** | boolean | ❌ No | - |
+| `folder_id` | **query** | string (uuid) | ❌ No | - |
+| `header_flows` | **query** | boolean | ❌ No | - |
+| `page` | **query** | integer | ❌ No | - |
+| `size` | **query** | integer | ❌ No | - |
 
 
 
@@ -59,6 +131,22 @@ Retrieve a list of flows with pagination support.&lt;br&gt;&lt;br&gt;Args:&lt;br
 | **200** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `items` | array[object] | - |
+| `total` | integer | - |
+| `page` | integer | - |
+| `size` | integer | - |
+| `pages` | integer | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ## `DELETE` /api/v1/flows/
@@ -66,7 +154,15 @@ Retrieve a list of flows with pagination support.&lt;br&gt;&lt;br&gt;Args:&lt;br
 > Delete Multiple Flows
 
 
-Delete multiple flows by their IDs.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    flow_ids (List[str]): The list of flow IDs to delete.&lt;br&gt;    user (User, optional): The user making the request. Defaults to the current active user.&lt;br&gt;    db (Session, optional): The database session.&lt;br&gt;&lt;br&gt;Returns:&lt;br&gt;    dict: A dictionary containing the number of flows deleted.
+Delete multiple flows by their IDs.
+
+Args:
+    flow_ids (List[str]): The list of flow IDs to delete.
+    user (User, optional): The user making the request. Defaults to the current active user.
+    db (Session, optional): The database session.
+
+Returns:
+    dict: A dictionary containing the number of flows deleted.
 
 
 **Operation ID:** `delete_multiple_flows_api_v1_flows__delete`
@@ -77,6 +173,9 @@ Delete multiple flows by their IDs.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    flow_i
 
 - **Required:** Yes
 
+- **Content-Type:** `application/json`
+
+
 
 ### Responses
 
@@ -84,6 +183,12 @@ Delete multiple flows by their IDs.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    flow_i
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -102,7 +207,7 @@ Read a flow.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **path** |  (string) | ✅ Yes | - |
+| `flow_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -112,6 +217,36 @@ Read a flow.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `name` | string | - |
+| `description` | string | - |
+| `icon` | string | - |
+| `icon_bg_color` | string | - |
+| `gradient` | string | - |
+| `data` | object | - |
+| `is_component` | boolean | - |
+| `updated_at` | string (date-time) | - |
+| `webhook` | boolean | Can be used on the webhook endpoint |
+| `endpoint_name` | string | - |
+| `tags` | array[string] | The tags of the flow |
+| `locked` | boolean | - |
+| `mcp_enabled` | boolean | Can be exposed in the MCP server |
+| `action_name` | string | The name of the action associated with the flow |
+| `action_description` | string | The description of the action associated with the flow |
+| `access_type` | string | - |
+| `id` | string (uuid) | - |
+| `user_id` | string (uuid) | - |
+| `folder_id` | string (uuid) | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -130,12 +265,28 @@ Update a flow.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **path** |  (string) | ✅ Yes | - |
+| `flow_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 ### Request Body
 
 - **Required:** Yes
+
+- **Content-Type:** `application/json`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `name` | string | ❌ No | - |
+  | `description` | string | ❌ No | - |
+  | `data` | object | ❌ No | - |
+  | `folder_id` | string (uuid) | ❌ No | - |
+  | `endpoint_name` | string | ❌ No | - |
+  | `mcp_enabled` | boolean | ❌ No | - |
+  | `locked` | boolean | ❌ No | - |
+  | `action_name` | string | ❌ No | - |
+  | `action_description` | string | ❌ No | - |
+  | `access_type` | string | ❌ No | - |
+  | `fs_path` | string | ❌ No | - |
+
 
 
 ### Responses
@@ -144,6 +295,36 @@ Update a flow.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `name` | string | - |
+| `description` | string | - |
+| `icon` | string | - |
+| `icon_bg_color` | string | - |
+| `gradient` | string | - |
+| `data` | object | - |
+| `is_component` | boolean | - |
+| `updated_at` | string (date-time) | - |
+| `webhook` | boolean | Can be used on the webhook endpoint |
+| `endpoint_name` | string | - |
+| `tags` | array[string] | The tags of the flow |
+| `locked` | boolean | - |
+| `mcp_enabled` | boolean | Can be exposed in the MCP server |
+| `action_name` | string | The name of the action associated with the flow |
+| `action_description` | string | The description of the action associated with the flow |
+| `access_type` | string | - |
+| `id` | string (uuid) | - |
+| `user_id` | string (uuid) | - |
+| `folder_id` | string (uuid) | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -162,7 +343,7 @@ Delete a flow.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **path** |  (string) | ✅ Yes | - |
+| `flow_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -172,6 +353,12 @@ Delete a flow.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -190,7 +377,7 @@ Read a public flow.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **path** |  (string) | ✅ Yes | - |
+| `flow_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -200,6 +387,36 @@ Read a public flow.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `name` | string | - |
+| `description` | string | - |
+| `icon` | string | - |
+| `icon_bg_color` | string | - |
+| `gradient` | string | - |
+| `data` | object | - |
+| `is_component` | boolean | - |
+| `updated_at` | string (date-time) | - |
+| `webhook` | boolean | Can be used on the webhook endpoint |
+| `endpoint_name` | string | - |
+| `tags` | array[string] | The tags of the flow |
+| `locked` | boolean | - |
+| `mcp_enabled` | boolean | Can be exposed in the MCP server |
+| `action_name` | string | The name of the action associated with the flow |
+| `action_description` | string | The description of the action associated with the flow |
+| `access_type` | string | - |
+| `id` | string (uuid) | - |
+| `user_id` | string (uuid) | - |
+| `folder_id` | string (uuid) | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -219,6 +436,12 @@ Create multiple new flows.
 
 - **Required:** Yes
 
+- **Content-Type:** `application/json`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `flows` | array[object] | ✅ Yes | - |
+
+
 
 ### Responses
 
@@ -226,6 +449,12 @@ Create multiple new flows.
 |-------------|-------------|
 | **201** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -244,12 +473,18 @@ Upload flows from a file.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `folder_id` | **query** |  | ❌ No | - |
+| `folder_id` | **query** | string (uuid) | ❌ No | - |
 
 
 ### Request Body
 
 - **Required:** Yes
+
+- **Content-Type:** `multipart/form-data`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `file` | string | ✅ Yes | - |
+
 
 
 ### Responses
@@ -258,6 +493,12 @@ Upload flows from a file.
 |-------------|-------------|
 | **201** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -277,6 +518,9 @@ Download all flows as a zip file.
 
 - **Required:** Yes
 
+- **Content-Type:** `application/json`
+
+
 
 ### Responses
 
@@ -285,6 +529,12 @@ Download all flows as a zip file.
 | **200** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ## `GET` /api/v1/flows/basic_examples/
@@ -292,7 +542,13 @@ Download all flows as a zip file.
 > Read Basic Examples
 
 
-Retrieve a list of basic example flows.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    session (Session): The database session.&lt;br&gt;&lt;br&gt;Returns:&lt;br&gt;    list[FlowRead]: A list of basic example flows.
+Retrieve a list of basic example flows.
+
+Args:
+    session (Session): The database session.
+
+Returns:
+    list[FlowRead]: A list of basic example flows.
 
 
 **Operation ID:** `read_basic_examples_api_v1_flows_basic_examples__get`
