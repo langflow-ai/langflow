@@ -475,8 +475,9 @@ complete = [
     "langflow-base[astrapy]",
     # Windows-specific
     "langflow-base[gassist]",
-    # wxO deployment adapter
-    "langflow-base[ibm-watsonx]"
+    # wxO deployment adapter,
+    # will add to complete once the feature flag is dropped
+    # "langflow-base[ibm-watsonx]"
 ]
 
 all = [
