@@ -19,6 +19,13 @@ User activation is controlled by the NEW_USER_IS_ACTIVE setting.
 
 
 
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Not required | - |
+| Content-Type | `application/json` | ✅ |
+
 ### Request Body
 
 - **Required:** Yes
@@ -170,6 +177,13 @@ Update an existing user's data.
 | `user_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `application/json` | ✅ |
+
 ### Request Body
 
 - **Required:** Yes
@@ -276,6 +290,13 @@ Reset a user's password.
 |------|-----------|------|----------|-------------|
 | `user_id` | **path** | string (uuid) | ✅ Yes | - |
 
+
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `application/json` | ✅ |
 
 ### Request Body
 
