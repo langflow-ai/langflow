@@ -202,7 +202,7 @@ const CustomInputPopover = ({
     if (!isComposing) {
       setLocalValue(disabled ? "" : value || "");
     }
-  }, [value, disabled]);
+  }, [value, disabled, isComposing]);
 
   // Restore cursor position after value changes
   useEffect(() => {
