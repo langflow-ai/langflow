@@ -28,7 +28,7 @@ export default function LoginPage(): JSX.Element {
               window.location.href = "/api/v1/keycloak/login";
             }}
           >
-            SSO 로그인
+            SK하이닉스 SSO 로그인
           </Button>
         </div>
       </div>
