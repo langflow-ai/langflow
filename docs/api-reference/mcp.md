@@ -19,7 +19,7 @@ Get the list of available servers.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `action_count` | **query** |  | ❌ No | - |
+| `action_count` | **query** | boolean | ❌ No | - |
 
 
 
@@ -29,6 +29,12 @@ Get the list of available servers.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -47,7 +53,7 @@ Get a specific server.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `server_name` | **path** |  (string) | ✅ Yes | - |
+| `server_name` | **path** | string | ✅ Yes | - |
 
 
 
@@ -57,6 +63,12 @@ Get a specific server.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -72,12 +84,22 @@ Get a specific server.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `server_name` | **path** |  (string) | ✅ Yes | - |
+| `server_name` | **path** | string | ✅ Yes | - |
 
 
 ### Request Body
 
 - **Required:** Yes
+
+- **Content-Type:** `application/json`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `command` | string | ❌ No | - |
+  | `args` | array[string] | ❌ No | - |
+  | `env` | object | ❌ No | - |
+  | `headers` | object | ❌ No | - |
+  | `url` | string | ❌ No | - |
+
 
 
 ### Responses
@@ -86,6 +108,12 @@ Get a specific server.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -101,12 +129,22 @@ Get a specific server.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `server_name` | **path** |  (string) | ✅ Yes | - |
+| `server_name` | **path** | string | ✅ Yes | - |
 
 
 ### Request Body
 
 - **Required:** Yes
+
+- **Content-Type:** `application/json`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `command` | string | ❌ No | - |
+  | `args` | array[string] | ❌ No | - |
+  | `env` | object | ❌ No | - |
+  | `headers` | object | ❌ No | - |
+  | `url` | string | ❌ No | - |
+
 
 
 ### Responses
@@ -115,6 +153,12 @@ Get a specific server.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -130,7 +174,7 @@ Get a specific server.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `server_name` | **path** |  (string) | ✅ Yes | - |
+| `server_name` | **path** | string | ✅ Yes | - |
 
 
 
@@ -140,6 +184,12 @@ Get a specific server.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
