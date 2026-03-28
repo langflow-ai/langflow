@@ -6,12 +6,10 @@ import os
 import secrets
 import urllib.parse
 from datetime import datetime, timedelta, timezone
-from typing import Annotated
 
 import jwt as pyjwt
 from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
-
 from langflow.api.utils.core import DbSession
 from langflow.services.deps import get_auth_service, get_settings_service
 
@@ -36,9 +34,7 @@ def _get_state_secret() -> str:
 def _generate_pkce() -> tuple[str, str]:
     """Return (code_verifier, code_challenge) for PKCE S256."""
     verifier = base64.urlsafe_b64encode(os.urandom(32)).rstrip(b"=").decode()
-    challenge = base64.urlsafe_b64encode(
-        hashlib.sha256(verifier.encode()).digest()
-    ).rstrip(b"=").decode()
+    challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
     return verifier, challenge
 
 
@@ -227,7 +223,12 @@ async def keycloak_logout(request: Request):
 
     redirect = RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
     for name, httponly, samesite, secure in [
-        ("refresh_token_lf", auth_settings.REFRESH_HTTPONLY, auth_settings.REFRESH_SAME_SITE, auth_settings.REFRESH_SECURE),
+        (
+            "refresh_token_lf",
+            auth_settings.REFRESH_HTTPONLY,
+            auth_settings.REFRESH_SAME_SITE,
+            auth_settings.REFRESH_SECURE,
+        ),
         ("access_token_lf", auth_settings.ACCESS_HTTPONLY, auth_settings.ACCESS_SAME_SITE, auth_settings.ACCESS_SECURE),
         ("apikey_tkn_lflw", auth_settings.ACCESS_HTTPONLY, auth_settings.ACCESS_SAME_SITE, auth_settings.ACCESS_SECURE),
         ("kc_id_token_lf", True, auth_settings.ACCESS_SAME_SITE, auth_settings.ACCESS_SECURE),
@@ -261,9 +262,24 @@ async def keycloak_logout(request: Request):
         redirect = RedirectResponse(url=kc_logout_url, status_code=status.HTTP_302_FOUND)
         # Re-delete the cookies on the new redirect response as well.
         for name, httponly, samesite, secure in [
-            ("refresh_token_lf", auth_settings.REFRESH_HTTPONLY, auth_settings.REFRESH_SAME_SITE, auth_settings.REFRESH_SECURE),
-            ("access_token_lf", auth_settings.ACCESS_HTTPONLY, auth_settings.ACCESS_SAME_SITE, auth_settings.ACCESS_SECURE),
-            ("apikey_tkn_lflw", auth_settings.ACCESS_HTTPONLY, auth_settings.ACCESS_SAME_SITE, auth_settings.ACCESS_SECURE),
+            (
+                "refresh_token_lf",
+                auth_settings.REFRESH_HTTPONLY,
+                auth_settings.REFRESH_SAME_SITE,
+                auth_settings.REFRESH_SECURE,
+            ),
+            (
+                "access_token_lf",
+                auth_settings.ACCESS_HTTPONLY,
+                auth_settings.ACCESS_SAME_SITE,
+                auth_settings.ACCESS_SECURE,
+            ),
+            (
+                "apikey_tkn_lflw",
+                auth_settings.ACCESS_HTTPONLY,
+                auth_settings.ACCESS_SAME_SITE,
+                auth_settings.ACCESS_SECURE,
+            ),
             ("kc_id_token_lf", True, auth_settings.ACCESS_SAME_SITE, auth_settings.ACCESS_SECURE),
         ]:
             redirect.delete_cookie(

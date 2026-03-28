@@ -17,9 +17,7 @@ class KeycloakClient:
         self._client_secret = client_secret
         self._jwks_client = PyJWKClient(jwks_uri)
 
-    async def exchange_code(
-        self, code: str, redirect_uri: str, code_verifier: str | None = None
-    ) -> dict[str, Any]:
+    async def exchange_code(self, code: str, redirect_uri: str, code_verifier: str | None = None) -> dict[str, Any]:
         """Exchange authorization code for tokens. Returns the token response dict."""
         post_data: dict[str, str] = {
             "grant_type": "authorization_code",

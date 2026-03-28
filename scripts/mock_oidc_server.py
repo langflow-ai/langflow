@@ -127,7 +127,10 @@ def _b64url(n: int) -> str:
 JWKS = {
     "keys": [
         {
-            "kty": "RSA", "use": "sig", "kid": _KID, "alg": "RS256",
+            "kty": "RSA",
+            "use": "sig",
+            "kid": _KID,
+            "alg": "RS256",
             "n": _b64url(_pub_numbers.n),
             "e": _b64url(_pub_numbers.e),
         }
@@ -274,7 +277,7 @@ async def authorization_submit(
     if not _has_client_access(emp_id, client_id):
         project = client_id.removeprefix("langflow-")
         groups = _get_employee_groups(emp_id)
-        reason = f"소속 그룹 없음" if not groups else f"소속 그룹: {', '.join(groups)}"
+        reason = "소속 그룹 없음" if not groups else f"소속 그룹: {', '.join(groups)}"
         return HTMLResponse(
             _error_page(
                 f"<b>{emp['name']} ({emp_id})</b> 계정은 "
@@ -304,7 +307,9 @@ async def token(
 
     entry = _codes.pop(code, None)
     if not entry:
-        return JSONResponse({"error": "invalid_grant", "error_description": "Code not found or already used"}, status_code=400)
+        return JSONResponse(
+            {"error": "invalid_grant", "error_description": "Code not found or already used"}, status_code=400
+        )
 
     employee_id, issued_client_id = entry
     return {
@@ -318,7 +323,6 @@ async def token(
 @app.get("/admin", include_in_schema=False)
 async def admin_page():
     """Read-only page: employees, groups, and client access."""
-
     # ── Group table ───────────────────────────────────────────────────────
     group_rows = ""
     for gname, g in GROUPS.items():
