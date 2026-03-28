@@ -1,0 +1,24 @@
+[project]
+name = "langflow-keycloak-sso"
+version = "0.1.0"
+description = "Keycloak SSO plugin for Langflow — maps Keycloak groups to shared Langflow accounts"
+requires-python = ">=3.10,<3.14"
+license = "MIT"
+
+dependencies = [
+    "langflow-base>=0.8.0",
+    "httpx>=0.27,<1.0.0",
+    "PyJWT>=2.10.1",
+    "cryptography>=41.0.0",
+    "pydantic-settings>=2.2.0,<3.0.0",
+]
+
+[project.entry-points."langflow.plugins"]
+keycloak-sso = "langflow_keycloak_sso.plugin:register"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/langflow_keycloak_sso"]
