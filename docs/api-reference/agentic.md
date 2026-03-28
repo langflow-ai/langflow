@@ -22,6 +22,13 @@ Execute a named flow from the flows directory.
 | `flow_name` | **path** | string | ✅ Yes | - |
 
 
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `application/json` | ✅ |
+
 ### Request Body
 
 - **Required:** Yes
@@ -94,6 +101,13 @@ Chat with the Langflow Assistant.
 
 
 
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `application/json` | ✅ |
+
 ### Request Body
 
 - **Required:** Yes
@@ -142,6 +156,13 @@ Chat with the Langflow Assistant with streaming progress updates.
 **Operation ID:** `assist_stream_api_v1_agentic_assist_stream_post`
 
 
+
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `application/json` | ✅ |
 
 ### Request Body
 
