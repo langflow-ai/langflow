@@ -35,6 +35,9 @@ Get the list of available servers.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -69,6 +72,9 @@ Get a specific server.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -99,6 +105,7 @@ Get a specific server.
   | `env` | object | ❌ No | - |
   | `headers` | object | ❌ No | - |
   | `url` | string | ❌ No | - |
+  
 
 
 
@@ -114,6 +121,9 @@ Get a specific server.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -144,6 +154,7 @@ Get a specific server.
   | `env` | object | ❌ No | - |
   | `headers` | object | ❌ No | - |
   | `url` | string | ❌ No | - |
+  
 
 
 
@@ -159,6 +170,9 @@ Get a specific server.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -190,6 +204,9 @@ Get a specific server.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
