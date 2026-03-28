@@ -59,13 +59,15 @@ WORKDIR /tmp/src/frontend
 RUN --mount=type=cache,target=/root/.npm \
     npm ci \
     && NODE_OPTIONS="--max-old-space-size=4096" JOBS=1 npm run build \
-    && cp -r build /app/src/backend/langflow/frontend
+    && rm -rf /app/src/backend/base/langflow/frontend \
+    && cp -r build /app/src/backend/base/langflow/frontend
 
 WORKDIR /app
 
 # ── Final sync (install project itself) ──────────────────────────────────────
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-editable \
+# NOTE: no cache mount here — ensures local packages (langflow, langflow-base)
+# are always rebuilt from source, picking up frontend build output changes.
+RUN uv sync --frozen --no-editable \
         --extra postgresql --no-group dev
 
 # ── Install keycloak-sso plugin AFTER uv sync (not in lockfile) ──────────────
