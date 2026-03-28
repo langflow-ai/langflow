@@ -31,6 +31,13 @@
 
 
 
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `application/json` | ✅ |
+
 ### Request Body
 
 - **Required:** Yes
@@ -143,6 +150,13 @@
 |------|-----------|------|----------|-------------|
 | `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
+
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `application/json` | ✅ |
 
 ### Request Body
 
@@ -272,6 +286,13 @@ Upload flows from a file.
 **Operation ID:** `upload_file_api_v1_projects_upload__post`
 
 
+
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `multipart/form-data` | ✅ |
 
 ### Request Body
 
