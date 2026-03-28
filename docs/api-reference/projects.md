@@ -35,6 +35,16 @@
 
 - **Required:** Yes
 
+- **Content-Type:** `application/json`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `name` | string | ✅ Yes | - |
+  | `description` | string | ❌ No | - |
+  | `auth_settings` | object | ❌ No | Authentication settings for the folder/project |
+  | `components_list` | array[string] | ❌ No | - |
+  | `flows_list` | array[string] | ❌ No | - |
+
+
 
 ### Responses
 
@@ -42,6 +52,22 @@
 |-------------|-------------|
 | **201** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `name` | string | - |
+| `description` | string | - |
+| `auth_settings` | object | Authentication settings for the folder/project |
+| `id` | string (uuid) | - |
+| `parent_id` | string (uuid) | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -57,12 +83,12 @@
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
-| `page` | **query** |  | ❌ No | - |
-| `size` | **query** |  | ❌ No | - |
-| `is_component` | **query** |  (boolean) | ❌ No | - |
-| `is_flow` | **query** |  (boolean) | ❌ No | - |
-| `search` | **query** |  (string) | ❌ No | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
+| `page` | **query** | integer | ❌ No | - |
+| `size` | **query** | integer | ❌ No | - |
+| `is_component` | **query** | boolean | ❌ No | - |
+| `is_flow` | **query** | boolean | ❌ No | - |
+| `search` | **query** | string | ❌ No | - |
 
 
 
@@ -72,6 +98,23 @@
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `name` | string | - |
+| `description` | string | - |
+| `auth_settings` | object | Authentication settings for the folder/project |
+| `id` | string (uuid) | - |
+| `parent_id` | string (uuid) | - |
+| `flows` | array[object] | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -87,12 +130,23 @@
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 ### Request Body
 
 - **Required:** Yes
+
+- **Content-Type:** `application/json`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `name` | string | ❌ No | - |
+  | `description` | string | ❌ No | - |
+  | `parent_id` | string (uuid) | ❌ No | - |
+  | `components` | array[string] | ❌ No | - |
+  | `flows` | array[string] | ❌ No | - |
+  | `auth_settings` | object | ❌ No | - |
+
 
 
 ### Responses
@@ -101,6 +155,22 @@
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `name` | string | - |
+| `description` | string | - |
+| `auth_settings` | object | Authentication settings for the folder/project |
+| `id` | string (uuid) | - |
+| `parent_id` | string (uuid) | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -116,7 +186,7 @@
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -126,6 +196,12 @@
 |-------------|-------------|
 | **204** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -144,7 +220,7 @@ Download all flows from project as a zip file.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -154,6 +230,12 @@ Download all flows from project as a zip file.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -173,6 +255,12 @@ Upload flows from a file.
 
 - **Required:** Yes
 
+- **Content-Type:** `multipart/form-data`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `file` | string | ✅ Yes | - |
+
+
 
 ### Responses
 
@@ -180,6 +268,12 @@ Upload flows from a file.
 |-------------|-------------|
 | **201** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
