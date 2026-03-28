@@ -36,6 +36,9 @@ List project MCP tools.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -70,6 +73,9 @@ Handle POST messages for a project-specific MCP server.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -103,6 +109,11 @@ the body of the response to display to the user.
   |------|------|----------|-------------|
   | `settings` | array[object] | ✅ Yes | - |
   | `auth_settings` | object | ❌ No | Model representing authentication settings for MCP. |
+  **`settings`** — Array of `object`
+
+**`auth_settings`** ❌ — Model representing authentication settings for MCP.
+
+
 
 
 
@@ -118,6 +129,9 @@ the body of the response to display to the user.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -152,6 +166,9 @@ Handle SSE connections for a specific project.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -186,6 +203,9 @@ Handle POST messages for a project-specific MCP server.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -220,6 +240,9 @@ Handle Streamable HTTP connections for a specific project.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -254,6 +277,9 @@ Handle Streamable HTTP connections for a specific project.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -288,6 +314,9 @@ Handle Streamable HTTP connections for a specific project.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -317,7 +346,8 @@ Install MCP server configuration for Cursor, Windsurf, or Claude.
   | Name | Type | Required | Description |
   |------|------|----------|-------------|
   | `client` | string | ✅ Yes | - |
-  | `transport` | string | ❌ No | - |
+  | `transport` | string = `sse` \| `streamablehttp` | ❌ No | - |
+  
 
 
 
@@ -333,6 +363,9 @@ Install MCP server configuration for Cursor, Windsurf, or Claude.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -375,11 +408,15 @@ the body of the response to display to the user.
 | `legacy_sse_url` | string | - |
 | `error_message` | string | - |
 
+
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -414,6 +451,9 @@ Check if MCP server configuration is installed for this project in Cursor, Winds
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
