@@ -64,6 +64,9 @@ SECURITY: Logs may contain sensitive information and require authentication.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
