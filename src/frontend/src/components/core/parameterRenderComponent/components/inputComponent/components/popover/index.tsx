@@ -190,17 +190,26 @@ const CustomInputPopover = ({
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [cursor, setCursor] = useState<number | null>(null);
+  const [isComposing, setIsComposing] = useState(false);
+  const [localValue, setLocalValue] = useState(disabled ? "" : value || "");
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
 
   const PopoverContentInput =
     editNode || inspectionPanel ? PopoverContent : PopoverContentWithoutPortal;
 
-  // Restore cursor position after value changes
+  // Sync local value from parent when not composing
   useEffect(() => {
-    if (cursor !== null && refInput.current) {
+    if (!isComposing) {
+      setLocalValue(disabled ? "" : value || "");
+    }
+  }, [value, disabled, isComposing]);
+
+  // Restore cursor position after value changes (skip during IME composition)
+  useEffect(() => {
+    if (cursor !== null && refInput.current && !isComposing) {
       refInput.current.setSelectionRange(cursor, cursor);
     }
-  }, [cursor, value]);
+  }, [cursor, localValue, isComposing]);
 
   const handleRemoveOption = (
     optionToRemove: string,
@@ -297,7 +306,7 @@ const CustomInputPopover = ({
                 onInputLostFocus?.();
                 setIsFocused(false);
               }}
-              value={disabled ? "" : value || ""}
+              value={localValue}
               disabled={disabled}
               required={required}
               className={getInputClassName(
@@ -313,8 +322,19 @@ const CustomInputPopover = ({
                   : placeholder
               }
               onChange={(e) => {
+                const val = e.target.value;
+                setLocalValue(val);
                 setCursor(e.target.selectionStart);
-                onChange?.(e.target.value);
+                if (!isComposing) {
+                  onChange?.(val);
+                }
+              }}
+              onCompositionStart={() => setIsComposing(true)}
+              onCompositionEnd={(e) => {
+                setIsComposing(false);
+                const val = (e.target as HTMLInputElement).value;
+                setLocalValue(val);
+                onChange?.(val);
               }}
               onKeyDown={(e) => {
                 handleKeyDown?.(e);

@@ -78,6 +78,8 @@ export default function TextAreaComponent({
   const [passwordVisible, setPasswordVisible] = useState(false);
   const webhookAuthEnable = useUtilityStore((state) => state.webhookAuthEnable);
   const [cursor, setCursor] = useState<number | null>(null);
+  const [isComposing, setIsComposing] = useState(false);
+  const [localValue, setLocalValue] = useState(disabled ? "" : value);
 
   const isWebhook = useMemo(
     () => nodeInformationMetadata?.nodeType === "webhook",
@@ -110,12 +112,19 @@ export default function TextAreaComponent({
     webhookAuthEnable,
   ]);
 
-  // Restore cursor position after value changes
+  // Sync local value from parent when not composing
   useEffect(() => {
-    if (cursor !== null && inputRef.current) {
+    if (!isComposing) {
+      setLocalValue(disabled ? "" : value);
+    }
+  }, [value, disabled, isComposing]);
+
+  // Restore cursor position after value changes (skip during IME composition)
+  useEffect(() => {
+    if (cursor !== null && inputRef.current && !isComposing) {
       inputRef.current.setSelectionRange(cursor, cursor);
     }
-  }, [cursor, value]);
+  }, [cursor, localValue, isComposing]);
 
   const getInputClassName = () => {
     return cn(
@@ -128,8 +137,12 @@ export default function TextAreaComponent({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setLocalValue(val);
     setCursor(e.target.selectionStart);
-    handleOnNewValue({ value: e.target.value });
+    if (!isComposing) {
+      handleOnNewValue({ value: val });
+    }
   };
 
   const changeWebhookFormat = (format: "multiline" | "singleline") => {
@@ -198,8 +211,15 @@ export default function TextAreaComponent({
         onBlur={() => setIsFocused(false)}
         id={id}
         data-testid={id}
-        value={disabled ? "" : value}
+        value={localValue}
         onChange={handleInputChange}
+        onCompositionStart={() => setIsComposing(true)}
+        onCompositionEnd={(e) => {
+          setIsComposing(false);
+          const val = (e.target as HTMLInputElement).value;
+          setLocalValue(val);
+          handleOnNewValue({ value: val });
+        }}
         disabled={disabled}
         className={getInputClassName()}
         placeholder={getPlaceholder(disabled, placeholder)}
