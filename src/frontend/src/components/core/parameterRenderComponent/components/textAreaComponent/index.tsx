@@ -124,7 +124,7 @@ export default function TextAreaComponent({
     if (cursor !== null && inputRef.current && !isComposing) {
       inputRef.current.setSelectionRange(cursor, cursor);
     }
-  }, [cursor, localValue]);
+  }, [cursor, localValue, isComposing]);
 
   const getInputClassName = () => {
     return cn(
