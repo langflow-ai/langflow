@@ -17,6 +17,7 @@ class JobStatus(str, Enum):
 
     QUEUED = "queued"
     IN_PROGRESS = "in_progress"
+    PAUSED = "paused"
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
@@ -132,6 +133,8 @@ class WorkflowJobResponse(BaseModel):
             self.links = {
                 "status": f"/api/v2/workflows?job_id={self.job_id!s}",
                 "stop": "/api/v2/workflows/stop",
+                "pause": "/api/v2/workflows/pause",
+                "resume": "/api/v2/workflows/resume",
             }
         return self
 
@@ -155,6 +158,40 @@ class WorkflowStopResponse(BaseModel):
     """Response schema for stopping workflow."""
 
     job_id: JobId
+    message: str | None = None
+
+
+class WorkflowPauseRequest(BaseModel):
+    """Request schema for pausing a running workflow."""
+
+    job_id: JobId
+    reason: str = Field(default="user-requested", description="Reason for the pause")
+    data: dict[str, Any] = Field(default_factory=dict, description="Additional context for the pause")
+
+
+class WorkflowPauseResponse(BaseModel):
+    """Response schema for pausing a workflow."""
+
+    job_id: JobId
+    status: JobStatus
+    checkpoint_id: str | None = None
+    message: str | None = None
+
+
+class WorkflowResumeRequest(BaseModel):
+    """Request schema for resuming a paused workflow."""
+
+    job_id: JobId
+    inputs: dict[str, Any] | None = Field(
+        None, description="New inputs to inject when resuming (e.g., answers to agent questions)"
+    )
+
+
+class WorkflowResumeResponse(BaseModel):
+    """Response schema for resuming a paused workflow."""
+
+    job_id: JobId
+    status: JobStatus
     message: str | None = None
 
 

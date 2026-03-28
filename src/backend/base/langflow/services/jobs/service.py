@@ -10,6 +10,8 @@ if TYPE_CHECKING:
 from datetime import datetime, timezone
 from uuid import UUID
 
+from lfx.exceptions.graph import GraphPausedException
+
 from langflow.services.base import Service
 from langflow.services.database.models.jobs.crud import (
     get_job_by_job_id,
@@ -175,6 +177,12 @@ class JobService(Service):
             # Handle missing required arguments
             await logger.aerror(f"Job {job_id} failed with AssertionError: {e}")
             await self.update_job_status(job_id, JobStatus.FAILED, finished_timestamp=True)
+            raise
+
+        except GraphPausedException as e:
+            # Graph was paused via API signal — don't mark as FAILED.
+            # Status is already PAUSED (set by the pause API endpoint).
+            await logger.ainfo(f"Job {job_id} paused: {e.reason} (checkpoint={e.checkpoint_id})")
             raise
 
         except asyncio.TimeoutError as e:

@@ -37,6 +37,10 @@ from lfx.schema.workflow import (
     WorkflowExecutionRequest,
     WorkflowExecutionResponse,
     WorkflowJobResponse,
+    WorkflowPauseRequest,
+    WorkflowPauseResponse,
+    WorkflowResumeRequest,
+    WorkflowResumeResponse,
     WorkflowStopRequest,
     WorkflowStopResponse,
 )
@@ -455,6 +459,10 @@ async def execute_workflow_background(
         )
         graph.set_run_id(job_id)
 
+        # Enable checkpointing for background jobs (allows pause/resume via API)
+        graph._checkpointing_enabled = True
+        graph._job_id = str(job_id)
+
         # Get terminal nodes
         terminal_node_ids = graph.get_terminal_nodes()
 
@@ -724,3 +732,182 @@ async def stop_workflow(
                 "message": f"Failed to stop job: {job_id} - {exc!s}",
             },
         ) from exc
+
+
+@router.post(
+    "/pause",
+    summary="Pause Workflow",
+    description=(
+        "Pause a running workflow execution. The workflow will checkpoint at the next component boundary. "
+        "WARNING: With the default in-memory checkpoint store, pause/resume only works with a single server "
+        "worker and checkpoints are lost on restart. Configure a DatabaseCheckpointStore for production use."
+    ),
+)
+async def pause_workflow(
+    request: WorkflowPauseRequest,
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],  # noqa: ARG001
+) -> WorkflowPauseResponse:
+    """Pause a running workflow execution.
+
+    Writes a PAUSE signal to the execution_signals table. The graph executor
+    polls for signals after each component build and will checkpoint when it
+    sees this signal. The job transitions to PAUSED status.
+
+    Args:
+        request: Pause request containing job_id and optional reason
+        api_key_user: Authenticated user from API key
+
+    Returns:
+        WorkflowPauseResponse with current status
+
+    Raises:
+        HTTPException:
+            - 404: Job not found
+            - 409: Job not in a pausable state
+    """
+    job_id = request.job_id
+    job_service = get_job_service()
+
+    job = await job_service.get_job_by_job_id(job_id)
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "Job not found",
+                "code": "JOB_NOT_FOUND",
+                "message": f"Job {job_id} not found",
+                "job_id": str(job_id),
+            },
+        )
+
+    if job.status not in (JobStatus.IN_PROGRESS, JobStatus.QUEUED):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Job not pausable",
+                "code": "INVALID_STATE_TRANSITION",
+                "message": f"Job {job_id} is in state '{job.status}' and cannot be paused",
+                "job_id": str(job_id),
+            },
+        )
+
+    # Write PAUSE signal to execution_signals table.
+    # The graph executor checks this table after each vertex build.
+    # TODO: Implement execution_signals table write once DB model is created.
+    # For now, update job status directly as a placeholder.
+    await job_service.update_job_status(job_id, JobStatus.PAUSED)
+
+    return WorkflowPauseResponse(
+        job_id=str(job_id),
+        status=JobStatus.PAUSED,
+        message=f"Pause signal sent for job {job_id}. Workflow will pause at next component boundary.",
+    )
+
+
+@router.post(
+    "/resume",
+    summary="Resume Workflow",
+    description=(
+        "Resume a paused workflow execution from its last checkpoint. "
+        "WARNING: With the default in-memory checkpoint store, pause/resume only works with a single server "
+        "worker and checkpoints are lost on restart. Configure a DatabaseCheckpointStore for production use."
+    ),
+)
+async def resume_workflow(
+    request: WorkflowResumeRequest,
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],  # noqa: ARG001
+) -> WorkflowResumeResponse:
+    """Resume a paused workflow from its checkpoint.
+
+    Loads the checkpoint for the paused job, reconstructs the graph,
+    injects any new inputs, and continues execution from where it left off.
+
+    Args:
+        request: Resume request containing job_id and optional new inputs
+        api_key_user: Authenticated user from API key
+
+    Returns:
+        WorkflowResumeResponse with updated status
+
+    Raises:
+        HTTPException:
+            - 404: Job not found or no checkpoint available
+            - 409: Job not in PAUSED state
+    """
+    job_id = request.job_id
+    job_service = get_job_service()
+
+    job = await job_service.get_job_by_job_id(job_id)
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "Job not found",
+                "code": "JOB_NOT_FOUND",
+                "message": f"Job {job_id} not found",
+                "job_id": str(job_id),
+            },
+        )
+
+    if job.status != JobStatus.PAUSED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Job not paused",
+                "code": "INVALID_STATE_TRANSITION",
+                "message": f"Job {job_id} is in state '{job.status}' and cannot be resumed. Only PAUSED jobs can be resumed.",
+                "job_id": str(job_id),
+            },
+        )
+
+    # Load checkpoint for this job
+    from lfx.services.deps import get_checkpoint_service
+
+    checkpoint_store = get_checkpoint_service()
+    checkpoint = await checkpoint_store.load_by_run_id(str(job_id))
+    if not checkpoint:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "No checkpoint found",
+                "code": "CHECKPOINT_NOT_FOUND",
+                "message": f"No checkpoint available for job {job_id}. The checkpoint may have expired.",
+                "job_id": str(job_id),
+            },
+        )
+
+    # Reconstruct graph from checkpoint and inject new inputs
+    resumed_graph = await Graph.resume_from_checkpoint(
+        checkpoint,
+        input_data=request.inputs,
+    )
+    resumed_graph._checkpointing_enabled = True
+    resumed_graph._job_id = str(job_id)
+
+    # Get terminal nodes for output collection
+    terminal_node_ids = resumed_graph.get_terminal_nodes()
+
+    # Update status and fire background task to continue execution
+    task_service = get_task_service()
+    await job_service.update_job_status(job_id, JobStatus.IN_PROGRESS)
+
+    await task_service.fire_and_forget_task(
+        job_service.execute_with_status,
+        job_id=job_id,
+        run_coro_func=run_graph_internal,
+        graph=resumed_graph,
+        flow_id=checkpoint.flow_id,
+        session_id=checkpoint.session_id or None,
+        inputs=None,
+        outputs=terminal_node_ids,
+        stream=False,
+    )
+
+    # Clean up the consumed checkpoint
+    await checkpoint_store.delete(checkpoint.checkpoint_id)
+
+    return WorkflowResumeResponse(
+        job_id=str(job_id),
+        status=JobStatus.IN_PROGRESS,
+        message=f"Job {job_id} resumed from checkpoint. Execution continuing.",
+    )

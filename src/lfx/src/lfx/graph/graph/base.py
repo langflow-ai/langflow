@@ -53,7 +53,21 @@ if TYPE_CHECKING:
     from lfx.graph.schema import ResultData
     from lfx.schema.schema import InputValueRequest
     from lfx.services.chat.schema import GetCache, SetCache
+    from lfx.services.checkpoint.schema import GraphCheckpoint
     from lfx.services.tracing.service import TracingService
+
+
+def _is_serializable(obj: Any) -> bool:
+    """Check if an object can be serialized by pydantic/JSON."""
+    if obj is None:
+        return True
+    try:
+        import json
+
+        json.dumps(obj, default=str)
+        return True
+    except (TypeError, ValueError, OverflowError):
+        return False
 
 
 class Graph:
@@ -130,6 +144,13 @@ class Graph:
         self._snapshots: list[dict[str, Any]] = []
         self._end_trace_tasks: set[asyncio.Task] = set()
         self._is_subgraph = False
+
+        # Pause/checkpoint state (opt-in: disabled by default)
+        self._checkpointing_enabled = False
+        self._pause_requested = False
+        self._pause_info: dict[str, Any] | None = None
+        self._checkpoint_store = None
+        self._job_id: str | None = None
 
         if context and not isinstance(context, dict):
             msg = "Context must be a dictionary"
@@ -408,6 +429,72 @@ class Graph:
             "vertices_to_run": copy.deepcopy(self.vertices_to_run),
             "run_manager": copy.deepcopy(self.run_manager.to_dict()),
         }
+
+    def request_pause(self, vertex_id: str, reason: str, data: dict[str, Any] | None = None) -> None:
+        """Signal that execution should pause after the current layer completes."""
+        self._pause_requested = True
+        self._pause_info = {
+            "vertex_id": vertex_id,
+            "reason": reason,
+            "data": data or {},
+        }
+
+    async def _check_for_pause_signal(self, vertex_id: str) -> None:
+        """Check the job's DB status for a PAUSE signal. If found, set pause state.
+
+        This is the multi-worker-safe mechanism: the API writes PAUSED status to the
+        jobs table, and the executor polls it after each vertex build.
+        """
+        if not self._job_id:
+            return
+        try:
+            from langflow.services.deps import get_job_service
+
+            job_service = get_job_service()
+            job = await job_service.get_job_by_job_id(self._job_id)
+            if job and job.status.value == "paused":
+                self.request_pause(
+                    vertex_id=vertex_id,
+                    reason="api-requested",
+                    data={"source": "workflow-pause-api"},
+                )
+        except Exception:  # noqa: BLE001
+            # If we can't reach the DB, don't block execution
+            pass
+
+    def _create_checkpoint(self, completed_layers: int) -> "GraphCheckpoint":
+        """Capture current execution state as a checkpoint."""
+        from lfx.services.checkpoint.schema import GraphCheckpoint, VertexCheckpointData
+
+        vertex_results: dict[str, VertexCheckpointData] = {}
+        for vertex in self.vertices:
+            if vertex.built:
+                vertex_results[vertex.id] = VertexCheckpointData(
+                    built=True,
+                    results=vertex.results if hasattr(vertex, "results") else {},
+                    artifacts=vertex.artifacts if hasattr(vertex, "artifacts") else {},
+                    built_object=vertex.built_object if _is_serializable(vertex.built_object) else None,
+                    built_result=vertex.built_result if _is_serializable(vertex.built_result) else None,
+                )
+
+        pause_info = self._pause_info or {}
+        return GraphCheckpoint(
+            flow_id=self.flow_id or "",
+            session_id=self._session_id or "",
+            run_id=self._run_id or "",
+            flow_payload=self.raw_graph_data,
+            completed_layers=completed_layers,
+            run_manager_state=self.run_manager.to_dict(),
+            vertices_to_run=self.vertices_to_run.copy(),
+            vertices_layers=[layer[:] for layer in self.vertices_layers],
+            inactivated_vertices=self.inactivated_vertices.copy(),
+            activated_vertices=self.activated_vertices[:],
+            call_order=self._call_order[:],
+            vertex_results=vertex_results,
+            paused_vertex_id=pause_info.get("vertex_id"),
+            pause_reason=pause_info.get("reason", ""),
+            pause_data=pause_info.get("data", {}),
+        )
 
     def __apply_config(self, config: StartConfigDict) -> None:
         for vertex in self.vertices:
@@ -1181,6 +1268,79 @@ class Graph:
         else:
             return graph
 
+    @classmethod
+    async def resume_from_checkpoint(
+        cls,
+        checkpoint: GraphCheckpoint,
+        input_data: dict[str, Any] | None = None,
+        user_id: str | None = None,
+    ) -> Graph:
+        """Restore a graph from a checkpoint and prepare for continued execution.
+
+        Reconstructs the graph from the saved flow payload, restores all completed
+        vertex results, and injects external input if provided. The caller should
+        then call graph.process() to continue execution from remaining layers.
+        """
+        payload = checkpoint.flow_payload
+        if payload and payload.get("nodes"):
+            graph = cls.from_payload(
+                payload=payload,
+                flow_id=checkpoint.flow_id,
+                user_id=user_id,
+            )
+        else:
+            graph = cls(flow_id=checkpoint.flow_id, user_id=user_id)
+
+        graph._session_id = checkpoint.session_id
+        graph._run_id = checkpoint.run_id
+
+        # Restore execution state
+        if checkpoint.run_manager_state:
+            graph.run_manager = RunnableVerticesManager.from_dict(checkpoint.run_manager_state)
+        if checkpoint.vertices_to_run:
+            graph.vertices_to_run = checkpoint.vertices_to_run.copy()
+        if checkpoint.vertices_layers:
+            graph.vertices_layers = [layer[:] for layer in checkpoint.vertices_layers]
+        if checkpoint.inactivated_vertices:
+            graph.inactivated_vertices = checkpoint.inactivated_vertices.copy()
+        if checkpoint.activated_vertices:
+            graph.activated_vertices = checkpoint.activated_vertices[:]
+        if checkpoint.call_order:
+            graph._call_order = checkpoint.call_order[:]
+
+        # Restore completed vertex results (only for vertices that exist in the graph)
+        for vertex_id, result_data in checkpoint.vertex_results.items():
+            vertex = graph.get_vertex(vertex_id) if vertex_id in graph.vertex_map else None
+            if vertex is None:
+                continue
+            vertex.built = result_data.built
+            if result_data.results:
+                vertex.results = result_data.results
+            if result_data.artifacts:
+                vertex.artifacts = result_data.artifacts
+            if result_data.built_object is not None:
+                vertex.built_object = result_data.built_object
+            if result_data.built_result is not None:
+                vertex.built_result = result_data.built_result
+
+        # Inject external input into the paused vertex if provided
+        if input_data and checkpoint.paused_vertex_id:
+            paused_vertex = (
+                graph.get_vertex(checkpoint.paused_vertex_id)
+                if checkpoint.paused_vertex_id in graph.vertex_map
+                else None
+            )
+            if paused_vertex is not None:
+                from lfx.schema.message import Message
+
+                response_text = input_data.get("text", input_data.get("response", ""))
+                message = Message(text=str(response_text))
+                paused_vertex.built_object = message
+                paused_vertex.built_result = message
+                paused_vertex.built = True
+
+        return graph
+
     def __eq__(self, /, other: object) -> bool:
         if not isinstance(other, Graph):
             return False
@@ -1591,6 +1751,11 @@ class Graph:
                     files=files,
                     event_manager=event_manager,
                 )
+
+                # Check for external pause/stop signals after each vertex build
+                if self._checkpointing_enabled:
+                    await self._check_for_pause_signal(vertex_id)
+
                 if set_cache is not None:
                     vertex_dict = {
                         "built": vertex.built,
@@ -1707,6 +1872,11 @@ class Graph:
             except Exception:
                 await logger.aexception(f"Error executing tasks in layer {layer_index}")
                 raise
+
+            # Check if any vertex in this layer requested a pause (opt-in only)
+            if self._checkpointing_enabled and self._pause_requested:
+                await self._handle_pause(layer_index)
+
             if not next_runnable_vertices:
                 break
             to_process.extend(next_runnable_vertices)
@@ -1714,6 +1884,20 @@ class Graph:
 
         await logger.adebug("Graph processing complete")
         return self
+
+    async def _handle_pause(self, layer_index: int) -> None:
+        """Handle a pause request by saving a checkpoint and raising GraphPausedException."""
+        from lfx.exceptions.graph import GraphPausedException
+        from lfx.services.deps import get_checkpoint_service
+
+        checkpoint = self._create_checkpoint(completed_layers=layer_index + 1)
+        store = self._checkpoint_store or get_checkpoint_service()
+        await store.save(checkpoint)
+        raise GraphPausedException(
+            checkpoint_id=checkpoint.checkpoint_id,
+            reason=self._pause_info["reason"] if self._pause_info else "unknown",
+            data=self._pause_info.get("data", {}) if self._pause_info else {},
+        )
 
     def find_next_runnable_vertices(self, vertex_successors_ids: list[str]) -> list[str]:
         """Determines the next set of runnable vertices from a list of successor vertex IDs.
