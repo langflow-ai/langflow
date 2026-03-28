@@ -462,8 +462,7 @@ Payload:
         {"components": ["component3"], "input_value": "value2"}
     ],
     "outputs": ["Component Name", "component_id"],
-    "tweaks": {"parameter_name": "value", "Component Name": {"parameter_name": "value"}, "component_id": {"parameter_name": "value"}}
-    "stream": false
+    "tweaks": {"parameter_name": "value", "Component Name": {"parameter_name": "value"}, "component_id": {"parameter_name": "value"}},    "stream": false
 }
 ```
 
