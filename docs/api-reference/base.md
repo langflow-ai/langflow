@@ -81,6 +81,13 @@ Notes:
 | `user_id` | **query** | string | ❌ No | - |
 
 
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `application/json` | ✅ |
+
 ### Request Body
 
 - **Required:** No
@@ -206,8 +213,7 @@ Payload:
         {"components": ["component3"], "input_value": "value2"}
     ],
     "outputs": ["Component Name", "component_id"],
-    "tweaks": {"parameter_name": "value", "Component Name": {"parameter_name": "value"}, "component_id": {"parameter_name": "value"}}
-    "stream": false
+    "tweaks": {"parameter_name": "value", "Component Name": {"parameter_name": "value"}, "component_id": {"parameter_name": "value"}},    "stream": false
 }
 ```
 
@@ -225,6 +231,13 @@ catering to diverse application requirements.
 | `flow_id_or_name` | **path** | string | ✅ Yes | - |
 | `user_id` | **query** | string | ❌ No | - |
 
+
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `application/json` | ✅ |
 
 ### Request Body
 
