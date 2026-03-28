@@ -19,12 +19,25 @@ Execute a named flow from the flows directory.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_name` | **path** |  (string) | ✅ Yes | - |
+| `flow_name` | **path** | string | ✅ Yes | - |
 
 
 ### Request Body
 
 - **Required:** Yes
+
+- **Content-Type:** `application/json`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `flow_id` | string | ✅ Yes | - |
+  | `component_id` | string | ❌ No | - |
+  | `field_name` | string | ❌ No | - |
+  | `input_value` | string | ❌ No | - |
+  | `max_retries` | integer | ❌ No | - |
+  | `model_name` | string | ❌ No | - |
+  | `provider` | string | ❌ No | - |
+  | `session_id` | string | ❌ No | - |
+
 
 
 ### Responses
@@ -34,6 +47,12 @@ Execute a named flow from the flows directory.
 | **200** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ## `GET` /api/v1/agentic/check-config
@@ -41,7 +60,9 @@ Execute a named flow from the flows directory.
 > Check Assistant Config
 
 
-Check if the Langflow Assistant is properly configured.&lt;br&gt;&lt;br&gt;Returns available providers with their configured status and available models.
+Check if the Langflow Assistant is properly configured.
+
+Returns available providers with their configured status and available models.
 
 
 **Operation ID:** `check_assistant_config_api_v1_agentic_check_config_get`
@@ -73,6 +94,19 @@ Chat with the Langflow Assistant.
 
 - **Required:** Yes
 
+- **Content-Type:** `application/json`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `flow_id` | string | ✅ Yes | - |
+  | `component_id` | string | ❌ No | - |
+  | `field_name` | string | ❌ No | - |
+  | `input_value` | string | ❌ No | - |
+  | `max_retries` | integer | ❌ No | - |
+  | `model_name` | string | ❌ No | - |
+  | `provider` | string | ❌ No | - |
+  | `session_id` | string | ❌ No | - |
+
+
 
 ### Responses
 
@@ -80,6 +114,12 @@ Chat with the Langflow Assistant.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -99,6 +139,19 @@ Chat with the Langflow Assistant with streaming progress updates.
 
 - **Required:** Yes
 
+- **Content-Type:** `application/json`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `flow_id` | string | ✅ Yes | - |
+  | `component_id` | string | ❌ No | - |
+  | `field_name` | string | ❌ No | - |
+  | `input_value` | string | ❌ No | - |
+  | `max_retries` | integer | ❌ No | - |
+  | `model_name` | string | ❌ No | - |
+  | `provider` | string | ❌ No | - |
+  | `session_id` | string | ❌ No | - |
+
+
 
 ### Responses
 
@@ -106,6 +159,12 @@ Chat with the Langflow Assistant with streaming progress updates.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
