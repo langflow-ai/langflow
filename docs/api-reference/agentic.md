@@ -37,6 +37,7 @@ Execute a named flow from the flows directory.
   | `model_name` | string | ❌ No | - |
   | `provider` | string | ❌ No | - |
   | `session_id` | string | ❌ No | - |
+  
 
 
 
@@ -52,6 +53,9 @@ Execute a named flow from the flows directory.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -105,6 +109,7 @@ Chat with the Langflow Assistant.
   | `model_name` | string | ❌ No | - |
   | `provider` | string | ❌ No | - |
   | `session_id` | string | ❌ No | - |
+  
 
 
 
@@ -120,6 +125,9 @@ Chat with the Langflow Assistant.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -150,6 +158,7 @@ Chat with the Langflow Assistant with streaming progress updates.
   | `model_name` | string | ❌ No | - |
   | `provider` | string | ❌ No | - |
   | `session_id` | string | ❌ No | - |
+  
 
 
 
@@ -165,6 +174,9 @@ Chat with the Langflow Assistant with streaming progress updates.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
