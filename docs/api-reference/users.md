@@ -29,6 +29,7 @@ User activation is controlled by the NEW_USER_IS_ACTIVE setting.
   | `username` | string | ✅ Yes | - |
   | `password` | string | ✅ Yes | - |
   | `optins` | object | ❌ No | - |
+  
 
 
 
@@ -54,11 +55,15 @@ User activation is controlled by the NEW_USER_IS_ACTIVE setting.
 | `last_login_at` | string (date-time) | - |
 | `optins` | object | - |
 
+
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -95,12 +100,18 @@ Retrieve a list of users from the database with pagination.
 |------|------|-------------|
 | `total_count` | integer | - |
 | `users` | array[object] | - |
+**`users`** — Array of `object`
+
+
 
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -139,6 +150,7 @@ Retrieve the current user's data.
 | `optins` | object | - |
 
 
+
 ---
 ## `PATCH` /api/v1/users/{user_id}
 
@@ -172,6 +184,7 @@ Update an existing user's data.
   | `is_superuser` | boolean | ❌ No | - |
   | `last_login_at` | string (date-time) | ❌ No | - |
   | `optins` | object | ❌ No | - |
+  
 
 
 
@@ -197,11 +210,15 @@ Update an existing user's data.
 | `last_login_at` | string (date-time) | - |
 | `optins` | object | - |
 
+
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -236,6 +253,9 @@ Delete a user from the database.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -271,6 +291,7 @@ Reset a user's password.
   | `is_superuser` | boolean | ❌ No | - |
   | `last_login_at` | string (date-time) | ❌ No | - |
   | `optins` | object | ❌ No | - |
+  
 
 
 
@@ -296,11 +317,15 @@ Reset a user's password.
 | `last_login_at` | string (date-time) | - |
 | `optins` | object | - |
 
+
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
