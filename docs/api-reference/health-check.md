@@ -38,5 +38,13 @@
 |-------------|-------------|
 | **200** | Successful Response |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `status` | string | - |
+| `chat` | string | - |
+| `db` | string | - |
+
 
 ---
