@@ -27,6 +27,7 @@
   | Name | Type | Required | Description |
   |------|------|----------|-------------|
   | `file` | string | ✅ Yes | - |
+  
 
 
 
@@ -44,11 +45,15 @@
 | `flowId` | string | - |
 | `file_path` | string (path) | - |
 
+
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -81,6 +86,9 @@
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -116,6 +124,9 @@ Download image from storage for browser rendering.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -154,6 +165,9 @@ then fallback to the package's bundled profile_pictures directory.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -209,6 +223,9 @@ then fallback to the package's bundled profile_pictures directory.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -241,6 +258,9 @@ then fallback to the package's bundled profile_pictures directory.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -270,6 +290,7 @@ Upload a file for the current user and track it in the database.
   | Name | Type | Required | Description |
   |------|------|----------|-------------|
   | `file` | string | ✅ Yes | - |
+  
 
 
 
@@ -290,11 +311,15 @@ Upload a file for the current user and track it in the database.
 | `size` | integer | - |
 | `provider` | string | - |
 
+
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -366,6 +391,7 @@ Upload a file for the current user and track it in the database.
   | Name | Type | Required | Description |
   |------|------|----------|-------------|
   | `file` | string | ✅ Yes | - |
+  
 
 
 
@@ -386,11 +412,15 @@ Upload a file for the current user and track it in the database.
 | `size` | integer | - |
 | `provider` | string | - |
 
+
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -468,6 +498,9 @@ Download multiple files as a zip file by their IDs.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -503,6 +536,9 @@ Delete multiple files by their IDs.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -548,6 +584,9 @@ Returns:
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -588,11 +627,15 @@ Edit the name of a file by its ID.
 | `size` | integer | - |
 | `provider` | string | - |
 
+
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -627,6 +670,9 @@ Delete a file by its ID.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
