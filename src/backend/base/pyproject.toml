@@ -363,7 +363,6 @@ ibm-watsonx = [
     "ibm-watsonx-orchestrate-clients~=2.7.0; python_version >= '3.11'",
 ]
 
-# Complete installation (excluding ibm-watsonx for now)
 complete = [
     "langflow-base[couchbase]",
     "langflow-base[cassandra]",
