@@ -3,7 +3,7 @@
 # Langflow
 
 
-**Version:** `1.8.0` · **Generated:** 2026-03-28T04:03:54.537Z
+**Version:** `1.8.0` · **Generated:** 2026-03-28T04:21:05.541Z
 
 </div>
 
@@ -13,6 +13,7 @@
 
 - [Overview](#overview)
 - [Documentation](#documentation)
+- [Authentication](#authentication)
 
 ## Overview
 
@@ -26,6 +27,24 @@ API documentation for **Langflow**.
 | [📘 API Reference](./API.md) | All API endpoints and operations |
 | [🗂️ Data Schemas](./Schemas.md) | Request/response schema definitions |
 | [📝 Changelog](./CHANGELOG.md) | Version history and changes |
+
+## Authentication
+
+### OAuth2PasswordBearerCookie
+
+- **Type:** OAuth 2.0
+- **Flows:** password
+
+### API key query
+
+- **Type:** API Key
+- **Location:** query (`x-api-key`)
+
+### API key header
+
+- **Type:** API Key
+- **Location:** header (`x-api-key`)
+
 
 
 
