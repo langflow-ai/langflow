@@ -16,7 +16,7 @@
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **query** |  (string) | ✅ Yes | - |
+| `flow_id` | **query** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -26,6 +26,18 @@
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `vertex_builds` | object | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -41,7 +53,7 @@
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **query** |  (string) | ✅ Yes | - |
+| `flow_id` | **query** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -51,6 +63,12 @@
 |-------------|-------------|
 | **204** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -66,7 +84,7 @@
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **query** |  | ❌ No | - |
+| `flow_id` | **query** | string (uuid) | ❌ No | - |
 
 
 
@@ -76,6 +94,12 @@
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -91,11 +115,11 @@
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **query** |  | ❌ No | - |
-| `session_id` | **query** |  | ❌ No | - |
-| `sender` | **query** |  | ❌ No | - |
-| `sender_name` | **query** |  | ❌ No | - |
-| `order_by` | **query** |  | ❌ No | - |
+| `flow_id` | **query** | string (uuid) | ❌ No | - |
+| `session_id` | **query** | string | ❌ No | - |
+| `sender` | **query** | string | ❌ No | - |
+| `sender_name` | **query** | string | ❌ No | - |
+| `order_by` | **query** | string | ❌ No | - |
 
 
 
@@ -105,6 +129,12 @@
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -121,6 +151,9 @@
 
 - **Required:** Yes
 
+- **Content-Type:** `application/json`
+
+
 
 ### Responses
 
@@ -128,6 +161,12 @@
 |-------------|-------------|
 | **204** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -143,12 +182,26 @@
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `message_id` | **path** |  (string) | ✅ Yes | - |
+| `message_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 ### Request Body
 
 - **Required:** Yes
+
+- **Content-Type:** `application/json`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `text` | string | ❌ No | - |
+  | `sender` | string | ❌ No | - |
+  | `sender_name` | string | ❌ No | - |
+  | `session_id` | string | ❌ No | - |
+  | `context_id` | string | ❌ No | - |
+  | `files` | array[string] | ❌ No | - |
+  | `edit` | boolean | ❌ No | - |
+  | `error` | boolean | ❌ No | - |
+  | `properties` | object | ❌ No | - |
+
 
 
 ### Responses
@@ -157,6 +210,31 @@
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `timestamp` | string (date-time) | - |
+| `sender` | string | - |
+| `sender_name` | string | - |
+| `session_id` | string | - |
+| `context_id` | string | - |
+| `text` | string | - |
+| `files` | array[string] | - |
+| `error` | boolean | - |
+| `edit` | boolean | - |
+| `properties` | object | - |
+| `category` | string | - |
+| `content_blocks` | array[object] | - |
+| `id` | string (uuid) | - |
+| `flow_id` | string (uuid) | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -172,8 +250,8 @@
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `old_session_id` | **path** |  (string) | ✅ Yes | - |
-| `new_session_id` | **query** |  (string) | ✅ Yes | The new session ID to update to |
+| `old_session_id` | **path** | string | ✅ Yes | - |
+| `new_session_id` | **query** | string | ✅ Yes | The new session ID to update to |
 
 
 
@@ -183,6 +261,12 @@
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -198,7 +282,7 @@
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `session_id` | **path** |  (string) | ✅ Yes | - |
+| `session_id` | **path** | string | ✅ Yes | - |
 
 
 
@@ -208,6 +292,12 @@
 |-------------|-------------|
 | **204** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -223,9 +313,9 @@
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **query** |  (string) | ✅ Yes | - |
-| `page` | **query** |  (integer) | ❌ No | Page number |
-| `size` | **query** |  (integer) | ❌ No | Page size |
+| `flow_id` | **query** | string (uuid) | ✅ Yes | - |
+| `page` | **query** | integer | ❌ No | Page number |
+| `size` | **query** | integer | ❌ No | Page size |
 
 
 
@@ -235,6 +325,22 @@
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `items` | array[object] | - |
+| `total` | integer | - |
+| `page` | integer | - |
+| `size` | integer | - |
+| `pages` | integer | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
