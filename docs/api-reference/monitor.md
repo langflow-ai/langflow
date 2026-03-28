@@ -33,11 +33,15 @@
 |------|------|-------------|
 | `vertex_builds` | object | - |
 
+
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -69,6 +73,9 @@
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -100,6 +107,9 @@
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -135,6 +145,9 @@
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -167,6 +180,9 @@
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -201,6 +217,13 @@
   | `edit` | boolean | ❌ No | - |
   | `error` | boolean | ❌ No | - |
   | `properties` | object | ❌ No | - |
+  **`properties`** ❌
+
+  **`source`** ❌
+
+  **`usage`** ❌ — Token usage information from LLM responses.
+
+
 
 
 
@@ -229,12 +252,24 @@
 | `content_blocks` | array[object] | - |
 | `id` | string (uuid) | - |
 | `flow_id` | string (uuid) | - |
+**`properties`** ❌
+
+  **`source`** ❌
+
+  **`usage`** ❌ — Token usage information from LLM responses.
+
+**`content_blocks`** — Array of `object`
+
+
 
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -267,6 +302,9 @@
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -298,6 +336,9 @@
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -335,12 +376,18 @@
 | `page` | integer | - |
 | `size` | integer | - |
 | `pages` | integer | - |
+**`items`** — Array of `object`
+
+
 
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
