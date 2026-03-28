@@ -93,6 +93,13 @@ Get a specific server.
 | `server_name` | **path** | string | ✅ Yes | - |
 
 
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `application/json` | ✅ |
+
 ### Request Body
 
 - **Required:** Yes
@@ -141,6 +148,13 @@ Get a specific server.
 |------|-----------|------|----------|-------------|
 | `server_name` | **path** | string | ✅ Yes | - |
 
+
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `application/json` | ✅ |
 
 ### Request Body
 
