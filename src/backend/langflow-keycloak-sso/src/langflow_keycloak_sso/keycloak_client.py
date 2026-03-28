@@ -17,18 +17,23 @@ class KeycloakClient:
         self._client_secret = client_secret
         self._jwks_client = PyJWKClient(jwks_uri)
 
-    async def exchange_code(self, code: str, redirect_uri: str) -> dict[str, Any]:
+    async def exchange_code(
+        self, code: str, redirect_uri: str, code_verifier: str | None = None
+    ) -> dict[str, Any]:
         """Exchange authorization code for tokens. Returns the token response dict."""
+        post_data: dict[str, str] = {
+            "grant_type": "authorization_code",
+            "client_id": self._client_id,
+            "client_secret": self._client_secret,
+            "code": code,
+            "redirect_uri": redirect_uri,
+        }
+        if code_verifier is not None:
+            post_data["code_verifier"] = code_verifier
         async with httpx.AsyncClient() as client:
             resp = await client.post(
                 self._token_endpoint,
-                data={
-                    "grant_type": "authorization_code",
-                    "client_id": self._client_id,
-                    "client_secret": self._client_secret,
-                    "code": code,
-                    "redirect_uri": redirect_uri,
-                },
+                data=post_data,
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
                 timeout=15,
             )

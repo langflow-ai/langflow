@@ -39,6 +39,10 @@ class KeycloakSettings(BaseSettings):
     # Falls back to LANGFLOW_SECRET_KEY at runtime if not set.
     STATE_SECRET: str = Field(default="")
 
+    # Where Keycloak should redirect the browser after its own logout page.
+    # When empty, the router constructs a fallback from REDIRECT_URI base + "/login".
+    LOGOUT_REDIRECT_URI: str = ""
+
     # Removed: GROUPS_CLAIM — group-based mapping is no longer used.
     # Authorization is fully delegated to Keycloak (client-level access control).
 
@@ -58,6 +62,10 @@ class KeycloakSettings(BaseSettings):
     @property
     def userinfo_endpoint(self) -> str:
         return f"{self.SERVER_URL}/realms/{self.REALM}/protocol/openid-connect/userinfo"
+
+    @property
+    def end_session_endpoint(self) -> str:
+        return f"{self.SERVER_URL}/realms/{self.REALM}/protocol/openid-connect/logout"
 
 
 @lru_cache(maxsize=1)

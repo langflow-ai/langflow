@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import base64
+import hashlib
+import os
 import secrets
 import urllib.parse
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 import jwt as pyjwt
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 
 from langflow.api.utils.core import DbSession
@@ -30,9 +33,23 @@ def _get_state_secret() -> str:
     return secret.get_secret_value() if hasattr(secret, "get_secret_value") else str(secret)
 
 
-def _create_state_token(redirect_after: str) -> str:
+def _generate_pkce() -> tuple[str, str]:
+    """Return (code_verifier, code_challenge) for PKCE S256."""
+    verifier = base64.urlsafe_b64encode(os.urandom(32)).rstrip(b"=").decode()
+    challenge = base64.urlsafe_b64encode(
+        hashlib.sha256(verifier.encode()).digest()
+    ).rstrip(b"=").decode()
+    return verifier, challenge
+
+
+def _create_state_token(redirect_after: str, nonce: str, code_verifier: str) -> str:
     exp = datetime.now(timezone.utc) + timedelta(seconds=_STATE_TTL_SECONDS)
-    payload = {"redirect_after": redirect_after, "nonce": secrets.token_hex(16), "exp": exp}
+    payload = {
+        "redirect_after": redirect_after,
+        "nonce": nonce,
+        "code_verifier": code_verifier,
+        "exp": exp,
+    }
     return pyjwt.encode(payload, _get_state_secret(), algorithm=_STATE_ALGORITHM)
 
 
@@ -69,13 +86,18 @@ async def keycloak_login(redirect_after: str = "/"):
     if not s.ENABLED:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Keycloak SSO is not enabled")
 
-    state = _create_state_token(redirect_after)
+    nonce = secrets.token_hex(16)
+    code_verifier, code_challenge = _generate_pkce()
+    state = _create_state_token(redirect_after, nonce=nonce, code_verifier=code_verifier)
     params = {
         "client_id": s.CLIENT_ID,
         "redirect_uri": s.REDIRECT_URI,
         "response_type": "code",
         "scope": "openid email profile",
         "state": state,
+        "nonce": nonce,
+        "code_challenge": code_challenge,
+        "code_challenge_method": "S256",
     }
     url = s.authorization_endpoint + "?" + urllib.parse.urlencode(params)
     return RedirectResponse(url=url, status_code=status.HTTP_302_FOUND)
@@ -109,11 +131,13 @@ async def keycloak_callback(
     # 1. Validate state (CSRF protection)
     state_payload = _decode_state_token(state)
     redirect_after = state_payload.get("redirect_after", "/")
+    nonce = state_payload.get("nonce", "")
+    code_verifier = state_payload.get("code_verifier", "") or None
 
-    # 2. Exchange code for tokens
+    # 2. Exchange code for tokens (with PKCE code_verifier if present)
     client = _get_keycloak_client()
     try:
-        token_response = await client.exchange_code(code, s.REDIRECT_URI)
+        token_response = await client.exchange_code(code, s.REDIRECT_URI, code_verifier=code_verifier)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
@@ -126,6 +150,13 @@ async def keycloak_callback(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Keycloak token verification failed: {exc}",
         ) from exc
+
+    # 3b. Verify nonce in id_token to prevent replay attacks
+    id_token: str = token_response.get("id_token", "")
+    if id_token and nonce:
+        id_claims = pyjwt.decode(id_token, options={"verify_signature": False})
+        if id_claims.get("nonce") != nonce:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Nonce mismatch in id_token")
 
     # 4. Log into the shared account (auto-created on first login)
     user = await get_or_create_shared_user(db, s.SHARED_USERNAME)
@@ -164,24 +195,42 @@ async def keycloak_callback(
         expires=None,
         domain=auth_settings.COOKIE_DOMAIN,
     )
+    if id_token:
+        redirect.set_cookie(
+            "kc_id_token_lf",
+            id_token,
+            httponly=True,
+            samesite=auth_settings.ACCESS_SAME_SITE,
+            secure=auth_settings.ACCESS_SECURE,
+            expires=auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS,
+            domain=auth_settings.COOKIE_DOMAIN,
+        )
     return redirect
 
 
 @router.get("/logout", include_in_schema=False)
-async def keycloak_logout():
+async def keycloak_logout(request: Request):
     """Clear Langflow session cookies and redirect to the login page.
+
+    When Keycloak SSO end_session_endpoint is available and an id_token cookie
+    is present, also terminates the upstream Keycloak SSO session so that the
+    user is fully logged out across all applications sharing the same realm.
 
     Using a server-side redirect (rather than a JS fetch) guarantees that the
     Set-Cookie headers that expire the cookies are delivered to the browser
     even when the frontend's IS_AUTO_LOGIN constant skips the normal logout
     API call.
     """
+    s = get_keycloak_settings()
     auth_settings = get_settings_service().auth_settings
+    id_token = request.cookies.get("kc_id_token_lf", "")
+
     redirect = RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
     for name, httponly, samesite, secure in [
         ("refresh_token_lf", auth_settings.REFRESH_HTTPONLY, auth_settings.REFRESH_SAME_SITE, auth_settings.REFRESH_SECURE),
         ("access_token_lf", auth_settings.ACCESS_HTTPONLY, auth_settings.ACCESS_SAME_SITE, auth_settings.ACCESS_SECURE),
         ("apikey_tkn_lflw", auth_settings.ACCESS_HTTPONLY, auth_settings.ACCESS_SAME_SITE, auth_settings.ACCESS_SECURE),
+        ("kc_id_token_lf", True, auth_settings.ACCESS_SAME_SITE, auth_settings.ACCESS_SECURE),
     ]:
         redirect.delete_cookie(
             name,
@@ -190,4 +239,39 @@ async def keycloak_logout():
             secure=secure,
             domain=auth_settings.COOKIE_DOMAIN,
         )
+
+    if s.end_session_endpoint and id_token:
+        # Determine where Keycloak should send the browser after its logout page.
+        if s.LOGOUT_REDIRECT_URI:
+            post_logout_uri = s.LOGOUT_REDIRECT_URI
+        else:
+            # Try to derive the origin from REDIRECT_URI (e.g. https://app.company.com/api/v1/keycloak/callback
+            # → https://app.company.com/login).
+            try:
+                parsed = urllib.parse.urlparse(s.REDIRECT_URI)
+                post_logout_uri = urllib.parse.urlunparse((parsed.scheme, parsed.netloc, "/login", "", "", ""))
+            except Exception:
+                post_logout_uri = "/login"
+
+        kc_logout_params = {
+            "id_token_hint": id_token,
+            "post_logout_redirect_uri": post_logout_uri,
+        }
+        kc_logout_url = s.end_session_endpoint + "?" + urllib.parse.urlencode(kc_logout_params)
+        redirect = RedirectResponse(url=kc_logout_url, status_code=status.HTTP_302_FOUND)
+        # Re-delete the cookies on the new redirect response as well.
+        for name, httponly, samesite, secure in [
+            ("refresh_token_lf", auth_settings.REFRESH_HTTPONLY, auth_settings.REFRESH_SAME_SITE, auth_settings.REFRESH_SECURE),
+            ("access_token_lf", auth_settings.ACCESS_HTTPONLY, auth_settings.ACCESS_SAME_SITE, auth_settings.ACCESS_SECURE),
+            ("apikey_tkn_lflw", auth_settings.ACCESS_HTTPONLY, auth_settings.ACCESS_SAME_SITE, auth_settings.ACCESS_SECURE),
+            ("kc_id_token_lf", True, auth_settings.ACCESS_SAME_SITE, auth_settings.ACCESS_SECURE),
+        ]:
+            redirect.delete_cookie(
+                name,
+                httponly=httponly,
+                samesite=samesite,
+                secure=secure,
+                domain=auth_settings.COOKIE_DOMAIN,
+            )
+
     return redirect
