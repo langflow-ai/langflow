@@ -11,7 +11,27 @@
 > **Build Flow**
 
 
-Build and process a flow, returning a job ID for event polling.&lt;br&gt;&lt;br&gt;This endpoint requires authentication through the CurrentActiveUser dependency.&lt;br&gt;For public flows that don&#x27;t require authentication, use the /build_public_tmp/flow_id/flow endpoint.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    flow_id: UUID of the flow to build&lt;br&gt;    background_tasks: Background tasks manager&lt;br&gt;    inputs: Optional input values for the flow&lt;br&gt;    data: Optional flow data&lt;br&gt;    files: Optional files to include&lt;br&gt;    stop_component_id: Optional ID of component to stop at&lt;br&gt;    start_component_id: Optional ID of component to start from&lt;br&gt;    log_builds: Whether to log the build process&lt;br&gt;    current_user: The authenticated user&lt;br&gt;    queue_service: Queue service for job management&lt;br&gt;    flow_name: Optional name for the flow&lt;br&gt;    event_delivery: Optional event delivery type - default is streaming&lt;br&gt;&lt;br&gt;Returns:&lt;br&gt;    Dict with job_id that can be used to poll for build status
+Build and process a flow, returning a job ID for event polling.
+
+This endpoint requires authentication through the CurrentActiveUser dependency.
+For public flows that don't require authentication, use the /build_public_tmp/flow_id/flow endpoint.
+
+Args:
+    flow_id: UUID of the flow to build
+    background_tasks: Background tasks manager
+    inputs: Optional input values for the flow
+    data: Optional flow data
+    files: Optional files to include
+    stop_component_id: Optional ID of component to stop at
+    start_component_id: Optional ID of component to start from
+    log_builds: Whether to log the build process
+    current_user: The authenticated user
+    queue_service: Queue service for job management
+    flow_name: Optional name for the flow
+    event_delivery: Optional event delivery type - default is streaming
+
+Returns:
+    Dict with job_id that can be used to poll for build status
 
 
 **Operation ID:** `build_flow_api_v1_build__flow_id__flow_post`
@@ -24,12 +44,12 @@ Build and process a flow, returning a job ID for event polling.&lt;br&gt;&lt;br&
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **path** |  (string) | ✅ Yes | - |
-| `stop_component_id` | **query** |  | ❌ No | - |
-| `start_component_id` | **query** |  | ❌ No | - |
-| `log_builds` | **query** |  (boolean) | ❌ No | - |
-| `flow_name` | **query** |  | ❌ No | - |
-| `event_delivery` | **query** |  (string) | ❌ No | - |
+| `flow_id` | **path** | string (uuid) | ✅ Yes | - |
+| `stop_component_id` | **query** | string | ❌ No | - |
+| `start_component_id` | **query** | string | ❌ No | - |
+| `log_builds` | **query** | boolean | ❌ No | - |
+| `flow_name` | **query** | string | ❌ No | - |
+| `event_delivery` | **query** | string | ❌ No | - |
 
 
 #### Request Body
@@ -37,7 +57,11 @@ Build and process a flow, returning a job ID for event polling.&lt;br&gt;&lt;br&
 - **Required:** No
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `inputs` | object | ❌ No | - |
+  | `data` | object | ❌ No | - |
+  | `files` | array[string] | ❌ No | - |
 
 
 #### Responses
@@ -46,6 +70,12 @@ Build and process a flow, returning a job ID for event polling.&lt;br&gt;&lt;br&
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -56,7 +86,9 @@ Build and process a flow, returning a job ID for event polling.&lt;br&gt;&lt;br&
 > **Get Build Events**
 
 
-Get events for a specific build job.&lt;br&gt;&lt;br&gt;Requires authentication to prevent unauthorized access to build events.
+Get events for a specific build job.
+
+Requires authentication to prevent unauthorized access to build events.
 
 
 **Operation ID:** `get_build_events_api_v1_build__job_id__events_get`
@@ -69,8 +101,8 @@ Get events for a specific build job.&lt;br&gt;&lt;br&gt;Requires authentication 
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `job_id` | **path** |  (string) | ✅ Yes | - |
-| `event_delivery` | **query** |  (string) | ❌ No | - |
+| `job_id` | **path** | string | ✅ Yes | - |
+| `event_delivery` | **query** | string | ❌ No | - |
 
 
 
@@ -81,6 +113,12 @@ Get events for a specific build job.&lt;br&gt;&lt;br&gt;Requires authentication 
 | **200** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ## `/api/v1/build/{job_id}/cancel`
@@ -90,7 +128,9 @@ Get events for a specific build job.&lt;br&gt;&lt;br&gt;Requires authentication 
 > **Cancel Build**
 
 
-Cancel a specific build job.&lt;br&gt;&lt;br&gt;Requires authentication to prevent unauthorized build cancellation.
+Cancel a specific build job.
+
+Requires authentication to prevent unauthorized build cancellation.
 
 
 **Operation ID:** `cancel_build_api_v1_build__job_id__cancel_post`
@@ -103,7 +143,7 @@ Cancel a specific build job.&lt;br&gt;&lt;br&gt;Requires authentication to preve
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `job_id` | **path** |  (string) | ✅ Yes | - |
+| `job_id` | **path** | string | ✅ Yes | - |
 
 
 
@@ -114,6 +154,19 @@ Cancel a specific build job.&lt;br&gt;&lt;br&gt;Requires authentication to preve
 | **200** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `success` | boolean | - |
+| `message` | string | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ## `/api/v1/build_public_tmp/{flow_id}/flow`
@@ -123,7 +176,36 @@ Cancel a specific build job.&lt;br&gt;&lt;br&gt;Requires authentication to preve
 > **Build Public Tmp**
 
 
-Build a public flow without requiring authentication.&lt;br&gt;&lt;br&gt;This endpoint is specifically for public flows that don&#x27;t require authentication.&lt;br&gt;It uses a client_id cookie to create a deterministic flow ID for tracking purposes.&lt;br&gt;&lt;br&gt;The endpoint:&lt;br&gt;1. Verifies the requested flow is marked as public in the database&lt;br&gt;2. Creates a deterministic UUID based on client_id and flow_id&lt;br&gt;3. Uses the flow owner&#x27;s permissions to build the flow&lt;br&gt;&lt;br&gt;Requirements:&lt;br&gt;- The flow must be marked as PUBLIC in the database&lt;br&gt;- The request must include a client_id cookie&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    flow_id: UUID of the public flow to build&lt;br&gt;    background_tasks: Background tasks manager&lt;br&gt;    inputs: Optional input values for the flow&lt;br&gt;    data: Optional flow data&lt;br&gt;    files: Optional files to include&lt;br&gt;    stop_component_id: Optional ID of component to stop at&lt;br&gt;    start_component_id: Optional ID of component to start from&lt;br&gt;    log_builds: Whether to log the build process&lt;br&gt;    flow_name: Optional name for the flow&lt;br&gt;    request: FastAPI request object (needed for cookie access)&lt;br&gt;    queue_service: Queue service for job management&lt;br&gt;    event_delivery: Optional event delivery type - default is streaming&lt;br&gt;&lt;br&gt;Returns:&lt;br&gt;    Dict with job_id that can be used to poll for build status
+Build a public flow without requiring authentication.
+
+This endpoint is specifically for public flows that don't require authentication.
+It uses a client_id cookie to create a deterministic flow ID for tracking purposes.
+
+The endpoint:
+1. Verifies the requested flow is marked as public in the database
+2. Creates a deterministic UUID based on client_id and flow_id
+3. Uses the flow owner's permissions to build the flow
+
+Requirements:
+- The flow must be marked as PUBLIC in the database
+- The request must include a client_id cookie
+
+Args:
+    flow_id: UUID of the public flow to build
+    background_tasks: Background tasks manager
+    inputs: Optional input values for the flow
+    data: Optional flow data
+    files: Optional files to include
+    stop_component_id: Optional ID of component to stop at
+    start_component_id: Optional ID of component to start from
+    log_builds: Whether to log the build process
+    flow_name: Optional name for the flow
+    request: FastAPI request object (needed for cookie access)
+    queue_service: Queue service for job management
+    event_delivery: Optional event delivery type - default is streaming
+
+Returns:
+    Dict with job_id that can be used to poll for build status
 
 
 **Operation ID:** `build_public_tmp_api_v1_build_public_tmp__flow_id__flow_post`
@@ -136,12 +218,12 @@ Build a public flow without requiring authentication.&lt;br&gt;&lt;br&gt;This en
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **path** |  (string) | ✅ Yes | - |
-| `stop_component_id` | **query** |  | ❌ No | - |
-| `start_component_id` | **query** |  | ❌ No | - |
-| `log_builds` | **query** |  | ❌ No | - |
-| `flow_name` | **query** |  | ❌ No | - |
-| `event_delivery` | **query** |  (string) | ❌ No | - |
+| `flow_id` | **path** | string (uuid) | ✅ Yes | - |
+| `stop_component_id` | **query** | string | ❌ No | - |
+| `start_component_id` | **query** | string | ❌ No | - |
+| `log_builds` | **query** | boolean | ❌ No | - |
+| `flow_name` | **query** | string | ❌ No | - |
+| `event_delivery` | **query** | string | ❌ No | - |
 
 
 #### Request Body
@@ -149,7 +231,11 @@ Build a public flow without requiring authentication.&lt;br&gt;&lt;br&gt;This en
 - **Required:** No
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `inputs` | object | ❌ No | - |
+  | `data` | object | ❌ No | - |
+  | `files` | array[string] | ❌ No | - |
 
 
 #### Responses
@@ -158,6 +244,12 @@ Build a public flow without requiring authentication.&lt;br&gt;&lt;br&gt;This en
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -168,7 +260,9 @@ Build a public flow without requiring authentication.&lt;br&gt;&lt;br&gt;This en
 > **Get All**
 
 
-Retrieve all component types with compression for better performance.&lt;br&gt;&lt;br&gt;Returns a compressed response containing all available component types.
+Retrieve all component types with compression for better performance.
+
+Returns a compressed response containing all available component types.
 
 
 **Operation ID:** `get_all_api_v1_all_get`
@@ -194,7 +288,41 @@ Retrieve all component types with compression for better performance.&lt;br&gt;&
 > **Simplified Run Flow**
 
 
-Executes a specified flow by ID with support for streaming and telemetry (API key auth).&lt;br&gt;&lt;br&gt;This endpoint executes a flow identified by ID or name, with options for streaming the response&lt;br&gt;and tracking execution metrics. It handles both streaming and non-streaming execution modes.&lt;br&gt;This endpoint uses API key authentication (Bearer token).&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    background_tasks (BackgroundTasks): FastAPI background task manager&lt;br&gt;    flow (FlowRead | None): The flow to execute, loaded via dependency&lt;br&gt;    input_request (SimplifiedAPIRequest | None): Input parameters for the flow&lt;br&gt;    stream (bool): Whether to stream the response&lt;br&gt;    api_key_user (UserRead): Authenticated user from API key&lt;br&gt;    context (dict | None): Optional context to pass to the flow&lt;br&gt;    http_request (Request): The incoming HTTP request for extracting global variables&lt;br&gt;&lt;br&gt;Returns:&lt;br&gt;    Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results&lt;br&gt;    or a RunResponse with the complete execution results&lt;br&gt;&lt;br&gt;Raises:&lt;br&gt;    HTTPException: For flow not found (404) or invalid input (400)&lt;br&gt;    APIException: For internal execution errors (500)&lt;br&gt;&lt;br&gt;Notes:&lt;br&gt;    - Supports both streaming and non-streaming execution modes&lt;br&gt;    - Tracks execution time and success/failure via telemetry&lt;br&gt;    - Handles graceful client disconnection in streaming mode&lt;br&gt;    - Provides detailed error handling with appropriate HTTP status codes&lt;br&gt;    - Extracts global variables from HTTP headers with prefix X-LANGFLOW-GLOBAL-VAR-*&lt;br&gt;    - Merges extracted variables with the context parameter as &quot;request_variables&quot;&lt;br&gt;    - In streaming mode, uses EventManager to handle events:&lt;br&gt;        - &quot;add_message&quot;: New messages during execution&lt;br&gt;        - &quot;token&quot;: Individual tokens during streaming&lt;br&gt;        - &quot;end&quot;: Final execution result&lt;br&gt;    - Authentication: Requires API key (Bearer token)
+Executes a specified flow by ID with support for streaming and telemetry (API key auth).
+
+This endpoint executes a flow identified by ID or name, with options for streaming the response
+and tracking execution metrics. It handles both streaming and non-streaming execution modes.
+This endpoint uses API key authentication (Bearer token).
+
+Args:
+    background_tasks (BackgroundTasks): FastAPI background task manager
+    flow (FlowRead | None): The flow to execute, loaded via dependency
+    input_request (SimplifiedAPIRequest | None): Input parameters for the flow
+    stream (bool): Whether to stream the response
+    api_key_user (UserRead): Authenticated user from API key
+    context (dict | None): Optional context to pass to the flow
+    http_request (Request): The incoming HTTP request for extracting global variables
+
+Returns:
+    Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results
+    or a RunResponse with the complete execution results
+
+Raises:
+    HTTPException: For flow not found (404) or invalid input (400)
+    APIException: For internal execution errors (500)
+
+Notes:
+    - Supports both streaming and non-streaming execution modes
+    - Tracks execution time and success/failure via telemetry
+    - Handles graceful client disconnection in streaming mode
+    - Provides detailed error handling with appropriate HTTP status codes
+    - Extracts global variables from HTTP headers with prefix X-LANGFLOW-GLOBAL-VAR-*
+    - Merges extracted variables with the context parameter as "request_variables"
+    - In streaming mode, uses EventManager to handle events:
+        - "add_message": New messages during execution
+        - "token": Individual tokens during streaming
+        - "end": Final execution result
+    - Authentication: Requires API key (Bearer token)
 
 
 **Operation ID:** `simplified_run_flow_api_v1_run__flow_id_or_name__post`
@@ -207,9 +335,9 @@ Executes a specified flow by ID with support for streaming and telemetry (API ke
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id_or_name` | **path** |  (string) | ✅ Yes | - |
-| `stream` | **query** |  (boolean) | ❌ No | - |
-| `user_id` | **query** |  | ❌ No | - |
+| `flow_id_or_name` | **path** | string | ✅ Yes | - |
+| `stream` | **query** | boolean | ❌ No | - |
+| `user_id` | **query** | string | ❌ No | - |
 
 
 #### Request Body
@@ -217,7 +345,10 @@ Executes a specified flow by ID with support for streaming and telemetry (API ke
 - **Required:** No
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `input_request` | object | ❌ No | - |
+  | `context` | object | ❌ No | - |
 
 
 #### Responses
@@ -226,6 +357,12 @@ Executes a specified flow by ID with support for streaming and telemetry (API ke
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -236,7 +373,18 @@ Executes a specified flow by ID with support for streaming and telemetry (API ke
 > **Webhook Run Flow**
 
 
-Run a flow using a webhook request.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    flow_id_or_name: The flow ID or endpoint name (used by dependency).&lt;br&gt;    flow: The flow to be executed.&lt;br&gt;    request: The incoming HTTP request.&lt;br&gt;&lt;br&gt;Returns:&lt;br&gt;    A dictionary containing the status of the task.&lt;br&gt;&lt;br&gt;Raises:&lt;br&gt;    HTTPException: If the flow is not found or if there is an error processing the request.
+Run a flow using a webhook request.
+
+Args:
+    flow_id_or_name: The flow ID or endpoint name (used by dependency).
+    flow: The flow to be executed.
+    request: The incoming HTTP request.
+
+Returns:
+    A dictionary containing the status of the task.
+
+Raises:
+    HTTPException: If the flow is not found or if there is an error processing the request.
 
 
 **Operation ID:** `webhook_run_flow_api_v1_webhook__flow_id_or_name__post`
@@ -249,8 +397,8 @@ Run a flow using a webhook request.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    flow_i
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id_or_name` | **path** |  (string) | ✅ Yes | - |
-| `user_id` | **query** |  | ❌ No | - |
+| `flow_id_or_name` | **path** | string | ✅ Yes | - |
+| `user_id` | **query** | string | ❌ No | - |
 
 
 
@@ -261,6 +409,12 @@ Run a flow using a webhook request.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    flow_i
 | **202** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ## `/api/v1/run/advanced/{flow_id_or_name}`
@@ -270,7 +424,51 @@ Run a flow using a webhook request.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    flow_i
 > **Experimental Run Flow**
 
 
-Executes a specified flow by ID with optional input values, output selection, tweaks, and streaming capability.&lt;br&gt;&lt;br&gt;This endpoint supports running flows with caching to enhance performance and efficiency.&lt;br&gt;&lt;br&gt;### Parameters:&lt;br&gt;- &#x60;flow&#x60; (Flow): The flow object to be executed, resolved via dependency injection.&lt;br&gt;- &#x60;inputs&#x60; (List[InputValueRequest], optional): A list of inputs specifying the input values and components&lt;br&gt;  for the flow. Each input can target specific components and provide custom values.&lt;br&gt;- &#x60;outputs&#x60; (List[str], optional): A list of output names to retrieve from the executed flow.&lt;br&gt;  If not provided, all outputs are returned.&lt;br&gt;- &#x60;tweaks&#x60; (Optional[Tweaks], optional): A dictionary of tweaks to customize the flow execution.&lt;br&gt;  The tweaks can be used to modify the flow&#x27;s parameters and components.&lt;br&gt;  Tweaks can be overridden by the input values.&lt;br&gt;- &#x60;stream&#x60; (bool, optional): Specifies whether the results should be streamed. Defaults to False.&lt;br&gt;- &#x60;session_id&#x60; (Union[None, str], optional): An optional session ID to utilize existing session data for the flow&lt;br&gt;  execution.&lt;br&gt;- &#x60;api_key_user&#x60; (User): The user associated with the current API key. Automatically resolved from the API key.&lt;br&gt;&lt;br&gt;### Returns:&lt;br&gt;A &#x60;RunResponse&#x60; object containing the selected outputs (or all if not specified) of the executed flow&lt;br&gt;and the session ID.&lt;br&gt;The structure of the response accommodates multiple inputs, providing a nested list of outputs for each input.&lt;br&gt;&lt;br&gt;### Raises:&lt;br&gt;HTTPException: Indicates issues with finding the specified flow, invalid input formats, or internal errors during&lt;br&gt;flow execution.&lt;br&gt;&lt;br&gt;### Example usage:&lt;br&gt;&#x60;&#x60;&#x60;json&lt;br&gt;POST /run/flow_id&lt;br&gt;x-api-key: YOUR_API_KEY&lt;br&gt;Payload:&lt;br&gt;{&lt;br&gt;    &quot;inputs&quot;: [&lt;br&gt;        {&quot;components&quot;: [&quot;component1&quot;], &quot;input_value&quot;: &quot;value1&quot;},&lt;br&gt;        {&quot;components&quot;: [&quot;component3&quot;], &quot;input_value&quot;: &quot;value2&quot;}&lt;br&gt;    ],&lt;br&gt;    &quot;outputs&quot;: [&quot;Component Name&quot;, &quot;component_id&quot;],&lt;br&gt;    &quot;tweaks&quot;: {&quot;parameter_name&quot;: &quot;value&quot;, &quot;Component Name&quot;: {&quot;parameter_name&quot;: &quot;value&quot;}, &quot;component_id&quot;: {&quot;parameter_name&quot;: &quot;value&quot;}}&lt;br&gt;    &quot;stream&quot;: false&lt;br&gt;}&lt;br&gt;&#x60;&#x60;&#x60;&lt;br&gt;&lt;br&gt;This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations,&lt;br&gt;catering to diverse application requirements.
+Executes a specified flow by ID with optional input values, output selection, tweaks, and streaming capability.
+
+This endpoint supports running flows with caching to enhance performance and efficiency.
+
+### Parameters:
+- `flow` (Flow): The flow object to be executed, resolved via dependency injection.
+- `inputs` (List[InputValueRequest], optional): A list of inputs specifying the input values and components
+  for the flow. Each input can target specific components and provide custom values.
+- `outputs` (List[str], optional): A list of output names to retrieve from the executed flow.
+  If not provided, all outputs are returned.
+- `tweaks` (Optional[Tweaks], optional): A dictionary of tweaks to customize the flow execution.
+  The tweaks can be used to modify the flow's parameters and components.
+  Tweaks can be overridden by the input values.
+- `stream` (bool, optional): Specifies whether the results should be streamed. Defaults to False.
+- `session_id` (Union[None, str], optional): An optional session ID to utilize existing session data for the flow
+  execution.
+- `api_key_user` (User): The user associated with the current API key. Automatically resolved from the API key.
+
+### Returns:
+A `RunResponse` object containing the selected outputs (or all if not specified) of the executed flow
+and the session ID.
+The structure of the response accommodates multiple inputs, providing a nested list of outputs for each input.
+
+### Raises:
+HTTPException: Indicates issues with finding the specified flow, invalid input formats, or internal errors during
+flow execution.
+
+### Example usage:
+```json
+POST /run/flow_id
+x-api-key: YOUR_API_KEY
+Payload:
+{
+    "inputs": [
+        {"components": ["component1"], "input_value": "value1"},
+        {"components": ["component3"], "input_value": "value2"}
+    ],
+    "outputs": ["Component Name", "component_id"],
+    "tweaks": {"parameter_name": "value", "Component Name": {"parameter_name": "value"}, "component_id": {"parameter_name": "value"}}
+    "stream": false
+}
+```
+
+This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations,
+catering to diverse application requirements.
 
 
 **Operation ID:** `experimental_run_flow_api_v1_run_advanced__flow_id_or_name__post`
@@ -283,8 +481,8 @@ Executes a specified flow by ID with optional input values, output selection, tw
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id_or_name` | **path** |  (string) | ✅ Yes | - |
-| `user_id` | **query** |  | ❌ No | - |
+| `flow_id_or_name` | **path** | string | ✅ Yes | - |
+| `user_id` | **query** | string | ❌ No | - |
 
 
 #### Request Body
@@ -292,7 +490,13 @@ Executes a specified flow by ID with optional input values, output selection, tw
 - **Required:** No
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `inputs` | array[object] | ❌ No | - |
+  | `outputs` | array[string] | ❌ No | - |
+  | `tweaks` | object | ❌ No | A dictionary of tweaks to adjust the flow's execution. Allows customizing flow behavior dynamically. All tweaks are overridden by the input values. |
+  | `stream` | boolean | ❌ No | - |
+  | `session_id` | string | ❌ No | - |
 
 
 #### Responses
@@ -301,6 +505,19 @@ Executes a specified flow by ID with optional input values, output selection, tw
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `outputs` | array[object] | - |
+| `session_id` | string | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -334,7 +551,20 @@ Executes a specified flow by ID with optional input values, output selection, tw
 > **Get Config**
 
 
-Retrieve application configuration settings.&lt;br&gt;&lt;br&gt;Returns different configuration based on authentication status:&lt;br&gt;- Authenticated users: Full ConfigResponse with all settings&lt;br&gt;- Unauthenticated users: PublicConfigResponse with limited, safe-to-expose settings&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    user: The authenticated user, or None if unauthenticated.&lt;br&gt;&lt;br&gt;Returns:&lt;br&gt;    ConfigResponse | PublicConfigResponse: Configuration settings appropriate for the user&#x27;s auth status.&lt;br&gt;&lt;br&gt;Raises:&lt;br&gt;    HTTPException: If an error occurs while retrieving the configuration.
+Retrieve application configuration settings.
+
+Returns different configuration based on authentication status:
+- Authenticated users: Full ConfigResponse with all settings
+- Unauthenticated users: PublicConfigResponse with limited, safe-to-expose settings
+
+Args:
+    user: The authenticated user, or None if unauthenticated.
+
+Returns:
+    ConfigResponse | PublicConfigResponse: Configuration settings appropriate for the user's auth status.
+
+Raises:
+    HTTPException: If an error occurs while retrieving the configuration.
 
 
 **Operation ID:** `get_config_api_v1_config_get`
@@ -350,6 +580,28 @@ Retrieve application configuration settings.&lt;br&gt;&lt;br&gt;Returns differen
 | Status Code | Description |
 |-------------|-------------|
 | **200** | Successful Response |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `max_file_size_upload` | integer | - |
+| `event_delivery` | string | - |
+| `voice_mode_available` | boolean | - |
+| `frontend_timeout` | integer | - |
+| `type` | string | - |
+| `feature_flags` | object | - |
+| `serialization_max_items_length` | integer | - |
+| `serialization_max_text_length` | integer | - |
+| `auto_saving` | boolean | - |
+| `auto_saving_interval` | integer | - |
+| `health_check_max_retries` | integer | - |
+| `webhook_polling_interval` | integer | - |
+| `public_flow_cleanup_interval` | integer | - |
+| `public_flow_expiration` | integer | - |
+| `webhook_auth_enable` | boolean | - |
+| `default_folder_name` | string | - |
+| `hide_getting_started_progress` | boolean | - |
 
 
 ---
@@ -372,7 +624,27 @@ Retrieve application configuration settings.&lt;br&gt;&lt;br&gt;Returns differen
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `name` | string | ✅ Yes | - |
+  | `description` | string | ❌ No | - |
+  | `icon` | string | ❌ No | - |
+  | `icon_bg_color` | string | ❌ No | - |
+  | `gradient` | string | ❌ No | - |
+  | `data` | object | ❌ No | - |
+  | `is_component` | boolean | ❌ No | - |
+  | `updated_at` | string (date-time) | ❌ No | - |
+  | `webhook` | boolean | ❌ No | Can be used on the webhook endpoint |
+  | `endpoint_name` | string | ❌ No | - |
+  | `tags` | array[string] | ❌ No | - |
+  | `locked` | boolean | ❌ No | - |
+  | `mcp_enabled` | boolean | ❌ No | Can be exposed in the MCP server |
+  | `action_name` | string | ❌ No | The name of the action associated with the flow |
+  | `action_description` | string | ❌ No | The description of the action associated with the flow |
+  | `access_type` | string | ❌ No | - |
+  | `user_id` | string (uuid) | ❌ No | - |
+  | `folder_id` | string (uuid) | ❌ No | - |
+  | `fs_path` | string | ❌ No | - |
 
 
 #### Responses
@@ -382,6 +654,36 @@ Retrieve application configuration settings.&lt;br&gt;&lt;br&gt;Returns differen
 | **201** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `name` | string | - |
+| `description` | string | - |
+| `icon` | string | - |
+| `icon_bg_color` | string | - |
+| `gradient` | string | - |
+| `data` | object | - |
+| `is_component` | boolean | - |
+| `updated_at` | string (date-time) | - |
+| `webhook` | boolean | Can be used on the webhook endpoint |
+| `endpoint_name` | string | - |
+| `tags` | array[string] | The tags of the flow |
+| `locked` | boolean | - |
+| `mcp_enabled` | boolean | Can be exposed in the MCP server |
+| `action_name` | string | The name of the action associated with the flow |
+| `action_description` | string | The description of the action associated with the flow |
+| `access_type` | string | - |
+| `id` | string (uuid) | - |
+| `user_id` | string (uuid) | - |
+| `folder_id` | string (uuid) | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ### GET /api/v1/flows/
@@ -389,7 +691,25 @@ Retrieve application configuration settings.&lt;br&gt;&lt;br&gt;Returns differen
 > **Read Flows**
 
 
-Retrieve a list of flows with pagination support.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    current_user (User): The current authenticated user.&lt;br&gt;    session (Session): The database session.&lt;br&gt;    settings_service (SettingsService): The settings service.&lt;br&gt;    components_only (bool, optional): Whether to return only components. Defaults to False.&lt;br&gt;&lt;br&gt;    get_all (bool, optional): Whether to return all flows without pagination. Defaults to True.&lt;br&gt;    **This field must be True because of backward compatibility with the frontend - Release: 1.0.20**&lt;br&gt;&lt;br&gt;    folder_id (UUID, optional): The project ID. Defaults to None.&lt;br&gt;    params (Params): Pagination parameters.&lt;br&gt;    remove_example_flows (bool, optional): Whether to remove example flows. Defaults to False.&lt;br&gt;    header_flows (bool, optional): Whether to return only specific headers of the flows. Defaults to False.&lt;br&gt;&lt;br&gt;Returns:&lt;br&gt;    list[FlowRead] | Page[FlowRead] | list[FlowHeader]&lt;br&gt;    A list of flows or a paginated response containing the list of flows or a list of flow headers.
+Retrieve a list of flows with pagination support.
+
+Args:
+    current_user (User): The current authenticated user.
+    session (Session): The database session.
+    settings_service (SettingsService): The settings service.
+    components_only (bool, optional): Whether to return only components. Defaults to False.
+
+    get_all (bool, optional): Whether to return all flows without pagination. Defaults to True.
+    **This field must be True because of backward compatibility with the frontend - Release: 1.0.20**
+
+    folder_id (UUID, optional): The project ID. Defaults to None.
+    params (Params): Pagination parameters.
+    remove_example_flows (bool, optional): Whether to remove example flows. Defaults to False.
+    header_flows (bool, optional): Whether to return only specific headers of the flows. Defaults to False.
+
+Returns:
+    list[FlowRead] | Page[FlowRead] | list[FlowHeader]
+    A list of flows or a paginated response containing the list of flows or a list of flow headers.
 
 
 **Operation ID:** `read_flows_api_v1_flows__get`
@@ -402,13 +722,13 @@ Retrieve a list of flows with pagination support.&lt;br&gt;&lt;br&gt;Args:&lt;br
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `remove_example_flows` | **query** |  (boolean) | ❌ No | - |
-| `components_only` | **query** |  (boolean) | ❌ No | - |
-| `get_all` | **query** |  (boolean) | ❌ No | - |
-| `folder_id` | **query** |  | ❌ No | - |
-| `header_flows` | **query** |  (boolean) | ❌ No | - |
-| `page` | **query** |  (integer) | ❌ No | - |
-| `size` | **query** |  (integer) | ❌ No | - |
+| `remove_example_flows` | **query** | boolean | ❌ No | - |
+| `components_only` | **query** | boolean | ❌ No | - |
+| `get_all` | **query** | boolean | ❌ No | - |
+| `folder_id` | **query** | string (uuid) | ❌ No | - |
+| `header_flows` | **query** | boolean | ❌ No | - |
+| `page` | **query** | integer | ❌ No | - |
+| `size` | **query** | integer | ❌ No | - |
 
 
 
@@ -419,6 +739,22 @@ Retrieve a list of flows with pagination support.&lt;br&gt;&lt;br&gt;Args:&lt;br
 | **200** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `items` | array[object] | - |
+| `total` | integer | - |
+| `page` | integer | - |
+| `size` | integer | - |
+| `pages` | integer | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ### DELETE /api/v1/flows/
@@ -426,7 +762,15 @@ Retrieve a list of flows with pagination support.&lt;br&gt;&lt;br&gt;Args:&lt;br
 > **Delete Multiple Flows**
 
 
-Delete multiple flows by their IDs.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    flow_ids (List[str]): The list of flow IDs to delete.&lt;br&gt;    user (User, optional): The user making the request. Defaults to the current active user.&lt;br&gt;    db (Session, optional): The database session.&lt;br&gt;&lt;br&gt;Returns:&lt;br&gt;    dict: A dictionary containing the number of flows deleted.
+Delete multiple flows by their IDs.
+
+Args:
+    flow_ids (List[str]): The list of flow IDs to delete.
+    user (User, optional): The user making the request. Defaults to the current active user.
+    db (Session, optional): The database session.
+
+Returns:
+    dict: A dictionary containing the number of flows deleted.
 
 
 **Operation ID:** `delete_multiple_flows_api_v1_flows__delete`
@@ -441,7 +785,7 @@ Delete multiple flows by their IDs.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    flow_i
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `array`
+  - **Type:** `array`
 
 
 #### Responses
@@ -450,6 +794,12 @@ Delete multiple flows by their IDs.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    flow_i
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -473,7 +823,7 @@ Read a flow.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **path** |  (string) | ✅ Yes | - |
+| `flow_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -483,6 +833,36 @@ Read a flow.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `name` | string | - |
+| `description` | string | - |
+| `icon` | string | - |
+| `icon_bg_color` | string | - |
+| `gradient` | string | - |
+| `data` | object | - |
+| `is_component` | boolean | - |
+| `updated_at` | string (date-time) | - |
+| `webhook` | boolean | Can be used on the webhook endpoint |
+| `endpoint_name` | string | - |
+| `tags` | array[string] | The tags of the flow |
+| `locked` | boolean | - |
+| `mcp_enabled` | boolean | Can be exposed in the MCP server |
+| `action_name` | string | The name of the action associated with the flow |
+| `action_description` | string | The description of the action associated with the flow |
+| `access_type` | string | - |
+| `id` | string (uuid) | - |
+| `user_id` | string (uuid) | - |
+| `folder_id` | string (uuid) | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -504,7 +884,7 @@ Update a flow.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **path** |  (string) | ✅ Yes | - |
+| `flow_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 #### Request Body
@@ -512,7 +892,19 @@ Update a flow.
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `name` | string | ❌ No | - |
+  | `description` | string | ❌ No | - |
+  | `data` | object | ❌ No | - |
+  | `folder_id` | string (uuid) | ❌ No | - |
+  | `endpoint_name` | string | ❌ No | - |
+  | `mcp_enabled` | boolean | ❌ No | - |
+  | `locked` | boolean | ❌ No | - |
+  | `action_name` | string | ❌ No | - |
+  | `action_description` | string | ❌ No | - |
+  | `access_type` | string | ❌ No | - |
+  | `fs_path` | string | ❌ No | - |
 
 
 #### Responses
@@ -521,6 +913,36 @@ Update a flow.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `name` | string | - |
+| `description` | string | - |
+| `icon` | string | - |
+| `icon_bg_color` | string | - |
+| `gradient` | string | - |
+| `data` | object | - |
+| `is_component` | boolean | - |
+| `updated_at` | string (date-time) | - |
+| `webhook` | boolean | Can be used on the webhook endpoint |
+| `endpoint_name` | string | - |
+| `tags` | array[string] | The tags of the flow |
+| `locked` | boolean | - |
+| `mcp_enabled` | boolean | Can be exposed in the MCP server |
+| `action_name` | string | The name of the action associated with the flow |
+| `action_description` | string | The description of the action associated with the flow |
+| `access_type` | string | - |
+| `id` | string (uuid) | - |
+| `user_id` | string (uuid) | - |
+| `folder_id` | string (uuid) | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -542,7 +964,7 @@ Delete a flow.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **path** |  (string) | ✅ Yes | - |
+| `flow_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -552,6 +974,12 @@ Delete a flow.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -575,7 +1003,7 @@ Read a public flow.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **path** |  (string) | ✅ Yes | - |
+| `flow_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -585,6 +1013,36 @@ Read a public flow.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `name` | string | - |
+| `description` | string | - |
+| `icon` | string | - |
+| `icon_bg_color` | string | - |
+| `gradient` | string | - |
+| `data` | object | - |
+| `is_component` | boolean | - |
+| `updated_at` | string (date-time) | - |
+| `webhook` | boolean | Can be used on the webhook endpoint |
+| `endpoint_name` | string | - |
+| `tags` | array[string] | The tags of the flow |
+| `locked` | boolean | - |
+| `mcp_enabled` | boolean | Can be exposed in the MCP server |
+| `action_name` | string | The name of the action associated with the flow |
+| `action_description` | string | The description of the action associated with the flow |
+| `access_type` | string | - |
+| `id` | string (uuid) | - |
+| `user_id` | string (uuid) | - |
+| `folder_id` | string (uuid) | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -610,7 +1068,9 @@ Create multiple new flows.
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `flows` | array[object] | ✅ Yes | - |
 
 
 #### Responses
@@ -619,6 +1079,12 @@ Create multiple new flows.
 |-------------|-------------|
 | **201** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -642,7 +1108,7 @@ Upload flows from a file.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `folder_id` | **query** |  | ❌ No | - |
+| `folder_id` | **query** | string (uuid) | ❌ No | - |
 
 
 #### Request Body
@@ -650,7 +1116,9 @@ Upload flows from a file.
 - **Required:** Yes
 
 - **Content-Type:** `multipart/form-data`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `file` | string | ✅ Yes | - |
 
 
 #### Responses
@@ -659,6 +1127,12 @@ Upload flows from a file.
 |-------------|-------------|
 | **201** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -684,7 +1158,7 @@ Download all flows as a zip file.
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `array`
+  - **Type:** `array`
 
 
 #### Responses
@@ -693,6 +1167,12 @@ Download all flows as a zip file.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -703,7 +1183,13 @@ Download all flows as a zip file.
 > **Read Basic Examples**
 
 
-Retrieve a list of basic example flows.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    session (Session): The database session.&lt;br&gt;&lt;br&gt;Returns:&lt;br&gt;    list[FlowRead]: A list of basic example flows.
+Retrieve a list of basic example flows.
+
+Args:
+    session (Session): The database session.
+
+Returns:
+    list[FlowRead]: A list of basic example flows.
 
 
 **Operation ID:** `read_basic_examples_api_v1_flows_basic_examples__get`
@@ -729,7 +1215,10 @@ Retrieve a list of basic example flows.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    se
 > **Add User**
 
 
-Add a new user to the database.&lt;br&gt;&lt;br&gt;This endpoint allows public user registration (sign up).&lt;br&gt;User activation is controlled by the NEW_USER_IS_ACTIVE setting.
+Add a new user to the database.
+
+This endpoint allows public user registration (sign up).
+User activation is controlled by the NEW_USER_IS_ACTIVE setting.
 
 
 **Operation ID:** `add_user_api_v1_users__post`
@@ -744,7 +1233,11 @@ Add a new user to the database.&lt;br&gt;&lt;br&gt;This endpoint allows public u
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `username` | string | ✅ Yes | - |
+  | `password` | string | ✅ Yes | - |
+  | `optins` | object | ❌ No | - |
 
 
 #### Responses
@@ -753,6 +1246,27 @@ Add a new user to the database.&lt;br&gt;&lt;br&gt;This endpoint allows public u
 |-------------|-------------|
 | **201** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `id` | string (uuid) | - |
+| `username` | string | - |
+| `profile_image` | string | - |
+| `store_api_key` | string | - |
+| `is_active` | boolean | - |
+| `is_superuser` | boolean | - |
+| `create_at` | string (date-time) | - |
+| `updated_at` | string (date-time) | - |
+| `last_login_at` | string (date-time) | - |
+| `optins` | object | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -774,8 +1288,8 @@ Retrieve a list of users from the database with pagination.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `skip` | **query** |  (integer) | ❌ No | - |
-| `limit` | **query** |  (integer) | ❌ No | - |
+| `skip` | **query** | integer | ❌ No | - |
+| `limit` | **query** | integer | ❌ No | - |
 
 
 
@@ -786,6 +1300,19 @@ Retrieve a list of users from the database with pagination.
 | **200** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `total_count` | integer | - |
+| `users` | array[object] | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ## `/api/v1/users/whoami`
@@ -795,7 +1322,7 @@ Retrieve a list of users from the database with pagination.
 > **Read Current User**
 
 
-Retrieve the current user&#x27;s data.
+Retrieve the current user's data.
 
 
 **Operation ID:** `read_current_user_api_v1_users_whoami_get`
@@ -812,6 +1339,21 @@ Retrieve the current user&#x27;s data.
 |-------------|-------------|
 | **200** | Successful Response |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `id` | string (uuid) | - |
+| `username` | string | - |
+| `profile_image` | string | - |
+| `store_api_key` | string | - |
+| `is_active` | boolean | - |
+| `is_superuser` | boolean | - |
+| `create_at` | string (date-time) | - |
+| `updated_at` | string (date-time) | - |
+| `last_login_at` | string (date-time) | - |
+| `optins` | object | - |
+
 
 ---
 ## `/api/v1/users/{user_id}`
@@ -821,7 +1363,7 @@ Retrieve the current user&#x27;s data.
 > **Patch User**
 
 
-Update an existing user&#x27;s data.
+Update an existing user's data.
 
 
 **Operation ID:** `patch_user_api_v1_users__user_id__patch`
@@ -834,7 +1376,7 @@ Update an existing user&#x27;s data.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `user_id` | **path** |  (string) | ✅ Yes | - |
+| `user_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 #### Request Body
@@ -842,7 +1384,15 @@ Update an existing user&#x27;s data.
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `username` | string | ❌ No | - |
+  | `profile_image` | string | ❌ No | - |
+  | `password` | string | ❌ No | - |
+  | `is_active` | boolean | ❌ No | - |
+  | `is_superuser` | boolean | ❌ No | - |
+  | `last_login_at` | string (date-time) | ❌ No | - |
+  | `optins` | object | ❌ No | - |
 
 
 #### Responses
@@ -851,6 +1401,27 @@ Update an existing user&#x27;s data.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `id` | string (uuid) | - |
+| `username` | string | - |
+| `profile_image` | string | - |
+| `store_api_key` | string | - |
+| `is_active` | boolean | - |
+| `is_superuser` | boolean | - |
+| `create_at` | string (date-time) | - |
+| `updated_at` | string (date-time) | - |
+| `last_login_at` | string (date-time) | - |
+| `optins` | object | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -872,7 +1443,7 @@ Delete a user from the database.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `user_id` | **path** |  (string) | ✅ Yes | - |
+| `user_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -883,6 +1454,12 @@ Delete a user from the database.
 | **200** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ## `/api/v1/users/{user_id}/reset-password`
@@ -892,7 +1469,7 @@ Delete a user from the database.
 > **Reset Password**
 
 
-Reset a user&#x27;s password.
+Reset a user's password.
 
 
 **Operation ID:** `reset_password_api_v1_users__user_id__reset_password_patch`
@@ -905,7 +1482,7 @@ Reset a user&#x27;s password.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `user_id` | **path** |  (string) | ✅ Yes | - |
+| `user_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 #### Request Body
@@ -913,7 +1490,15 @@ Reset a user&#x27;s password.
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `username` | string | ❌ No | - |
+  | `profile_image` | string | ❌ No | - |
+  | `password` | string | ❌ No | - |
+  | `is_active` | boolean | ❌ No | - |
+  | `is_superuser` | boolean | ❌ No | - |
+  | `last_login_at` | string (date-time) | ❌ No | - |
+  | `optins` | object | ❌ No | - |
 
 
 #### Responses
@@ -922,6 +1507,27 @@ Reset a user&#x27;s password.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `id` | string (uuid) | - |
+| `username` | string | - |
+| `profile_image` | string | - |
+| `store_api_key` | string | - |
+| `is_active` | boolean | - |
+| `is_superuser` | boolean | - |
+| `create_at` | string (date-time) | - |
+| `updated_at` | string (date-time) | - |
+| `last_login_at` | string (date-time) | - |
+| `optins` | object | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -942,7 +1548,7 @@ Reset a user&#x27;s password.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **path** |  (string) | ✅ Yes | - |
+| `flow_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 #### Request Body
@@ -950,7 +1556,9 @@ Reset a user&#x27;s password.
 - **Required:** Yes
 
 - **Content-Type:** `multipart/form-data`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `file` | string | ✅ Yes | - |
 
 
 #### Responses
@@ -959,6 +1567,19 @@ Reset a user&#x27;s password.
 |-------------|-------------|
 | **201** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `flowId` | string | - |
+| `file_path` | string (path) | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -979,8 +1600,8 @@ Reset a user&#x27;s password.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `file_name` | **path** |  (string) | ✅ Yes | - |
-| `flow_id` | **path** |  (string) | ✅ Yes | - |
+| `file_name` | **path** | string | ✅ Yes | - |
+| `flow_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -990,6 +1611,12 @@ Reset a user&#x27;s password.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -1013,8 +1640,8 @@ Download image from storage for browser rendering.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **path** |  (string) | ✅ Yes | - |
-| `file_name` | **path** |  (string) | ✅ Yes | - |
+| `flow_id` | **path** | string (uuid) | ✅ Yes | - |
+| `file_name` | **path** | string | ✅ Yes | - |
 
 
 
@@ -1025,6 +1652,12 @@ Download image from storage for browser rendering.
 | **200** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ## `/api/v1/files/profile_pictures/{folder_name}/{file_name}`
@@ -1034,7 +1667,10 @@ Download image from storage for browser rendering.
 > **Download Profile Picture**
 
 
-Download profile picture from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures are first looked up in config_dir/profile_pictures/,&lt;br&gt;then fallback to the package&#x27;s bundled profile_pictures directory.
+Download profile picture from local filesystem.
+
+Profile pictures are first looked up in config_dir/profile_pictures/,
+then fallback to the package's bundled profile_pictures directory.
 
 
 **Operation ID:** `download_profile_picture_api_v1_files_profile_pictures__folder_name___file_name__get`
@@ -1047,8 +1683,8 @@ Download profile picture from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictu
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `folder_name` | **path** |  (string) | ✅ Yes | - |
-| `file_name` | **path** |  (string) | ✅ Yes | - |
+| `folder_name` | **path** | string | ✅ Yes | - |
+| `file_name` | **path** | string | ✅ Yes | - |
 
 
 
@@ -1059,6 +1695,12 @@ Download profile picture from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictu
 | **200** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ## `/api/v1/files/profile_pictures/list`
@@ -1068,7 +1710,10 @@ Download profile picture from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictu
 > **List Profile Pictures**
 
 
-List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures are first looked up in config_dir/profile_pictures/,&lt;br&gt;then fallback to the package&#x27;s bundled profile_pictures directory.
+List profile pictures from local filesystem.
+
+Profile pictures are first looked up in config_dir/profile_pictures/,
+then fallback to the package's bundled profile_pictures directory.
 
 
 **Operation ID:** `list_profile_pictures_api_v1_files_profile_pictures_list_get`
@@ -1104,7 +1749,7 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **path** |  (string) | ✅ Yes | - |
+| `flow_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -1114,6 +1759,12 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -1134,8 +1785,8 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `file_name` | **path** |  (string) | ✅ Yes | - |
-| `flow_id` | **path** |  (string) | ✅ Yes | - |
+| `file_name` | **path** | string | ✅ Yes | - |
+| `flow_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -1145,6 +1796,12 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -1165,7 +1822,7 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **query** |  (string) | ✅ Yes | - |
+| `flow_id` | **query** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -1175,6 +1832,18 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `vertex_builds` | object | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -1193,7 +1862,7 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **query** |  (string) | ✅ Yes | - |
+| `flow_id` | **query** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -1203,6 +1872,12 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 |-------------|-------------|
 | **204** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -1223,7 +1898,7 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **query** |  | ❌ No | - |
+| `flow_id` | **query** | string (uuid) | ❌ No | - |
 
 
 
@@ -1233,6 +1908,12 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -1253,11 +1934,11 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **query** |  | ❌ No | - |
-| `session_id` | **query** |  | ❌ No | - |
-| `sender` | **query** |  | ❌ No | - |
-| `sender_name` | **query** |  | ❌ No | - |
-| `order_by` | **query** |  | ❌ No | - |
+| `flow_id` | **query** | string (uuid) | ❌ No | - |
+| `session_id` | **query** | string | ❌ No | - |
+| `sender` | **query** | string | ❌ No | - |
+| `sender_name` | **query** | string | ❌ No | - |
+| `order_by` | **query** | string | ❌ No | - |
 
 
 
@@ -1267,6 +1948,12 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -1287,7 +1974,7 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `array`
+  - **Type:** `array`
 
 
 #### Responses
@@ -1296,6 +1983,12 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 |-------------|-------------|
 | **204** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -1316,7 +2009,7 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `message_id` | **path** |  (string) | ✅ Yes | - |
+| `message_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 #### Request Body
@@ -1324,7 +2017,17 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `text` | string | ❌ No | - |
+  | `sender` | string | ❌ No | - |
+  | `sender_name` | string | ❌ No | - |
+  | `session_id` | string | ❌ No | - |
+  | `context_id` | string | ❌ No | - |
+  | `files` | array[string] | ❌ No | - |
+  | `edit` | boolean | ❌ No | - |
+  | `error` | boolean | ❌ No | - |
+  | `properties` | object | ❌ No | - |
 
 
 #### Responses
@@ -1333,6 +2036,31 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `timestamp` | string (date-time) | - |
+| `sender` | string | - |
+| `sender_name` | string | - |
+| `session_id` | string | - |
+| `context_id` | string | - |
+| `text` | string | - |
+| `files` | array[string] | - |
+| `error` | boolean | - |
+| `edit` | boolean | - |
+| `properties` | object | - |
+| `category` | string | - |
+| `content_blocks` | array[object] | - |
+| `id` | string (uuid) | - |
+| `flow_id` | string (uuid) | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -1353,8 +2081,8 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `old_session_id` | **path** |  (string) | ✅ Yes | - |
-| `new_session_id` | **query** |  (string) | ✅ Yes | The new session ID to update to |
+| `old_session_id` | **path** | string | ✅ Yes | - |
+| `new_session_id` | **query** | string | ✅ Yes | The new session ID to update to |
 
 
 
@@ -1364,6 +2092,12 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -1384,7 +2118,7 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `session_id` | **path** |  (string) | ✅ Yes | - |
+| `session_id` | **path** | string | ✅ Yes | - |
 
 
 
@@ -1394,6 +2128,12 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 |-------------|-------------|
 | **204** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -1414,9 +2154,9 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **query** |  (string) | ✅ Yes | - |
-| `page` | **query** |  (integer) | ❌ No | Page number |
-| `size` | **query** |  (integer) | ❌ No | Page size |
+| `flow_id` | **query** | string (uuid) | ✅ Yes | - |
+| `page` | **query** | integer | ❌ No | Page number |
+| `size` | **query** | integer | ❌ No | Page size |
 
 
 
@@ -1427,6 +2167,22 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 | **200** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `items` | array[object] | - |
+| `total` | integer | - |
+| `page` | integer | - |
+| `size` | integer | - |
+| `pages` | integer | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ## `/api/v1/monitor/traces`
@@ -1436,7 +2192,21 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 > **Get Traces**
 
 
-Get list of traces for a flow.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    current_user: Authenticated user (required for authorization)&lt;br&gt;    flow_id: Filter by flow ID&lt;br&gt;    session_id: Filter by session ID&lt;br&gt;    status: Filter by trace status&lt;br&gt;    query: Search query for trace name/id/session id&lt;br&gt;    start_time: Filter traces starting on/after this time (ISO)&lt;br&gt;    end_time: Filter traces starting on/before this time (ISO)&lt;br&gt;    page: Page number (1-based)&lt;br&gt;    size: Page size&lt;br&gt;&lt;br&gt;Returns:&lt;br&gt;    List of traces
+Get list of traces for a flow.
+
+Args:
+    current_user: Authenticated user (required for authorization)
+    flow_id: Filter by flow ID
+    session_id: Filter by session ID
+    status: Filter by trace status
+    query: Search query for trace name/id/session id
+    start_time: Filter traces starting on/after this time (ISO)
+    end_time: Filter traces starting on/before this time (ISO)
+    page: Page number (1-based)
+    size: Page size
+
+Returns:
+    List of traces
 
 
 **Operation ID:** `get_traces_api_v1_monitor_traces_get`
@@ -1449,14 +2219,14 @@ Get list of traces for a flow.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    current_use
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **query** |  | ❌ No | - |
-| `session_id` | **query** |  | ❌ No | - |
-| `status` | **query** |  | ❌ No | - |
-| `query` | **query** |  | ❌ No | - |
-| `start_time` | **query** |  | ❌ No | - |
-| `end_time` | **query** |  | ❌ No | - |
-| `page` | **query** |  (integer) | ❌ No | - |
-| `size` | **query** |  (integer) | ❌ No | - |
+| `flow_id` | **query** | string (uuid) | ❌ No | - |
+| `session_id` | **query** | string | ❌ No | - |
+| `status` | **query** | string | ❌ No | - |
+| `query` | **query** | string | ❌ No | - |
+| `start_time` | **query** | string (date-time) | ❌ No | - |
+| `end_time` | **query** | string (date-time) | ❌ No | - |
+| `page` | **query** | integer | ❌ No | - |
+| `size` | **query** | integer | ❌ No | - |
 
 
 
@@ -1467,6 +2237,20 @@ Get list of traces for a flow.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    current_use
 | **200** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `traces` | array[object] | - |
+| `total` | integer | - |
+| `pages` | integer | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ### DELETE /api/v1/monitor/traces
@@ -1474,7 +2258,11 @@ Get list of traces for a flow.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    current_use
 > **Delete Traces By Flow**
 
 
-Delete all traces for a flow.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    flow_id: The ID of the flow whose traces should be deleted.&lt;br&gt;    current_user: The authenticated user (required for authorization).
+Delete all traces for a flow.
+
+Args:
+    flow_id: The ID of the flow whose traces should be deleted.
+    current_user: The authenticated user (required for authorization).
 
 
 **Operation ID:** `delete_traces_by_flow_api_v1_monitor_traces_delete`
@@ -1487,7 +2275,7 @@ Delete all traces for a flow.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    flow_id: The
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **query** |  (string) | ✅ Yes | - |
+| `flow_id` | **query** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -1498,6 +2286,12 @@ Delete all traces for a flow.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    flow_id: The
 | **204** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ## `/api/v1/monitor/traces/{trace_id}`
@@ -1507,7 +2301,14 @@ Delete all traces for a flow.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    flow_id: The
 > **Get Trace**
 
 
-Get a single trace with its hierarchical span tree.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    trace_id: The ID of the trace to retrieve.&lt;br&gt;    current_user: The authenticated user (required for authorization).&lt;br&gt;&lt;br&gt;Returns:&lt;br&gt;    TraceRead containing the trace and its hierarchical span tree.
+Get a single trace with its hierarchical span tree.
+
+Args:
+    trace_id: The ID of the trace to retrieve.
+    current_user: The authenticated user (required for authorization).
+
+Returns:
+    TraceRead containing the trace and its hierarchical span tree.
 
 
 **Operation ID:** `get_trace_api_v1_monitor_traces__trace_id__get`
@@ -1520,7 +2321,7 @@ Get a single trace with its hierarchical span tree.&lt;br&gt;&lt;br&gt;Args:&lt;
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `trace_id` | **path** |  (string) | ✅ Yes | - |
+| `trace_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -1531,6 +2332,33 @@ Get a single trace with its hierarchical span tree.&lt;br&gt;&lt;br&gt;Args:&lt;
 | **200** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `id` | string (uuid) | - |
+| `name` | string | - |
+| `status` | string | OpenTelemetry status codes.
+
+- UNSET: Default status, span has not ended yet
+- OK: Span completed successfully
+- ERROR: Span completed with an error |
+| `startTime` | string (date-time) | - |
+| `endTime` | string (date-time) | - |
+| `totalLatencyMs` | integer | - |
+| `totalTokens` | integer | - |
+| `flowId` | string (uuid) | - |
+| `sessionId` | string | - |
+| `input` | object | - |
+| `output` | object | - |
+| `spans` | array[object] | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ### DELETE /api/v1/monitor/traces/{trace_id}
@@ -1538,7 +2366,11 @@ Get a single trace with its hierarchical span tree.&lt;br&gt;&lt;br&gt;Args:&lt;
 > **Delete Trace**
 
 
-Delete a trace and all its spans.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    trace_id: The ID of the trace to delete.&lt;br&gt;    current_user: The authenticated user (required for authorization).
+Delete a trace and all its spans.
+
+Args:
+    trace_id: The ID of the trace to delete.
+    current_user: The authenticated user (required for authorization).
 
 
 **Operation ID:** `delete_trace_api_v1_monitor_traces__trace_id__delete`
@@ -1551,7 +2383,7 @@ Delete a trace and all its spans.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    trace_id
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `trace_id` | **path** |  (string) | ✅ Yes | - |
+| `trace_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -1561,6 +2393,12 @@ Delete a trace and all its spans.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    trace_id
 |-------------|-------------|
 | **204** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -1604,7 +2442,13 @@ Delete a trace and all its spans.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    trace_id
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `name` | string | ✅ Yes | - |
+  | `description` | string | ❌ No | - |
+  | `auth_settings` | object | ❌ No | Authentication settings for the folder/project |
+  | `components_list` | array[string] | ❌ No | - |
+  | `flows_list` | array[string] | ❌ No | - |
 
 
 #### Responses
@@ -1613,6 +2457,22 @@ Delete a trace and all its spans.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    trace_id
 |-------------|-------------|
 | **201** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `name` | string | - |
+| `description` | string | - |
+| `auth_settings` | object | Authentication settings for the folder/project |
+| `id` | string (uuid) | - |
+| `parent_id` | string (uuid) | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -1633,12 +2493,12 @@ Delete a trace and all its spans.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    trace_id
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
-| `page` | **query** |  | ❌ No | - |
-| `size` | **query** |  | ❌ No | - |
-| `is_component` | **query** |  (boolean) | ❌ No | - |
-| `is_flow` | **query** |  (boolean) | ❌ No | - |
-| `search` | **query** |  (string) | ❌ No | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
+| `page` | **query** | integer | ❌ No | - |
+| `size` | **query** | integer | ❌ No | - |
+| `is_component` | **query** | boolean | ❌ No | - |
+| `is_flow` | **query** | boolean | ❌ No | - |
+| `search` | **query** | string | ❌ No | - |
 
 
 
@@ -1648,6 +2508,23 @@ Delete a trace and all its spans.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    trace_id
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `name` | string | - |
+| `description` | string | - |
+| `auth_settings` | object | Authentication settings for the folder/project |
+| `id` | string (uuid) | - |
+| `parent_id` | string (uuid) | - |
+| `flows` | array[object] | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -1666,7 +2543,7 @@ Delete a trace and all its spans.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    trace_id
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 #### Request Body
@@ -1674,7 +2551,14 @@ Delete a trace and all its spans.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    trace_id
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `name` | string | ❌ No | - |
+  | `description` | string | ❌ No | - |
+  | `parent_id` | string (uuid) | ❌ No | - |
+  | `components` | array[string] | ❌ No | - |
+  | `flows` | array[string] | ❌ No | - |
+  | `auth_settings` | object | ❌ No | - |
 
 
 #### Responses
@@ -1683,6 +2567,22 @@ Delete a trace and all its spans.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    trace_id
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `name` | string | - |
+| `description` | string | - |
+| `auth_settings` | object | Authentication settings for the folder/project |
+| `id` | string (uuid) | - |
+| `parent_id` | string (uuid) | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -1701,7 +2601,7 @@ Delete a trace and all its spans.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    trace_id
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -1711,6 +2611,12 @@ Delete a trace and all its spans.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    trace_id
 |-------------|-------------|
 | **204** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -1734,7 +2640,7 @@ Download all flows from project as a zip file.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -1744,6 +2650,12 @@ Download all flows from project as a zip file.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -1769,7 +2681,9 @@ Upload flows from a file.
 - **Required:** Yes
 
 - **Content-Type:** `multipart/form-data`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `file` | string | ✅ Yes | - |
 
 
 #### Responses
@@ -1778,6 +2692,12 @@ Upload flows from a file.
 |-------------|-------------|
 | **201** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -1947,8 +2867,8 @@ List project MCP tools.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
-| `mcp_enabled` | **query** |  (boolean) | ❌ No | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
+| `mcp_enabled` | **query** | boolean | ❌ No | - |
 
 
 
@@ -1958,6 +2878,12 @@ List project MCP tools.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -1979,7 +2905,7 @@ Handle POST messages for a project-specific MCP server.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -1990,6 +2916,12 @@ Handle POST messages for a project-specific MCP server.
 | **200** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ### PATCH /api/v1/mcp/project/{project_id}
@@ -1997,7 +2929,10 @@ Handle POST messages for a project-specific MCP server.
 > **Update Project Mcp Settings**
 
 
-Update the MCP settings of all flows in a project and project-level auth settings.&lt;br&gt;&lt;br&gt;On MCP Composer failure, this endpoint should return with a 200 status code and an error message in&lt;br&gt;the body of the response to display to the user.
+Update the MCP settings of all flows in a project and project-level auth settings.
+
+On MCP Composer failure, this endpoint should return with a 200 status code and an error message in
+the body of the response to display to the user.
 
 
 **Operation ID:** `update_project_mcp_settings_api_v1_mcp_project__project_id__patch`
@@ -2010,7 +2945,7 @@ Update the MCP settings of all flows in a project and project-level auth setting
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 #### Request Body
@@ -2018,7 +2953,10 @@ Update the MCP settings of all flows in a project and project-level auth setting
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `settings` | array[object] | ✅ Yes | - |
+  | `auth_settings` | object | ❌ No | Model representing authentication settings for MCP. |
 
 
 #### Responses
@@ -2027,6 +2965,12 @@ Update the MCP settings of all flows in a project and project-level auth setting
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2050,7 +2994,7 @@ Handle SSE connections for a specific project.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -2060,6 +3004,12 @@ Handle SSE connections for a specific project.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2083,7 +3033,7 @@ Handle POST messages for a project-specific MCP server.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -2093,6 +3043,12 @@ Handle POST messages for a project-specific MCP server.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2116,7 +3072,7 @@ Handle Streamable HTTP connections for a specific project.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -2126,6 +3082,12 @@ Handle Streamable HTTP connections for a specific project.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2147,7 +3109,7 @@ Handle Streamable HTTP connections for a specific project.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -2157,6 +3119,12 @@ Handle Streamable HTTP connections for a specific project.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2178,7 +3146,7 @@ Handle Streamable HTTP connections for a specific project.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -2188,6 +3156,12 @@ Handle Streamable HTTP connections for a specific project.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2211,7 +3185,7 @@ Install MCP server configuration for Cursor, Windsurf, or Claude.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 #### Request Body
@@ -2219,7 +3193,10 @@ Install MCP server configuration for Cursor, Windsurf, or Claude.
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `client` | string | ✅ Yes | - |
+  | `transport` | string | ❌ No | - |
 
 
 #### Responses
@@ -2228,6 +3205,12 @@ Install MCP server configuration for Cursor, Windsurf, or Claude.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2238,7 +3221,10 @@ Install MCP server configuration for Cursor, Windsurf, or Claude.
 > **Get Project Composer Url**
 
 
-Get the MCP Composer URL for a specific project.&lt;br&gt;&lt;br&gt;On failure, this endpoint should return with a 200 status code and an error message in&lt;br&gt;the body of the response to display to the user.
+Get the MCP Composer URL for a specific project.
+
+On failure, this endpoint should return with a 200 status code and an error message in
+the body of the response to display to the user.
 
 
 **Operation ID:** `get_project_composer_url_api_v1_mcp_project__project_id__composer_url_get`
@@ -2251,7 +3237,7 @@ Get the MCP Composer URL for a specific project.&lt;br&gt;&lt;br&gt;On failure, 
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -2261,6 +3247,22 @@ Get the MCP Composer URL for a specific project.&lt;br&gt;&lt;br&gt;On failure, 
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `project_id` | string | - |
+| `uses_composer` | boolean | - |
+| `streamable_http_url` | string | - |
+| `legacy_sse_url` | string | - |
+| `error_message` | string | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2284,7 +3286,7 @@ Check if MCP server configuration is installed for this project in Cursor, Winds
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -2295,6 +3297,12 @@ Check if MCP server configuration is installed for this project in Cursor, Winds
 | **200** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ## `/api/v1/responses`
@@ -2304,7 +3312,23 @@ Check if MCP server configuration is installed for this project in Cursor, Winds
 > **Create Response**
 
 
-Create a response using OpenAI Responses API format.&lt;br&gt;&lt;br&gt;This endpoint accepts a flow_id in the model parameter and processes&lt;br&gt;the input through the specified Langflow flow.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    request: OpenAI Responses API request with model (flow_id) and input&lt;br&gt;    background_tasks: FastAPI background task manager&lt;br&gt;    api_key_user: Authenticated user from API key&lt;br&gt;    http_request: The incoming HTTP request&lt;br&gt;    telemetry_service: Telemetry service for logging&lt;br&gt;&lt;br&gt;Returns:&lt;br&gt;    OpenAI-compatible response or streaming response&lt;br&gt;&lt;br&gt;Raises:&lt;br&gt;    HTTPException: For validation errors or flow execution issues
+Create a response using OpenAI Responses API format.
+
+This endpoint accepts a flow_id in the model parameter and processes
+the input through the specified Langflow flow.
+
+Args:
+    request: OpenAI Responses API request with model (flow_id) and input
+    background_tasks: FastAPI background task manager
+    api_key_user: Authenticated user from API key
+    http_request: The incoming HTTP request
+    telemetry_service: Telemetry service for logging
+
+Returns:
+    OpenAI-compatible response or streaming response
+
+Raises:
+    HTTPException: For validation errors or flow execution issues
 
 
 **Operation ID:** `create_response_api_v1_responses_post`
@@ -2319,7 +3343,15 @@ Create a response using OpenAI Responses API format.&lt;br&gt;&lt;br&gt;This end
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `model` | string | ✅ Yes | The flow ID to execute (used instead of OpenAI model) |
+  | `input` | string | ✅ Yes | The input text to process |
+  | `stream` | boolean | ❌ No | Whether to stream the response |
+  | `background` | boolean | ❌ No | Whether to process in background |
+  | `tools` | array[object] | ❌ No | Tools are not supported yet |
+  | `previous_response_id` | string | ❌ No | ID of previous response to continue conversation |
+  | `include` | array[string] | ❌ No | Additional response data to include, e.g., ['tool_call.results'] |
 
 
 #### Responses
@@ -2328,6 +3360,12 @@ Create a response using OpenAI Responses API format.&lt;br&gt;&lt;br&gt;This end
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2351,7 +3389,7 @@ Execute a named flow from the flows directory.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_name` | **path** |  (string) | ✅ Yes | - |
+| `flow_name` | **path** | string | ✅ Yes | - |
 
 
 #### Request Body
@@ -2359,7 +3397,16 @@ Execute a named flow from the flows directory.
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `flow_id` | string | ✅ Yes | - |
+  | `component_id` | string | ❌ No | - |
+  | `field_name` | string | ❌ No | - |
+  | `input_value` | string | ❌ No | - |
+  | `max_retries` | integer | ❌ No | - |
+  | `model_name` | string | ❌ No | - |
+  | `provider` | string | ❌ No | - |
+  | `session_id` | string | ❌ No | - |
 
 
 #### Responses
@@ -2368,6 +3415,12 @@ Execute a named flow from the flows directory.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2378,7 +3431,9 @@ Execute a named flow from the flows directory.
 > **Check Assistant Config**
 
 
-Check if the Langflow Assistant is properly configured.&lt;br&gt;&lt;br&gt;Returns available providers with their configured status and available models.
+Check if the Langflow Assistant is properly configured.
+
+Returns available providers with their configured status and available models.
 
 
 **Operation ID:** `check_assistant_config_api_v1_agentic_check_config_get`
@@ -2419,7 +3474,16 @@ Chat with the Langflow Assistant.
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `flow_id` | string | ✅ Yes | - |
+  | `component_id` | string | ❌ No | - |
+  | `field_name` | string | ❌ No | - |
+  | `input_value` | string | ❌ No | - |
+  | `max_retries` | integer | ❌ No | - |
+  | `model_name` | string | ❌ No | - |
+  | `provider` | string | ❌ No | - |
+  | `session_id` | string | ❌ No | - |
 
 
 #### Responses
@@ -2428,6 +3492,12 @@ Chat with the Langflow Assistant.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2453,7 +3523,16 @@ Chat with the Langflow Assistant with streaming progress updates.
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `flow_id` | string | ✅ Yes | - |
+  | `component_id` | string | ❌ No | - |
+  | `field_name` | string | ❌ No | - |
+  | `input_value` | string | ❌ No | - |
+  | `max_retries` | integer | ❌ No | - |
+  | `model_name` | string | ❌ No | - |
+  | `provider` | string | ❌ No | - |
+  | `session_id` | string | ❌ No | - |
 
 
 #### Responses
@@ -2462,6 +3541,12 @@ Chat with the Langflow Assistant with streaming progress updates.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2485,7 +3570,7 @@ Upload a file for the current user and track it in the database.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `append` | **query** |  (boolean) | ❌ No | - |
+| `append` | **query** | boolean | ❌ No | - |
 
 
 #### Request Body
@@ -2493,7 +3578,9 @@ Upload a file for the current user and track it in the database.
 - **Required:** Yes
 
 - **Content-Type:** `multipart/form-data`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `file` | string | ✅ Yes | - |
 
 
 #### Responses
@@ -2502,6 +3589,22 @@ Upload a file for the current user and track it in the database.
 |-------------|-------------|
 | **201** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `id` | string (uuid) | - |
+| `name` | string | - |
+| `path` | string (path) | - |
+| `size` | integer | - |
+| `provider` | string | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2573,7 +3676,7 @@ Upload a file for the current user and track it in the database.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `append` | **query** |  (boolean) | ❌ No | - |
+| `append` | **query** | boolean | ❌ No | - |
 
 
 #### Request Body
@@ -2581,7 +3684,9 @@ Upload a file for the current user and track it in the database.
 - **Required:** Yes
 
 - **Content-Type:** `multipart/form-data`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `file` | string | ✅ Yes | - |
 
 
 #### Responses
@@ -2590,6 +3695,22 @@ Upload a file for the current user and track it in the database.
 |-------------|-------------|
 | **201** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `id` | string (uuid) | - |
+| `name` | string | - |
+| `path` | string (path) | - |
+| `size` | integer | - |
+| `provider` | string | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2663,7 +3784,7 @@ Download multiple files as a zip file by their IDs.
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `array`
+  - **Type:** `array`
 
 
 #### Responses
@@ -2672,6 +3793,12 @@ Download multiple files as a zip file by their IDs.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2695,7 +3822,7 @@ Delete multiple files by their IDs.
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `array`
+  - **Type:** `array`
 
 
 #### Responses
@@ -2704,6 +3831,12 @@ Delete multiple files by their IDs.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2714,7 +3847,17 @@ Delete multiple files by their IDs.
 > **Download File**
 
 
-Download a file by its ID or return its content as a string/bytes.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    file_id: UUID of the file.&lt;br&gt;    current_user: Authenticated user.&lt;br&gt;    session: Database session.&lt;br&gt;    storage_service: File storage service.&lt;br&gt;    return_content: If True, return raw content (str) instead of StreamingResponse.&lt;br&gt;&lt;br&gt;Returns:&lt;br&gt;    StreamingResponse for client downloads or str for internal use.
+Download a file by its ID or return its content as a string/bytes.
+
+Args:
+    file_id: UUID of the file.
+    current_user: Authenticated user.
+    session: Database session.
+    storage_service: File storage service.
+    return_content: If True, return raw content (str) instead of StreamingResponse.
+
+Returns:
+    StreamingResponse for client downloads or str for internal use.
 
 
 **Operation ID:** `download_file_api_v2_files__file_id__get`
@@ -2727,8 +3870,8 @@ Download a file by its ID or return its content as a string/bytes.&lt;br&gt;&lt;
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `file_id` | **path** |  (string) | ✅ Yes | - |
-| `return_content` | **query** |  (boolean) | ❌ No | - |
+| `file_id` | **path** | string (uuid) | ✅ Yes | - |
+| `return_content` | **query** | boolean | ❌ No | - |
 
 
 
@@ -2738,6 +3881,12 @@ Download a file by its ID or return its content as a string/bytes.&lt;br&gt;&lt;
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2759,8 +3908,8 @@ Edit the name of a file by its ID.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `file_id` | **path** |  (string) | ✅ Yes | - |
-| `name` | **query** |  (string) | ✅ Yes | - |
+| `file_id` | **path** | string (uuid) | ✅ Yes | - |
+| `name` | **query** | string | ✅ Yes | - |
 
 
 
@@ -2770,6 +3919,22 @@ Edit the name of a file by its ID.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `id` | string (uuid) | - |
+| `name` | string | - |
+| `path` | string (path) | - |
+| `size` | integer | - |
+| `provider` | string | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2791,7 +3956,7 @@ Delete a file by its ID.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `file_id` | **path** |  (string) | ✅ Yes | - |
+| `file_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -2801,6 +3966,12 @@ Delete a file by its ID.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2824,7 +3995,7 @@ Get the list of available servers.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `action_count` | **query** |  | ❌ No | - |
+| `action_count` | **query** | boolean | ❌ No | - |
 
 
 
@@ -2834,6 +4005,12 @@ Get the list of available servers.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2857,7 +4034,7 @@ Get a specific server.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `server_name` | **path** |  (string) | ✅ Yes | - |
+| `server_name` | **path** | string | ✅ Yes | - |
 
 
 
@@ -2867,6 +4044,12 @@ Get a specific server.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2885,7 +4068,7 @@ Get a specific server.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `server_name` | **path** |  (string) | ✅ Yes | - |
+| `server_name` | **path** | string | ✅ Yes | - |
 
 
 #### Request Body
@@ -2893,7 +4076,13 @@ Get a specific server.
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `command` | string | ❌ No | - |
+  | `args` | array[string] | ❌ No | - |
+  | `env` | object | ❌ No | - |
+  | `headers` | object | ❌ No | - |
+  | `url` | string | ❌ No | - |
 
 
 #### Responses
@@ -2902,6 +4091,12 @@ Get a specific server.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2920,7 +4115,7 @@ Get a specific server.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `server_name` | **path** |  (string) | ✅ Yes | - |
+| `server_name` | **path** | string | ✅ Yes | - |
 
 
 #### Request Body
@@ -2928,7 +4123,13 @@ Get a specific server.
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `command` | string | ❌ No | - |
+  | `args` | array[string] | ❌ No | - |
+  | `env` | object | ❌ No | - |
+  | `headers` | object | ❌ No | - |
+  | `url` | string | ❌ No | - |
 
 
 #### Responses
@@ -2937,6 +4138,12 @@ Get a specific server.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2955,7 +4162,7 @@ Get a specific server.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `server_name` | **path** |  (string) | ✅ Yes | - |
+| `server_name` | **path** | string | ✅ Yes | - |
 
 
 
@@ -2965,6 +4172,12 @@ Get a specific server.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -2990,7 +4203,12 @@ Execute a workflow with support for sync, stream, and background modes
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `background` | boolean | ❌ No | - |
+  | `stream` | boolean | ❌ No | - |
+  | `flow_id` | string | ✅ Yes | - |
+  | `inputs` | object | ❌ No | Component-specific inputs in flat format: 'component_id.param_name': value |
 
 
 #### Responses
@@ -2999,6 +4217,34 @@ Execute a workflow with support for sync, stream, and background modes
 |-------------|-------------|
 | **200** | Workflow execution response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `flow_id` | string | - |
+| `job_id` | string | - |
+| `object` | string | - |
+| `created_timestamp` | string | - |
+| `status` | string | Job execution status. |
+| `errors` | array[object] | - |
+| `inputs` | object | - |
+| `outputs` | object | - |
+
+**Response Body** (text/event-stream):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `type` | string | - |
+| `run_id` | string | - |
+| `timestamp` | integer | - |
+| `raw_event` | object | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -3020,7 +4266,7 @@ Get status of workflow job by job ID
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `job_id` | **query** |  | ❌ No | Job ID to query |
+| `job_id` | **query** | string | ❌ No | Job ID to query |
 
 
 
@@ -3030,6 +4276,34 @@ Get status of workflow job by job ID
 |-------------|-------------|
 | **200** | Workflow status response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `flow_id` | string | - |
+| `job_id` | string | - |
+| `object` | string | - |
+| `created_timestamp` | string | - |
+| `status` | string | Job execution status. |
+| `errors` | array[object] | - |
+| `inputs` | object | - |
+| `outputs` | object | - |
+
+**Response Body** (text/event-stream):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `type` | string | - |
+| `run_id` | string | - |
+| `timestamp` | integer | - |
+| `raw_event` | object | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -3055,7 +4329,9 @@ Stop a running workflow execution
 - **Required:** Yes
 
 - **Content-Type:** `application/json`
-  - **Schema:** `object`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `job_id` | string | ✅ Yes | - |
 
 
 #### Responses
@@ -3064,6 +4340,19 @@ Stop a running workflow execution
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `job_id` | string | - |
+| `message` | string | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -3111,6 +4400,14 @@ Stop a running workflow execution
 |-------------|-------------|
 | **200** | Successful Response |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `status` | string | - |
+| `chat` | string | - |
+| `db` | string | - |
+
 
 ---
 ## `/logs-stream`
@@ -3120,7 +4417,11 @@ Stop a running workflow execution
 > **Stream Logs**
 
 
-HTTP/2 Server-Sent-Event (SSE) endpoint for streaming logs.&lt;br&gt;&lt;br&gt;Requires authentication to prevent exposure of sensitive log data.&lt;br&gt;It establishes a long-lived connection to the server and receives log messages in real-time.&lt;br&gt;The client should use the header &quot;Accept: text/event-stream&quot;.
+HTTP/2 Server-Sent-Event (SSE) endpoint for streaming logs.
+
+Requires authentication to prevent exposure of sensitive log data.
+It establishes a long-lived connection to the server and receives log messages in real-time.
+The client should use the header "Accept: text/event-stream".
 
 
 **Operation ID:** `stream_logs_logs_stream_get`
@@ -3146,7 +4447,9 @@ HTTP/2 Server-Sent-Event (SSE) endpoint for streaming logs.&lt;br&gt;&lt;br&gt;R
 > **Logs**
 
 
-Retrieve application logs with authentication required.&lt;br&gt;&lt;br&gt;SECURITY: Logs may contain sensitive information and require authentication.
+Retrieve application logs with authentication required.
+
+SECURITY: Logs may contain sensitive information and require authentication.
 
 
 **Operation ID:** `logs_logs_get`
@@ -3159,9 +4462,9 @@ Retrieve application logs with authentication required.&lt;br&gt;&lt;br&gt;SECUR
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `lines_before` | **query** |  (integer) | ❌ No | The number of logs before the timestamp or the last log |
-| `lines_after` | **query** |  (integer) | ❌ No | The number of logs after the timestamp |
-| `timestamp` | **query** |  (integer) | ❌ No | The timestamp to start getting logs from |
+| `lines_before` | **query** | integer | ❌ No | The number of logs before the timestamp or the last log |
+| `lines_after` | **query** | integer | ❌ No | The number of logs after the timestamp |
+| `timestamp` | **query** | integer | ❌ No | The timestamp to start getting logs from |
 
 
 
@@ -3171,6 +4474,12 @@ Retrieve application logs with authentication required.&lt;br&gt;&lt;br&gt;SECUR
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
