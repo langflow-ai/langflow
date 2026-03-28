@@ -90,6 +90,9 @@ Notes:
   |------|------|----------|-------------|
   | `input_request` | object | ❌ No | - |
   | `context` | object | ❌ No | - |
+  **`input_request`** ❌
+
+
 
 
 
@@ -105,6 +108,9 @@ Notes:
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -151,6 +157,9 @@ Raises:
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -229,6 +238,9 @@ catering to diverse application requirements.
   | `tweaks` | object | ❌ No | A dictionary of tweaks to adjust the flow's execution. Allows customizing flow behavior dynamically. All tweaks are overridden by the input values. |
   | `stream` | boolean | ❌ No | - |
   | `session_id` | string | ❌ No | - |
+  **`inputs`** — Array of `object`
+
+
 
 
 
@@ -245,12 +257,24 @@ catering to diverse application requirements.
 |------|------|-------------|
 | `outputs` | array[object] | - |
 | `session_id` | string | - |
+**`outputs`** — Array of `object`
+
+  **`outputs`** — Array of `object`
+
+    **`messages`** — Array of `object`
+
+      **`files`** — Array of `object`
+
+
 
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -309,7 +333,7 @@ Raises:
 | Name | Type | Description |
 |------|------|-------------|
 | `max_file_size_upload` | integer | - |
-| `event_delivery` | string | - |
+| `event_delivery` | string = `polling` \| `streaming` \| `direct` | - |
 | `voice_mode_available` | boolean | - |
 | `frontend_timeout` | integer | - |
 | `type` | string | - |
@@ -325,6 +349,9 @@ Raises:
 | `webhook_auth_enable` | boolean | - |
 | `default_folder_name` | string | - |
 | `hide_getting_started_progress` | boolean | - |
+**`feature_flags`** ✅
+
+
 
 
 ---
