@@ -13,6 +13,13 @@
 
 
 
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `application/json` | ✅ |
+
 ### Request Body
 
 - **Required:** Yes
@@ -180,6 +187,13 @@ Returns:
 
 
 
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `application/json` | ✅ |
+
 ### Request Body
 
 - **Required:** Yes
@@ -285,6 +299,13 @@ Update a flow.
 |------|-----------|------|----------|-------------|
 | `flow_id` | **path** | string (uuid) | ✅ Yes | - |
 
+
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `application/json` | ✅ |
 
 ### Request Body
 
@@ -462,6 +483,13 @@ Create multiple new flows.
 
 
 
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `application/json` | ✅ |
+
 ### Request Body
 
 - **Required:** Yes
@@ -512,6 +540,13 @@ Upload flows from a file.
 | `folder_id` | **query** | string (uuid) | ❌ No | - |
 
 
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `multipart/form-data` | ✅ |
+
 ### Request Body
 
 - **Required:** Yes
@@ -553,6 +588,13 @@ Download all flows as a zip file.
 **Operation ID:** `download_multiple_file_api_v1_flows_download__post`
 
 
+
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `application/json` | ✅ |
 
 ### Request Body
 
