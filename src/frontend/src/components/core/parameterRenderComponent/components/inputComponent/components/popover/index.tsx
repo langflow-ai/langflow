@@ -204,12 +204,12 @@ const CustomInputPopover = ({
     }
   }, [value, disabled, isComposing]);
 
-  // Restore cursor position after value changes
+  // Restore cursor position after value changes (skip during IME composition)
   useEffect(() => {
-    if (cursor !== null && refInput.current) {
+    if (cursor !== null && refInput.current && !isComposing) {
       refInput.current.setSelectionRange(cursor, cursor);
     }
-  }, [cursor, localValue]);
+  }, [cursor, localValue, isComposing]);
 
   const handleRemoveOption = (
     optionToRemove: string,

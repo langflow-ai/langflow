@@ -433,11 +433,10 @@ export default function AccordionPromptComponent({
     // Update internal state
     setInternalValue(normalizedValue);
 
-    // Notify parent immediately
-    handleOnNewValue({ value: normalizedValue });
-
-    // Skip innerHTML updates during IME composition to prevent Korean input breakage
+    // Skip parent notification and innerHTML updates during IME composition to prevent Korean input breakage
     if (!isComposingRef.current) {
+      handleOnNewValue({ value: normalizedValue });
+
       // Check if we need to update HTML for highlighting
       const currentHTML = contentEditableRef.current.innerHTML;
       const expectedHTML = normalizedValue
