@@ -16,12 +16,18 @@
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **path** |  (string) | ✅ Yes | - |
+| `flow_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 ### Request Body
 
 - **Required:** Yes
+
+- **Content-Type:** `multipart/form-data`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `file` | string | ✅ Yes | - |
+
 
 
 ### Responses
@@ -30,6 +36,19 @@
 |-------------|-------------|
 | **201** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `flowId` | string | - |
+| `file_path` | string (path) | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -45,8 +64,8 @@
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `file_name` | **path** |  (string) | ✅ Yes | - |
-| `flow_id` | **path** |  (string) | ✅ Yes | - |
+| `file_name` | **path** | string | ✅ Yes | - |
+| `flow_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -56,6 +75,12 @@
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -74,8 +99,8 @@ Download image from storage for browser rendering.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **path** |  (string) | ✅ Yes | - |
-| `file_name` | **path** |  (string) | ✅ Yes | - |
+| `flow_id` | **path** | string (uuid) | ✅ Yes | - |
+| `file_name` | **path** | string | ✅ Yes | - |
 
 
 
@@ -86,6 +111,12 @@ Download image from storage for browser rendering.
 | **200** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ## `GET` /api/v1/files/profile_pictures/{folder_name}/{file_name}
@@ -93,7 +124,10 @@ Download image from storage for browser rendering.
 > Download Profile Picture
 
 
-Download profile picture from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures are first looked up in config_dir/profile_pictures/,&lt;br&gt;then fallback to the package&#x27;s bundled profile_pictures directory.
+Download profile picture from local filesystem.
+
+Profile pictures are first looked up in config_dir/profile_pictures/,
+then fallback to the package's bundled profile_pictures directory.
 
 
 **Operation ID:** `download_profile_picture_api_v1_files_profile_pictures__folder_name___file_name__get`
@@ -103,8 +137,8 @@ Download profile picture from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictu
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `folder_name` | **path** |  (string) | ✅ Yes | - |
-| `file_name` | **path** |  (string) | ✅ Yes | - |
+| `folder_name` | **path** | string | ✅ Yes | - |
+| `file_name` | **path** | string | ✅ Yes | - |
 
 
 
@@ -115,6 +149,12 @@ Download profile picture from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictu
 | **200** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ## `GET` /api/v1/files/profile_pictures/list
@@ -122,7 +162,10 @@ Download profile picture from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictu
 > List Profile Pictures
 
 
-List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures are first looked up in config_dir/profile_pictures/,&lt;br&gt;then fallback to the package&#x27;s bundled profile_pictures directory.
+List profile pictures from local filesystem.
+
+Profile pictures are first looked up in config_dir/profile_pictures/,
+then fallback to the package's bundled profile_pictures directory.
 
 
 **Operation ID:** `list_profile_pictures_api_v1_files_profile_pictures_list_get`
@@ -150,7 +193,7 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `flow_id` | **path** |  (string) | ✅ Yes | - |
+| `flow_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -160,6 +203,12 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -175,8 +224,8 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `file_name` | **path** |  (string) | ✅ Yes | - |
-| `flow_id` | **path** |  (string) | ✅ Yes | - |
+| `file_name` | **path** | string | ✅ Yes | - |
+| `flow_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -186,6 +235,12 @@ List profile pictures from local filesystem.&lt;br&gt;&lt;br&gt;Profile pictures
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -204,12 +259,18 @@ Upload a file for the current user and track it in the database.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `append` | **query** |  (boolean) | ❌ No | - |
+| `append` | **query** | boolean | ❌ No | - |
 
 
 ### Request Body
 
 - **Required:** Yes
+
+- **Content-Type:** `multipart/form-data`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `file` | string | ✅ Yes | - |
+
 
 
 ### Responses
@@ -218,6 +279,22 @@ Upload a file for the current user and track it in the database.
 |-------------|-------------|
 | **201** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `id` | string (uuid) | - |
+| `name` | string | - |
+| `path` | string (path) | - |
+| `size` | integer | - |
+| `provider` | string | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -278,12 +355,18 @@ Upload a file for the current user and track it in the database.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `append` | **query** |  (boolean) | ❌ No | - |
+| `append` | **query** | boolean | ❌ No | - |
 
 
 ### Request Body
 
 - **Required:** Yes
+
+- **Content-Type:** `multipart/form-data`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `file` | string | ✅ Yes | - |
+
 
 
 ### Responses
@@ -292,6 +375,22 @@ Upload a file for the current user and track it in the database.
 |-------------|-------------|
 | **201** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `id` | string (uuid) | - |
+| `name` | string | - |
+| `path` | string (path) | - |
+| `size` | integer | - |
+| `provider` | string | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -353,6 +452,9 @@ Download multiple files as a zip file by their IDs.
 
 - **Required:** Yes
 
+- **Content-Type:** `application/json`
+
+
 
 ### Responses
 
@@ -360,6 +462,12 @@ Download multiple files as a zip file by their IDs.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -379,6 +487,9 @@ Delete multiple files by their IDs.
 
 - **Required:** Yes
 
+- **Content-Type:** `application/json`
+
+
 
 ### Responses
 
@@ -387,6 +498,12 @@ Delete multiple files by their IDs.
 | **200** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ## `GET` /api/v2/files/{file_id}
@@ -394,7 +511,17 @@ Delete multiple files by their IDs.
 > Download File
 
 
-Download a file by its ID or return its content as a string/bytes.&lt;br&gt;&lt;br&gt;Args:&lt;br&gt;    file_id: UUID of the file.&lt;br&gt;    current_user: Authenticated user.&lt;br&gt;    session: Database session.&lt;br&gt;    storage_service: File storage service.&lt;br&gt;    return_content: If True, return raw content (str) instead of StreamingResponse.&lt;br&gt;&lt;br&gt;Returns:&lt;br&gt;    StreamingResponse for client downloads or str for internal use.
+Download a file by its ID or return its content as a string/bytes.
+
+Args:
+    file_id: UUID of the file.
+    current_user: Authenticated user.
+    session: Database session.
+    storage_service: File storage service.
+    return_content: If True, return raw content (str) instead of StreamingResponse.
+
+Returns:
+    StreamingResponse for client downloads or str for internal use.
 
 
 **Operation ID:** `download_file_api_v2_files__file_id__get`
@@ -404,8 +531,8 @@ Download a file by its ID or return its content as a string/bytes.&lt;br&gt;&lt;
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `file_id` | **path** |  (string) | ✅ Yes | - |
-| `return_content` | **query** |  (boolean) | ❌ No | - |
+| `file_id` | **path** | string (uuid) | ✅ Yes | - |
+| `return_content` | **query** | boolean | ❌ No | - |
 
 
 
@@ -415,6 +542,12 @@ Download a file by its ID or return its content as a string/bytes.&lt;br&gt;&lt;
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -433,8 +566,8 @@ Edit the name of a file by its ID.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `file_id` | **path** |  (string) | ✅ Yes | - |
-| `name` | **query** |  (string) | ✅ Yes | - |
+| `file_id` | **path** | string (uuid) | ✅ Yes | - |
+| `name` | **query** | string | ✅ Yes | - |
 
 
 
@@ -444,6 +577,22 @@ Edit the name of a file by its ID.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `id` | string (uuid) | - |
+| `name` | string | - |
+| `path` | string (path) | - |
+| `size` | integer | - |
+| `provider` | string | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -462,7 +611,7 @@ Delete a file by its ID.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `file_id` | **path** |  (string) | ✅ Yes | - |
+| `file_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -472,6 +621,12 @@ Delete a file by its ID.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
