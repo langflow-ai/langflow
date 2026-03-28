@@ -35,10 +35,11 @@
   | `mcp_enabled` | boolean | ❌ No | Can be exposed in the MCP server |
   | `action_name` | string | ❌ No | The name of the action associated with the flow |
   | `action_description` | string | ❌ No | The description of the action associated with the flow |
-  | `access_type` | string | ❌ No | - |
+  | `access_type` | string = `PRIVATE` \| `PUBLIC` | ❌ No | - |
   | `user_id` | string (uuid) | ❌ No | - |
   | `folder_id` | string (uuid) | ❌ No | - |
   | `fs_path` | string | ❌ No | - |
+  
 
 
 
@@ -68,16 +69,20 @@
 | `mcp_enabled` | boolean | Can be exposed in the MCP server |
 | `action_name` | string | The name of the action associated with the flow |
 | `action_description` | string | The description of the action associated with the flow |
-| `access_type` | string | - |
+| `access_type` | string = `PRIVATE` \| `PUBLIC` | - |
 | `id` | string (uuid) | - |
 | `user_id` | string (uuid) | - |
 | `folder_id` | string (uuid) | - |
+
 
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -140,12 +145,18 @@ Returns:
 | `page` | integer | - |
 | `size` | integer | - |
 | `pages` | integer | - |
+**`items`** — Array of `object`
+
+
 
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -189,6 +200,9 @@ Returns:
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -237,16 +251,20 @@ Read a flow.
 | `mcp_enabled` | boolean | Can be exposed in the MCP server |
 | `action_name` | string | The name of the action associated with the flow |
 | `action_description` | string | The description of the action associated with the flow |
-| `access_type` | string | - |
+| `access_type` | string = `PRIVATE` \| `PUBLIC` | - |
 | `id` | string (uuid) | - |
 | `user_id` | string (uuid) | - |
 | `folder_id` | string (uuid) | - |
+
 
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -284,8 +302,9 @@ Update a flow.
   | `locked` | boolean | ❌ No | - |
   | `action_name` | string | ❌ No | - |
   | `action_description` | string | ❌ No | - |
-  | `access_type` | string | ❌ No | - |
+  | `access_type` | string = `PRIVATE` \| `PUBLIC` | ❌ No | - |
   | `fs_path` | string | ❌ No | - |
+  
 
 
 
@@ -315,16 +334,20 @@ Update a flow.
 | `mcp_enabled` | boolean | Can be exposed in the MCP server |
 | `action_name` | string | The name of the action associated with the flow |
 | `action_description` | string | The description of the action associated with the flow |
-| `access_type` | string | - |
+| `access_type` | string = `PRIVATE` \| `PUBLIC` | - |
 | `id` | string (uuid) | - |
 | `user_id` | string (uuid) | - |
 | `folder_id` | string (uuid) | - |
+
 
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -359,6 +382,9 @@ Delete a flow.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -407,16 +433,20 @@ Read a public flow.
 | `mcp_enabled` | boolean | Can be exposed in the MCP server |
 | `action_name` | string | The name of the action associated with the flow |
 | `action_description` | string | The description of the action associated with the flow |
-| `access_type` | string | - |
+| `access_type` | string = `PRIVATE` \| `PUBLIC` | - |
 | `id` | string (uuid) | - |
 | `user_id` | string (uuid) | - |
 | `folder_id` | string (uuid) | - |
+
 
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -440,6 +470,9 @@ Create multiple new flows.
   | Name | Type | Required | Description |
   |------|------|----------|-------------|
   | `flows` | array[object] | ✅ Yes | - |
+  **`flows`** — Array of `object`
+
+
 
 
 
@@ -455,6 +488,9 @@ Create multiple new flows.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -484,6 +520,7 @@ Upload flows from a file.
   | Name | Type | Required | Description |
   |------|------|----------|-------------|
   | `file` | string | ✅ Yes | - |
+  
 
 
 
@@ -499,6 +536,9 @@ Upload flows from a file.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -534,6 +574,9 @@ Download all flows as a zip file.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
