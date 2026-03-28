@@ -19,8 +19,8 @@ List project MCP tools.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
-| `mcp_enabled` | **query** |  (boolean) | ❌ No | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
+| `mcp_enabled` | **query** | boolean | ❌ No | - |
 
 
 
@@ -30,6 +30,12 @@ List project MCP tools.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -48,7 +54,7 @@ Handle POST messages for a project-specific MCP server.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -59,6 +65,12 @@ Handle POST messages for a project-specific MCP server.
 | **200** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ## `PATCH` /api/v1/mcp/project/{project_id}
@@ -66,7 +78,10 @@ Handle POST messages for a project-specific MCP server.
 > Update Project Mcp Settings
 
 
-Update the MCP settings of all flows in a project and project-level auth settings.&lt;br&gt;&lt;br&gt;On MCP Composer failure, this endpoint should return with a 200 status code and an error message in&lt;br&gt;the body of the response to display to the user.
+Update the MCP settings of all flows in a project and project-level auth settings.
+
+On MCP Composer failure, this endpoint should return with a 200 status code and an error message in
+the body of the response to display to the user.
 
 
 **Operation ID:** `update_project_mcp_settings_api_v1_mcp_project__project_id__patch`
@@ -76,12 +91,19 @@ Update the MCP settings of all flows in a project and project-level auth setting
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 ### Request Body
 
 - **Required:** Yes
+
+- **Content-Type:** `application/json`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `settings` | array[object] | ✅ Yes | - |
+  | `auth_settings` | object | ❌ No | Model representing authentication settings for MCP. |
+
 
 
 ### Responses
@@ -90,6 +112,12 @@ Update the MCP settings of all flows in a project and project-level auth setting
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -108,7 +136,7 @@ Handle SSE connections for a specific project.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -118,6 +146,12 @@ Handle SSE connections for a specific project.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -136,7 +170,7 @@ Handle POST messages for a project-specific MCP server.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -146,6 +180,12 @@ Handle POST messages for a project-specific MCP server.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -164,7 +204,7 @@ Handle Streamable HTTP connections for a specific project.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -174,6 +214,12 @@ Handle Streamable HTTP connections for a specific project.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -192,7 +238,7 @@ Handle Streamable HTTP connections for a specific project.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -202,6 +248,12 @@ Handle Streamable HTTP connections for a specific project.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -220,7 +272,7 @@ Handle Streamable HTTP connections for a specific project.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -230,6 +282,12 @@ Handle Streamable HTTP connections for a specific project.
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -248,12 +306,19 @@ Install MCP server configuration for Cursor, Windsurf, or Claude.
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 ### Request Body
 
 - **Required:** Yes
+
+- **Content-Type:** `application/json`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `client` | string | ✅ Yes | - |
+  | `transport` | string | ❌ No | - |
+
 
 
 ### Responses
@@ -263,6 +328,12 @@ Install MCP server configuration for Cursor, Windsurf, or Claude.
 | **200** | Successful Response |
 | **422** | Validation Error |
 
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
+
 
 ---
 ## `GET` /api/v1/mcp/project/{project_id}/composer-url
@@ -270,7 +341,10 @@ Install MCP server configuration for Cursor, Windsurf, or Claude.
 > Get Project Composer Url
 
 
-Get the MCP Composer URL for a specific project.&lt;br&gt;&lt;br&gt;On failure, this endpoint should return with a 200 status code and an error message in&lt;br&gt;the body of the response to display to the user.
+Get the MCP Composer URL for a specific project.
+
+On failure, this endpoint should return with a 200 status code and an error message in
+the body of the response to display to the user.
 
 
 **Operation ID:** `get_project_composer_url_api_v1_mcp_project__project_id__composer_url_get`
@@ -280,7 +354,7 @@ Get the MCP Composer URL for a specific project.&lt;br&gt;&lt;br&gt;On failure, 
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -290,6 +364,22 @@ Get the MCP Composer URL for a specific project.&lt;br&gt;&lt;br&gt;On failure, 
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `project_id` | string | - |
+| `uses_composer` | boolean | - |
+| `streamable_http_url` | string | - |
+| `legacy_sse_url` | string | - |
+| `error_message` | string | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -308,7 +398,7 @@ Check if MCP server configuration is installed for this project in Cursor, Winds
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `project_id` | **path** |  (string) | ✅ Yes | - |
+| `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
 
@@ -318,6 +408,12 @@ Check if MCP server configuration is installed for this project in Cursor, Winds
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
