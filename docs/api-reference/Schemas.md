@@ -12,7 +12,6 @@
 
 
 
-
 ---
 ## `AssistantRequest`
 
@@ -21,19 +20,18 @@
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `flow_id` | `string` | ✅ Yes | - |
-| `component_id` | object | ❌ No | - |
-| `field_name` | object | ❌ No | - |
-| `input_value` | object | ❌ No | - |
-| `max_retries` | object | ❌ No | - |
-| `model_name` | object | ❌ No | - |
-| `provider` | object | ❌ No | - |
-| `session_id` | object | ❌ No | - |
+| `flow_id` | string | ✅ Yes | - |
+| `component_id` | string | ❌ No | - |
+| `field_name` | string | ❌ No | - |
+| `input_value` | string | ❌ No | - |
+| `max_retries` | integer | ❌ No | - |
+| `model_name` | string | ❌ No | - |
+| `provider` | string | ❌ No | - |
+| `session_id` | string | ❌ No | - |
 
 
 **Required fields:** `flow_id`
@@ -48,23 +46,22 @@
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `auth_type` | `string` | ❌ No | - |
-| `oauth_host` | object | ❌ No | - |
-| `oauth_port` | object | ❌ No | - |
-| `oauth_server_url` | object | ❌ No | - |
-| `oauth_callback_path` | object | ❌ No | - |
-| `oauth_callback_url` | object | ❌ No | - |
-| `oauth_client_id` | object | ❌ No | - |
-| `oauth_client_secret` | object | ❌ No | - |
-| `oauth_auth_url` | object | ❌ No | - |
-| `oauth_token_url` | object | ❌ No | - |
-| `oauth_mcp_scope` | object | ❌ No | - |
-| `oauth_provider_scope` | object | ❌ No | - |
+| `auth_type` | string | ❌ No | - |
+| `oauth_host` | string | ❌ No | - |
+| `oauth_port` | string | ❌ No | - |
+| `oauth_server_url` | string | ❌ No | - |
+| `oauth_callback_path` | string | ❌ No | - |
+| `oauth_callback_url` | string | ❌ No | - |
+| `oauth_client_id` | string | ❌ No | - |
+| `oauth_client_secret` | string (password) | ❌ No | - |
+| `oauth_auth_url` | string | ❌ No | - |
+| `oauth_token_url` | string | ❌ No | - |
+| `oauth_mcp_scope` | string | ❌ No | - |
+| `oauth_provider_scope` | string | ❌ No | - |
 
 
 
@@ -75,14 +72,13 @@
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | `inputs` | object | ❌ No | - |
 | `data` | object | ❌ No | - |
-| `files` | object | ❌ No | - |
+| `files` | array[string] | ❌ No | - |
 
 
 
@@ -93,14 +89,13 @@
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | `inputs` | object | ❌ No | - |
 | `data` | object | ❌ No | - |
-| `files` | object | ❌ No | - |
+| `files` | array[string] | ❌ No | - |
 
 
 
@@ -111,16 +106,15 @@
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `inputs` | object | ❌ No | - |
-| `outputs` | object | ❌ No | - |
-| `tweaks` | object | ❌ No | - |
-| `stream` | `boolean` | ❌ No | - |
-| `session_id` | object | ❌ No | - |
+| `inputs` | array[object] | ❌ No | - |
+| `outputs` | array[string] | ❌ No | - |
+| `tweaks` | object | ❌ No | A dictionary of tweaks to adjust the flow&#x27;s execution. Allows customizing flow behavior dynamically. All tweaks are overridden by the input values. |
+| `stream` | boolean | ❌ No | - |
+| `session_id` | string | ❌ No | - |
 
 
 
@@ -130,7 +124,6 @@
 
 
 **Type:** `object`
-
 
 ### Properties
 
@@ -148,12 +141,11 @@
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `file` | `string` | ✅ Yes | - |
+| `file` | string | ✅ Yes | - |
 
 
 **Required fields:** `file`
@@ -166,12 +158,11 @@
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `file` | `string` | ✅ Yes | - |
+| `file` | string | ✅ Yes | - |
 
 
 **Required fields:** `file`
@@ -184,12 +175,11 @@
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `file` | `string` | ✅ Yes | - |
+| `file` | string | ✅ Yes | - |
 
 
 **Required fields:** `file`
@@ -202,12 +192,11 @@
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `file` | `string` | ✅ Yes | - |
+| `file` | string | ✅ Yes | - |
 
 
 **Required fields:** `file`
@@ -220,12 +209,11 @@
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `file` | `string` | ✅ Yes | - |
+| `file` | string | ✅ Yes | - |
 
 
 **Required fields:** `file`
@@ -240,13 +228,12 @@
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `success` | `boolean` | ✅ Yes | - |
-| `message` | `string` | ✅ Yes | - |
+| `success` | boolean | ✅ Yes | - |
+| `message` | string | ✅ Yes | - |
 
 
 **Required fields:** `success`, `message`
@@ -261,19 +248,18 @@
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `message` | object | ✅ Yes | - |
-| `sender` | object | ❌ No | - |
-| `sender_name` | object | ❌ No | - |
-| `session_id` | object | ❌ No | - |
-| `stream_url` | object | ❌ No | - |
-| `component_id` | object | ❌ No | - |
-| `files` | `array` [object] | ❌ No | - |
-| `type` | `string` | ✅ Yes | - |
+| `message` | string | ✅ Yes | - |
+| `sender` | string | ❌ No | - |
+| `sender_name` | string | ❌ No | - |
+| `session_id` | string | ❌ No | - |
+| `stream_url` | string | ❌ No | - |
+| `component_id` | string | ❌ No | - |
+| `files` | array[object] | ❌ No | - |
+| `type` | string | ✅ Yes | - |
 
 
 **Required fields:** `message`, `type`
@@ -289,7 +275,6 @@
 
 
 
-
 ---
 ## `ComposerUrlResponse`
 
@@ -298,16 +283,15 @@
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `project_id` | `string` | ✅ Yes | - |
-| `uses_composer` | `boolean` | ✅ Yes | - |
-| `streamable_http_url` | object | ❌ No | - |
-| `legacy_sse_url` | object | ❌ No | - |
-| `error_message` | object | ❌ No | - |
+| `project_id` | string | ✅ Yes | - |
+| `uses_composer` | boolean | ✅ Yes | - |
+| `streamable_http_url` | string | ❌ No | - |
+| `legacy_sse_url` | string | ❌ No | - |
+| `error_message` | string | ❌ No | - |
 
 
 **Required fields:** `project_id`, `uses_composer`
@@ -324,28 +308,27 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `max_file_size_upload` | `integer` | ✅ Yes | - |
-| `event_delivery` | `string` | ✅ Yes | - |
-| `voice_mode_available` | `boolean` | ✅ Yes | - |
-| `frontend_timeout` | `integer` | ✅ Yes | - |
-| `type` | `string` | ❌ No | - |
-| `feature_flags` | `object` | ✅ Yes | - |
-| `serialization_max_items_length` | `integer` | ✅ Yes | - |
-| `serialization_max_text_length` | `integer` | ✅ Yes | - |
-| `auto_saving` | `boolean` | ✅ Yes | - |
-| `auto_saving_interval` | `integer` | ✅ Yes | - |
-| `health_check_max_retries` | `integer` | ✅ Yes | - |
-| `webhook_polling_interval` | `integer` | ✅ Yes | - |
-| `public_flow_cleanup_interval` | `integer` | ✅ Yes | - |
-| `public_flow_expiration` | `integer` | ✅ Yes | - |
-| `webhook_auth_enable` | `boolean` | ✅ Yes | - |
-| `default_folder_name` | `string` | ✅ Yes | - |
-| `hide_getting_started_progress` | `boolean` | ✅ Yes | - |
+| `max_file_size_upload` | integer | ✅ Yes | - |
+| `event_delivery` | string | ✅ Yes | - |
+| `voice_mode_available` | boolean | ✅ Yes | - |
+| `frontend_timeout` | integer | ✅ Yes | - |
+| `type` | string | ❌ No | - |
+| `feature_flags` | object | ✅ Yes | - |
+| `serialization_max_items_length` | integer | ✅ Yes | - |
+| `serialization_max_text_length` | integer | ✅ Yes | - |
+| `auto_saving` | boolean | ✅ Yes | - |
+| `auto_saving_interval` | integer | ✅ Yes | - |
+| `health_check_max_retries` | integer | ✅ Yes | - |
+| `webhook_polling_interval` | integer | ✅ Yes | - |
+| `public_flow_cleanup_interval` | integer | ✅ Yes | - |
+| `public_flow_expiration` | integer | ✅ Yes | - |
+| `webhook_auth_enable` | boolean | ✅ Yes | - |
+| `default_folder_name` | string | ✅ Yes | - |
+| `hide_getting_started_progress` | boolean | ✅ Yes | - |
 
 
 **Required fields:** `max_file_size_upload`, `event_delivery`, `voice_mode_available`, `frontend_timeout`, `feature_flags`, `serialization_max_items_length`, `serialization_max_text_length`, `auto_saving`, `auto_saving_interval`, `health_check_max_retries`, `webhook_polling_interval`, `public_flow_cleanup_interval`, `public_flow_expiration`, `webhook_auth_enable`, `default_folder_name`, `hide_getting_started_progress`
@@ -360,15 +343,14 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `title` | `string` | ✅ Yes | - |
-| `contents` | `array` [object] | ✅ Yes | - |
-| `allow_markdown` | `boolean` | ❌ No | - |
-| `media_url` | object | ❌ No | - |
+| `title` | string | ✅ Yes | - |
+| `contents` | array[object] | ✅ Yes | - |
+| `allow_markdown` | boolean | ❌ No | - |
+| `media_url` | array[string] | ❌ No | - |
 
 
 **Required fields:** `title`, `contents`
@@ -384,13 +366,11 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 
 
-
 ---
 ## `EventDeliveryType`
 
 
 **Type:** `string`
-
 
 
 
@@ -401,12 +381,11 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `mvp_components` | `boolean` | ❌ No | - |
+| `mvp_components` | boolean | ❌ No | - |
 
 
 
@@ -417,31 +396,30 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `name` | `string` | ✅ Yes | - |
-| `description` | object | ❌ No | - |
-| `icon` | object | ❌ No | - |
-| `icon_bg_color` | object | ❌ No | - |
-| `gradient` | object | ❌ No | - |
+| `name` | string | ✅ Yes | - |
+| `description` | string | ❌ No | - |
+| `icon` | string | ❌ No | - |
+| `icon_bg_color` | string | ❌ No | - |
+| `gradient` | string | ❌ No | - |
 | `data` | object | ❌ No | - |
-| `is_component` | object | ❌ No | - |
-| `updated_at` | object | ❌ No | - |
-| `webhook` | object | ❌ No | Can be used on the webhook endpoint |
-| `endpoint_name` | object | ❌ No | - |
-| `tags` | object | ❌ No | - |
-| `locked` | object | ❌ No | - |
-| `mcp_enabled` | object | ❌ No | Can be exposed in the MCP server |
-| `action_name` | object | ❌ No | The name of the action associated with the flow |
-| `action_description` | object | ❌ No | The description of the action associated with the flow |
-| `access_type` | `string` | ❌ No | - |
-| `id` | `string` (uuid) | ❌ No | - |
-| `user_id` | object | ✅ Yes | - |
-| `folder_id` | object | ❌ No | - |
-| `fs_path` | object | ❌ No | - |
+| `is_component` | boolean | ❌ No | - |
+| `updated_at` | string (date-time) | ❌ No | - |
+| `webhook` | boolean | ❌ No | Can be used on the webhook endpoint |
+| `endpoint_name` | string | ❌ No | - |
+| `tags` | array[string] | ❌ No | - |
+| `locked` | boolean | ❌ No | - |
+| `mcp_enabled` | boolean | ❌ No | Can be exposed in the MCP server |
+| `action_name` | string | ❌ No | The name of the action associated with the flow |
+| `action_description` | string | ❌ No | The description of the action associated with the flow |
+| `access_type` | string | ❌ No | - |
+| `id` | string (uuid) | ❌ No | - |
+| `user_id` | string (uuid) | ✅ Yes | - |
+| `folder_id` | string (uuid) | ❌ No | - |
+| `fs_path` | string | ❌ No | - |
 
 
 **Required fields:** `name`, `user_id`
@@ -454,30 +432,29 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `name` | `string` | ✅ Yes | - |
-| `description` | object | ❌ No | - |
-| `icon` | object | ❌ No | - |
-| `icon_bg_color` | object | ❌ No | - |
-| `gradient` | object | ❌ No | - |
+| `name` | string | ✅ Yes | - |
+| `description` | string | ❌ No | - |
+| `icon` | string | ❌ No | - |
+| `icon_bg_color` | string | ❌ No | - |
+| `gradient` | string | ❌ No | - |
 | `data` | object | ❌ No | - |
-| `is_component` | object | ❌ No | - |
-| `updated_at` | object | ❌ No | - |
-| `webhook` | object | ❌ No | Can be used on the webhook endpoint |
-| `endpoint_name` | object | ❌ No | - |
-| `tags` | object | ❌ No | - |
-| `locked` | object | ❌ No | - |
-| `mcp_enabled` | object | ❌ No | Can be exposed in the MCP server |
-| `action_name` | object | ❌ No | The name of the action associated with the flow |
-| `action_description` | object | ❌ No | The description of the action associated with the flow |
-| `access_type` | `string` | ❌ No | - |
-| `user_id` | object | ❌ No | - |
-| `folder_id` | object | ❌ No | - |
-| `fs_path` | object | ❌ No | - |
+| `is_component` | boolean | ❌ No | - |
+| `updated_at` | string (date-time) | ❌ No | - |
+| `webhook` | boolean | ❌ No | Can be used on the webhook endpoint |
+| `endpoint_name` | string | ❌ No | - |
+| `tags` | array[string] | ❌ No | - |
+| `locked` | boolean | ❌ No | - |
+| `mcp_enabled` | boolean | ❌ No | Can be exposed in the MCP server |
+| `action_name` | string | ❌ No | The name of the action associated with the flow |
+| `action_description` | string | ❌ No | The description of the action associated with the flow |
+| `access_type` | string | ❌ No | - |
+| `user_id` | string (uuid) | ❌ No | - |
+| `folder_id` | string (uuid) | ❌ No | - |
+| `fs_path` | string | ❌ No | - |
 
 
 **Required fields:** `name`
@@ -490,13 +467,12 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `nodes` | `array` [object] | ✅ Yes | - |
-| `edges` | `array` [object] | ✅ Yes | - |
+| `nodes` | array[object] | ✅ Yes | - |
+| `edges` | array[object] | ✅ Yes | - |
 | `viewport` | object | ❌ No | - |
 
 
@@ -512,23 +488,22 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `id` | `string` (uuid) | ✅ Yes | Unique identifier for the flow |
-| `name` | `string` | ✅ Yes | The name of the flow |
-| `folder_id` | object | ❌ No | The ID of the folder containing the flow. None if not associated with a folder |
-| `is_component` | object | ❌ No | Flag indicating whether the flow is a component |
-| `endpoint_name` | object | ❌ No | The name of the endpoint associated with this flow |
-| `description` | object | ❌ No | A description of the flow |
+| `id` | string (uuid) | ✅ Yes | Unique identifier for the flow |
+| `name` | string | ✅ Yes | The name of the flow |
+| `folder_id` | string (uuid) | ❌ No | The ID of the folder containing the flow. None if not associated with a folder |
+| `is_component` | boolean | ❌ No | Flag indicating whether the flow is a component |
+| `endpoint_name` | string | ❌ No | The name of the endpoint associated with this flow |
+| `description` | string | ❌ No | A description of the flow |
 | `data` | object | ❌ No | The data of the component, if is_component is True |
-| `access_type` | object | ❌ No | The access type of the flow |
-| `tags` | object | ❌ No | The tags of the flow |
-| `mcp_enabled` | object | ❌ No | Flag indicating whether the flow is exposed in the MCP server |
-| `action_name` | object | ❌ No | The name of the action associated with the flow |
-| `action_description` | object | ❌ No | The description of the action associated with the flow |
+| `access_type` | string | ❌ No | The access type of the flow |
+| `tags` | array[string] | ❌ No | The tags of the flow |
+| `mcp_enabled` | boolean | ❌ No | Flag indicating whether the flow is exposed in the MCP server |
+| `action_name` | string | ❌ No | The name of the action associated with the flow |
+| `action_description` | string | ❌ No | The description of the action associated with the flow |
 
 
 **Required fields:** `id`, `name`
@@ -541,12 +516,11 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `flows` | `array` [object] | ✅ Yes | - |
+| `flows` | array[object] | ✅ Yes | - |
 
 
 **Required fields:** `flows`
@@ -559,30 +533,29 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `name` | `string` | ✅ Yes | - |
-| `description` | object | ❌ No | - |
-| `icon` | object | ❌ No | - |
-| `icon_bg_color` | object | ❌ No | - |
-| `gradient` | object | ❌ No | - |
+| `name` | string | ✅ Yes | - |
+| `description` | string | ❌ No | - |
+| `icon` | string | ❌ No | - |
+| `icon_bg_color` | string | ❌ No | - |
+| `gradient` | string | ❌ No | - |
 | `data` | object | ❌ No | - |
-| `is_component` | object | ❌ No | - |
-| `updated_at` | object | ❌ No | - |
-| `webhook` | object | ❌ No | Can be used on the webhook endpoint |
-| `endpoint_name` | object | ❌ No | - |
-| `tags` | object | ❌ No | The tags of the flow |
-| `locked` | object | ❌ No | - |
-| `mcp_enabled` | object | ❌ No | Can be exposed in the MCP server |
-| `action_name` | object | ❌ No | The name of the action associated with the flow |
-| `action_description` | object | ❌ No | The description of the action associated with the flow |
-| `access_type` | `string` | ❌ No | - |
-| `id` | `string` (uuid) | ✅ Yes | - |
-| `user_id` | object | ✅ Yes | - |
-| `folder_id` | object | ✅ Yes | - |
+| `is_component` | boolean | ❌ No | - |
+| `updated_at` | string (date-time) | ❌ No | - |
+| `webhook` | boolean | ❌ No | Can be used on the webhook endpoint |
+| `endpoint_name` | string | ❌ No | - |
+| `tags` | array[string] | ❌ No | The tags of the flow |
+| `locked` | boolean | ❌ No | - |
+| `mcp_enabled` | boolean | ❌ No | Can be exposed in the MCP server |
+| `action_name` | string | ❌ No | The name of the action associated with the flow |
+| `action_description` | string | ❌ No | The description of the action associated with the flow |
+| `access_type` | string | ❌ No | - |
+| `id` | string (uuid) | ✅ Yes | - |
+| `user_id` | string (uuid) | ✅ Yes | - |
+| `folder_id` | string (uuid) | ✅ Yes | - |
 
 
 **Required fields:** `name`, `id`, `user_id`, `folder_id`
@@ -595,22 +568,21 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `name` | object | ❌ No | - |
-| `description` | object | ❌ No | - |
+| `name` | string | ❌ No | - |
+| `description` | string | ❌ No | - |
 | `data` | object | ❌ No | - |
-| `folder_id` | object | ❌ No | - |
-| `endpoint_name` | object | ❌ No | - |
-| `mcp_enabled` | object | ❌ No | - |
-| `locked` | object | ❌ No | - |
-| `action_name` | object | ❌ No | - |
-| `action_description` | object | ❌ No | - |
-| `access_type` | object | ❌ No | - |
-| `fs_path` | object | ❌ No | - |
+| `folder_id` | string (uuid) | ❌ No | - |
+| `endpoint_name` | string | ❌ No | - |
+| `mcp_enabled` | boolean | ❌ No | - |
+| `locked` | boolean | ❌ No | - |
+| `action_name` | string | ❌ No | - |
+| `action_description` | string | ❌ No | - |
+| `access_type` | string | ❌ No | - |
+| `fs_path` | string | ❌ No | - |
 
 
 
@@ -621,16 +593,15 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `name` | `string` | ✅ Yes | - |
-| `description` | object | ❌ No | - |
+| `name` | string | ✅ Yes | - |
+| `description` | string | ❌ No | - |
 | `auth_settings` | object | ❌ No | Authentication settings for the folder/project |
-| `components_list` | object | ❌ No | - |
-| `flows_list` | object | ❌ No | - |
+| `components_list` | array[string] | ❌ No | - |
+| `flows_list` | array[string] | ❌ No | - |
 
 
 **Required fields:** `name`
@@ -643,16 +614,15 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `name` | `string` | ✅ Yes | - |
-| `description` | object | ❌ No | - |
+| `name` | string | ✅ Yes | - |
+| `description` | string | ❌ No | - |
 | `auth_settings` | object | ❌ No | Authentication settings for the folder/project |
-| `id` | `string` (uuid) | ✅ Yes | - |
-| `parent_id` | object | ✅ Yes | - |
+| `id` | string (uuid) | ✅ Yes | - |
+| `parent_id` | string (uuid) | ✅ Yes | - |
 
 
 **Required fields:** `name`, `id`, `parent_id`
@@ -665,17 +635,16 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `name` | `string` | ✅ Yes | - |
-| `description` | object | ❌ No | - |
+| `name` | string | ✅ Yes | - |
+| `description` | string | ❌ No | - |
 | `auth_settings` | object | ❌ No | Authentication settings for the folder/project |
-| `id` | `string` (uuid) | ✅ Yes | - |
-| `parent_id` | object | ✅ Yes | - |
-| `flows` | `array` [object] | ❌ No | - |
+| `id` | string (uuid) | ✅ Yes | - |
+| `parent_id` | string (uuid) | ✅ Yes | - |
+| `flows` | array[object] | ❌ No | - |
 
 
 **Required fields:** `name`, `id`, `parent_id`
@@ -688,16 +657,15 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `name` | object | ❌ No | - |
-| `description` | object | ❌ No | - |
-| `parent_id` | object | ❌ No | - |
-| `components` | `array` [string] | ❌ No | - |
-| `flows` | `array` [string] | ❌ No | - |
+| `name` | string | ❌ No | - |
+| `description` | string | ❌ No | - |
+| `parent_id` | string (uuid) | ❌ No | - |
+| `components` | array[string] | ❌ No | - |
+| `flows` | array[string] | ❌ No | - |
 | `auth_settings` | object | ❌ No | - |
 
 
@@ -709,13 +677,12 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `folder` | `object` | ✅ Yes | - |
-| `flows` | `object` | ✅ Yes | - |
+| `folder` | object | ✅ Yes | - |
+| `flows` | object | ✅ Yes | - |
 
 
 **Required fields:** `folder`, `flows`
@@ -728,13 +695,12 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `nodes` | `array` [object] | ✅ Yes | - |
-| `edges` | `array` [object] | ✅ Yes | - |
+| `nodes` | array[object] | ✅ Yes | - |
+| `edges` | array[object] | ✅ Yes | - |
 | `viewport` | object | ❌ No | - |
 
 
@@ -748,16 +714,15 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `data` | `object` | ✅ Yes | - |
-| `is_component` | object | ❌ No | - |
-| `name` | object | ❌ No | - |
-| `description` | object | ❌ No | - |
-| `endpoint_name` | object | ❌ No | - |
+| `data` | object | ✅ Yes | - |
+| `is_component` | boolean | ❌ No | - |
+| `name` | string | ❌ No | - |
+| `description` | string | ❌ No | - |
+| `endpoint_name` | string | ❌ No | - |
 
 
 **Required fields:** `data`
@@ -770,12 +735,11 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `detail` | `array` [object] | ❌ No | - |
+| `detail` | array[object] | ❌ No | - |
 
 
 
@@ -786,14 +750,13 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `status` | `string` | ❌ No | - |
-| `chat` | `string` | ❌ No | - |
-| `db` | `string` | ❌ No | - |
+| `status` | string | ❌ No | - |
+| `chat` | string | ❌ No | - |
+| `db` | string | ❌ No | - |
 
 
 
@@ -804,16 +767,15 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `components` | object | ❌ No | - |
-| `input_value` | object | ❌ No | - |
-| `session` | object | ❌ No | - |
-| `type` | object | ❌ No | Defines on which components the input value should be applied. &#x27;any&#x27; applies to all input components. |
-| `client_request_time` | object | ❌ No | Client-side timestamp in milliseconds when the request was initiated. Used to calculate accurate end-to-end duration. |
+| `components` | array[string] | ❌ No | - |
+| `input_value` | string | ❌ No | - |
+| `session` | string | ❌ No | - |
+| `type` | string | ❌ No | Defines on which components the input value should be applied. &#x27;any&#x27; applies to all input components. |
+| `client_request_time` | integer | ❌ No | Client-side timestamp in milliseconds when the request was initiated. Used to calculate accurate end-to-end duration. |
 
 
 
@@ -827,20 +789,18 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 
 
-
 ---
 ## `MCPInstallRequest`
 
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `client` | `string` | ✅ Yes | - |
-| `transport` | object | ❌ No | - |
+| `client` | string | ✅ Yes | - |
+| `transport` | string | ❌ No | - |
 
 
 **Required fields:** `client`
@@ -855,13 +815,12 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `settings` | `array` [object] | ✅ Yes | - |
-| `auth_settings` | object | ❌ No | - |
+| `settings` | array[object] | ✅ Yes | - |
+| `auth_settings` | object | ❌ No | Model representing authentication settings for MCP. |
 
 
 **Required fields:** `settings`
@@ -876,16 +835,15 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `command` | object | ❌ No | - |
-| `args` | object | ❌ No | - |
+| `command` | string | ❌ No | - |
+| `args` | array[string] | ❌ No | - |
 | `env` | object | ❌ No | - |
 | `headers` | object | ❌ No | - |
-| `url` | object | ❌ No | - |
+| `url` | string | ❌ No | - |
 
 
 
@@ -898,17 +856,16 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `id` | `string` (uuid) | ✅ Yes | - |
-| `mcp_enabled` | object | ❌ No | - |
-| `action_name` | object | ❌ No | - |
-| `action_description` | object | ❌ No | - |
-| `name` | object | ❌ No | - |
-| `description` | object | ❌ No | - |
+| `id` | string (uuid) | ✅ Yes | - |
+| `mcp_enabled` | boolean | ❌ No | - |
+| `action_name` | string | ❌ No | - |
+| `action_description` | string | ❌ No | - |
+| `name` | string | ❌ No | - |
+| `description` | string | ❌ No | - |
 
 
 **Required fields:** `id`
@@ -924,32 +881,30 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 
 
-
 ---
 ## `MessageRead`
 
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `timestamp` | `string` (date-time) | ❌ No | - |
-| `sender` | `string` | ✅ Yes | - |
-| `sender_name` | `string` | ✅ Yes | - |
-| `session_id` | `string` | ✅ Yes | - |
-| `context_id` | object | ❌ No | - |
-| `text` | `string` | ✅ Yes | - |
-| `files` | `array` [string] | ❌ No | - |
-| `error` | `boolean` | ❌ No | - |
-| `edit` | `boolean` | ❌ No | - |
-| `properties` | `object` | ❌ No | - |
-| `category` | `string` | ❌ No | - |
-| `content_blocks` | `array` [object] | ❌ No | - |
-| `id` | `string` (uuid) | ✅ Yes | - |
-| `flow_id` | object | ✅ Yes | - |
+| `timestamp` | string (date-time) | ❌ No | - |
+| `sender` | string | ✅ Yes | - |
+| `sender_name` | string | ✅ Yes | - |
+| `session_id` | string | ✅ Yes | - |
+| `context_id` | string | ❌ No | - |
+| `text` | string | ✅ Yes | - |
+| `files` | array[string] | ❌ No | - |
+| `error` | boolean | ❌ No | - |
+| `edit` | boolean | ❌ No | - |
+| `properties` | object | ❌ No | - |
+| `category` | string | ❌ No | - |
+| `content_blocks` | array[object] | ❌ No | - |
+| `id` | string (uuid) | ✅ Yes | - |
+| `flow_id` | string (uuid) | ✅ Yes | - |
 
 
 **Required fields:** `sender`, `sender_name`, `session_id`, `text`, `id`, `flow_id`
@@ -962,25 +917,24 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `id` | object | ❌ No | - |
-| `flow_id` | object | ❌ No | - |
-| `timestamp` | `string` (date-time) | ❌ No | - |
-| `sender` | `string` | ✅ Yes | - |
-| `sender_name` | `string` | ✅ Yes | - |
-| `session_id` | `string` | ✅ Yes | - |
-| `context_id` | object | ❌ No | - |
-| `text` | `string` | ✅ Yes | - |
-| `files` | `array` [string] | ❌ No | - |
-| `edit` | `boolean` | ✅ Yes | - |
-| `duration` | object | ❌ No | - |
+| `id` | string | ❌ No | - |
+| `flow_id` | string (uuid) | ❌ No | - |
+| `timestamp` | string (date-time) | ❌ No | - |
+| `sender` | string | ✅ Yes | - |
+| `sender_name` | string | ✅ Yes | - |
+| `session_id` | string | ✅ Yes | - |
+| `context_id` | string | ❌ No | - |
+| `text` | string | ✅ Yes | - |
+| `files` | array[string] | ❌ No | - |
+| `edit` | boolean | ✅ Yes | - |
+| `duration` | number | ❌ No | - |
 | `properties` | object | ❌ No | - |
-| `category` | object | ❌ No | - |
-| `content_blocks` | object | ❌ No | - |
+| `category` | string | ❌ No | - |
+| `content_blocks` | array[object] | ❌ No | - |
 
 
 **Required fields:** `sender`, `sender_name`, `session_id`, `text`, `edit`
@@ -993,19 +947,18 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `text` | object | ❌ No | - |
-| `sender` | object | ❌ No | - |
-| `sender_name` | object | ❌ No | - |
-| `session_id` | object | ❌ No | - |
-| `context_id` | object | ❌ No | - |
-| `files` | object | ❌ No | - |
-| `edit` | object | ❌ No | - |
-| `error` | object | ❌ No | - |
+| `text` | string | ❌ No | - |
+| `sender` | string | ❌ No | - |
+| `sender_name` | string | ❌ No | - |
+| `session_id` | string | ❌ No | - |
+| `context_id` | string | ❌ No | - |
+| `files` | array[string] | ❌ No | - |
+| `edit` | boolean | ❌ No | - |
+| `error` | boolean | ❌ No | - |
 | `properties` | object | ❌ No | - |
 
 
@@ -1019,18 +972,17 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `model` | `string` | ✅ Yes | The flow ID to execute (used instead of OpenAI model) |
-| `input` | `string` | ✅ Yes | The input text to process |
-| `stream` | `boolean` | ❌ No | Whether to stream the response |
-| `background` | `boolean` | ❌ No | Whether to process in background |
-| `tools` | object | ❌ No | Tools are not supported yet |
-| `previous_response_id` | object | ❌ No | ID of previous response to continue conversation |
-| `include` | object | ❌ No | Additional response data to include, e.g., [&#x27;tool_call.results&#x27;] |
+| `model` | string | ✅ Yes | The flow ID to execute (used instead of OpenAI model) |
+| `input` | string | ✅ Yes | The input text to process |
+| `stream` | boolean | ❌ No | Whether to stream the response |
+| `background` | boolean | ❌ No | Whether to process in background |
+| `tools` | array[object] | ❌ No | Tools are not supported yet |
+| `previous_response_id` | string | ❌ No | ID of previous response to continue conversation |
+| `include` | array[string] | ❌ No | Additional response data to include, e.g., [&#x27;tool_call.results&#x27;] |
 
 
 **Required fields:** `model`, `input`
@@ -1043,16 +995,15 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `items` | `array` [object] | ✅ Yes | - |
-| `total` | `integer` | ✅ Yes | - |
-| `page` | `integer` | ✅ Yes | - |
-| `size` | `integer` | ✅ Yes | - |
-| `pages` | `integer` | ✅ Yes | - |
+| `items` | array[object] | ✅ Yes | - |
+| `total` | integer | ✅ Yes | - |
+| `page` | integer | ✅ Yes | - |
+| `size` | integer | ✅ Yes | - |
+| `pages` | integer | ✅ Yes | - |
 
 
 **Required fields:** `items`, `total`, `page`, `size`, `pages`
@@ -1065,16 +1016,15 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `items` | `array` [object] | ✅ Yes | - |
-| `total` | `integer` | ✅ Yes | - |
-| `page` | `integer` | ✅ Yes | - |
-| `size` | `integer` | ✅ Yes | - |
-| `pages` | `integer` | ✅ Yes | - |
+| `items` | array[object] | ✅ Yes | - |
+| `total` | integer | ✅ Yes | - |
+| `page` | integer | ✅ Yes | - |
+| `size` | integer | ✅ Yes | - |
+| `pages` | integer | ✅ Yes | - |
 
 
 **Required fields:** `items`, `total`, `page`, `size`, `pages`
@@ -1087,16 +1037,15 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `items` | `array` [object] | ✅ Yes | - |
-| `total` | `integer` | ✅ Yes | - |
-| `page` | `integer` | ✅ Yes | - |
-| `size` | `integer` | ✅ Yes | - |
-| `pages` | `integer` | ✅ Yes | - |
+| `items` | array[object] | ✅ Yes | - |
+| `total` | integer | ✅ Yes | - |
+| `page` | integer | ✅ Yes | - |
+| `size` | integer | ✅ Yes | - |
+| `pages` | integer | ✅ Yes | - |
 
 
 **Required fields:** `items`, `total`, `page`, `size`, `pages`
@@ -1109,22 +1058,21 @@ The &#x27;type&#x27; field is a discriminator to distinguish from PublicConfigRe
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `text_color` | object | ❌ No | - |
-| `background_color` | object | ❌ No | - |
-| `edited` | `boolean` | ❌ No | - |
-| `source` | `object` | ❌ No | - |
-| `icon` | object | ❌ No | - |
-| `allow_markdown` | `boolean` | ❌ No | - |
-| `positive_feedback` | object | ❌ No | - |
-| `state` | `string` | ❌ No | - |
-| `targets` | `array` [] | ❌ No | - |
-| `usage` | object | ❌ No | - |
-| `build_duration` | object | ❌ No | - |
+| `text_color` | string | ❌ No | - |
+| `background_color` | string | ❌ No | - |
+| `edited` | boolean | ❌ No | - |
+| `source` | object | ❌ No | - |
+| `icon` | string | ❌ No | - |
+| `allow_markdown` | boolean | ❌ No | - |
+| `positive_feedback` | boolean | ❌ No | - |
+| `state` | string | ❌ No | - |
+| `targets` | array[object] | ❌ No | - |
+| `usage` | object | ❌ No | Token usage information from LLM responses. |
+| `build_duration` | number | ❌ No | - |
 
 
 
@@ -1140,16 +1088,15 @@ The &#x27;type&#x27; field is a discriminator to distinguish from full ConfigRes
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `max_file_size_upload` | `integer` | ✅ Yes | - |
-| `event_delivery` | `string` | ✅ Yes | - |
-| `voice_mode_available` | `boolean` | ✅ Yes | - |
-| `frontend_timeout` | `integer` | ✅ Yes | - |
-| `type` | `string` | ❌ No | - |
+| `max_file_size_upload` | integer | ✅ Yes | - |
+| `event_delivery` | string | ✅ Yes | - |
+| `voice_mode_available` | boolean | ✅ Yes | - |
+| `frontend_timeout` | integer | ✅ Yes | - |
+| `type` | string | ❌ No | - |
 
 
 **Required fields:** `max_file_size_upload`, `event_delivery`, `voice_mode_available`, `frontend_timeout`
@@ -1162,7 +1109,6 @@ The &#x27;type&#x27; field is a discriminator to distinguish from full ConfigRes
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
@@ -1171,12 +1117,12 @@ The &#x27;type&#x27; field is a discriminator to distinguish from full ConfigRes
 | `artifacts` | object | ❌ No | - |
 | `outputs` | object | ❌ No | - |
 | `logs` | object | ❌ No | - |
-| `messages` | object | ❌ No | - |
-| `timedelta` | object | ❌ No | - |
-| `duration` | object | ❌ No | - |
-| `component_display_name` | object | ❌ No | - |
-| `component_id` | object | ❌ No | - |
-| `used_frozen_result` | object | ❌ No | - |
+| `messages` | array[object] | ❌ No | - |
+| `timedelta` | number | ❌ No | - |
+| `duration` | string | ❌ No | - |
+| `component_display_name` | string | ❌ No | - |
+| `component_id` | string | ❌ No | - |
+| `used_frozen_result` | boolean | ❌ No | - |
 
 
 
@@ -1187,13 +1133,12 @@ The &#x27;type&#x27; field is a discriminator to distinguish from full ConfigRes
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `inputs` | `object` | ❌ No | - |
-| `outputs` | `array` [] | ❌ No | - |
+| `inputs` | object | ❌ No | - |
+| `outputs` | array[object] | ❌ No | - |
 
 
 
@@ -1206,13 +1151,12 @@ The &#x27;type&#x27; field is a discriminator to distinguish from full ConfigRes
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `outputs` | object | ❌ No | - |
-| `session_id` | object | ❌ No | - |
+| `outputs` | array[object] | ❌ No | - |
+| `session_id` | string | ❌ No | - |
 
 
 
@@ -1223,17 +1167,16 @@ The &#x27;type&#x27; field is a discriminator to distinguish from full ConfigRes
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `input_value` | object | ❌ No | The input value |
-| `input_type` | object | ❌ No | The input type |
-| `output_type` | object | ❌ No | The output type |
-| `output_component` | object | ❌ No | If there are multiple output components, you can specify the component to get the output from. |
-| `tweaks` | object | ❌ No | The tweaks |
-| `session_id` | object | ❌ No | The session id |
+| `input_value` | string | ❌ No | The input value |
+| `input_type` | string | ❌ No | The input type |
+| `output_type` | string | ❌ No | The output type |
+| `output_component` | string | ❌ No | If there are multiple output components, you can specify the component to get the output from. |
+| `tweaks` | object | ❌ No | A dictionary of tweaks to adjust the flow&#x27;s execution. Allows customizing flow behavior dynamically. All tweaks are overridden by the input values. |
+| `session_id` | string | ❌ No | The session id |
 
 
 
@@ -1244,14 +1187,13 @@ The &#x27;type&#x27; field is a discriminator to distinguish from full ConfigRes
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `id` | object | ❌ No | The id of the source component. |
-| `display_name` | object | ❌ No | The display name of the source component. |
-| `source` | object | ❌ No | The source of the message. Normally used to display the model name (e.g. &#x27;gpt-4o&#x27;) |
+| `id` | string | ❌ No | The id of the source component. |
+| `display_name` | string | ❌ No | The display name of the source component. |
+| `source` | string | ❌ No | The source of the message. Normally used to display the model name (e.g. &#x27;gpt-4o&#x27;) |
 
 
 
@@ -1266,28 +1208,27 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `id` | `string` (uuid) | ✅ Yes | - |
-| `name` | `string` | ✅ Yes | - |
-| `type` | `string` | ✅ Yes | Types of spans that can be recorded. |
-| `status` | `string` | ✅ Yes | OpenTelemetry status codes.
+| `id` | string (uuid) | ✅ Yes | - |
+| `name` | string | ✅ Yes | - |
+| `type` | string | ✅ Yes | Types of spans that can be recorded. |
+| `status` | string | ✅ Yes | OpenTelemetry status codes.
 
 - UNSET: Default status, span has not ended yet
 - OK: Span completed successfully
 - ERROR: Span completed with an error |
-| `startTime` | object | ✅ Yes | - |
-| `endTime` | object | ✅ Yes | - |
-| `latencyMs` | `integer` | ✅ Yes | - |
+| `startTime` | string (date-time) | ✅ Yes | - |
+| `endTime` | string (date-time) | ✅ Yes | - |
+| `latencyMs` | integer | ✅ Yes | - |
 | `inputs` | object | ✅ Yes | - |
 | `outputs` | object | ✅ Yes | - |
-| `error` | object | ✅ Yes | - |
-| `modelName` | object | ✅ Yes | - |
+| `error` | string | ✅ Yes | - |
+| `modelName` | string | ✅ Yes | - |
 | `tokenUsage` | object | ✅ Yes | - |
-| `children` | `array` [] | ❌ No | - |
+| `children` | array[object] | ❌ No | - |
 
 
 **Required fields:** `id`, `name`, `type`, `status`, `startTime`, `endTime`, `latencyMs`, `inputs`, `outputs`, `error`, `modelName`, `tokenUsage`
@@ -1309,7 +1250,6 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 
 
-
 ---
 ## `SpanType`
 
@@ -1317,7 +1257,6 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 
 **Type:** `string`
-
 
 
 
@@ -1331,13 +1270,11 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 
 
-
 ---
 ## `ToolContent`
 
 
 **Type:** `object`
-
 
 
 
@@ -1350,14 +1287,13 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `traces` | `array` [object] | ✅ Yes | - |
-| `total` | `integer` | ✅ Yes | - |
-| `pages` | `integer` | ✅ Yes | - |
+| `traces` | array[object] | ✅ Yes | - |
+| `total` | integer | ✅ Yes | - |
+| `pages` | integer | ✅ Yes | - |
 
 
 **Required fields:** `traces`, `total`, `pages`
@@ -1374,27 +1310,26 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `id` | `string` (uuid) | ✅ Yes | - |
-| `name` | `string` | ✅ Yes | - |
-| `status` | `string` | ✅ Yes | OpenTelemetry status codes.
+| `id` | string (uuid) | ✅ Yes | - |
+| `name` | string | ✅ Yes | - |
+| `status` | string | ✅ Yes | OpenTelemetry status codes.
 
 - UNSET: Default status, span has not ended yet
 - OK: Span completed successfully
 - ERROR: Span completed with an error |
-| `startTime` | object | ✅ Yes | - |
-| `endTime` | object | ✅ Yes | - |
-| `totalLatencyMs` | `integer` | ✅ Yes | - |
-| `totalTokens` | `integer` | ✅ Yes | - |
-| `flowId` | `string` (uuid) | ✅ Yes | - |
-| `sessionId` | `string` | ✅ Yes | - |
+| `startTime` | string (date-time) | ✅ Yes | - |
+| `endTime` | string (date-time) | ✅ Yes | - |
+| `totalLatencyMs` | integer | ✅ Yes | - |
+| `totalTokens` | integer | ✅ Yes | - |
+| `flowId` | string (uuid) | ✅ Yes | - |
+| `sessionId` | string | ✅ Yes | - |
 | `input` | object | ❌ No | - |
 | `output` | object | ❌ No | - |
-| `spans` | `array` [] | ❌ No | - |
+| `spans` | array[object] | ❌ No | - |
 
 
 **Required fields:** `id`, `name`, `status`, `startTime`, `endTime`, `totalLatencyMs`, `totalTokens`, `flowId`, `sessionId`
@@ -1411,23 +1346,22 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `id` | `string` (uuid) | ✅ Yes | - |
-| `name` | `string` | ✅ Yes | - |
-| `status` | `string` | ✅ Yes | OpenTelemetry status codes.
+| `id` | string (uuid) | ✅ Yes | - |
+| `name` | string | ✅ Yes | - |
+| `status` | string | ✅ Yes | OpenTelemetry status codes.
 
 - UNSET: Default status, span has not ended yet
 - OK: Span completed successfully
 - ERROR: Span completed with an error |
-| `startTime` | object | ✅ Yes | - |
-| `totalLatencyMs` | `integer` | ✅ Yes | - |
-| `totalTokens` | `integer` | ✅ Yes | - |
-| `flowId` | `string` (uuid) | ✅ Yes | - |
-| `sessionId` | `string` | ✅ Yes | - |
+| `startTime` | string (date-time) | ✅ Yes | - |
+| `totalLatencyMs` | integer | ✅ Yes | - |
+| `totalTokens` | integer | ✅ Yes | - |
+| `flowId` | string (uuid) | ✅ Yes | - |
+| `sessionId` | string | ✅ Yes | - |
 | `input` | object | ❌ No | - |
 | `output` | object | ❌ No | - |
 
@@ -1444,18 +1378,17 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `id` | `string` (uuid) | ✅ Yes | - |
-| `timestamp` | `string` (date-time) | ❌ No | - |
-| `vertex_id` | `string` | ✅ Yes | - |
-| `target_id` | object | ❌ No | - |
-| `inputs` | `object` | ❌ No | - |
-| `outputs` | `object` | ❌ No | - |
-| `status` | `string` | ✅ Yes | - |
+| `id` | string (uuid) | ✅ Yes | - |
+| `timestamp` | string (date-time) | ❌ No | - |
+| `vertex_id` | string | ✅ Yes | - |
+| `target_id` | string | ❌ No | - |
+| `inputs` | object | ❌ No | - |
+| `outputs` | object | ❌ No | - |
+| `status` | string | ✅ Yes | - |
 
 
 **Required fields:** `id`, `vertex_id`, `status`
@@ -1473,7 +1406,6 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 
 
-
 ---
 ## `Usage`
 
@@ -1482,14 +1414,13 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `input_tokens` | object | ❌ No | - |
-| `output_tokens` | object | ❌ No | - |
-| `total_tokens` | object | ❌ No | - |
+| `input_tokens` | integer | ❌ No | - |
+| `output_tokens` | integer | ❌ No | - |
+| `total_tokens` | integer | ❌ No | - |
 
 
 
@@ -1500,13 +1431,12 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `username` | `string` | ✅ Yes | - |
-| `password` | `string` | ✅ Yes | - |
+| `username` | string | ✅ Yes | - |
+| `password` | string | ✅ Yes | - |
 | `optins` | object | ❌ No | - |
 
 
@@ -1520,20 +1450,19 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `id` | `string` (uuid) | ❌ No | - |
-| `username` | `string` | ✅ Yes | - |
-| `profile_image` | object | ✅ Yes | - |
-| `store_api_key` | object | ✅ Yes | - |
-| `is_active` | `boolean` | ✅ Yes | - |
-| `is_superuser` | `boolean` | ✅ Yes | - |
-| `create_at` | `string` (date-time) | ✅ Yes | - |
-| `updated_at` | `string` (date-time) | ✅ Yes | - |
-| `last_login_at` | object | ✅ Yes | - |
+| `id` | string (uuid) | ❌ No | - |
+| `username` | string | ✅ Yes | - |
+| `profile_image` | string | ✅ Yes | - |
+| `store_api_key` | string | ✅ Yes | - |
+| `is_active` | boolean | ✅ Yes | - |
+| `is_superuser` | boolean | ✅ Yes | - |
+| `create_at` | string (date-time) | ✅ Yes | - |
+| `updated_at` | string (date-time) | ✅ Yes | - |
+| `last_login_at` | string (date-time) | ✅ Yes | - |
 | `optins` | object | ❌ No | - |
 
 
@@ -1547,17 +1476,16 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `username` | object | ❌ No | - |
-| `profile_image` | object | ❌ No | - |
-| `password` | object | ❌ No | - |
-| `is_active` | object | ❌ No | - |
-| `is_superuser` | object | ❌ No | - |
-| `last_login_at` | object | ❌ No | - |
+| `username` | string | ❌ No | - |
+| `profile_image` | string | ❌ No | - |
+| `password` | string | ❌ No | - |
+| `is_active` | boolean | ❌ No | - |
+| `is_superuser` | boolean | ❌ No | - |
+| `last_login_at` | string (date-time) | ❌ No | - |
 | `optins` | object | ❌ No | - |
 
 
@@ -1569,13 +1497,12 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `total_count` | `integer` | ✅ Yes | - |
-| `users` | `array` [object] | ✅ Yes | - |
+| `total_count` | integer | ✅ Yes | - |
+| `users` | array[object] | ✅ Yes | - |
 
 
 **Required fields:** `total_count`, `users`
@@ -1588,16 +1515,15 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `loc` | `array` [] | ✅ Yes | - |
-| `msg` | `string` | ✅ Yes | - |
-| `type` | `string` | ✅ Yes | - |
+| `loc` | array[string] | ✅ Yes | - |
+| `msg` | string | ✅ Yes | - |
+| `type` | string | ✅ Yes | - |
 | `input` | object | ❌ No | - |
-| `ctx` | `object` | ❌ No | - |
+| `ctx` | object | ❌ No | - |
 
 
 **Required fields:** `loc`, `msg`, `type`
@@ -1610,12 +1536,11 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `vertex_builds` | `object` | ✅ Yes | - |
+| `vertex_builds` | object | ✅ Yes | - |
 
 
 **Required fields:** `vertex_builds`
@@ -1628,20 +1553,19 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `timestamp` | `string` (date-time) | ❌ No | - |
-| `id` | `string` | ✅ Yes | - |
-| `data` | `object` | ❌ No | - |
-| `artifacts` | `object` | ❌ No | - |
-| `params` | `string` | ❌ No | - |
-| `valid` | `boolean` | ✅ Yes | - |
-| `flow_id` | `string` (uuid) | ✅ Yes | - |
-| `job_id` | object | ❌ No | - |
-| `build_id` | object | ❌ No | - |
+| `timestamp` | string (date-time) | ❌ No | - |
+| `id` | string | ✅ Yes | - |
+| `data` | object | ❌ No | - |
+| `artifacts` | object | ❌ No | - |
+| `params` | string | ❌ No | - |
+| `valid` | boolean | ✅ Yes | - |
+| `flow_id` | string (uuid) | ✅ Yes | - |
+| `job_id` | string (uuid) | ❌ No | - |
+| `build_id` | string (uuid) | ❌ No | - |
 
 
 **Required fields:** `id`, `valid`, `flow_id`
@@ -1654,14 +1578,13 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `x` | `number` | ✅ Yes | - |
-| `y` | `number` | ✅ Yes | - |
-| `zoom` | `number` | ✅ Yes | - |
+| `x` | number | ✅ Yes | - |
+| `y` | number | ✅ Yes | - |
+| `zoom` | number | ✅ Yes | - |
 
 
 **Required fields:** `x`, `y`, `zoom`
@@ -1676,14 +1599,13 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `background` | `boolean` | ❌ No | - |
-| `stream` | `boolean` | ❌ No | - |
-| `flow_id` | `string` | ✅ Yes | - |
+| `background` | boolean | ❌ No | - |
+| `stream` | boolean | ❌ No | - |
+| `flow_id` | string | ✅ Yes | - |
 | `inputs` | object | ❌ No | Component-specific inputs in flat format: &#x27;component_id.param_name&#x27;: value |
 
 
@@ -1699,12 +1621,11 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `job_id` | object | ✅ Yes | - |
+| `job_id` | string | ✅ Yes | - |
 
 
 **Required fields:** `job_id`
@@ -1719,13 +1640,12 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `job_id` | object | ✅ Yes | - |
-| `message` | object | ❌ No | - |
+| `job_id` | string | ✅ Yes | - |
+| `message` | string | ❌ No | - |
 
 
 **Required fields:** `job_id`
@@ -1740,16 +1660,15 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `id` | `string` (uuid) | ✅ Yes | - |
-| `name` | `string` | ✅ Yes | - |
-| `path` | `string` (path) | ✅ Yes | - |
-| `size` | `integer` | ✅ Yes | - |
-| `provider` | object | ❌ No | - |
+| `id` | string (uuid) | ✅ Yes | - |
+| `name` | string | ✅ Yes | - |
+| `path` | string (path) | ✅ Yes | - |
+| `size` | integer | ✅ Yes | - |
+| `provider` | string | ❌ No | - |
 
 
 **Required fields:** `id`, `name`, `path`, `size`
@@ -1764,13 +1683,12 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `flowId` | `string` | ✅ Yes | - |
-| `file_path` | `string` (path) | ✅ Yes | - |
+| `flowId` | string | ✅ Yes | - |
+| `file_path` | string (path) | ✅ Yes | - |
 
 
 **Required fields:** `flowId`, `file_path`
@@ -1783,19 +1701,18 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `id` | `string` (uuid) | ❌ No | - |
-| `user_id` | `string` (uuid) | ✅ Yes | - |
-| `name` | `string` | ✅ Yes | - |
-| `path` | `string` | ✅ Yes | - |
-| `size` | `integer` | ✅ Yes | - |
-| `provider` | object | ❌ No | - |
-| `created_at` | `string` (date-time) | ❌ No | - |
-| `updated_at` | `string` (date-time) | ❌ No | - |
+| `id` | string (uuid) | ❌ No | - |
+| `user_id` | string (uuid) | ✅ Yes | - |
+| `name` | string | ✅ Yes | - |
+| `path` | string | ✅ Yes | - |
+| `size` | integer | ✅ Yes | - |
+| `provider` | string | ❌ No | - |
+| `created_at` | string (date-time) | ❌ No | - |
+| `updated_at` | string (date-time) | ❌ No | - |
 
 
 **Required fields:** `user_id`, `name`, `path`, `size`
@@ -1810,14 +1727,13 @@ Serializes to camelCase JSON to match the frontend API contract.
 
 **Type:** `object`
 
-
 ### Properties
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `path` | `string` | ✅ Yes | - |
-| `name` | `string` | ✅ Yes | - |
-| `type` | `string` | ✅ Yes | - |
+| `path` | string | ✅ Yes | - |
+| `name` | string | ✅ Yes | - |
+| `type` | string | ✅ Yes | - |
 
 
 **Required fields:** `path`, `name`, `type`
