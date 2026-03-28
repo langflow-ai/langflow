@@ -100,6 +100,13 @@ the body of the response to display to the user.
 | `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
 
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `application/json` | ✅ |
+
 ### Request Body
 
 - **Required:** Yes
@@ -337,6 +344,13 @@ Install MCP server configuration for Cursor, Windsurf, or Claude.
 |------|-----------|------|----------|-------------|
 | `project_id` | **path** | string (uuid) | ✅ Yes | - |
 
+
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `application/json` | ✅ |
 
 ### Request Body
 
