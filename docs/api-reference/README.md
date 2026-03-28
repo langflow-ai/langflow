@@ -3,7 +3,7 @@
 # Langflow
 
 
-**Version:** `1.8.0` · **Generated:** 2026-03-28T03:34:26.926Z
+**Version:** `1.8.0` · **Generated:** 2026-03-28T03:52:07.720Z
 
 </div>
 
