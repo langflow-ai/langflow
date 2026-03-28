@@ -58,13 +58,11 @@ if TYPE_CHECKING:
 
 
 def _is_serializable(obj: Any) -> bool:
-    """Check if an object can be serialized by pydantic/JSON."""
+    """Check if an object can be round-trip serialized to JSON without data loss."""
     if obj is None:
         return True
     try:
-        import json
-
-        json.dumps(obj, default=str)
+        json.dumps(obj)
         return True
     except (TypeError, ValueError, OverflowError):
         return False
@@ -452,18 +450,22 @@ class Graph:
 
             job_service = get_job_service()
             job = await job_service.get_job_by_job_id(self._job_id)
-            if job and job.status.value == "paused":
+            if job and str(job.status.value) == "paused":
                 self.request_pause(
                     vertex_id=vertex_id,
                     reason="api-requested",
                     data={"source": "workflow-pause-api"},
                 )
+        except (OSError, ConnectionError):
+            # DB unreachable — don't block execution
+            await logger.adebug(f"Could not check pause signal for job {self._job_id}")
         except Exception:  # noqa: BLE001
-            # If we can't reach the DB, don't block execution
-            pass
+            await logger.awarning(f"Unexpected error checking pause signal for job {self._job_id}", exc_info=True)
 
     def _create_checkpoint(self, completed_layers: int) -> "GraphCheckpoint":
         """Capture current execution state as a checkpoint."""
+        from datetime import timedelta
+
         from lfx.services.checkpoint.schema import GraphCheckpoint, VertexCheckpointData
 
         vertex_results: dict[str, VertexCheckpointData] = {}
@@ -494,6 +496,7 @@ class Graph:
             paused_vertex_id=pause_info.get("vertex_id"),
             pause_reason=pause_info.get("reason", ""),
             pause_data=pause_info.get("data", {}),
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
         )
 
     def __apply_config(self, config: StartConfigDict) -> None:

@@ -791,10 +791,6 @@ async def pause_workflow(
             },
         )
 
-    # Write PAUSE signal to execution_signals table.
-    # The graph executor checks this table after each vertex build.
-    # TODO: Implement execution_signals table write once DB model is created.
-    # For now, update job status directly as a placeholder.
     await job_service.update_job_status(job_id, JobStatus.PAUSED)
 
     return WorkflowPauseResponse(
@@ -897,7 +893,7 @@ async def resume_workflow(
         run_coro_func=run_graph_internal,
         graph=resumed_graph,
         flow_id=checkpoint.flow_id,
-        session_id=checkpoint.session_id or None,
+        session_id=checkpoint.session_id,
         inputs=None,
         outputs=terminal_node_ids,
         stream=False,
