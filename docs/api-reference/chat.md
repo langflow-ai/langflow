@@ -47,6 +47,13 @@ Returns:
 | `event_delivery` | **query** | string | ❌ No | - |
 
 
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer `<token>` / API Key (`x-api-key`) | ✅ |
+| Content-Type | `application/json` | ✅ |
+
 ### Request Body
 
 - **Required:** No
@@ -221,6 +228,13 @@ Returns:
 | `flow_name` | **query** | string | ❌ No | - |
 | `event_delivery` | **query** | string | ❌ No | - |
 
+
+### Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Not required | - |
+| Content-Type | `application/json` | ✅ |
 
 ### Request Body
 
