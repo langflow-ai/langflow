@@ -57,6 +57,11 @@ Returns:
   | `inputs` | object | ❌ No | - |
   | `data` | object | ❌ No | - |
   | `files` | array[string] | ❌ No | - |
+  **`inputs`** ❌
+
+**`data`** ✅
+
+
 
 
 
@@ -72,6 +77,9 @@ Returns:
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -109,6 +117,9 @@ Requires authentication to prevent unauthorized access to build events.
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -147,11 +158,15 @@ Requires authentication to prevent unauthorized build cancellation.
 | `success` | boolean | - |
 | `message` | string | - |
 
+
 **Response Body** (application/json):
 
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
@@ -217,6 +232,11 @@ Returns:
   | `inputs` | object | ❌ No | - |
   | `data` | object | ❌ No | - |
   | `files` | array[string] | ❌ No | - |
+  **`inputs`** ❌
+
+**`data`** ✅
+
+
 
 
 
@@ -232,6 +252,9 @@ Returns:
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
