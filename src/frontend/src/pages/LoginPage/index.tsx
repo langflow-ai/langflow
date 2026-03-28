@@ -24,6 +24,7 @@ export default function LoginPage(): JSX.Element {
             variant="default"
             type="button"
             disabled={!keycloakConfig?.enabled}
+            ignoreTitleCase
             onClick={() => {
               window.location.href = "/api/v1/keycloak/login";
             }}

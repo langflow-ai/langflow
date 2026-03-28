@@ -115,7 +115,7 @@ ENV LANGFLOW_AUTO_LOGIN=false
 
 # ── Keycloak SSO defaults (override at runtime) ───────────────────────────────
 ENV KEYCLOAK_ENABLED=false
-ENV KEYCLOAK_BUTTON_TEXT="SSO 로그인"
+ENV KEYCLOAK_BUTTON_TEXT="SK하이닉스 SSO 로그인"
 ENV KEYCLOAK_SHARED_USERNAME=langflow-shared
 
 CMD ["langflow", "run"]
