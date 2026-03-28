@@ -20,6 +20,15 @@ Execute a workflow with support for sync, stream, and background modes
 
 - **Required:** Yes
 
+- **Content-Type:** `application/json`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `background` | boolean | ❌ No | - |
+  | `stream` | boolean | ❌ No | - |
+  | `flow_id` | string | ✅ Yes | - |
+  | `inputs` | object | ❌ No | Component-specific inputs in flat format: 'component_id.param_name': value |
+
+
 
 ### Responses
 
@@ -27,6 +36,34 @@ Execute a workflow with support for sync, stream, and background modes
 |-------------|-------------|
 | **200** | Workflow execution response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `flow_id` | string | - |
+| `job_id` | string | - |
+| `object` | string | - |
+| `created_timestamp` | string | - |
+| `status` | string | Job execution status. |
+| `errors` | array[object] | - |
+| `inputs` | object | - |
+| `outputs` | object | - |
+
+**Response Body** (text/event-stream):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `type` | string | - |
+| `run_id` | string | - |
+| `timestamp` | integer | - |
+| `raw_event` | object | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -45,7 +82,7 @@ Get status of workflow job by job ID
 
 | Name | Located In | Type | Required | Description |
 |------|-----------|------|----------|-------------|
-| `job_id` | **query** |  | ❌ No | Job ID to query |
+| `job_id` | **query** | string | ❌ No | Job ID to query |
 
 
 
@@ -55,6 +92,34 @@ Get status of workflow job by job ID
 |-------------|-------------|
 | **200** | Workflow status response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `flow_id` | string | - |
+| `job_id` | string | - |
+| `object` | string | - |
+| `created_timestamp` | string | - |
+| `status` | string | Job execution status. |
+| `errors` | array[object] | - |
+| `inputs` | object | - |
+| `outputs` | object | - |
+
+**Response Body** (text/event-stream):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `type` | string | - |
+| `run_id` | string | - |
+| `timestamp` | integer | - |
+| `raw_event` | object | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
@@ -74,6 +139,12 @@ Stop a running workflow execution
 
 - **Required:** Yes
 
+- **Content-Type:** `application/json`
+  | Name | Type | Required | Description |
+  |------|------|----------|-------------|
+  | `job_id` | string | ✅ Yes | - |
+
+
 
 ### Responses
 
@@ -81,6 +152,19 @@ Stop a running workflow execution
 |-------------|-------------|
 | **200** | Successful Response |
 | **422** | Validation Error |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `job_id` | string | - |
+| `message` | string | - |
+
+**Response Body** (application/json):
+
+| Name | Type | Description |
+|------|------|-------------|
+| `detail` | array[object] | - |
 
 
 ---
