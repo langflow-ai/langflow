@@ -46,6 +46,7 @@ Raises:
   | `tools` | array[object] | ❌ No | Tools are not supported yet |
   | `previous_response_id` | string | ❌ No | ID of previous response to continue conversation |
   | `include` | array[string] | ❌ No | Additional response data to include, e.g., ['tool_call.results'] |
+  
 
 
 
@@ -61,6 +62,9 @@ Raises:
 | Name | Type | Description |
 |------|------|-------------|
 | `detail` | array[object] | - |
+**`detail`** — Array of `object`
+
+
 
 
 ---
