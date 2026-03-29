@@ -352,9 +352,13 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
         # the existing pattern of explicitly deleting all child records.
         await session.exec(delete(FlowVersion).where(FlowVersion.flow_id == flow_id))
         # Delete spans before traces (span.trace_id → trace.id FK dependency order).
-        await session.exec(delete(SpanTable).where(SpanTable.trace_id.in_(  # type: ignore[union-attr]
-            select(TraceTable.id).where(TraceTable.flow_id == flow_id)
-        )))
+        await session.exec(
+            delete(SpanTable).where(
+                SpanTable.trace_id.in_(  # type: ignore[union-attr]
+                    select(TraceTable.id).where(TraceTable.flow_id == flow_id)
+                )
+            )
+        )
         await session.exec(delete(TraceTable).where(TraceTable.flow_id == flow_id))
         await session.exec(delete(Flow).where(Flow.id == flow_id))
     except Exception as e:
