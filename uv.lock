@@ -6246,6 +6246,7 @@ all = [
     { name = "huggingface-hub", extra = ["inference"] },
     { name = "ibm-cloud-sdk-core" },
     { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11'" },
+    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
     { name = "jigsawstack" },
     { name = "json-repair" },
     { name = "kubernetes" },
@@ -6416,6 +6417,7 @@ complete = [
     { name = "huggingface-hub", extra = ["inference"] },
     { name = "ibm-cloud-sdk-core" },
     { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11'" },
+    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
     { name = "jigsawstack" },
     { name = "json-repair" },
     { name = "kubernetes" },
@@ -6573,6 +6575,7 @@ huggingface = [
 ibm-watsonx-clients = [
     { name = "ibm-cloud-sdk-core" },
     { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11'" },
+    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
 ]
 jigsawstack = [
     { name = "jigsawstack" },
@@ -6880,6 +6883,7 @@ requires-dist = [
     { name = "ibm-cloud-sdk-core", marker = "extra == 'ibm-watsonx-clients'", specifier = "~=3.24.4" },
     { name = "ibm-watsonx-ai", specifier = ">=1.3.1,<2.0.0" },
     { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11' and extra == 'ibm-watsonx-clients'", specifier = "~=2.7.0" },
+    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11' and extra == 'ibm-watsonx-clients'", specifier = "~=2.7.0" },
     { name = "jaraco-context", specifier = ">=6.1.0" },
     { name = "jigsawstack", marker = "extra == 'jigsawstack'", specifier = "==0.2.7" },
     { name = "jq", marker = "sys_platform != 'win32'", specifier = ">=1.7.0,<2.0.0" },
