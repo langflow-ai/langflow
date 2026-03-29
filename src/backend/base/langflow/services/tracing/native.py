@@ -340,8 +340,10 @@ class NativeTracer(BaseTracer):
                     deferred = []
                     for s in remaining:
                         pid = s.get("parent_span_id")
-                        if not pid or _resolve_uuid(pid) not in span_id_set or any(
-                            _resolve_uuid(o["id"]) == _resolve_uuid(pid) for o in ordered
+                        if (
+                            not pid
+                            or _resolve_uuid(pid) not in span_id_set
+                            or any(_resolve_uuid(o["id"]) == _resolve_uuid(pid) for o in ordered)
                         ):
                             ordered.append(s)
                         else:
