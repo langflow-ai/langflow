@@ -320,7 +320,36 @@ class NativeTracer(BaseTracer):
                 )
                 await session.merge(trace)
 
-                for span_data in self.completed_spans:
+                # Sort spans so parents are always inserted before their children,
+                # avoiding FK violations when a child span references a parent that
+                # hasn't been persisted yet.
+                def _resolve_uuid(sid: Any) -> str:
+                    if isinstance(sid, UUID_):
+                        return str(sid)
+                    try:
+                        return str(UUID_(sid))
+                    except (ValueError, TypeError):
+                        return str(uuid5(LANGFLOW_SPAN_NAMESPACE, f"{self.trace_id}-{sid}"))
+
+                span_id_set = {_resolve_uuid(s["id"]) for s in self.completed_spans}
+                ordered: list[Any] = []
+                remaining = list(self.completed_spans)
+                max_passes = len(remaining) + 1
+                while remaining and max_passes > 0:
+                    max_passes -= 1
+                    deferred = []
+                    for s in remaining:
+                        pid = s.get("parent_span_id")
+                        if not pid or _resolve_uuid(pid) not in span_id_set or any(
+                            _resolve_uuid(o["id"]) == _resolve_uuid(pid) for o in ordered
+                        ):
+                            ordered.append(s)
+                        else:
+                            deferred.append(s)
+                    remaining = deferred
+                ordered.extend(remaining)  # append any unresolvable cycles rather than dropping them
+
+                for span_data in ordered:
                     try:
                         span_uuid = UUID_(span_data["id"])
                     except (ValueError, TypeError):
