@@ -283,6 +283,7 @@ def _with_wxo_wrappers(ns):
     """Attach WxOClient SDK wrapper methods to a SimpleNamespace test double."""
     if hasattr(ns, "_base") and ns._base is not None:
         ns.get_agents_raw = lambda params=None: ns._base._get("/agents", params=params)
+        ns.get_tools_raw = lambda params=None: ns._base._get("/tools", params=params)
         ns.post_run = lambda *, data: ns._base._post("/runs", data)
         ns.get_run = lambda run_id: ns._base._get(f"/runs/{run_id}")
     return ns
@@ -2574,12 +2575,17 @@ async def test_list_snapshots_single_deployment_scope(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_list_configs_without_deployment_id_raises(monkeypatch):
+async def test_list_configs_without_deployment_id_lists_tenant_scope(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    connections_client = FakeConnectionsClient()
+    connections_client._list_entries = [
+        {"app_id": "cfg-1", "name": "Config One"},
+        {"app_id": "cfg-2", "display_name": "Config Two"},
+    ]
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient({"id": "dep-1", "tools": []}),
         tool=FakeToolClient([]),
-        connections=FakeConnectionsClient(),
+        connections=connections_client,
     )
 
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
@@ -2587,17 +2593,29 @@ async def test_list_configs_without_deployment_id_raises(monkeypatch):
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    with pytest.raises(OperationNotSupportedError, match="requires exactly one deployment_id"):
-        await service.list_configs(user_id="user-1", db=object(), params=None)
+    result = await service.list_configs(user_id="user-1", db=object(), params=None)
+    assert [config.id for config in result.configs] == ["cfg-1", "cfg-2"]
+    assert result.provider_result == {"scope": "tenant"}
 
 
 @pytest.mark.anyio
-async def test_list_snapshots_without_deployment_id_raises(monkeypatch):
+async def test_list_snapshots_without_deployment_id_lists_tenant_scope(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_clients = SimpleNamespace(
-        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
-        tool=FakeToolClient([]),
-        connections=FakeConnectionsClient(),
+    fake_base = FakeBaseClient(
+        get_payloads={
+            "/tools": [
+                {"id": "tool-1", "name": "Tool One"},
+                {"id": "tool-2"},
+            ]
+        }
+    )
+    fake_clients = _with_wxo_wrappers(
+        SimpleNamespace(
+            _base=fake_base,
+            agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+            tool=FakeToolClient([]),
+            connections=FakeConnectionsClient(),
+        )
     )
 
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
@@ -2605,8 +2623,9 @@ async def test_list_snapshots_without_deployment_id_raises(monkeypatch):
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    with pytest.raises(OperationNotSupportedError, match="requires exactly one deployment_id"):
-        await service.list_snapshots(user_id="user-1", db=object(), params=None)
+    result = await service.list_snapshots(user_id="user-1", db=object(), params=None)
+    assert [snapshot.id for snapshot in result.snapshots] == ["tool-1", "tool-2"]
+    assert result.provider_result == {"scope": "tenant"}
 
 
 # ---------------------------------------------------------------------------

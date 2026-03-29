@@ -9,6 +9,8 @@ from fastapi import HTTPException, status
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentDataUpdate,
     DeploymentCreateResult,
+    DeploymentListResult,
+    DeploymentType,
     DeploymentUpdateResult,
     ExecutionCreateResult,
     ExecutionStatusResult,
@@ -52,6 +54,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiAgentExecutionStatusResultData,
     WatsonxApiBindOperation,
     WatsonxApiDeploymentCreatePayload,
+    WatsonxApiDeploymentListProviderData,
     WatsonxApiDeploymentUpdatePayload,
     WatsonxApiDeploymentUpdateResultData,
     WatsonxApiFlowArtifactProviderData,
@@ -61,6 +64,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
 )
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
+    DeploymentListResponse,
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountUpdateRequest,
     DeploymentUpdateRequest,
@@ -102,6 +106,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         ),
         deployment_update_result=PayloadSlot(
             adapter_model=WatsonxApiDeploymentUpdateResultData,
+            policy=PayloadSlotPolicy.VALIDATE_ONLY,
+        ),
+        deployment_list_result=PayloadSlot(
+            adapter_model=WatsonxApiDeploymentListProviderData,
             policy=PayloadSlotPolicy.VALIDATE_ONLY,
         ),
         execution_create_result=PayloadSlot(
@@ -229,6 +237,32 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             raw=payload.provider_data,
         )
         return self._extract_bind_flow_version_ids(api_provider_payload.operations)
+
+    def util_existing_deployment_resource_key_for_create(
+        self,
+        payload: DeploymentCreateRequest,
+    ) -> str | None:
+        if payload.provider_data is None:
+            return None
+        api_provider_payload: WatsonxApiDeploymentCreatePayload = self._parse_api_payload_slot(
+            slot=self.api_payloads.deployment_create,
+            slot_name="deployment_create",
+            raw=payload.provider_data,
+        )
+        return api_provider_payload.existing_agent_id
+
+    def util_should_mutate_provider_for_existing_deployment_create(
+        self,
+        payload: DeploymentCreateRequest,
+    ) -> bool:
+        if payload.provider_data is None:
+            return False
+        api_provider_payload: WatsonxApiDeploymentCreatePayload = self._parse_api_payload_slot(
+            slot=self.api_payloads.deployment_create,
+            slot_name="deployment_create",
+            raw=payload.provider_data,
+        )
+        return bool(api_provider_payload.operations)
 
     async def resolve_deployment_create(
         self,
@@ -620,6 +654,55 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             deployment_id=deployment_id,
             provider_data=provider_result,
         )
+
+    def shape_deployment_list_result(
+        self,
+        result: DeploymentListResult,
+        *,
+        deployment_type: DeploymentType | None,
+    ) -> DeploymentListResponse:
+        provider_result = {
+            "entries": [
+                self._shape_provider_deployment_list_entry(item) for item in result.deployments if str(item.id).strip()
+            ]
+        }
+        slot = self.api_payloads.deployment_list_result
+        if slot is None:
+            msg = "Watsonx deployment_list_result payload slot is not configured."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+        try:
+            validated_payload = slot.apply(provider_result)
+        except AdapterPayloadValidationError as exc:
+            first_error = exc.error.errors()[0] if exc.error.errors() else {}
+            detail = str(first_error.get("msg") or exc)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Invalid deployment list provider_data payload: {detail}",
+            ) from exc
+        total = len(validated_payload.get("entries", []))
+        return DeploymentListResponse(
+            deployments=[],
+            deployment_type=deployment_type,
+            page=1,
+            size=total,
+            total=total,
+            provider_data=validated_payload,
+        )
+
+    def _shape_provider_deployment_list_entry(self, item: Any) -> dict[str, Any]:
+        item_provider_data = item.provider_data
+        if item_provider_data is not None and not isinstance(item_provider_data, dict):
+            msg = "Invalid deployment list item provider_data payload: expected object or null."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+        return {
+            "resource_key": str(item.id),
+            "name": item.name,
+            "type": item.type,
+            "description": getattr(item, "description", None),
+            "created_at": item.created_at,
+            "updated_at": item.updated_at,
+            "provider_data": self.shape_deployment_item_data(item_provider_data),
+        }
 
     def _parse_required_payload_slot(
         self,

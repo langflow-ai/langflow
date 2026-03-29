@@ -289,6 +289,10 @@ class _PaginatedResponse(BaseModel):
 class DeploymentListResponse(_PaginatedResponse):
     deployments: list[DeploymentListItem]
     deployment_type: DeploymentType | None = None
+    provider_data: dict[str, Any] | None = Field(
+        default=None,
+        description="Provider-owned opaque payload for list-specific provider metadata.",
+    )
 
 
 class DeploymentProviderAccountListResponse(_PaginatedResponse):
@@ -310,6 +314,23 @@ class DeploymentConfigListItem(BaseModel):
 
 class DeploymentConfigListResponse(_PaginatedResponse):
     configs: list[DeploymentConfigListItem]
+
+
+class DeploymentSnapshotListItem(BaseModel):
+    """Lean snapshot/tool representation used in list responses."""
+
+    id: str = Field(description="Provider-owned snapshot/tool identifier.")
+    name: str
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    provider_data: dict[str, Any] | None = Field(
+        default=None,
+        description="Provider-owned opaque payload returned by the deployment provider.",
+    )
+
+
+class DeploymentSnapshotListResponse(_PaginatedResponse):
+    snapshots: list[DeploymentSnapshotListItem]
 
 
 class DeploymentCreateResponse(_DeploymentResponseBase):

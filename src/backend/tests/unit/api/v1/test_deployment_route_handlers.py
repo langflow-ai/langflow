@@ -11,7 +11,7 @@ Covers the integration behaviour of the FastAPI route handlers:
 from __future__ import annotations
 
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -27,7 +27,16 @@ from lfx.services.adapters.deployment.exceptions import (
     DeploymentNotFoundError,
     ServiceUnavailableError,
 )
-from lfx.services.adapters.deployment.schema import DeploymentCreateResult, DeploymentUpdateResult
+from lfx.services.adapters.deployment.schema import (
+    ConfigListItem,
+    ConfigListResult,
+    DeploymentCreateResult,
+    DeploymentListResult,
+    DeploymentUpdateResult,
+    ItemResult,
+    SnapshotItem,
+    SnapshotListResult,
+)
 
 ROUTES_MODULE = "langflow.api.v1.deployments"
 HELPERS_MODULE = "langflow.api.v1.mappers.deployments.helpers"
@@ -201,6 +210,301 @@ class TestCreateDeploymentRollback:
 
 
 # ---------------------------------------------------------------------------
+# create_deployment: existing_agent_id behavior
+# ---------------------------------------------------------------------------
+
+
+class TestCreateDeploymentExistingAgent:
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.attach_flow_versions", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.create_deployment_db", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_existing_agent_without_mutation_skips_provider_calls(
+        self,
+        mock_get_pa,
+        mock_name_exists,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_resolve_project,
+        mock_validate_fv,
+        mock_create_db,
+        mock_attach,
+    ):
+        from langflow.api.v1.deployments import create_deployment
+
+        pa = _fake_provider_account()
+        mock_get_pa.return_value = pa
+        adapter = AsyncMock()
+        mock_resolve_adapter.return_value = adapter
+        mapper = MagicMock()
+        mapper.util_existing_deployment_resource_key_for_create.return_value = "existing-agent-1"
+        mapper.util_should_mutate_provider_for_existing_deployment_create.return_value = False
+        mapper.util_create_flow_version_ids.return_value = []
+        mock_get_mapper.return_value = mapper
+        mock_resolve_project.return_value = uuid4()
+        dep_row = _fake_deployment_row(resource_key="existing-agent-1")
+        mock_create_db.return_value = dep_row
+
+        session = AsyncMock()
+        session.commit.return_value = None
+
+        payload = MagicMock()
+        payload.provider_id = pa.id
+        payload.spec.name = "existing"
+        payload.spec.type = "agent"
+        payload.spec.description = None
+
+        with patch(f"{ROUTES_MODULE}.to_deployment_create_response", return_value=MagicMock()):
+            await create_deployment(session=session, payload=payload, current_user=_fake_user())
+
+        _ = (mock_name_exists, mock_validate_fv, mock_attach)
+        adapter.create.assert_not_awaited()
+        adapter.update.assert_not_awaited()
+        assert mock_create_db.call_args.kwargs["resource_key"] == "existing-agent-1"
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.attach_flow_versions", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.create_deployment_db", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_existing_agent_with_mutation_uses_provider_update(
+        self,
+        mock_get_pa,
+        mock_name_exists,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_resolve_project,
+        mock_validate_fv,
+        mock_create_db,
+        mock_attach,
+    ):
+        from langflow.api.v1.deployments import create_deployment
+
+        pa = _fake_provider_account()
+        mock_get_pa.return_value = pa
+        adapter = AsyncMock()
+        adapter.update.return_value = DeploymentUpdateResult(id="existing-agent-1", provider_result={"ok": True})
+        mock_resolve_adapter.return_value = adapter
+        mapper = MagicMock()
+        mapper.util_existing_deployment_resource_key_for_create.return_value = "existing-agent-1"
+        mapper.util_should_mutate_provider_for_existing_deployment_create.return_value = True
+        mapper.util_create_flow_version_ids.return_value = []
+        mapper.resolve_deployment_create = AsyncMock(return_value=MagicMock(provider_data={"operations": [{}]}))
+        mock_get_mapper.return_value = mapper
+        mock_resolve_project.return_value = uuid4()
+        dep_row = _fake_deployment_row(resource_key="existing-agent-1")
+        mock_create_db.return_value = dep_row
+
+        session = AsyncMock()
+        session.commit.return_value = None
+
+        payload = MagicMock()
+        payload.provider_id = pa.id
+        payload.spec.name = "existing"
+        payload.spec.type = "agent"
+        payload.spec.description = "desc"
+
+        with patch(f"{ROUTES_MODULE}.to_deployment_create_response", return_value=MagicMock()):
+            await create_deployment(session=session, payload=payload, current_user=_fake_user())
+
+        _ = (mock_name_exists, mock_validate_fv, mock_attach)
+        adapter.create.assert_not_awaited()
+        adapter.update.assert_awaited_once()
+        assert adapter.update.call_args.kwargs["deployment_id"] == "existing-agent-1"
+
+
+# ---------------------------------------------------------------------------
+# list_deployments: provider passthrough mode
+# ---------------------------------------------------------------------------
+
+
+class TestListDeploymentsLoadFromProvider:
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_load_from_provider_bypasses_db_view(
+        self,
+        mock_get_pa,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_list_synced,
+    ):
+        from langflow.api.v1.deployments import list_deployments
+
+        pa = _fake_provider_account()
+        mock_get_pa.return_value = pa
+        adapter = AsyncMock()
+        adapter.list.return_value = DeploymentListResult(
+            deployments=[ItemResult(id="agent-1", name="Agent 1", type="agent")]
+        )
+        mock_resolve_adapter.return_value = adapter
+        mapper = MagicMock()
+        expected = MagicMock()
+        mapper.shape_deployment_list_result.return_value = expected
+        mock_get_mapper.return_value = mapper
+
+        result = await list_deployments(
+            provider_id=pa.id,
+            session=AsyncMock(),
+            current_user=_fake_user(),
+            params=SimpleNamespace(page=2, size=50),
+            deployment_type=None,
+            load_from_provider=True,
+            flow_version_ids=None,
+        )
+
+        assert result is expected
+        mock_list_synced.assert_not_awaited()
+        adapter.list.assert_awaited_once()
+        mapper.shape_deployment_list_result.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_load_from_provider_rejects_flow_version_filters(self):
+        from langflow.api.v1.deployments import list_deployments
+
+        with pytest.raises(HTTPException) as exc_info:
+            await list_deployments(
+                provider_id=uuid4(),
+                session=AsyncMock(),
+                current_user=_fake_user(),
+                params=SimpleNamespace(page=1, size=20),
+                deployment_type=None,
+                load_from_provider=True,
+                flow_version_ids=[str(uuid4())],
+            )
+        assert exc_info.value.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# config/snapshot passthrough listing routes
+# ---------------------------------------------------------------------------
+
+
+class TestConfigAndSnapshotListRoutes:
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_list_configs_global_scope_uses_provider_id(
+        self,
+        mock_get_pa,
+        mock_get_mapper,
+        mock_resolve_adapter,
+    ):
+        from langflow.api.v1.deployments import list_deployment_configs
+
+        pa = _fake_provider_account()
+        mock_get_pa.return_value = pa
+        adapter = AsyncMock()
+        adapter.list_configs.return_value = ConfigListResult(
+            configs=[
+                ConfigListItem(id="cfg-1", name="Config 1"),
+                ConfigListItem(id="cfg-2", name="Config 2"),
+            ],
+            provider_result={"scope": "tenant"},
+        )
+        mock_resolve_adapter.return_value = adapter
+        mapper = MagicMock()
+        adapter_params = MagicMock()
+        expected_response = MagicMock()
+        mapper.resolve_config_list_adapter_params = AsyncMock(return_value=adapter_params)
+        mapper.shape_config_list_result.return_value = expected_response
+        mock_get_mapper.return_value = mapper
+
+        result = await list_deployment_configs(
+            provider_id=pa.id,
+            deployment_id=None,
+            page=1,
+            size=10,
+            session=AsyncMock(),
+            current_user=_fake_user(),
+        )
+
+        assert result is expected_response
+        mapper.resolve_config_list_adapter_params.assert_awaited_once_with(
+            deployment_resource_key=None,
+            provider_params=None,
+            db=ANY,
+        )
+        call_params = adapter.list_configs.call_args.kwargs["params"]
+        assert call_params is adapter_params
+        mapper.shape_config_list_result.assert_called_once_with(
+            adapter.list_configs.return_value,
+            page=1,
+            size=10,
+        )
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.get_deployment_row_or_404", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_list_snapshots_deployment_scope_resolves_provider_from_deployment(
+        self,
+        mock_get_pa,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_get_deployment,
+    ):
+        from langflow.api.v1.deployments import list_deployment_snapshots
+
+        pa = _fake_provider_account()
+        deployment = _fake_deployment_row(resource_key="dep-key")
+        deployment.deployment_provider_account_id = pa.id
+        mock_get_deployment.return_value = deployment
+        mock_get_pa.return_value = pa
+        adapter = AsyncMock()
+        adapter.list_snapshots.return_value = SnapshotListResult(
+            snapshots=[
+                SnapshotItem(id="tool-1", name="Tool 1"),
+                SnapshotItem(id="tool-2", name="Tool 2"),
+            ],
+            provider_result={"scope": "deployment"},
+        )
+        mock_resolve_adapter.return_value = adapter
+        mapper = MagicMock()
+        adapter_params = MagicMock()
+        expected_response = MagicMock()
+        mapper.resolve_snapshot_list_adapter_params = AsyncMock(return_value=adapter_params)
+        mapper.shape_snapshot_list_result.return_value = expected_response
+        mock_get_mapper.return_value = mapper
+
+        result = await list_deployment_snapshots(
+            provider_id=pa.id,
+            deployment_id=deployment.id,
+            page=1,
+            size=10,
+            session=AsyncMock(),
+            current_user=_fake_user(),
+        )
+
+        assert result is expected_response
+        mapper.resolve_snapshot_list_adapter_params.assert_awaited_once_with(
+            deployment_resource_key="dep-key",
+            provider_params=None,
+            db=ANY,
+        )
+        call_params = adapter.list_snapshots.call_args.kwargs["params"]
+        assert call_params is adapter_params
+        mapper.shape_snapshot_list_result.assert_called_once_with(
+            adapter.list_snapshots.return_value,
+            page=1,
+            size=10,
+        )
+
+
+# ---------------------------------------------------------------------------
 # provider account routes
 # ---------------------------------------------------------------------------
 
@@ -288,7 +592,7 @@ class TestProviderAccountRoutes:
 
         mapper = MagicMock()
         mapper.resolve_verify_credentials.return_value = MagicMock()
-        mapper.resolve_credential_fields.return_value = {"api_key": "api-key"}
+        mapper.resolve_credential_fields.return_value = {"api_key": "api-key"}  # pragma: allowlist secret
         mapper.resolve_provider_tenant_id.return_value = "tenant-1"
         mock_get_mapper.return_value = mapper
 
@@ -300,7 +604,7 @@ class TestProviderAccountRoutes:
             name="prod",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
             provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
-            provider_data={"api_key": "api-key"},
+            provider_data={"api_key": "api-key"},  # pragma: allowlist secret
         )
 
         with pytest.raises(HTTPException) as exc_info:

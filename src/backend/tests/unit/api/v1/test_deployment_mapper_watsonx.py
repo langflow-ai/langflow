@@ -20,7 +20,11 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentProviderAccountUpdateRequest,
     DeploymentUpdateRequest,
 )
-from lfx.services.adapters.deployment.schema import DeploymentCreateResult, DeploymentType, DeploymentUpdateResult
+from lfx.services.adapters.deployment.schema import (
+    DeploymentCreateResult,
+    DeploymentType,
+    DeploymentUpdateResult,
+)
 from lfx.services.adapters.schema import AdapterType
 
 try:
@@ -63,6 +67,25 @@ def test_watsonx_mapper_is_registered() -> None:
     assert mapper.api_payloads.deployment_create is not None
     assert mapper.api_payloads.deployment_update is not None
     assert mapper.api_payloads.deployment_update_result is not None
+
+
+def test_watsonx_mapper_provider_list_entry_rejects_non_dict_provider_data() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    item = SimpleNamespace(
+        id="agent-1",
+        name="Agent 1",
+        type=DeploymentType.AGENT,
+        description=None,
+        created_at=None,
+        updated_at=None,
+        provider_data="bad-payload-type",
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        mapper._shape_provider_deployment_list_entry(item)
+
+    assert exc_info.value.status_code == 500
+    assert exc_info.value.detail == "Invalid deployment list item provider_data payload: expected object or null."
 
 
 def test_watsonx_api_payload_accepts_flow_version_create_bind_contract() -> None:
