@@ -27,6 +27,7 @@ try:
     from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
     from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
         WatsonxApiDeploymentCreatePayload,
+        WatsonxApiDeploymentCreateResultData,
         WatsonxApiDeploymentUpdatePayload,
         WatsonxApiDeploymentUpdateResultData,
     )
@@ -70,12 +71,11 @@ def test_watsonx_api_payload_accepts_flow_version_create_bind_contract() -> None
     payload = WatsonxApiDeploymentCreatePayload.model_validate(
         {
             "resource_name_prefix": "lf_abc_",
-            "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
                 {
                     "op": "bind",
                     "flow_version_id": str(flow_version_id),
-                    "app_ids": ["app-one"],
+                    "app_refs": [{"app_id": "app-one"}],
                 }
             ],
         }
@@ -89,12 +89,11 @@ def test_watsonx_api_payload_strips_resource_name_prefix_whitespace() -> None:
     payload = WatsonxApiDeploymentCreatePayload.model_validate(
         {
             "resource_name_prefix": "  custom_prefix  ",
-            "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
                 {
                     "op": "bind",
                     "flow_version_id": str(flow_version_id),
-                    "app_ids": ["app-one"],
+                    "app_refs": [{"app_id": "app-one"}],
                 }
             ],
         }
@@ -108,12 +107,11 @@ def test_watsonx_api_payload_rejects_non_alpha_resource_name_prefix() -> None:
         WatsonxApiDeploymentCreatePayload.model_validate(
             {
                 "resource_name_prefix": "123_prefix",
-                "connections": {"existing_app_ids": ["app-one"]},
                 "operations": [
                     {
                         "op": "bind",
                         "flow_version_id": str(flow_version_id),
-                        "app_ids": ["app-one"],
+                        "app_refs": [{"app_id": "app-one"}],
                     }
                 ],
             }
@@ -126,12 +124,11 @@ def test_watsonx_api_payload_rejects_effective_too_long_resource_name_prefix() -
         WatsonxApiDeploymentCreatePayload.model_validate(
             {
                 "resource_name_prefix": "a" * (WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH - len("lf_") + 1),
-                "connections": {"existing_app_ids": ["app-one"]},
                 "operations": [
                     {
                         "op": "bind",
                         "flow_version_id": str(flow_version_id),
-                        "app_ids": ["app-one"],
+                        "app_refs": [{"app_id": "app-one"}],
                     }
                 ],
             }
@@ -142,12 +139,11 @@ def test_watsonx_api_payload_accepts_flow_version_bind_contract() -> None:
     flow_version_id = uuid4()
     payload = WatsonxApiDeploymentUpdatePayload.model_validate(
         {
-            "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
                 {
                     "op": "bind",
                     "flow_version_id": str(flow_version_id),
-                    "app_ids": ["app-one"],
+                    "app_refs": [{"app_id": "app-one"}],
                 }
             ],
         }
@@ -161,12 +157,11 @@ def test_watsonx_update_payload_rejects_non_alpha_resource_name_prefix() -> None
         WatsonxApiDeploymentUpdatePayload.model_validate(
             {
                 "resource_name_prefix": "123_prefix",
-                "connections": {"existing_app_ids": ["app-one"]},
                 "operations": [
                     {
                         "op": "bind",
                         "flow_version_id": str(flow_version_id),
-                        "app_ids": ["app-one"],
+                        "app_refs": [{"app_id": "app-one"}],
                     }
                 ],
             }
@@ -179,12 +174,11 @@ def test_watsonx_update_payload_rejects_effective_too_long_resource_name_prefix(
         WatsonxApiDeploymentUpdatePayload.model_validate(
             {
                 "resource_name_prefix": "a" * (WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH - len("lf_") + 1),
-                "connections": {"existing_app_ids": ["app-one"]},
                 "operations": [
                     {
                         "op": "bind",
                         "flow_version_id": str(flow_version_id),
-                        "app_ids": ["app-one"],
+                        "app_refs": [{"app_id": "app-one"}],
                     }
                 ],
             }
@@ -195,7 +189,6 @@ def test_watsonx_api_payload_accepts_flow_version_unbind_and_remove_contract() -
     flow_version_id = uuid4()
     payload = WatsonxApiDeploymentUpdatePayload.model_validate(
         {
-            "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
                 {
                     "op": "unbind",
@@ -211,6 +204,43 @@ def test_watsonx_api_payload_accepts_flow_version_unbind_and_remove_contract() -
     )
     assert payload.operations[0].op == "unbind"
     assert payload.operations[1].op == "remove_tool"
+
+
+def test_watsonx_api_payload_rejects_mixed_selector_kinds_for_same_app_id() -> None:
+    flow_version_id = uuid4()
+    with pytest.raises(ValueError, match="mixed selector kinds for the same app_id"):
+        WatsonxApiDeploymentUpdatePayload.model_validate(
+            {
+                "connections": {"raw_payloads": [{"app_id": "dup-app"}]},
+                "operations": [
+                    {
+                        "op": "bind",
+                        "flow_version_id": str(flow_version_id),
+                        "app_refs": [
+                            {"app_id": "dup-app"},
+                            {"app_id_of_raw": "dup-app"},
+                        ],
+                    }
+                ],
+            }
+        )
+
+
+def test_watsonx_api_payload_rejects_bind_existing_app_id_collision_with_raw_payload() -> None:
+    flow_version_id = uuid4()
+    with pytest.raises(ValueError, match=r"must not overlap connections.raw_payloads"):
+        WatsonxApiDeploymentUpdatePayload.model_validate(
+            {
+                "connections": {"raw_payloads": [{"app_id": "dup-app"}]},
+                "operations": [
+                    {
+                        "op": "bind",
+                        "flow_version_id": str(flow_version_id),
+                        "app_refs": [{"app_id": "dup-app"}],
+                    }
+                ],
+            }
+        )
 
 
 def test_watsonx_mapper_resolve_verify_credentials_for_update_uses_decrypted_stored_key(monkeypatch) -> None:
@@ -306,12 +336,11 @@ async def test_watsonx_mapper_translates_create_bind_into_raw_tool_payload() -> 
         spec={"name": "create-deploy", "description": "", "type": "agent"},
         provider_data={
             "resource_name_prefix": "lf_test_",
-            "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
                 {
                     "op": "bind",
                     "flow_version_id": str(flow_version_id),
-                    "app_ids": ["app-one"],
+                    "app_refs": [{"app_id": "app-one"}],
                 }
             ],
         },
@@ -351,12 +380,11 @@ async def test_watsonx_mapper_rejects_top_level_flow_version_and_config_on_creat
         flow_version_ids=[uuid4()],
         provider_data={
             "resource_name_prefix": "lf_test_",
-            "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
                 {
                     "op": "bind",
                     "flow_version_id": str(uuid4()),
-                    "app_ids": ["app-one"],
+                    "app_refs": [{"app_id": "app-one"}],
                 }
             ],
         },
@@ -393,12 +421,11 @@ async def test_watsonx_mapper_translates_flow_version_bind_into_raw_tool_payload
     payload = DeploymentUpdateRequest(
         provider_data={
             "resource_name_prefix": "lf_test_",
-            "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
                 {
                     "op": "bind",
                     "flow_version_id": str(flow_version_id),
-                    "app_ids": ["app-one"],
+                    "app_refs": [{"app_id": "app-one"}],
                 }
             ],
         }
@@ -446,7 +473,6 @@ async def test_watsonx_mapper_translates_unbind_and_remove_via_attachment_snapsh
     user_id = uuid4()
     payload = DeploymentUpdateRequest(
         provider_data={
-            "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
                 {
                     "op": "unbind",
@@ -539,6 +565,56 @@ def test_watsonx_mapper_shapes_update_response_from_result_schema() -> None:
     }
 
 
+def test_watsonx_mapper_shapes_create_provider_data_from_result_schema() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    new_flow_version_id = uuid4()
+    existing_flow_version_id = uuid4()
+
+    shaped = mapper.shape_deployment_create_result(
+        {
+            "created_app_ids": ["created-app-1"],
+            "tools_with_refs": [
+                {"source_ref": str(new_flow_version_id), "tool_id": "new-tool-1"},
+                {"source_ref": str(existing_flow_version_id), "tool_id": "existing-tool-1"},
+            ],
+            "tool_app_bindings": [
+                {"tool_id": "new-tool-1", "app_ids": ["app-a"]},
+                {"tool_id": "existing-tool-1", "app_ids": ["app-b"]},
+            ],
+        }
+    )
+
+    assert shaped == {
+        "created_app_ids": ["created-app-1"],
+        "tools_with_flow_version_refs": [
+            {"flow_version_id": str(new_flow_version_id), "tool_id": "new-tool-1"},
+            {"flow_version_id": str(existing_flow_version_id), "tool_id": "existing-tool-1"},
+        ],
+        "tool_app_bindings": [
+            {"flow_version_id": str(new_flow_version_id), "app_ids": ["app-a"]},
+            {"flow_version_id": str(existing_flow_version_id), "app_ids": ["app-b"]},
+        ],
+    }
+
+
+def test_watsonx_mapper_create_shape_raises_on_invalid_source_ref() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+
+    with pytest.raises(HTTPException) as exc:
+        mapper.shape_deployment_create_result(
+            {
+                "created_app_ids": [],
+                "tools_with_refs": [
+                    {"source_ref": "not-a-uuid", "tool_id": "tool-1"},
+                ],
+                "tool_app_bindings": [{"tool_id": "tool-1", "app_ids": ["app-a"]}],
+            }
+        )
+
+    assert exc.value.status_code == 500
+    assert "not a valid UUID" in exc.value.detail
+
+
 def test_watsonx_mapper_update_response_raises_on_invalid_source_ref() -> None:
     """Non-UUID source_ref in snapshot bindings raises HTTP 500."""
     mapper = WatsonxOrchestrateDeploymentMapper()
@@ -568,6 +644,19 @@ def test_watsonx_mapper_update_response_raises_on_invalid_source_ref() -> None:
         mapper.shape_deployment_update_result(result, deployment_row)
     assert exc.value.status_code == 500
     assert "not a valid UUID" in exc.value.detail
+
+
+def test_watsonx_api_result_rejects_string_like_created_app_ids() -> None:
+    with pytest.raises(TypeError):
+        WatsonxApiDeploymentCreateResultData.model_validate(
+            {
+                "created_app_ids": "not-a-list",
+                "tools_with_flow_version_refs": [],
+                "tool_app_bindings": [],
+            }
+        )
+    with pytest.raises(TypeError):
+        WatsonxApiDeploymentUpdateResultData.model_validate({"created_app_ids": "not-a-list"})
 
 
 def test_watsonx_mapper_update_response_raises_on_unmapped_tool_binding() -> None:
@@ -611,9 +700,12 @@ def test_watsonx_mapper_exposes_reconciliation_resolvers() -> None:
     patch = mapper.util_flow_version_patch(
         DeploymentUpdateRequest(
             provider_data={
-                "connections": {"existing_app_ids": ["app-one"]},
                 "operations": [
-                    {"op": "bind", "flow_version_id": str(add_id), "app_ids": ["app-one"]},
+                    {
+                        "op": "bind",
+                        "flow_version_id": str(add_id),
+                        "app_refs": [{"app_id": "app-one"}],
+                    },
                     {"op": "unbind", "flow_version_id": str(remove_id), "app_ids": ["app-one"]},
                 ],
             }

@@ -221,7 +221,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             raise DeploymentError(message=msg, error_code="deployment_error") from exc
 
         create_result_payload = WatsonxDeploymentCreateResultData(
-            app_ids=apply_result.app_ids,
+            created_app_ids=apply_result.created_app_ids,
             tools_with_refs=apply_result.tools_with_refs,
             tool_app_bindings=apply_result.tool_app_bindings,
         )
@@ -251,7 +251,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             clients=clients,
             agent_id=_normalize_and_validate_id(str(deployment_id), field_name="deployment_id"),
             tool_ids=tool_ids,
-            app_ids=result_data.app_ids,
+            app_ids=result_data.created_app_ids,
         )
 
     async def list_types(

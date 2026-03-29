@@ -116,7 +116,10 @@ class TestCreateDeploymentRollback:
         adapter = AsyncMock()
         create_result = DeploymentCreateResult(
             id="provider-dep-1",
-            provider_result={"app_ids": ["cfg-1"], "tools_with_refs": [{"tool_id": "tool-1", "source_ref": "fv-1"}]},
+            provider_result={
+                "created_app_ids": ["cfg-1"],
+                "tools_with_refs": [{"tool_id": "tool-1", "source_ref": "fv-1"}],
+            },
         )
         adapter.create.return_value = create_result
         mock_resolve_adapter.return_value = adapter
@@ -139,6 +142,67 @@ class TestCreateDeploymentRollback:
         with pytest.raises(RuntimeError, match="DB commit failed"):
             await create_deployment(session=session, payload=payload, current_user=_fake_user())
 
+        mock_rollback.assert_awaited_once()
+        assert mock_rollback.call_args.kwargs["resource_id"] == create_result.id
+        assert mock_rollback.call_args.kwargs["provider_result"] == create_result.provider_result
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.rollback_provider_create", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.attach_flow_versions", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_snapshot_map_for_create", return_value={})
+    @patch(f"{ROUTES_MODULE}.create_deployment_db", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_rollback_called_on_create_shape_failure(
+        self,
+        mock_get_pa,
+        mock_name_exists,  # noqa: ARG002
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_resolve_project,
+        mock_validate_fv,  # noqa: ARG002
+        mock_create_db,
+        mock_resolve_snap,  # noqa: ARG002
+        mock_attach,  # noqa: ARG002
+        mock_rollback,
+    ):
+        """When create-result shaping fails, provider rollback is still called."""
+        from langflow.api.v1.deployments import create_deployment
+
+        pa = _fake_provider_account()
+        mock_get_pa.return_value = pa
+        adapter = AsyncMock()
+        create_result = DeploymentCreateResult(
+            id="provider-dep-1",
+            provider_result={"created_app_ids": ["cfg-1"], "tools_with_refs": []},
+        )
+        adapter.create.return_value = create_result
+        mock_resolve_adapter.return_value = adapter
+        mapper = MagicMock()
+        mapper.util_create_flow_version_ids.return_value = []
+        mapper.resolve_deployment_create = AsyncMock(return_value=MagicMock())
+        mapper.shape_deployment_create_result.side_effect = RuntimeError("shape failed")
+        mock_get_mapper.return_value = mapper
+        mock_resolve_project.return_value = uuid4()
+        mock_create_db.return_value = _fake_deployment_row()
+
+        session = AsyncMock()
+        session.commit.return_value = None
+
+        payload = MagicMock()
+        payload.provider_id = pa.id
+        payload.spec.name = "test"
+        payload.spec.type = "agent"
+        payload.spec.description = None
+
+        with pytest.raises(RuntimeError, match="shape failed"):
+            await create_deployment(session=session, payload=payload, current_user=_fake_user())
+
+        session.commit.assert_not_awaited()
         mock_rollback.assert_awaited_once()
         assert mock_rollback.call_args.kwargs["resource_id"] == create_result.id
         assert mock_rollback.call_args.kwargs["provider_result"] == create_result.provider_result
@@ -198,6 +262,65 @@ class TestCreateDeploymentRollback:
             await create_deployment(session=session, payload=payload, current_user=_fake_user())
 
         mock_rollback.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.attach_flow_versions", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_snapshot_map_for_create", return_value={})
+    @patch(f"{ROUTES_MODULE}.create_deployment_db", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_create_response_uses_mapper_shape(
+        self,
+        mock_get_pa,
+        mock_name_exists,  # noqa: ARG002
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_resolve_project,
+        mock_validate_fv,  # noqa: ARG002
+        mock_create_db,
+        mock_resolve_snap,  # noqa: ARG002
+        mock_attach,  # noqa: ARG002
+    ):
+        """create_deployment forwards provider_result through mapper create-shaping."""
+        from langflow.api.v1.deployments import create_deployment
+
+        pa = _fake_provider_account()
+        mock_get_pa.return_value = pa
+        adapter = AsyncMock()
+        create_result = DeploymentCreateResult(
+            id="provider-dep-1",
+            provider_result={"created_app_ids": ["cfg-1"], "tools_with_refs": []},
+        )
+        adapter.create.return_value = create_result
+        mock_resolve_adapter.return_value = adapter
+        mapper = MagicMock()
+        mapper.util_create_flow_version_ids.return_value = []
+        mapper.resolve_deployment_create = AsyncMock(return_value=MagicMock())
+        mapper.shape_deployment_create_result.return_value = {"created_app_ids": ["cfg-1"]}
+        mock_get_mapper.return_value = mapper
+        mock_resolve_project.return_value = uuid4()
+        dep_row = _fake_deployment_row()
+        mock_create_db.return_value = dep_row
+
+        session = AsyncMock()
+        session.commit.return_value = None
+
+        payload = MagicMock()
+        payload.provider_id = pa.id
+        payload.spec.name = "test"
+        payload.spec.type = "agent"
+        payload.spec.description = None
+
+        with patch(f"{ROUTES_MODULE}.to_deployment_create_response") as mock_response:
+            mock_response.return_value = MagicMock()
+            await create_deployment(session=session, payload=payload, current_user=_fake_user())
+
+        mapper.shape_deployment_create_result.assert_called_once_with(create_result.provider_result)
+        assert mock_response.call_args.kwargs["provider_data"] == {"created_app_ids": ["cfg-1"]}
 
 
 # ---------------------------------------------------------------------------
@@ -266,7 +389,9 @@ class TestProviderAccountRoutes:
             await update_provider_account(
                 provider_id=existing_account.id,
                 session=AsyncMock(),
-                payload=DeploymentProviderAccountUpdateRequest(provider_data={"api_key": "new-api-key"}),
+                payload=DeploymentProviderAccountUpdateRequest(
+                    provider_data={"api_key": "new-api-key"},  # pragma: allowlist secret
+                ),
                 current_user=_fake_user(),
             )
 
@@ -288,7 +413,7 @@ class TestProviderAccountRoutes:
 
         mapper = MagicMock()
         mapper.resolve_verify_credentials.return_value = MagicMock()
-        mapper.resolve_credential_fields.return_value = {"api_key": "api-key"}
+        mapper.resolve_credential_fields.return_value = {"api_key": "api-key"}  # pragma: allowlist secret
         mapper.resolve_provider_tenant_id.return_value = "tenant-1"
         mock_get_mapper.return_value = mapper
 
@@ -300,7 +425,7 @@ class TestProviderAccountRoutes:
             name="prod",
             provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
             provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
-            provider_data={"api_key": "api-key"},
+            provider_data={"api_key": "api-key"},  # pragma: allowlist secret
         )
 
         with pytest.raises(HTTPException) as exc_info:

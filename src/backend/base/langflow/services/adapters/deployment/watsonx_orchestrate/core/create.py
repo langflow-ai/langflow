@@ -74,6 +74,7 @@ class ProviderCreatePlan:
     resource_prefix: str
     prefixed_deployment_name: str
     existing_tool_ids: list[str]
+    existing_tool_refs: list[WatsonxToolRefBinding]
     existing_tool_bindings: dict[str, list[str]]
     existing_app_ids: list[str]
     raw_connections_to_create: list[RawConnectionCreatePlan]
@@ -107,8 +108,8 @@ def build_provider_create_plan(
     # existing_tool_bindings: per existing tool_id, collects operation app_ids
     #   that should be bound to that tool during creation.
     existing_tool_bindings: dict[str, OrderedUniqueStrs] = {}
-    # existing_app_ids: declared existing connection app_ids (identity-mapped).
-    existing_app_ids = OrderedUniqueStrs.from_values(list(provider_create.connections.existing_app_ids or []))
+    # existing_app_ids: derived existing connection app_ids (identity-mapped).
+    existing_app_ids = OrderedUniqueStrs()
     # selected_operation_app_ids: all app_ids referenced by any bind operation
     #   (used to determine which connections the create plan needs).
     selected_operation_app_ids = OrderedUniqueStrs()
@@ -116,19 +117,30 @@ def build_provider_create_plan(
     # raw_tool_app_ids: per raw tool name, collects operation app_ids to bind
     #   when the raw tool is created.
     raw_tool_app_ids: dict[str, OrderedUniqueStrs] = {}
+    # existing_tool_refs: source_ref ↔ tool_id refs for pre-existing tools
+    #   referenced during create bind operations.
+    existing_tool_refs_by_id: dict[str, WatsonxToolRefBinding] = {}
     for operation in provider_create.operations:
         if not isinstance(operation, WatsonxBindOperation):
             continue
-        selected_operation_app_ids.extend(operation.app_ids)
+        operation_app_ids = operation.all_app_ids()
+        operation_existing_app_ids = operation.app_ids_of_existing()
+        existing_app_ids.extend(operation_existing_app_ids)
+        selected_operation_app_ids.extend(operation_app_ids)
         if operation.tool.tool_id_with_ref is not None:
-            tool_id = operation.tool.tool_id_with_ref.tool_id
+            ref = operation.tool.tool_id_with_ref
+            tool_id = ref.tool_id
             existing_tool_ids.add(tool_id)
+            existing_tool_refs_by_id.setdefault(
+                tool_id,
+                WatsonxToolRefBinding(source_ref=ref.source_ref, tool_id=tool_id),
+            )
             existing_bindings = existing_tool_bindings.setdefault(tool_id, OrderedUniqueStrs())
-            existing_bindings.extend(operation.app_ids)
+            existing_bindings.extend(operation_app_ids)
             continue
         raw_name = str(operation.tool.name_of_raw)
         raw_apps = raw_tool_app_ids.setdefault(raw_name, OrderedUniqueStrs())
-        raw_apps.extend(operation.app_ids)
+        raw_apps.extend(operation_app_ids)
 
     raw_connections_to_create = [
         RawConnectionCreatePlan(
@@ -148,6 +160,7 @@ def build_provider_create_plan(
         resource_prefix=resource_prefix,
         prefixed_deployment_name=prefixed_deployment_name,
         existing_tool_ids=existing_tool_ids.to_list(),
+        existing_tool_refs=list(existing_tool_refs_by_id.values()),
         existing_tool_bindings={tool_id: app_ids.to_list() for tool_id, app_ids in existing_tool_bindings.items()},
         existing_app_ids=existing_app_ids.to_list(),
         raw_connections_to_create=raw_connections_to_create,
@@ -175,15 +188,16 @@ async def apply_provider_create_plan_with_rollback(
     original_tools: dict[str, dict[str, Any]] = {}
 
     # Working state:
-    # - created_snapshot_bindings: source_ref ↔ tool_id bindings for newly
-    #     created tools; returned in the create result for reconciliation.
+    # - tools_with_refs: source_ref ↔ tool_id bindings for all
+    #     tools referenced by create operations (existing + newly created);
+    #     returned in the create result for reconciliation.
     # - created_tool_app_bindings: tool_id → app_ids bindings showing which
     #     connections were wired to each tool; returned in the create result.
     # - agent_create_response: wxO agent creation response (carries agent_id).
     # - operation_to_provider_app_id: operation app_id → provider app_id
     #     (identity mapping for both existing and raw-created connections).
     # - resolved_connections: provider_app_id → connection_id map for bind calls.
-    created_snapshot_bindings: list[WatsonxToolRefBinding] = []
+    tools_with_refs: list[WatsonxToolRefBinding] = list(plan.existing_tool_refs)
     created_tool_app_bindings: list[WatsonxToolAppBinding] = []
     agent_create_response = None
     operation_to_provider_app_id: dict[str, str] = {}
@@ -219,7 +233,7 @@ async def apply_provider_create_plan_with_rollback(
                 create_and_upload_tools_fn=create_and_upload_wxo_flow_tools_with_bindings,
             )
             created_tool_ids.extend(tool_create_result.created_tool_ids)
-            created_snapshot_bindings.extend(tool_create_result.snapshot_bindings)
+            tools_with_refs.extend(tool_create_result.snapshot_bindings)
             created_tool_app_bindings.extend(
                 _build_created_tool_app_bindings(
                     raw_tools_to_create=plan.raw_tools_to_create,
@@ -286,8 +300,8 @@ async def apply_provider_create_plan_with_rollback(
 
     return WatsonxProviderCreateApplyResult(
         agent_id=str(agent_create_response.id),
-        app_ids=created_app_ids,
-        tools_with_refs=created_snapshot_bindings,
+        created_app_ids=created_app_ids,
+        tools_with_refs=tools_with_refs,
         tool_app_bindings=created_tool_app_bindings,
         prefixed_name=plan.prefixed_deployment_name,
         display_name=deployment_spec.name,

@@ -1063,9 +1063,16 @@ def resolve_added_snapshot_bindings_for_update(
 
 
 def to_deployment_create_response(
-    result: AdapterDeploymentCreateResult, deployment_row: Deployment
+    result: AdapterDeploymentCreateResult,
+    deployment_row: Deployment,
+    *,
+    provider_data: dict[str, Any] | None = None,
 ) -> DeploymentCreateResponse:
-    payload = result.model_dump(exclude_unset=True)
+    resolved_provider_data = provider_data
+    if resolved_provider_data is None:
+        payload = result.model_dump(exclude_unset=True)
+        raw_provider_result = payload.get("provider_result")
+        resolved_provider_data = raw_provider_result if isinstance(raw_provider_result, dict) else None
     return DeploymentCreateResponse(
         id=deployment_row.id,
         name=deployment_row.name,
@@ -1073,5 +1080,5 @@ def to_deployment_create_response(
         type=deployment_row.deployment_type,
         created_at=deployment_row.created_at,
         updated_at=deployment_row.updated_at,
-        provider_data=payload.get("provider_result"),
+        provider_data=resolved_provider_data,
     )

@@ -75,6 +75,13 @@ def _tool_ref(tool_id: str) -> dict[str, str]:
     return {"source_ref": f"fv-{tool_id}", "tool_id": tool_id}
 
 
+def test_watsonx_service_result_models_reject_string_like_id_lists() -> None:
+    with pytest.raises(TypeError):
+        payloads_module.WatsonxDeploymentCreateResultData.model_validate({"created_app_ids": "not-a-list"})
+    with pytest.raises(TypeError):
+        payloads_module.WatsonxDeploymentUpdateResultData.model_validate({"created_app_ids": "not-a-list"})
+
+
 class DummySettingsService:
     def __init__(self):
         self.settings = SimpleNamespace()
@@ -300,12 +307,12 @@ def _create_provider_spec(
     return {
         "resource_name_prefix": resource_name_prefix,
         "tools": {},
-        "connections": {"existing_app_ids": app_ids},
+        "connections": {},
         "operations": [
             {
                 "op": "bind",
                 "tool": {"tool_id_with_ref": _tool_ref(tool_ids[0])},
-                "app_ids": [app_ids[0]],
+                "app_refs": [{"app_id": app_ids[0]}],
             }
         ],
     }
@@ -406,12 +413,12 @@ async def test_create_rejects_missing_resource_name_prefix():
                 ),
                 provider_data={
                     "tools": {},
-                    "connections": {"existing_app_ids": ["app-existing-1"]},
+                    "connections": {},
                     "operations": [
                         {
                             "op": "bind",
                             "tool": {"tool_id_with_ref": _tool_ref("tool-existing-1")},
-                            "app_ids": ["app-existing-1"],
+                            "app_refs": [{"app_id": "app-existing-1"}],
                         }
                     ],
                 },
@@ -522,12 +529,12 @@ async def test_update_provider_data_binds_existing_tool_and_updates_agent_tools(
         payload=DeploymentUpdate(
             provider_data={
                 "tools": {},
-                "connections": {"existing_app_ids": ["cfg-new"]},
+                "connections": {},
                 "operations": [
                     {
                         "op": "bind",
                         "tool": {"tool_id_with_ref": _tool_ref("tool-3")},
-                        "app_ids": ["cfg-new"],
+                        "app_refs": [{"app_id": "cfg-new"}],
                     }
                 ],
             }
@@ -615,7 +622,7 @@ async def test_update_provider_data_creates_raw_connection_and_raw_tool(monkeypa
                     {
                         "op": "bind",
                         "tool": {"name_of_raw": "snapshot-new-1"},
-                        "app_ids": ["cfg"],
+                        "app_refs": [{"app_id_of_raw": "cfg"}],
                     }
                 ],
             }
@@ -680,7 +687,7 @@ async def test_update_provider_data_binds_existing_tool_using_provider_app_id_fo
                     {
                         "op": "bind",
                         "tool": {"tool_id_with_ref": _tool_ref("tool-1")},
-                        "app_ids": ["cfg"],
+                        "app_refs": [{"app_id_of_raw": "cfg"}],
                     }
                 ],
             }
@@ -732,9 +739,13 @@ async def test_update_provider_data_mixed_operations_preserve_encounter_order(mo
         payload=DeploymentUpdate(
             provider_data={
                 "tools": {},
-                "connections": {"existing_app_ids": ["cfg-1", "cfg-2"]},
+                "connections": {},
                 "operations": [
-                    {"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-3")}, "app_ids": ["cfg-2", "cfg-1"]},
+                    {
+                        "op": "bind",
+                        "tool": {"tool_id_with_ref": _tool_ref("tool-3")},
+                        "app_refs": [{"app_id": "cfg-2"}, {"app_id": "cfg-1"}],
+                    },
                     {"op": "unbind", "tool": _tool_ref("tool-1"), "app_ids": ["cfg-1", "cfg-2"]},
                     {"op": "remove_tool", "tool": _tool_ref("tool-2")},
                 ],
@@ -743,7 +754,7 @@ async def test_update_provider_data_mixed_operations_preserve_encounter_order(mo
         db=object(),
     )
 
-    assert validate_calls == ["cfg-1", "cfg-2"]
+    assert validate_calls == ["cfg-2", "cfg-1"]
     assert result.provider_result is not None
     assert result.provider_result.created_app_ids == []
     assert result.provider_result.created_snapshot_ids == ["tool-3"]
@@ -760,6 +771,40 @@ async def test_update_provider_data_mixed_operations_preserve_encounter_order(mo
 
     _, agent_payload = fake_agent.update_calls[0]
     assert agent_payload["tools"] == ["tool-1", "tool-3"]
+
+
+@pytest.mark.anyio
+async def test_update_provider_data_rejects_missing_existing_tool_reference(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
+    fake_tool = FakeToolClient([{"id": "tool-1", "name": "tool-1", "binding": {"langflow": {"connections": {}}}}])
+    fake_clients = SimpleNamespace(
+        agent=fake_agent,
+        tool=fake_tool,
+        connections=FakeConnectionsClient(existing_app_id="cfg-1"),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(InvalidContentError, match="Snapshot tool\\(s\\) not found: tool-missing"):
+        await service.update(
+            user_id="user-1",
+            deployment_id="dep-1",
+            payload=DeploymentUpdate(
+                provider_data={
+                    "operations": [
+                        {
+                            "op": "remove_tool",
+                            "tool": {"source_ref": "fv-missing", "tool_id": "tool-missing"},
+                        }
+                    ]
+                }
+            ),
+            db=object(),
+        )
 
 
 def test_ordered_unique_strs_preserves_encounter_order_and_safe_discard():
@@ -790,7 +835,6 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
                 ],
             },
             "connections": {
-                "existing_app_ids": ["cfg-1", "cfg-2", "cfg-3"],
                 "raw_payloads": [
                     {"app_id": "cfg-raw-1", "environment_variables": {"API_KEY": {"source": "raw", "value": "x"}}},
                     {"app_id": "cfg-raw-2", "environment_variables": {"API_KEY": {"source": "raw", "value": "y"}}},
@@ -800,12 +844,24 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
                 {
                     "op": "bind",
                     "tool": {"tool_id_with_ref": _tool_ref("tool-c")},
-                    "app_ids": ["cfg-2", "cfg-1", "cfg-2"],
+                    "app_refs": [
+                        {"app_id": "cfg-2"},
+                        {"app_id": "cfg-1"},
+                        {"app_id": "cfg-2"},
+                    ],
                 },
-                {"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-a")}, "app_ids": ["cfg-1"]},
+                {
+                    "op": "bind",
+                    "tool": {"tool_id_with_ref": _tool_ref("tool-a")},
+                    "app_refs": [{"app_id": "cfg-1"}],
+                },
                 {"op": "unbind", "tool": _tool_ref("tool-c"), "app_ids": ["cfg-3", "cfg-1", "cfg-3"]},
                 {"op": "remove_tool", "tool": _tool_ref("tool-b")},
-                {"op": "bind", "tool": {"name_of_raw": "snapshot-raw-1"}, "app_ids": ["cfg-raw-2", "cfg-raw-1"]},
+                {
+                    "op": "bind",
+                    "tool": {"name_of_raw": "snapshot-raw-1"},
+                    "app_refs": [{"app_id_of_raw": "cfg-raw-2"}, {"app_id_of_raw": "cfg-raw-1"}],
+                },
             ],
         }
     )
@@ -816,7 +872,7 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
 
     assert plan.bind_existing_tool_ids == ["tool-c", "tool-a"]
     assert plan.final_existing_tool_ids == ["tool-a", "tool-c"]
-    assert plan.existing_app_ids == ["cfg-1", "cfg-2", "cfg-3"]
+    assert plan.existing_app_ids == ["cfg-2", "cfg-1", "cfg-3"]
     assert [item.operation_app_id for item in plan.raw_connections_to_create] == ["cfg-raw-1", "cfg-raw-2"]
     assert [item.provider_app_id for item in plan.raw_connections_to_create] == ["cfg-raw-1", "cfg-raw-2"]
     assert len(plan.raw_tools_to_create) == 1
@@ -831,8 +887,14 @@ def test_build_provider_update_plan_normalizes_resource_name_prefix():
     provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
         {
             "resource_name_prefix": "my-prefix!",
-            "connections": {"existing_app_ids": ["cfg-1"]},
-            "operations": [{"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-a")}, "app_ids": ["cfg-1"]}],
+            "connections": {},
+            "operations": [
+                {
+                    "op": "bind",
+                    "tool": {"tool_id_with_ref": _tool_ref("tool-a")},
+                    "app_refs": [{"app_id": "cfg-1"}],
+                }
+            ],
         }
     )
     plan = update_core_module.build_provider_update_plan(
@@ -848,8 +910,14 @@ def test_build_provider_update_plan_rejects_non_alpha_resource_name_prefix():
         payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
             {
                 "resource_name_prefix": "123-prefix",
-                "connections": {"existing_app_ids": ["cfg-1"]},
-                "operations": [{"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-a")}, "app_ids": ["cfg-1"]}],
+                "connections": {},
+                "operations": [
+                    {
+                        "op": "bind",
+                        "tool": {"tool_id_with_ref": _tool_ref("tool-a")},
+                        "app_refs": [{"app_id": "cfg-1"}],
+                    }
+                ],
             }
         )
 
@@ -934,7 +1002,11 @@ async def test_apply_provider_create_plan_binds_raw_tools_with_provider_app_ids(
                 ]
             },
             "operations": [
-                {"op": "bind", "tool": {"name_of_raw": "snapshot-raw-1"}, "app_ids": ["cfg"]},
+                {
+                    "op": "bind",
+                    "tool": {"name_of_raw": "snapshot-raw-1"},
+                    "app_refs": [{"app_id_of_raw": "cfg"}],
+                },
             ],
         }
     )
@@ -982,10 +1054,161 @@ async def test_apply_provider_create_plan_binds_raw_tools_with_provider_app_ids(
     assert fake_clients.agent.create_calls[0]["name"] == "lf_my_deployment"
     assert fake_clients.agent.create_calls[0]["tools"] == ["created-tool-1"]
     assert result.agent_id == "dep-created"
-    assert result.app_ids == ["cfg"]
+    assert result.created_app_ids == ["cfg"]
     assert [(binding.tool_id, binding.app_ids) for binding in result.tool_app_bindings] == [("created-tool-1", ["cfg"])]
     assert [(binding.source_ref, binding.tool_id) for binding in result.tools_with_refs] == [
         ("fv-create-1", "created-tool-1")
+    ]
+
+
+@pytest.mark.anyio
+async def test_apply_provider_create_plan_includes_existing_tool_refs_in_result(monkeypatch):
+    provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
+        {
+            "resource_name_prefix": "lf_",
+            "tools": {},
+            "connections": {},
+            "operations": [
+                {
+                    "op": "bind",
+                    "tool": {"tool_id_with_ref": _tool_ref("tool-1")},
+                    "app_refs": [{"app_id": "cfg-existing"}],
+                },
+            ],
+        }
+    )
+    plan = create_core_module.build_provider_create_plan(
+        deployment_name="my deployment",
+        provider_create=provider_create,
+    )
+    fake_tool = FakeToolClient(
+        [
+            {
+                "id": "tool-1",
+                "name": "tool-1",
+                "binding": {"langflow": {"connections": {}}},
+            }
+        ]
+    )
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]}),
+        tool=fake_tool,
+        connections=FakeConnectionsClient(existing_app_id="cfg-existing"),
+    )
+
+    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+        assert app_id == "cfg-existing"
+        return SimpleNamespace(connection_id="conn-existing")
+
+    monkeypatch.setattr(create_core_module, "validate_connection", mock_validate_connection)
+
+    result = await create_core_module.apply_provider_create_plan_with_rollback(
+        clients=fake_clients,
+        user_id="user-1",
+        db=object(),
+        deployment_spec=BaseDeploymentData(
+            name="my deployment",
+            description="desc",
+            type=DeploymentType.AGENT,
+        ),
+        plan=plan,
+    )
+
+    assert result.created_app_ids == []
+    assert [(binding.source_ref, binding.tool_id) for binding in result.tools_with_refs] == [("fv-tool-1", "tool-1")]
+    assert [(binding.tool_id, binding.app_ids) for binding in result.tool_app_bindings] == [
+        ("tool-1", ["cfg-existing"])
+    ]
+
+
+@pytest.mark.anyio
+async def test_apply_provider_create_plan_includes_all_tool_refs_in_mixed_result(monkeypatch):
+    provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
+        {
+            "resource_name_prefix": "lf_",
+            "tools": {
+                "raw_payloads": [
+                    {
+                        "id": str(UUID("00000000-0000-0000-0000-000000000082")),
+                        "name": "snapshot-raw-mixed-1",
+                        "description": "desc",
+                        "data": {"nodes": [], "edges": []},
+                        "tags": [],
+                        "provider_data": {"project_id": "project-1", "source_ref": "fv-create-mixed-1"},
+                    }
+                ]
+            },
+            "connections": {
+                "raw_payloads": [
+                    {"app_id": "cfg-raw", "environment_variables": {"API_KEY": {"source": "raw", "value": "x"}}}
+                ]
+            },
+            "operations": [
+                {
+                    "op": "bind",
+                    "tool": {"tool_id_with_ref": _tool_ref("tool-1")},
+                    "app_refs": [{"app_id": "cfg-existing"}],
+                },
+                {
+                    "op": "bind",
+                    "tool": {"name_of_raw": "snapshot-raw-mixed-1"},
+                    "app_refs": [{"app_id_of_raw": "cfg-raw"}],
+                },
+            ],
+        }
+    )
+    plan = create_core_module.build_provider_create_plan(
+        deployment_name="my deployment",
+        provider_create=provider_create,
+    )
+    fake_tool = FakeToolClient(
+        [
+            {
+                "id": "tool-1",
+                "name": "tool-1",
+                "binding": {"langflow": {"connections": {}}},
+            }
+        ]
+    )
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]}),
+        tool=fake_tool,
+        connections=FakeConnectionsClient(existing_app_id="cfg-existing"),
+    )
+
+    async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
+        return SimpleNamespace(connection_id=f"conn-{app_id}")
+
+    async def mock_create_and_upload(*, clients, tool_bindings, tool_name_prefix):  # noqa: ARG001
+        _ = tool_bindings, tool_name_prefix
+        return ["created-tool-1"]
+
+    monkeypatch.setattr(create_core_module, "validate_connection", mock_validate_connection)
+    monkeypatch.setattr(
+        create_core_module,
+        "create_and_upload_wxo_flow_tools_with_bindings",
+        mock_create_and_upload,
+    )
+
+    result = await create_core_module.apply_provider_create_plan_with_rollback(
+        clients=fake_clients,
+        user_id="user-1",
+        db=object(),
+        deployment_spec=BaseDeploymentData(
+            name="my deployment",
+            description="desc",
+            type=DeploymentType.AGENT,
+        ),
+        plan=plan,
+    )
+
+    assert [(binding.source_ref, binding.tool_id) for binding in result.tools_with_refs] == [
+        ("fv-tool-1", "tool-1"),
+        ("fv-create-mixed-1", "created-tool-1"),
+    ]
+    assert [(binding.tool_id, binding.app_ids) for binding in result.tool_app_bindings] == [
+        ("created-tool-1", ["cfg-raw"]),
+        ("tool-1", ["cfg-existing"]),
     ]
 
 
@@ -995,8 +1218,14 @@ async def test_apply_provider_create_plan_rolls_back_mutated_existing_tools_with
         {
             "resource_name_prefix": "lf_",
             "tools": {},
-            "connections": {"existing_app_ids": ["cfg-1"]},
-            "operations": [{"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-1")}, "app_ids": ["cfg-1"]}],
+            "connections": {},
+            "operations": [
+                {
+                    "op": "bind",
+                    "tool": {"tool_id_with_ref": _tool_ref("tool-1")},
+                    "app_refs": [{"app_id": "cfg-1"}],
+                }
+            ],
         }
     )
     plan = create_core_module.build_provider_create_plan(
@@ -1079,7 +1308,7 @@ async def test_apply_provider_create_plan_rolls_back_successfully_created_raw_co
                 {
                     "op": "bind",
                     "tool": {"tool_id_with_ref": _tool_ref("tool-existing-1")},
-                    "app_ids": ["cfg-a", "cfg-b"],
+                    "app_refs": [{"app_id_of_raw": "cfg-a"}, {"app_id_of_raw": "cfg-b"}],
                 },
             ],
         }
@@ -1142,7 +1371,11 @@ async def test_apply_provider_create_plan_rolls_back_all_journaled_raw_connectio
                 {
                     "op": "bind",
                     "tool": {"tool_id_with_ref": _tool_ref("tool-existing-1")},
-                    "app_ids": ["cfg-a", "cfg-b", "cfg-c"],
+                    "app_refs": [
+                        {"app_id_of_raw": "cfg-a"},
+                        {"app_id_of_raw": "cfg-b"},
+                        {"app_id_of_raw": "cfg-c"},
+                    ],
                 },
             ],
         }
@@ -1204,7 +1437,7 @@ async def test_apply_provider_update_plan_rolls_back_successfully_created_raw_co
                 {
                     "op": "bind",
                     "tool": {"tool_id_with_ref": _tool_ref("tool-existing-1")},
-                    "app_ids": ["cfg-a", "cfg-b"],
+                    "app_refs": [{"app_id_of_raw": "cfg-a"}, {"app_id_of_raw": "cfg-b"}],
                 },
             ],
         }
@@ -1273,7 +1506,11 @@ async def test_apply_provider_update_plan_rolls_back_all_journaled_raw_connectio
                 {
                     "op": "bind",
                     "tool": {"tool_id_with_ref": _tool_ref("tool-existing-1")},
-                    "app_ids": ["cfg-a", "cfg-b", "cfg-c"],
+                    "app_refs": [
+                        {"app_id_of_raw": "cfg-a"},
+                        {"app_id_of_raw": "cfg-b"},
+                        {"app_id_of_raw": "cfg-c"},
+                    ],
                 },
             ],
         }
@@ -1375,7 +1612,11 @@ async def test_create_provider_data_prefixes_tool_and_deployment_names_but_not_c
                     ]
                 },
                 "operations": [
-                    {"op": "bind", "tool": {"name_of_raw": "snapshot-new-1"}, "app_ids": ["cfg"]},
+                    {
+                        "op": "bind",
+                        "tool": {"name_of_raw": "snapshot-new-1"},
+                        "app_refs": [{"app_id_of_raw": "cfg"}],
+                    },
                 ],
             },
         ),
@@ -1396,7 +1637,7 @@ async def test_create_provider_data_prefixes_tool_and_deployment_names_but_not_c
     provider_result = (
         result.provider_result.model_dump() if hasattr(result.provider_result, "model_dump") else result.provider_result
     )
-    assert provider_result["app_ids"] == ["cfg"]
+    assert provider_result["created_app_ids"] == ["cfg"]
     assert provider_result["tool_app_bindings"] == [{"tool_id": "created-tool-1", "app_ids": ["cfg"]}]
     assert provider_result["tools_with_refs"] == [{"source_ref": "fv-create-service-1", "tool_id": "created-tool-1"}]
 
@@ -1490,7 +1731,7 @@ async def test_update_provider_data_maps_raw_connection_conflict_to_deployment_c
                         {
                             "op": "bind",
                             "tool": {"name_of_raw": "snapshot-new-1"},
-                            "app_ids": ["cfg"],
+                            "app_refs": [{"app_id_of_raw": "cfg"}],
                         }
                     ],
                 }
@@ -1557,7 +1798,7 @@ async def test_create_provider_data_maps_raw_connection_conflict_to_deployment_c
                         {
                             "op": "bind",
                             "tool": {"name_of_raw": "snapshot-new-1"},
-                            "app_ids": ["cfg"],
+                            "app_refs": [{"app_id_of_raw": "cfg"}],
                         }
                     ],
                 },
@@ -1579,12 +1820,11 @@ async def test_create_provider_data_maps_raw_connection_conflict_to_deployment_c
                     {
                         "op": "bind",
                         "tool": {"tool_id_with_ref": _tool_ref("tool-1")},
-                        "app_ids": ["undeclared_app_for_bind"],
+                        "app_refs": [{"app_id": "undeclared_app_for_bind"}],
                     }
                 ],
             },
-            "operation app_ids must be declared in connections\\.existing_app_ids or "
-            "connections\\.raw_payloads\\[\\*\\]\\.app_id",
+            "Connection 'undeclared_app_for_bind' not found",
         ),
     ],
 )
@@ -1657,12 +1897,12 @@ async def test_update_provider_data_rolls_back_mutated_tools_with_writable_paylo
                 spec=BaseDeploymentDataUpdate(description="trigger update"),
                 provider_data={
                     "tools": {},
-                    "connections": {"existing_app_ids": ["cfg-1"]},
+                    "connections": {},
                     "operations": [
                         {
                             "op": "bind",
                             "tool": {"tool_id_with_ref": _tool_ref("tool-1")},
-                            "app_ids": ["cfg-1"],
+                            "app_refs": [{"app_id": "cfg-1"}],
                         }
                     ],
                 },
@@ -1749,7 +1989,7 @@ async def test_update_provider_data_rolls_back_partially_created_raw_tools(monke
                         {
                             "op": "bind",
                             "tool": {"name_of_raw": "snapshot-new-1"},
-                            "app_ids": ["cfg"],
+                            "app_refs": [{"app_id_of_raw": "cfg"}],
                         }
                     ],
                 }
@@ -1840,7 +2080,7 @@ async def test_create_provider_data_rolls_back_partially_created_raw_tools(monke
                         {
                             "op": "bind",
                             "tool": {"name_of_raw": "snapshot-new-1"},
-                            "app_ids": ["cfg"],
+                            "app_refs": [{"app_id_of_raw": "cfg"}],
                         }
                     ],
                 },
@@ -2305,7 +2545,7 @@ async def test_rollback_create_result_cleans_up_agent_tools_and_apps(monkeypatch
         user_id="user-1",
         deployment_id="dep-created",
         provider_result={
-            "app_ids": ["cfg"],
+            "created_app_ids": ["cfg"],
             "tools_with_refs": [
                 {"source_ref": "fv-1", "tool_id": "tool-1"},
                 {"source_ref": "fv-2", "tool_id": "tool-2"},
