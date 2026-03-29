@@ -120,9 +120,13 @@ async def execute_workflow(
 
     **background** and **stream** can't be true at the same time.
     This endpoint supports three execution modes:
-        - **Synchronous** (background=False, stream=False): Returns complete results immediately
+        - **Synchronous** (background=False, stream=False): Returns complete results immediately.
+          Note: synchronous execution cannot be paused via the pause API because the
+          caller's HTTP connection is blocking — there is no opportunity to send a
+          separate pause request. Use background mode for pausable workflows.
         - **Streaming** (stream=True): Returns server-sent events in real-time (not yet implemented)
-        - **Background** (background=True): Starts job and returns job ID (not yet implemented)
+        - **Background** (background=True): Starts job and returns job ID. Supports
+          pause/resume via POST /workflows/pause and POST /workflows/resume.
 
     Error Handling Strategy:
         - System errors (404, 500, 503, 504): Returned as HTTP error responses
@@ -749,9 +753,12 @@ async def pause_workflow(
 ) -> WorkflowPauseResponse:
     """Pause a running workflow execution.
 
-    Writes a PAUSE signal to the execution_signals table. The graph executor
-    polls for signals after each component build and will checkpoint when it
-    sees this signal. The job transitions to PAUSED status.
+    Only background jobs (started with background=True) can be paused. Synchronous
+    executions block the caller's HTTP connection, leaving no opportunity to send
+    a pause request.
+
+    Sets the job status to PAUSED. The graph executor polls job status after each
+    component build and will checkpoint when it sees this signal.
 
     Args:
         request: Pause request containing job_id and optional reason
@@ -786,7 +793,7 @@ async def pause_workflow(
             detail={
                 "error": "Job not pausable",
                 "code": "INVALID_STATE_TRANSITION",
-                "message": f"Job {job_id} is in state '{job.status}' and cannot be paused",
+                "message": f"Job {job_id} is in state '{job.status.value}' and cannot be paused",
                 "job_id": str(job_id),
             },
         )
@@ -811,7 +818,7 @@ async def pause_workflow(
 )
 async def resume_workflow(
     request: WorkflowResumeRequest,
-    api_key_user: Annotated[UserRead, Depends(api_key_security)],  # noqa: ARG001
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
 ) -> WorkflowResumeResponse:
     """Resume a paused workflow from its checkpoint.
 
@@ -851,7 +858,7 @@ async def resume_workflow(
             detail={
                 "error": "Job not paused",
                 "code": "INVALID_STATE_TRANSITION",
-                "message": f"Job {job_id} is in state '{job.status}' and cannot be resumed. Only PAUSED jobs can be resumed.",
+                "message": f"Job {job_id} is in state '{job.status.value}' and cannot be resumed. Only paused jobs can be resumed.",
                 "job_id": str(job_id),
             },
         )
@@ -876,9 +883,13 @@ async def resume_workflow(
     resumed_graph = await Graph.resume_from_checkpoint(
         checkpoint,
         input_data=request.inputs,
+        user_id=str(api_key_user.id),
     )
     resumed_graph._checkpointing_enabled = True
     resumed_graph._job_id = str(job_id)
+    # Assign a new run_id so the job queue service treats this as a fresh task
+    # (the old queue entry from the paused execution may still exist)
+    resumed_graph.set_run_id(uuid4())
 
     # Get terminal nodes for output collection
     terminal_node_ids = resumed_graph.get_terminal_nodes()

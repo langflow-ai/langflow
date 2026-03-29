@@ -1,4 +1,10 @@
-"""Tests for graph checkpointing: pause, checkpoint, resume."""
+"""Tests for graph checkpointing: pause, checkpoint, resume.
+
+Tests are organized by layer:
+  1. Data model and store (GraphCheckpoint, InMemoryCheckpointStore)
+  2. Graph mechanics (request_pause, _create_checkpoint, opt-in gating)
+  3. Integration (real graph execution → pause → checkpoint → resume)
+"""
 
 from __future__ import annotations
 
@@ -7,14 +13,14 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.exceptions.graph import GraphPausedException
-from lfx.graph.graph.base import Graph
+from lfx.graph.graph.base import Graph, _is_serializable
 from lfx.graph.graph.constants import Finish
 from lfx.services.checkpoint.schema import GraphCheckpoint, VertexCheckpointData
 from lfx.services.checkpoint.service import InMemoryCheckpointStore
 
 
 # ---------------------------------------------------------------------------
-# Phase A: CheckpointStore and data model tests
+# 1. Data model and store
 # ---------------------------------------------------------------------------
 
 
@@ -23,7 +29,6 @@ class TestGraphCheckpointModel:
         cp = GraphCheckpoint(flow_id="f1", session_id="s1", run_id="r1")
         assert cp.checkpoint_id  # UUID generated
         assert cp.flow_id == "f1"
-        assert cp.session_id == "s1"
         assert cp.completed_layers == 0
         assert cp.vertex_results == {}
         assert cp.paused_vertex_id is None
@@ -45,16 +50,19 @@ class TestGraphCheckpointModel:
             pause_data={"question": "Which env?"},
         )
         assert cp.vertex_results["v1"].built is True
+        assert cp.vertex_results["v1"].results == {"output": "hello"}
         assert cp.paused_vertex_id == "v2"
-        assert cp.pause_reason == "input-required"
+        assert cp.pause_data["question"] == "Which env?"
 
     def test_checkpoint_serialization_roundtrip(self):
+        """model_dump → model_validate must preserve all fields including sets."""
         cp = GraphCheckpoint(
             flow_id="f1",
             session_id="s1",
             run_id="r1",
             completed_layers=2,
             vertices_to_run={"v3", "v4"},
+            inactivated_vertices={"v5"},
             pause_reason="input-required",
         )
         data = cp.model_dump()
@@ -62,6 +70,24 @@ class TestGraphCheckpointModel:
         assert restored.checkpoint_id == cp.checkpoint_id
         assert restored.completed_layers == 2
         assert restored.vertices_to_run == {"v3", "v4"}
+        assert restored.inactivated_vertices == {"v5"}
+
+    def test_checkpoint_json_roundtrip(self):
+        """JSON serialization must also roundtrip (important for DB storage)."""
+        cp = GraphCheckpoint(
+            flow_id="f1",
+            session_id="s1",
+            run_id="r1",
+            vertices_to_run={"a", "b"},
+            vertex_results={
+                "v1": VertexCheckpointData(built=True, results={"x": 1}),
+            },
+        )
+        json_str = cp.model_dump_json()
+        restored = GraphCheckpoint.model_validate_json(json_str)
+        assert restored.vertices_to_run == {"a", "b"}
+        assert restored.vertex_results["v1"].built is True
+        assert restored.vertex_results["v1"].results == {"x": 1}
 
 
 class TestInMemoryCheckpointStore:
@@ -69,36 +95,30 @@ class TestInMemoryCheckpointStore:
     def store(self):
         return InMemoryCheckpointStore()
 
-    @pytest.fixture
-    def sample_checkpoint(self):
-        return GraphCheckpoint(
-            flow_id="flow-1",
-            session_id="session-1",
-            run_id="run-1",
-            completed_layers=1,
-            pause_reason="input-required",
-        )
+    def _make_checkpoint(self, **kwargs) -> GraphCheckpoint:
+        defaults = {"flow_id": "f1", "session_id": "s1", "run_id": "r1"}
+        defaults.update(kwargs)
+        return GraphCheckpoint(**defaults)
 
     @pytest.mark.asyncio
-    async def test_save_and_load(self, store, sample_checkpoint):
-        checkpoint_id = await store.save(sample_checkpoint)
+    async def test_save_and_load(self, store):
+        cp = self._make_checkpoint(pause_reason="input-required")
+        checkpoint_id = await store.save(cp)
         loaded = await store.load(checkpoint_id)
         assert loaded is not None
         assert loaded.checkpoint_id == checkpoint_id
-        assert loaded.flow_id == "flow-1"
         assert loaded.pause_reason == "input-required"
 
     @pytest.mark.asyncio
     async def test_load_missing_returns_none(self, store):
-        result = await store.load("nonexistent-id")
-        assert result is None
+        assert await store.load("nonexistent-id") is None
 
     @pytest.mark.asyncio
-    async def test_delete(self, store, sample_checkpoint):
-        checkpoint_id = await store.save(sample_checkpoint)
+    async def test_delete(self, store):
+        cp = self._make_checkpoint()
+        checkpoint_id = await store.save(cp)
         await store.delete(checkpoint_id)
-        result = await store.load(checkpoint_id)
-        assert result is None
+        assert await store.load(checkpoint_id) is None
 
     @pytest.mark.asyncio
     async def test_delete_nonexistent_is_noop(self, store):
@@ -106,115 +126,148 @@ class TestInMemoryCheckpointStore:
 
     @pytest.mark.asyncio
     async def test_list_by_session(self, store):
-        cp1 = GraphCheckpoint(flow_id="f1", session_id="s1", run_id="r1")
-        cp2 = GraphCheckpoint(flow_id="f2", session_id="s1", run_id="r2")
-        cp3 = GraphCheckpoint(flow_id="f3", session_id="s2", run_id="r3")
-        await store.save(cp1)
-        await store.save(cp2)
-        await store.save(cp3)
+        await store.save(self._make_checkpoint(session_id="s1", run_id="r1"))
+        await store.save(self._make_checkpoint(session_id="s1", run_id="r2"))
+        await store.save(self._make_checkpoint(session_id="s2", run_id="r3"))
 
-        s1_checkpoints = await store.list_by_session("s1")
-        assert len(s1_checkpoints) == 2
-        assert all(cp.session_id == "s1" for cp in s1_checkpoints)
-
-    @pytest.mark.asyncio
-    async def test_ttl_expiry(self, store):
-        expired = GraphCheckpoint(
-            flow_id="f1",
-            session_id="s1",
-            run_id="r1",
-            expires_at=datetime.now(timezone.utc) - timedelta(hours=1),
-        )
-        await store.save(expired)
-        result = await store.load(expired.checkpoint_id)
-        assert result is None
+        result = await store.list_by_session("s1")
+        assert len(result) == 2
+        assert all(cp.session_id == "s1" for cp in result)
 
     @pytest.mark.asyncio
     async def test_load_by_run_id(self, store):
-        cp1 = GraphCheckpoint(flow_id="f1", session_id="s1", run_id="run-123")
-        cp2 = GraphCheckpoint(flow_id="f2", session_id="s2", run_id="run-456")
-        await store.save(cp1)
-        await store.save(cp2)
+        await store.save(self._make_checkpoint(run_id="run-123"))
+        await store.save(self._make_checkpoint(run_id="run-456"))
 
         result = await store.load_by_run_id("run-123")
         assert result is not None
         assert result.run_id == "run-123"
+        assert await store.load_by_run_id("run-999") is None
 
-        missing = await store.load_by_run_id("run-999")
-        assert missing is None
+    @pytest.mark.asyncio
+    async def test_load_by_run_id_returns_most_recent(self, store):
+        """When multiple checkpoints exist for a run, return the newest."""
+        old = self._make_checkpoint(
+            run_id="run-1",
+            created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            completed_layers=1,
+        )
+        new = self._make_checkpoint(
+            run_id="run-1",
+            created_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
+            completed_layers=2,
+        )
+        await store.save(old)
+        await store.save(new)
+
+        result = await store.load_by_run_id("run-1")
+        assert result is not None
+        assert result.completed_layers == 2
+
+    @pytest.mark.asyncio
+    async def test_ttl_expiry_on_load(self, store):
+        expired = self._make_checkpoint(
+            expires_at=datetime.now(timezone.utc) - timedelta(hours=1),
+        )
+        await store.save(expired)
+        assert await store.load(expired.checkpoint_id) is None
+
+    @pytest.mark.asyncio
+    async def test_ttl_expiry_on_load_by_run_id(self, store):
+        expired = self._make_checkpoint(
+            run_id="run-expired",
+            expires_at=datetime.now(timezone.utc) - timedelta(hours=1),
+        )
+        await store.save(expired)
+        assert await store.load_by_run_id("run-expired") is None
 
     @pytest.mark.asyncio
     async def test_ttl_not_expired(self, store):
-        future = GraphCheckpoint(
-            flow_id="f1",
-            session_id="s1",
-            run_id="r1",
+        future = self._make_checkpoint(
             expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
         )
         await store.save(future)
-        result = await store.load(future.checkpoint_id)
-        assert result is not None
+        assert await store.load(future.checkpoint_id) is not None
 
 
 # ---------------------------------------------------------------------------
-# Phase B: Graph pause and checkpoint creation tests
+# 2. Graph mechanics
 # ---------------------------------------------------------------------------
+
+
+def _make_graph() -> Graph:
+    """Build a minimal 2-vertex graph (ChatInput → ChatOutput)."""
+    chat_input = ChatInput(_id="chat_input")
+    chat_input.set(input_value="hello", should_store_message=False)
+    chat_output = ChatOutput(input_value="test", _id="chat_output")
+    chat_output.set(sender_name=chat_input.message_response, should_store_message=False)
+    return Graph(chat_input, chat_output)
+
+
+class TestIsSerializable:
+    def test_none_is_serializable(self):
+        assert _is_serializable(None) is True
+
+    def test_primitives_are_serializable(self):
+        assert _is_serializable("hello") is True
+        assert _is_serializable(42) is True
+        assert _is_serializable({"a": [1, 2]}) is True
+
+    def test_non_serializable_objects_rejected(self):
+        assert _is_serializable(object()) is False
+        assert _is_serializable(lambda: None) is False
+
+    def test_no_silent_str_conversion(self):
+        """Objects that would pass with default=str must be rejected."""
+
+        class Custom:
+            pass
+
+        assert _is_serializable(Custom()) is False
 
 
 class TestCheckpointingOptIn:
     def test_checkpointing_disabled_by_default(self):
-        chat_input = ChatInput(_id="chat_input")
-        chat_input.set(input_value="hello")
-        chat_output = ChatOutput(input_value="test", _id="chat_output")
-        chat_output.set(sender_name=chat_input.message_response)
-        graph = Graph(chat_input, chat_output)
+        graph = _make_graph()
         assert graph._checkpointing_enabled is False
 
     @pytest.mark.asyncio
     async def test_pause_ignored_when_checkpointing_disabled(self):
-        """When checkpointing is off, request_pause is a no-op during process()."""
-        chat_input = ChatInput(_id="chat_input")
-        chat_input.set(input_value="hello", should_store_message=False)
-        chat_output = ChatOutput(input_value="test", _id="chat_output")
-        chat_output.set(sender_name=chat_input.message_response, should_store_message=False)
-
-        graph = Graph(chat_input, chat_output)
+        """process() completes normally even if _pause_requested is set."""
+        graph = _make_graph()
         graph.flow_id = "test-flow"
-        # Checkpointing NOT enabled (default)
         graph.prepare()
         graph._pause_requested = True
         graph._pause_info = {"vertex_id": "chat_input", "reason": "test", "data": {}}
 
-        # process() should NOT raise — pause is ignored when checkpointing disabled
         result = await graph.process(fallback_to_env_vars=False)
-        assert result is graph  # Completed normally
+        assert result is graph
 
 
-class TestGraphPause:
-    def test_request_pause_sets_state(self):
-        chat_input = ChatInput(_id="chat_input")
-        chat_input.set(input_value="hello")
-        chat_output = ChatOutput(input_value="test", _id="chat_output")
-        chat_output.set(sender_name=chat_input.message_response)
-        graph = Graph(chat_input, chat_output)
-
+class TestRequestPause:
+    def test_sets_pause_state(self):
+        graph = _make_graph()
         graph.request_pause(vertex_id="v1", reason="input-required", data={"q": "why?"})
+
         assert graph._pause_requested is True
         assert graph._pause_info["vertex_id"] == "v1"
         assert graph._pause_info["reason"] == "input-required"
         assert graph._pause_info["data"]["q"] == "why?"
 
-    def test_create_checkpoint_captures_state(self):
-        chat_input = ChatInput(_id="chat_input")
-        chat_input.set(input_value="hello")
-        chat_output = ChatOutput(input_value="test", _id="chat_output")
-        chat_output.set(sender_name=chat_input.message_response)
-        graph = Graph(chat_input, chat_output)
+    def test_default_data_is_empty_dict(self):
+        graph = _make_graph()
+        graph.request_pause(vertex_id="v1", reason="test")
+        assert graph._pause_info["data"] == {}
+
+
+class TestCreateCheckpoint:
+    def test_captures_identity_and_pause_context(self):
+        graph = _make_graph()
+        graph.flow_id = "test-flow"
         graph._session_id = "test-session"
         graph._run_id = "test-run"
-        graph.flow_id = "test-flow"
-
         graph.request_pause(vertex_id="chat_input", reason="test-pause")
+
         checkpoint = graph._create_checkpoint(completed_layers=1)
 
         assert checkpoint.flow_id == "test-flow"
@@ -224,26 +277,76 @@ class TestGraphPause:
         assert checkpoint.paused_vertex_id == "chat_input"
         assert checkpoint.pause_reason == "test-pause"
 
-    @pytest.mark.asyncio
-    async def test_process_raises_on_pause(self):
-        """When a vertex requests pause, process() should raise GraphPausedException."""
-        chat_input = ChatInput(_id="chat_input")
-        chat_input.set(input_value="hello", should_store_message=False)
-        chat_output = ChatOutput(input_value="test", _id="chat_output")
-        chat_output.set(sender_name=chat_input.message_response, should_store_message=False)
+    def test_sets_expiration(self):
+        graph = _make_graph()
+        graph.flow_id = "f"
+        graph._session_id = "s"
+        graph._run_id = "r"
+        graph.request_pause(vertex_id="v", reason="test")
 
-        graph = Graph(chat_input, chat_output)
+        checkpoint = graph._create_checkpoint(completed_layers=0)
+        assert checkpoint.expires_at is not None
+        assert checkpoint.expires_at > datetime.now(timezone.utc)
+
+    def test_captures_built_vertex_results(self):
+        """After running a graph, checkpoint should capture built vertex state."""
+        graph = _make_graph()
+        graph.flow_id = "f"
+        graph._session_id = "s"
+        graph._run_id = "r"
+
+        # Actually run the graph
+        results = list(graph.start())
+        assert results[-1] == Finish()
+
+        graph.request_pause(vertex_id="chat_input", reason="test")
+        checkpoint = graph._create_checkpoint(completed_layers=1)
+
+        assert "chat_input" in checkpoint.vertex_results
+        assert checkpoint.vertex_results["chat_input"].built is True
+        assert "chat_output" in checkpoint.vertex_results
+        assert checkpoint.vertex_results["chat_output"].built is True
+
+    def test_skips_non_serializable_built_objects(self):
+        """Non-serializable built_object/built_result should be stored as None."""
+        graph = _make_graph()
+        graph.flow_id = "f"
+        graph._session_id = "s"
+        graph._run_id = "r"
+
+        list(graph.start())
+
+        # Inject a non-serializable object into a vertex
+        vertex = graph.get_vertex("chat_input")
+        vertex.built_object = object()  # Not JSON-serializable
+
+        graph.request_pause(vertex_id="chat_input", reason="test")
+        checkpoint = graph._create_checkpoint(completed_layers=1)
+
+        # built_object should be None (skipped), but vertex is still recorded as built
+        assert checkpoint.vertex_results["chat_input"].built is True
+        assert checkpoint.vertex_results["chat_input"].built_object is None
+
+
+# ---------------------------------------------------------------------------
+# 3. Integration: real graph execution → pause → checkpoint → resume
+# ---------------------------------------------------------------------------
+
+
+class TestProcessPauseIntegration:
+    @pytest.mark.asyncio
+    async def test_process_raises_and_saves_checkpoint(self):
+        """Full flow: enable checkpointing, set pause flag, run process().
+        Verify GraphPausedException is raised and checkpoint is persisted."""
+        graph = _make_graph()
         graph.flow_id = "test-flow"
         graph._session_id = "test-session"
         graph._checkpointing_enabled = True
-        graph._checkpoint_store = InMemoryCheckpointStore()
 
-        # Manually trigger pause before processing
-        # We simulate a vertex that calls request_pause during build
-        # by injecting the pause state after prepare
+        store = InMemoryCheckpointStore()
+        graph._checkpoint_store = store
+
         graph.prepare()
-
-        # Force pause after layer 0
         graph._pause_requested = True
         graph._pause_info = {
             "vertex_id": "chat_input",
@@ -254,59 +357,33 @@ class TestGraphPause:
         with pytest.raises(GraphPausedException) as exc_info:
             await graph.process(fallback_to_env_vars=False)
 
-        assert exc_info.value.reason == "input-required"
-        assert exc_info.value.checkpoint_id  # UUID assigned
-        assert exc_info.value.data["question"] == "Which env?"
+        exc = exc_info.value
+        assert exc.reason == "input-required"
+        assert exc.data["question"] == "Which env?"
+        assert exc.checkpoint_id
 
-        # Verify checkpoint was saved to the store
-        loaded = await graph._checkpoint_store.load(exc_info.value.checkpoint_id)
+        # Checkpoint must be in the store
+        loaded = await store.load(exc.checkpoint_id)
         assert loaded is not None
         assert loaded.pause_reason == "input-required"
+        assert loaded.flow_id == "test-flow"
+
+        # Checkpoint must also be findable by run_id
+        by_run = await store.load_by_run_id(loaded.run_id)
+        assert by_run is not None
+        assert by_run.checkpoint_id == loaded.checkpoint_id
 
 
-# ---------------------------------------------------------------------------
-# Phase C: Graph resume from checkpoint tests
-# ---------------------------------------------------------------------------
-
-
-class TestGraphResume:
-    def _make_simple_graph(self) -> Graph:
-        chat_input = ChatInput(_id="chat_input")
-        chat_input.set(input_value="hello", should_store_message=False)
-        chat_output = ChatOutput(input_value="test", _id="chat_output")
-        chat_output.set(sender_name=chat_input.message_response, should_store_message=False)
-        return Graph(chat_input, chat_output)
-
-    def test_checkpoint_roundtrip_data_integrity(self):
-        """Verify that checkpoint data is complete enough for resume."""
-        graph = self._make_simple_graph()
-        graph.flow_id = "test-flow"
-        graph._session_id = "test-session"
-        graph._run_id = "test-run"
-
-        # Run the graph synchronously to populate vertex states
-        results = list(graph.start())
-        assert results[-1] == Finish()
-
-        # Create a checkpoint after execution
-        graph.request_pause(vertex_id="chat_input", reason="test")
-        checkpoint = graph._create_checkpoint(completed_layers=1)
-
-        # Verify checkpoint captured built vertices
-        assert "chat_input" in checkpoint.vertex_results
-        assert checkpoint.vertex_results["chat_input"].built is True
-        assert checkpoint.run_manager_state  # Not empty
-
+class TestResumeFromCheckpoint:
     @pytest.mark.asyncio
-    async def test_resume_from_checkpoint_restores_identity(self):
-        """Verify that resume_from_checkpoint restores identity fields."""
+    async def test_restores_identity_fields(self):
         checkpoint = GraphCheckpoint(
             flow_id="test-flow",
             session_id="test-session",
             run_id="test-run",
             completed_layers=1,
             pause_reason="input-required",
-            flow_payload={},  # Empty payload - no graph to reconstruct
+            flow_payload={},
         )
 
         resumed = await Graph.resume_from_checkpoint(checkpoint)
@@ -316,13 +393,11 @@ class TestGraphResume:
         assert resumed._run_id == "test-run"
 
     @pytest.mark.asyncio
-    async def test_resume_restores_execution_state(self):
-        """Verify resume correctly restores run_manager and vertices_to_run."""
+    async def test_restores_run_manager_state(self):
         checkpoint = GraphCheckpoint(
-            flow_id="test-flow",
-            session_id="test-session",
-            run_id="test-run",
-            completed_layers=1,
+            flow_id="f",
+            session_id="s",
+            run_id="r",
             run_manager_state={
                 "run_map": {"v1": ["v2"]},
                 "run_predecessors": {"v2": []},
@@ -343,37 +418,34 @@ class TestGraphResume:
         assert resumed._call_order == ["v1"]
 
     @pytest.mark.asyncio
-    async def test_resume_with_input_injection(self):
-        """Verify that input injection works when the vertex exists in the graph."""
-        # Build a real graph so we have vertices in vertex_map
-        graph = self._make_simple_graph()
+    async def test_checkpoint_from_real_execution(self):
+        """Run a graph, checkpoint it, verify checkpoint data is plausible for resume."""
+        graph = _make_graph()
         graph.flow_id = "test-flow"
         graph._session_id = "test-session"
         graph._run_id = "test-run"
 
-        # Run to completion first
-        list(graph.start())
+        results = list(graph.start())
+        assert results[-1] == Finish()
 
-        # Create checkpoint
         graph.request_pause(vertex_id="chat_input", reason="input-required")
         checkpoint = graph._create_checkpoint(completed_layers=1)
 
-        # Since component-built graphs have empty raw_graph_data,
-        # resume won't reconstruct vertices. In production, graphs come from
-        # JSON payloads and resume works fully. For this test, verify the
-        # checkpoint data is correct and the mechanism is sound.
-        assert checkpoint.paused_vertex_id == "chat_input"
+        # Checkpoint captured both built vertices
         assert checkpoint.vertex_results["chat_input"].built is True
-        assert checkpoint.pause_reason == "input-required"
+        assert checkpoint.vertex_results["chat_output"].built is True
+        # Run manager state is populated
+        assert checkpoint.run_manager_state
+        assert "run_map" in checkpoint.run_manager_state
 
 
 # ---------------------------------------------------------------------------
-# GraphPausedException tests
+# GraphPausedException
 # ---------------------------------------------------------------------------
 
 
 class TestGraphPausedException:
-    def test_exception_attributes(self):
+    def test_attributes(self):
         exc = GraphPausedException(
             checkpoint_id="cp-123",
             reason="input-required",
@@ -382,9 +454,16 @@ class TestGraphPausedException:
         assert exc.checkpoint_id == "cp-123"
         assert exc.reason == "input-required"
         assert exc.data == {"question": "Which env?"}
+
+    def test_string_representation(self):
+        exc = GraphPausedException(checkpoint_id="cp-123", reason="input-required")
         assert "input-required" in str(exc)
         assert "cp-123" in str(exc)
 
-    def test_exception_default_data(self):
+    def test_default_data(self):
         exc = GraphPausedException(checkpoint_id="cp-1", reason="test")
         assert exc.data == {}
+
+    def test_is_exception(self):
+        exc = GraphPausedException(checkpoint_id="cp-1", reason="test")
+        assert isinstance(exc, Exception)
