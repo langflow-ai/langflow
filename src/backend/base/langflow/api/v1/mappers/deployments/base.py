@@ -35,6 +35,7 @@ from lfx.services.adapters.deployment.schema import (
     ConfigDeploymentBindingUpdate,
     ConfigItem,
     DeploymentCreateResult,
+    DeploymentListLlmsResult,
     DeploymentUpdateResult,
     ExecutionCreate,
     ExecutionCreateResult,
@@ -436,6 +437,10 @@ class BaseDeploymentMapper:
 
     def shape_deployment_list_result(self, provider_result: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_result
+
+    def shape_llm_list_result(self, result: DeploymentListLlmsResult) -> list[str]:
+        """Shape adapter LLM listing into API response model payload."""
+        return list(dict.fromkeys([llm.strip() for llm in result.llms if isinstance(llm, str) and llm.strip()]))
 
     def shape_config_list_result(self, provider_result: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_result

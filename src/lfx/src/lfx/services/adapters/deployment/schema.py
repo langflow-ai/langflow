@@ -16,6 +16,7 @@ from lfx.services.adapters.deployment.payloads import (
     T_DeploymentItemData,
     T_DeploymentListParams,
     T_DeploymentListResult,
+    T_DeploymentLlmListResult,
     T_DeploymentOperationResult,
     T_DeploymentSpec,
     T_DeploymentStatusData,
@@ -392,6 +393,23 @@ class DeploymentListResult(ProviderResultModel[T_DeploymentListResult]):
     """Model representing a result for a deployment list operation."""
 
     deployments: list[ItemResult] = Field(description="The list of deployments")
+
+
+class DeploymentListLlmsResult(ProviderResultModel[T_DeploymentLlmListResult]):
+    """Model representing a result for listing available deployment LLMs."""
+
+    llms: list[NormalizedId] = Field(
+        default_factory=list,
+        description="Provider-available LLM model names for deployment configuration.",
+    )
+
+    @field_validator("llms", mode="before")
+    @classmethod
+    def normalize_llms(cls, value) -> list[str]:
+        if value is None:
+            return []
+        normalized = _normalize_and_validate_id_list([str(item) for item in value], field_name="llm")
+        return list(dict.fromkeys(normalized))
 
 
 class ConfigListResult(ProviderResultModel[T_ConfigListResult]):

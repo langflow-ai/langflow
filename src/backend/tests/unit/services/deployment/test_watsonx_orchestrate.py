@@ -283,6 +283,7 @@ def _with_wxo_wrappers(ns):
     """Attach WxOClient SDK wrapper methods to a SimpleNamespace test double."""
     if hasattr(ns, "_base") and ns._base is not None:
         ns.get_agents_raw = lambda params=None: ns._base._get("/agents", params=params)
+        ns.get_models_raw = lambda params=None: ns._base._get("/v1/models", params=params)
         ns.post_run = lambda *, data: ns._base._post("/runs", data)
         ns.get_run = lambda run_id: ns._base._get(f"/runs/{run_id}")
     return ns
@@ -3078,6 +3079,66 @@ async def test_list_types_returns_supported_types():
     result = await service.list_types(user_id="user-1", db=object())
     assert DeploymentType.AGENT in result.deployment_types
     assert len(result.deployment_types) == 1
+
+
+@pytest.mark.anyio
+async def test_list_llms_returns_normalized_model_names(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_agent = FakeAgentClient(
+        {"id": "dep-1", "tools": []},
+        get_payloads={
+            "/v1/models": [
+                {"model_name": "granite-3.1-8b"},
+                {"model_name": "granite-3.3-8b"},
+                {"model_name": "granite-3.1-8b"},
+            ]
+        },
+    )
+    fake_clients = _with_wxo_wrappers(
+        SimpleNamespace(
+            _base=fake_agent,
+            agent=fake_agent,
+        )
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_llms(user_id="user-1", db=object())
+
+    assert result.llms == ["granite-3.1-8b", "granite-3.3-8b"]
+    assert result.provider_result == {
+        "models": [
+            {"model_name": "granite-3.1-8b"},
+            {"model_name": "granite-3.3-8b"},
+            {"model_name": "granite-3.1-8b"},
+        ]
+    }
+
+
+@pytest.mark.anyio
+async def test_list_llms_invalid_payload_raises_invalid_content(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_agent = FakeAgentClient(
+        {"id": "dep-1", "tools": []},
+        get_payloads={"/v1/models": [{"id": "missing-model-name"}]},
+    )
+    fake_clients = _with_wxo_wrappers(
+        SimpleNamespace(
+            _base=fake_agent,
+            agent=fake_agent,
+        )
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(InvalidContentError):
+        await service.list_llms(user_id="user-1", db=object())
 
 
 @pytest.mark.anyio

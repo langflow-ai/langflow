@@ -35,6 +35,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentDeleteResult,
     DeploymentDuplicateResult,
     DeploymentGetResult,
+    DeploymentListLlmsResult,
     DeploymentListParams,
     DeploymentListResult,
     DeploymentListTypesResult,
@@ -90,6 +91,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     PAYLOAD_SCHEMAS,
     WatsonxDeploymentCreatePayload,
     WatsonxDeploymentCreateResultData,
+    WatsonxDeploymentLlmListResultData,
     WatsonxDeploymentUpdateResultData,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
@@ -263,6 +265,35 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     ) -> DeploymentListTypesResult:
         """List deployment types supported by the provider."""
         return DeploymentListTypesResult(deployment_types=list(SUPPORTED_ADAPTER_DEPLOYMENT_TYPES))
+
+    async def list_llms(
+        self,
+        *,
+        user_id: IdLike,
+        db: AsyncSession,
+    ) -> DeploymentListLlmsResult:
+        """List provider-available LLM model names."""
+        client_manager = await self._get_provider_clients(user_id=user_id, db=db)
+        try:
+            raw_models = await asyncio.to_thread(client_manager.get_models_raw)
+            parsed_models: WatsonxDeploymentLlmListResultData = self._parse_provider_payload(
+                slot=self.payload_schemas.deployment_llm_list_result,
+                slot_name="deployment_llm_list_result",
+                provider_data={"models": raw_models},
+                error_prefix=ErrorPrefix.LIST,
+            )
+            llms = dedupe_list([model.model_name for model in parsed_models.models])
+            return DeploymentListLlmsResult(
+                llms=llms,
+                provider_result=parsed_models.model_dump(exclude_none=True),
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise_as_deployment_error(
+                exc,
+                error_prefix=ErrorPrefix.LIST,
+                log_msg="Unexpected error while listing wxO deployment LLMs",
+                pass_through=(AuthenticationError, AuthorizationError, InvalidContentError),
+            )
 
     async def list(
         self,

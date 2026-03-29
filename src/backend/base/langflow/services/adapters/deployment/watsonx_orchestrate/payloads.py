@@ -512,6 +512,22 @@ class WatsonxAgentExecutionResultData(BaseModel):
     last_error: str | None = None
 
 
+class WatsonxModelOut(BaseModel):
+    """Model metadata returned by wxO model catalog endpoints."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    model_name: NormalizedId
+
+
+class WatsonxDeploymentLlmListResultData(BaseModel):
+    """Normalized provider result payload for deployment LLM listing."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    models: list[WatsonxModelOut] = Field(default_factory=list)
+
+
 class WatsonxProviderUpdateApplyResult(BaseModel):
     """Public adapter contract for update helper apply results."""
 
@@ -553,5 +569,6 @@ PAYLOAD_SCHEMAS = DeploymentPayloadSchemas(
     deployment_update_result=PayloadSlot(WatsonxDeploymentUpdateResultData),
     execution_create_result=PayloadSlot(WatsonxAgentExecutionResultData),
     execution_status_result=PayloadSlot(WatsonxAgentExecutionResultData),
+    deployment_llm_list_result=PayloadSlot(WatsonxDeploymentLlmListResultData),
     verify_credentials=PayloadSlot(WatsonxVerifyCredentialsPayload),
 )

@@ -20,7 +20,12 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentProviderAccountUpdateRequest,
     DeploymentUpdateRequest,
 )
-from lfx.services.adapters.deployment.schema import DeploymentCreateResult, DeploymentType, DeploymentUpdateResult
+from lfx.services.adapters.deployment.schema import (
+    DeploymentCreateResult,
+    DeploymentListLlmsResult,
+    DeploymentType,
+    DeploymentUpdateResult,
+)
 from lfx.services.adapters.schema import AdapterType
 
 try:
@@ -602,6 +607,33 @@ def test_watsonx_mapper_update_response_raises_on_unmapped_tool_binding() -> Non
     assert exc.value.status_code == 500
     assert "orphan-tool" in exc.value.detail
     assert "no matching snapshot binding" in exc.value.detail
+
+
+def test_watsonx_mapper_shapes_llm_list_result() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    result = DeploymentListLlmsResult(
+        llms=[],
+        provider_result={
+            "models": [
+                {"model_name": "granite-3.1-8b"},
+                {"model_name": "granite-3.3-8b"},
+                {"model_name": "granite-3.1-8b"},
+            ]
+        },
+    )
+
+    shaped = mapper.shape_llm_list_result(result)
+    assert shaped == ["granite-3.1-8b", "granite-3.3-8b"]
+
+
+def test_watsonx_mapper_llm_list_result_raises_for_missing_provider_payload() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    result = DeploymentListLlmsResult(llms=[], provider_result=None)
+
+    with pytest.raises(HTTPException) as exc:
+        mapper.shape_llm_list_result(result)
+    assert exc.value.status_code == 500
+    assert "missing provider_result payload" in exc.value.detail
 
 
 def test_watsonx_mapper_exposes_reconciliation_resolvers() -> None:

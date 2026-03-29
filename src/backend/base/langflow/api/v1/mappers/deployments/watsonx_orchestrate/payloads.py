@@ -216,6 +216,31 @@ class WatsonxApiDeploymentUpdateResultData(BaseModel):
         return payload or None
 
 
+class WatsonxApiModelOut(BaseModel):
+    """Minimal API-boundary model metadata needed for deployment LLM listing."""
+
+    model_config = {"extra": "ignore"}
+
+    model_name: str = Field(min_length=1)
+
+    @field_validator("model_name")
+    @classmethod
+    def normalize_model_name(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            msg = "model_name must not be empty."
+            raise ValueError(msg)
+        return normalized
+
+
+class WatsonxApiDeploymentLlmListResultData(BaseModel):
+    """API-boundary payload used by mapper LLM-list response shaping."""
+
+    model_config = {"extra": "forbid"}
+
+    models: list[WatsonxApiModelOut] = Field(default_factory=list)
+
+
 class _WatsonxApiAgentExecutionResultBase(BaseModel):
     """Shared fields for API-facing agent execution result payloads.
 

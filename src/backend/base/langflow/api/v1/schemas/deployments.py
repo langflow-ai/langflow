@@ -240,6 +240,18 @@ class DeploymentTypeListResponse(BaseModel):
     deployment_types: list[DeploymentType]
 
 
+class DeploymentLlmListResponse(BaseModel):
+    """Available deployment LLM model names for a provider account."""
+
+    llms: list[str] = Field(default_factory=list)
+
+    @field_validator("llms")
+    @classmethod
+    def validate_llms(cls, values: list[str]) -> list[str]:
+        normalized = [_normalize_str(value, field_name="llm") for value in values]
+        return list(dict.fromkeys(normalized))
+
+
 class _DeploymentResponseBase(BaseModel):
     """Shared fields for deployment response schemas."""
 

@@ -55,6 +55,7 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentGetResponse,
     DeploymentListItem,
     DeploymentListResponse,
+    DeploymentLlmListResponse,
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountGetResponse,
     DeploymentProviderAccountListResponse,
@@ -563,6 +564,27 @@ async def list_deployment_types(
             db=session,
         )
     return DeploymentTypeListResponse(deployment_types=deployment_types_result.deployment_types)
+
+
+@router.get("/llms", response_model=DeploymentLlmListResponse)
+async def list_deployment_llms(
+    provider_id: DeploymentProviderAccountIdQuery,
+    session: DbSessionReadOnly,
+    current_user: CurrentActiveUser,
+):
+    provider_account = await get_owned_provider_account_or_404(
+        provider_id=provider_id,
+        user_id=current_user.id,
+        db=session,
+    )
+    deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
+    deployment_mapper = get_deployment_mapper(provider_account.provider_key)
+    with handle_adapter_errors(), deployment_provider_scope(provider_id):
+        llm_list_result = await deployment_adapter.list_llms(
+            user_id=current_user.id,
+            db=session,
+        )
+    return DeploymentLlmListResponse(llms=deployment_mapper.shape_llm_list_result(llm_list_result))
 
 
 @router.post("/executions", response_model=ExecutionCreateResponse, status_code=status.HTTP_201_CREATED)
