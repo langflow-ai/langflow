@@ -25,7 +25,7 @@ jobs:
           name: dist-main
           path: dist
       - name: Create Release Notes
-        uses: ncipollo/release-action@v1
+        uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1
         with:
           artifacts: "dist/*"
           token: ${{ secrets.GITHUB_TOKEN }}
