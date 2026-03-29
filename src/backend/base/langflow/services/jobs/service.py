@@ -182,8 +182,11 @@ class JobService(Service):
         except GraphPausedException as e:
             # Graph was paused via API signal — don't mark as FAILED.
             # Status is already PAUSED (set by the pause API endpoint).
+            # Return normally instead of re-raising, since this runs in a
+            # fire-and-forget task and an unhandled exception would produce
+            # "Task exception was never retrieved" warnings.
             await logger.ainfo(f"Job {job_id} paused: {e.reason} (checkpoint={e.checkpoint_id})")
-            raise
+            return None
 
         except asyncio.TimeoutError as e:
             # Handle timeout specifically

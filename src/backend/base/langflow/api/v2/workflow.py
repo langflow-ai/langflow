@@ -887,9 +887,14 @@ async def resume_workflow(
     )
     resumed_graph._checkpointing_enabled = True
     resumed_graph._job_id = str(job_id)
-    # Assign a new run_id so the job queue service treats this as a fresh task
-    # (the old queue entry from the paused execution may still exist)
-    resumed_graph.set_run_id(uuid4())
+    # Keep the original run_id (= job_id) so vertex_builds are logged under the same job.
+    # Clean up the old job queue entry from the paused execution first.
+    resumed_graph.set_run_id(job_id)
+
+    from langflow.services.deps import get_queue_service
+
+    queue_service = get_queue_service()
+    await queue_service.cleanup_job(str(job_id))
 
     # Get terminal nodes for output collection
     terminal_node_ids = resumed_graph.get_terminal_nodes()
