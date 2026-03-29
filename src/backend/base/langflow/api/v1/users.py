@@ -10,7 +10,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
-from langflow.services.auth.utils import get_current_active_superuser
+from langflow.services.auth.utils import get_current_active_superuser, get_optional_user
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
 from langflow.services.database.models.user.model import User, UserCreate, UserRead, UserUpdate
 from langflow.services.deps import get_auth_service, get_settings_service
@@ -18,14 +18,36 @@ from langflow.services.deps import get_auth_service, get_settings_service
 router = APIRouter(tags=["Users"], prefix="/users")
 
 
+async def check_user_creation_permission(
+    current_user: Annotated[User | None, Depends(get_optional_user)],
+) -> None:
+    """Restrict user creation to superusers when AUTO_LOGIN is disabled.
+
+    When AUTO_LOGIN is True (development mode), anyone can register.
+    When AUTO_LOGIN is False (production mode), only authenticated superusers
+    can create new users to prevent unrestricted user creation.
+    """
+    settings_service = get_settings_service()
+    if not settings_service.auth_settings.AUTO_LOGIN:
+        if current_user is None or not current_user.is_active or not current_user.is_superuser:
+            raise HTTPException(
+                status_code=403,
+                detail="User registration is disabled. Only superusers can create new users.",
+            )
+
+
 @router.post("/", response_model=UserRead, status_code=201)
 async def add_user(
     user: UserCreate,
     session: DbSession,
+    _: None = Depends(check_user_creation_permission),
 ) -> User:
     """Add a new user to the database.
 
-    This endpoint allows public user registration (sign up).
+    When AUTO_LOGIN is enabled (development mode), this endpoint allows
+    public user registration (sign up).
+    When AUTO_LOGIN is disabled (production mode), only authenticated
+    superusers can create new users.
     User activation is controlled by the NEW_USER_IS_ACTIVE setting.
     """
     settings_service = get_settings_service()
