@@ -11,6 +11,7 @@ from lfx.services.adapters.deployment.payloads import (
     T_ConfigListParams,
     T_ConfigListResult,
     T_DeploymentConfig,
+    T_DeploymentCreate,
     T_DeploymentCreateResult,
     T_DeploymentItemData,
     T_DeploymentListParams,
@@ -19,13 +20,19 @@ from lfx.services.adapters.deployment.payloads import (
     T_DeploymentSpec,
     T_DeploymentStatusData,
     T_DeploymentUpdate,
+    T_DeploymentUpdateResult,
+    T_ExecutionCreateResult,
     T_ExecutionInput,
     T_ExecutionResult,
+    T_ExecutionStatusResult,
+    T_FlowProviderData,
     T_ListParamsPayload,
     T_ProviderData,
     T_ProviderResult,
     T_SnapshotListParams,
     T_SnapshotListResult,
+    T_VerifyCredentials,
+    T_VerifyCredentialsResult,
 )
 from lfx.services.adapters.payload import AdapterPayload
 
@@ -39,14 +46,23 @@ IdLike = UUID | NormalizedId
 
 
 class DeploymentType(str, Enum):
-    """Core deployment types recognized by LFX contracts."""
+    """Core deployment types recognized by LFX contracts.
 
-    # First-class deployment types recognized by the core schema.
+    **Cross-package coupling** — langflow's ``Deployment`` database model
+    (``langflow.services.database.models.deployment.model``) persists this
+    enum's ``.value`` as a ``NOT NULL`` string column and deserialises it
+    back via ``DeploymentType(value)``.  Because of this:
+
+    * **Never remove or rename** an existing member value — doing so will
+      cause ``ValueError`` on every read of rows that stored that value.
+    * Adding new members is safe and requires no migration.
+    """
+
     # Adapters may carry additional provider-specific classification in `provider_data`.
     AGENT = "agent"
 
 
-class BaseFlowArtifact(BaseModel):
+class BaseFlowArtifact(BaseModel, Generic[T_FlowProviderData]):
     """Model representing a payload for a flow."""
 
     model_config = ConfigDict(extra="allow")  # e.g., viewport - good for viewing the flow in the UI
@@ -58,7 +74,7 @@ class BaseFlowArtifact(BaseModel):
     description: str | None = Field(None, description="The description of the flow")
     data: dict = Field(description="The data of the flow")
     tags: list[str] | None = Field(None, description="The tags of the flow")
-    provider_data: dict | None = Field(
+    provider_data: T_FlowProviderData | None = Field(
         None,
         description="Provider-specific flow metadata consumed only by the active deployment adapter.",
     )
@@ -85,7 +101,7 @@ class BaseFlowArtifact(BaseModel):
         return value
 
 
-SnapshotList = Annotated[list[BaseFlowArtifact], Field(min_length=1)]
+SnapshotList = Annotated[list[BaseFlowArtifact[AdapterPayload]], Field(min_length=1)]
 
 
 class SnapshotItem(BaseModel):
@@ -96,7 +112,7 @@ class SnapshotItem(BaseModel):
     provider_data: dict | None = Field(None, description="The data of the snapshot item from the provider")
 
 
-class SnapshotItems(BaseModel):
+class SnapshotItems(BaseModel, Generic[T_FlowProviderData]):
     """Snapshot input for deployment create.
 
     Accept raw snapshot artifact payloads for deployment create.
@@ -104,7 +120,7 @@ class SnapshotItems(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    raw_payloads: SnapshotList | None = Field(
+    raw_payloads: Annotated[list[BaseFlowArtifact[T_FlowProviderData]], Field(min_length=1)] | None = Field(
         None,
         description="List of raw snapshot payloads to create and bind for this deployment. Omit to leave unchanged.",
     )
@@ -128,7 +144,7 @@ class SnapshotItems(BaseModel):
         return self
 
 
-class SnapshotDeploymentBindingUpdate(BaseModel):
+class SnapshotDeploymentBindingUpdate(BaseModel, Generic[T_FlowProviderData]):
     """Snapshot deployment binding patch payload.
 
     Supports three operations: bind existing snapshots by ID, create new
@@ -140,7 +156,7 @@ class SnapshotDeploymentBindingUpdate(BaseModel):
         None,
         description="Existing snapshot ids to attach to the deployment. Omit to leave unchanged.",
     )
-    add_raw_payloads: SnapshotList | None = Field(
+    add_raw_payloads: Annotated[list[BaseFlowArtifact[T_FlowProviderData]], Field(min_length=1)] | None = Field(
         None,
         description="Raw snapshot payloads to create and attach to the deployment. Omit to leave unchanged.",
     )
@@ -483,6 +499,10 @@ class DeploymentCreate(BaseModel):
     spec: BaseDeploymentData = Field(description="The base metadata of the deployment")
     snapshot: SnapshotItems | None = Field(None, description="The snapshots of the deployment")
     config: ConfigItem | None = Field(None, description="The config of the deployment")
+    provider_data: T_DeploymentCreate | None = Field(
+        None,
+        description="Provider-specific opaque payload for deployment create operations.",
+    )
 
 
 @lru_cache(maxsize=1)
@@ -527,13 +547,8 @@ class DeploymentUpdate(BaseModel):
         return self
 
 
-class DeploymentUpdateResult(DeploymentOperationResult):
+class DeploymentUpdateResult(DeploymentOperationResult[T_DeploymentUpdateResult]):
     """Model representing a result for a deployment update operation."""
-
-    snapshot_ids: list[IdLike] = Field(
-        default_factory=list,
-        description="Snapshot ids produced or bound during the update.",
-    )
 
 
 class RedeployResult(DeploymentOperationResult):
@@ -582,7 +597,7 @@ class ExecutionResultBase(ProviderResultModel[T_ExecutionResult]):
     deployment_id: IdLike = Field(description="The id of the deployment that was executed.")
 
 
-class ExecutionCreateResult(ExecutionResultBase):
+class ExecutionCreateResult(ExecutionResultBase[T_ExecutionCreateResult]):
     """Result returned when an execution is created.
 
     This model intentionally remains distinct from ``ExecutionStatusResult`` even
@@ -592,7 +607,7 @@ class ExecutionCreateResult(ExecutionResultBase):
     """
 
 
-class ExecutionStatusResult(ExecutionResultBase):
+class ExecutionStatusResult(ExecutionResultBase[T_ExecutionStatusResult]):
     """Result returned when querying an execution status.
 
     This model intentionally remains distinct from ``ExecutionCreateResult`` even
@@ -600,6 +615,33 @@ class ExecutionStatusResult(ExecutionResultBase):
     response types: create responses and status responses represent different API
     stages and may diverge as the contract evolves.
     """
+
+
+class VerifyCredentials(BaseModel, Generic[T_VerifyCredentials]):
+    """Provider-agnostic input for credential verification.
+
+    ``base_url`` is the only provider-agnostic field; actual credentials
+    (API keys, access-key pairs, client secrets, etc.) are carried in
+    ``provider_data`` because different providers use fundamentally different
+    credential shapes.  Each adapter defines its own credential model via the
+    ``T_VerifyCredentials`` type parameter, and the mapper is responsible for
+    packing the appropriate credentials into ``provider_data``.
+    """
+
+    base_url: str = Field(description="Provider service URL to verify against.")
+    provider_data: T_VerifyCredentials | None = Field(
+        None,
+        description="Provider-specific credential payload.",
+    )
+
+
+class VerifyCredentialsResult(BaseModel, Generic[T_VerifyCredentialsResult]):
+    """Provider-agnostic result from credential verification."""
+
+    provider_result: T_VerifyCredentialsResult | None = Field(
+        None,
+        description="Provider-specific result payload.",
+    )
 
 
 class DeploymentListTypesResult(ProviderResultModel[AdapterPayload]):

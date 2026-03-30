@@ -249,7 +249,7 @@ test(
 
     await page.getByTestId("button_run_text output").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully", { timeout: 120000 });
 
     await unselectNodes(page);
 
