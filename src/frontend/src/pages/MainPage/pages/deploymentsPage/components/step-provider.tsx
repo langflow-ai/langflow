@@ -49,18 +49,7 @@ function ProviderCard({
         )}
       />
       <div className="flex flex-col text-left">
-        <span className="pb-1 text-sm font-medium">{provider.name}</span>
-        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <span
-            className={cn(
-              "inline-block h-1.5 w-1.5 rounded-full",
-              provider.connected
-                ? "bg-accent-emerald-foreground"
-                : "bg-muted-foreground",
-            )}
-          />
-          {provider.connected ? "Connected" : "Not Connected"}
-        </span>
+        <span className="text-sm font-medium">{provider.name}</span>
       </div>
     </label>
   );
