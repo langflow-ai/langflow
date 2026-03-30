@@ -15,7 +15,7 @@ class TestScanCodeSecuritySafeCode:
 
     def test_should_pass_basic_component(self):
         """Basic Langflow component should pass."""
-        code = '''
+        code = """
 from lfx.custom import Component
 from lfx.io import MessageTextInput, Output
 from lfx.schema import Data
@@ -27,46 +27,46 @@ class MyComponent(Component):
 
     def build(self) -> Data:
         return Data(data={"text": self.text})
-'''
+"""
         result = scan_code_security(code)
         assert result.is_safe is True
         assert result.violations == ()
 
     def test_should_pass_os_path_usage(self):
         """os.path operations are safe and should pass."""
-        code = '''
+        code = """
 import os
 path = os.path.join("a", "b")
 exists = os.path.exists(path)
-'''
+"""
         result = scan_code_security(code)
         assert result.is_safe is True
 
     def test_should_pass_http_requests(self):
         """Standard HTTP requests library should pass."""
-        code = '''
+        code = """
 import requests
 response = requests.get("https://api.example.com/data")
-'''
+"""
         result = scan_code_security(code)
         assert result.is_safe is True
 
     def test_should_pass_json_operations(self):
         """JSON operations should pass."""
-        code = '''
+        code = """
 import json
 data = json.loads('{"key": "value"}')
 result = json.dumps(data)
-'''
+"""
         result = scan_code_security(code)
         assert result.is_safe is True
 
     def test_should_pass_math_operations(self):
         """Math operations should pass."""
-        code = '''
+        code = """
 import math
 result = math.sqrt(16)
-'''
+"""
         result = scan_code_security(code)
         assert result.is_safe is True
 
@@ -104,7 +104,7 @@ class TestScanCodeSecurityDangerousCalls:
 
     def test_should_detect_globals(self):
         """globals() call should be detected."""
-        code = 'g = globals()'
+        code = "g = globals()"
         result = scan_code_security(code)
         assert result.is_safe is False
         assert any("globals()" in v for v in result.violations)
@@ -153,7 +153,7 @@ class TestScanCodeSecurityDangerousAttrCalls:
 
     def test_should_detect_sys_exit(self):
         """sys.exit() should be detected."""
-        code = 'import sys\nsys.exit(1)'
+        code = "import sys\nsys.exit(1)"
         result = scan_code_security(code)
         assert result.is_safe is False
 
@@ -162,51 +162,51 @@ class TestScanCodeSecurityDangerousImports:
     """Tests that dangerous imports are detected."""
 
     def test_should_detect_subprocess_import(self):
-        """import subprocess should be detected."""
-        code = 'import subprocess'
+        """Import subprocess should be detected."""
+        code = "import subprocess"
         result = scan_code_security(code)
         assert result.is_safe is False
         assert any("subprocess" in v for v in result.violations)
 
     def test_should_detect_shutil_import(self):
-        """import shutil should be detected."""
-        code = 'import shutil'
+        """Import shutil should be detected."""
+        code = "import shutil"
         result = scan_code_security(code)
         assert result.is_safe is False
 
     def test_should_detect_pickle_import(self):
-        """import pickle should be detected."""
-        code = 'import pickle'
+        """Import pickle should be detected."""
+        code = "import pickle"
         result = scan_code_security(code)
         assert result.is_safe is False
 
     def test_should_detect_ctypes_import(self):
-        """import ctypes should be detected."""
-        code = 'import ctypes'
+        """Import ctypes should be detected."""
+        code = "import ctypes"
         result = scan_code_security(code)
         assert result.is_safe is False
 
     def test_should_detect_from_subprocess_import(self):
-        """from subprocess import run should be detected."""
-        code = 'from subprocess import run'
+        """From subprocess import run should be detected."""
+        code = "from subprocess import run"
         result = scan_code_security(code)
         assert result.is_safe is False
 
     def test_should_detect_restricted_os_import(self):
-        """from os import system should be detected."""
-        code = 'from os import system'
+        """From os import system should be detected."""
+        code = "from os import system"
         result = scan_code_security(code)
         assert result.is_safe is False
 
     def test_should_allow_os_path_import(self):
-        """from os import path should be allowed."""
-        code = 'from os import path'
+        """From os import path should be allowed."""
+        code = "from os import path"
         result = scan_code_security(code)
         assert result.is_safe is True
 
     def test_should_allow_os_import_itself(self):
-        """import os alone should pass (specific functions are blocked)."""
-        code = 'import os'
+        """Import os alone should pass (specific functions are blocked)."""
+        code = "import os"
         result = scan_code_security(code)
         assert result.is_safe is True
 

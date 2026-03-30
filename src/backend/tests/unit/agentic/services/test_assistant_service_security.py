@@ -8,19 +8,17 @@ Tests cover:
 """
 
 import json
-
 from unittest.mock import AsyncMock, patch
 
 import pytest
-
 from langflow.agentic.helpers.input_sanitization import REFUSAL_MESSAGE
 from langflow.agentic.services.assistant_service import (
     execute_flow_with_validation,
     execute_flow_with_validation_streaming,
 )
 from langflow.agentic.services.flow_types import (
-    IntentResult,
     OFF_TOPIC_REFUSAL_MESSAGE,
+    IntentResult,
 )
 
 MODULE = "langflow.agentic.services.assistant_service"
@@ -183,11 +181,9 @@ class TestCodeSecurityIntegration:
     @pytest.mark.asyncio
     async def test_streaming_should_block_dangerous_code(self):
         """Generated code with os.system should be blocked."""
-        mock_classify = AsyncMock(
-            return_value=_make_intent(intent="generate_component")
-        )
+        mock_classify = AsyncMock(return_value=_make_intent(intent="generate_component"))
 
-        dangerous_code = '''```python
+        dangerous_code = """```python
 import os
 from lfx.custom import Component
 from lfx.io import MessageTextInput, Output
@@ -201,7 +197,7 @@ class DangerousComponent(Component):
     def run(self) -> Data:
         os.system(self.cmd)
         return Data(data={"status": "done"})
-```'''
+```"""
 
         flow_gen = _make_flow_events([("end", {"result": dangerous_code})])
 
@@ -221,18 +217,14 @@ class DangerousComponent(Component):
         all_data = [_parse_sse_event(e) for e in events if _parse_sse_event(e)]
         complete_data = _get_complete_data(events)
         has_security_error = (
-            (complete_data and "Security violations" in str(complete_data.get("validation_error", "")))
-            or any(
-                "Security violations" in str(d.get("error", ""))
-                for d in all_data
-            )
-        )
+            complete_data and "Security violations" in str(complete_data.get("validation_error", ""))
+        ) or any("Security violations" in str(d.get("error", "")) for d in all_data)
         assert has_security_error, f"Expected security violation in events: {all_data}"
 
     @pytest.mark.asyncio
     async def test_non_streaming_should_block_dangerous_code(self):
         """Non-streaming: generated code with exec should be blocked."""
-        dangerous_code = '''```python
+        dangerous_code = """```python
 from lfx.custom import Component
 from lfx.io import MessageTextInput, Output
 from lfx.schema import Data
@@ -245,7 +237,7 @@ class EvalComponent(Component):
     def run(self) -> Data:
         result = eval(self.expr)
         return Data(data={"result": result})
-```'''
+```"""
 
         mock_execute = AsyncMock(return_value={"result": dangerous_code})
 
@@ -263,11 +255,9 @@ class EvalComponent(Component):
     @pytest.mark.asyncio
     async def test_streaming_should_pass_safe_code(self):
         """Safe component code should pass security scan and validation."""
-        mock_classify = AsyncMock(
-            return_value=_make_intent(intent="generate_component")
-        )
+        mock_classify = AsyncMock(return_value=_make_intent(intent="generate_component"))
 
-        safe_code = '''```python
+        safe_code = """```python
 from lfx.custom import Component
 from lfx.io import MessageTextInput, Output
 from lfx.schema import Data
@@ -279,7 +269,7 @@ class SafeComponent(Component):
 
     def build(self) -> Data:
         return Data(data={"text": self.text.upper()})
-```'''
+```"""
 
         flow_gen = _make_flow_events([("end", {"result": safe_code})])
 

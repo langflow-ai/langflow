@@ -58,7 +58,20 @@ DANGEROUS_IMPORTS: set[str] = {
 
 # Imports where only specific names are dangerous (module -> set of dangerous names)
 RESTRICTED_IMPORT_NAMES: dict[str, set[str]] = {
-    "os": {"system", "popen", "execl", "execle", "execlp", "execv", "execve", "execvp", "execvpe", "remove", "rmdir", "unlink"},
+    "os": {
+        "system",
+        "popen",
+        "execl",
+        "execle",
+        "execlp",
+        "execv",
+        "execve",
+        "execvp",
+        "execvpe",
+        "remove",
+        "rmdir",
+        "unlink",
+    },
 }
 
 

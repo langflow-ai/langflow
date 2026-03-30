@@ -100,7 +100,7 @@ class TestClassifyIntent:
     @pytest.mark.asyncio
     async def test_should_extract_intent_from_text_containing_generate_component(self):
         """Models that return plain text mentioning generate_component should still be classified."""
-        mock_result = {"result": 'The intent is generate_component. Translation: create a sum component'}
+        mock_result = {"result": "The intent is generate_component. Translation: create a sum component"}
 
         with patch(
             "langflow.agentic.services.helpers.intent_classification.execute_flow_file",
@@ -117,7 +117,9 @@ class TestClassifyIntent:
     @pytest.mark.asyncio
     async def test_should_extract_json_with_surrounding_text(self):
         """Models may return JSON embedded in explanatory text."""
-        mock_result = {"result": 'Here is the classification:\n{"translation": "build a parser", "intent": "generate_component"}\nDone.'}
+        mock_result = {
+            "result": 'Here is the classification:\n{"translation": "build a parser", "intent": "generate_component"}\nDone.'
+        }
 
         with patch(
             "langflow.agentic.services.helpers.intent_classification.execute_flow_file",

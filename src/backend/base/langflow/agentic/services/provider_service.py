@@ -45,10 +45,7 @@ async def get_enabled_providers_for_user(
         # Check if ALL required variables for this provider are present
         # in either database variables or environment variables
         required_keys = get_provider_required_variable_keys(provider)
-        is_enabled = all(
-            key in all_variable_names or os.getenv(key)
-            for key in required_keys
-        )
+        is_enabled = all(key in all_variable_names or os.getenv(key) for key in required_keys)
 
         provider_status[provider] = is_enabled
         if is_enabled:

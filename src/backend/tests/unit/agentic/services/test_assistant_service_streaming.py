@@ -153,7 +153,6 @@ class TestQAResponse:
             complete_events = [e for e in events if '"event": "complete"' in e]
             assert len(complete_events) == 1
 
-
     @pytest.mark.asyncio
     async def test_should_return_plain_text_when_question_response_contains_example_code(self):
         """Q&A response with example component code should NOT trigger validation.
@@ -168,18 +167,18 @@ class TestQAResponse:
             "To create a custom component, you need to:\n\n"
             "1. Create a Python file\n"
             "2. Define a class\n\n"
-            + "```python\n"
-            + "from lfx.custom import Component\n"
-            + "from lfx.io import Output\n"
-            + "from lfx.schema import Data\n\n"
-            + "class SumComponent(Component):\n"
-            + "    display_name = 'Sum'\n"
-            + "    description = 'Adds two numbers'\n"
-            + "    inputs = []\n"
-            + "    outputs = [Output(name='result', display_name='Result', method='run')]\n\n"
-            + "    def run(self) -> Data:\n"
-            + "        return Data(data={'result': 42})\n"
-            + "```\n"
+            "```python\n"
+            "from lfx.custom import Component\n"
+            "from lfx.io import Output\n"
+            "from lfx.schema import Data\n\n"
+            "class SumComponent(Component):\n"
+            "    display_name = 'Sum'\n"
+            "    description = 'Adds two numbers'\n"
+            "    inputs = []\n"
+            "    outputs = [Output(name='result', display_name='Result', method='run')]\n\n"
+            "    def run(self) -> Data:\n"
+            "        return Data(data={'result': 42})\n"
+            "```\n"
         )
         flow_gen = _make_flow_events([("end", {"result": explanation_with_example})])
 

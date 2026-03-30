@@ -102,7 +102,12 @@ async def execute_flow_file(
 
     try:
         graph = await load_graph_for_execution(
-            flow_path, flow_type, provider, model_name, api_key_var, provider_vars=global_variables,
+            flow_path,
+            flow_type,
+            provider,
+            model_name,
+            api_key_var,
+            provider_vars=global_variables,
         )
 
         if user_id:
@@ -177,7 +182,12 @@ async def execute_flow_file_streaming(
 
     try:
         graph = await load_graph_for_execution(
-            flow_path, flow_type, provider, model_name, api_key_var, provider_vars=global_variables,
+            flow_path,
+            flow_type,
+            provider,
+            model_name,
+            api_key_var,
+            provider_vars=global_variables,
         )
     except (json.JSONDecodeError, OSError, ValueError) as e:
         logger.error(f"Flow preparation error: {e}")
@@ -226,9 +236,12 @@ async def execute_flow_file_streaming(
         return
 
     if execution_result.has_error:
-        error_detail = str(execution_result.error) if execution_result.error else "An error occurred while executing the flow."
+        error_detail = (
+            str(execution_result.error) if execution_result.error else "An error occurred while executing the flow."
+        )
         raise HTTPException(
-            status_code=500, detail=error_detail,
+            status_code=500,
+            detail=error_detail,
         ) from execution_result.error
 
     yield ("end", execution_result.result if execution_result.has_result else {})
