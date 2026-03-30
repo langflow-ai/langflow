@@ -50,8 +50,8 @@ async def register_mcp_servers_for_project(
             ]
         elif default_auth.get("auth_type", "none") == "oauth":
             msg = "OAuth authentication is not yet implemented for MCP server creation during project creation."
-            logger.warning(msg)
-            raise HTTPException(status_code=501, detail=msg)
+            await logger.awarning(msg)
+            return
         else:
             command = "uvx"
             args = [
@@ -99,12 +99,8 @@ async def register_mcp_servers_for_project(
         )
     except HTTPException:
         raise
-    except NotImplementedError:
-        msg = "OAuth as default MCP authentication type is not yet implemented"
-        await logger.aerror(msg)
-        raise
     except Exception as e:  # noqa: BLE001
-        await logger.aexception("Failed to auto-register MCP server for project %s: %s", project.id, e, exc_info=True)
+        await logger.aexception("Failed to auto-register MCP server for project %s: %s", project.id, e)
 
 
 async def handle_mcp_server_rename(
