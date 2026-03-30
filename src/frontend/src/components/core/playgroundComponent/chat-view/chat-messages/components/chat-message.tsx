@@ -1,9 +1,15 @@
 import { useEffect, useState } from "react";
 import useFlowStore from "@/stores/flowStore";
+import type { ContentBlock, ContentBlockItem } from "@/types/chat";
 import type { chatMessagePropsType } from "@/types/components";
 import { BotMessage } from "./bot-message";
 import { ErrorView } from "./error-message";
 import { UserMessage } from "./user-message";
+
+/** Type guard: returns true for grouped ContentBlock items (with title + contents). */
+function isGroupedBlock(item: ContentBlockItem): item is ContentBlock {
+  return "contents" in item && "title" in item;
+}
 
 export default function ChatMessage({
   chat,
@@ -27,7 +33,7 @@ export default function ChatMessage({
 
   // Error messages
   if (chat.category === "error") {
-    const blocks = chat.content_blocks ?? [];
+    const blocks = (chat.content_blocks ?? []).filter(isGroupedBlock);
     return (
       <ErrorView
         blocks={blocks}

@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
+import { type ReactNode, useState } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax/browser";
 import remarkGfm from "remark-gfm";
@@ -242,12 +243,183 @@ export default function ContentDisplay({
         </div>
       );
       break;
+
+    case "image":
+      contentData = (
+        <div className="flex flex-col gap-2">
+          {content.urls?.map((url, index) => (
+            <img
+              key={index}
+              src={url}
+              alt={content.caption || `Image ${index + 1}`}
+              className="max-w-full rounded"
+            />
+          ))}
+          {content.base64 && (
+            <img
+              src={`data:${content.mime_type || "image/png"};base64,${content.base64}`}
+              alt={content.caption || "Image"}
+              className="max-w-full rounded"
+            />
+          )}
+          {content.caption && (
+            <p className="text-xs text-muted-foreground">{content.caption}</p>
+          )}
+        </div>
+      );
+      break;
+
+    case "audio":
+      contentData = (
+        <div className="flex flex-col gap-2">
+          {content.urls?.map((url, index) => (
+            <audio key={index} controls className="w-full">
+              <source src={url} type={content.mime_type} />
+            </audio>
+          ))}
+          {content.base64 && (
+            <audio controls className="w-full">
+              <source
+                src={`data:${content.mime_type || "audio/mpeg"};base64,${content.base64}`}
+                type={content.mime_type || "audio/mpeg"}
+              />
+            </audio>
+          )}
+          {content.transcript && (
+            <p className="text-xs text-muted-foreground italic">
+              {content.transcript}
+            </p>
+          )}
+        </div>
+      );
+      break;
+
+    case "video":
+      contentData = (
+        <div className="flex flex-col gap-2">
+          {content.urls?.map((url, index) => (
+            <video key={index} controls className="max-w-full rounded">
+              <source src={url} type={content.mime_type} />
+            </video>
+          ))}
+          {content.base64 && (
+            <video controls className="max-w-full rounded">
+              <source
+                src={`data:${content.mime_type || "video/mp4"};base64,${content.base64}`}
+                type={content.mime_type || "video/mp4"}
+              />
+            </video>
+          )}
+        </div>
+      );
+      break;
+
+    case "file":
+      contentData = (
+        <div className="flex items-center gap-2">
+          <ForwardedIconComponent
+            name="File"
+            className="h-4 w-4 text-muted-foreground"
+          />
+          {content.urls?.map((url, index) => (
+            <a
+              key={index}
+              href={url}
+              download={content.filename}
+              className="text-sm underline text-primary hover:text-primary/80"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {content.filename || `Download file ${index + 1}`}
+            </a>
+          ))}
+        </div>
+      );
+      break;
+
+    case "reasoning":
+      contentData = <ReasoningDisplay text={content.text} />;
+      break;
+
+    case "usage":
+      contentData = (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          {content.model && (
+            <span className="font-medium">{content.model}</span>
+          )}
+          <span>
+            Tokens:{" "}
+            {content.input_tokens !== undefined
+              ? `${content.input_tokens} in`
+              : ""}
+            {content.input_tokens !== undefined &&
+            content.output_tokens !== undefined
+              ? " / "
+              : ""}
+            {content.output_tokens !== undefined
+              ? `${content.output_tokens} out`
+              : ""}
+          </span>
+        </div>
+      );
+      break;
+
+    case "citation":
+      contentData = (
+        <div className="flex flex-col gap-1 text-sm">
+          {content.url ? (
+            <a
+              href={content.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline text-primary hover:text-primary/80"
+            >
+              {content.title || content.url}
+            </a>
+          ) : (
+            content.title && (
+              <span className="font-medium">{content.title}</span>
+            )
+          )}
+          {content.cited_text && (
+            <blockquote className="border-l-2 border-muted-foreground/30 pl-3 text-xs text-muted-foreground italic">
+              {content.cited_text}
+            </blockquote>
+          )}
+        </div>
+      );
+      break;
   }
 
   return (
     <div className="relative p-[16px]">
       {renderDuration}
       {contentData}
+    </div>
+  );
+}
+
+/** Collapsible "Thinking" section for reasoning content. */
+function ReasoningDisplay({ text }: { text: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-1">
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+      >
+        <ChevronDown
+          className={`h-3 w-3 transition-transform ${isOpen ? "rotate-180" : ""}`}
+        />
+        Thinking
+      </button>
+      {isOpen && (
+        <div className="pl-4 text-xs text-muted-foreground whitespace-pre-wrap border-l-2 border-muted-foreground/20">
+          {text}
+        </div>
+      )}
     </div>
   );
 }
