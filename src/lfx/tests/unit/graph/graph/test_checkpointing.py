@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.exceptions.graph import GraphPausedException
-from lfx.graph.graph.base import Graph, _is_serializable
+from lfx.graph.graph.base import Graph, _deserialize_vertex_value, _serialize_vertex_value
 from lfx.graph.graph.constants import Finish
 from lfx.services.checkpoint.schema import GraphCheckpoint, VertexCheckpointData
 from lfx.services.checkpoint.service import InMemoryCheckpointStore
@@ -204,26 +204,52 @@ def _make_graph() -> Graph:
     return Graph(chat_input, chat_output)
 
 
-class TestIsSerializable:
-    def test_none_is_serializable(self):
-        assert _is_serializable(None) is True
+class TestVertexValueSerialization:
+    def test_none_roundtrips(self):
+        assert _serialize_vertex_value(None) is None
+        assert _deserialize_vertex_value(None) is None
 
-    def test_primitives_are_serializable(self):
-        assert _is_serializable("hello") is True
-        assert _is_serializable(42) is True
-        assert _is_serializable({"a": [1, 2]}) is True
+    def test_primitives_roundtrip(self):
+        assert _serialize_vertex_value("hello") == "hello"
+        assert _serialize_vertex_value(42) == 42
+        assert _serialize_vertex_value({"a": [1, 2]}) == {"a": [1, 2]}
 
-    def test_non_serializable_objects_rejected(self):
-        assert _is_serializable(object()) is False
-        assert _is_serializable(lambda: None) is False
+    def test_non_serializable_returns_none(self):
+        assert _serialize_vertex_value(object()) is None
+        assert _serialize_vertex_value(lambda: None) is None
 
-    def test_no_silent_str_conversion(self):
-        """Objects that would pass with default=str must be rejected."""
+    def test_pydantic_model_roundtrips(self):
+        from lfx.schema.message import Message
 
-        class Custom:
-            pass
+        msg = Message(text="hello", sender="User", sender_name="User")
+        serialized = _serialize_vertex_value(msg)
+        assert serialized is not None
+        assert serialized["__pydantic__"] is True
+        assert serialized["__class__"] == "Message"
 
-        assert _is_serializable(Custom()) is False
+        restored = _deserialize_vertex_value(serialized)
+        assert isinstance(restored, Message)
+        assert restored.text == "hello"
+
+    def test_dict_of_pydantic_models_roundtrips(self):
+        """built_object is typically {'message': Message(...)}."""
+        from lfx.schema.message import Message
+
+        msg = Message(text="world", sender="AI", sender_name="AI")
+        built_obj = {"message": msg}
+
+        serialized = _serialize_vertex_value(built_obj)
+        assert serialized is not None
+        assert serialized["message"]["__pydantic__"] is True
+
+        restored = _deserialize_vertex_value(serialized)
+        assert isinstance(restored["message"], Message)
+        assert restored["message"].text == "world"
+
+    def test_dict_with_non_serializable_value_returns_none(self):
+        """If any value in a dict can't be serialized, entire dict returns None."""
+        built_obj = {"good": "value", "bad": object()}
+        assert _serialize_vertex_value(built_obj) is None
 
 
 class TestCheckpointingOptIn:
@@ -307,8 +333,8 @@ class TestCreateCheckpoint:
         assert "chat_output" in checkpoint.vertex_results
         assert checkpoint.vertex_results["chat_output"].built is True
 
-    def test_skips_non_serializable_built_objects(self):
-        """Non-serializable built_object/built_result should be stored as None."""
+    def test_raises_on_non_serializable_built_object(self):
+        """Non-serializable built_object must raise TypeError — fail fast on data loss."""
         graph = _make_graph()
         graph.flow_id = "f"
         graph._session_id = "s"
@@ -318,14 +344,11 @@ class TestCreateCheckpoint:
 
         # Inject a non-serializable object into a vertex
         vertex = graph.get_vertex("chat_input")
-        vertex.built_object = object()  # Not JSON-serializable
+        vertex.built_object = object()  # Not JSON-serializable, not a sentinel
 
         graph.request_pause(vertex_id="chat_input", reason="test")
-        checkpoint = graph._create_checkpoint(completed_layers=1)
-
-        # built_object should be None (skipped), but vertex is still recorded as built
-        assert checkpoint.vertex_results["chat_input"].built is True
-        assert checkpoint.vertex_results["chat_input"].built_object is None
+        with pytest.raises(TypeError, match="not serializable"):
+            graph._create_checkpoint(completed_layers=1)
 
 
 # ---------------------------------------------------------------------------

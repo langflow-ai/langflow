@@ -58,15 +58,78 @@ if TYPE_CHECKING:
     from lfx.services.tracing.service import TracingService
 
 
-def _is_serializable(obj: Any) -> bool:
-    """Check if an object can be round-trip serialized to JSON without data loss."""
+def _serialize_vertex_value(obj: Any) -> Any | None:
+    """Serialize a vertex built_object or built_result for checkpoint storage.
+
+    Handles:
+    - None → None
+    - Plain JSON-serializable values (str, int, dict of primitives) → as-is
+    - Pydantic BaseModel instances → tagged dict with __pydantic__ marker
+    - Dicts containing Pydantic models → recursively serialized
+    - Non-serializable objects → None (logged upstream)
+    """
     if obj is None:
-        return True
+        return None
+
+    from pydantic import BaseModel
+
+    if isinstance(obj, BaseModel):
+        return {
+            "__pydantic__": True,
+            "__module__": type(obj).__module__,
+            "__class__": type(obj).__qualname__,
+            "__data__": obj.model_dump(),
+        }
+
+    if isinstance(obj, dict):
+        serialized = {}
+        for key, value in obj.items():
+            s = _serialize_vertex_value(value)
+            if s is None and value is not None:
+                # Value couldn't be serialized — skip entire dict to avoid partial state
+                return None
+            serialized[key] = s
+        return serialized
+
+    if isinstance(obj, list):
+        serialized_list = []
+        for item in obj:
+            s = _serialize_vertex_value(item)
+            if s is None and item is not None:
+                return None
+            serialized_list.append(s)
+        return serialized_list
+
+    # Try plain JSON serialization for primitives
     try:
         json.dumps(obj)
-        return True
+        return obj
     except (TypeError, ValueError, OverflowError):
-        return False
+        return None
+
+
+def _deserialize_vertex_value(obj: Any) -> Any:
+    """Deserialize a vertex value that was serialized by _serialize_vertex_value."""
+    if obj is None:
+        return None
+
+    if isinstance(obj, dict) and obj.get("__pydantic__"):
+        module_name = obj["__module__"]
+        class_name = obj["__class__"]
+        data = obj["__data__"]
+        import importlib
+
+        module = importlib.import_module(module_name)
+        cls = getattr(module, class_name)
+        return cls.model_validate(data)
+
+    if isinstance(obj, dict):
+        return {key: _deserialize_vertex_value(value) for key, value in obj.items()}
+
+    if isinstance(obj, list):
+        return [_deserialize_vertex_value(item) for item in obj]
+
+    return obj
 
 
 class Graph:
@@ -479,8 +542,6 @@ class Graph:
             await logger.adebug(f"Could not check pause signal for job {self._job_id}")
         except asyncio.CancelledError:
             raise
-        except Exception:  # noqa: BLE001
-            await logger.awarning(f"Unexpected error checking pause signal for job {self._job_id}", exc_info=True)
 
     def _create_checkpoint(self, completed_layers: int) -> "GraphCheckpoint":
         """Capture current execution state as a checkpoint."""
@@ -491,19 +552,37 @@ class Graph:
         vertex_results: dict[str, VertexCheckpointData] = {}
         for vertex in self.vertices:
             if vertex.built:
-                obj_serializable = _is_serializable(vertex.built_object)
-                res_serializable = _is_serializable(vertex.built_result)
+                from lfx.graph.utils import UnbuiltObject, UnbuiltResult
+
+                serialized_obj = _serialize_vertex_value(vertex.built_object)
+                serialized_res = _serialize_vertex_value(vertex.built_result)
+                if serialized_obj is None and vertex.built_object is not None:
+                    if not isinstance(vertex.built_object, UnbuiltObject):
+                        msg = (
+                            f"Checkpoint failed: vertex {vertex.id} built_object "
+                            f"({type(vertex.built_object).__name__}) is not serializable. "
+                            f"Downstream components would get None on resume, causing data loss."
+                        )
+                        raise TypeError(msg)
+                if serialized_res is None and vertex.built_result is not None:
+                    if not isinstance(vertex.built_result, UnbuiltResult):
+                        msg = (
+                            f"Checkpoint failed: vertex {vertex.id} built_result "
+                            f"({type(vertex.built_result).__name__}) is not serializable. "
+                            f"Downstream components would get None on resume, causing data loss."
+                        )
+                        raise TypeError(msg)
                 logger.debug(
                     f"Checkpoint: capturing vertex {vertex.id} "
-                    f"(built_object serializable={obj_serializable}, "
-                    f"built_result serializable={res_serializable})"
+                    f"(built_object captured={serialized_obj is not None}, "
+                    f"built_result captured={serialized_res is not None})"
                 )
                 vertex_results[vertex.id] = VertexCheckpointData(
                     built=True,
                     results=vertex.results if hasattr(vertex, "results") else {},
                     artifacts=vertex.artifacts if hasattr(vertex, "artifacts") else {},
-                    built_object=vertex.built_object if obj_serializable else None,
-                    built_result=vertex.built_result if res_serializable else None,
+                    built_object=serialized_obj,
+                    built_result=serialized_res,
                 )
 
         logger.debug(
@@ -954,11 +1033,13 @@ class Graph:
                 raise ValueError(msg)
 
             if not vertex.result and not stream and hasattr(vertex, "consume_async_generator"):
-                try:
+                # Only consume if the vertex has a live input iterator in params.
+                # Checkpoint-restored vertices have built=True but no runtime component state.
+                from collections.abc import AsyncIterator, Iterator
+
+                input_param = vertex.params.get(INPUT_FIELD_NAME) if hasattr(vertex, "params") and vertex.params else None
+                if isinstance(input_param, AsyncIterator | Iterator):
                     await vertex.consume_async_generator()
-                except (TypeError, AttributeError):
-                    # Restored-from-checkpoint vertices may not have a consumable generator
-                    pass
             if (not outputs and vertex.is_output) or (vertex.display_name in outputs or vertex.id in outputs):
                 if vertex.result is not None:
                     vertex_outputs.append(vertex.result)
@@ -1377,15 +1458,17 @@ class Graph:
             if result_data.artifacts:
                 vertex.artifacts = result_data.artifacts
             if result_data.built_object is not None:
-                vertex.built_object = result_data.built_object
+                vertex.built_object = _deserialize_vertex_value(result_data.built_object)
             if result_data.built_result is not None:
-                vertex.built_result = result_data.built_result
-            # Rebuild the ResultData object so output collection works
+                vertex.built_result = _deserialize_vertex_value(result_data.built_result)
             if vertex.built:
                 try:
                     vertex.finalize_build()
                 except Exception:  # noqa: BLE001
-                    logger.debug(f"Resume: finalize_build failed for vertex {vertex_id}")
+                    pass
+            obj_type = type(vertex.built_object).__name__ if vertex.built_object is not None else "None"
+            res_type = type(vertex.built_result).__name__ if vertex.built_result is not None else "None"
+            logger.debug(f"Resume: restored vertex {vertex_id} (built_object={obj_type}, built_result={res_type})")
             restored_count += 1
         logger.info(f"Resume: restored {restored_count} vertices, skipped {skipped_count}")
 
