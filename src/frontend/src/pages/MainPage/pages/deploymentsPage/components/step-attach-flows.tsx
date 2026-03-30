@@ -95,6 +95,10 @@ export default function StepAttachFlows() {
       setSelectedConnections(
         new Set(attachedConnectionByFlow.get(selectedFlowId) ?? []),
       );
+      // Default to "create" tab when there are no existing connections
+      if (connections.length === 0) {
+        setConnectionTab("create");
+      }
 
       // Auto-detect global variable references via the backend detection endpoint
       try {
@@ -503,24 +507,48 @@ function ConnectionPanel({
         <div className="mt-4 flex-1 overflow-y-auto">
           {connectionTab === "available" ? (
             <div className="space-y-3">
-              {connections.map((conn) => (
-                <CheckboxSelectItem
-                  key={conn.id}
-                  value={conn.id}
-                  checked={selectedConnections.has(conn.id)}
-                  onChange={() => onToggleConnection(conn.id)}
-                  data-testid={`connection-item-${conn.id}`}
-                >
-                  <span className="flex flex-col">
-                    <span className="text-sm font-medium leading-tight">
-                      {conn.name}
+              {connections.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+                  <ForwardedIconComponent
+                    name="PlugZap"
+                    className="h-8 w-8 text-muted-foreground/50"
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      No connections yet
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground/70">
+                      Create a connection to attach credentials to this flow.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onTabChange("create")}
+                    className="text-xs font-medium text-primary hover:underline"
+                  >
+                    Create your first connection
+                  </button>
+                </div>
+              ) : (
+                connections.map((conn) => (
+                  <CheckboxSelectItem
+                    key={conn.id}
+                    value={conn.id}
+                    checked={selectedConnections.has(conn.id)}
+                    onChange={() => onToggleConnection(conn.id)}
+                    data-testid={`connection-item-${conn.id}`}
+                  >
+                    <span className="flex flex-col">
+                      <span className="text-sm font-medium leading-tight">
+                        {conn.name}
+                      </span>
+                      <span className="text-sm leading-tight text-muted-foreground">
+                        {conn.variableCount} variables
+                      </span>
                     </span>
-                    <span className="text-sm leading-tight text-muted-foreground">
-                      {conn.variableCount} variables
-                    </span>
-                  </span>
-                </CheckboxSelectItem>
-              ))}
+                  </CheckboxSelectItem>
+                ))
+              )}
             </div>
           ) : (
             <div className="flex flex-col gap-4">
