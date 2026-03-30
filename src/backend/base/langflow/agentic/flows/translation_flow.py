@@ -8,6 +8,7 @@ Usage:
     graph = await get_graph(provider="OpenAI", model_name="gpt-4o-mini")
 """
 
+from lfx.base.models.model_metadata import get_provider_param_mapping
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.components.models import LanguageModelComponent
 from lfx.graph import Graph
@@ -63,22 +64,21 @@ Output: {{"translation": "what does the output format look like?", "intent": "qu
 
 def _build_model_config(provider: str, model_name: str) -> list[dict]:
     """Build model configuration for LanguageModelComponent."""
-    model_classes = {
-        "OpenAI": "ChatOpenAI",
-        "Anthropic": "ChatAnthropic",
-        "Google Generative AI": "ChatGoogleGenerativeAI",
-        "Groq": "ChatGroq",
-        "Azure OpenAI": "AzureChatOpenAI",
+    param_mapping = get_provider_param_mapping(provider)
+    metadata: dict = {
+        "api_key_param": param_mapping.get("api_key_param", "api_key"),
+        "context_length": 128000,
+        "model_class": param_mapping.get("model_class", "ChatOpenAI"),
+        "model_name_param": param_mapping.get("model_name_param", "model"),
     }
+    # Include extra params like base_url_param for providers like Ollama
+    for extra_param in ("url_param", "project_id_param", "base_url_param"):
+        if extra_param in param_mapping:
+            metadata[extra_param] = param_mapping[extra_param]
     return [
         {
             "icon": provider,
-            "metadata": {
-                "api_key_param": "api_key",
-                "context_length": 128000,
-                "model_class": model_classes.get(provider, "ChatOpenAI"),
-                "model_name_param": "model",
-            },
+            "metadata": metadata,
             "name": model_name,
             "provider": provider,
         }

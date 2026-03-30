@@ -14,6 +14,7 @@ import type {
 } from "../assistant-panel.types";
 
 const uid = new ShortUniqueId();
+const AGENTIC_SESSION_PREFIX = "agentic_";
 
 interface UseAssistantChatReturn {
   messages: AssistantMessage[];
@@ -34,7 +35,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
   const [currentStep, setCurrentStep] = useState<AgenticStepType | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const lastModelRef = useRef<AssistantModel | null>(null);
-  const sessionIdRef = useRef<string>(uid.randomUUID(16));
+  const sessionIdRef = useRef<string>(`${AGENTIC_SESSION_PREFIX}${uid.randomUUID(16)}`);
   const [sessionId, setSessionId] = useState<string>(sessionIdRef.current);
 
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
@@ -243,7 +244,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
     setMessages([]);
     setCurrentStep(null);
     setIsProcessing(false);
-    const newId = uid.randomUUID(16);
+    const newId = `${AGENTIC_SESSION_PREFIX}${uid.randomUUID(16)}`;
     sessionIdRef.current = newId;
     setSessionId(newId);
   }, []);

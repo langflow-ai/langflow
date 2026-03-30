@@ -585,5 +585,31 @@ describe("useAssistantChat", () => {
 
       expect(sessionBefore).not.toBe(sessionAfter);
     });
+
+    it("should_prefix_session_id_with_agentic_to_isolate_from_playground", async () => {
+      const { result } = renderHook(() => useAssistantChat());
+
+      await act(async () => {
+        await result.current.handleSend("hello", TEST_MODEL);
+      });
+
+      const sessionId = mockPostAssistStream.mock.calls[0][0].session_id;
+      expect(sessionId).toMatch(/^agentic_/);
+    });
+
+    it("should_prefix_session_id_with_agentic_after_clear_history", async () => {
+      const { result } = renderHook(() => useAssistantChat());
+
+      act(() => {
+        result.current.handleClearHistory();
+      });
+
+      await act(async () => {
+        await result.current.handleSend("after clear", TEST_MODEL);
+      });
+
+      const sessionId = mockPostAssistStream.mock.calls[0][0].session_id;
+      expect(sessionId).toMatch(/^agentic_/);
+    });
   });
 });

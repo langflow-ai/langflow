@@ -12,7 +12,6 @@ from lfx.log.logger import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from langflow.services.deps import get_variable_service
-from langflow.services.variable.constants import CREDENTIAL_TYPE
 from langflow.services.variable.service import DatabaseVariableService, VariableService
 
 # Preferred providers in order of priority
@@ -33,10 +32,9 @@ async def get_enabled_providers_for_user(
         return [], {}
 
     all_variables = await variable_service.get_all(user_id=user_id, session=session)
-    credential_names = {var.name for var in all_variables if var.type == CREDENTIAL_TYPE}
-
-    if not credential_names:
-        return [], {}
+    # Include all variable types (credentials and regular variables)
+    # so providers like Ollama (which use non-secret variables) are detected
+    all_variable_names = {var.name for var in all_variables}
 
     provider_variable_map = get_model_provider_variable_mapping()
 
@@ -45,8 +43,12 @@ async def get_enabled_providers_for_user(
 
     for provider in provider_variable_map:
         # Check if ALL required variables for this provider are present
+        # in either database variables or environment variables
         required_keys = get_provider_required_variable_keys(provider)
-        is_enabled = all(key in credential_names for key in required_keys)
+        is_enabled = all(
+            key in all_variable_names or os.getenv(key)
+            for key in required_keys
+        )
 
         provider_status[provider] = is_enabled
         if is_enabled:

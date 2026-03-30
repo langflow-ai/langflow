@@ -15,7 +15,7 @@ STREAMING_EVENT_TIMEOUT_SECONDS = 300.0
 MAX_VALIDATION_RETRIES = 3
 VALIDATION_UI_DELAY_SECONDS = 0.3
 LANGFLOW_ASSISTANT_FLOW = "LangflowAssistant.json"
-TRANSLATION_FLOW = "TranslationFlow.json"
+TRANSLATION_FLOW = "translation_flow.py"
 
 OFF_TOPIC_REFUSAL_MESSAGE = (
     "I appreciate your interest, but I'm the Langflow Assistant and can only help with "
