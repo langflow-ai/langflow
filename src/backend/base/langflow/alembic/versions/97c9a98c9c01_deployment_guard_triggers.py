@@ -124,7 +124,7 @@ def _upgrade_postgresql() -> None:
                 RAISE EXCEPTION '%',
                     'DEPLOYMENT_GUARD:DEPLOYMENT_PROJECT_MOVE:'
                     || 'Cannot move deployment to a different project. '
-                    || 'Delete it and re-create in the target project instead.';
+                    || 'Re-create it in the target project instead.';
             END IF;
             RETURN NEW;
         END;
@@ -169,104 +169,89 @@ def _upgrade_postgresql() -> None:
 
 def _upgrade_sqlite() -> None:
     op.execute(
-        """
-        CREATE TRIGGER trg_prevent_flow_version_delete_if_deployed
-        BEFORE DELETE ON flow_version
-        FOR EACH ROW
-        WHEN EXISTS (
-            SELECT 1
-            FROM flow_version_deployment_attachment
-            WHERE flow_version_id = OLD.id
-        )
-        BEGIN
-            SELECT RAISE(
-                ABORT,
-                'DEPLOYMENT_GUARD:FLOW_VERSION_DEPLOYED:'
-                || 'Cannot delete flow version because it is attached to one or more deployments. '
-                || 'Detach it from all deployments first.'
-            );
-        END;
-        """
+        "CREATE TRIGGER trg_prevent_flow_version_delete_if_deployed\n"
+        "BEFORE DELETE ON flow_version\n"
+        "FOR EACH ROW\n"
+        "WHEN EXISTS (\n"
+        "    SELECT 1\n"
+        "    FROM flow_version_deployment_attachment\n"
+        "    WHERE flow_version_id = OLD.id\n"
+        ")\n"
+        "BEGIN\n"
+        "    SELECT RAISE(\n"
+        "        ABORT,\n"
+        "        'DEPLOYMENT_GUARD:FLOW_VERSION_DEPLOYED:Cannot delete flow version because it is attached "
+        "to one or more deployments. Detach it from all deployments first.'\n"
+        "    );\n"
+        "END;\n"
     )
 
     op.execute(
-        """
-        CREATE TRIGGER trg_prevent_folder_delete_if_has_deployments
-        BEFORE DELETE ON folder
-        FOR EACH ROW
-        WHEN EXISTS (
-            SELECT 1
-            FROM deployment
-            WHERE project_id = OLD.id
-        )
-        BEGIN
-            SELECT RAISE(
-                ABORT,
-                'DEPLOYMENT_GUARD:PROJECT_HAS_DEPLOYMENTS:'
-                || 'Cannot delete project because it contains one or more deployments. '
-                || 'Remove all deployments first.'
-            );
-        END;
-        """
+        "CREATE TRIGGER trg_prevent_folder_delete_if_has_deployments\n"
+        "BEFORE DELETE ON folder\n"
+        "FOR EACH ROW\n"
+        "WHEN EXISTS (\n"
+        "    SELECT 1\n"
+        "    FROM deployment\n"
+        "    WHERE project_id = OLD.id\n"
+        ")\n"
+        "BEGIN\n"
+        "    SELECT RAISE(\n"
+        "        ABORT,\n"
+        "        'DEPLOYMENT_GUARD:PROJECT_HAS_DEPLOYMENTS:Cannot delete project because it contains one "
+        "or more deployments. Remove all deployments first.'\n"
+        "    );\n"
+        "END;\n"
     )
 
     op.execute(
-        """
-        CREATE TRIGGER trg_prevent_flow_move_if_deployed
-        BEFORE UPDATE OF folder_id ON flow
-        FOR EACH ROW
-        WHEN OLD.folder_id IS NOT NEW.folder_id
-            AND EXISTS (
-                SELECT 1
-                FROM flow_version fv
-                JOIN flow_version_deployment_attachment fvda ON fvda.flow_version_id = fv.id
-                JOIN deployment d ON d.id = fvda.deployment_id
-                WHERE fv.flow_id = OLD.id
-                  AND d.project_id = OLD.folder_id
-            )
-        BEGIN
-            SELECT RAISE(
-                ABORT,
-                'DEPLOYMENT_GUARD:FLOW_DEPLOYED_IN_PROJECT:'
-                || 'Cannot move flow to a different project because it has versions deployed '
-                || 'in the current project. Detach deployed versions first.'
-            );
-        END;
-        """
+        "CREATE TRIGGER trg_prevent_flow_move_if_deployed\n"
+        "BEFORE UPDATE OF folder_id ON flow\n"
+        "FOR EACH ROW\n"
+        "WHEN OLD.folder_id IS NOT NEW.folder_id\n"
+        "    AND EXISTS (\n"
+        "        SELECT 1\n"
+        "        FROM flow_version fv\n"
+        "        JOIN flow_version_deployment_attachment fvda ON fvda.flow_version_id = fv.id\n"
+        "        JOIN deployment d ON d.id = fvda.deployment_id\n"
+        "        WHERE fv.flow_id = OLD.id\n"
+        "          AND d.project_id = OLD.folder_id\n"
+        "    )\n"
+        "BEGIN\n"
+        "    SELECT RAISE(\n"
+        "        ABORT,\n"
+        "        'DEPLOYMENT_GUARD:FLOW_DEPLOYED_IN_PROJECT:Cannot move flow to a different project because "
+        "it has versions deployed in the current project. Detach deployed versions first.'\n"
+        "    );\n"
+        "END;\n"
     )
 
     op.execute(
-        """
-        CREATE TRIGGER trg_prevent_deployment_project_move
-        BEFORE UPDATE OF project_id ON deployment
-        FOR EACH ROW
-        WHEN OLD.project_id IS NOT NEW.project_id
-        BEGIN
-            SELECT RAISE(
-                ABORT,
-                'DEPLOYMENT_GUARD:DEPLOYMENT_PROJECT_MOVE:'
-                || 'Cannot move deployment to a different project. '
-                || 'Delete it and re-create in the target project instead.'
-            );
-        END;
-        """
+        "CREATE TRIGGER trg_prevent_deployment_project_move\n"
+        "BEFORE UPDATE OF project_id ON deployment\n"
+        "FOR EACH ROW\n"
+        "WHEN OLD.project_id IS NOT NEW.project_id\n"
+        "BEGIN\n"
+        "    SELECT RAISE(\n"
+        "        ABORT,\n"
+        "        'DEPLOYMENT_GUARD:DEPLOYMENT_PROJECT_MOVE:Cannot move deployment to a different project. "
+        "Re-create it in the target project instead.'\n"
+        "    );\n"
+        "END;\n"
     )
 
     op.execute(
-        """
-        CREATE TRIGGER trg_prevent_deployment_provider_account_move
-        BEFORE UPDATE OF deployment_provider_account_id ON deployment
-        FOR EACH ROW
-        WHEN OLD.deployment_provider_account_id IS NOT NEW.deployment_provider_account_id
-        BEGIN
-            SELECT RAISE(
-                ABORT,
-                'DEPLOYMENT_GUARD:DEPLOYMENT_PROVIDER_ACCOUNT_MOVE:'
-                || 'Cannot move deployment to a different deployment provider account. '
-                || 'Delete it and re-create under the target provider account instead.'
-            );
-        END;
-        """
+        "CREATE TRIGGER trg_prevent_deployment_provider_account_move\n"
+        "BEFORE UPDATE OF deployment_provider_account_id ON deployment\n"
+        "FOR EACH ROW\n"
+        "WHEN OLD.deployment_provider_account_id IS NOT NEW.deployment_provider_account_id\n"
+        "BEGIN\n"
+        "    SELECT RAISE(\n"
+        "        ABORT,\n"
+        "        'DEPLOYMENT_GUARD:DEPLOYMENT_PROVIDER_ACCOUNT_MOVE:Cannot move deployment to a different "
+        "deployment provider account. Re-create it under the target provider account instead.'\n"
+        "    );\n"
+        "END;\n"
     )
 
 

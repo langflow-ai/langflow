@@ -54,24 +54,21 @@ def test_parse_deployment_guard_error_deployment_project_move() -> None:
     message = (
         "DEPLOYMENT_GUARD:DEPLOYMENT_PROJECT_MOVE:"
         "Cannot move deployment to a different project. "
-        "Delete it and re-create in the target project instead."
+        "Re-create it in the target project instead."
     )
     exc = _SimulatedDbError(message)
 
     parsed = parse_deployment_guard_error(exc)
 
     assert isinstance(parsed, DeploymentGuardError)
-    assert (
-        parsed.detail
-        == "Cannot move deployment to a different project. Delete it and re-create in the target project instead."
-    )
+    assert parsed.detail == "Cannot move deployment to a different project. Re-create it in the target project instead."
 
 
 def test_parse_deployment_guard_error_deployment_provider_account_move() -> None:
     message = (
         "DEPLOYMENT_GUARD:DEPLOYMENT_PROVIDER_ACCOUNT_MOVE:"
         "Cannot move deployment to a different deployment provider account. "
-        "Delete it and re-create under the target provider account instead."
+        "Re-create it under the target provider account instead."
     )
     exc = _SimulatedDbError(message)
 
