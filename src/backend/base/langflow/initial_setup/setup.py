@@ -719,7 +719,7 @@ def create_new_project(
         gradient=project_gradient,
         tags=project_tags,
     )
-    db_flow = Flow.model_validate(new_project, from_attributes=True)
+    db_flow = Flow.model_validate(new_project.model_dump(exclude={"id"}))
     session.add(db_flow)
 
 
@@ -895,7 +895,7 @@ async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID) -
                         tags=flow_tags,
                         endpoint_name=flow_endpoint_name,  # Set endpoint_name from JSON
                     )
-                    db_flow = Flow.model_validate(new_project, from_attributes=True)
+                    db_flow = Flow.model_validate(new_project.model_dump(exclude={"id"}))
 
                     # Set the ID from JSON if provided
                     if flow_id:
