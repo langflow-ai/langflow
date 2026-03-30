@@ -28,19 +28,20 @@ async def check_user_creation_permission(
     can create new users to prevent unrestricted user creation.
     """
     settings_service = get_settings_service()
-    if not settings_service.auth_settings.AUTO_LOGIN:
-        if current_user is None or not current_user.is_active or not current_user.is_superuser:
-            raise HTTPException(
-                status_code=403,
-                detail="User registration is disabled. Only superusers can create new users.",
-            )
+    if not settings_service.auth_settings.AUTO_LOGIN and (
+        current_user is None or not current_user.is_active or not current_user.is_superuser
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="User registration is disabled. Only superusers can create new users.",
+        )
 
 
 @router.post("/", response_model=UserRead, status_code=201)
 async def add_user(
     user: UserCreate,
     session: DbSession,
-    _: None = Depends(check_user_creation_permission),
+    _: Annotated[None, Depends(check_user_creation_permission)],
 ) -> User:
     """Add a new user to the database.
 
