@@ -70,7 +70,6 @@ export function AssistantHeader({
           onDeleteSession={onDeleteSession}
           isExpanded={isExpanded}
         />
-
       </div>
     </div>
   );
