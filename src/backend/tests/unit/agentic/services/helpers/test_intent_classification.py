@@ -119,8 +119,7 @@ class TestClassifyIntent:
         """Models may return JSON embedded in explanatory text."""
         mock_result = {
             "result": (
-                'Here is the classification:\n'
-                '{"translation": "build a parser", "intent": "generate_component"}\nDone.'
+                'Here is the classification:\n{"translation": "build a parser", "intent": "generate_component"}\nDone.'
             )
         }
 
