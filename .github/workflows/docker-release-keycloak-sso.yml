@@ -1,13 +1,17 @@
 name: Docker Release (Keycloak SSO)
 
+# v*-hynix 태그를 push하면 자동으로 GitHub Release 생성 + Docker 이미지 빌드/푸시
+# 사용법: git tag v1.8.1-hynix && git push origin v1.8.1-hynix
+
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*-hynix"
   workflow_dispatch:
     inputs:
       tag:
-        description: "Image tag (e.g. v1.8.1-hynix). Defaults to the triggering ref."
-        required: false
+        description: "빌드할 git 태그 (예: v1.8.1-hynix)"
+        required: true
         type: string
 
 env:
@@ -15,16 +19,25 @@ env:
   IMAGE_NAME: ${{ github.repository_owner }}/langflow-hynix
 
 jobs:
-  build-and-push:
-    name: Build & Push Docker Image
+  release:
+    name: Create Release & Push Docker Image
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      packages: write
+      contents: write   # Release 생성 권한
+      packages: write   # ghcr.io 푸시 권한
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Resolve tag name
+        id: tag
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "name=${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "name=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -42,15 +55,11 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            # Release 이벤트: v1.2.3 → 태그 그대로 + latest
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            # workflow_dispatch에서 수동 태그 지정
-            type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
-            # 기본: latest (main 브랜치 또는 release)
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ steps.tag.outputs.name }}
+            type=raw,value=latest
 
       - name: Build and push
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -61,18 +70,30 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Update release notes with image info
-        if: github.event_name == 'release'
-        uses: actions/github-script@v7
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
         with:
-          script: |
-            const tag = context.payload.release.tag_name;
-            const image = `ghcr.io/${{ env.IMAGE_NAME }}:${tag}`;
-            const body = context.payload.release.body || '';
-            const addition = `\n\n## Docker Image\n\n\`\`\`bash\ndocker pull ${image}\n\`\`\`\n\n### 실행 예시\n\`\`\`bash\ndocker run -p 7860:7860 \\\n  -e KEYCLOAK_ENABLED=true \\\n  -e KEYCLOAK_SERVER_URL=https://keycloak.company.com \\\n  -e KEYCLOAK_REALM=company \\\n  -e KEYCLOAK_CLIENT_ID=langflow \\\n  -e KEYCLOAK_CLIENT_SECRET=<secret> \\\n  -e KEYCLOAK_REDIRECT_URI=http://localhost:7860/api/v1/keycloak/callback \\\n  -e KEYCLOAK_SHARED_USERNAME=langflow-shared \\\n  -e LANGFLOW_SECRET_KEY=<random-32-chars> \\\n  ${image}\n\`\`\``;
-            await github.rest.repos.updateRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              release_id: context.payload.release.id,
-              body: body + addition,
-            });
+          tag: ${{ steps.tag.outputs.name }}
+          generateReleaseNotes: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            ## Docker Image
+
+            ```bash
+            docker pull ghcr.io/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.name }}
+            ```
+
+            ### 실행 예시
+
+            ```bash
+            docker run -p 7860:7860 \
+              -e KEYCLOAK_ENABLED=true \
+              -e KEYCLOAK_SERVER_URL=https://keycloak.company.com \
+              -e KEYCLOAK_REALM=company \
+              -e KEYCLOAK_CLIENT_ID=langflow \
+              -e KEYCLOAK_CLIENT_SECRET=<secret> \
+              -e KEYCLOAK_REDIRECT_URI=http://localhost:7860/api/v1/keycloak/callback \
+              -e KEYCLOAK_SHARED_USERNAME=langflow-shared \
+              -e LANGFLOW_SECRET_KEY=<random-32-chars> \
+              ghcr.io/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.name }}
+            ```
