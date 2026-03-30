@@ -1,0 +1,78 @@
+name: Docker Release (Keycloak SSO)
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag (e.g. v1.8.1-hynix). Defaults to the triggering ref."
+        required: false
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/langflow-hynix
+
+jobs:
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            # Release 이벤트: v1.2.3 → 태그 그대로 + latest
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            # workflow_dispatch에서 수동 태그 지정
+            type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
+            # 기본: latest (main 브랜치 또는 release)
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/keycloak-sso.Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Update release notes with image info
+        if: github.event_name == 'release'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = context.payload.release.tag_name;
+            const image = `ghcr.io/${{ env.IMAGE_NAME }}:${tag}`;
+            const body = context.payload.release.body || '';
+            const addition = `\n\n## Docker Image\n\n\`\`\`bash\ndocker pull ${image}\n\`\`\`\n\n### 실행 예시\n\`\`\`bash\ndocker run -p 7860:7860 \\\n  -e KEYCLOAK_ENABLED=true \\\n  -e KEYCLOAK_SERVER_URL=https://keycloak.company.com \\\n  -e KEYCLOAK_REALM=company \\\n  -e KEYCLOAK_CLIENT_ID=langflow \\\n  -e KEYCLOAK_CLIENT_SECRET=<secret> \\\n  -e KEYCLOAK_REDIRECT_URI=http://localhost:7860/api/v1/keycloak/callback \\\n  -e KEYCLOAK_SHARED_USERNAME=langflow-shared \\\n  -e LANGFLOW_SECRET_KEY=<random-32-chars> \\\n  ${image}\n\`\`\``;
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: context.payload.release.id,
+              body: body + addition,
+            });
