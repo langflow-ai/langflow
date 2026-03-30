@@ -1,11 +1,9 @@
 import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import { useGetProviderAccounts } from "@/controllers/API/queries/deployment-provider-accounts";
-import {
-  useDeleteDeployment,
-  useGetDeployments,
-} from "@/controllers/API/queries/deployments";
+import { useGetProviderAccounts } from "@/controllers/API/queries/deployment-provider-accounts/use-get-provider-accounts";
+import { useDeleteDeployment } from "@/controllers/API/queries/deployments/use-delete-deployment";
+import { useGetDeployments } from "@/controllers/API/queries/deployments/use-get-deployments";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import DeploymentStepperModal from "./components/deployment-stepper-modal";

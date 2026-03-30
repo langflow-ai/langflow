@@ -1,9 +1,10 @@
+import { memo } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import type { FlowType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 
-export function FlowListPanel({
+export const FlowListPanel = memo(function FlowListPanel({
   flows,
   selectedFlowId,
   selectedVersionByFlow,
@@ -74,4 +75,4 @@ export function FlowListPanel({
       </div>
     </div>
   );
-}
+});

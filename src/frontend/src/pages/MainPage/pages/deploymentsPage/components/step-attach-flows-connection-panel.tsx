@@ -1,3 +1,4 @@
+import { memo } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { CheckboxSelectItem } from "./radio-select-item";
 
 export type ConnectionTab = "available" | "create";
 
-export function ConnectionPanel({
+export const ConnectionPanel = memo(function ConnectionPanel({
   connectionTab,
   onTabChange,
   connections,
@@ -226,4 +227,4 @@ export function ConnectionPanel({
       </div>
     </>
   );
-}
+});

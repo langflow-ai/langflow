@@ -20,7 +20,6 @@ export interface DeploymentProvider {
   type: DeploymentProviderType;
   name: string;
   icon: string;
-  connected: boolean;
 }
 
 export interface ProviderAccount {

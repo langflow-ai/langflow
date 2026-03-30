@@ -1,10 +1,11 @@
+import { memo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { FlowType } from "@/types/flow";
 import type { FlowVersionEntry } from "@/types/flow/version";
 import { RadioSelectItem } from "./radio-select-item";
 
-export function VersionPanel({
+export const VersionPanel = memo(function VersionPanel({
   selectedFlow,
   versions,
   isLoadingVersions,
@@ -100,4 +101,4 @@ export function VersionPanel({
       </div>
     </>
   );
-}
+});

@@ -10,7 +10,6 @@ import {
 } from "react";
 import type { ProviderAccountCreateRequest } from "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account";
 import type { DeploymentCreateRequest } from "@/controllers/API/queries/deployments/use-post-deployment";
-import { MOCK_CONNECTIONS } from "../mock-data";
 import type {
   ConnectionItem,
   DeploymentProvider,
@@ -86,8 +85,7 @@ export function DeploymentStepperProvider({
   const [selectedVersionByFlow, setSelectedVersionByFlow] = useState<
     Map<string, { versionId: string; versionTag: string }>
   >(new Map());
-  const [connections, setConnections] =
-    useState<ConnectionItem[]>(MOCK_CONNECTIONS);
+  const [connections, setConnections] = useState<ConnectionItem[]>([]);
   const [attachedConnectionByFlow, setAttachedConnectionByFlow] = useState<
     Map<string, string[]>
   >(new Map());

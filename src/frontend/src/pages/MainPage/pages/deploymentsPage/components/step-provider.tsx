@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
-import { useGetProviderAccounts } from "@/controllers/API/queries/deployment-provider-accounts";
+import { useGetProviderAccounts } from "@/controllers/API/queries/deployment-provider-accounts/use-get-provider-accounts";
 import { cn } from "@/utils/utils";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
-import { MOCK_PROVIDERS } from "../mock-data";
 import type {
   DeploymentProvider,
   ProviderAccount,
@@ -12,48 +11,17 @@ import type {
 } from "../types";
 import { RadioSelectItem } from "./radio-select-item";
 
-type EnvironmentTab = "existing" | "new";
+// TODO: replace with real API data when multi-provider support is added
+const PROVIDERS: DeploymentProvider[] = [
+  {
+    id: "watsonx",
+    type: "watsonx",
+    name: "watsonx Orchestrate",
+    icon: "Bot",
+  },
+];
 
-function ProviderCard({
-  provider,
-  selected,
-  onSelect,
-}: {
-  provider: DeploymentProvider;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <label
-      data-testid={`provider-card-${provider.id}`}
-      className={cn(
-        "flex h-[80px] cursor-pointer items-center gap-3 rounded-lg border bg-muted p-3 text-left transition-colors",
-        selected
-          ? "border-2 border-foreground"
-          : "border-border hover:border-muted-foreground",
-      )}
-    >
-      <input
-        type="radio"
-        name="provider"
-        value={provider.id}
-        checked={selected}
-        onChange={onSelect}
-        className="sr-only"
-      />
-      <ForwardedIconComponent
-        name={provider.icon}
-        className={cn(
-          "h-8 w-8",
-          selected ? "text-foreground" : "text-muted-foreground",
-        )}
-      />
-      <div className="flex flex-col text-left">
-        <span className="text-sm font-medium">{provider.name}</span>
-      </div>
-    </label>
-  );
-}
+type EnvironmentTab = "existing" | "new";
 
 function EnvironmentTabToggle({
   activeTab,
@@ -209,82 +177,70 @@ function NewEnvironmentForm({
 
 export default function StepProvider() {
   const {
-    selectedProvider,
     setSelectedProvider,
     selectedInstance,
     setSelectedInstance,
     credentials,
     setCredentials,
   } = useDeploymentStepper();
-  // TODO: replace with real API data
-  const providers = MOCK_PROVIDERS;
   const { data: providerAccountsData } = useGetProviderAccounts({});
   const environments = providerAccountsData?.providers ?? [];
 
   useEffect(() => {
-    if (!selectedProvider && providers.length === 1) {
-      setSelectedProvider(providers[0]);
-    }
-  }, [selectedProvider, setSelectedProvider]);
+    setSelectedProvider(PROVIDERS[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setSelectedProvider]);
 
+  const provider = PROVIDERS[0];
   const hasEnvironments = environments.length > 0;
 
-  const [environmentTab, setEnvironmentTab] = useState<EnvironmentTab>(
-    hasEnvironments ? "existing" : "new",
-  );
+  const [environmentTab, setEnvironmentTab] = useState<EnvironmentTab>("new");
+  const hasSetTabRef = useRef(false);
+
+  if (!hasSetTabRef.current && environments.length > 0) {
+    hasSetTabRef.current = true;
+    setEnvironmentTab("existing");
+  }
 
   return (
     <div className="flex h-full w-full flex-col gap-6 overflow-y-auto py-3">
       <h2 className="text-lg font-semibold">Provider</h2>
 
-      <div className="flex flex-col gap-3">
-        <span className="pb-2 text-sm font-medium">
-          Choose Provider <span className="text-destructive">*</span>
-        </span>
-        <div
-          className="grid grid-cols-2 gap-4"
-          role="radiogroup"
-          aria-label="Provider"
-        >
-          {providers.map((provider) => (
-            <ProviderCard
-              key={provider.id}
-              provider={provider}
-              selected={selectedProvider?.id === provider.id}
-              onSelect={() => setSelectedProvider(provider)}
-            />
-          ))}
-        </div>
+      <div className="flex items-center gap-3 rounded-lg border border-border bg-muted p-3">
+        <ForwardedIconComponent
+          name={provider.icon}
+          className="h-8 w-8 text-foreground"
+        />
+        <span className="text-sm font-medium">{provider.name}</span>
       </div>
 
-      {selectedProvider &&
-        (hasEnvironments ? (
-          <div className="flex flex-col gap-4">
-            <EnvironmentTabToggle
-              activeTab={environmentTab}
-              onTabChange={setEnvironmentTab}
-            />
-            {environmentTab === "existing" ? (
-              <EnvironmentList
-                environments={environments}
-                selectedEnvironment={selectedInstance}
-                onSelectEnvironment={setSelectedInstance}
-              />
-            ) : (
-              <NewEnvironmentForm
-                provider={selectedProvider}
-                credentials={credentials}
-                onCredentialsChange={setCredentials}
-              />
-            )}
-          </div>
-        ) : (
-          <NewEnvironmentForm
-            provider={selectedProvider}
-            credentials={credentials}
-            onCredentialsChange={setCredentials}
+      {hasEnvironments ? (
+        <div className="flex flex-col gap-4">
+          <EnvironmentTabToggle
+            activeTab={environmentTab}
+            onTabChange={setEnvironmentTab}
           />
-        ))}
+          {environmentTab === "existing" ? (
+            <EnvironmentList
+              environments={environments}
+              selectedEnvironment={selectedInstance}
+              onSelectEnvironment={setSelectedInstance}
+            />
+          ) : (
+            <NewEnvironmentForm
+              provider={provider}
+              credentials={credentials}
+              onCredentialsChange={setCredentials}
+            />
+          )}
+        </div>
+      ) : (
+        <NewEnvironmentForm
+          provider={provider}
+          credentials={credentials}
+          onCredentialsChange={setCredentials}
+        />
+      )}
     </div>
   );
 }
