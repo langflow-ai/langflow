@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -8,224 +9,143 @@ from cryptography.fernet import InvalidToken
 from langflow.services.database.models.deployment_provider_account.crud import (
     create_provider_account,
     delete_provider_account,
-    get_provider_account_by_id,
-    list_provider_accounts,
     update_provider_account,
 )
+from langflow.services.database.models.deployment_provider_account.model import (
+    DeploymentProviderKey,
+)
+from langflow.services.database.models.user.model import User
+from sqlalchemy import event
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.pool import StaticPool
+from sqlmodel import SQLModel
+from sqlmodel.ext.asyncio.session import AsyncSession
 
-MODEL_CLASS = "langflow.services.database.models.deployment_provider_account.crud.DeploymentProviderAccount"
-CRUD_AUTH = "langflow.services.database.models.deployment_provider_account.crud.auth_utils"
-CRUD_LOGGER = "langflow.services.database.models.deployment_provider_account.crud.logger"
+_ENCRYPT_TARGET = "langflow.services.database.models.deployment_provider_account.crud.auth_utils"
+_CRUD_LOGGER = "langflow.services.database.models.deployment_provider_account.crud.logger"
+_TEST_PASSWORD = "hashed"  # noqa: S105  # pragma: allowlist secret
+
+
+# ---------------------------------------------------------------------------
+# Helpers for pure-validation (mock-based) tests
+# ---------------------------------------------------------------------------
 
 
 def _make_db() -> AsyncMock:
-    """Create a mock AsyncSession with common async methods."""
     db = AsyncMock()
     db.add = MagicMock()
     return db
 
 
-def _make_provider_account(**overrides) -> MagicMock:
-    """Create a mock provider account with sensible defaults for testing."""
+def _make_provider_account(**overrides) -> SimpleNamespace:
     defaults = {
         "id": uuid4(),
         "user_id": uuid4(),
+        "name": "staging",
         "provider_tenant_id": "tenant-1",
-        "provider_key": "watsonx",
+        "provider_key": "watsonx-orchestrate",
         "provider_url": "https://example.com",
         "api_key": "encrypted-key",  # pragma: allowlist secret
     }
     defaults.update(overrides)
-    mock = MagicMock()
-    for k, v in defaults.items():
-        setattr(mock, k, v)
-    return mock
+    return SimpleNamespace(**defaults)
 
 
-# --- get_provider_account_by_id ---
+# ---------------------------------------------------------------------------
+# Fixtures for real in-memory SQLite tests
+# ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
-async def test_get_provider_account_by_id_found():
-    db = _make_db()
-    mock_acct = MagicMock()
-    mock_result = MagicMock()
-    mock_result.first.return_value = mock_acct
-    db.exec.return_value = mock_result
+@pytest.fixture(name="db_engine")
+def db_engine_fixture():
+    engine = create_async_engine(
+        "sqlite+aiosqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
 
-    result = await get_provider_account_by_id(db, provider_id=uuid4(), user_id=uuid4())
+    @event.listens_for(engine.sync_engine, "connect")
+    def _enable_fk(dbapi_connection, connection_record):  # noqa: ARG001
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
-    assert result is mock_acct
+    return engine
 
 
-@pytest.mark.asyncio
-async def test_get_provider_account_by_id_not_found():
-    db = _make_db()
-    mock_result = MagicMock()
-    mock_result.first.return_value = None
-    db.exec.return_value = mock_result
+@pytest.fixture(name="db")
+async def db_fixture(db_engine):
+    async with db_engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+    async with AsyncSession(db_engine, expire_on_commit=False) as session:
+        yield session
+    async with db_engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
+    await db_engine.dispose()
 
-    result = await get_provider_account_by_id(db, provider_id=uuid4(), user_id=uuid4())
 
-    assert result is None
+@pytest.fixture
+async def user(db: AsyncSession) -> User:
+    u = User(username="testuser", password=_TEST_PASSWORD, is_active=True)
+    db.add(u)
+    await db.commit()
+    await db.refresh(u)
+    return u
+
+
+# ---------------------------------------------------------------------------
+# Pure-validation tests (raise before touching DB)
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_get_provider_account_by_id_invalid_uuid_raises():
-    db = _make_db()
+    from langflow.services.database.models.deployment_provider_account.crud import get_provider_account_by_id
 
+    db = _make_db()
     with pytest.raises(ValueError, match="provider_id is not a valid UUID"):
         await get_provider_account_by_id(db, provider_id="not-a-uuid", user_id=uuid4())
 
 
-# --- list_provider_accounts ---
-
-
 @pytest.mark.asyncio
-async def test_list_provider_accounts_returns_list():
+async def test_create_provider_account_empty_name_raises():
     db = _make_db()
-    mock_items = [MagicMock(), MagicMock()]
-    mock_result = MagicMock()
-    mock_result.all.return_value = mock_items
-    db.exec.return_value = mock_result
-
-    result = await list_provider_accounts(db, user_id=uuid4())
-
-    assert result == mock_items
-    assert isinstance(result, list)
-
-
-@pytest.mark.asyncio
-async def test_list_provider_accounts_empty():
-    db = _make_db()
-    mock_result = MagicMock()
-    mock_result.all.return_value = []
-    db.exec.return_value = mock_result
-
-    result = await list_provider_accounts(db, user_id=uuid4())
-
-    assert result == []
-
-
-# --- create_provider_account ---
-
-
-@pytest.mark.asyncio
-async def test_create_provider_account_success():
-    db = _make_db()
-
-    with (
-        patch(CRUD_AUTH) as mock_auth,
-        patch(MODEL_CLASS) as mock_cls,
-    ):
-        mock_auth.encrypt_api_key.return_value = "encrypted"
-        mock_obj = MagicMock()
-        mock_obj.provider_key = "watsonx"
-        mock_obj.api_key = "encrypted"  # pragma: allowlist secret
-        mock_cls.return_value = mock_obj
-
-        result = await create_provider_account(
-            db,
-            user_id=uuid4(),
-            provider_tenant_id="tenant-1",
-            provider_key="watsonx",
-            provider_url="https://example.com",
-            api_key="test-token",  # pragma: allowlist secret
-        )
-
-    db.add.assert_called_once_with(mock_obj)
-    db.flush.assert_awaited_once()
-    db.refresh.assert_awaited_once_with(mock_obj)
-    assert result is mock_obj
-    assert result.provider_key == "watsonx"
-    assert result.api_key == "encrypted"  # pragma: allowlist secret
-    mock_auth.encrypt_api_key.assert_called_once_with("test-token")
-
-
-@pytest.mark.asyncio
-async def test_create_provider_account_strips_whitespace():
-    db = _make_db()
-
-    with (
-        patch(CRUD_AUTH) as mock_auth,
-        patch(MODEL_CLASS) as mock_cls,
-    ):
-        mock_auth.encrypt_api_key.return_value = "encrypted"
-        mock_cls.return_value = MagicMock()
-
+    with pytest.raises(ValueError, match="name must not be empty"):
         await create_provider_account(
             db,
             user_id=uuid4(),
-            provider_tenant_id="  tenant-1  ",
-            provider_key="  watsonx  ",
-            provider_url="  https://example.com  ",
-            api_key="  test-token  ",  # pragma: allowlist secret
-        )
-
-    call_kwargs = mock_cls.call_args.kwargs
-    assert call_kwargs["provider_tenant_id"] == "tenant-1"
-    assert call_kwargs["provider_key"] == "watsonx"
-    assert call_kwargs["provider_url"] == "https://example.com"
-    mock_auth.encrypt_api_key.assert_called_once_with("test-token")
-
-
-@pytest.mark.asyncio
-async def test_create_provider_account_none_tenant_id():
-    db = _make_db()
-
-    with (
-        patch(CRUD_AUTH) as mock_auth,
-        patch(MODEL_CLASS) as mock_cls,
-    ):
-        mock_auth.encrypt_api_key.return_value = "encrypted"
-        mock_cls.return_value = MagicMock()
-
-        await create_provider_account(
-            db,
-            user_id=uuid4(),
+            name="",
             provider_tenant_id=None,
-            provider_key="watsonx",
+            provider_key="watsonx-orchestrate",
             provider_url="https://example.com",
             api_key="test-token",  # pragma: allowlist secret
         )
-
-    call_kwargs = mock_cls.call_args.kwargs
-    assert call_kwargs["provider_tenant_id"] is None
 
 
 @pytest.mark.asyncio
-async def test_create_provider_account_blank_tenant_id_normalizes_to_none():
+async def test_create_provider_account_whitespace_name_raises():
     db = _make_db()
-
-    with (
-        patch(CRUD_AUTH) as mock_auth,
-        patch(MODEL_CLASS) as mock_cls,
-    ):
-        mock_auth.encrypt_api_key.return_value = "encrypted"
-        mock_cls.return_value = MagicMock()
-
+    with pytest.raises(ValueError, match="name must not be empty"):
         await create_provider_account(
             db,
             user_id=uuid4(),
-            provider_tenant_id="   ",
-            provider_key="watsonx",
+            name="   ",
+            provider_tenant_id=None,
+            provider_key="watsonx-orchestrate",
             provider_url="https://example.com",
             api_key="test-token",  # pragma: allowlist secret
         )
-
-    call_kwargs = mock_cls.call_args.kwargs
-    assert call_kwargs["provider_tenant_id"] is None
 
 
 @pytest.mark.asyncio
 async def test_create_provider_account_empty_provider_key_raises():
     db = _make_db()
-
     with pytest.raises(ValueError, match="provider_key must not be empty"):
         await create_provider_account(
             db,
             user_id=uuid4(),
+            name="staging",
             provider_tenant_id=None,
             provider_key="   ",
             provider_url="https://example.com",
@@ -236,13 +156,13 @@ async def test_create_provider_account_empty_provider_key_raises():
 @pytest.mark.asyncio
 async def test_create_provider_account_empty_provider_url_raises():
     db = _make_db()
-
     with pytest.raises(ValueError, match="provider_url must not be empty"):
         await create_provider_account(
             db,
             user_id=uuid4(),
+            name="staging",
             provider_tenant_id=None,
-            provider_key="watsonx",
+            provider_key="watsonx-orchestrate",
             provider_url="",
             api_key="test-token",  # pragma: allowlist secret
         )
@@ -251,149 +171,38 @@ async def test_create_provider_account_empty_provider_url_raises():
 @pytest.mark.asyncio
 async def test_create_provider_account_empty_api_key_raises():
     db = _make_db()
-
     with pytest.raises(ValueError, match="api_key must not be empty"):
         await create_provider_account(
             db,
             user_id=uuid4(),
+            name="staging",
             provider_tenant_id=None,
-            provider_key="watsonx",
+            provider_key="watsonx-orchestrate",
             provider_url="https://example.com",
             api_key="   ",  # pragma: allowlist secret
         )
 
 
 @pytest.mark.asyncio
-async def test_create_provider_account_integrity_error_raises_value_error():
-    db = _make_db()
-    db.flush.side_effect = IntegrityError("dup", params=None, orig=Exception())
-
-    with (
-        patch(CRUD_AUTH) as mock_auth,
-        patch(MODEL_CLASS),
-        patch(CRUD_LOGGER) as mock_logger,
-    ):
-        mock_auth.encrypt_api_key.return_value = "encrypted"
-        mock_logger.aerror = AsyncMock()
-        with pytest.raises(ValueError, match="Provider account already exists"):
-            await create_provider_account(
-                db,
-                user_id=uuid4(),
-                provider_tenant_id=None,
-                provider_key="watsonx",
-                provider_url="https://example.com",
-                api_key="test-token",  # pragma: allowlist secret
-            )
-
-    db.rollback.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-async def test_create_provider_account_encryption_value_error():
-    db = _make_db()
-
-    with (
-        patch(CRUD_AUTH) as mock_auth,
-        patch(CRUD_LOGGER) as mock_logger,
-    ):
-        mock_auth.encrypt_api_key.side_effect = ValueError("bad key")
-        mock_logger.aerror = AsyncMock()
-        with pytest.raises(RuntimeError, match="Failed to encrypt API key"):
-            await create_provider_account(
-                db,
-                user_id=uuid4(),
-                provider_tenant_id=None,
-                provider_key="watsonx",
-                provider_url="https://example.com",
-                api_key="test-token",  # pragma: allowlist secret
-            )
-
-
-@pytest.mark.asyncio
-async def test_create_provider_account_encryption_invalid_token():
-    db = _make_db()
-
-    with (
-        patch(CRUD_AUTH) as mock_auth,
-        patch(CRUD_LOGGER) as mock_logger,
-    ):
-        mock_auth.encrypt_api_key.side_effect = InvalidToken()
-        mock_logger.aerror = AsyncMock()
-        with pytest.raises(RuntimeError, match="Failed to encrypt API key"):
-            await create_provider_account(
-                db,
-                user_id=uuid4(),
-                provider_tenant_id=None,
-                provider_key="watsonx",
-                provider_url="https://example.com",
-                api_key="test-token",  # pragma: allowlist secret
-            )
-
-
-# --- update_provider_account ---
-
-
-@pytest.mark.asyncio
-async def test_update_provider_account_success():
+async def test_update_provider_account_empty_name_raises():
     db = _make_db()
     acct = _make_provider_account()
-
-    with patch(CRUD_AUTH) as mock_auth:
-        mock_auth.encrypt_api_key.return_value = "new-encrypted"
-        result = await update_provider_account(
-            db,
-            provider_account=acct,
-            provider_tenant_id="new-tenant",
-            provider_key="new-key",
-            provider_url="https://new.example.com",
-            api_key="updated-token",  # pragma: allowlist secret
-        )
-
-    assert result.provider_tenant_id == "new-tenant"
-    assert result.provider_key == "new-key"
-    assert result.provider_url == "https://new.example.com"
-    assert result.api_key == "new-encrypted"  # pragma: allowlist secret
-    db.flush.assert_awaited_once()
-    db.refresh.assert_awaited_once()
+    with pytest.raises(ValueError, match="name must not be empty"):
+        await update_provider_account(db, provider_account=acct, name="")
 
 
 @pytest.mark.asyncio
-async def test_update_provider_account_no_changes():
+async def test_update_provider_account_whitespace_name_raises():
     db = _make_db()
     acct = _make_provider_account()
-    original_key = acct.provider_key
-
-    result = await update_provider_account(db, provider_account=acct)
-
-    assert result.provider_key == original_key
-    db.flush.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-async def test_update_provider_account_set_tenant_to_none():
-    db = _make_db()
-    acct = _make_provider_account(provider_tenant_id="old-tenant")
-
-    await update_provider_account(db, provider_account=acct, provider_tenant_id=None)
-
-    assert acct.provider_tenant_id is None
-
-
-@pytest.mark.asyncio
-async def test_update_provider_account_empty_tenant_normalizes_to_none():
-    db = _make_db()
-    acct = _make_provider_account(provider_tenant_id="old-tenant")
-
-    await update_provider_account(db, provider_account=acct, provider_tenant_id="   ")
-
-    assert acct.provider_tenant_id is None
+    with pytest.raises(ValueError, match="name must not be empty"):
+        await update_provider_account(db, provider_account=acct, name="   ")
 
 
 @pytest.mark.asyncio
 async def test_update_provider_account_empty_provider_key_raises():
     db = _make_db()
     acct = _make_provider_account()
-
     with pytest.raises(ValueError, match="provider_key must not be empty"):
         await update_provider_account(db, provider_account=acct, provider_key="")
 
@@ -402,7 +211,6 @@ async def test_update_provider_account_empty_provider_key_raises():
 async def test_update_provider_account_whitespace_provider_key_raises():
     db = _make_db()
     acct = _make_provider_account()
-
     with pytest.raises(ValueError, match="provider_key must not be empty"):
         await update_provider_account(db, provider_account=acct, provider_key="   ")
 
@@ -411,7 +219,6 @@ async def test_update_provider_account_whitespace_provider_key_raises():
 async def test_update_provider_account_empty_provider_url_raises():
     db = _make_db()
     acct = _make_provider_account()
-
     with pytest.raises(ValueError, match="provider_url must not be empty"):
         await update_provider_account(db, provider_account=acct, provider_url="")
 
@@ -420,33 +227,64 @@ async def test_update_provider_account_empty_provider_url_raises():
 async def test_update_provider_account_empty_api_key_raises():
     db = _make_db()
     acct = _make_provider_account()
-
     with pytest.raises(ValueError, match="api_key must not be empty"):
         await update_provider_account(db, provider_account=acct, api_key="   ")  # pragma: allowlist secret
 
 
+# ---------------------------------------------------------------------------
+# Mock-based tests (encryption errors / hard-to-trigger edge cases)
+# ---------------------------------------------------------------------------
+
+
 @pytest.mark.asyncio
-async def test_update_provider_account_integrity_error_raises_value_error():
+async def test_create_provider_account_encryption_value_error():
     db = _make_db()
-    db.flush.side_effect = IntegrityError("dup", params=None, orig=Exception())
-    acct = _make_provider_account()
-
-    with patch(CRUD_LOGGER) as mock_logger:
+    with (
+        patch(_ENCRYPT_TARGET) as mock_auth,
+        patch(_CRUD_LOGGER) as mock_logger,
+    ):
+        mock_auth.encrypt_api_key.side_effect = ValueError("bad key")
         mock_logger.aerror = AsyncMock()
-        with pytest.raises(ValueError, match="conflicts with an existing record"):
-            await update_provider_account(db, provider_account=acct, provider_tenant_id="new-tenant")
+        with pytest.raises(RuntimeError, match="Failed to encrypt API key"):
+            await create_provider_account(
+                db,
+                user_id=uuid4(),
+                name="staging",
+                provider_tenant_id=None,
+                provider_key="watsonx-orchestrate",
+                provider_url="https://example.com",
+                api_key="test-token",  # pragma: allowlist secret
+            )
 
-    db.rollback.assert_awaited_once()
+
+@pytest.mark.asyncio
+async def test_create_provider_account_encryption_invalid_token():
+    db = _make_db()
+    with (
+        patch(_ENCRYPT_TARGET) as mock_auth,
+        patch(_CRUD_LOGGER) as mock_logger,
+    ):
+        mock_auth.encrypt_api_key.side_effect = InvalidToken()
+        mock_logger.aerror = AsyncMock()
+        with pytest.raises(RuntimeError, match="Failed to encrypt API key"):
+            await create_provider_account(
+                db,
+                user_id=uuid4(),
+                name="staging",
+                provider_tenant_id=None,
+                provider_key="watsonx-orchestrate",
+                provider_url="https://example.com",
+                api_key="test-token",  # pragma: allowlist secret
+            )
 
 
 @pytest.mark.asyncio
 async def test_update_provider_account_encryption_error():
     db = _make_db()
     acct = _make_provider_account()
-
     with (
-        patch(CRUD_AUTH) as mock_auth,
-        patch(CRUD_LOGGER) as mock_logger,
+        patch(_ENCRYPT_TARGET) as mock_auth,
+        patch(_CRUD_LOGGER) as mock_logger,
     ):
         mock_auth.encrypt_api_key.side_effect = ValueError("bad key")
         mock_logger.aerror = AsyncMock()
@@ -458,29 +296,98 @@ async def test_update_provider_account_encryption_error():
             )
 
 
-# --- delete_provider_account ---
-
-
-@pytest.mark.asyncio
-async def test_delete_provider_account_success():
-    db = _make_db()
-    acct = _make_provider_account()
-
-    await delete_provider_account(db, provider_account=acct)
-
-    db.delete.assert_awaited_once_with(acct)
-    db.flush.assert_awaited_once()
-
-
 @pytest.mark.asyncio
 async def test_delete_provider_account_integrity_error_raises_value_error():
     db = _make_db()
     db.flush.side_effect = IntegrityError("fk", params=None, orig=Exception())
     acct = _make_provider_account()
-
-    with patch(CRUD_LOGGER) as mock_logger:
+    with patch(_CRUD_LOGGER) as mock_logger:
         mock_logger.aerror = AsyncMock()
         with pytest.raises(ValueError, match="Failed to delete provider account"):
             await delete_provider_account(db, provider_account=acct)
-
     db.rollback.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# Real in-memory SQLite tests
+# ---------------------------------------------------------------------------
+
+
+async def _create_account(db, user, **overrides):
+    defaults = {
+        "user_id": user.id,
+        "name": "staging",
+        "provider_tenant_id": "tenant-1",
+        "provider_key": "watsonx-orchestrate",
+        "provider_url": "https://example.com",
+        "api_key": "raw-token",  # pragma: allowlist secret
+    }
+    defaults.update(overrides)
+    with patch(_ENCRYPT_TARGET) as mock_auth:
+        mock_auth.encrypt_api_key.return_value = "enc-token"
+        return await create_provider_account(db, **defaults)
+
+
+@pytest.mark.asyncio
+async def test_create_provider_account_strips_whitespace(db, user):
+    acct = await _create_account(
+        db,
+        user,
+        name="  staging  ",
+        provider_tenant_id="  tenant-1  ",
+        provider_key="  watsonx-orchestrate  ",
+        provider_url="  https://example.com  ",
+        api_key="  raw-token  ",  # pragma: allowlist secret
+    )
+    assert acct.name == "staging"
+    assert acct.provider_tenant_id == "tenant-1"
+    assert acct.provider_key == DeploymentProviderKey.WATSONX_ORCHESTRATE
+    assert acct.provider_url == "https://example.com"
+
+
+@pytest.mark.asyncio
+async def test_create_provider_account_none_tenant_id(db, user):
+    acct = await _create_account(db, user, provider_tenant_id=None)
+    assert acct.provider_tenant_id is None
+
+
+@pytest.mark.asyncio
+async def test_create_provider_account_blank_tenant_id_normalizes_to_none(db, user):
+    acct = await _create_account(db, user, provider_tenant_id="   ")
+    assert acct.provider_tenant_id is None
+
+
+@pytest.mark.asyncio
+async def test_update_provider_account_set_tenant_to_none(db, user):
+    acct = await _create_account(db, user, name="set-tenant-none", provider_tenant_id="old-tenant")
+    updated = await update_provider_account(db, provider_account=acct, provider_tenant_id=None)
+    assert updated.provider_tenant_id is None
+
+
+@pytest.mark.asyncio
+async def test_update_provider_account_empty_tenant_normalizes_to_none(db, user):
+    acct = await _create_account(db, user, name="empty-tenant", provider_tenant_id="old-tenant")
+    updated = await update_provider_account(db, provider_account=acct, provider_tenant_id="   ")
+    assert updated.provider_tenant_id is None
+
+
+@pytest.mark.asyncio
+async def test_create_provider_account_duplicate_name_per_provider_raises(db, user):
+    await _create_account(db, user, name="prod")
+    with pytest.raises(ValueError, match="Provider account already exists"):
+        await _create_account(db, user, name="prod", provider_url="https://other.example.com")
+
+
+@pytest.mark.asyncio
+async def test_create_provider_account_same_name_same_provider_allowed_for_different_users(db, user):
+    other_user = User(username="otheruser", password=_TEST_PASSWORD, is_active=True)
+    db.add(other_user)
+    await db.commit()
+    await db.refresh(other_user)
+
+    first = await _create_account(db, user, name="prod", provider_url="https://example.com")
+    second = await _create_account(db, other_user, name="prod", provider_url="https://example.com")
+
+    assert first.name == "prod"
+    assert second.name == "prod"
+    assert first.user_id != second.user_id

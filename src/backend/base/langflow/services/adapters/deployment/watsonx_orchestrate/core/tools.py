@@ -19,6 +19,10 @@ from lfx.services.adapters.deployment.exceptions import InvalidContentError, Inv
 from lfx.utils.flow_requirements import generate_requirements_from_flow
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import retry_create
+from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
+    WatsonxFlowArtifactProviderData,
+    WatsonxToolRefBinding,
+)
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     dedupe_list,
     normalize_wxo_name,
@@ -29,7 +33,7 @@ from langflow.utils.version import get_version_info
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from lfx.services.adapters.deployment.schema import BaseFlowArtifact, SnapshotItems
+    from lfx.services.adapters.deployment.schema import BaseFlowArtifact, SnapshotItems, SnapshotListResult
 
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 
@@ -208,7 +212,7 @@ def upload_tool_artifact_bytes(
 
 def create_wxo_flow_tool(
     *,
-    flow_payload: BaseFlowArtifact,
+    flow_payload: BaseFlowArtifact[WatsonxFlowArtifactProviderData],
     connections: dict[str, str],
     tool_name_prefix: str,
 ) -> tuple[dict[str, Any], bytes]:
@@ -230,17 +234,14 @@ def create_wxo_flow_tool(
             - artifacts: The supporting artifacts (the requirements.txt
                 and the flow json file) for the tool.
     """
-    flow_definition = flow_payload.model_dump()
+    # provider_data might break tool runtime expectations with unexpected top-level keys
+    flow_definition = flow_payload.model_dump(exclude={"provider_data"})
 
-    flow_provider_data = flow_definition.pop("provider_data", None)
-
-    if not isinstance(flow_provider_data, dict):
-        msg = "Flow payload must include provider_data with a non-empty project_id for Watsonx deployment."
+    flow_provider_data = flow_payload.provider_data
+    if not isinstance(flow_provider_data, WatsonxFlowArtifactProviderData):
+        msg = "Flow payload provider_data must be a WatsonxFlowArtifactProviderData model instance."
         raise InvalidContentError(message=msg)
-    project_id = str(flow_provider_data.get("project_id") or "").strip()
-    if not project_id:
-        msg = "Flow payload must include provider_data with a non-empty project_id for Watsonx deployment."
-        raise InvalidContentError(message=msg)
+    project_id = str(flow_provider_data.project_id).strip()
 
     flow_definition.update(
         {
@@ -303,7 +304,7 @@ def create_langflow_tool(
 async def create_and_upload_wxo_flow_tools(
     *,
     clients: WxOClient,
-    flow_payloads: list[BaseFlowArtifact],
+    flow_payloads: list[BaseFlowArtifact[WatsonxFlowArtifactProviderData]],
     connections: dict[str, str],
     tool_name_prefix: str,
 ) -> list[str]:
@@ -406,9 +407,9 @@ def build_snapshot_tool_names(
 async def process_raw_flows_with_app_id(
     clients: WxOClient,
     app_id: str,
-    flows: list[BaseFlowArtifact],
+    flows: list[BaseFlowArtifact[WatsonxFlowArtifactProviderData]],
     tool_name_prefix: str,
-) -> list[str]:
+) -> list[WatsonxToolRefBinding]:
     """Create langflow tools in wxO and connect them to the given app_id."""
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
 
@@ -418,12 +419,34 @@ async def process_raw_flows_with_app_id(
 
     connection = await validate_connection(clients.connections, app_id=app_id)
 
-    return await create_and_upload_wxo_flow_tools(
+    created_tool_ids = await create_and_upload_wxo_flow_tools(
         clients=clients,
         flow_payloads=flows,
         connections={app_id: connection.connection_id},
         tool_name_prefix=tool_name_prefix,
     )
+    if len(created_tool_ids) != len(flows):
+        msg = "Flow upload result mismatch: created tool ids count does not match the number of flow payloads."
+        raise InvalidDeploymentOperationError(message=msg)
+    return [
+        WatsonxToolRefBinding(
+            source_ref=_resolve_flow_source_ref(flow_payload),
+            tool_id=tool_id,
+        )
+        for flow_payload, tool_id in zip(flows, created_tool_ids, strict=True)
+    ]
+
+
+def _resolve_flow_source_ref(flow_payload: BaseFlowArtifact[WatsonxFlowArtifactProviderData]) -> str:
+    provider_data = flow_payload.provider_data
+    if not isinstance(provider_data, WatsonxFlowArtifactProviderData):
+        msg = "Flow payload provider_data must be a WatsonxFlowArtifactProviderData model instance."
+        raise InvalidContentError(message=msg)
+    source_ref = str(provider_data.source_ref).strip()
+    if source_ref:
+        return source_ref
+    msg = "Flow payload must include provider_data.source_ref for snapshot correlation."
+    raise InvalidContentError(message=msg)
 
 
 # TODO(WXO): find a way to make this fallback not hard-coded.
@@ -445,3 +468,38 @@ def _resolve_lfx_requirement() -> str:
             _LFX_MINIMUM_REQUIREMENT,
         )
         return _LFX_MINIMUM_REQUIREMENT
+
+
+async def verify_tools_by_ids(
+    clients: WxOClient,
+    snapshot_ids: list[str],
+) -> SnapshotListResult:
+    """Fetch tools by ID and return only those that still exist on the provider."""
+    from lfx.services.adapters.deployment.schema import SnapshotItem, SnapshotListResult
+
+    from langflow.services.adapters.deployment.watsonx_orchestrate.constants import ErrorPrefix
+    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import raise_as_deployment_error
+
+    if not snapshot_ids:
+        return SnapshotListResult(snapshots=[])
+
+    unique_ids = list(dict.fromkeys(snapshot_ids))
+    try:
+        tools = await asyncio.to_thread(clients.tool.get_drafts_by_ids, unique_ids)
+    except Exception as exc:  # noqa: BLE001
+        raise_as_deployment_error(
+            exc,
+            error_prefix=ErrorPrefix.LIST,
+            log_msg="Unexpected error while verifying wxO tool snapshots by ID",
+        )
+
+    return SnapshotListResult(
+        snapshots=[
+            SnapshotItem(
+                id=tool["id"],
+                name=tool.get("name") or tool["id"],
+            )
+            for tool in (tools or [])
+            if isinstance(tool, dict) and tool.get("id")
+        ],
+    )
