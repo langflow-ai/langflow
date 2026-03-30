@@ -118,7 +118,10 @@ class TestClassifyIntent:
     async def test_should_extract_json_with_surrounding_text(self):
         """Models may return JSON embedded in explanatory text."""
         mock_result = {
-            "result": 'Here is the classification:\n{"translation": "build a parser", "intent": "generate_component"}\nDone.'
+            "result": (
+                'Here is the classification:\n'
+                '{"translation": "build a parser", "intent": "generate_component"}\nDone.'
+            )
         }
 
         with patch(

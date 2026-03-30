@@ -44,7 +44,7 @@ async def _collect_events(gen):
 
 
 def _parse_sse_event(event_str: str) -> dict | None:
-    """Parse SSE event string into dict.
+    r"""Parse SSE event string into dict.
 
     SSE events have format: data: {"event": "...", ...}\n\n
     Complete events nest payload in "data" key: {"event": "complete", "data": {...}}
