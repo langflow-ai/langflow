@@ -347,9 +347,14 @@ class Settings(BaseSettings):
     # Custom Component Security
     allow_custom_components: bool = True
     """If set to False, blocks execution of components whose code does not match a known
-    server template. The server validates node code against its component template cache;
+    server template. 
+    
+    The server validates node code against its component template cache;
     when the cache is not yet loaded (e.g., during startup), all flow execution is blocked
-    as a safety measure. Set via LANGFLOW_ALLOW_CUSTOM_COMPONENTS environment variable."""
+    as a safety measure.
+
+    Note: this is a beta feature. For security in a multi-tenant environment,
+    use hardware-level isolation to restrict access."""
 
     # SSRF Protection
     ssrf_protection_enabled: bool = False
