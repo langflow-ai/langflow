@@ -17,9 +17,9 @@ export function AssistantValidationFailed({
   const [showErrorDetails, setShowErrorDetails] = useState(false);
 
   return (
-    <div className="space-y-3">
+    <div className="max-w-[80%] space-y-3">
       {/* Error card */}
-      <div className="max-w-[80%] rounded-lg border border-destructive/30 bg-destructive/5">
+      <div className="rounded-lg border border-destructive/30 bg-destructive/5">
         {/* Header */}
         <div className="flex items-center gap-2 border-b border-destructive/20 px-4 py-3">
           <AlertTriangle className="h-4 w-4 text-destructive" />
