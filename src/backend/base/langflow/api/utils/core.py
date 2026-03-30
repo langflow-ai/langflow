@@ -354,7 +354,7 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
         # Delete spans before traces (span.trace_id → trace.id FK dependency order).
         await session.exec(
             delete(SpanTable).where(
-                SpanTable.trace_id.in_(  # type: ignore[union-attr]
+                SpanTable.trace_id.in_(  # type: ignore[attr-defined]
                     select(TraceTable.id).where(TraceTable.flow_id == flow_id)
                 )
             )
