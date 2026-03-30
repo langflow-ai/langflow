@@ -3,6 +3,7 @@
  */
 
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -59,8 +60,19 @@ export function SessionHistoryDropdown({
         sideOffset={4}
         className="z-[70] max-h-80 w-72 overflow-y-auto"
       >
-        <DropdownMenuLabel className="text-xs font-semibold">
+        <DropdownMenuLabel className="flex items-center gap-1.5 text-xs font-semibold">
           Session History
+          <ShadTooltip
+            content="Sessions are stored in your browser only and will not be preserved across different browsers or after clearing browser data."
+            side="right"
+          >
+            <div>
+              <ForwardedIconComponent
+                name="Info"
+                className="h-3 w-3 cursor-pointer text-muted-foreground hover:text-foreground"
+              />
+            </div>
+          </ShadTooltip>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
 

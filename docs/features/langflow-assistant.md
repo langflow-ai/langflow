@@ -1,7 +1,7 @@
 # Feature: Langflow Assistant
 
 > Generated on: 2026-01-21
-> Updated on: 2026-02-16
+> Updated on: 2026-03-30
 > Status: Draft
 > Owner: Engineering Team
 
@@ -58,11 +58,11 @@ This context owns:
 | **Assistant** | AI-powered chat interface that generates Langflow components from natural language | `AssistantPanel`, `AssistantService` |
 | **AssistantMessage** | A single message in the chat, either from user or assistant | `AssistantMessage` interface |
 | **ComponentCode** | Python code that defines a Langflow component with inputs, outputs, and processing logic | `component_code` field, `extract_component_code()` |
-| **IntentClassification** | LLM-based detection of whether user wants to generate a component or ask a question | `classify_intent()`, `IntentResult` |
+| **IntentClassification** | LLM-based detection of whether user wants to generate a component, ask a question, or is off-topic | `classify_intent()`, `IntentResult` |
 | **ProgressStep** | A discrete stage in the component generation pipeline (generating, validating, etc.) | `StepType`, `AgenticStepType` |
 | **SSE** | Server-Sent Events - Protocol for streaming real-time progress updates from server to client | `StreamingResponse`, `postAssistStream()` |
 | **TokenEvent** | Real-time streaming of LLM output tokens for Q&A responses | `AgenticTokenEvent`, `format_token_event()` |
-| **Validation** | Process of compiling and instantiating generated component code to verify correctness | `validate_component_code()`, `ValidationResult` |
+| **Validation** | Two-phase process: static AST analysis (`validate_component_code()`) followed by runtime instantiation (`validate_component_runtime()`) | `validate_component_code()`, `validate_component_runtime()`, `ValidationResult` |
 | **ValidationRetry** | Automatic re-generation attempt when validation fails, including error context | `VALIDATION_RETRY_TEMPLATE`, `max_retries` |
 | **FloatingPanel** | The assistant panel displayed as a floating overlay centered on the canvas | `AssistantPanel` |
 | **ModelProvider** | External LLM service (OpenAI, Anthropic, etc.) used for generation | `provider`, `PREFERRED_PROVIDERS` |
@@ -72,6 +72,9 @@ This context owns:
 | **LangflowAssistantFlow** | Pre-built flow containing the main assistant prompt and component generation logic | `LangflowAssistant.json`, `LANGFLOW_ASSISTANT_FLOW` |
 | **ReasoningUI** | Animated typing display showing "thinking" messages during component generation | `AssistantLoadingState` |
 | **ApproveAction** | User action to add a validated component to the canvas | `handleApprove()`, `addComponent()` |
+| **OffTopic** | Intent classification for questions unrelated to Langflow (other tools, general knowledge) | `"off_topic"`, `OFF_TOPIC_REFUSAL_MESSAGE` |
+| **RuntimeValidation** | Second-phase validation that instantiates the component class to catch import/runtime errors | `validate_component_runtime()`, `build_custom_component_template()` |
+| **AgenticSessionPrefix** | `agentic_` prefix on session IDs to isolate Assistant sessions from Playground | `AGENTIC_SESSION_PREFIX` |
 
 ---
 
@@ -125,14 +128,16 @@ Configuration for available LLM providers.
   - At least one provider must be enabled to use assistant
   - API key must be valid and non-empty for provider to be enabled
   - Provider preference order: Anthropic > OpenAI > Google Generative AI > Groq
+  - IBM WatsonX and Ollama are supported with provider-specific parameter injection (URL, project ID, base URL)
 
 #### Model Selection Behavior
 
 The frontend implements automatic model selection to ensure a valid model is always sent to the backend:
 
-- **Auto-selection**: When no model is explicitly selected, the first available model from enabled providers is automatically selected
+- **Auto-selection**: When no model is explicitly selected, or when the persisted model's provider is no longer available, the first available model from enabled providers is automatically selected
 - **Persistence**: Selected model is stored in localStorage (`langflow-assistant-selected-model`)
-- **Validation**: On load, persisted model is validated to ensure it has required fields (`provider`, `name`). Invalid entries are cleared
+- **Validation**: On load, persisted model is validated against current enabled providers. If the provider or model no longer exists, the selection is cleared and auto-selection triggers
+- **Provider icon**: The model selector trigger displays the provider's icon (e.g., Anthropic, OpenAI) instead of a generic label
 - **Invariant**: A request must never be sent without a valid model selection to prevent backend fallback to unexpected providers
 
 ### 3.2 Domain Events
@@ -227,7 +232,7 @@ The frontend implements automatic model selection to ensure a valid model is alw
 
 ### Scenario: New session resets conversation memory
 - **Given** I have messages in the assistant chat
-- **When** I click "New session" in the header (direct button next to the close button)
+- **When** I click "New session" in the header
 - **Then** all messages should be cleared
 - **And** a new session ID should be generated
 - **And** subsequent messages should not reference previous conversation
@@ -242,21 +247,30 @@ The frontend implements automatic model selection to ensure a valid model is alw
 
 ### Scenario: Automatic retry on validation failure
 - **Given** the assistant panel is open
-- **And** max_retries is set to 3
+- **And** max_retries is set to 3 (meaning 3 total attempts)
 - **When** I submit a request that generates invalid code
-- **Then** I should see a "validation_failed" indicator with the error
+- **Then** I should see a "validation_failed" indicator with a clean error (not raw stacktrace)
 - **And** I should see a "retrying" indicator
 - **And** the system should automatically re-generate with error context
-- **And** I should see "Attempt 2 of 3" in the UI
+- **And** I should see "Attempt 2 of 3" in the UI (1-indexed, only shown on retries)
+- **And** validation includes both static AST checks AND runtime instantiation
 
 ### Scenario: Max retries exhausted
 - **Given** the assistant panel is open
-- **And** max_retries is set to 2
+- **And** max_retries is set to 3
 - **When** the generated code fails validation 3 times
-- **Then** I should see the final "validation_failed" status
-- **And** I should see the validation error message
-- **And** I should see the invalid component code (for debugging)
+- **Then** I should see the "Component generation failed" card
+- **And** I should see a friendly message: "The selected model was unable to generate valid component code. Try again or use a more capable model."
+- **And** I should see a collapsible "Error details" section (collapsed by default)
+- **And** I should see a "View code" toggle and a "Try Again" button
 - **And** I should NOT see an "Add to Canvas" button
+
+### Scenario: Ask about unrelated tools (off-topic guardrail)
+- **Given** the assistant panel is open
+- **When** I ask "how does n8n work?" or any question unrelated to Langflow
+- **Then** the intent should be classified as "off_topic"
+- **And** I should see a refusal message redirecting me to Langflow-related topics
+- **And** the LLM should NOT be called for the main response (saves API cost)
 
 ### Scenario: No model provider configured
 - **Given** no model providers are configured
@@ -281,10 +295,10 @@ The frontend implements automatic model selection to ensure a valid model is alw
 
 ### Scenario: Open assistant with keyboard shortcut
 - **Given** I am on the flow page with focus on the canvas (not in a text input)
-- **When** I press the **A** key
+- **When** I press the configured shortcut key (default: **A**, configurable in Settings > Shortcuts)
 - **Then** the assistant panel should open
 - **And** the text input should be auto-focused so I can start typing immediately
-- **And** pressing **A** again (when not focused on the input) should close it
+- **And** pressing the shortcut again (when not focused on the input) should close it
 
 ### Scenario: Close assistant with Escape
 - **Given** the assistant panel is open
@@ -297,12 +311,20 @@ The frontend implements automatic model selection to ensure a valid model is alw
 - **Then** the input placeholder should show "Working on it..." instead of the random suggestion text
 - **And** once generation completes, the placeholder should return to normal
 
-### Scenario: Streaming content hides raw code for misclassified intent
-- **Given** a follow-up request was misclassified as "question" instead of "generate_component"
-- **And** the LLM response streams component code (tokens visible as raw markdown)
-- **When** the streaming content matches a Python class extending Component
-- **Then** the raw code should be hidden and replaced with the progress card (ReasoningUI)
-- **And** the user should never see raw component code streaming in the chat
+### Scenario: Q&A response with example code renders as text
+- **Given** the user asks a question like "how do I create a component?"
+- **And** the LLM response includes example component code in a markdown code block
+- **When** the response completes
+- **Then** the response should render as markdown text (with syntax-highlighted code block)
+- **And** it should NOT trigger the component validation pipeline
+- **And** it should NOT show a component card or "Add to Canvas" button
+
+### Scenario: Component generation fallback for edge cases
+- **Given** a component generation response completes
+- **And** the backend did not set `result.validated` (e.g., format mismatch)
+- **But** the message has `completedSteps` containing component generation steps
+- **When** the content contains a Python class extending Component in a code block
+- **Then** the frontend should extract and display it as a component card
 
 ### Scenario: Clear conversation history
 - **Given** I have multiple messages in the chat
@@ -485,34 +507,38 @@ The TranslationFlow (intent classification) and LangflowAssistant flow shared th
 
 ---
 
-### ADR-007: Intent-Independent Code Extraction with Improved Classification
+### ADR-007: Q&A Path Isolation and Off-Topic Guardrails (supersedes previous intent-independent extraction)
 
 **Status**: Accepted
 
 #### Context
-Follow-up modification requests like "can you use dataframe output instead?" were classified as `"question"` because the TranslationFlow prompt only recognized explicit creation verbs (create/build/generate). This caused the Q&A path to be taken — tokens were streamed and no code extraction/validation occurred, so the component card never appeared.
+The original ADR-007 introduced intent-independent code extraction: all responses were scanned for component code regardless of intent. This caused a critical bug: when users asked questions like "how do I create a component?", the LLM's example code in the answer was extracted, validated, and displayed as a component card instead of the text answer.
+
+Additionally, the TranslationFlow only classified two intents (`generate_component` and `question`), allowing questions about unrelated tools (n8n, Docker, etc.) to pass through as `"question"` and receive full LLM responses.
 
 #### Decision
-Two-layer fix:
+Three changes:
 
-1. **Primary: Improved intent classification** — Updated the TranslationFlow prompt to recognize modification and follow-up patterns (e.g., "use X instead", "add Y", "change Z") as `"generate_component"`. This ensures the correct UX path (progress card, no token streaming) for modifications.
+1. **Q&A path isolation** — When intent is `"question"`, the backend returns the response immediately as plain text without code extraction/validation. Code extraction only runs for `"generate_component"` intent.
 
-2. **Fallback: Intent-independent code extraction** — The streaming assistant service now always attempts code extraction from the response, regardless of intent classification. If a response classified as `"question"` happens to contain valid Langflow component code (`"class " in code and "Component" in code`), it is extracted, validated, and returned with the component card. This is a safety net for edge cases the prompt doesn't catch.
+2. **Off-topic intent** — Added `"off_topic"` as a third intent classification. Questions about other tools, platforms, or unrelated topics are blocked before calling the main LLM, saving API cost and enforcing scope.
+
+3. **Frontend fallback scoping** — The frontend only shows a component card for Q&A responses if `message.completedSteps` contains component generation steps (indicating the backend intended to generate a component). This prevents example code in explanatory answers from being misinterpreted.
 
 #### Consequences
 
 **Benefits:**
-- Follow-up modifications show the same clean UX as initial generation
-- No risk of showing raw code to the user for any response that contains a component
-- Graceful degradation: if intent classification misses a case, the fallback catches it
+- Q&A answers with example code render as markdown, not component cards
+- Off-topic questions are blocked before the expensive LLM call
+- Clear separation between generation and Q&A paths
 
 **Trade-offs:**
-- Fallback path still briefly streams tokens before showing the card (slightly jarring UX)
-- Code extraction runs on all responses (negligible performance cost — regex on a string)
+- If intent classification misses a follow-up modification (classifies as "question"), the component card won't appear. Mitigated by improved TranslationFlow prompt with modification examples.
 
 **Key Files:**
-- `src/backend/.../agentic/flows/translation_flow.py` — expanded `TRANSLATION_PROMPT` with modification examples
-- `src/backend/.../agentic/services/assistant_service.py` — removed `if not is_component_request: return` early exit
+- `src/backend/.../agentic/services/assistant_service.py` — `if not is_component_request: yield complete; return`
+- `src/backend/.../agentic/flows/translation_flow.py` — three intents: `generate_component`, `question`, `off_topic`
+- `src/frontend/.../components/assistant-message.tsx` — fallback scoped by `completedSteps`
 
 ---
 
@@ -558,6 +584,140 @@ Opening the assistant panel felt sluggish when there were previous chat messages
 
 ---
 
+### ADR-010: Two-Phase Validation (Static + Runtime)
+
+**Status**: Accepted
+
+#### Context
+The original validation (`validate_component_code`) only performed static AST analysis — syntax, class name extraction, overlapping I/O names, return statements. Code with valid syntax but wrong imports (e.g., `from lfx.base import Component` instead of `from lfx.custom import Component`) passed validation, was marked as `validated: true`, and showed "Add to Canvas". Clicking it failed silently because the `/api/v1/custom_component` endpoint performed real instantiation.
+
+#### Decision
+Add a second validation phase (`validate_component_runtime`) that attempts to instantiate the component using `Component(_code=code)` + `build_custom_component_template()`. If runtime validation fails, the error is fed back into the retry loop.
+
+#### Consequences
+
+**Benefits:**
+- Components marked as `validated: true` can always be added to canvas
+- Import errors, missing base classes, and runtime issues are caught during generation
+- The retry loop includes runtime error context, improving LLM's ability to self-correct
+
+**Trade-offs:**
+- Runtime validation executes the generated code (mitigated by prior security scan)
+- Slightly slower validation per attempt (~100ms overhead)
+
+**Key Files:**
+- `src/backend/.../agentic/helpers/validation.py` — `validate_component_runtime()`
+- `src/backend/.../agentic/services/assistant_service.py` — calls runtime validation after AST passes
+
+---
+
+### ADR-011: Session ID Isolation from Playground
+
+**Status**: Accepted
+
+#### Context
+Assistant sessions appeared in the Playground's session list because both used the same `MessageTable` with the same `flow_id`. The Assistant's `ChatOutput` component stored messages with `should_store_message=True`, and the Playground queried `SELECT DISTINCT session_id FROM message WHERE flow_id = ?`.
+
+#### Decision
+1. Prefix all Assistant session IDs with `agentic_` on the frontend.
+2. Filter out `agentic_`-prefixed sessions in the Playground's session query.
+
+#### Consequences
+
+**Benefits:**
+- Assistant sessions are completely invisible in the Playground
+- Agent's conversation memory still works (same prefixed session_id across turns)
+- No database schema changes required
+
+**Key Files:**
+- `src/frontend/.../hooks/use-assistant-chat.ts` — `AGENTIC_SESSION_PREFIX`
+- `src/backend/.../api/v1/monitor.py` — `WHERE session_id NOT LIKE 'agentic_%'`
+
+---
+
+### ADR-012: Configurable Keyboard Shortcut
+
+**Status**: Accepted
+
+#### Context
+The "A" key shortcut to open the assistant was hardcoded in `FlowPage/index.tsx`, making it impossible for users to remap or disable via Settings > Shortcuts.
+
+#### Decision
+Register the shortcut in the existing `customDefaultShortcuts` system with name "AI Assistant" and default key "a". The `FlowPage` reads the shortcut from `useShortcutsStore` instead of using a hardcoded string.
+
+**Key Files:**
+- `src/frontend/.../customization/constants.ts` — `"AI Assistant"` entry
+- `src/frontend/.../stores/shortcuts.ts` — `aiAssistant: "a"`
+- `src/frontend/.../pages/FlowPage/index.tsx` — reads from store
+
+---
+
+### ADR-013: Resilient Intent Classification for Diverse Models
+
+**Status**: Accepted
+
+#### Context
+Models like IBM granite return non-JSON responses from the TranslationFlow, causing all requests to default to `"question"` intent. This prevented component generation from ever triggering with these models.
+
+#### Decision
+Add three progressive fallbacks when `json.loads()` fails:
+1. Extract JSON from markdown code blocks (`` ```json ... ``` ``)
+2. Find JSON objects embedded in surrounding text
+3. Match known intent keywords in plain text (`"generate_component"`, `"off_topic"`)
+
+**Key Files:**
+- `src/backend/.../services/helpers/intent_classification.py` — `_MARKDOWN_JSON_RE`, `_EMBEDDED_JSON_RE`, keyword fallback
+
+---
+
+### ADR-014: Provider-Specific Parameter Injection
+
+**Status**: Accepted
+
+#### Context
+IBM WatsonX and Ollama require additional parameters beyond API key and model name (WatsonX: URL + project ID; Ollama: base URL). The `inject_model_into_flow` function only injected the `model` value into Agent nodes, leaving provider-specific fields empty. This caused authentication failures for WatsonX in the Assistant.
+
+#### Decision
+Thread `provider_vars` (resolved from database) through `flow_executor` → `flow_loader` → `inject_model_into_flow`. The injection function now sets `api_key`, `base_url_ibm_watsonx`, `project_id` (WatsonX) and `base_url_ollama` (Ollama) on Agent node templates.
+
+**Key Files:**
+- `src/backend/.../services/flow_preparation.py` — `provider_fields` injection
+- `src/backend/.../services/flow_executor.py` — passes `global_variables` as `provider_vars`
+
+---
+
+### ADR-015: Session Storage in localStorage (Not Database)
+
+**Status**: Accepted
+
+#### Context
+Users expect assistant session history to persist. A decision was needed on whether to store sessions in the database (like the Playground) or in browser localStorage.
+
+#### Decision
+Session history is stored in browser `localStorage` (key: `langflow-assistant-sessions`), limited to 10 sessions. Sessions are serialized/deserialized with `progress` state stripped and in-flight messages marked as `"cancelled"`.
+
+#### Consequences
+
+**Benefits:**
+- Zero backend changes — no new API endpoints or database tables
+- Fast read/write with no network latency
+- Simple implementation matching the frontend-scoped session_id model
+
+**Trade-offs:**
+- **Sessions are lost when browser cache is cleared** — users should be aware
+- No cross-device or cross-browser synchronization
+- Limited to 10 sessions (oldest dropped on overflow)
+- Session data is not backed up or recoverable
+
+**Important: This is a known limitation.** If users report lost sessions, the answer is that assistant sessions are browser-local only. Database persistence can be added as a future enhancement if needed.
+
+**Key Files:**
+- `src/frontend/.../hooks/use-session-history.ts` — `saveCurrentSession()`, `switchSession()`, `deleteSession()`
+- `src/frontend/.../helpers/session-storage.ts` — serialization/deserialization
+- `src/frontend/.../assistant-panel.constants.ts` — `ASSISTANT_SESSIONS_STORAGE_KEY`, `ASSISTANT_MAX_SESSIONS`
+
+---
+
 ## 6. Technical Specification
 
 ### 6.1 Dependencies
@@ -568,7 +728,7 @@ Opening the assistant panel felt sluggish when there were previous chat messages
 | Service | `ProviderService` | Detects configured model providers and retrieves API keys |
 | Service | `VariableService` | Retrieves user's stored API keys from encrypted storage |
 | Service | `ValidationService` | Compiles and instantiates component code for validation |
-| External API | LLM Provider APIs | OpenAI, Anthropic, Azure, Google - for text generation |
+| External API | LLM Provider APIs | OpenAI, Anthropic, Azure, Google, IBM WatsonX, Ollama, Groq - for text generation |
 | Library | `lfx.run` | Flow execution engine |
 | Library | `lfx.custom.validate` | Component class creation and validation |
 | Frontend | `use-stick-to-bottom` | Auto-scroll behavior in chat |
@@ -587,8 +747,8 @@ Opening the assistant panel felt sluggish when there were previous chat messages
   "input_value": "string - The user's message/prompt",
   "provider": "string - Optional. Model provider (openai, anthropic, etc.)",
   "model_name": "string - Optional. Specific model name (gpt-4o, claude-3-opus, etc.)",
-  "max_retries": "integer - Optional. Max validation retries (default: 3)",
-  "session_id": "string - Required for conversation memory. Generated once per session by the frontend, reused across all requests. New ID on 'New session' only. Backend falls back to uuid4() if omitted."
+  "max_retries": "integer - Optional. Total validation attempts (default: 3)",
+  "session_id": "string - Required for conversation memory. Prefixed with 'agentic_' to isolate from Playground. Generated once per session by the frontend, reused across all requests. New ID on 'New session' only. Backend falls back to uuid4() if omitted."
 }
 ```
 
@@ -703,7 +863,7 @@ Event: `cancelled`
 | `400` | Missing API key | "OPENAI_API_KEY is required for the Langflow Assistant with openai. Please configure it in Settings > Model Providers." | Add API key in Settings |
 | `400` | Unknown provider | "Unknown provider: X" | Use a supported provider |
 | `404` | Flow file not found | "Flow file 'X.json' not found" | Ensure agentic flows are deployed |
-| `500` | Flow execution error | "An error occurred while executing the flow." | Retry request; check server logs |
+| `500` | Flow execution error | Friendly error extracted from the actual error (e.g., "Rate limit exceeded. Please wait a moment and try again.") | Retry request; check server logs |
 | `ValidationError` | Code syntax error | Includes `SyntaxError: ...` | System auto-retries with error context |
 | `ValidationError` | Import error | Includes `ModuleNotFoundError: ...` | System auto-retries with error context |
 | `ValidationError` | Missing Component base | "Could not extract class name from code" | System auto-retries with hint |
@@ -718,7 +878,7 @@ Event: `cancelled`
 | Metric | Type | Description | Alert Threshold |
 |--------|------|-------------|-----------------|
 | `assistant_requests_total` | Counter | Total number of assistant requests | N/A (baseline) |
-| `assistant_requests_by_intent` | Counter | Requests segmented by intent (generate_component, question) | N/A |
+| `assistant_requests_by_intent` | Counter | Requests segmented by intent (generate_component, question, off_topic) | N/A |
 | `assistant_generation_duration_seconds` | Histogram | Time from request to completion | P95 > 60s |
 | `assistant_validation_attempts` | Histogram | Number of validation attempts per request | P95 > 2 |
 | `assistant_validation_success_rate` | Gauge | Percentage of validations succeeding on first attempt | < 70% |
@@ -743,7 +903,7 @@ Event: `cancelled`
 
 **Assistant Usage Dashboard:**
 - Request Rate - Requests per minute over time
-- Intent Distribution - Pie chart of generate_component vs question
+- Intent Distribution - Pie chart of generate_component vs question vs off_topic
 - Provider Usage - Bar chart of requests by provider
 - Validation Success Rate - Time series of first-attempt success rate
 - Response Time P50/P95/P99 - Latency distribution
@@ -766,8 +926,10 @@ No dedicated feature flags are currently implemented. The assistant is always en
 
 - No database migrations required
 - Configuration stored in existing `variables` table (API keys)
-- Session messages are persisted in the message store (keyed by `session_id`), enabling conversation memory within a session
-- Session ID is frontend-scoped (generated per hook instance, reset on "New session")
+- Session messages are persisted in the message store (keyed by `session_id`) for Agent conversation memory within a session
+- Session ID is frontend-scoped, prefixed with `agentic_`, and generated per hook instance (reset on "New session")
+- **Session history (chat messages list) is stored in browser `localStorage` only** — not in the database. Clearing browser data deletes all assistant session history. This is by design (see ADR-015)
+- The Playground filters out `agentic_`-prefixed sessions to avoid cross-contamination (see ADR-011)
 
 ### 8.3 Rollback Plan
 
@@ -791,12 +953,21 @@ No dedicated feature flags are currently implemented. The assistant is always en
 - [ ] Click "New session" and verify the assistant does not remember the previous conversation
 - [ ] Cancel a generation in progress
 - [ ] Clear conversation history
-- [ ] Press **A** on the canvas to open the assistant and verify the input is auto-focused
+- [ ] Press the configured shortcut (default **A**) on the canvas to open the assistant and verify the input is auto-focused
 - [ ] Press **Escape** to close the assistant (from both canvas and input focus)
+- [ ] Verify the shortcut is listed and editable in Settings > Shortcuts
 - [ ] Verify the input placeholder shows "Working on it..." during generation (not a random suggestion)
 - [ ] Resize the floating panel by dragging edges and verify size is persisted
 - [ ] Verify zoom percentage display doesn't shift the controls bar when zooming between 60% and 200%
 - [ ] Open the assistant panel with previous messages and verify it opens instantly (no lag)
+- [ ] Verify assistant sessions do NOT appear in Playground session list
+- [ ] Ask an off-topic question (e.g., "how does n8n work?") and verify it is blocked
+- [ ] Verify model selector shows correct provider icon (not generic "AI")
+- [ ] Switch to a different provider and verify the icon updates
+- [ ] Generate a component with invalid imports and verify retry loop catches it with runtime validation
+- [ ] Verify validation failure shows friendly message with collapsible error details
+- [ ] Verify attempt counter shows correct "Attempt X of 3" (never exceeds max)
+- [ ] Test with IBM WatsonX or Ollama provider and verify it works
 
 ---
 
@@ -860,68 +1031,86 @@ C4Container
 ```mermaid
 flowchart TD
     A[User Input] --> B{Intent Classification<br/>TranslationFlow - stateless}
-    B -->|generate_component| C[Execute LangflowAssistant Flow<br/>no token streaming]
+    B -->|off_topic| Z[Return Refusal Message<br/>no LLM call]
+    B -->|generate_component| C[Execute LangflowAssistant Flow]
     B -->|question| D[Execute LangflowAssistant Flow<br/>with token streaming]
 
+    D --> F[Complete Response<br/>plain text / Q&A]
+
     C --> G[Extract Component Code]
-    D --> G
 
-    G --> H{Component Code Found?<br/>class + Component check}
-    H -->|No| F[Complete Response<br/>plain text / Q&A]
-    H -->|Yes| I[Validate Code]
+    G --> H{Code Found?}
+    H -->|No| F
+    H -->|Yes| I[Static Validation<br/>AST parsing]
 
-    I --> J{Valid?}
-    J -->|Yes| K[Return Validated Component<br/>component card with Approve]
+    I --> I2{AST Valid?}
+    I2 -->|No| L
+    I2 -->|Yes| I3[Runtime Validation<br/>instantiate component]
+
+    I3 --> J{Runtime Valid?}
+    J -->|Yes| K[Return Validated Component<br/>component card with Add to Canvas]
     J -->|No| L{Retries Left?}
 
     L -->|Yes| M[Retry with Error Context]
     M --> C
-    L -->|No| N[Return with Validation Error]
+    L -->|No| N[Return Friendly Error<br/>collapsible details + Try Again]
 
-    K --> O[User Approves]
-    O --> P[Add to Canvas]
+    K --> O[User Clicks Add to Canvas]
+    O --> P[Component API Validation]
+    P --> Q[Add to Canvas]
 ```
 
 ### 9.4 State Machine: Generation Pipeline
 
 ```
-┌──────────┐    ┌────────────────────────┐    ┌─────────────────────┐
-│  Start   │───▶│  generating_component  │───▶│  generation_complete │
-└──────────┘    │    (or "generating")   │    └──────────┬──────────┘
-                └────────────────────────┘               │
-                                                         │
-                                                ┌────────▼────────┐
-                                                │  Extract Code   │ ← runs for ALL responses
-                                                └────────┬────────┘
-                                                         │
-                         ┌───────────────────────────────┼───────────────────┐
-                         │ No Component Code             │ Component Code    │
-                         ▼                               ▼                   │
-                ┌────────────────┐             ┌─────────────────┐           │
-                │    complete    │             │ extracting_code │           │
-                │  (plain text)  │             └────────┬────────┘           │
-                └────────────────┘                      │                    │
-                                                        ▼                    │
-                                               ┌─────────────────┐           │
-                                               │   validating    │           │
-                                               └────────┬────────┘           │
-                                                        │                    │
-                                    ┌───────────────────┼────────────────┐   │
-                                    │ Valid             │ Invalid        │   │
-                                    ▼                   ▼                │   │
-                           ┌─────────────────┐ ┌──────────────────────┐  │   │
-                           │    validated    │ │  validation_failed   │  │   │
-                           └────────┬────────┘ └──────────┬───────────┘  │   │
-                                    │                     │              │   │
-                                    ▼                     ▼              │   │
-                           ┌─────────────────┐   ┌─────────────────┐    │   │
-                           │    complete     │   │    retrying     │────┘   │
-                           │   (validated)   │   └─────────────────┘        │
-                           └─────────────────┘          │                   │
-                                                        │ max retries       │
-                                                        ▼                   │
-                                               ┌─────────────────┐          │
-                                               │    complete     │◀─────────┘
-                                               │ (not validated) │
-                                               └─────────────────┘
+┌──────────┐    ┌─────────────────────────┐
+│  Start   │───▶│  Intent Classification  │
+└──────────┘    └─────────┬───────────────┘
+                          │
+              ┌───────────┼────────────┐
+              │           │            │
+              ▼           ▼            ▼
+        ┌──────────┐ ┌──────────┐ ┌────────────┐
+        │off_topic │ │ question │ │gen_component│
+        └────┬─────┘ └────┬─────┘ └─────┬──────┘
+             │            │              │
+             ▼            ▼              ▼
+        ┌──────────┐ ┌──────────┐ ┌────────────────────────┐
+        │ refusal  │ │generating│ │  generating_component  │
+        │ message  │ └────┬─────┘ └─────────┬──────────────┘
+        └──────────┘      │                 │
+                          ▼                 ▼
+                   ┌────────────┐    ┌─────────────────┐
+                   │  complete  │    │generation_complete│
+                   │(plain text)│    └────────┬────────┘
+                   └────────────┘             │
+                                              ▼
+                                     ┌─────────────────┐
+                                     │ extracting_code │
+                                     └────────┬────────┘
+                                              │
+                                     ┌────────▼────────┐
+                                     │   validating    │
+                                     │ (AST + Runtime) │
+                                     └────────┬────────┘
+                                              │
+                          ┌───────────────────┼────────────────┐
+                          │ Valid             │ Invalid        │
+                          ▼                   ▼                │
+                 ┌─────────────────┐ ┌──────────────────────┐  │
+                 │    validated    │ │  validation_failed   │  │
+                 └────────┬────────┘ └──────────┬───────────┘  │
+                          │                     │              │
+                          ▼                     ▼              │
+                 ┌─────────────────┐   ┌─────────────────┐    │
+                 │    complete     │   │    retrying     │────┘
+                 │   (validated)   │   └─────────────────┘
+                 └─────────────────┘          │
+                                              │ max attempts
+                                              ▼
+                                     ┌─────────────────┐
+                                     │    complete     │
+                                     │ (not validated) │
+                                     │ friendly error  │
+                                     └─────────────────┘
 ```
