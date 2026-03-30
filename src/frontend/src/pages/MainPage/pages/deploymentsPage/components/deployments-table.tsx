@@ -2,6 +2,13 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Table,
   TableBody,
   TableCell,
@@ -16,21 +23,25 @@ interface DeploymentsTableProps {
   deployments: Deployment[];
   providerName: string;
   onTestDeployment: (deployment: Deployment) => void;
+  onDuplicateDeployment?: (deployment: Deployment) => void;
+  onUpdateDeployment?: (deployment: Deployment) => void;
+  onDeleteDeployment?: (deployment: Deployment) => void;
 }
 
-const TYPE_CONFIG: Record<DeploymentType, { color: string }> = {
-  agent: { color: "border-l-error" },
-  mcp: { color: "border-l-accent-emerald" },
-};
+const TYPE_CONFIG: Record<DeploymentType, { icon: string; className: string }> =
+  {
+    agent: { icon: "Bot", className: "text-error" },
+    mcp: { icon: "Plug", className: "text-accent-emerald" },
+  };
 
 function TypeBadge({ type }: { type: DeploymentType }) {
   const config = TYPE_CONFIG[type] ?? TYPE_CONFIG["agent"];
   return (
-    <Badge
-      variant="secondaryStatic"
-      size="tag"
-      className={cn("border-l-2", config.color)}
-    >
+    <Badge variant="secondaryStatic" size="tag" className="gap-1">
+      <ForwardedIconComponent
+        name={config.icon}
+        className={cn("h-3 w-3", config.className)}
+      />
       {type === "agent" ? "Agent" : "MCP"}
     </Badge>
   );
@@ -48,6 +59,9 @@ export default function DeploymentsTable({
   deployments,
   providerName,
   onTestDeployment,
+  onDuplicateDeployment,
+  onUpdateDeployment,
+  onDeleteDeployment,
 }: DeploymentsTableProps) {
   return (
     <Table>
@@ -108,18 +122,53 @@ export default function DeploymentsTable({
               </Button>
             </TableCell>
             <TableCell>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                data-testid={`actions-deployment-${deployment.id}`}
-                aria-label={`Actions for ${deployment.name}`}
-              >
-                <ForwardedIconComponent
-                  name="EllipsisVertical"
-                  className="h-4 w-4"
-                />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    data-testid={`actions-deployment-${deployment.id}`}
+                    aria-label={`Actions for ${deployment.name}`}
+                  >
+                    <ForwardedIconComponent
+                      name="EllipsisVertical"
+                      className="h-4 w-4"
+                    />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => onDuplicateDeployment?.(deployment)}
+                  >
+                    <ForwardedIconComponent
+                      name="Copy"
+                      className="mr-2 h-4 w-4"
+                    />
+                    Duplicate
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onUpdateDeployment?.(deployment)}
+                  >
+                    <ForwardedIconComponent
+                      name="Pencil"
+                      className="mr-2 h-4 w-4"
+                    />
+                    Update
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => onDeleteDeployment?.(deployment)}
+                  >
+                    <ForwardedIconComponent
+                      name="Trash2"
+                      className="mr-2 h-4 w-4"
+                    />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </TableCell>
           </TableRow>
         ))}
