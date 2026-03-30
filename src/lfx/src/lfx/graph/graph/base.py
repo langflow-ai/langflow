@@ -68,10 +68,10 @@ def _serialize_vertex_value(obj: Any) -> Any | None:
     - Dicts containing Pydantic models → recursively serialized
     - Non-serializable objects → None (logged upstream)
     """
+    from pydantic import BaseModel
+
     if obj is None:
         return None
-
-    from pydantic import BaseModel
 
     if isinstance(obj, BaseModel):
         return {
@@ -117,7 +117,7 @@ def _deserialize_vertex_value(obj: Any) -> Any:
         module_name = obj["__module__"]
         class_name = obj["__class__"]
         data = obj["__data__"]
-        import importlib
+        import importlib  # noqa: PLC0415 — dynamic module loading by name
 
         module = importlib.import_module(module_name)
         cls = getattr(module, class_name)
@@ -577,10 +577,22 @@ class Graph:
                     f"(built_object captured={serialized_obj is not None}, "
                     f"built_result captured={serialized_res is not None})"
                 )
+                # Serialize results dict — contains named outputs like {"message": Message(...)}
+                # These must go through the same Pydantic-aware serializer as built_object
+                serialized_results = {}
+                if hasattr(vertex, "results") and vertex.results:
+                    for rkey, rval in vertex.results.items():
+                        serialized_results[rkey] = _serialize_vertex_value(rval)
+
+                serialized_artifacts = {}
+                if hasattr(vertex, "artifacts") and vertex.artifacts:
+                    for akey, aval in vertex.artifacts.items():
+                        serialized_artifacts[akey] = _serialize_vertex_value(aval)
+
                 vertex_results[vertex.id] = VertexCheckpointData(
                     built=True,
-                    results=vertex.results if hasattr(vertex, "results") else {},
-                    artifacts=vertex.artifacts if hasattr(vertex, "artifacts") else {},
+                    results=serialized_results,
+                    artifacts=serialized_artifacts,
                     built_object=serialized_obj,
                     built_result=serialized_res,
                 )
@@ -1454,9 +1466,13 @@ class Graph:
                 continue
             vertex.built = result_data.built
             if result_data.results:
-                vertex.results = result_data.results
+                vertex.results = {
+                    k: _deserialize_vertex_value(v) for k, v in result_data.results.items()
+                }
             if result_data.artifacts:
-                vertex.artifacts = result_data.artifacts
+                vertex.artifacts = {
+                    k: _deserialize_vertex_value(v) for k, v in result_data.artifacts.items()
+                }
             if result_data.built_object is not None:
                 vertex.built_object = _deserialize_vertex_value(result_data.built_object)
             if result_data.built_result is not None:
