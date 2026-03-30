@@ -41,3 +41,10 @@ class DeploymentProviderIDContext:
             yield
         finally:
             cls.reset_current(token)
+
+
+@contextmanager
+def deployment_provider_scope(provider_id: UUID):
+    """Set deployment provider context for a scoped adapter call."""
+    with DeploymentProviderIDContext.scope(DeploymentAdapterContext(provider_id=provider_id)):
+        yield
