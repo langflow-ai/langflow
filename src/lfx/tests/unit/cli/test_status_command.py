@@ -552,7 +552,7 @@ class TestStatusCommandSynced:
         p = _write_flow(tmp_path, "flow.json")
         remote = _fake_remote_flow(flow_dict=_FLOW_DICT)
         client = _CloseAwareClient(remote)
-        triple = _identity_normalize, _json_flow_to_json, MagicMock(return_value=client)
+        triple = _identity_normalize, _json_flow_to_json, MagicMock(return_value=client), _FakeLangflowNotFoundError
 
         _run_status([str(p)], sdk_triple=triple)
 
