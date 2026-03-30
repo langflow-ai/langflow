@@ -19,6 +19,14 @@ import type {
 } from "../types";
 import { toResourceNamePrefix } from "../types";
 
+interface DeploymentStepperInitialState {
+  selectedVersionByFlow?: Map<
+    string,
+    { versionId: string; versionTag: string }
+  >;
+  initialFlowId?: string;
+}
+
 interface DeploymentStepperContextType {
   // Navigation
   currentStep: number;
@@ -43,6 +51,7 @@ interface DeploymentStepperContextType {
   setDeploymentDescription: (description: string) => void;
 
   // Step 3: Attach Flows
+  initialFlowId: string | null;
   connections: ConnectionItem[];
   setConnections: Dispatch<SetStateAction<ConnectionItem[]>>;
   selectedVersionByFlow: Map<string, { versionId: string; versionTag: string }>;
@@ -65,8 +74,10 @@ const DeploymentStepperContext =
 
 export function DeploymentStepperProvider({
   children,
+  initialState,
 }: {
   children: ReactNode;
+  initialState?: DeploymentStepperInitialState;
 }) {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedProvider, setSelectedProviderState] =
@@ -84,7 +95,7 @@ export function DeploymentStepperProvider({
   const [deploymentDescription, setDeploymentDescription] = useState("");
   const [selectedVersionByFlow, setSelectedVersionByFlow] = useState<
     Map<string, { versionId: string; versionTag: string }>
-  >(new Map());
+  >(initialState?.selectedVersionByFlow ?? new Map());
   const [connections, setConnections] = useState<ConnectionItem[]>([]);
   const [attachedConnectionByFlow, setAttachedConnectionByFlow] = useState<
     Map<string, string[]>
@@ -242,6 +253,7 @@ export function DeploymentStepperProvider({
       setDeploymentName,
       deploymentDescription,
       setDeploymentDescription,
+      initialFlowId: initialState?.initialFlowId ?? null,
       connections,
       setConnections,
       selectedVersionByFlow,

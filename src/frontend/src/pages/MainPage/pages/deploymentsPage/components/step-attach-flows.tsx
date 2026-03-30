@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { usePostDetectDeploymentEnvVars } from "@/controllers/API/queries/deployments/use-post-detect-deployment-env-vars";
 import { useGetFlowVersions } from "@/controllers/API/queries/flow-version/use-get-flow-versions";
@@ -17,6 +17,7 @@ type RightPanelView = "versions" | "connections";
 
 export default function StepAttachFlows() {
   const {
+    initialFlowId,
     connections,
     setConnections,
     selectedVersionByFlow,
@@ -40,12 +41,16 @@ export default function StepAttachFlows() {
   const flows = useMemo(() => {
     const list = Array.isArray(flowsData) ? flowsData : [];
     return list.filter(
-      (f) => !f.is_component && f.folder_id === currentFolderId,
+      (f) =>
+        !f.is_component &&
+        (f.folder_id === currentFolderId || f.id === initialFlowId),
     );
-  }, [flowsData, currentFolderId]);
+  }, [flowsData, currentFolderId, initialFlowId]);
   // TODO: replace with real API data
 
-  const [selectedFlowId, setSelectedFlowId] = useState<string | null>(null);
+  const [selectedFlowId, setSelectedFlowId] = useState<string | null>(
+    initialFlowId ?? null,
+  );
   const [pendingVersion, setPendingVersion] = useState<string | null>(null);
   const [rightPanel, setRightPanel] = useState<RightPanelView>("versions");
   const [connectionTab, setConnectionTab] =
@@ -59,6 +64,44 @@ export default function StepAttachFlows() {
     { id: crypto.randomUUID(), key: "", value: "" },
   ]);
   const [detectedVarCount, setDetectedVarCount] = useState(0);
+  // When a flow+version are pre-selected from outside (e.g., canvas deploy button),
+  // auto-advance to the connections panel and detect env vars for the pre-selected version.
+  useEffect(() => {
+    const preSelected = initialFlowId
+      ? selectedVersionByFlow.get(initialFlowId)
+      : undefined;
+    if (!preSelected) return;
+
+    setRightPanel("connections");
+
+    const detect = async () => {
+      try {
+        const result = await detectEnvVars({
+          reference_ids: [preSelected.versionId],
+        });
+        const detected = result.variables ?? [];
+        if (detected.length > 0) {
+          setDetectedVarCount(detected.length);
+          setEnvVars(
+            detected.map((v) => ({
+              id: crypto.randomUUID(),
+              key: v.key,
+              value: v.global_variable_name ?? "",
+              globalVar: Boolean(v.global_variable_name),
+            })),
+          );
+        }
+      } catch {
+        setErrorData({
+          title: "Could not auto-detect environment variables",
+          list: ["Add them manually in the connection form."],
+        });
+      }
+    };
+    detect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const { mutateAsync: detectEnvVars } = usePostDetectDeploymentEnvVars();
   const { data: globalVariables } = useGetGlobalVariables();
   const globalVariableOptions = (globalVariables ?? []).map((v) => v.name);

@@ -24,16 +24,20 @@ import StepType from "./step-type";
 interface DeploymentStepperModalProps {
   open: boolean;
   setOpen: (open: boolean) => void;
-  onTestDeployment: (
+  onTestDeployment?: (
     deployment: { id: string; name: string },
     providerId: string,
   ) => void;
+  initialFlowId?: string;
+  initialVersionByFlow?: Map<string, { versionId: string; versionTag: string }>;
 }
 
 export default function DeploymentStepperModal({
   open,
   setOpen,
   onTestDeployment,
+  initialFlowId,
+  initialVersionByFlow,
 }: DeploymentStepperModalProps) {
   const [isDeploying, setIsDeploying] = useState(false);
 
@@ -49,7 +53,12 @@ export default function DeploymentStepperModal({
         className="flex h-[85vh] w-[900px] !max-w-none flex-col gap-0 overflow-hidden border-none bg-transparent p-0 shadow-none"
         closeButtonClassName="top-5 right-4"
       >
-        <DeploymentStepperProvider>
+        <DeploymentStepperProvider
+          initialState={{
+            initialFlowId,
+            selectedVersionByFlow: initialVersionByFlow,
+          }}
+        >
           <DeploymentStepperModalContent
             setOpen={setOpen}
             onTestDeployment={onTestDeployment}
@@ -69,7 +78,7 @@ function DeploymentStepperModalContent({
   onDeployingChange,
 }: {
   setOpen: (open: boolean) => void;
-  onTestDeployment: (
+  onTestDeployment?: (
     deployment: { id: string; name: string },
     providerId: string,
   ) => void;
@@ -230,7 +239,7 @@ function DeploymentStepperModalContent({
                 Deploying...
               </Button>
             )}
-            {isDeployed && (
+            {isDeployed && onTestDeployment && (
               <Button
                 data-testid="deployment-stepper-test"
                 onClick={handleTest}
