@@ -1,3 +1,4 @@
+import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,9 +16,11 @@ import {
 } from "../contexts/deployment-stepper-context";
 import DeploymentStepper from "./deployment-stepper";
 import StepAttachFlows from "./step-attach-flows";
+import StepDeployStatus from "./step-deploy-status";
 import StepProvider from "./step-provider";
 import StepReview from "./step-review";
 import StepType from "./step-type";
+import TestDeploymentContent from "./test-deployment-modal/test-deployment-content";
 
 interface DeploymentStepperModalProps {
   open: boolean;
@@ -42,11 +45,21 @@ export default function DeploymentStepperModal({
   );
 }
 
+type DeploymentPhase = "idle" | "deploying" | "deployed";
+
 function DeploymentStepperModalContent({
   setOpen,
 }: {
   setOpen: (open: boolean) => void;
 }) {
+  const [deploymentPhase, setDeploymentPhase] =
+    useState<DeploymentPhase>("idle");
+  const [isTesting, setIsTesting] = useState(false);
+  const [createdDeployment, setCreatedDeployment] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+
   const {
     currentStep,
     canGoNext,
@@ -60,39 +73,80 @@ function DeploymentStepperModalContent({
   } = useDeploymentStepper();
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
-  const { mutateAsync: createProviderAccount, isPending: isCreatingProvider } =
-    usePostProviderAccount();
-  const { mutateAsync: createDeployment, isPending: isCreatingDeployment } =
-    usePostDeployment();
+  const { mutateAsync: createProviderAccount } = usePostProviderAccount();
+  const { mutateAsync: createDeployment } = usePostDeployment();
 
-  const isDeploying = isCreatingProvider || isCreatingDeployment;
+  const isDeploying = deploymentPhase === "deploying";
+  const isDeployed = deploymentPhase === "deployed";
+  const isInDeployPhase = isDeploying || isDeployed;
 
   const handleDeploy = async () => {
     try {
+      setDeploymentPhase("deploying");
       let providerId = selectedInstance?.id;
 
       if (needsProviderAccountCreation) {
         const accountPayload = buildProviderAccountPayload();
-        if (!accountPayload) return;
+        if (!accountPayload) {
+          setDeploymentPhase("idle");
+          return;
+        }
         const newAccount = await createProviderAccount(accountPayload);
         setSelectedInstance(newAccount);
         providerId = newAccount.id;
       }
 
-      if (!providerId) return;
+      if (!providerId) {
+        setDeploymentPhase("idle");
+        return;
+      }
 
       const payload = buildDeploymentPayload(providerId);
-      await createDeployment(payload);
-      setSuccessData({ title: "Deployment created successfully" });
-      setOpen(false);
+      const result = await createDeployment(payload);
+      if (
+        result &&
+        typeof result === "object" &&
+        "id" in result &&
+        "name" in result
+      ) {
+        setCreatedDeployment({
+          id: String(result.id),
+          name: String(result.name),
+        });
+      }
+      setDeploymentPhase("deployed");
     } catch (err: unknown) {
+      setDeploymentPhase("idle");
       const message =
         err instanceof Error ? err.message : "Something went wrong";
       setErrorData({ title: "Failed to create deployment", list: [message] });
     }
   };
+
+  if (isTesting) {
+    return (
+      <>
+        <DialogTitle className="sr-only">Test Deployment</DialogTitle>
+        <DialogDescription className="sr-only">
+          Chat interface to test {createdDeployment?.name ?? "deployment"}
+        </DialogDescription>
+
+        <div className="flex flex-col gap-4 px-6 pt-6">
+          <h2 className="text-center text-2xl font-semibold">
+            Test Deployment
+          </h2>
+        </div>
+
+        <div className="mx-4 mb-4 mt-4 flex flex-1 flex-col overflow-hidden rounded-lg border border-border bg-background">
+          <TestDeploymentContent
+            deployment={createdDeployment}
+            providerId={selectedInstance?.id ?? ""}
+          />
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -112,40 +166,68 @@ function DeploymentStepperModalContent({
       {/* Content box: step content + footer */}
       <div className="mx-4 mb-4 mt-4 flex flex-1 flex-col overflow-hidden rounded-lg border border-border bg-background">
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-2">
-          {currentStep === 1 && <StepProvider />}
-          {currentStep === 2 && <StepType />}
-          {currentStep === 3 && <StepAttachFlows />}
-          {currentStep === 4 && <StepReview />}
+          {isInDeployPhase ? (
+            <StepDeployStatus phase={isDeploying ? "deploying" : "deployed"} />
+          ) : (
+            <>
+              {currentStep === 1 && <StepProvider />}
+              {currentStep === 2 && <StepType />}
+              {currentStep === 3 && <StepAttachFlows />}
+              {currentStep === 4 && <StepReview />}
+            </>
+          )}
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-border px-6 py-4">
-          <button
-            type="button"
-            onClick={handleBack}
-            disabled={currentStep === 1}
-            className="text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
-          >
-            Back
-          </button>
+          {!isDeployed && (
+            <button
+              type="button"
+              onClick={handleBack}
+              disabled={currentStep === 1 || isDeploying}
+              className="text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
+            >
+              Back
+            </button>
+          )}
+          {isDeployed && <span />}
           <div className="flex items-center gap-3">
             <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
+              {isDeployed ? "Close" : "Cancel"}
             </Button>
-            <Button
-              onClick={currentStep === 4 ? handleDeploy : handleNext}
-              disabled={!canGoNext || isDeploying}
-              data-testid="deployment-stepper-next"
-            >
-              {currentStep === 4 ? (
-                <>
-                  <ForwardedIconComponent name="Rocket" className="h-4 w-4" />
-                  {isDeploying ? "Deploying..." : "Deploy"}
-                </>
-              ) : (
-                "Next"
-              )}
-            </Button>
+            {!isInDeployPhase && (
+              <Button
+                onClick={currentStep === 4 ? handleDeploy : handleNext}
+                disabled={!canGoNext}
+                data-testid="deployment-stepper-next"
+              >
+                {currentStep === 4 ? (
+                  <>
+                    <ForwardedIconComponent name="Rocket" className="h-4 w-4" />
+                    Deploy
+                  </>
+                ) : (
+                  "Next"
+                )}
+              </Button>
+            )}
+            {isDeploying && (
+              <Button disabled data-testid="deployment-stepper-next">
+                <ForwardedIconComponent
+                  name="Rocket"
+                  className="h-4 w-4 animate-pulse"
+                />
+                Deploying...
+              </Button>
+            )}
+            {isDeployed && (
+              <Button
+                data-testid="deployment-stepper-test"
+                onClick={() => setIsTesting(true)}
+              >
+                Test
+              </Button>
+            )}
           </div>
         </div>
       </div>

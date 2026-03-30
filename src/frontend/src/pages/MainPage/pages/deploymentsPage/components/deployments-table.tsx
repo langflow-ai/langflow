@@ -15,6 +15,7 @@ import type { Deployment, DeploymentType } from "../types";
 interface DeploymentsTableProps {
   deployments: Deployment[];
   providerName: string;
+  onTestDeployment: (deployment: Deployment) => void;
 }
 
 const TYPE_CONFIG: Record<DeploymentType, { color: string }> = {
@@ -46,6 +47,7 @@ function formatDate(iso: string) {
 export default function DeploymentsTable({
   deployments,
   providerName,
+  onTestDeployment,
 }: DeploymentsTableProps) {
   return (
     <Table>
@@ -100,6 +102,7 @@ export default function DeploymentsTable({
                 className="h-8 w-8"
                 data-testid={`test-deployment-${deployment.id}`}
                 aria-label={`Test ${deployment.name}`}
+                onClick={() => onTestDeployment(deployment)}
               >
                 <ForwardedIconComponent name="Play" className="h-4 w-4" />
               </Button>

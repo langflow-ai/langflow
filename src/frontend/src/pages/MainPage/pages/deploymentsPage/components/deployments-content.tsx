@@ -9,6 +9,7 @@ interface DeploymentsContentProps {
   deployments: Deployment[];
   providerName: string;
   onCreateDeployment: () => void;
+  onTestDeployment: (deployment: Deployment) => void;
 }
 
 export default function DeploymentsContent({
@@ -17,11 +18,16 @@ export default function DeploymentsContent({
   deployments,
   providerName,
   onCreateDeployment,
+  onTestDeployment,
 }: DeploymentsContentProps) {
   if (isLoading) return <DeploymentsLoadingSkeleton />;
   if (isEmpty)
     return <DeploymentsEmptyState onCreateDeployment={onCreateDeployment} />;
   return (
-    <DeploymentsTable deployments={deployments} providerName={providerName} />
+    <DeploymentsTable
+      deployments={deployments}
+      providerName={providerName}
+      onTestDeployment={onTestDeployment}
+    />
   );
 }

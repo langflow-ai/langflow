@@ -8,11 +8,14 @@ import DeploymentsContent from "./components/deployments-content";
 import SubTabToggle, {
   type DeploymentSubTab,
 } from "./components/sub-tab-toggle";
+import TestDeploymentModal from "./components/test-deployment-modal/test-deployment-modal";
+import type { Deployment } from "./types";
 
 export default function DeploymentsPage() {
   const [activeSubTab, setActiveSubTab] =
     useState<DeploymentSubTab>("deployments");
   const [stepperOpen, setStepperOpen] = useState(false);
+  const [testTarget, setTestTarget] = useState<Deployment | null>(null);
 
   const { data: providersData } = useGetProviderAccounts({});
   const providers = providersData?.providers ?? [];
@@ -45,6 +48,7 @@ export default function DeploymentsPage() {
           deployments={deployments}
           providerName={providers[0]?.name ?? ""}
           onCreateDeployment={() => setStepperOpen(true)}
+          onTestDeployment={setTestTarget}
         />
       )}
 
@@ -55,6 +59,15 @@ export default function DeploymentsPage() {
       )}
 
       <DeploymentStepperModal open={stepperOpen} setOpen={setStepperOpen} />
+
+      <TestDeploymentModal
+        open={!!testTarget}
+        setOpen={(open) => {
+          if (!open) setTestTarget(null);
+        }}
+        deployment={testTarget}
+        providerId={firstProviderId}
+      />
     </div>
   );
 }
