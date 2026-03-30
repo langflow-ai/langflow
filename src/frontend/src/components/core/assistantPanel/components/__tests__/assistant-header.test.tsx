@@ -18,7 +18,6 @@ describe("AssistantHeader", () => {
     onSelectSession: jest.fn(),
     onDeleteSession: jest.fn(),
     isExpanded: false,
-    panelWidth: 400, // Below 520 threshold → dropdown mode
   };
 
   beforeEach(() => {

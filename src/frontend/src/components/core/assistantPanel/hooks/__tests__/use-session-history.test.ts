@@ -126,7 +126,7 @@ describe("useSessionHistory", () => {
       expect(result.current.sessions[0].messageCount).toBe(2);
     });
 
-    it("should_add_new_session_to_end", () => {
+    it("should_add_new_session_to_top", () => {
       const entry = {
         sessionId: "old",
         firstUserMessage: "old msg",
@@ -144,8 +144,8 @@ describe("useSessionHistory", () => {
       act(() => result.current.saveCurrentSession());
 
       expect(result.current.sessions).toHaveLength(2);
-      expect(result.current.sessions[0].sessionId).toBe("old");
-      expect(result.current.sessions[1].sessionId).toBe("new-session");
+      expect(result.current.sessions[0].sessionId).toBe("new-session");
+      expect(result.current.sessions[1].sessionId).toBe("old");
     });
 
     it("should_cap_at_max_sessions", () => {
@@ -166,8 +166,7 @@ describe("useSessionHistory", () => {
       act(() => result.current.saveCurrentSession());
 
       expect(result.current.sessions).toHaveLength(10);
-      // Oldest session dropped, new one at the end
-      expect(result.current.sessions[9].sessionId).toBe("s-new");
+      expect(result.current.sessions[0].sessionId).toBe("s-new");
     });
 
     it("should_persist_to_localStorage", () => {

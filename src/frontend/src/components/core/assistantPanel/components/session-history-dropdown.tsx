@@ -97,7 +97,7 @@ export function SessionHistoryDropdown({
                   </span>
                 </div>
                 <button
-                  className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
                   data-testid={`delete-session-${entry.sessionId}`}
                   onClick={(e) => {
                     e.stopPropagation();

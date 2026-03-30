@@ -24,9 +24,6 @@ export const ASSISTANT_SESSIONS_STORAGE_KEY = "langflow-assistant-sessions";
 export const ASSISTANT_MAX_SESSIONS = 10;
 export const ASSISTANT_SESSION_PREVIEW_LENGTH = 80;
 
-export const ASSISTANT_TAB_BAR_MIN_WIDTH = 520;
-export const ASSISTANT_TAB_SCROLL_AMOUNT = 150;
-
 export const ASSISTANT_WELCOME_TEXT = "Here's how I can help";
 
 export const ASSISTANT_SUGGESTIONS: AssistantSuggestion[] = [

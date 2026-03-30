@@ -62,8 +62,8 @@ export function useSessionHistory(
           s.sessionId === currentSessionId ? entry : s,
         );
       } else {
-        // New session goes to the end (queue order, like Chrome tabs)
-        updated = [...prev, entry].slice(-ASSISTANT_MAX_SESSIONS);
+        // New session goes to the top
+        updated = [entry, ...prev].slice(0, ASSISTANT_MAX_SESSIONS);
       }
       saveSessionsToStorage(ASSISTANT_SESSIONS_STORAGE_KEY, updated);
       return updated;
