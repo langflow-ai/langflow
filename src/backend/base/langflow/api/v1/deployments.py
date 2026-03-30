@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
@@ -440,6 +440,7 @@ async def create_deployment(
     # if we get here, the deployment was created successfully in the provider
     # so we need to create the deployment row and attach the flow versions
     # in the DB
+    shaped_provider_data: dict[str, Any] | None = None
     try:
         deployment_row = await create_deployment_db(
             session,
@@ -466,6 +467,9 @@ async def create_deployment(
             snapshot_id_by_flow_version_id=snapshot_id_by_flow_version_id,
             db=session,
         )
+        shaped_provider_data = deployment_mapper.shape_deployment_create_result(
+            result.provider_result if isinstance(result.provider_result, dict) else None
+        )
 
         await session.commit()
     except Exception:
@@ -484,7 +488,11 @@ async def create_deployment(
             db=session,
         )
         raise
-    return to_deployment_create_response(result, deployment_row)
+    return to_deployment_create_response(
+        result,
+        deployment_row,
+        provider_data=shaped_provider_data if isinstance(shaped_provider_data, dict) else None,
+    )
 
 
 @router.get("", response_model=DeploymentListResponse)

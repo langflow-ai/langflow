@@ -136,6 +136,8 @@ def build_provider_update_plan(
 
     # existing_tool_deltas: per existing tool_id, tracks app_ids to bind/unbind.
     existing_tool_deltas: dict[str, ToolConnectionOps] = {}
+    # existing_app_ids: derived existing connection app ids (identity mapped).
+    existing_app_ids = OrderedUniqueStrs()
     # bind_existing_tool_ids: existing tool_ids explicitly referenced by bind
     #   operations (used for added-snapshot reporting in the result).
     bind_existing_tool_ids = OrderedUniqueStrs()
@@ -151,6 +153,9 @@ def build_provider_update_plan(
 
     for operation in provider_update.operations:
         if isinstance(operation, WatsonxBindOperation):
+            operation_app_ids = operation.all_app_ids()
+            operation_existing_app_ids = operation.app_ids_of_existing()
+            existing_app_ids.extend(operation_existing_app_ids)
             if operation.tool.tool_id_with_ref is not None:
                 ref = operation.tool.tool_id_with_ref
                 tool_id = ref.tool_id
@@ -160,15 +165,16 @@ def build_provider_update_plan(
                     WatsonxResultToolRefBinding(source_ref=ref.source_ref, tool_id=tool_id, created=False)
                 )
                 delta = _get_or_create_tool_connection_ops(existing_tool_deltas, tool_id=tool_id)
-                delta.bind.extend(operation.app_ids)
+                delta.bind.extend(operation_app_ids)
                 continue
 
             raw_name = str(operation.tool.name_of_raw)
             raw_apps = raw_tool_app_ids.setdefault(raw_name, OrderedUniqueStrs())
-            raw_apps.extend(operation.app_ids)
+            raw_apps.extend(operation_app_ids)
             continue
 
         if isinstance(operation, WatsonxUnbindOperation):
+            existing_app_ids.extend(operation.app_ids)
             tool_id = operation.tool.tool_id
             existing_tool_refs.append(
                 WatsonxResultToolRefBinding(source_ref=operation.tool.source_ref, tool_id=tool_id, created=False)
@@ -210,7 +216,7 @@ def build_provider_update_plan(
 
     return ProviderUpdatePlan(
         resource_prefix=resource_prefix,
-        existing_app_ids=list(provider_update.connections.existing_app_ids or []),
+        existing_app_ids=existing_app_ids.to_list(),
         raw_connections_to_create=raw_connections_to_create,
         existing_tool_deltas=existing_tool_deltas,
         raw_tools_to_create=raw_tools_to_create,
@@ -295,6 +301,23 @@ async def _rollback_agent_update(
         logger.exception("Rollback failed for agent_id=%s — resource may be orphaned", agent_id)
 
 
+async def _validate_referenced_existing_tools_exist(
+    *,
+    clients: WxOClient,
+    existing_tool_refs: list[WatsonxResultToolRefBinding],
+) -> None:
+    tool_ids = dedupe_list([ref.tool_id for ref in existing_tool_refs])
+    if not tool_ids:
+        return
+    tools = await asyncio.to_thread(clients.tool.get_drafts_by_ids, tool_ids)
+    tool_by_id = {str(tool.get("id")): tool for tool in tools if isinstance(tool, dict) and tool.get("id")}
+    missing_tool_ids = [tool_id for tool_id in tool_ids if tool_id not in tool_by_id]
+    if missing_tool_ids:
+        missing_ids = ", ".join(missing_tool_ids)
+        msg = f"Snapshot tool(s) not found: {missing_ids}"
+        raise InvalidContentError(message=msg)
+
+
 async def apply_provider_update_plan_with_rollback(
     *,
     clients: WxOClient,
@@ -331,6 +354,10 @@ async def apply_provider_update_plan_with_rollback(
     rollback_agent_payload: dict[str, Any] = {}
 
     try:
+        await _validate_referenced_existing_tools_exist(
+            clients=clients,
+            existing_tool_refs=plan.existing_tool_refs,
+        )
         try:
             connection_result = await resolve_connections_for_operations(
                 clients=clients,

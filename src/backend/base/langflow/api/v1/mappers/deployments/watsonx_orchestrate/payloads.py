@@ -21,10 +21,75 @@ WatsonxApiResourceNamePrefix = Annotated[
 ]
 
 
+def _normalize_non_empty_str_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, (str, bytes, bytearray)):
+        msg = "Expected an iterable of IDs, got a string-like value."
+        raise TypeError(msg)
+    try:
+        return [normalized for item in value if (normalized := str(item).strip())]
+    except TypeError as err:
+        msg = "Expected an iterable of IDs."
+        raise TypeError(msg) from err
+
+
 class WatsonxApiFlowArtifactProviderData(CreateFlowArtifactProviderData):
     """Watsonx create-time flow artifact provider_data contract."""
 
     project_id: str = Field(min_length=1)
+
+
+class WatsonxApiBindAppRef(BaseModel):
+    """Connection selector used by API bind operations."""
+
+    model_config = {"extra": "forbid"}
+
+    app_id: str | None = Field(default=None, min_length=1)
+    app_id_of_raw: str | None = Field(default=None, min_length=1)
+
+    @model_validator(mode="after")
+    def validate_exactly_one_selector(self) -> WatsonxApiBindAppRef:
+        provided = [self.app_id is not None, self.app_id_of_raw is not None]
+        if sum(provided) != 1:
+            msg = "Exactly one of 'app_id' or 'app_id_of_raw' must be provided."
+            raise ValueError(msg)
+        return self
+
+    @property
+    def operation_app_id(self) -> str:
+        return str(self.app_id or self.app_id_of_raw or "").strip()
+
+    @property
+    def is_raw(self) -> bool:
+        return self.app_id_of_raw is not None
+
+    @property
+    def is_existing(self) -> bool:
+        return self.app_id is not None
+
+
+def _normalize_bind_app_refs(value: list[WatsonxApiBindAppRef]) -> list[WatsonxApiBindAppRef]:
+    normalized: list[WatsonxApiBindAppRef] = []
+    seen: set[tuple[str, str]] = set()
+    selector_kind_by_app_id: dict[str, str] = {}
+    for ref in value:
+        selector_kind = "existing" if ref.app_id is not None else "raw" if ref.app_id_of_raw is not None else "unknown"
+        app_id = ref.operation_app_id
+        previous_selector_kind = selector_kind_by_app_id.get(app_id)
+        if previous_selector_kind is not None and previous_selector_kind != selector_kind:
+            msg = (
+                "bind app_refs contains mixed selector kinds for the same app_id: "
+                f"{app_id!r} appears as both {previous_selector_kind!r} and {selector_kind!r}."
+            )
+            raise ValueError(msg)
+        selector_kind_by_app_id[app_id] = selector_kind
+        key = (selector_kind, app_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append(ref)
+    return normalized
 
 
 class WatsonxApiBindOperation(BaseModel):
@@ -34,7 +99,20 @@ class WatsonxApiBindOperation(BaseModel):
 
     op: Literal["bind"]
     flow_version_id: UUID
-    app_ids: list[str] = Field(min_length=1)
+    app_refs: list[WatsonxApiBindAppRef] = Field(min_length=1)
+
+    @field_validator("app_refs")
+    @classmethod
+    def dedupe_app_refs(cls, value: list[WatsonxApiBindAppRef]) -> list[WatsonxApiBindAppRef]:
+        return _normalize_bind_app_refs(value)
+
+    @property
+    def app_ids(self) -> list[str]:
+        return [app_ref.operation_app_id for app_ref in self.app_refs]
+
+    @property
+    def existing_app_ids(self) -> list[str]:
+        return [app_ref.operation_app_id for app_ref in self.app_refs if app_ref.is_existing]
 
 
 class WatsonxApiUnbindOperation(BaseModel):
@@ -77,8 +155,39 @@ class WatsonxApiUpdateConnections(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    existing_app_ids: list[str] | None = None
     raw_payloads: list[WatsonxApiUpdateConnectionRawPayload] | None = None
+
+
+def _collect_api_operation_reference_state(
+    *,
+    operations: list[Any],
+) -> tuple[set[str], set[str]]:
+    referenced_raw_app_ids: set[str] = set()
+    unbind_app_ids: set[str] = set()
+
+    for operation in operations:
+        if isinstance(operation, WatsonxApiBindOperation):
+            for app_ref in operation.app_refs:
+                if app_ref.is_raw:
+                    referenced_raw_app_ids.add(app_ref.operation_app_id)
+            continue
+        if isinstance(operation, WatsonxApiUnbindOperation):
+            unbind_app_ids.update(operation.app_ids)
+
+    return referenced_raw_app_ids, unbind_app_ids
+
+
+def _collect_api_bind_existing_app_ids(
+    *,
+    operations: list[Any],
+) -> set[str]:
+    return {
+        app_ref.operation_app_id
+        for operation in operations
+        if isinstance(operation, WatsonxApiBindOperation)
+        for app_ref in operation.app_refs
+        if app_ref.is_existing
+    }
 
 
 class WatsonxApiDeploymentPayloadBase(BaseModel):
@@ -90,47 +199,40 @@ class WatsonxApiDeploymentPayloadBase(BaseModel):
 
     @model_validator(mode="after")
     def validate_operation_references(self) -> WatsonxApiDeploymentPayloadBase:
-        existing_app_ids = set(self.connections.existing_app_ids or [])
+        operations = list(getattr(self, "operations", []))
         raw_app_ids = {raw.app_id for raw in (self.connections.raw_payloads or [])}
-        collisions = existing_app_ids.intersection(raw_app_ids)
-        if collisions:
+        bind_existing_app_ids = _collect_api_bind_existing_app_ids(operations=operations)
+        referenced_raw_app_ids, unbind_app_ids = _collect_api_operation_reference_state(
+            operations=operations,
+        )
+
+        existing_raw_collisions = sorted(bind_existing_app_ids.intersection(raw_app_ids))
+        if existing_raw_collisions:
             msg = (
-                "connections.existing_app_ids collides with raw app ids from connections.raw_payloads: "
-                f"{list(collisions)}"
+                "bind app_id values must not overlap connections.raw_payloads[*].app_id; "
+                "use app_id_of_raw for raw connections: "
+                f"[{existing_raw_collisions[0]!r}]"
             )
             raise ValueError(msg)
 
-        valid_app_ids = existing_app_ids.union(raw_app_ids)
-        referenced_app_ids: set[str] = set()
-
-        for operation in getattr(self, "operations", []):
-            if isinstance(operation, (WatsonxApiBindOperation, WatsonxApiUnbindOperation)):
-                for app_id in operation.app_ids:
-                    referenced_app_ids.add(app_id)
-                    if app_id not in valid_app_ids:
-                        msg = (
-                            "operation app_ids must be declared in "
-                            "connections.existing_app_ids or connections.raw_payloads[*].app_id: "
-                            f"[{app_id!r}]"
-                        )
-                        raise ValueError(msg)
-            if isinstance(operation, WatsonxApiUnbindOperation):
-                for app_id in operation.app_ids:
-                    if app_id in raw_app_ids:
-                        msg = f"unbind.operation app_ids must reference connections.existing_app_ids only: [{app_id!r}]"
-                        raise ValueError(msg)
-
-        unused_existing_app_ids = existing_app_ids.difference(referenced_app_ids)
-        if unused_existing_app_ids:
+        missing_raw_app_ids = sorted(referenced_raw_app_ids.difference(raw_app_ids))
+        if missing_raw_app_ids:
             msg = (
-                "connections.existing_app_ids contains ids not referenced by operations: "
-                f"{list(unused_existing_app_ids)}"
+                "bind operation app_id_of_raw must be declared in "
+                "connections.raw_payloads[*].app_id: "
+                f"[{missing_raw_app_ids[0]!r}]"
             )
             raise ValueError(msg)
-        unused_raw_app_ids = raw_app_ids.difference(referenced_app_ids)
+
+        invalid_unbind_app_ids = sorted(unbind_app_ids.intersection(raw_app_ids))
+        if invalid_unbind_app_ids:
+            msg = f"unbind.operation app_ids must reference existing app ids only: [{invalid_unbind_app_ids[0]!r}]"
+            raise ValueError(msg)
+
+        unused_raw_app_ids = raw_app_ids.difference(referenced_raw_app_ids)
         if unused_raw_app_ids:
             msg = (
-                "connections.raw_payloads contains app_id values not referenced by operations: "
+                "connections.raw_payloads contains app_id values not referenced by bind operation refs: "
                 f"{list(unused_raw_app_ids)}"
             )
             raise ValueError(msg)
@@ -184,9 +286,48 @@ class WatsonxApiToolAppBinding(BaseModel):
     @field_validator("app_ids", mode="before")
     @classmethod
     def normalize_app_ids(cls, value: Any) -> list[str]:
-        if value is None:
-            return []
-        return [str(app_id).strip() for app_id in value if str(app_id).strip()]
+        return _normalize_non_empty_str_list(value)
+
+
+class WatsonxApiToolFlowVersionRef(BaseModel):
+    """API response shape for flow-version to tool bindings."""
+
+    model_config = {"extra": "forbid"}
+
+    flow_version_id: UUID
+    tool_id: str = Field(min_length=1)
+
+    @field_validator("tool_id", mode="before")
+    @classmethod
+    def normalize_tool_id(cls, value: Any) -> str:
+        normalized = str(value or "").strip()
+        if not normalized:
+            msg = "tool_id must not be empty."
+            raise ValueError(msg)
+        return normalized
+
+
+class WatsonxApiDeploymentCreateResultData(BaseModel):
+    """Normalized provider-result payload used by Watsonx mapper create shaper."""
+
+    model_config = {"extra": "ignore"}
+
+    created_app_ids: list[str] = Field(default_factory=list)
+    tools_with_flow_version_refs: list[WatsonxApiToolFlowVersionRef] = Field(default_factory=list)
+    tool_app_bindings: list[WatsonxApiToolAppBinding] = Field(default_factory=list)
+
+    @field_validator("created_app_ids", mode="before")
+    @classmethod
+    def normalize_created_app_ids(cls, value: Any) -> list[str]:
+        return _normalize_non_empty_str_list(value)
+
+    def to_api_provider_data(self) -> dict[str, Any] | None:
+        payload = self.model_dump(
+            mode="json",
+            include={"created_app_ids", "tools_with_flow_version_refs", "tool_app_bindings"},
+            exclude_none=True,
+        )
+        return payload or None
 
 
 class WatsonxApiDeploymentUpdateResultData(BaseModel):
@@ -200,9 +341,7 @@ class WatsonxApiDeploymentUpdateResultData(BaseModel):
     @field_validator("created_app_ids", mode="before")
     @classmethod
     def normalize_created_app_ids(cls, value: Any) -> list[str]:
-        if value is None:
-            return []
-        return [normalized for app_id in value if (normalized := str(app_id).strip())]
+        return _normalize_non_empty_str_list(value)
 
     @classmethod
     def from_provider_result(cls, provider_result: Any) -> WatsonxApiDeploymentUpdateResultData:

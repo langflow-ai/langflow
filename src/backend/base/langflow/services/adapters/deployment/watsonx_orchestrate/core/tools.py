@@ -261,7 +261,8 @@ def create_wxo_flow_tool(
     tool: LangflowTool = create_langflow_tool(
         tool_definition=flow_definition,
         connections=connections,
-        show_details=False,
+        show_details=True,  # the ADK has a regression,
+        # where it only sets the 'requirements' local variable if show_details is True
     )
 
     tool_payload = tool.__tool_spec__.model_dump(

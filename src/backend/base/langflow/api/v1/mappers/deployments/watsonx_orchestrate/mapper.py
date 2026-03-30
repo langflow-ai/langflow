@@ -50,8 +50,10 @@ from langflow.api.v1.mappers.deployments.registry import register_mapper
 from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiAgentExecutionCreateResultData,
     WatsonxApiAgentExecutionStatusResultData,
+    WatsonxApiBindAppRef,
     WatsonxApiBindOperation,
     WatsonxApiDeploymentCreatePayload,
+    WatsonxApiDeploymentCreateResultData,
     WatsonxApiDeploymentUpdatePayload,
     WatsonxApiDeploymentUpdateResultData,
     WatsonxApiFlowArtifactProviderData,
@@ -467,6 +469,27 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             provider_data=provider_api_result.model_dump(mode="json", exclude_none=True),
         )
 
+    def shape_deployment_create_result(self, provider_result: dict[str, Any] | None) -> dict[str, Any] | None:
+        adapter_provider_result = self._parse_required_payload_slot(
+            slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_create_result,
+            slot_name="deployment_create_result",
+            raw=provider_result,
+            missing_payload_detail="Deployment provider create result is missing provider_result payload.",
+            malformed_payload_detail="Deployment provider create result contains invalid provider_result payload.",
+        )
+        tool_app_bindings = self._to_api_tool_app_bindings(
+            adapter_tool_app_bindings=adapter_provider_result.tool_app_bindings,
+            adapter_added_snapshot_bindings=adapter_provider_result.tools_with_refs,
+        )
+        provider_api_result = WatsonxApiDeploymentCreateResultData(
+            created_app_ids=list(adapter_provider_result.created_app_ids),
+            tools_with_flow_version_refs=self._to_api_tools_with_flow_version_refs(
+                adapter_provider_result.tools_with_refs
+            ),
+            tool_app_bindings=tool_app_bindings,
+        )
+        return provider_api_result.to_api_provider_data()
+
     def util_create_snapshot_bindings(
         self,
         *,
@@ -680,11 +703,21 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             )
         )
 
-    def _to_bind_provider_operation(self, *, raw_name: str, app_ids: list[str]) -> AdapterPayload:
+    def _to_provider_bind_app_refs(self, app_refs: list[WatsonxApiBindAppRef]) -> list[dict[str, str]]:
+        provider_app_refs: list[dict[str, str]] = []
+        for app_ref in app_refs:
+            if app_ref.app_id_of_raw is not None:
+                provider_app_refs.append({"app_id_of_raw": app_ref.app_id_of_raw})
+                continue
+            if app_ref.app_id is not None:
+                provider_app_refs.append({"app_id": app_ref.app_id})
+        return provider_app_refs
+
+    def _to_bind_provider_operation(self, *, raw_name: str, app_refs: list[WatsonxApiBindAppRef]) -> AdapterPayload:
         return {
             "op": "bind",
             "tool": {"name_of_raw": raw_name},
-            "app_ids": app_ids,
+            "app_refs": self._to_provider_bind_app_refs(app_refs),
         }
 
     def _to_unbind_provider_operation(
@@ -723,7 +756,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 provider_operations.append(
                     self._to_bind_provider_operation(
                         raw_name=raw_name_by_flow_version_id[flow_version_id],
-                        app_ids=operation.app_ids,
+                        app_refs=operation.app_refs,
                     )
                 )
                 continue
@@ -767,7 +800,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 "raw_payloads": raw_tool_payloads or None,
             },
             "connections": {
-                "existing_app_ids": connections.existing_app_ids,
                 "raw_payloads": self._dump_raw_connection_payloads(connections.raw_payloads),
             },
             "operations": operations,
@@ -815,6 +847,33 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 )
             )
         return api_bindings
+
+    def _to_api_tools_with_flow_version_refs(self, adapter_bindings: list[Any]) -> list[dict[str, Any]]:
+        tool_refs: list[dict[str, Any]] = []
+        for binding in adapter_bindings:
+            source_ref = str(binding.source_ref or "").strip()
+            tool_id = str(binding.tool_id or "").strip()
+            if not source_ref or not tool_id:
+                msg = (
+                    f"Snapshot binding has empty tool_id={binding.tool_id!r} or "
+                    f"source_ref={binding.source_ref!r}; cannot map tool to flow version."
+                )
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+            try:
+                flow_version_id = UUID(source_ref)
+            except ValueError as err:
+                msg = (
+                    f"Snapshot binding source_ref={source_ref!r} is not a valid UUID "
+                    f"for tool_id={tool_id!r}; cannot map tool to flow version."
+                )
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg) from err
+            tool_refs.append(
+                {
+                    "flow_version_id": flow_version_id,
+                    "tool_id": tool_id,
+                }
+            )
+        return tool_refs
 
     def _dump_raw_connection_payloads(self, raw_payloads: list[Any] | None) -> list[dict[str, Any]] | None:
         if not raw_payloads:
