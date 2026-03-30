@@ -140,6 +140,32 @@ def _upgrade_postgresql() -> None:
         """
     )
 
+    op.execute(
+        """
+        CREATE FUNCTION prevent_deployment_provider_account_move()
+        RETURNS TRIGGER
+        AS $$
+        BEGIN
+            IF OLD.deployment_provider_account_id IS DISTINCT FROM NEW.deployment_provider_account_id THEN
+                RAISE EXCEPTION '%',
+                    'DEPLOYMENT_GUARD:DEPLOYMENT_PROVIDER_ACCOUNT_MOVE:'
+                    || 'Cannot move deployment to a different deployment provider account. '
+                    || 'Re-create it under the target provider account instead.';
+            END IF;
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+        """
+    )
+    op.execute(
+        """
+        CREATE TRIGGER trg_prevent_deployment_provider_account_move
+        BEFORE UPDATE ON deployment
+        FOR EACH ROW
+        EXECUTE FUNCTION prevent_deployment_provider_account_move();
+        """
+    )
+
 
 def _upgrade_sqlite() -> None:
     op.execute(
@@ -226,13 +252,32 @@ def _upgrade_sqlite() -> None:
         """
     )
 
+    op.execute(
+        """
+        CREATE TRIGGER trg_prevent_deployment_provider_account_move
+        BEFORE UPDATE OF deployment_provider_account_id ON deployment
+        FOR EACH ROW
+        WHEN OLD.deployment_provider_account_id IS NOT NEW.deployment_provider_account_id
+        BEGIN
+            SELECT RAISE(
+                ABORT,
+                'DEPLOYMENT_GUARD:DEPLOYMENT_PROVIDER_ACCOUNT_MOVE:'
+                || 'Cannot move deployment to a different deployment provider account. '
+                || 'Delete it and re-create under the target provider account instead.'
+            );
+        END;
+        """
+    )
+
 
 def _downgrade_postgresql() -> None:
+    op.execute("DROP TRIGGER IF EXISTS trg_prevent_deployment_provider_account_move ON deployment;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_deployment_project_move ON deployment;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_flow_move_if_deployed ON flow;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_folder_delete_if_has_deployments ON folder;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_flow_version_delete_if_deployed ON flow_version;")
 
+    op.execute("DROP FUNCTION IF EXISTS prevent_deployment_provider_account_move();")
     op.execute("DROP FUNCTION IF EXISTS prevent_deployment_project_move();")
     op.execute("DROP FUNCTION IF EXISTS prevent_flow_move_if_deployed();")
     op.execute("DROP FUNCTION IF EXISTS prevent_folder_delete_if_has_deployments();")
@@ -240,6 +285,7 @@ def _downgrade_postgresql() -> None:
 
 
 def _downgrade_sqlite() -> None:
+    op.execute("DROP TRIGGER IF EXISTS trg_prevent_deployment_provider_account_move;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_deployment_project_move;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_flow_move_if_deployed;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_folder_delete_if_has_deployments;")
