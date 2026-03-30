@@ -5,6 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query
 from lfx.log import logger
+from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -98,6 +99,12 @@ def _translate_version_error(exc: FlowVersionError) -> HTTPException:
     return HTTPException(status_code=500, detail=str(exc))
 
 
+def _ensure_deployments_enabled_for_filters(deployment_ids: list[UUID] | None) -> None:
+    if deployment_ids and not FEATURE_FLAGS.wxo_deployments:
+        msg = "Cannot filter by deployment_ids: the wxo_deployments feature flag is disabled"
+        raise HTTPException(status_code=400, detail=msg)
+
+
 @router.get("/")
 async def list_flow_versions(
     flow_id: UUID,
@@ -117,8 +124,11 @@ async def list_flow_versions(
     ] = None,
 ) -> FlowVersionListResponse:
     await _get_user_flow(session, flow_id, current_user.id)
+    _ensure_deployments_enabled_for_filters(deployment_ids)
 
-    has_providers = await count_provider_accounts(session, user_id=current_user.id) > 0
+    has_providers = (
+        FEATURE_FLAGS.wxo_deployments and await count_provider_accounts(session, user_id=current_user.id) > 0
+    )
 
     if has_providers:
         # Best-effort snapshot-level sync: prune attachment rows whose
@@ -170,7 +180,9 @@ async def get_single_flow_version(
 ) -> FlowVersionReadWithData:
     await _get_user_flow(session, flow_id, current_user.id)
 
-    has_providers = await count_provider_accounts(session, user_id=current_user.id) > 0
+    has_providers = (
+        FEATURE_FLAGS.wxo_deployments and await count_provider_accounts(session, user_id=current_user.id) > 0
+    )
 
     if has_providers:
         # Best-effort snapshot-level sync (same as list endpoint).
