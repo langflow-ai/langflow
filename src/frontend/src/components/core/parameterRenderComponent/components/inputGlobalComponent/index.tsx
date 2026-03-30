@@ -54,15 +54,23 @@ export default function InputGlobalComponent({
     handleOnNewValue,
   );
 
-  // Clean up when selected variable no longer exists
+  // Clean up when selected variable no longer exists.
+  // Guard against empty globalVariables (still loading) to avoid clearing
+  // the value before variables have been fetched — same guard used in useInitialLoad.
   useEffect(() => {
-    if (loadFromDb && currentValue && !valueExists && !isDisabled) {
+    if (
+      loadFromDb &&
+      currentValue &&
+      !valueExists &&
+      !isDisabled &&
+      typedGlobalVariables.length > 0
+    ) {
       handleOnNewValue(
         { value: "", load_from_db: false },
         { skipSnapshot: true },
       );
     }
-  }, [loadFromDb, currentValue, valueExists, isDisabled, handleOnNewValue]);
+  }, [loadFromDb, currentValue, valueExists, isDisabled, handleOnNewValue, typedGlobalVariables.length]);
 
   // Create handlers object for better organization
   const handlers: GlobalVariableHandlers = {
