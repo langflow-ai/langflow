@@ -68,12 +68,13 @@ class FlowStatus:
 # ---------------------------------------------------------------------------
 
 
-def _load_sdk() -> tuple[object, object, object]:
-    """Return (normalize_flow, flow_to_json, Client) from langflow_sdk."""
+def _load_sdk() -> tuple[object, object, object, type]:
+    """Return (normalize_flow, flow_to_json, Client, LangflowNotFoundError) from langflow_sdk."""
     sdk = load_sdk("status")
+    from langflow_sdk.exceptions import LangflowNotFoundError
     from langflow_sdk.serialization import flow_to_json, normalize_flow
 
-    return normalize_flow, flow_to_json, sdk.Client
+    return normalize_flow, flow_to_json, sdk.Client, LangflowNotFoundError
 
 
 def _flow_hash(flow_dict: dict, normalize_flow: object, flow_to_json: object) -> str:
@@ -163,9 +164,7 @@ def status_command(
     show_remote_only: bool,
 ) -> None:
     """Compare local flow files against the remote instance and render a status table."""
-    normalize_flow, flow_to_json, client_cls = _load_sdk()
-
-    from langflow_sdk.exceptions import LangflowNotFoundError
+    normalize_flow, flow_to_json, client_cls, not_found_error = _load_sdk()
 
     from lfx.config import ConfigError, resolve_environment
 
@@ -237,7 +236,7 @@ def status_command(
 
             try:
                 remote_flow = client.get_flow(flow_id)
-            except LangflowNotFoundError:
+            except not_found_error:
                 statuses.append(FlowStatus(name=name, status=_STATUS_NEW, path=path, flow_id=flow_id))
                 continue
             except Exception as exc:  # noqa: BLE001
