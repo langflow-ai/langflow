@@ -191,10 +191,10 @@ describe("AssistantLoadingState", () => {
   });
 
   describe("attempt counter", () => {
-    it("should show when attempt > 0", () => {
+    it("should show on retry attempts (attempt > 1, 1-indexed from backend)", () => {
       render(
         <AssistantLoadingState
-          progress={createProgress({ attempt: 1, maxAttempts: 3 })}
+          progress={createProgress({ attempt: 2, maxAttempts: 3 })}
         />,
       );
       expect(screen.getByText("Attempt 2 of 3")).toBeInTheDocument();
@@ -202,7 +202,7 @@ describe("AssistantLoadingState", () => {
 
     it("should not show on first attempt", () => {
       render(
-        <AssistantLoadingState progress={createProgress({ attempt: 0 })} />,
+        <AssistantLoadingState progress={createProgress({ attempt: 1, maxAttempts: 3 })} />,
       );
       expect(screen.queryByText(/Attempt/)).not.toBeInTheDocument();
     });

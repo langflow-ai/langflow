@@ -163,25 +163,32 @@ export function AssistantMessageItem({
       );
     }
 
-    // Fallback: content contains component code but result didn't capture it
-    // (e.g. misclassified intent where backend streamed code as Q&A text)
-    const componentCodeMatch = message.content?.match(
-      /```python\s*\n([\s\S]*?class\s+(\w+)\s*\(.*Component.*\)[\s\S]*?)```/,
+    // Fallback: component generation where backend returned code in the response
+    // text but didn't set result.validated (e.g., code extraction format mismatch).
+    // Only applies when the message has progress steps from component generation,
+    // NOT for plain Q&A responses that happen to contain example code.
+    const wasComponentGeneration = message.completedSteps?.some((step) =>
+      ["generating_component", "extracting_code", "validating", "validated"].includes(step),
     );
-    if (componentCodeMatch && message.status === "complete") {
-      const extractedCode = componentCodeMatch[1];
-      const extractedClassName = componentCodeMatch[2];
-      return (
-        <AssistantComponentResult
-          result={{
-            content: message.content,
-            validated: true,
-            componentCode: extractedCode,
-            className: extractedClassName,
-          }}
-          onApprove={() => onApprove?.(message.id, extractedCode)}
-        />
+    if (wasComponentGeneration && message.status === "complete") {
+      const componentCodeMatch = message.content?.match(
+        /```python\s*\n([\s\S]*?class\s+(\w+)\s*\(.*Component.*\)[\s\S]*?)```/,
       );
+      if (componentCodeMatch) {
+        const extractedCode = componentCodeMatch[1];
+        const extractedClassName = componentCodeMatch[2];
+        return (
+          <AssistantComponentResult
+            result={{
+              content: message.content,
+              validated: true,
+              componentCode: extractedCode,
+              className: extractedClassName,
+            }}
+            onApprove={() => onApprove?.(message.id, extractedCode)}
+          />
+        );
+      }
     }
 
     // Default text content with markdown support

@@ -196,10 +196,21 @@ export function useAssistantChat(): UseAssistantChatReturn {
           addComponent(response.data, response.type || "CustomComponent");
         }
       } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         console.error("Failed to validate or add component to canvas:", error);
+        // Show validation failure to the user instead of silently swallowing
+        updateMessage(messageId, () => ({
+          result: {
+            content: code,
+            validated: false,
+            componentCode: code,
+            validationError: `Failed to add component: ${errorMessage}`,
+          },
+        }));
       }
     },
-    [messages, validateComponent, addComponent],
+    [messages, validateComponent, addComponent, updateMessage],
   );
 
   const handleRetry = useCallback(

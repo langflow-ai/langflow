@@ -12,6 +12,9 @@ import { AssistantMessageItem } from "./components/assistant-message";
 import { AssistantNoModelsState } from "./components/assistant-no-models-state";
 import { useAssistantChat, useEnabledModels, useSessionHistory } from "./hooks";
 
+// Module-level draft cache — survives panel unmount/remount
+let draftMessageCache = "";
+
 const PANEL_SIZE_KEY = "langflow-assistant-panel-size";
 const DEFAULT_SIZE = { width: 620, height: 600 };
 const MIN_SIZE = { width: 456, height: 400 };
@@ -37,6 +40,8 @@ interface AssistantInputWithScrollProps {
   isProcessing: boolean;
   currentStep: AgenticStepType | null;
   autoFocus?: boolean;
+  draftMessage?: string;
+  onDraftChange?: (draft: string) => void;
 }
 
 function AssistantInputWithScroll({
@@ -46,6 +51,8 @@ function AssistantInputWithScroll({
   isProcessing,
   currentStep,
   autoFocus,
+  draftMessage,
+  onDraftChange,
 }: AssistantInputWithScrollProps) {
   const { scrollToBottom } = useStickToBottomContext();
 
@@ -62,6 +69,8 @@ function AssistantInputWithScroll({
       isProcessing={isProcessing}
       currentStep={currentStep}
       autoFocus={autoFocus}
+      draftMessage={draftMessage}
+      onDraftChange={onDraftChange}
       compact
     />
   );
@@ -123,6 +132,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
   const handleNewSession = useCallback(() => {
     handleStopGeneration();
     saveCurrentSession();
+    draftMessageCache = "";
     handleClearHistory();
   }, [handleStopGeneration, saveCurrentSession, handleClearHistory]);
 
@@ -274,6 +284,8 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
               isProcessing={isProcessing}
               currentStep={currentStep}
               autoFocus={isOpen && hasEnabledModels}
+              draftMessage={draftMessageCache}
+              onDraftChange={(draft) => { draftMessageCache = draft; }}
             />
           </StickToBottom>
         ) : (
@@ -287,6 +299,8 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
               currentStep={currentStep}
               compact={hasExpandedOnce}
               autoFocus={isOpen}
+              draftMessage={draftMessageCache}
+              onDraftChange={(draft) => { draftMessageCache = draft; }}
             />
           </>
         )}

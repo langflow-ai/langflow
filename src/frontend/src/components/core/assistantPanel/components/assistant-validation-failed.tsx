@@ -14,35 +14,49 @@ export function AssistantValidationFailed({
   onRetry,
 }: AssistantValidationFailedProps) {
   const [showCode, setShowCode] = useState(false);
+  const [showErrorDetails, setShowErrorDetails] = useState(false);
 
   return (
     <div className="space-y-3">
       {/* Error card */}
-      <div className="rounded-lg border border-destructive/30 bg-destructive/5">
+      <div className="max-w-[80%] rounded-lg border border-destructive/30 bg-destructive/5">
         {/* Header */}
         <div className="flex items-center gap-2 border-b border-destructive/20 px-4 py-3">
           <AlertTriangle className="h-4 w-4 text-destructive" />
           <span className="text-sm font-medium text-destructive">
-            Component validation failed
+            Component generation failed
           </span>
-          {result.validationAttempts && (
-            <span className="ml-auto text-xs text-muted-foreground">
-              {result.validationAttempts} attempts
-            </span>
-          )}
         </div>
 
-        {/* Error message */}
+        {/* Friendly message */}
         <div className="p-4">
-          <p className="text-sm text-muted-foreground">
-            The generated component could not be validated after multiple
-            attempts.
+          <p className="text-sm text-foreground">
+            The selected model was unable to generate valid component code.
+            Try again or use a more capable model.
           </p>
+
+          {/* Collapsible error details */}
           {result.validationError && (
-            <div className="mt-3 rounded-md bg-muted/50 p-3">
-              <p className="font-mono text-xs text-destructive">
-                {result.validationError}
-              </p>
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => setShowErrorDetails(!showErrorDetails)}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showErrorDetails ? (
+                  <ChevronUp className="h-3 w-3" />
+                ) : (
+                  <ChevronDown className="h-3 w-3" />
+                )}
+                Error details
+              </button>
+              {showErrorDetails && (
+                <div className="mt-2 max-h-[200px] overflow-auto rounded-md bg-muted/50 p-3">
+                  <p className="whitespace-pre-wrap break-all font-mono text-xs text-destructive">
+                    {result.validationError}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -72,7 +86,7 @@ export function AssistantValidationFailed({
               onClick={onRetry}
               className="ml-auto h-8"
             >
-              Try again
+              Try Again
             </Button>
           )}
         </div>

@@ -82,21 +82,21 @@ function AssistantLoadingStateComponent({
 
         {/* Validation error */}
         {progress.error && (
-          <div className="mt-3 rounded-md bg-destructive/5 px-3 py-2 text-xs text-destructive">
+          <div className="mt-2 w-fit rounded-md bg-destructive/5 px-3 py-2 text-xs text-destructive">
             {progress.error}
           </div>
         )}
 
         {/* Retry counter */}
-        {progress.attempt > 0 && (
-          <div className="mt-2 text-xs text-muted-foreground">
-            Attempt {progress.attempt + 1} of {progress.maxAttempts}
+        {progress.attempt > 1 && (
+          <div className="mt-3 text-xs text-muted-foreground">
+            Attempt {progress.attempt} of {progress.maxAttempts}
           </div>
         )}
 
         {/* Final extracted code — replaces streaming preview */}
         {finalCode && (
-          <div>
+          <div className="mt-3">
             <button
               type="button"
               onClick={() => setCodeOpen((prev) => !prev)}

@@ -55,6 +55,8 @@ interface AssistantInputProps {
   placeholder?: string;
   compact?: boolean;
   autoFocus?: boolean;
+  draftMessage?: string;
+  onDraftChange?: (draft: string) => void;
 }
 
 export function AssistantInput({
@@ -66,8 +68,10 @@ export function AssistantInput({
   placeholder,
   compact = false,
   autoFocus = false,
+  draftMessage = "",
+  onDraftChange,
 }: AssistantInputProps) {
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(draftMessage);
   const [idlePlaceholder] = useState(getAssistantPlaceholder);
 
   // Show animated placeholder only during post-generation steps (when thinking animation is done)
@@ -117,11 +121,16 @@ export function AssistantInput({
     }
   }, [selectedModel]);
 
+  const updateMessage = (value: string) => {
+    setMessage(value);
+    onDraftChange?.(value);
+  };
+
   const handleSend = () => {
     const trimmedMessage = message.trim();
     if (!trimmedMessage || disabled || isProcessing) return;
     onSend(trimmedMessage, selectedModel);
-    setMessage("");
+    updateMessage("");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -160,7 +169,7 @@ export function AssistantInput({
             ref={textareaRef}
             value={message}
             maxLength={MAX_MESSAGE_LENGTH}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={(e) => updateMessage(e.target.value)}
             data-testid="assistant-input-textarea"
             onKeyDown={handleKeyDown}
             placeholder={
