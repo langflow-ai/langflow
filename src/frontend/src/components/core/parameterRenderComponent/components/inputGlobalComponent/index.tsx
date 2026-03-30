@@ -70,7 +70,14 @@ export default function InputGlobalComponent({
         { skipSnapshot: true },
       );
     }
-  }, [loadFromDb, currentValue, valueExists, isDisabled, handleOnNewValue, typedGlobalVariables.length]);
+  }, [
+    loadFromDb,
+    currentValue,
+    valueExists,
+    isDisabled,
+    handleOnNewValue,
+    typedGlobalVariables.length,
+  ]);
 
   // Create handlers object for better organization
   const handlers: GlobalVariableHandlers = {
