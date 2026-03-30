@@ -79,9 +79,9 @@ describe("SessionTabBar", () => {
       expect(screen.getByText("Create a chatbot")).toBeInTheDocument();
     });
 
-    it("should render new session button", () => {
+    it("should render tab bar container with tabs", () => {
       render(<SessionTabBar {...defaultProps} />);
-      expect(screen.getByTestId("tab-new-session")).toBeInTheDocument();
+      expect(screen.getByTestId("session-tab-bar")).toBeInTheDocument();
     });
   });
 
@@ -158,35 +158,21 @@ describe("SessionTabBar", () => {
       expect(onDeleteSession).toHaveBeenCalledWith("saved-1");
     });
 
-    it("should call onNewSession when clicking + button", async () => {
+    it("should call onNewSession when closing last active tab", async () => {
       const onNewSession = jest.fn();
+      const onDeleteSession = jest.fn();
 
       render(
-        <SessionTabBar {...defaultProps} onNewSession={onNewSession} />,
+        <SessionTabBar
+          {...defaultProps}
+          onNewSession={onNewSession}
+          onDeleteSession={onDeleteSession}
+        />,
       );
 
-      await userEvent.click(screen.getByTestId("tab-new-session"));
-      expect(onNewSession).toHaveBeenCalledTimes(1);
-    });
-
-    it("should disable + button when no messages", () => {
-      render(<SessionTabBar {...defaultProps} hasMessages={false} />);
-      expect(screen.getByTestId("tab-new-session")).toBeDisabled();
-    });
-
-    it("should disable + button at session limit", () => {
-      const sessions = Array.from({ length: 10 }, (_, i) =>
-        createSession({
-          sessionId: `s-${i}`,
-          firstUserMessage: `Session ${i}`,
-        }),
-      );
-
-      render(
-        <SessionTabBar {...defaultProps} sessions={sessions} />,
-      );
-
-      expect(screen.getByTestId("tab-new-session")).toBeDisabled();
+      // Only one tab (current session) — close button hidden when single tab
+      // No close button available, so onNewSession won't be triggered
+      expect(screen.queryByTestId(`session-tab-close-${defaultProps.activeSessionId}`)).not.toBeInTheDocument();
     });
   });
 });

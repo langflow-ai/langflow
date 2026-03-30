@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { cn } from "@/utils/utils";
 import {
-  ASSISTANT_MAX_SESSIONS,
   ASSISTANT_SESSION_PREVIEW_LENGTH,
   ASSISTANT_TAB_SCROLL_AMOUNT,
 } from "../assistant-panel.constants";
@@ -37,8 +35,6 @@ export function SessionTabBar({
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
-  const isAtSessionLimit = sessions.length >= ASSISTANT_MAX_SESSIONS;
-
   // Build tab list: saved sessions in order, plus current live session at the end
   // Like Chrome: tabs stay in their position, active one is just highlighted
   const tabs: TabItem[] = [];
@@ -69,8 +65,8 @@ export function SessionTabBar({
   const checkOverflow = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 1);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+    setCanScrollLeft(el.scrollLeft > 2);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
   }, []);
 
   useEffect(() => {
@@ -89,16 +85,32 @@ export function SessionTabBar({
     };
   }, [checkOverflow, tabs.length]);
 
-  // Scroll active tab into view when it changes
+  // Scroll active tab fully into view when it changes or tabs change
   useEffect(() => {
-    if (activeTabRef.current?.scrollIntoView) {
-      activeTabRef.current.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-        inline: "nearest",
-      });
-    }
-  }, [activeSessionId]);
+    // Small delay to let the DOM update after tab list changes
+    const timer = setTimeout(() => {
+      const tab = activeTabRef.current;
+      const container = scrollRef.current;
+      if (!tab || !container) return;
+
+      const tabLeft = tab.offsetLeft;
+      const tabRight = tabLeft + tab.offsetWidth;
+      const viewLeft = container.scrollLeft;
+      const viewRight = viewLeft + container.clientWidth;
+
+      if (tabLeft < viewLeft) {
+        container.scrollTo({ left: tabLeft - 4, behavior: "smooth" });
+      } else if (tabRight > viewRight) {
+        container.scrollTo({
+          left: tabRight - container.clientWidth + 4,
+          behavior: "smooth",
+        });
+      }
+      // Re-check overflow after scroll
+      checkOverflow();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [activeSessionId, tabs.length, checkOverflow]);
 
   const scrollBy = (amount: number) => {
     scrollRef.current?.scrollBy({ left: amount, behavior: "smooth" });
@@ -109,12 +121,12 @@ export function SessionTabBar({
       className="relative flex min-w-0 flex-1 items-center"
       data-testid="session-tab-bar"
     >
-      {/* Left scroll arrow */}
+      {/* Left scroll arrow — absolute overlay */}
       {canScrollLeft && (
         <button
           type="button"
           data-testid="tab-scroll-left"
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="absolute left-0 top-0 z-10 flex h-full w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
           onClick={() => scrollBy(-ASSISTANT_TAB_SCROLL_AMOUNT)}
         >
           <ForwardedIconComponent
@@ -127,7 +139,8 @@ export function SessionTabBar({
       {/* Scrollable tab strip */}
       <div
         ref={scrollRef}
-        className="flex flex-1 items-end overflow-x-hidden px-1"
+        className="flex items-end overflow-x-auto"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {tabs.map((tab) => {
           const isActive = tab.id === activeSessionId;
@@ -193,12 +206,12 @@ export function SessionTabBar({
         })}
       </div>
 
-      {/* Right scroll arrow */}
+      {/* Right scroll arrow — absolute overlay */}
       {canScrollRight && (
         <button
           type="button"
           data-testid="tab-scroll-right"
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="absolute right-0 top-0 z-10 flex h-full w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
           onClick={() => scrollBy(ASSISTANT_TAB_SCROLL_AMOUNT)}
         >
           <ForwardedIconComponent
@@ -208,26 +221,6 @@ export function SessionTabBar({
         </button>
       )}
 
-      {/* New session button */}
-      <ShadTooltip
-        content={
-          isAtSessionLimit
-            ? `Max ${ASSISTANT_MAX_SESSIONS} sessions`
-            : ""
-        }
-        side="bottom"
-      >
-        <button
-          type="button"
-          data-testid="tab-new-session"
-          className="flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
-          onClick={onNewSession}
-          disabled={!hasMessages || isAtSessionLimit}
-        >
-          <ForwardedIconComponent name="Plus" className="h-3.5 w-3.5" />
-          <span>New</span>
-        </button>
-      </ShadTooltip>
     </div>
   );
 }

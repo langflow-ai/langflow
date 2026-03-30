@@ -95,6 +95,32 @@ export function AssistantHeader({
         </>
       )}
 
+      {/* New session button — shown next to close when in tab mode */}
+      {useTabBar && (
+        <ShadTooltip
+          content={
+            isAtSessionLimit
+              ? `Max ${ASSISTANT_MAX_SESSIONS} sessions`
+              : ""
+          }
+          side="bottom"
+        >
+          <span className="inline-flex">
+            <Button
+              variant="ghost"
+              size="sm"
+              data-testid="tab-new-session"
+              className="h-8 shrink-0 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+              onClick={onNewSession}
+              disabled={isNewSessionDisabled}
+            >
+              <ForwardedIconComponent name="Plus" className="h-3.5 w-3.5" />
+              New
+            </Button>
+          </span>
+        </ShadTooltip>
+      )}
+
       {/* Close button — always visible */}
       <Button
         variant="ghost"
