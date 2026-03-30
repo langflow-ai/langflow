@@ -543,10 +543,12 @@ async def rollback_provider_create(
     provider_id: UUID,
     resource_id: object,
     provider_result: Any | None = None,
+    allow_delete_fallback: bool = True,
     user_id: UUID,
     db: DbSession,
 ) -> None:
     """Best-effort compensating cleanup after a failed DB commit on create."""
+    # TODO: Add this method to the deployment service protocol.
     rollback_create_result = getattr(deployment_adapter, "rollback_create_result", None)
     if provider_result is not None and callable(rollback_create_result):
         try:
@@ -558,13 +560,23 @@ async def rollback_provider_create(
                     db=db,
                 )
         except Exception:  # noqa: BLE001
-            logger.warning(
-                "Extended rollback failed for provider resource %s on provider account %s; "
-                "falling back to basic delete.",
-                resource_id,
-                provider_id,
-                exc_info=True,
-            )
+            if allow_delete_fallback:
+                logger.warning(
+                    "Extended rollback failed for provider resource %s on provider account %s; "
+                    "falling back to basic delete.",
+                    resource_id,
+                    provider_id,
+                    exc_info=True,
+                )
+            else:
+                logger.warning(
+                    "Extended rollback failed for existing provider resource %s on provider account %s; "
+                    "skipping delete fallback.",
+                    resource_id,
+                    provider_id,
+                    exc_info=True,
+                )
+                return
         else:
             logger.info(
                 "Rolled back provider create result for resource %s on provider account %s after DB commit failure.",
@@ -572,6 +584,14 @@ async def rollback_provider_create(
                 provider_id,
             )
             return
+    if not allow_delete_fallback:
+        logger.warning(
+            "Skipping delete fallback for existing provider resource %s on provider account %s; "
+            "provider side-effects may require manual cleanup.",
+            resource_id,
+            provider_id,
+        )
+        return
     try:
         with deployment_provider_scope(provider_id):
             await deployment_adapter.delete(

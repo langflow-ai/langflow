@@ -1003,6 +1003,27 @@ class TestRollbackProviderCreate:
             db=AsyncMock(),
         )
 
+    @pytest.mark.asyncio
+    async def test_skips_delete_fallback_when_disabled_and_extended_rollback_fails(self):
+        """When delete fallback is disabled, extended rollback failures do not trigger delete."""
+        adapter = AsyncMock()
+        adapter.rollback_create_result.side_effect = RuntimeError("rollback boom")
+
+        from langflow.api.v1.mappers.deployments.helpers import rollback_provider_create
+
+        await rollback_provider_create(
+            deployment_adapter=adapter,
+            provider_id=uuid4(),
+            resource_id="existing-resource-1",
+            provider_result={"app_ids": ["app-1"]},
+            allow_delete_fallback=False,
+            user_id=uuid4(),
+            db=AsyncMock(),
+        )
+
+        adapter.rollback_create_result.assert_awaited_once()
+        adapter.delete.assert_not_awaited()
+
 
 # ---------------------------------------------------------------------------
 # rollback_provider_update

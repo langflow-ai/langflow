@@ -527,6 +527,16 @@ async def create_deployment(
                 user_id=current_user.id,
                 db=session,
             )
+        elif should_mutate_existing_resource:
+            await rollback_provider_create(
+                deployment_adapter=deployment_adapter,
+                provider_id=provider_id,
+                resource_id=str(existing_resource_key),
+                provider_result=provider_create_result.provider_result,
+                allow_delete_fallback=False,
+                user_id=current_user.id,
+                db=session,
+            )
         raise
     return to_deployment_create_response(provider_create_result, deployment_row)
 
