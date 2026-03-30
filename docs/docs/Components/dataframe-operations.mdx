@@ -10,7 +10,7 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 import PartialCurlyBraces from '@site/docs/_partial-escape-curly-braces.mdx';
 
 :::tip
-Prior to Langflow 1.9.0, this component was named **Data Operations**.
+Prior to Langflow 1.9.0, this component was named **DataFrame Operations**.
 :::
 
 The **Table Operations** component performs operations on [`Table`](/data-types#table) rows and columns, including schema changes, record changes, sorting, and filtering.
@@ -53,7 +53,7 @@ The only requirement is that the preceding component must create `Table` output 
         Your instructions depend on the response content and desired outcome.
         For example, if the response contains a large `result` field, you might provide instructions like `explode the result field out into a Data object`.
 
-    3. Convert the **Smart Transform** component's `JSON` output to `Table`:
+    3. Convert the **Smart Transform** component's output from `JSON` to `Table`:
 
         1. Connect the **Filtered Data** output to the **Type Convert** component's **JSON** input.
         2. Set the **Type Convert** component's **Output Type** to **Table**.

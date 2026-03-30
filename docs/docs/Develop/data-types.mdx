@@ -28,7 +28,7 @@ Click a port to <Icon name="Search" aria-hidden="true" /> **Search** for compati
 ## JSON
 
 :::tip
-Prior to version 1.9.0, the JSON port was called `Data`.
+In Langflow version 1.9.0, the `Data` type and port were renamed to `JSON`.
 Flows using `Data` are backwards compatible.
 :::
 
@@ -48,7 +48,7 @@ The following attributes are available:
 - `default_value`: Fallback if `text_key` is missing. The default `text_key` is `"text"`.
 
 ```python
-data_obj = Data(
+data_obj = JSON(
     text_key="text",
     data={
         "text": "Hello world",
@@ -78,7 +78,7 @@ For example, when serialized into JSON, the previous Python example becomes the 
 ## Table
 
 :::tip
-Prior to version 1.9.0, the Table port was called `DataFrame`.
+In Langflow version 1.9.0, the `DataFrame` type and port were renamed to `Table`.
 Flows using `DataFrame` are backwards compatible.
 :::
 

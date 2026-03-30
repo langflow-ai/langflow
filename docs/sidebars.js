@@ -283,16 +283,8 @@ module.exports = {
               type: "category",
               label: "Processing",
               items: [
-                {
-                  type: "doc",
-                  id: "Components/data-operations",
-                  label: "JSON Operations",
-                },
-                {
-                  type: "doc",
-                  id: "Components/dataframe-operations",
-                  label: "Table Operations",
-                },
+                "Components/data-operations",
+                "Components/dataframe-operations",
                 "Components/dynamic-create-data",
                 "Components/parser",
                 "Components/split-text",
