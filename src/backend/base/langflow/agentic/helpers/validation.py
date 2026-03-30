@@ -30,7 +30,7 @@ class _ReturnChecker(ast.NodeVisitor):
         self.generic_visit(node)
 
     # Langflow components commonly use async output methods
-    visit_AsyncFunctionDef = visit_FunctionDef
+    visit_AsyncFunctionDef = visit_FunctionDef  # noqa: N815
 
 
 def _extract_class_name_regex(code: str) -> str | None:

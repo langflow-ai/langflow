@@ -58,7 +58,20 @@ DANGEROUS_IMPORTS: set[str] = {
 
 # Imports where only specific names are dangerous (module -> set of dangerous names)
 RESTRICTED_IMPORT_NAMES: dict[str, set[str]] = {
-    "os": {"system", "popen", "execl", "execle", "execlp", "execv", "execve", "execvp", "execvpe", "remove", "rmdir", "unlink"},
+    "os": {
+        "system",
+        "popen",
+        "execl",
+        "execle",
+        "execlp",
+        "execv",
+        "execve",
+        "execvp",
+        "execvpe",
+        "remove",
+        "rmdir",
+        "unlink",
+    },
 }
 
 
@@ -97,7 +110,7 @@ class _SecurityChecker(ast.NodeVisitor):
                 if alias.name in restricted:
                     self.violations.append(f"Import of '{root_module}.{alias.name}' is forbidden in components")
 
-        self.generic_visit(node)
+        return self.generic_visit(node)
 
     def visit_Call(self, node: ast.Call):
         self._check_name_call(node)
