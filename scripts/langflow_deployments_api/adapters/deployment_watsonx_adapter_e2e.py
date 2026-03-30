@@ -15,9 +15,10 @@ Scenario catalog
 ----------------
 Live create scenarios:
 - `live_create_success`: creates config + snapshot + agent successfully (expects Success).
-- `live_invalid_config_reference`: rejects config reference binding at create time
-  (expects InvalidDeploymentOperationError).
-- `live_duplicate_snapshot_names_conflict`: duplicate snapshot names collide in wxO (expects DeploymentConflictError).
+- `live_invalid_config_reference`: rejects create payload when provider_data references
+  a non-existent existing connection id (expects InvalidContentError).
+- `live_duplicate_snapshot_names_conflict`: duplicate raw snapshot names are deduped
+  by schema normalization (expects Success).
 
 Live lifecycle scenarios:
 - `live_lifecycle_create_seed`: creates a seed deployment for lifecycle checks (expects Success).
@@ -26,17 +27,34 @@ Live lifecycle scenarios:
 - `live_update_seed_name_description`: updates deployment name/description (expects Success).
 - `live_get_after_update_reflects_name`: confirms updated name is persisted (expects Success).
 - `live_get_status_connected`: confirms status endpoint reports connected deployment (expects Success).
-- `live_create_execution_success`: starts an execution run with valid message payload (expects Success).
-- `live_get_execution_success`: fetches execution by returned execution id (expects Success).
+- `live_create_execution_success`: starts an execution run with valid message payload and validates
+  provider_result contains execution_id (not run_id) and status (expects Success).
+- `live_create_execution_input_string`: creates execution using plain string input (expects Success).
+- `live_create_execution_input_dict_content`: creates execution using dict input with content key (expects Success).
+- `live_get_execution_poll_terminal`: polls execution until terminal status and validates
+  provider_result fields including execution_id, status, and absence of run_id (expects Success).
+- `live_get_execution_terminal_fields`: validates terminal execution has agent_id and
+  appropriate timestamp (completed_at, failed_at, or cancelled_at) (expects Success).
 - `live_delete_seed`: deletes seed deployment agent (expects Success).
 - `live_get_after_delete_not_found`: confirms deleted deployment is no longer fetchable
   (expects DeploymentNotFoundError).
 - `live_status_after_delete_not_found_state`: confirms status on deleted deployment returns not found
   (expects DeploymentNotFoundError).
 
+Live list-snapshots-by-ids scenarios:
+- `live_list_snapshots_by_ids_returns_known`: fetches known snapshot ids via
+  snapshot_ids mode and confirms all are returned (expects Success).
+- `live_list_snapshots_by_ids_filters_unknown`: mixes a known id with a bogus id;
+  confirms the provider returns only existing snapshots (expects Success).
+- `live_list_snapshots_by_ids_empty_input`: passes an empty list; the adapter treats
+  this as "no snapshot filter" and falls through to the deployment-scoped branch,
+  which rejects because no deployment_id is provided (expects DeploymentError).
+
 Live negative scenarios:
 - `live_negative_create_seed`: creates a second seed deployment for negative-path checks (expects Success).
 - `live_create_execution_rejects_empty_input`: rejects empty execution input payload (expects InvalidContentError).
+- `live_create_execution_missing_deployment`: rejects execution for non-existent deployment
+  (expects DeploymentNotFoundError).
 - `live_delete_missing_not_found`: delete on unknown deployment id returns not found (expects DeploymentNotFoundError).
 - `live_negative_delete_seed`: cleans up negative-path seed deployment (expects Success).
 
@@ -62,10 +80,16 @@ Live update-matrix scenarios:
   in provider_data (expects InvalidContentError).
 - `upd_reject_unbind_unknown_tool_id`: rejects unbind on unknown tool id
   in provider_data (expects InvalidContentError).
-- `upd_missing_add_id_fails`: rejects unknown bind.tool.reference_id in provider_data (expects InvalidContentError).
+- `upd_missing_add_id_fails`: rejects unknown bind.tool.tool_id_with_ref in provider_data (expects InvalidContentError).
 - `upd_config_raw_payload_conflict`: detects conflict when creating duplicate provider_data
   raw connection app id (expects DeploymentConflictError).
 - `upd_not_found_deployment`: update unknown deployment id returns not found (expects DeploymentNotFoundError).
+- `upd_put_tools_replaces_tool_list`: uses put_tools to declaratively replace
+  the agent's tool list with a subset (expects Success).
+- `upd_put_tools_empty_clears_all_tools`: passes an empty put_tools list to
+  remove all tools from the agent (expects Success).
+- `upd_put_tools_deduplicates`: passes duplicate tool ids in put_tools and
+  confirms deduplication produces a single binding (expects Success).
 
 Failpoint scenarios:
 - `fp_retry_create_config_then_success`: injects transient config-create failures; retries
@@ -77,6 +101,9 @@ Failpoint scenarios:
   and validates rollback path (expects DeploymentError).
 - `fp_update_bindings_failure_with_rollback_failure`: injects update failure + rollback
   failure and expects terminal error (expects DeploymentError).
+- `fp_update_failure_then_put_tools_restore`: injects a binding-stage failure to corrupt
+  the tool list, then uses put_tools to restore the original snapshot set and confirms
+  the tool list matches the pre-failure state (expects Success after restore).
 """
 
 from __future__ import annotations
@@ -89,14 +116,15 @@ import textwrap
 import types
 from contextlib import suppress
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from types import MethodType, SimpleNamespace
 from typing import TYPE_CHECKING, Any
-from uuid import UUID, uuid4
+from uuid import uuid4
 
+import langflow.services.adapters.deployment.watsonx_orchestrate.core.create as create_core_module
 import langflow.services.adapters.deployment.watsonx_orchestrate.core.retry as retry_module
-import langflow.services.adapters.deployment.watsonx_orchestrate.service as service_module
-import langflow.services.adapters.deployment.watsonx_orchestrate.update_helpers as update_helpers_module
+import langflow.services.adapters.deployment.watsonx_orchestrate.core.shared as shared_core_module
+import langflow.services.adapters.deployment.watsonx_orchestrate.core.update as update_core_module
 from dotenv import load_dotenv
 from fastapi import HTTPException
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
@@ -107,6 +135,10 @@ from langflow.services.adapters.deployment.context import (
 from langflow.services.adapters.deployment.watsonx_orchestrate import (
     WatsonxOrchestrateDeploymentService,
     WxOCredentials,
+)
+from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
+    WatsonxDeploymentCreateResultData,
+    WatsonxFlowArtifactProviderData,
 )
 from lfx.services.adapters.deployment.exceptions import (
     DeploymentConflictError,
@@ -120,7 +152,6 @@ from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
     BaseDeploymentDataUpdate,
     BaseFlowArtifact,
-    ConfigItem,
     ConfigListParams,
     DeploymentConfig,
     DeploymentCreate,
@@ -128,7 +159,6 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentType,
     DeploymentUpdate,
     ExecutionCreate,
-    SnapshotItems,
     SnapshotListParams,
 )
 
@@ -142,6 +172,9 @@ HTTP_STATUS_NOT_FOUND = 404
 HTTP_STATUS_CONFLICT = 409
 MIN_MIXED_SNAPSHOT_IDS = 2
 DEFAULT_CONCURRENCY_ITERATIONS = 1
+EXECUTION_POLL_INTERVAL_SECS = 2
+EXECUTION_POLL_MAX_ATTEMPTS = 10
+EXECUTION_TERMINAL_STATUSES = {"completed", "failed", "cancelled", "async_completed", "expired", "requires_input"}
 
 _INVALID_WXO_NAME_CHARS = re.compile(r"[^A-Za-z0-9_]")
 
@@ -163,6 +196,12 @@ class ScenarioResult:
     detail: str
 
 
+@dataclass(slots=True)
+class WxoCreatedDeploymentResult:
+    deployment_id: str
+    provider_result: WatsonxDeploymentCreateResultData
+
+
 class WatsonxAdapterDirectE2E:
     def __init__(
         self,
@@ -178,7 +217,7 @@ class WatsonxAdapterDirectE2E:
         self.project_id = project_id
         self.mode = mode
         self.keep_resources = keep_resources
-        self.run_suffix = datetime.now(UTC).strftime("%Y%m%d%H%M%S") + "-" + uuid4().hex[:8]
+        self.run_suffix = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + "-" + uuid4().hex[:8]
 
         self.user_id = str(uuid4())
         self.db = object()
@@ -206,6 +245,7 @@ class WatsonxAdapterDirectE2E:
         self.created_deployment_ids: set[str] = set()
         self.created_snapshot_ids: set[str] = set()
         self.created_config_ids: set[str] = set()
+        self.tool_source_refs: dict[str, str] = {}
 
     async def run(self) -> int:
         print("Starting watsonx direct adapter runner...")
@@ -233,32 +273,34 @@ class WatsonxAdapterDirectE2E:
                 "name": "live_create_success",
                 "expected": {OUTCOME_SUCCESS},
                 "payload": self._build_create_payload(
-                    snapshots=[self._build_flow_payload(label="snap_live_success")],
-                    config=self._build_config_payload(label="cfg_live_success"),
+                    tool_payloads=[self._build_flow_payload(label="snap_live_success")],
+                    raw_connection=self._build_config_payload(label="cfg_live_success"),
                 ),
             },
             {
                 "name": "live_invalid_config_reference",
-                "expected": {OUTCOME_INVALID_OPERATION},
+                "expected": {OUTCOME_INVALID_CONTENT},
                 "payload": self._build_create_payload(
-                    snapshots=[self._build_flow_payload(label="snap_live_invalid_ref")],
-                    config_reference_id="cfg_ref_not_supported",
+                    tool_payloads=[self._build_flow_payload(label="snap_live_invalid_ref")],
+                    existing_connection_app_id="cfg_ref_not_supported",
                 ),
             },
             {
                 "name": "live_duplicate_snapshot_names_conflict",
-                "expected": {OUTCOME_CONFLICT},
+                "expected": {OUTCOME_SUCCESS},
                 "payload": self._build_create_payload(
-                    snapshots=[
+                    tool_payloads=[
                         self._build_flow_payload(label="snap_dup_a", name_override=duplicate_name),
                         self._build_flow_payload(label="snap_dup_b", name_override=duplicate_name),
                     ],
-                    config=self._build_config_payload(label="cfg_live_dup"),
+                    raw_connection=self._build_config_payload(label="cfg_live_dup"),
                 ),
+                "assert_dedupe_snapshot_count": 1,
             },
         ]
         results = await self._run_scenarios(scenarios)
         results.extend(await self._run_live_lifecycle_scenarios())
+        results.extend(await self._run_live_list_snapshots_by_ids_scenarios())
         results.extend(await self._run_live_update_matrix_scenarios())
         results.extend(await self._run_live_concurrency_scenarios())
         results.extend(await self._run_live_negative_scenarios())
@@ -270,19 +312,34 @@ class WatsonxAdapterDirectE2E:
                 "name": "fp_retry_create_config_then_success",
                 "expected": {OUTCOME_SUCCESS},
                 "payload": self._build_create_payload(
-                    snapshots=[self._build_flow_payload(label="snap_fp_retry")],
-                    config=self._build_config_payload(label="cfg_fp_retry"),
+                    tool_payloads=[self._build_flow_payload(label="snap_fp_retry")],
+                    raw_connection=self._build_config_payload(label="cfg_fp_retry"),
                 ),
                 "inject": {
                     "create_config": {"fail_first_n": 2, "error_type": "runtime", "message": "fp_create_config_retry"}
                 },
             },
             {
+                "name": "fp_create_config_wrapper_conflict_mapping",
+                "expected": {OUTCOME_CONFLICT},
+                "payload": self._build_create_payload(
+                    tool_payloads=[self._build_flow_payload(label="snap_fp_cfg_wrapper_conflict")],
+                    raw_connection=self._build_config_payload(label="cfg_fp_cfg_wrapper_conflict"),
+                ),
+                "inject": {
+                    "create_config_wrapper": {
+                        "fail_first_n": 1,
+                        "error_type": "domain_conflict",
+                        "message": "fp_create_config_wrapper_conflict",
+                    }
+                },
+            },
+            {
                 "name": "fp_non_retryable_create_agent_conflict",
                 "expected": {OUTCOME_CONFLICT},
                 "payload": self._build_create_payload(
-                    snapshots=[self._build_flow_payload(label="snap_fp_conflict")],
-                    config=self._build_config_payload(label="cfg_fp_conflict"),
+                    tool_payloads=[self._build_flow_payload(label="snap_fp_conflict")],
+                    raw_connection=self._build_config_payload(label="cfg_fp_conflict"),
                 ),
                 "inject": {
                     "create_agent": {
@@ -297,8 +354,8 @@ class WatsonxAdapterDirectE2E:
                 "expected": {OUTCOME_FAILURE},
                 "detail_contains": "Please check server logs for details",
                 "payload": self._build_create_payload(
-                    snapshots=[self._build_flow_payload(label="snap_fp_rollback")],
-                    config=self._build_config_payload(label="cfg_fp_rollback"),
+                    tool_payloads=[self._build_flow_payload(label="snap_fp_rollback")],
+                    raw_connection=self._build_config_payload(label="cfg_fp_rollback"),
                 ),
                 "inject": {
                     "create_agent": {
@@ -326,12 +383,27 @@ class WatsonxAdapterDirectE2E:
             detail_contains = str(scenario.get("detail_contains") or "").strip()
             detail_ok = not detail_contains or detail_contains in detail
             ok = status_code in scenario["expected"] and detail_ok
+            dedupe_expected = scenario.get("assert_dedupe_snapshot_count")
+            if dedupe_expected is not None:
+                created_snapshot_ids = self._extract_create_snapshot_ids(created.provider_result) if created else set()
+                created_snapshot_count = len(created_snapshot_ids)
+                dedupe_ok = (
+                    status_code == OUTCOME_SUCCESS
+                    and created is not None
+                    and created_snapshot_count == int(dedupe_expected)
+                    and self._has_unique_snapshot_ids(created_snapshot_ids)
+                )
+                ok = ok and dedupe_ok
+                if not dedupe_ok:
+                    detail = (
+                        f"{detail} | dedupe_check failed: expected_snapshot_count={dedupe_expected} "
+                        f"got={created_snapshot_count}"
+                    )
 
             if created:
-                self.created_deployment_ids.add(created["deployment_id"])
-                self.created_snapshot_ids.update(created["snapshot_ids"])
-                if created["config_id"]:
-                    self.created_config_ids.add(created["config_id"])
+                self.created_deployment_ids.add(created.deployment_id)
+                self.created_snapshot_ids.update(self._extract_create_snapshot_ids(created.provider_result))
+                self.created_config_ids.update(self._extract_create_app_ids(created.provider_result))
 
             results.append(
                 ScenarioResult(
@@ -349,7 +421,7 @@ class WatsonxAdapterDirectE2E:
         payload: DeploymentCreate,
         *,
         inject: dict[str, dict[str, Any]] | None = None,
-    ) -> tuple[str, str, dict[str, Any] | None]:
+    ) -> tuple[str, str, WxoCreatedDeploymentResult | None]:
         originals: list[tuple[Any, str, Any]] = []
         try:
             if inject:
@@ -369,11 +441,11 @@ class WatsonxAdapterDirectE2E:
         except Exception as exc:  # noqa: BLE001
             return OUTCOME_FAILURE, str(exc), None
         else:
-            created = {
-                "deployment_id": str(result.id),
-                "config_id": str(result.config_id) if result.config_id else None,
-                "snapshot_ids": {str(item) for item in (result.snapshot_ids or [])},
-            }
+            create_provider_result = self._parse_create_provider_result_payload(result.provider_result)
+            created = WxoCreatedDeploymentResult(
+                deployment_id=str(result.id),
+                provider_result=create_provider_result,
+            )
             return OUTCOME_SUCCESS, "created", created
         finally:
             for target, attr_name, original in originals:
@@ -451,6 +523,7 @@ class WatsonxAdapterDirectE2E:
         except Exception as exc:  # noqa: BLE001
             return OUTCOME_FAILURE, str(exc), None
         else:
+            self.created_config_ids.update(self._extract_update_created_app_ids(result))
             return OUTCOME_SUCCESS, "updated", result
         finally:
             for target, attr_name, original in originals:
@@ -479,6 +552,30 @@ class WatsonxAdapterDirectE2E:
             return OUTCOME_FAILURE, str(exc), None
         else:
             return OUTCOME_SUCCESS, "snapshots_listed", result
+
+    async def _run_list_snapshots_by_ids(self, snapshot_ids: list[str]) -> tuple[str, str, Any | None]:
+        try:
+            result = await self.service.list_snapshots(
+                user_id=self.user_id,
+                params=SnapshotListParams(snapshot_ids=snapshot_ids),
+                db=self.db,
+            )
+        except DeploymentNotFoundError as exc:
+            return OUTCOME_NOT_FOUND, str(exc), None
+        except DeploymentConflictError as exc:
+            return OUTCOME_CONFLICT, exc.message, None
+        except InvalidContentError as exc:
+            return OUTCOME_INVALID_CONTENT, exc.message, None
+        except (InvalidDeploymentOperationError, InvalidDeploymentTypeError) as exc:
+            return OUTCOME_INVALID_OPERATION, exc.message, None
+        except DeploymentError as exc:
+            return OUTCOME_FAILURE, exc.message, None
+        except HTTPException as exc:
+            return self._outcome_from_http_exception(exc), str(exc.detail), None
+        except Exception as exc:  # noqa: BLE001
+            return OUTCOME_FAILURE, str(exc), None
+        else:
+            return OUTCOME_SUCCESS, "snapshots_by_ids_listed", result
 
     async def _run_list_configs(self, deployment_id: str) -> tuple[str, str, Any | None]:
         try:
@@ -573,6 +670,26 @@ class WatsonxAdapterDirectE2E:
         else:
             return OUTCOME_SUCCESS, "execution_fetched", result
 
+    async def _poll_execution_terminal(self, execution_id: str) -> tuple[str, str, Any | None]:
+        """Poll get_execution until a terminal status is reached or max attempts exceeded."""
+        result = None
+        for attempt in range(EXECUTION_POLL_MAX_ATTEMPTS):
+            status_code, detail, result = await self._run_get_execution(execution_id)
+            pr = getattr(result, "provider_result", None) or {}
+            current_status = pr.get("status") if isinstance(pr, dict) else None
+            print(
+                f"  [poll {attempt + 1}/{EXECUTION_POLL_MAX_ATTEMPTS}] "
+                f"outcome={status_code} status={current_status} "
+                f"provider_result={pr}"
+            )
+            if status_code != OUTCOME_SUCCESS:
+                return status_code, f"poll attempt {attempt + 1}: {detail}", result
+            if current_status in EXECUTION_TERMINAL_STATUSES:
+                return status_code, f"terminal after {attempt + 1} polls: {current_status}", result
+            await asyncio.sleep(EXECUTION_POLL_INTERVAL_SECS)
+        msg = f"execution did not reach terminal status after {EXECUTION_POLL_MAX_ATTEMPTS} polls"
+        return OUTCOME_FAILURE, msg, result
+
     async def _run_delete(self, deployment_id: str) -> tuple[str, str, Any | None]:
         try:
             result = await self.service.delete(user_id=self.user_id, deployment_id=deployment_id, db=self.db)
@@ -627,8 +744,8 @@ class WatsonxAdapterDirectE2E:
         print("\n[life/1] live_lifecycle_create_seed")
         status_code, detail, created = await self._run_create(
             self._build_create_payload(
-                snapshots=[self._build_flow_payload(label="snap_live_lifecycle_seed")],
-                config=self._build_config_payload(label="cfg_live_lifecycle_seed"),
+                tool_payloads=[self._build_flow_payload(label="snap_live_lifecycle_seed")],
+                raw_connection=self._build_config_payload(label="cfg_live_lifecycle_seed"),
             )
         )
         create_ok = status_code == OUTCOME_SUCCESS and created is not None
@@ -644,11 +761,10 @@ class WatsonxAdapterDirectE2E:
         if not create_ok or created is None:
             return results
 
-        deployment_id = str(created["deployment_id"])
+        deployment_id = created.deployment_id
         self.created_deployment_ids.add(deployment_id)
-        self.created_snapshot_ids.update(created["snapshot_ids"])
-        if created["config_id"]:
-            self.created_config_ids.add(str(created["config_id"]))
+        self.created_snapshot_ids.update(self._extract_create_snapshot_ids(created.provider_result))
+        self.created_config_ids.update(self._extract_create_app_ids(created.provider_result))
 
         print("[life/2] live_list_contains_seed")
         status_code, detail, list_result = await self._run_list(
@@ -731,16 +847,24 @@ class WatsonxAdapterDirectE2E:
         print("[life/7] live_create_execution_success")
         status_code, detail, execution_create_result = await self._run_create_execution(
             deployment_id,
-            provider_data={"message": {"role": "user", "content": "ping from direct adapter e2e"}},
+            provider_data={"message": {"role": "user", "content": "hi"}},
         )
         has_execution_id = bool(execution_create_result and getattr(execution_create_result, "execution_id", None))
+        create_pr = getattr(execution_create_result, "provider_result", None) or {}
+        create_pr_ok = (
+            has_execution_id
+            and isinstance(create_pr, dict)
+            and "execution_id" in create_pr
+            and "run_id" not in create_pr
+            and create_pr.get("status") is not None
+        )
         results.append(
             self._build_result(
                 name="live_create_execution_success",
                 expected={OUTCOME_SUCCESS},
                 actual_outcome=status_code,
                 detail=detail,
-                ok=status_code == OUTCOME_SUCCESS and has_execution_id,
+                ok=status_code == OUTCOME_SUCCESS and create_pr_ok,
             )
         )
 
@@ -751,19 +875,80 @@ class WatsonxAdapterDirectE2E:
         )
         execution_id = str(execution_id_value) if execution_id_value else None
 
+        print("[life/7b] live_create_execution_input_string")
+        status_code, detail, exec_str_result = await self._run_create_execution(
+            deployment_id,
+            provider_data={"input": "hi again"},
+        )
+        str_ok = bool(
+            status_code == OUTCOME_SUCCESS and exec_str_result and getattr(exec_str_result, "execution_id", None)
+        )
+        results.append(
+            self._build_result(
+                name="live_create_execution_input_string",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=detail,
+                ok=str_ok,
+            )
+        )
+
+        print("[life/7c] live_create_execution_input_dict_content")
+        status_code, detail, exec_dict_result = await self._run_create_execution(
+            deployment_id,
+            provider_data={"input": {"content": "haha"}},
+        )
+        dict_ok = bool(
+            status_code == OUTCOME_SUCCESS and exec_dict_result and getattr(exec_dict_result, "execution_id", None)
+        )
+        results.append(
+            self._build_result(
+                name="live_create_execution_input_dict_content",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=detail,
+                ok=dict_ok,
+            )
+        )
+
         if execution_id:
-            print("[life/8] live_get_execution_success")
-            status_code, detail, execution_status_result = await self._run_get_execution(execution_id)
-            execution_ok = bool(
-                execution_status_result and str(getattr(execution_status_result, "execution_id", "")) == execution_id
+            print("[life/8] live_get_execution_poll_terminal")
+            terminal_result = await self._poll_execution_terminal(execution_id)
+            poll_status_code = terminal_result[0]
+            poll_detail = terminal_result[1]
+            poll_result = terminal_result[2]
+            poll_pr = getattr(poll_result, "provider_result", None) or {}
+            got_terminal = isinstance(poll_pr, dict) and poll_pr.get("status") in EXECUTION_TERMINAL_STATUSES
+            pr_has_execution_id = isinstance(poll_pr, dict) and "execution_id" in poll_pr
+            pr_no_run_id = isinstance(poll_pr, dict) and "run_id" not in poll_pr
+            results.append(
+                self._build_result(
+                    name="live_get_execution_poll_terminal",
+                    expected={OUTCOME_SUCCESS},
+                    actual_outcome=poll_status_code,
+                    detail=poll_detail,
+                    ok=poll_status_code == OUTCOME_SUCCESS and got_terminal and pr_has_execution_id and pr_no_run_id,
+                )
+            )
+
+            print("[life/8b] live_get_execution_terminal_fields")
+            terminal_fields_ok = (
+                got_terminal
+                and isinstance(poll_pr, dict)
+                and poll_pr.get("agent_id") is not None
+                and (
+                    poll_pr.get("completed_at") is not None
+                    or poll_pr.get("failed_at") is not None
+                    or poll_pr.get("cancelled_at") is not None
+                )
             )
             results.append(
                 self._build_result(
-                    name="live_get_execution_success",
+                    name="live_get_execution_terminal_fields",
                     expected={OUTCOME_SUCCESS},
-                    actual_outcome=status_code,
-                    detail=detail,
-                    ok=status_code == OUTCOME_SUCCESS and execution_ok,
+                    actual_outcome=poll_status_code,
+                    detail=f"status={poll_pr.get('status')} has_timestamps={terminal_fields_ok}",
+                    ok=poll_status_code == OUTCOME_SUCCESS and terminal_fields_ok,
                 )
             )
 
@@ -808,13 +993,83 @@ class WatsonxAdapterDirectE2E:
 
         return results
 
+    async def _run_live_list_snapshots_by_ids_scenarios(self) -> list[ScenarioResult]:
+        results: list[ScenarioResult] = []
+        print("\n[snap-ids/1] creating seed for list_snapshots by-ids mode")
+        _deployment_id, _config_id, seed_snapshot_ids, _ = await self._create_update_seed(
+            label="snap_ids_seed",
+            snapshot_count=2,
+        )
+        known_ids = sorted(seed_snapshot_ids)
+        if len(known_ids) < MIN_MIXED_SNAPSHOT_IDS:
+            results.append(
+                self._build_result(
+                    name="live_list_snapshots_by_ids_seed_insufficient",
+                    expected={OUTCOME_SUCCESS},
+                    actual_outcome=OUTCOME_FAILURE,
+                    detail=f"need >= {MIN_MIXED_SNAPSHOT_IDS} snapshot ids, got {len(known_ids)}",
+                    ok=False,
+                )
+            )
+            return results
+
+        print("[snap-ids/2] live_list_snapshots_by_ids_returns_known")
+        status_code, detail, snap_result = await self._run_list_snapshots_by_ids(known_ids)
+        returned_ids = self._extract_snapshot_ids(snap_result)
+        ids_match = set(known_ids) == returned_ids
+        results.append(
+            self._build_result(
+                name="live_list_snapshots_by_ids_returns_known",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=f"{detail} | returned={sorted(returned_ids)} expected={known_ids}",
+                ok=status_code == OUTCOME_SUCCESS and ids_match,
+            )
+        )
+
+        print("[snap-ids/3] live_list_snapshots_by_ids_filters_unknown")
+        bogus_id = str(uuid4())
+        mixed_ids = [known_ids[0], bogus_id]
+        status_code, detail, snap_result = await self._run_list_snapshots_by_ids(mixed_ids)
+        returned_ids = self._extract_snapshot_ids(snap_result)
+        has_known = known_ids[0] in returned_ids
+        no_bogus = bogus_id not in returned_ids
+        results.append(
+            self._build_result(
+                name="live_list_snapshots_by_ids_filters_unknown",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=f"{detail} | returned={sorted(returned_ids)} has_known={has_known} no_bogus={no_bogus}",
+                ok=status_code == OUTCOME_SUCCESS and has_known and no_bogus,
+            )
+        )
+
+        # Empty snapshot_ids → SnapshotListParams.has_snapshot_ids is False →
+        # the service falls through to the deployment-scoped path which requires
+        # deployment_id.  Since we don't provide one here, a DeploymentError is
+        # raised, making OUTCOME_FAILURE the correct expectation.
+        print("[snap-ids/4] live_list_snapshots_by_ids_empty_input")
+        status_code, detail, snap_result = await self._run_list_snapshots_by_ids([])
+        returned_ids = self._extract_snapshot_ids(snap_result)
+        results.append(
+            self._build_result(
+                name="live_list_snapshots_by_ids_empty_input",
+                expected={OUTCOME_FAILURE},
+                actual_outcome=status_code,
+                detail=f"{detail} | returned_count={len(returned_ids)}",
+                ok=status_code == OUTCOME_FAILURE,
+            )
+        )
+
+        return results
+
     async def _run_live_negative_scenarios(self) -> list[ScenarioResult]:
         results: list[ScenarioResult] = []
         print("\n[neg/1] live_negative_create_seed")
         status_code, detail, created = await self._run_create(
             self._build_create_payload(
-                snapshots=[self._build_flow_payload(label="snap_live_negative_seed")],
-                config=self._build_config_payload(label="cfg_live_negative_seed"),
+                tool_payloads=[self._build_flow_payload(label="snap_live_negative_seed")],
+                raw_connection=self._build_config_payload(label="cfg_live_negative_seed"),
             )
         )
         create_ok = status_code == OUTCOME_SUCCESS and created is not None
@@ -830,11 +1085,10 @@ class WatsonxAdapterDirectE2E:
         if not create_ok or created is None:
             return results
 
-        deployment_id = str(created["deployment_id"])
+        deployment_id = created.deployment_id
         self.created_deployment_ids.add(deployment_id)
-        self.created_snapshot_ids.update(created["snapshot_ids"])
-        if created["config_id"]:
-            self.created_config_ids.add(str(created["config_id"]))
+        self.created_snapshot_ids.update(self._extract_create_snapshot_ids(created.provider_result))
+        self.created_config_ids.update(self._extract_create_app_ids(created.provider_result))
 
         print("[neg/2] live_create_execution_rejects_empty_input")
         status_code, detail, _ = await self._run_create_execution(
@@ -848,6 +1102,21 @@ class WatsonxAdapterDirectE2E:
                 actual_outcome=status_code,
                 detail=detail,
                 ok=status_code == OUTCOME_INVALID_CONTENT,
+            )
+        )
+
+        print("[neg/2b] live_create_execution_missing_deployment")
+        status_code, detail, _ = await self._run_create_execution(
+            str(uuid4()),
+            provider_data={"input": "uh oh"},
+        )
+        results.append(
+            self._build_result(
+                name="live_create_execution_missing_deployment",
+                expected={OUTCOME_NOT_FOUND},
+                actual_outcome=status_code,
+                detail=detail,
+                ok=status_code == OUTCOME_NOT_FOUND,
             )
         )
 
@@ -884,6 +1153,77 @@ class WatsonxAdapterDirectE2E:
         snapshots = getattr(snapshot_result, "snapshots", []) if snapshot_result else []
         return {str(snapshot.id) for snapshot in snapshots if snapshot and snapshot.id}
 
+    def _parse_create_provider_result_payload(self, provider_result: Any) -> WatsonxDeploymentCreateResultData:
+        create_result_slot = self.service.payload_schemas.deployment_create_result
+        if create_result_slot is None:
+            return WatsonxDeploymentCreateResultData()
+        try:
+            parsed_result = create_result_slot.parse(provider_result)
+        except Exception:  # noqa: BLE001
+            return WatsonxDeploymentCreateResultData()
+        if isinstance(parsed_result, WatsonxDeploymentCreateResultData):
+            return parsed_result
+        return WatsonxDeploymentCreateResultData.model_validate(parsed_result)
+
+    def _extract_create_app_ids(self, create_provider_result: WatsonxDeploymentCreateResultData) -> list[str]:
+        app_ids = [str(app_id).strip() for app_id in create_provider_result.app_ids if str(app_id).strip()]
+        return list(dict.fromkeys(app_ids))
+
+    def _extract_create_snapshot_ids(self, create_provider_result: WatsonxDeploymentCreateResultData) -> set[str]:
+        bindings = create_provider_result.tools_with_refs
+        snapshot_ids: set[str] = set()
+        for binding in bindings:
+            tool_id = str(binding.tool_id or "").strip()
+            if tool_id:
+                snapshot_ids.add(tool_id)
+        return snapshot_ids
+
+    def _extract_create_tool_ref_map(
+        self,
+        create_provider_result: WatsonxDeploymentCreateResultData,
+    ) -> dict[str, str]:
+        """Return tool_id → source_ref mapping from create result and cache it."""
+        ref_map: dict[str, str] = {}
+        for binding in create_provider_result.tools_with_refs:
+            tool_id = str(binding.tool_id or "").strip()
+            source_ref = str(binding.source_ref or "").strip()
+            if tool_id and source_ref:
+                ref_map[tool_id] = source_ref
+        self.tool_source_refs.update(ref_map)
+        return ref_map
+
+    def _make_tool_ref(self, tool_id: str) -> dict[str, str]:
+        """Build a WatsonxToolRefBinding dict using the cached source_ref mapping."""
+        source_ref = self.tool_source_refs.get(tool_id)
+        if source_ref is None:
+            msg = f"tool_id={tool_id!r} has no cached source_ref; was it created via _create_update_seed?"
+            raise ValueError(msg)
+        return {"source_ref": source_ref, "tool_id": tool_id}
+
+    def _make_tool_id_with_ref(self, tool_id: str) -> dict[str, Any]:
+        """Build a bind-operation tool selector dict using the cached source_ref mapping."""
+        return {"tool_id_with_ref": self._make_tool_ref(tool_id)}
+
+    def _extract_update_snapshot_ids(self, update_result: Any) -> set[str]:
+        if update_result is None:
+            return set()
+        provider_result = getattr(update_result, "provider_result", None)
+        if isinstance(provider_result, dict):
+            snapshot_ids = provider_result.get("created_snapshot_ids", [])
+        else:
+            snapshot_ids = getattr(provider_result, "created_snapshot_ids", []) if provider_result else []
+        return {str(snapshot_id) for snapshot_id in snapshot_ids if str(snapshot_id).strip()}
+
+    def _extract_update_created_app_ids(self, update_result: Any) -> set[str]:
+        if update_result is None:
+            return set()
+        provider_result = getattr(update_result, "provider_result", None)
+        if isinstance(provider_result, dict):
+            app_ids = provider_result.get("created_app_ids", [])
+        else:
+            app_ids = getattr(provider_result, "created_app_ids", []) if provider_result else []
+        return {str(app_id).strip() for app_id in app_ids if str(app_id).strip()}
+
     async def _create_update_seed(
         self,
         *,
@@ -893,19 +1233,22 @@ class WatsonxAdapterDirectE2E:
         snapshots = [self._build_flow_payload(label=f"{label}_snap_{idx}") for idx in range(snapshot_count)]
         status_code, detail, created = await self._run_create(
             self._build_create_payload(
-                snapshots=snapshots,
-                config=self._build_config_payload(label=f"{label}_cfg"),
+                tool_payloads=snapshots,
+                raw_connection=self._build_config_payload(label=f"{label}_cfg"),
             )
         )
         if status_code != OUTCOME_SUCCESS or not created:
             msg = f"Failed to create seed deployment '{label}': status={status_code}, detail={detail}"
             raise RuntimeError(msg)
-        deployment_id = str(created["deployment_id"])
+        deployment_id = created.deployment_id
         self.created_deployment_ids.add(deployment_id)
-        self.created_snapshot_ids.update(created["snapshot_ids"])
-        if created["config_id"]:
-            self.created_config_ids.add(str(created["config_id"]))
-        return deployment_id, created["config_id"], set(created["snapshot_ids"]), detail
+        created_app_ids = self._extract_create_app_ids(created.provider_result)
+        created_snapshot_ids = self._extract_create_snapshot_ids(created.provider_result)
+        self._extract_create_tool_ref_map(created.provider_result)
+        self.created_snapshot_ids.update(created_snapshot_ids)
+        self.created_config_ids.update(created_app_ids)
+        config_id = created_app_ids[0] if created_app_ids else None
+        return deployment_id, config_id, set(created_snapshot_ids), detail
 
     async def _run_live_update_matrix_scenarios(self) -> list[ScenarioResult]:
         results: list[ScenarioResult] = []
@@ -976,8 +1319,8 @@ class WatsonxAdapterDirectE2E:
             primary_deployment_id,
             DeploymentUpdate(
                 provider_data={
-                    "tools": {"existing_ids": [removable_snapshot_id]},
-                    "operations": [{"op": "remove_tool", "tool_id": removable_snapshot_id}],
+                    "tools": {},
+                    "operations": [{"op": "remove_tool", "tool": self._make_tool_ref(removable_snapshot_id)}],
                 }
             ),
         )
@@ -1006,12 +1349,12 @@ class WatsonxAdapterDirectE2E:
             primary_deployment_id,
             DeploymentUpdate(
                 provider_data={
-                    "tools": {"existing_ids": retained_snapshot_ids_sorted},
+                    "tools": {},
                     "connections": {"existing_app_ids": [str(donor_config_id)]},
                     "operations": [
                         {
                             "op": "bind",
-                            "tool": {"reference_id": tool_id},
+                            "tool": self._make_tool_id_with_ref(tool_id),
                             "app_ids": [str(donor_config_id)],
                         }
                         for tool_id in retained_snapshot_ids_sorted
@@ -1021,9 +1364,7 @@ class WatsonxAdapterDirectE2E:
         )
         list_status, _list_detail, list_after_config_only = await self._run_list_snapshots(primary_deployment_id)
         attached_after_config_only = self._extract_snapshot_ids(list_after_config_only)
-        config_only_snapshot_ids = (
-            {str(item) for item in getattr(config_only_result, "snapshot_ids", [])} if config_only_result else set()
-        )
+        config_only_snapshot_ids = self._extract_update_snapshot_ids(config_only_result)
         config_only_snapshot_ids_ok = retained_snapshot_ids.issubset(config_only_snapshot_ids)
         results.append(
             self._build_result(
@@ -1045,12 +1386,12 @@ class WatsonxAdapterDirectE2E:
             primary_deployment_id,
             DeploymentUpdate(
                 provider_data={
-                    "tools": {"existing_ids": [donor_snapshot_id]},
+                    "tools": {},
                     "connections": {"existing_app_ids": [str(donor_config_id)]},
                     "operations": [
                         {
                             "op": "bind",
-                            "tool": {"reference_id": donor_snapshot_id},
+                            "tool": self._make_tool_id_with_ref(donor_snapshot_id),
                             "app_ids": [str(donor_config_id)],
                         }
                     ],
@@ -1059,9 +1400,7 @@ class WatsonxAdapterDirectE2E:
         )
         list_status, _list_detail, list_after_add_id = await self._run_list_snapshots(primary_deployment_id)
         attached_after_add_id = self._extract_snapshot_ids(list_after_add_id)
-        add_id_snapshot_ids = (
-            {str(item) for item in getattr(add_id_result, "snapshot_ids", [])} if add_id_result else set()
-        )
+        add_id_snapshot_ids = self._extract_update_snapshot_ids(add_id_result)
         results.append(
             self._build_result(
                 name="upd_snapshot_add_ids_with_config_id",
@@ -1096,9 +1435,7 @@ class WatsonxAdapterDirectE2E:
                 }
             ),
         )
-        add_raw_snapshot_ids = (
-            {str(item) for item in getattr(add_raw_result, "snapshot_ids", [])} if add_raw_result else set()
-        )
+        add_raw_snapshot_ids = self._extract_update_snapshot_ids(add_raw_result)
         self.created_snapshot_ids.update(add_raw_snapshot_ids)
         list_status, _list_detail, list_after_add_raw = await self._run_list_snapshots(primary_deployment_id)
         attached_after_add_raw = self._extract_snapshot_ids(list_after_add_raw)
@@ -1127,17 +1464,16 @@ class WatsonxAdapterDirectE2E:
                 provider_data={
                     "resource_name_prefix": f"e2e_upd_mix_{uuid4().hex[:6]}_",
                     "tools": {
-                        "existing_ids": [mixed_donor_snapshot_id, mixed_remove_id],
                         "raw_payloads": [mixed_raw_payload.model_dump(mode="json")],
                     },
                     "connections": {"existing_app_ids": [str(donor_config_id)]},
                     "operations": [
                         {
                             "op": "bind",
-                            "tool": {"reference_id": mixed_donor_snapshot_id},
+                            "tool": self._make_tool_id_with_ref(mixed_donor_snapshot_id),
                             "app_ids": [str(donor_config_id)],
                         },
-                        {"op": "remove_tool", "tool_id": mixed_remove_id},
+                        {"op": "remove_tool", "tool": self._make_tool_ref(mixed_remove_id)},
                         {
                             "op": "bind",
                             "tool": {"name_of_raw": mixed_raw_payload.name},
@@ -1147,9 +1483,7 @@ class WatsonxAdapterDirectE2E:
                 }
             ),
         )
-        mixed_snapshot_ids = (
-            {str(item) for item in getattr(mixed_result, "snapshot_ids", [])} if mixed_result else set()
-        )
+        mixed_snapshot_ids = self._extract_update_snapshot_ids(mixed_result)
         self.created_snapshot_ids.update(mixed_snapshot_ids)
         list_status, _list_detail, list_after_mixed = await self._run_list_snapshots(primary_deployment_id)
         attached_after_mixed = self._extract_snapshot_ids(list_after_mixed)
@@ -1175,11 +1509,11 @@ class WatsonxAdapterDirectE2E:
             primary_deployment_id,
             DeploymentUpdate(
                 provider_data={
-                    "tools": {"existing_ids": [donor_snapshot_id]},
+                    "tools": {},
                     "operations": [
                         {
                             "op": "bind",
-                            "tool": {"reference_id": donor_snapshot_id},
+                            "tool": self._make_tool_id_with_ref(donor_snapshot_id),
                             "app_ids": ["undeclared_app_for_bind"],
                         }
                     ],
@@ -1228,11 +1562,11 @@ class WatsonxAdapterDirectE2E:
             primary_deployment_id,
             DeploymentUpdate(
                 provider_data={
-                    "tools": {"existing_ids": [donor_snapshot_id]},
+                    "tools": {},
                     "operations": [
                         {
                             "op": "unbind",
-                            "tool_id": donor_snapshot_id,
+                            "tool": self._make_tool_ref(donor_snapshot_id),
                             "app_ids": ["undeclared_app_for_unbind"],
                         }
                     ],
@@ -1258,7 +1592,7 @@ class WatsonxAdapterDirectE2E:
                     "operations": [
                         {
                             "op": "unbind",
-                            "tool_id": str(uuid4()),
+                            "tool": {"source_ref": str(uuid4()), "tool_id": str(uuid4())},
                             "app_ids": [str(donor_config_id)],
                         }
                     ],
@@ -1280,12 +1614,12 @@ class WatsonxAdapterDirectE2E:
             primary_deployment_id,
             DeploymentUpdate(
                 provider_data={
-                    "tools": {"existing_ids": [donor_snapshot_id]},
+                    "tools": {},
                     "connections": {"existing_app_ids": [str(donor_config_id)]},
                     "operations": [
                         {
                             "op": "bind",
-                            "tool": {"reference_id": str(uuid4())},
+                            "tool": {"tool_id_with_ref": {"source_ref": str(uuid4()), "tool_id": str(uuid4())}},
                             "app_ids": [str(donor_config_id)],
                         }
                     ],
@@ -1325,28 +1659,34 @@ class WatsonxAdapterDirectE2E:
         conflict_payload = DeploymentUpdate(
             provider_data={
                 "resource_name_prefix": conflict_prefix,
-                "tools": {"existing_ids": [conflict_tool_id]},
+                "tools": {},
                 "connections": {"raw_payloads": [{"app_id": conflict_name, "environment_variables": {}}]},
                 "operations": [
                     {
                         "op": "bind",
-                        "tool": {"reference_id": conflict_tool_id},
+                        "tool": self._make_tool_id_with_ref(conflict_tool_id),
                         "app_ids": [conflict_name],
                     }
                 ],
             }
         )
-        setup_status, _setup_detail, _ = await self._run_update(conflict_seed_deployment_id, conflict_payload)
-        if setup_status == OUTCOME_SUCCESS:
-            self.created_config_ids.add(f"{conflict_prefix}{conflict_name}")
+        setup_status, _setup_detail, setup_result = await self._run_update(
+            conflict_seed_deployment_id, conflict_payload
+        )
+        setup_created_app_ids = self._extract_update_created_app_ids(setup_result)
         status_code, detail, _ = await self._run_update(conflict_seed_deployment_id, conflict_payload)
         results.append(
             self._build_result(
                 name="upd_config_raw_payload_conflict",
                 expected={OUTCOME_CONFLICT},
                 actual_outcome=status_code,
-                detail=(f"setup={setup_status}:{_setup_detail} conflict={status_code}:{detail}"),
-                ok=setup_status == OUTCOME_SUCCESS and status_code == OUTCOME_CONFLICT,
+                detail=(
+                    f"setup={setup_status}:{_setup_detail} setup_created_app_ids={sorted(setup_created_app_ids)} "
+                    f"conflict={status_code}:{detail}"
+                ),
+                ok=(
+                    setup_status == OUTCOME_SUCCESS and bool(setup_created_app_ids) and status_code == OUTCOME_CONFLICT
+                ),
             )
         )
 
@@ -1365,10 +1705,78 @@ class WatsonxAdapterDirectE2E:
             )
         )
 
+        print("[upd/14] upd_put_tools_replaces_tool_list")
+        put_tools_id, _put_tools_cfg, put_tools_snaps, _ = await self._create_update_seed(
+            label="upd_put_tools", snapshot_count=2
+        )
+        put_tools_sorted = sorted(put_tools_snaps)
+        keep_only = [put_tools_sorted[0]]
+        status_code, detail, _ = await self._run_update(
+            put_tools_id,
+            DeploymentUpdate(provider_data={"put_tools": keep_only}),
+        )
+        list_status, _list_detail, snap_after = await self._run_list_snapshots(put_tools_id)
+        attached_after = self._extract_snapshot_ids(snap_after)
+        results.append(
+            self._build_result(
+                name="upd_put_tools_replaces_tool_list",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=f"{detail} | attached_after={sorted(attached_after)} keep_only={keep_only}",
+                ok=(
+                    status_code == OUTCOME_SUCCESS
+                    and list_status == OUTCOME_SUCCESS
+                    and attached_after == set(keep_only)
+                ),
+            )
+        )
+
+        print("[upd/15] upd_put_tools_empty_clears_all_tools")
+        status_code, detail, _ = await self._run_update(
+            put_tools_id,
+            DeploymentUpdate(provider_data={"put_tools": []}),
+        )
+        list_status, _list_detail, snap_after_clear = await self._run_list_snapshots(put_tools_id)
+        attached_after_clear = self._extract_snapshot_ids(snap_after_clear)
+        results.append(
+            self._build_result(
+                name="upd_put_tools_empty_clears_all_tools",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=f"{detail} | attached_after={sorted(attached_after_clear)}",
+                ok=(
+                    status_code == OUTCOME_SUCCESS and list_status == OUTCOME_SUCCESS and len(attached_after_clear) == 0
+                ),
+            )
+        )
+
+        print("[upd/16] upd_put_tools_deduplicates")
+        dup_id = put_tools_sorted[0]
+        status_code, detail, _ = await self._run_update(
+            put_tools_id,
+            DeploymentUpdate(provider_data={"put_tools": [dup_id, dup_id, dup_id]}),
+        )
+        list_status, _list_detail, snap_after_dedup = await self._run_list_snapshots(put_tools_id)
+        attached_after_dedup = self._extract_snapshot_ids(snap_after_dedup)
+        results.append(
+            self._build_result(
+                name="upd_put_tools_deduplicates",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=status_code,
+                detail=f"{detail} | attached_after={sorted(attached_after_dedup)}",
+                ok=(
+                    status_code == OUTCOME_SUCCESS
+                    and list_status == OUTCOME_SUCCESS
+                    and attached_after_dedup == {dup_id}
+                ),
+            )
+        )
+
         # keep seed deployments tracked for shared final cleanup
         self.created_deployment_ids.add(primary_deployment_id)
         self.created_deployment_ids.add(donor_deployment_id)
         self.created_deployment_ids.add(mixed_donor_deployment_id)
+        self.created_deployment_ids.add(put_tools_id)
         return results
 
     async def _run_live_concurrency_scenarios(self) -> list[ScenarioResult]:
@@ -1394,8 +1802,8 @@ class WatsonxAdapterDirectE2E:
         shared_cfg_name = self._mk_name("cfg_cc_shared")
         shared_snap_name = self._mk_name("snap_cc_shared")
         shared_payload = self._build_create_payload(
-            snapshots=[self._build_flow_payload(label="cc_shared_snap", name_override=shared_snap_name)],
-            config=DeploymentConfig(
+            tool_payloads=[self._build_flow_payload(label="cc_shared_snap", name_override=shared_snap_name)],
+            raw_connection=DeploymentConfig(
                 name=shared_cfg_name,
                 description="concurrency create collision",
                 environment_variables={},
@@ -1450,12 +1858,12 @@ class WatsonxAdapterDirectE2E:
                     primary_id,
                     DeploymentUpdate(
                         provider_data={
-                            "tools": {"existing_ids": [donor_snapshot_id]},
+                            "tools": {},
                             "connections": {"existing_app_ids": [str(donor_cfg_id)]},
                             "operations": [
                                 {
                                     "op": "bind",
-                                    "tool": {"reference_id": donor_snapshot_id},
+                                    "tool": self._make_tool_id_with_ref(donor_snapshot_id),
                                     "app_ids": [str(donor_cfg_id)],
                                 }
                             ],
@@ -1538,7 +1946,7 @@ class WatsonxAdapterDirectE2E:
             {
                 "execution": lambda: self._run_create_execution(
                     exec_delete_id,
-                    provider_data={"message": {"role": "user", "content": "cc execution while delete"}},
+                    provider_data={"message": {"role": "user", "content": "woah"}},
                 ),
                 "delete": lambda: self._run_delete(exec_delete_id),
             }
@@ -1578,12 +1986,12 @@ class WatsonxAdapterDirectE2E:
                 delete_bind_id,
                 DeploymentUpdate(
                     provider_data={
-                        "tools": {"existing_ids": sorted(bind_snapshot_ids)},
+                        "tools": {},
                         "connections": {"existing_app_ids": [str(bind_cfg_id)]},
                         "operations": [
                             {
                                 "op": "unbind",
-                                "tool_id": tool_id,
+                                "tool": self._make_tool_ref(tool_id),
                                 "app_ids": [str(bind_cfg_id)],
                             }
                             for tool_id in sorted(bind_snapshot_ids)
@@ -1638,12 +2046,12 @@ class WatsonxAdapterDirectE2E:
                 DeploymentUpdate(
                     provider_data={
                         "resource_name_prefix": cfg_prefix,
-                        "tools": {"existing_ids": [target_tool_id]},
+                        "tools": {},
                         "connections": {"raw_payloads": [{"app_id": raw_cfg_name, "environment_variables": {}}]},
                         "operations": [
                             {
                                 "op": "bind",
-                                "tool": {"reference_id": target_tool_id},
+                                "tool": self._make_tool_id_with_ref(target_tool_id),
                                 "app_ids": [raw_cfg_name],
                             }
                         ],
@@ -1674,8 +2082,8 @@ class WatsonxAdapterDirectE2E:
         create_race_cfg = self._mk_name("cc_stage_cfg")
         create_race_snap = self._mk_name("cc_stage_snap")
         race_payload = self._build_create_payload(
-            snapshots=[self._build_flow_payload(label="cc_stage_snap", name_override=create_race_snap)],
-            config=DeploymentConfig(
+            tool_payloads=[self._build_flow_payload(label="cc_stage_snap", name_override=create_race_snap)],
+            raw_connection=DeploymentConfig(
                 name=create_race_cfg,
                 description="cc competing create",
                 environment_variables={},
@@ -1683,7 +2091,7 @@ class WatsonxAdapterDirectE2E:
             resource_name_prefix=create_race_prefix,
         )
         race_payload.spec = race_payload.spec.model_copy(update={"name": create_race_dep}, deep=True)
-        competing_create_task: asyncio.Task[tuple[str, str, dict[str, Any] | None]] | None = None
+        competing_create_task: asyncio.Task[tuple[str, str, WxoCreatedDeploymentResult | None]] | None = None
 
         async def _launch_competing_create(*args: Any, **kwargs: Any) -> None:  # noqa: ARG001
             nonlocal competing_create_task
@@ -1745,12 +2153,12 @@ class WatsonxAdapterDirectE2E:
         competing_update_payload = DeploymentUpdate(
             provider_data={
                 "resource_name_prefix": update_cfg_prefix,
-                "tools": {"existing_ids": [update_target_tool_id]},
+                "tools": {},
                 "connections": {"raw_payloads": [{"app_id": update_cfg_name, "environment_variables": {}}]},
                 "operations": [
                     {
                         "op": "bind",
-                        "tool": {"reference_id": update_target_tool_id},
+                        "tool": self._make_tool_id_with_ref(update_target_tool_id),
                         "app_ids": [update_cfg_name],
                     }
                 ],
@@ -1827,7 +2235,6 @@ class WatsonxAdapterDirectE2E:
                     provider_data={
                         "resource_name_prefix": rollback_prefix,
                         "tools": {
-                            "existing_ids": [rollback_seed_tool_id],
                             "raw_payloads": [rollback_raw_flow.model_dump(mode="json")],
                         },
                         "connections": {
@@ -1837,7 +2244,7 @@ class WatsonxAdapterDirectE2E:
                         "operations": [
                             {
                                 "op": "unbind",
-                                "tool_id": rollback_seed_tool_id,
+                                "tool": self._make_tool_ref(rollback_seed_tool_id),
                                 "app_ids": [str(rollback_cfg_id)],
                             },
                             {
@@ -1910,14 +2317,14 @@ class WatsonxAdapterDirectE2E:
                     DeploymentUpdate(
                         provider_data={
                             "resource_name_prefix": rollback_create_prefix,
-                            "tools": {"existing_ids": [rollback_create_seed_tool_id]},
+                            "tools": {},
                             "connections": {
                                 "raw_payloads": [{"app_id": rollback_create_cfg_name, "environment_variables": {}}]
                             },
                             "operations": [
                                 {
                                     "op": "bind",
-                                    "tool": {"reference_id": rollback_create_seed_tool_id},
+                                    "tool": self._make_tool_id_with_ref(rollback_create_seed_tool_id),
                                     "app_ids": [rollback_create_cfg_name],
                                 }
                             ],
@@ -1937,7 +2344,6 @@ class WatsonxAdapterDirectE2E:
                     provider_data={
                         "resource_name_prefix": rollback_create_prefix,
                         "tools": {
-                            "existing_ids": [rollback_create_seed_tool_id],
                             "raw_payloads": [rollback_create_raw_flow.model_dump(mode="json")],
                         },
                         "connections": {
@@ -1947,7 +2353,7 @@ class WatsonxAdapterDirectE2E:
                         "operations": [
                             {
                                 "op": "unbind",
-                                "tool_id": rollback_create_seed_tool_id,
+                                "tool": self._make_tool_ref(rollback_create_seed_tool_id),
                                 "app_ids": [str(rollback_create_cfg_id)],
                             },
                             {
@@ -2007,6 +2413,13 @@ class WatsonxAdapterDirectE2E:
         cfg_list_b_status, _cfg_b_detail, cfg_list_b = await self._run_list_configs(dep_b)
         cfg_ids_a = self._extract_config_ids(cfg_list_a)
         cfg_ids_b = self._extract_config_ids(cfg_list_b)
+        print(
+            "[cc/debug] parallel_updates_isolation "
+            f"dep_a={dep_a} cfg_a={cfg_a} update_a={iso_a_status}:{iso_a_detail} "
+            f"list_a={cfg_list_a_status}:{_cfg_a_detail} cfg_ids_a={sorted(cfg_ids_a)} "
+            f"dep_b={dep_b} cfg_b={cfg_b} update_b={iso_b_status}:{iso_b_detail} "
+            f"list_b={cfg_list_b_status}:{_cfg_b_detail} cfg_ids_b={sorted(cfg_ids_b)}"
+        )
         isolation_ok = (
             cfg_list_a_status == OUTCOME_SUCCESS and cfg_list_b_status == OUTCOME_SUCCESS and cfg_ids_a and cfg_ids_b
         )
@@ -2039,17 +2452,12 @@ class WatsonxAdapterDirectE2E:
                 results[name] = outcome
         return results
 
-    def _track_created_result(self, created: dict[str, Any] | None) -> None:
+    def _track_created_result(self, created: WxoCreatedDeploymentResult | None) -> None:
         if not created:
             return
-        deployment_id = created.get("deployment_id")
-        config_id = created.get("config_id")
-        snapshot_ids = created.get("snapshot_ids") or set()
-        if deployment_id:
-            self.created_deployment_ids.add(str(deployment_id))
-        if config_id:
-            self.created_config_ids.add(str(config_id))
-        self.created_snapshot_ids.update({str(item) for item in snapshot_ids if item})
+        self.created_deployment_ids.add(created.deployment_id)
+        self.created_config_ids.update(self._extract_create_app_ids(created.provider_result))
+        self.created_snapshot_ids.update(self._extract_create_snapshot_ids(created.provider_result))
 
     def _has_unique_snapshot_ids(self, snapshot_ids: set[str]) -> bool:
         snapshot_list = [str(item) for item in snapshot_ids]
@@ -2061,13 +2469,13 @@ class WatsonxAdapterDirectE2E:
 
     def _stage_hook_mapping(self) -> dict[str, tuple[Any, str]]:
         return {
-            "create_config": (service_module, "process_config"),
-            "create_snapshots": (service_module, "process_raw_flows_with_app_id"),
-            "create_agent": (self.service, "_create_agent_deployment"),
-            "update_create_config": (update_helpers_module, "_create_update_connection_with_conflict_mapping"),
-            "update_create_tools": (update_helpers_module, "create_and_upload_wxo_flow_tools_with_bindings"),
-            "update_bindings": (update_helpers_module, "_update_existing_tool_connection_deltas"),
-            "update_rollback_resources": (update_helpers_module, "rollback_update_resources"),
+            "create_config": (create_core_module, "create_connection_with_conflict_mapping"),
+            "create_snapshots": (create_core_module, "create_and_upload_wxo_flow_tools_with_bindings"),
+            "create_agent": (create_core_module, "create_agent_deployment"),
+            "update_create_config": (update_core_module, "create_connection_with_conflict_mapping"),
+            "update_create_tools": (update_core_module, "create_and_upload_wxo_flow_tools_with_bindings"),
+            "update_bindings": (update_core_module, "_update_existing_tool_connection_deltas"),
+            "update_rollback_resources": (update_core_module, "rollback_update_resources"),
         }
 
     async def _run_with_stage_hook(
@@ -2210,12 +2618,12 @@ class WatsonxAdapterDirectE2E:
             spec=BaseDeploymentDataUpdate(description="trigger update failpoint"),
             provider_data={
                 "resource_name_prefix": failpoint_prefix,
-                "tools": {"existing_ids": [seed_tool_id]},
+                "tools": {},
                 "connections": {"raw_payloads": [{"app_id": failpoint_raw_app_id, "environment_variables": {}}]},
                 "operations": [
                     {
                         "op": "bind",
-                        "tool": {"reference_id": seed_tool_id},
+                        "tool": self._make_tool_id_with_ref(seed_tool_id),
                         "app_ids": [failpoint_raw_app_id],
                     }
                 ],
@@ -2271,18 +2679,93 @@ class WatsonxAdapterDirectE2E:
             )
         )
 
+        print("[fp-upd/3] fp_update_failure_then_put_tools_restore")
+        restore_id, restore_cfg_id, restore_snaps, _ = await self._create_update_seed(
+            label="fp_put_tools_restore",
+            snapshot_count=2,
+        )
+        original_snap_ids = sorted(restore_snaps)
+        if not restore_cfg_id or len(original_snap_ids) < MIN_MIXED_SNAPSHOT_IDS:
+            results.append(
+                self._build_result(
+                    name="fp_update_failure_then_put_tools_restore",
+                    expected={OUTCOME_SUCCESS},
+                    actual_outcome=OUTCOME_FAILURE,
+                    detail=f"seed insufficient: cfg={restore_cfg_id} snaps={len(original_snap_ids)}",
+                    ok=False,
+                )
+            )
+            return results
+
+        restore_prefix = f"e2e_fp_restore_{uuid4().hex[:6]}_"
+        restore_raw_cfg = self._mk_name("fp_restore_cfg")
+        print("[fp-upd/3a] injecting update failure to corrupt tool list")
+        inject_status, inject_detail, _ = await self._run_update(
+            restore_id,
+            DeploymentUpdate(
+                provider_data={
+                    "resource_name_prefix": restore_prefix,
+                    "tools": {},
+                    "connections": {"raw_payloads": [{"app_id": restore_raw_cfg, "environment_variables": {}}]},
+                    "operations": [
+                        {
+                            "op": "bind",
+                            "tool": self._make_tool_id_with_ref(original_snap_ids[0]),
+                            "app_ids": [restore_raw_cfg],
+                        }
+                    ],
+                }
+            ),
+            inject={
+                "update_bindings": {
+                    "fail_first_n": 1,
+                    "error_type": "runtime",
+                    "message": "fp_put_tools_restore_trigger",
+                }
+            },
+        )
+        failure_triggered = inject_status == OUTCOME_FAILURE
+
+        print("[fp-upd/3b] restoring via put_tools")
+        restore_status, restore_detail, _ = await self._run_update(
+            restore_id,
+            DeploymentUpdate(provider_data={"put_tools": original_snap_ids}),
+        )
+        list_status, _list_detail, snap_after_restore = await self._run_list_snapshots(restore_id)
+        attached_after_restore = self._extract_snapshot_ids(snap_after_restore)
+        restored_ok = set(original_snap_ids) == attached_after_restore
+        results.append(
+            self._build_result(
+                name="fp_update_failure_then_put_tools_restore",
+                expected={OUTCOME_SUCCESS},
+                actual_outcome=restore_status,
+                detail=(
+                    f"failure_triggered={failure_triggered} inject={inject_status}:{inject_detail} "
+                    f"restore={restore_status}:{restore_detail} "
+                    f"attached_after={sorted(attached_after_restore)} expected={original_snap_ids}"
+                ),
+                ok=(
+                    failure_triggered
+                    and restore_status == OUTCOME_SUCCESS
+                    and list_status == OUTCOME_SUCCESS
+                    and restored_ok
+                ),
+            )
+        )
+
         return results
 
     def _apply_injections(self, inject: dict[str, dict[str, Any]], originals: list[tuple[Any, str, Any]]) -> None:
         mapping = {
-            "create_config": (service_module, "process_config"),
-            "create_snapshots": (service_module, "process_raw_flows_with_app_id"),
-            "create_agent": (self.service, "_create_agent_deployment"),
+            "create_config": (shared_core_module, "create_config"),
+            "create_config_wrapper": (create_core_module, "create_connection_with_conflict_mapping"),
+            "create_snapshots": (create_core_module, "create_and_upload_wxo_flow_tools_with_bindings"),
+            "create_agent": (create_core_module, "create_agent_deployment"),
             "rollback_delete_agent": (retry_module, "delete_agent_if_exists"),
             "rollback_delete_tool": (retry_module, "delete_tool_if_exists"),
             "rollback_delete_config": (retry_module, "delete_config_if_exists"),
-            "update_bindings": (update_helpers_module, "_update_existing_tool_connection_deltas"),
-            "update_rollback_resources": (update_helpers_module, "rollback_update_resources"),
+            "update_bindings": (update_core_module, "_update_existing_tool_connection_deltas"),
+            "update_rollback_resources": (update_core_module, "rollback_update_resources"),
         }
 
         for stage, config in inject.items():
@@ -2355,32 +2838,70 @@ class WatsonxAdapterDirectE2E:
     def _build_create_payload(
         self,
         *,
-        snapshots: list[BaseFlowArtifact],
-        config: DeploymentConfig | None = None,
-        config_reference_id: str | None = None,
+        tool_payloads: list[BaseFlowArtifact[WatsonxFlowArtifactProviderData]],
+        raw_connection: DeploymentConfig | None = None,
+        existing_connection_app_id: str | None = None,
         resource_name_prefix: str | None = None,
     ) -> DeploymentCreate:
         prefix = resource_name_prefix or f"e2e_{uuid4().hex[:8]}_"
-        provider_spec = {"resource_name_prefix": prefix}
         spec = BaseDeploymentData(
             name=self._mk_name("dep_agent"),
             description="direct adapter scenario",
             type=DeploymentType.AGENT,
-            provider_spec=provider_spec,
         )
-        config_item = ConfigItem(reference_id=config_reference_id) if config_reference_id else None
-        if config is not None:
-            config_item = ConfigItem(raw_payload=config)
-        return DeploymentCreate(spec=spec, snapshot=SnapshotItems(raw_payloads=snapshots), config=config_item)
+        raw_tool_payloads = [snapshot.model_copy(deep=True) for snapshot in tool_payloads]
+        connections: dict[str, Any] = {}
 
-    def _build_flow_payload(self, *, label: str, name_override: str | None = None) -> BaseFlowArtifact:
-        return BaseFlowArtifact(
-            id=UUID(str(uuid4())),
+        if raw_connection is not None:
+            operation_app_id = str(raw_connection.name).strip()
+            connections["raw_payloads"] = [
+                {
+                    "app_id": operation_app_id,
+                    "environment_variables": raw_connection.environment_variables,
+                    "provider_config": raw_connection.provider_config,
+                }
+            ]
+        elif existing_connection_app_id:
+            operation_app_id = str(existing_connection_app_id).strip()
+            connections["existing_app_ids"] = [operation_app_id]
+        else:
+            operation_app_id = self._mk_name("cfg_default_app")
+            connections["raw_payloads"] = [{"app_id": operation_app_id, "environment_variables": {}}]
+
+        operations = [
+            {
+                "op": "bind",
+                "tool": {"name_of_raw": str(flow_payload.name).strip()},
+                "app_ids": [operation_app_id],
+            }
+            for flow_payload in raw_tool_payloads
+        ]
+
+        provider_data = {
+            "resource_name_prefix": prefix,
+            "tools": {"raw_payloads": raw_tool_payloads},
+            "connections": connections,
+            "operations": operations,
+        }
+        return DeploymentCreate(spec=spec, provider_data=provider_data)
+
+    def _build_flow_payload(
+        self,
+        *,
+        label: str,
+        name_override: str | None = None,
+    ) -> BaseFlowArtifact[WatsonxFlowArtifactProviderData]:
+        flow_id = uuid4()
+        return BaseFlowArtifact[WatsonxFlowArtifactProviderData](
+            id=flow_id,
             name=name_override or self._mk_name(label),
             description="direct adapter flow payload",
             data=self._build_flow_data_payload(),
             tags=["e2e", "watsonx-direct-adapter"],
-            provider_data={"project_id": self.project_id},
+            provider_data=WatsonxFlowArtifactProviderData(
+                project_id=self.project_id,
+                source_ref=str(flow_id),
+            ),
         )
 
     def _build_config_payload(self, *, label: str) -> DeploymentConfig:
