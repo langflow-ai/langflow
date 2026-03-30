@@ -111,12 +111,12 @@ def _make_client_mock(
 
 def _make_sdk_triple(
     client_mock: MagicMock | None = None,
-) -> tuple[object, object, MagicMock]:
-    """Return (normalize_flow_fn, flow_to_json_fn, ClientClass) triple for _load_sdk mock."""
+) -> tuple[object, object, MagicMock, type[Exception]]:
+    """Return the mocked _load_sdk() payload for status_command tests."""
     if client_mock is None:
         client_mock = _make_client_mock()
     client_cls = MagicMock(return_value=client_mock)
-    return _identity_normalize, _json_flow_to_json, client_cls
+    return _identity_normalize, _json_flow_to_json, client_cls, _FakeLangflowNotFoundError
 
 
 class _CloseAwareClient:
@@ -159,9 +159,8 @@ def _run_status(
 ) -> None:
     """Invoke status_command with fully mocked SDK and config resolution.
 
-    LangflowNotFoundError is imported inside status_command() at call time via
-    ``from langflow_sdk.exceptions import LangflowNotFoundError``, so it must be
-    patched at its source location in langflow_sdk.exceptions, not on the status module.
+    The status command now expects _load_sdk() to provide the not-found exception
+    alongside the serialization helpers and client class.
     """
     from lfx.cli.status import status_command
 
@@ -171,7 +170,6 @@ def _run_status(
     with (
         patch("lfx.cli.status._load_sdk", return_value=triple),
         patch("lfx.config.resolve_environment", return_value=cfg),
-        patch("langflow_sdk.exceptions.LangflowNotFoundError", _FakeLangflowNotFoundError),
     ):
         status_command(
             dir_path=dir_path,
@@ -529,13 +527,12 @@ class TestStatusCommandSynced:
         p = _write_flow(tmp_path, "flow.json")
         remote = _fake_remote_flow(flow_dict=_FLOW_DICT)
         client = _make_client_mock(remote_flow=remote)
-        normalize_fn, to_json_fn, client_cls = _make_sdk_triple(client)
+        normalize_fn, to_json_fn, client_cls, not_found_error = _make_sdk_triple(client)
         cfg = _fake_env_config(url="http://custom.test", api_key="my-key")  # pragma: allowlist secret
 
         with (
-            patch("lfx.cli.status._load_sdk", return_value=(normalize_fn, to_json_fn, client_cls)),
+            patch("lfx.cli.status._load_sdk", return_value=(normalize_fn, to_json_fn, client_cls, not_found_error)),
             patch("lfx.config.resolve_environment", return_value=cfg),
-            patch("langflow_sdk.exceptions.LangflowNotFoundError", _FakeLangflowNotFoundError),
         ):
             from lfx.cli.status import status_command
 
@@ -880,7 +877,6 @@ class TestStatusCommandConfigError:
         with (
             patch("lfx.cli.status._load_sdk", return_value=triple),
             patch("lfx.config.resolve_environment", side_effect=ConfigError("bad config")),
-            patch("langflow_sdk.exceptions.LangflowNotFoundError", _FakeLangflowNotFoundError),
             pytest.raises(typer.Exit) as exc_info,
         ):
             status_command(
@@ -903,7 +899,6 @@ class TestStatusCommandConfigError:
 
         with (
             patch("lfx.cli.status._load_sdk", return_value=triple),
-            patch("langflow_sdk.exceptions.LangflowNotFoundError", _FakeLangflowNotFoundError),
             pytest.raises(typer.Exit) as exc_info,
         ):
             status_command(
