@@ -64,6 +64,9 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentTypeListResponse,
     DeploymentUpdateRequest,
     DeploymentUpdateResponse,
+    DetectedEnvVar,
+    DetectEnvVarsRequest,
+    DetectEnvVarsResponse,
     ExecutionCreateRequest,
     ExecutionCreateResponse,
     ExecutionStatusResponse,
@@ -100,6 +103,10 @@ from langflow.services.database.models.deployment_provider_account.crud import (
 from langflow.services.database.models.deployment_provider_account.crud import (
     update_provider_account as update_provider_account_row,
 )
+from langflow.services.database.models.flow_version.crud import (
+    get_flow_version_entry_or_raise,
+)
+from langflow.services.database.models.flow_version.exceptions import FlowVersionNotFoundError
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
     list_deployment_attachments,
 )
@@ -122,6 +129,32 @@ DeploymentIdQuery = Annotated[
     UUID,
     Query(description="Langflow DB deployment UUID (`deployment.id`)."),
 ]
+
+
+def _derive_env_var_name(field_key: str, template: dict) -> str:
+    """Derive a meaningful env var name for a password field without a global variable.
+
+    Looks for a sibling ``model`` field whose selected value carries a ``category``
+    (e.g. ``"OpenAI"``). When found, returns ``{CATEGORY}_API_KEY`` (e.g.
+    ``OPENAI_API_KEY``).  Falls back to the uppercased field key (``API_KEY``).
+    """
+    import json as _json
+
+    model_field = template.get("model")
+    if isinstance(model_field, dict):
+        raw = model_field.get("value")
+        if isinstance(raw, str):
+            try:
+                raw = _json.loads(raw)
+            except ValueError:
+                raw = None
+        if isinstance(raw, list) and raw and isinstance(raw[0], dict):
+            category = raw[0].get("category", "")
+            if category:
+                prefix = category.upper().replace(" ", "_").replace("-", "_")
+                return f"{prefix}_{field_key.upper()}"
+
+    return field_key.upper()
 
 
 def _field_was_explicitly_set(model: object, field_name: str) -> bool:
@@ -954,3 +987,65 @@ async def duplicate_deployment(
     """Duplicate a deployment."""
     _ = (deployment_id, session, current_user)
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
+
+
+@router.post("/variables/detections", response_model=DetectEnvVarsResponse)
+async def detect_deployment_env_vars(
+    payload: DetectEnvVarsRequest,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+):
+    """Detect credential fields used by the given flow version IDs.
+
+    Two tiers of detection:
+    1. Fields with ``load_from_db=True``: the ``value`` is a Langflow global
+       variable name — returned with ``global_variable_name`` set.
+    2. Fields with ``password=True`` and no global variable link: the field
+       key is uppercased and returned as a suggested env var name, with
+       ``global_variable_name`` left as ``None``.
+
+    Results are deduplicated. Global-variable refs take precedence over
+    password-only suggestions when the same key appears in both tiers.
+    """
+    # tier 1: fields linked to a global variable
+    global_var_keys: dict[str, str] = {}
+    # tier 2: password fields with no global variable (suggested_key → suggested_key)
+    password_keys: dict[str, str] = {}
+
+    for version_id in payload.reference_ids:
+        try:
+            version = await get_flow_version_entry_or_raise(
+                session,
+                version_id=version_id,
+                user_id=current_user.id,
+            )
+        except FlowVersionNotFoundError:
+            continue
+
+        data = version.data
+        if not isinstance(data, dict):
+            continue
+
+        for node in data.get("nodes", []):
+            template = node.get("data", {}).get("node", {}).get("template", {})
+            if not isinstance(template, dict):
+                continue
+            for field_key, field in template.items():
+                if not isinstance(field, dict):
+                    continue
+                if field.get("load_from_db") is True:
+                    var_name = field.get("value")
+                    if isinstance(var_name, str) and var_name.strip():
+                        global_var_keys[var_name.strip()] = var_name.strip()
+                elif field.get("password") is True:
+                    suggested = _derive_env_var_name(field_key, template)
+                    if suggested not in global_var_keys:
+                        password_keys[suggested] = suggested
+
+    # Merge: global var refs take priority; password suggestions fill in the rest
+    merged: list[DetectedEnvVar] = [DetectedEnvVar(key=k, global_variable_name=k) for k in sorted(global_var_keys)]
+    merged.extend(
+        DetectedEnvVar(key=k, global_variable_name=None) for k in sorted(password_keys) if k not in global_var_keys
+    )
+
+    return DetectEnvVarsResponse(variables=merged)

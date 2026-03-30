@@ -47,34 +47,34 @@ export const MOCK_PROVIDER_INSTANCES: ProviderAccount[] = [
 ];
 
 export const MOCK_CONNECTIONS: ConnectionItem[] = [
-  {
-    id: "conn-1",
-    name: "Production Connection A",
-    variableCount: 12,
-    isNew: false,
-    environmentVariables: {},
-  },
-  {
-    id: "conn-2",
-    name: "Production Connection B",
-    variableCount: 8,
-    isNew: false,
-    environmentVariables: {},
-  },
-  {
-    id: "conn-3",
-    name: "Staging Connection A",
-    variableCount: 10,
-    isNew: false,
-    environmentVariables: {},
-  },
-  {
-    id: "conn-4",
-    name: "Development Connection",
-    variableCount: 6,
-    isNew: false,
-    environmentVariables: {},
-  },
+  // {
+  //   id: "conn-1",
+  //   name: "Production Connection A",
+  //   variableCount: 12,
+  //   isNew: false,
+  //   environmentVariables: {},
+  // },
+  // {
+  //   id: "conn-2",
+  //   name: "Production Connection B",
+  //   variableCount: 8,
+  //   isNew: false,
+  //   environmentVariables: {},
+  // },
+  // {
+  //   id: "conn-3",
+  //   name: "Staging Connection A",
+  //   variableCount: 10,
+  //   isNew: false,
+  //   environmentVariables: {},
+  // },
+  // {
+  //   id: "conn-4",
+  //   name: "Development Connection",
+  //   variableCount: 6,
+  //   isNew: false,
+  //   environmentVariables: {},
+  // },
 ];
 
 export const MOCK_DEPLOYMENTS: Deployment[] = [];

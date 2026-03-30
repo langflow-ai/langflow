@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { usePostDetectDeploymentEnvVars } from "@/controllers/API/queries/deployments";
 import { useGetFlowVersions } from "@/controllers/API/queries/flow-version/use-get-flow-versions";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
+import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import { useFolderStore } from "@/stores/foldersStore";
 import type { FlowType } from "@/types/flow";
 import type { FlowVersionEntry } from "@/types/flow/version";
@@ -57,8 +60,12 @@ export default function StepAttachFlows() {
   const [newConnectionName, setNewConnectionName] = useState("");
   const [newConnectionDescription, setNewConnectionDescription] = useState("");
   const [envVars, setEnvVars] = useState<
-    { id: string; key: string; value: string }[]
+    { id: string; key: string; value: string; globalVar?: boolean }[]
   >([{ id: crypto.randomUUID(), key: "", value: "" }]);
+  const [detectedVarCount, setDetectedVarCount] = useState(0);
+  const { mutateAsync: detectEnvVars } = usePostDetectDeploymentEnvVars();
+  const { data: globalVariables } = useGetGlobalVariables();
+  const globalVariableOptions = (globalVariables ?? []).map((v) => v.name);
 
   useEffect(() => {
     if (!selectedFlowId && flows.length > 0) {
@@ -75,7 +82,7 @@ export default function StepAttachFlows() {
 
   const selectedFlow = flows.find((f) => f.id === selectedFlowId);
 
-  const handleAttachFlow = () => {
+  const handleAttachFlow = async () => {
     if (selectedFlowId && pendingVersion) {
       const version = versions.find((v) => v.id === pendingVersion);
       onSelectVersion(
@@ -88,6 +95,29 @@ export default function StepAttachFlows() {
       setSelectedConnections(
         new Set(attachedConnectionByFlow.get(selectedFlowId) ?? []),
       );
+
+      // Auto-detect global variable references via the backend detection endpoint
+      try {
+        const result = await detectEnvVars({ reference_ids: [pendingVersion] });
+        const detected = result.variables ?? [];
+        if (detected.length > 0) {
+          setDetectedVarCount(detected.length);
+          setEnvVars(
+            detected.map((v) => ({
+              id: crypto.randomUUID(),
+              key: v.key,
+              value: v.global_variable_name ?? "",
+              globalVar: Boolean(v.global_variable_name),
+            })),
+          );
+        } else {
+          setDetectedVarCount(0);
+          setEnvVars([{ id: crypto.randomUUID(), key: "", value: "" }]);
+        }
+      } catch {
+        setDetectedVarCount(0);
+        setEnvVars([{ id: crypto.randomUUID(), key: "", value: "" }]);
+      }
     }
   };
 
@@ -130,6 +160,8 @@ export default function StepAttachFlows() {
   const handleChangeFlow = () => {
     setRightPanel("versions");
     setSelectedConnections(new Set());
+    setDetectedVarCount(0);
+    setEnvVars([{ id: crypto.randomUUID(), key: "", value: "" }]);
   };
 
   const handleSelectFlow = (flowId: string) => {
@@ -137,6 +169,8 @@ export default function StepAttachFlows() {
     setPendingVersion(null);
     setRightPanel("versions");
     setSelectedConnections(new Set());
+    setDetectedVarCount(0);
+    setEnvVars([{ id: crypto.randomUUID(), key: "", value: "" }]);
   };
 
   const handleAddEnvVar = () => {
@@ -149,7 +183,29 @@ export default function StepAttachFlows() {
     val: string,
   ) => {
     setEnvVars((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, [field]: val } : item)),
+      prev.map((item) =>
+        item.id === id ? { ...item, [field]: val, globalVar: false } : item,
+      ),
+    );
+  };
+
+  const handleEnvVarSelectGlobalVar = (id: string, selected: string) => {
+    setEnvVars((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              key:
+                selected !== "" &&
+                (item.key.trim() === "" ||
+                  (item.globalVar && item.key === item.value))
+                  ? selected
+                  : item.key,
+              value: selected,
+              globalVar: selected !== "",
+            }
+          : item,
+      ),
     );
   };
 
@@ -257,7 +313,10 @@ export default function StepAttachFlows() {
               newConnectionDescription={newConnectionDescription}
               onDescriptionChange={setNewConnectionDescription}
               envVars={envVars}
+              detectedVarCount={detectedVarCount}
+              globalVariableOptions={globalVariableOptions}
               onEnvVarChange={handleEnvVarChange}
+              onEnvVarSelectGlobalVar={handleEnvVarSelectGlobalVar}
               onAddEnvVar={handleAddEnvVar}
               onChangeFlow={handleChangeFlow}
               onAttachConnection={handleAttachConnection}
@@ -383,7 +442,10 @@ function ConnectionPanel({
   newConnectionDescription,
   onDescriptionChange,
   envVars,
+  detectedVarCount,
+  globalVariableOptions,
   onEnvVarChange,
+  onEnvVarSelectGlobalVar,
   onAddEnvVar,
   onChangeFlow,
   onAttachConnection,
@@ -398,8 +460,11 @@ function ConnectionPanel({
   onNameChange: (v: string) => void;
   newConnectionDescription: string;
   onDescriptionChange: (v: string) => void;
-  envVars: { id: string; key: string; value: string }[];
+  envVars: { id: string; key: string; value: string; globalVar?: boolean }[];
+  detectedVarCount: number;
+  globalVariableOptions: string[];
   onEnvVarChange: (id: string, field: "key" | "value", val: string) => void;
+  onEnvVarSelectGlobalVar: (id: string, selected: string) => void;
   onAddEnvVar: () => void;
   onChangeFlow: () => void;
   onAttachConnection: () => void;
@@ -437,7 +502,7 @@ function ConnectionPanel({
         {/* Tab content */}
         <div className="mt-4 flex-1 overflow-y-auto">
           {connectionTab === "available" ? (
-            <div className="space-y-3" role="group" aria-label="Connections">
+            <div className="space-y-3">
               {connections.map((conn) => (
                 <CheckboxSelectItem
                   key={conn.id}
@@ -484,6 +549,13 @@ function ConnectionPanel({
                   Environment Variables
                   <span className="text-destructive">*</span>
                 </span>
+                {detectedVarCount > 0 && (
+                  <p className="mb-2 text-xs text-muted-foreground">
+                    {detectedVarCount} variable
+                    {detectedVarCount > 1 ? "s" : ""} auto-detected from the
+                    selected flow version.
+                  </p>
+                )}
                 <div className="space-y-2">
                   {envVars.map((envVar) => (
                     <div key={envVar.id} className="grid grid-cols-2 gap-2">
@@ -495,12 +567,21 @@ function ConnectionPanel({
                           onEnvVarChange(envVar.id, "key", e.target.value)
                         }
                       />
-                      <Input
+                      <InputComponent
+                        nodeStyle
+                        password
+                        id={`env-val-${envVar.id}`}
                         placeholder="Value"
-                        className="bg-muted"
                         value={envVar.value}
-                        onChange={(e) =>
-                          onEnvVarChange(envVar.id, "value", e.target.value)
+                        options={globalVariableOptions}
+                        optionsPlaceholder="Global Variables"
+                        optionsIcon="Globe"
+                        selectedOption={envVar.globalVar ? envVar.value : ""}
+                        setSelectedOption={(sel) =>
+                          onEnvVarSelectGlobalVar(envVar.id, sel)
+                        }
+                        onChange={(text) =>
+                          onEnvVarChange(envVar.id, "value", text)
                         }
                       />
                     </div>
