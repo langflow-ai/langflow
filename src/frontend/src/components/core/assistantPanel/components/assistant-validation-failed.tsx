@@ -31,8 +31,8 @@ export function AssistantValidationFailed({
         {/* Friendly message */}
         <div className="p-4">
           <p className="text-sm text-foreground">
-            The selected model was unable to generate valid component code.
-            Try again or use a more capable model.
+            The selected model was unable to generate valid component code. Try
+            again or use a more capable model.
           </p>
 
           {/* Collapsible error details */}

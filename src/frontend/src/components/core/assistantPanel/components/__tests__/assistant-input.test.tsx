@@ -181,9 +181,7 @@ describe("AssistantInput", () => {
     it("should_initialize_with_draft_message_when_provided", () => {
       // Bug: input text is lost when closing and reopening the panel.
       // The draftMessage prop allows restoring previously typed text.
-      render(
-        <AssistantInput {...defaultProps} draftMessage="saved draft" />,
-      );
+      render(<AssistantInput {...defaultProps} draftMessage="saved draft" />);
 
       expect(screen.getByRole("textbox")).toHaveValue("saved draft");
     });

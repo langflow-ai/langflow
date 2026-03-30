@@ -55,10 +55,7 @@ describe("ModelSelector", () => {
 
       // Act
       render(
-        <ModelSelector
-          selectedModel={anthropicModel}
-          {...defaultProps}
-        />,
+        <ModelSelector selectedModel={anthropicModel} {...defaultProps} />,
       );
 
       // Assert — the trigger button should show the Anthropic icon
@@ -80,12 +77,7 @@ describe("ModelSelector", () => {
       };
 
       // Act
-      render(
-        <ModelSelector
-          selectedModel={openaiModel}
-          {...defaultProps}
-        />,
-      );
+      render(<ModelSelector selectedModel={openaiModel} {...defaultProps} />);
 
       // Assert — the trigger button should show the OpenAI icon
       const triggerButton = screen.getByTestId("assistant-model-selector");

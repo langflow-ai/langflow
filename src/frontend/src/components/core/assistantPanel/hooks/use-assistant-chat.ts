@@ -35,7 +35,9 @@ export function useAssistantChat(): UseAssistantChatReturn {
   const [currentStep, setCurrentStep] = useState<AgenticStepType | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const lastModelRef = useRef<AssistantModel | null>(null);
-  const sessionIdRef = useRef<string>(`${AGENTIC_SESSION_PREFIX}${uid.randomUUID(16)}`);
+  const sessionIdRef = useRef<string>(
+    `${AGENTIC_SESSION_PREFIX}${uid.randomUUID(16)}`,
+  );
   const [sessionId, setSessionId] = useState<string>(sessionIdRef.current);
 
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
