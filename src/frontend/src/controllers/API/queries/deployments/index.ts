@@ -1,3 +1,4 @@
+export * from "./use-delete-deployment";
 export * from "./use-get-deployment-execution";
 export * from "./use-get-deployments";
 export * from "./use-post-deployment";

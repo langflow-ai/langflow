@@ -2,7 +2,12 @@ import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { useGetProviderAccounts } from "@/controllers/API/queries/deployment-provider-accounts";
-import { useGetDeployments } from "@/controllers/API/queries/deployments";
+import {
+  useDeleteDeployment,
+  useGetDeployments,
+} from "@/controllers/API/queries/deployments";
+import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
+import useAlertStore from "@/stores/alertStore";
 import DeploymentStepperModal from "./components/deployment-stepper-modal";
 import DeploymentsContent from "./components/deployments-content";
 import SubTabToggle, {
@@ -15,7 +20,15 @@ export default function DeploymentsPage() {
   const [activeSubTab, setActiveSubTab] =
     useState<DeploymentSubTab>("deployments");
   const [stepperOpen, setStepperOpen] = useState(false);
-  const [testTarget, setTestTarget] = useState<Deployment | null>(null);
+  const [testTarget, setTestTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [testProviderId, setTestProviderId] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<Deployment | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const { data: providersData } = useGetProviderAccounts({});
   const providers = providersData?.providers ?? [];
@@ -27,6 +40,29 @@ export default function DeploymentsPage() {
   );
   const deployments = data?.deployments ?? [];
   const isEmpty = !firstProviderId || deployments.length === 0;
+
+  const { mutate: deleteDeployment } = useDeleteDeployment();
+
+  function handleConfirmDelete(
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent>,
+  ) {
+    e.stopPropagation();
+    if (!deleteTarget) return;
+    setDeletingId(deleteTarget.id);
+    setDeleteTarget(null);
+    deleteDeployment(
+      { deployment_id: deleteTarget.id },
+      {
+        onError: () => {
+          setErrorData({
+            title: "Error deleting deployment",
+            list: [`Failed to delete "${deleteTarget.name}"`],
+          });
+        },
+        onSettled: () => setDeletingId(null),
+      },
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4 pt-4">
@@ -47,8 +83,13 @@ export default function DeploymentsPage() {
           isEmpty={isEmpty}
           deployments={deployments}
           providerName={providers[0]?.name ?? ""}
+          deletingId={deletingId}
           onCreateDeployment={() => setStepperOpen(true)}
-          onTestDeployment={setTestTarget}
+          onTestDeployment={(deployment) => {
+            setTestTarget(deployment);
+            setTestProviderId(firstProviderId);
+          }}
+          onDeleteDeployment={setDeleteTarget}
         />
       )}
 
@@ -58,15 +99,34 @@ export default function DeploymentsPage() {
         </div>
       )}
 
-      <DeploymentStepperModal open={stepperOpen} setOpen={setStepperOpen} />
+      <DeploymentStepperModal
+        open={stepperOpen}
+        setOpen={setStepperOpen}
+        onTestDeployment={(deployment, providerId) => {
+          setTestTarget(deployment);
+          setTestProviderId(providerId);
+        }}
+      />
 
       <TestDeploymentModal
         open={!!testTarget}
         setOpen={(open) => {
-          if (!open) setTestTarget(null);
+          if (!open) {
+            setTestTarget(null);
+            setTestProviderId("");
+          }
         }}
         deployment={testTarget}
-        providerId={firstProviderId}
+        providerId={testProviderId}
+      />
+
+      <DeleteConfirmationModal
+        open={!!deleteTarget}
+        setOpen={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        description={`deployment "${deleteTarget?.name}"`}
+        onConfirm={handleConfirmDelete}
       />
     </div>
   );

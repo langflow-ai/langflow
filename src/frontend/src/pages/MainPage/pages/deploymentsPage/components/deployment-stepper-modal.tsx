@@ -20,25 +20,41 @@ import StepDeployStatus from "./step-deploy-status";
 import StepProvider from "./step-provider";
 import StepReview from "./step-review";
 import StepType from "./step-type";
-import TestDeploymentContent from "./test-deployment-modal/test-deployment-content";
 
 interface DeploymentStepperModalProps {
   open: boolean;
   setOpen: (open: boolean) => void;
+  onTestDeployment: (
+    deployment: { id: string; name: string },
+    providerId: string,
+  ) => void;
 }
 
 export default function DeploymentStepperModal({
   open,
   setOpen,
+  onTestDeployment,
 }: DeploymentStepperModalProps) {
+  const [isDeploying, setIsDeploying] = useState(false);
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(value) => {
+        if (!value && isDeploying) return;
+        setOpen(value);
+      }}
+    >
       <DialogContent
         className="flex h-[85vh] w-[900px] !max-w-none flex-col gap-0 overflow-hidden border-none bg-transparent p-0 shadow-none"
         closeButtonClassName="top-5 right-4"
       >
         <DeploymentStepperProvider>
-          <DeploymentStepperModalContent setOpen={setOpen} />
+          <DeploymentStepperModalContent
+            setOpen={setOpen}
+            onTestDeployment={onTestDeployment}
+            onDeployingChange={setIsDeploying}
+          />
         </DeploymentStepperProvider>
       </DialogContent>
     </Dialog>
@@ -49,12 +65,18 @@ type DeploymentPhase = "idle" | "deploying" | "deployed";
 
 function DeploymentStepperModalContent({
   setOpen,
+  onTestDeployment,
+  onDeployingChange,
 }: {
   setOpen: (open: boolean) => void;
+  onTestDeployment: (
+    deployment: { id: string; name: string },
+    providerId: string,
+  ) => void;
+  onDeployingChange: (isDeploying: boolean) => void;
 }) {
   const [deploymentPhase, setDeploymentPhase] =
     useState<DeploymentPhase>("idle");
-  const [isTesting, setIsTesting] = useState(false);
   const [createdDeployment, setCreatedDeployment] = useState<{
     id: string;
     name: string;
@@ -84,6 +106,7 @@ function DeploymentStepperModalContent({
   const handleDeploy = async () => {
     try {
       setDeploymentPhase("deploying");
+      onDeployingChange(true);
       let providerId = selectedInstance?.id;
 
       if (needsProviderAccountCreation) {
@@ -116,37 +139,21 @@ function DeploymentStepperModalContent({
         });
       }
       setDeploymentPhase("deployed");
+      onDeployingChange(false);
     } catch (err: unknown) {
       setDeploymentPhase("idle");
+      onDeployingChange(false);
       const message =
         err instanceof Error ? err.message : "Something went wrong";
       setErrorData({ title: "Failed to create deployment", list: [message] });
     }
   };
 
-  if (isTesting) {
-    return (
-      <>
-        <DialogTitle className="sr-only">Test Deployment</DialogTitle>
-        <DialogDescription className="sr-only">
-          Chat interface to test {createdDeployment?.name ?? "deployment"}
-        </DialogDescription>
-
-        <div className="flex flex-col gap-4 px-6 pt-6">
-          <h2 className="text-center text-2xl font-semibold">
-            Test Deployment
-          </h2>
-        </div>
-
-        <div className="mx-4 mb-4 mt-4 flex flex-1 flex-col overflow-hidden rounded-lg border border-border bg-background">
-          <TestDeploymentContent
-            deployment={createdDeployment}
-            providerId={selectedInstance?.id ?? ""}
-          />
-        </div>
-      </>
-    );
-  }
+  const handleTest = () => {
+    if (!createdDeployment || !selectedInstance?.id) return;
+    onTestDeployment(createdDeployment, selectedInstance.id);
+    setOpen(false);
+  };
 
   return (
     <>
@@ -167,7 +174,10 @@ function DeploymentStepperModalContent({
       <div className="mx-4 mb-4 mt-4 flex flex-1 flex-col overflow-hidden rounded-lg border border-border bg-background">
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-2">
           {isInDeployPhase ? (
-            <StepDeployStatus phase={isDeploying ? "deploying" : "deployed"} />
+            <StepDeployStatus
+              phase={isDeploying ? "deploying" : "deployed"}
+              deploymentName={createdDeployment?.name}
+            />
           ) : (
             <>
               {currentStep === 1 && <StepProvider />}
@@ -223,7 +233,7 @@ function DeploymentStepperModalContent({
             {isDeployed && (
               <Button
                 data-testid="deployment-stepper-test"
-                onClick={() => setIsTesting(true)}
+                onClick={handleTest}
               >
                 Test
               </Button>

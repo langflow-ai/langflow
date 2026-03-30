@@ -8,8 +8,10 @@ interface DeploymentsContentProps {
   isEmpty: boolean;
   deployments: Deployment[];
   providerName: string;
+  deletingId?: string | null;
   onCreateDeployment: () => void;
   onTestDeployment: (deployment: Deployment) => void;
+  onDeleteDeployment: (deployment: Deployment) => void;
 }
 
 export default function DeploymentsContent({
@@ -17,8 +19,10 @@ export default function DeploymentsContent({
   isEmpty,
   deployments,
   providerName,
+  deletingId,
   onCreateDeployment,
   onTestDeployment,
+  onDeleteDeployment,
 }: DeploymentsContentProps) {
   if (isLoading) return <DeploymentsLoadingSkeleton />;
   if (isEmpty)
@@ -27,7 +31,9 @@ export default function DeploymentsContent({
     <DeploymentsTable
       deployments={deployments}
       providerName={providerName}
+      deletingId={deletingId}
       onTestDeployment={onTestDeployment}
+      onDeleteDeployment={onDeleteDeployment}
     />
   );
 }
