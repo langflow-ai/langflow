@@ -2,6 +2,7 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import SimplifiedCodeTabComponent from "@/components/core/codeTabsComponent";
 import { cn } from "@/utils/utils";
 import type { ChatMessage } from "./types";
 
@@ -120,6 +121,25 @@ export default function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               className="prose prose-sm dark:prose-invert max-w-none"
+              components={{
+                code({ className, children, ...props }) {
+                  const match = /language-(\w+)/.exec(className ?? "");
+                  const isBlock = !props.ref;
+                  if (isBlock && match) {
+                    return (
+                      <SimplifiedCodeTabComponent
+                        code={String(children).replace(/\n$/, "")}
+                        language={match[1]}
+                      />
+                    );
+                  }
+                  return (
+                    <code className={className} {...props}>
+                      {children}
+                    </code>
+                  );
+                },
+              }}
             >
               {message.content}
             </ReactMarkdown>
