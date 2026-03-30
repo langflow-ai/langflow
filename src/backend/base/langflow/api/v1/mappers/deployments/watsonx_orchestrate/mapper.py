@@ -264,14 +264,59 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         )
         return bool(api_provider_payload.operations)
 
-    async def resolve_deployment_create(
+    def util_create_result_from_existing_update(
+        self,
+        *,
+        existing_resource_key: str,
+        result: DeploymentUpdateResult,
+    ) -> DeploymentCreateResult:
+        adapter_provider_result = self._parse_required_payload_slot(
+            slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_update_result,
+            slot_name="deployment_update_result",
+            raw=result.provider_result,
+            missing_payload_detail="Deployment provider update result is missing provider_result payload.",
+            malformed_payload_detail="Deployment provider update result contains invalid provider_result payload.",
+        )
+        create_slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_create_result
+        if create_slot is None:
+            msg = "Watsonx deployment_create_result payload slot is not configured."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+        try:
+            create_provider_result = create_slot.apply(
+                {
+                    "app_ids": list(adapter_provider_result.created_app_ids),
+                    "tools_with_refs": [
+                        {"source_ref": binding.source_ref, "tool_id": binding.tool_id}
+                        for binding in adapter_provider_result.added_snapshot_bindings
+                    ],
+                    "tool_app_bindings": [
+                        {"tool_id": binding.tool_id, "app_ids": list(binding.app_ids)}
+                        for binding in (adapter_provider_result.tool_app_bindings or [])
+                    ],
+                }
+            )
+        except AdapterPayloadValidationError as exc:
+            first_error = exc.error.errors()[0] if exc.error.errors() else {}
+            detail = str(first_error.get("msg") or exc)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Deployment provider update result cannot be normalized for create response: {detail}",
+            ) from exc
+        return DeploymentCreateResult(
+            id=existing_resource_key,
+            provider_result=create_provider_result,
+        )
+
+    async def _resolve_provider_payload_from_create_api(
         self,
         *,
         user_id: UUID,
         project_id: UUID,
         db: AsyncSession,
         payload: DeploymentCreateRequest,
-    ) -> AdapterDeploymentCreate:
+        slot: PayloadSlot | None,
+        slot_name: str,
+    ) -> AdapterPayload:
         if payload.config is not None or payload.flow_version_ids is not None:
             msg = (
                 "Watsonx create does not support top-level 'config' or 'flow_version_ids'. "
@@ -299,31 +344,78 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             operations=api_provider_payload.operations,
             raw_name_by_flow_version_id=raw_name_by_flow_version_id,
         )
-
-        create_slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_create
-        if create_slot is None:
-            msg = "Watsonx deployment_create payload slot is not configured."
+        if slot is None:
+            msg = f"Watsonx {slot_name} payload slot is not configured."
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        provider_payload: AdapterPayload = create_slot.apply(
-            self._build_provider_payload_body(
-                resource_name_prefix=api_provider_payload.resource_name_prefix,
-                raw_tool_payloads=[
-                    artifact.model_copy(
-                        update={
-                            "provider_data": self.util_create_flow_artifact_provider_data(
-                                project_id=project_id,
-                                flow_version_id=flow_version_id,
-                            ).model_dump(exclude_none=True),
-                        }
-                    ).model_dump(exclude_none=True)
-                    for flow_version_id, artifact in flow_artifacts
-                ],
-                connections=api_provider_payload.connections,
-                operations=provider_operations,
+        try:
+            return slot.apply(
+                self._build_provider_payload_body(
+                    resource_name_prefix=api_provider_payload.resource_name_prefix,
+                    raw_tool_payloads=[
+                        artifact.model_copy(
+                            update={
+                                "provider_data": self.util_create_flow_artifact_provider_data(
+                                    project_id=project_id,
+                                    flow_version_id=flow_version_id,
+                                ).model_dump(exclude_none=True),
+                            }
+                        ).model_dump(exclude_none=True)
+                        for flow_version_id, artifact in flow_artifacts
+                    ],
+                    connections=api_provider_payload.connections,
+                    operations=provider_operations,
+                )
             )
+        except AdapterPayloadValidationError as exc:
+            first_error = exc.error.errors()[0] if exc.error.errors() else {}
+            detail = str(first_error.get("msg") or exc)
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid {slot_name} payload: {detail}",
+            ) from exc
+
+    async def resolve_deployment_create(
+        self,
+        *,
+        user_id: UUID,
+        project_id: UUID,
+        db: AsyncSession,
+        payload: DeploymentCreateRequest,
+    ) -> AdapterDeploymentCreate:
+        provider_payload = await self._resolve_provider_payload_from_create_api(
+            user_id=user_id,
+            project_id=project_id,
+            db=db,
+            payload=payload,
+            slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_create,
+            slot_name="deployment_create",
         )
         return AdapterDeploymentCreate(
             spec=payload.spec,
+            provider_data=provider_payload,
+        )
+
+    async def resolve_deployment_update_for_existing_create(
+        self,
+        *,
+        user_id: UUID,
+        project_id: UUID,
+        db: AsyncSession,
+        payload: DeploymentCreateRequest,
+    ) -> AdapterDeploymentUpdate:
+        provider_payload = await self._resolve_provider_payload_from_create_api(
+            user_id=user_id,
+            project_id=project_id,
+            db=db,
+            payload=payload,
+            slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_update,
+            slot_name="deployment_update",
+        )
+        return AdapterDeploymentUpdate(
+            spec=BaseDeploymentDataUpdate(
+                name=payload.spec.name,
+                description=payload.spec.description,
+            ),
             provider_data=provider_payload,
         )
 
@@ -396,14 +488,22 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         if update_slot is None:
             msg = "Watsonx deployment_update payload slot is not configured."
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        provider_payload: AdapterPayload = update_slot.apply(
-            self._build_provider_payload_body(
-                resource_name_prefix=api_provider_payload.resource_name_prefix,
-                raw_tool_payloads=[artifact.model_dump(exclude_none=True) for artifact in raw_payloads],
-                connections=api_provider_payload.connections,
-                operations=provider_operations,
+        try:
+            provider_payload: AdapterPayload = update_slot.apply(
+                self._build_provider_payload_body(
+                    resource_name_prefix=api_provider_payload.resource_name_prefix,
+                    raw_tool_payloads=[artifact.model_dump(exclude_none=True) for artifact in raw_payloads],
+                    connections=api_provider_payload.connections,
+                    operations=provider_operations,
+                )
             )
-        )
+        except AdapterPayloadValidationError as exc:
+            first_error = exc.error.errors()[0] if exc.error.errors() else {}
+            detail = str(first_error.get("msg") or exc)
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid deployment_update payload: {detail}",
+            ) from exc
         return AdapterDeploymentUpdate(
             spec=payload.spec,
             provider_data=provider_payload,

@@ -222,12 +222,14 @@ class TestCreateDeploymentExistingAgent:
     @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_deployment_by_resource_key", new_callable=AsyncMock, return_value=None)
     @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
     async def test_existing_agent_without_mutation_skips_provider_calls(
         self,
         mock_get_pa,
         mock_name_exists,
+        mock_get_by_resource_key,
         mock_get_mapper,
         mock_resolve_adapter,
         mock_resolve_project,
@@ -245,6 +247,7 @@ class TestCreateDeploymentExistingAgent:
         mapper.util_existing_deployment_resource_key_for_create.return_value = "existing-agent-1"
         mapper.util_should_mutate_provider_for_existing_deployment_create.return_value = False
         mapper.util_create_flow_version_ids.return_value = []
+        mapper.util_create_result_from_existing_resource.return_value = DeploymentCreateResult(id="existing-agent-1")
         mock_get_mapper.return_value = mapper
         mock_resolve_project.return_value = uuid4()
         dep_row = _fake_deployment_row(resource_key="existing-agent-1")
@@ -262,9 +265,12 @@ class TestCreateDeploymentExistingAgent:
         with patch(f"{ROUTES_MODULE}.to_deployment_create_response", return_value=MagicMock()):
             await create_deployment(session=session, payload=payload, current_user=_fake_user())
 
-        _ = (mock_name_exists, mock_validate_fv, mock_attach)
+        _ = (mock_name_exists, mock_get_by_resource_key, mock_validate_fv, mock_attach)
         adapter.create.assert_not_awaited()
         adapter.update.assert_not_awaited()
+        mapper.util_create_result_from_existing_resource.assert_called_once_with(
+            existing_resource_key="existing-agent-1"
+        )
         assert mock_create_db.call_args.kwargs["resource_key"] == "existing-agent-1"
 
     @pytest.mark.asyncio
@@ -274,12 +280,14 @@ class TestCreateDeploymentExistingAgent:
     @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_deployment_by_resource_key", new_callable=AsyncMock, return_value=None)
     @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
     async def test_existing_agent_with_mutation_uses_provider_update(
         self,
         mock_get_pa,
         mock_name_exists,
+        mock_get_by_resource_key,
         mock_get_mapper,
         mock_resolve_adapter,
         mock_resolve_project,
@@ -298,7 +306,9 @@ class TestCreateDeploymentExistingAgent:
         mapper.util_existing_deployment_resource_key_for_create.return_value = "existing-agent-1"
         mapper.util_should_mutate_provider_for_existing_deployment_create.return_value = True
         mapper.util_create_flow_version_ids.return_value = []
-        mapper.resolve_deployment_create = AsyncMock(return_value=MagicMock(provider_data={"operations": [{}]}))
+        mapper.resolve_deployment_update_for_existing_create = AsyncMock(
+            return_value=MagicMock(provider_data={"operations": [{}]})
+        )
         mock_get_mapper.return_value = mapper
         mock_resolve_project.return_value = uuid4()
         dep_row = _fake_deployment_row(resource_key="existing-agent-1")
@@ -316,10 +326,123 @@ class TestCreateDeploymentExistingAgent:
         with patch(f"{ROUTES_MODULE}.to_deployment_create_response", return_value=MagicMock()):
             await create_deployment(session=session, payload=payload, current_user=_fake_user())
 
-        _ = (mock_name_exists, mock_validate_fv, mock_attach)
+        _ = (mock_name_exists, mock_get_by_resource_key, mock_validate_fv, mock_attach)
         adapter.create.assert_not_awaited()
         adapter.update.assert_awaited_once()
+        mapper.resolve_deployment_update_for_existing_create.assert_awaited_once()
         assert adapter.update.call_args.kwargs["deployment_id"] == "existing-agent-1"
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.attach_flow_versions", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.create_deployment_db", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_deployment_by_resource_key", new_callable=AsyncMock, return_value=None)
+    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_existing_agent_with_mutation_uses_mapper_create_result_normalizer(
+        self,
+        mock_get_pa,
+        mock_name_exists,
+        mock_get_by_resource_key,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_resolve_project,
+        mock_validate_fv,
+        mock_create_db,
+        mock_attach,
+    ):
+        from langflow.api.v1.deployments import create_deployment
+
+        pa = _fake_provider_account()
+        mock_get_pa.return_value = pa
+        adapter = AsyncMock()
+        adapter.update.return_value = DeploymentUpdateResult(
+            id="existing-agent-1",
+            provider_result={"ok": True},
+        )
+        mock_resolve_adapter.return_value = adapter
+        mapper = MagicMock()
+        mapper.util_existing_deployment_resource_key_for_create.return_value = "existing-agent-1"
+        mapper.util_should_mutate_provider_for_existing_deployment_create.return_value = True
+        mapper.util_create_flow_version_ids.return_value = []
+        mapper.resolve_deployment_update_for_existing_create = AsyncMock(
+            return_value=MagicMock(provider_data={"operations": [{}]})
+        )
+        mapped_create_result = DeploymentCreateResult(id="existing-agent-1", provider_result={"ok": True})
+        mapper.util_create_result_from_existing_update.return_value = mapped_create_result
+        mock_get_mapper.return_value = mapper
+        mock_resolve_project.return_value = uuid4()
+        dep_row = _fake_deployment_row(resource_key="existing-agent-1")
+        mock_create_db.return_value = dep_row
+
+        session = AsyncMock()
+        session.commit.return_value = None
+
+        payload = MagicMock()
+        payload.provider_id = pa.id
+        payload.spec.name = "existing"
+        payload.spec.type = "agent"
+        payload.spec.description = "desc"
+
+        with patch(f"{ROUTES_MODULE}.to_deployment_create_response", return_value=MagicMock()) as mock_response:
+            await create_deployment(session=session, payload=payload, current_user=_fake_user())
+
+        _ = (mock_name_exists, mock_get_by_resource_key, mock_validate_fv, mock_attach)
+        adapter.create.assert_not_awaited()
+        adapter.update.assert_awaited_once()
+        mapper.resolve_deployment_update_for_existing_create.assert_awaited_once()
+        assert adapter.update.call_args.kwargs["deployment_id"] == "existing-agent-1"
+        mapper.util_create_result_from_existing_update.assert_called_once_with(
+            existing_resource_key="existing-agent-1",
+            result=adapter.update.return_value,
+        )
+        create_result_arg = mock_response.call_args.args[0]
+        assert create_result_arg is mapped_create_result
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.create_deployment_db", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_deployment_by_resource_key", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_existing_agent_conflict_when_resource_key_already_persisted(
+        self,
+        mock_get_pa,
+        mock_name_exists,
+        mock_get_by_resource_key,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_create_db,
+    ):
+        from langflow.api.v1.deployments import create_deployment
+
+        pa = _fake_provider_account()
+        mock_get_pa.return_value = pa
+        mock_get_by_resource_key.return_value = _fake_deployment_row(resource_key="existing-agent-1")
+        adapter = AsyncMock()
+        mock_resolve_adapter.return_value = adapter
+        mapper = MagicMock()
+        mapper.util_existing_deployment_resource_key_for_create.return_value = "existing-agent-1"
+        mock_get_mapper.return_value = mapper
+
+        payload = MagicMock()
+        payload.provider_id = pa.id
+        payload.spec.name = "existing"
+        payload.spec.type = "agent"
+        payload.spec.description = None
+
+        with pytest.raises(HTTPException) as exc_info:
+            await create_deployment(session=AsyncMock(), payload=payload, current_user=_fake_user())
+
+        assert exc_info.value.status_code == 409
+        _ = mock_name_exists
+        mock_create_db.assert_not_awaited()
+        adapter.create.assert_not_awaited()
+        adapter.update.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------
@@ -1378,6 +1501,52 @@ class TestCreateDeploymentProjectValidation:
 
         mock_validate_fv.assert_awaited_once()
         assert mock_validate_fv.call_args.kwargs["flow_version_ids"] == []
+
+
+class TestCreateDeploymentSchemaValidation:
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_mapper_schema_validation_error_surfaces_422(
+        self,
+        mock_get_pa,
+        mock_name_exists,  # noqa: ARG002
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_resolve_project,
+        mock_validate_fv,
+    ):
+        """Mapper-level schema failures on create surface as HTTP 422."""
+        from langflow.api.v1.deployments import create_deployment
+
+        pa = _fake_provider_account()
+        mock_get_pa.return_value = pa
+        adapter = AsyncMock()
+        mock_resolve_adapter.return_value = adapter
+        mapper = MagicMock()
+        mapper.util_create_flow_version_ids.return_value = [uuid4()]
+        mapper.resolve_deployment_create = AsyncMock(
+            side_effect=HTTPException(
+                status_code=422,
+                detail="Invalid deployment_create payload: simulated adapter validation failure",
+            )
+        )
+        mock_get_mapper.return_value = mapper
+        mock_resolve_project.return_value = uuid4()
+
+        payload = MagicMock()
+        payload.provider_id = pa.id
+
+        with pytest.raises(HTTPException) as exc_info:
+            await create_deployment(session=AsyncMock(), payload=payload, current_user=_fake_user())
+
+        assert exc_info.value.status_code == 422
+        mock_validate_fv.assert_awaited_once()
+        adapter.create.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------

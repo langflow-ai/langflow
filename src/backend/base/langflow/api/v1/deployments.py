@@ -12,15 +12,10 @@ from lfx.services.adapters.deployment.exceptions import (
     http_status_for_deployment_error,
 )
 from lfx.services.adapters.deployment.schema import (
-    BaseDeploymentDataUpdate,
     DeploymentListParams,
     DeploymentListTypesResult,
     DeploymentType,
-    DeploymentUpdate,
     DeploymentUpdateResult,
-)
-from lfx.services.adapters.deployment.schema import (
-    DeploymentCreateResult as AdapterDeploymentCreateResult,
 )
 
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
@@ -424,11 +419,24 @@ async def create_deployment(
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
     existing_resource_key = deployment_mapper.util_existing_deployment_resource_key_for_create(payload)
+    if existing_resource_key is not None:
+        existing_deployment = await get_deployment_by_resource_key(
+            session,
+            user_id=current_user.id,
+            deployment_provider_account_id=provider_id,
+            resource_key=str(existing_resource_key),
+        )
+        if existing_deployment is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"A deployment for provider resource {str(existing_resource_key)!r} already exists "
+                "for this provider account",
+            )
     should_mutate_existing_resource = (
         existing_resource_key is not None
         and deployment_mapper.util_should_mutate_provider_for_existing_deployment_create(payload)
     )
-    provider_resource_created = existing_resource_key is None
+    should_create_provider_resource = existing_resource_key is None
     project_id = await resolve_project_id_for_deployment_create(payload=payload, user_id=current_user.id, db=session)
     flow_version_ids = deployment_mapper.util_create_flow_version_ids(payload)
     await validate_project_scoped_flow_version_ids(
@@ -437,7 +445,7 @@ async def create_deployment(
         project_id=project_id,
         db=session,
     )
-    if provider_resource_created:
+    if should_create_provider_resource:
         adapter_payload = await deployment_mapper.resolve_deployment_create(
             user_id=current_user.id,
             project_id=project_id,
@@ -450,33 +458,28 @@ async def create_deployment(
                 payload=adapter_payload,
                 db=session,
             )
-    elif should_mutate_existing_resource:
-        adapter_payload = await deployment_mapper.resolve_deployment_create(
-            user_id=current_user.id,
-            project_id=project_id,
-            db=session,
-            payload=payload,
-        )
-        update_payload = DeploymentUpdate(
-            spec=BaseDeploymentDataUpdate(
-                name=payload.spec.name,
-                description=payload.spec.description,
-            ),
-            provider_data=adapter_payload.provider_data,
-        )
-        with handle_adapter_errors(), deployment_provider_scope(provider_id):
-            provider_update_result: DeploymentUpdateResult = await deployment_adapter.update(
-                deployment_id=existing_resource_key,
-                payload=update_payload,
-                user_id=current_user.id,
-                db=session,
-            )
-        provider_create_result = AdapterDeploymentCreateResult(
-            id=str(existing_resource_key),
-            provider_result=provider_update_result.provider_result,
-        )
     else:
-        provider_create_result = AdapterDeploymentCreateResult(id=str(existing_resource_key))
+        provider_create_result = deployment_mapper.util_create_result_from_existing_resource(
+            existing_resource_key=str(existing_resource_key),
+        )
+        if should_mutate_existing_resource:
+            adapter_payload = await deployment_mapper.resolve_deployment_update_for_existing_create(
+                user_id=current_user.id,
+                project_id=project_id,
+                db=session,
+                payload=payload,
+            )
+            with handle_adapter_errors(), deployment_provider_scope(provider_id):
+                provider_update_result: DeploymentUpdateResult = await deployment_adapter.update(
+                    deployment_id=existing_resource_key,
+                    payload=adapter_payload,
+                    user_id=current_user.id,
+                    db=session,
+                )
+            provider_create_result = deployment_mapper.util_create_result_from_existing_update(
+                existing_resource_key=str(existing_resource_key),
+                result=provider_update_result,
+            )
     # if we get here, the deployment was created successfully in the provider
     # so we need to create the deployment row and attach the flow versions
     # in the DB
@@ -515,7 +518,7 @@ async def create_deployment(
         # this is intentional because snapshots/configs may be shared across deployments,
         # making cascade-delete unsafe.
         await session.rollback()
-        if provider_resource_created:
+        if should_create_provider_resource:
             await rollback_provider_create(
                 deployment_adapter=deployment_adapter,
                 provider_id=provider_id,

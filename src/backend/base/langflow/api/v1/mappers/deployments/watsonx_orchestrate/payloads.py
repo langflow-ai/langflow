@@ -197,13 +197,14 @@ class WatsonxApiDeploymentCreatePayload(WatsonxApiDeploymentPayloadBase):
 
     @model_validator(mode="after")
     def validate_create_operation_requirements(self) -> WatsonxApiDeploymentCreatePayload:
-        if self.existing_agent_id is None:
-            if self.resource_name_prefix is None:
-                msg = "resource_name_prefix is required when existing_agent_id is not provided."
-                raise ValueError(msg)
-            if not self.operations:
-                msg = "operations must include at least one bind operation for new agent creation."
-                raise ValueError(msg)
+        has_operations = bool(self.operations)
+        has_raw_connections = bool(self.connections.raw_payloads)
+        if (has_operations or has_raw_connections) and self.resource_name_prefix is None:
+            msg = "resource_name_prefix is required when operations or connections.raw_payloads are provided."
+            raise ValueError(msg)
+        if self.existing_agent_id is None and not has_operations:
+            msg = "operations must include at least one bind operation for new agent creation."
+            raise ValueError(msg)
         return self
 
 

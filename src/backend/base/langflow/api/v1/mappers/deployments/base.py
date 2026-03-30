@@ -31,6 +31,7 @@ from uuid import UUID
 
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadFields
 from lfx.services.adapters.deployment.schema import (
+    BaseDeploymentDataUpdate,
     BaseFlowArtifact,
     ConfigDeploymentBindingUpdate,
     ConfigItem,
@@ -174,6 +175,29 @@ class BaseDeploymentMapper:
             snapshot=adapter_snapshot,
             config=adapter_config,
             provider_data=provider_data,
+        )
+
+    async def resolve_deployment_update_for_existing_create(
+        self,
+        *,
+        user_id: UUID,
+        project_id: UUID,
+        db: AsyncSession,
+        payload: DeploymentCreateRequest,
+    ) -> AdapterDeploymentUpdate:
+        """Build adapter update payload for existing-resource create onboarding."""
+        create_payload = await self.resolve_deployment_create(
+            user_id=user_id,
+            project_id=project_id,
+            db=db,
+            payload=payload,
+        )
+        return AdapterDeploymentUpdate(
+            spec=BaseDeploymentDataUpdate(
+                name=payload.spec.name,
+                description=payload.spec.description,
+            ),
+            provider_data=create_payload.provider_data,
         )
 
     async def resolve_deployment_update(
@@ -418,6 +442,31 @@ class BaseDeploymentMapper:
         """Return whether existing-resource create should call provider update."""
         _ = payload
         return True
+
+    def util_create_result_from_existing_update(
+        self,
+        *,
+        existing_resource_key: str,
+        result: DeploymentUpdateResult,
+    ) -> DeploymentCreateResult:
+        """Build create-result contract from existing-resource update result.
+
+        Routes use this when create-time onboarding reuses an existing provider
+        resource and mutates it through ``adapter.update``.
+        """
+        provider_result = result.provider_result if isinstance(result.provider_result, dict) else None
+        return DeploymentCreateResult(
+            id=existing_resource_key,
+            provider_result=provider_result,
+        )
+
+    def util_create_result_from_existing_resource(
+        self,
+        *,
+        existing_resource_key: str,
+    ) -> DeploymentCreateResult:
+        """Build create-result contract for DB-only existing-resource onboarding."""
+        return DeploymentCreateResult(id=existing_resource_key)
 
     def util_create_snapshot_bindings(
         self,
