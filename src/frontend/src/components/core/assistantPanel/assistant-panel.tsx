@@ -258,6 +258,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
           onSelectSession={switchSession}
           onDeleteSession={deleteSession}
           isExpanded={useExpandedSize}
+          panelWidth={panelSize.width}
         />
         {!hasEnabledModels && !hasMessages ? (
           <AssistantNoModelsState />
