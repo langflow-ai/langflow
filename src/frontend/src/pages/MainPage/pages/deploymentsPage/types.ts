@@ -1,5 +1,12 @@
 export type DeploymentProviderType = "watsonx" | "kubernetes";
 
+export interface EnvVarEntry {
+  id: string;
+  key: string;
+  value: string;
+  globalVar?: boolean;
+}
+
 export interface ConnectionItem {
   id: string;
   name: string;

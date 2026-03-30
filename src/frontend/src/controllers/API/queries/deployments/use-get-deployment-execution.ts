@@ -21,7 +21,8 @@ export const useGetDeploymentExecution: useMutationFunctionType<
     provider_id,
   }: GetDeploymentExecutionParams): Promise<DeploymentExecutionResponse> => {
     const res = await api.get<DeploymentExecutionResponse>(
-      `${getURL("DEPLOYMENTS")}/executions/${encodeURIComponent(execution_id)}?provider_id=${encodeURIComponent(provider_id)}`,
+      `${getURL("DEPLOYMENTS")}/executions/${encodeURIComponent(execution_id)}`,
+      { params: { provider_id } },
     );
     return res.data;
   };

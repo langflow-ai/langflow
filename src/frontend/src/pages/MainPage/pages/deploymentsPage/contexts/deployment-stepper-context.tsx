@@ -143,6 +143,7 @@ export function DeploymentStepperProvider({
       if (!hasValidCredentials) return null;
       return {
         name: credentials.name.trim(),
+        // derive from selectedProvider.id when multi-provider support is added
         provider_key: "watsonx-orchestrate",
         provider_url: credentials.provider_url.trim(),
         provider_data: { api_key: credentials.api_key.trim() },
@@ -154,7 +155,9 @@ export function DeploymentStepperProvider({
       // Collect all unique connection IDs referenced across all flows
       const allConnectionIds = new Set<string>();
       Array.from(attachedConnectionByFlow.values()).forEach((ids) => {
-        ids.forEach((id) => allConnectionIds.add(id));
+        ids.forEach((id) => {
+          allConnectionIds.add(id);
+        });
       });
 
       const existingAppIds: string[] = [];

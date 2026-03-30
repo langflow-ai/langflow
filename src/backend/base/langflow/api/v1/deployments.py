@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Annotated
 from uuid import UUID
 
@@ -138,14 +139,12 @@ def _derive_env_var_name(field_key: str, template: dict) -> str:
     (e.g. ``"OpenAI"``). When found, returns ``{CATEGORY}_API_KEY`` (e.g.
     ``OPENAI_API_KEY``).  Falls back to the uppercased field key (``API_KEY``).
     """
-    import json as _json
-
     model_field = template.get("model")
     if isinstance(model_field, dict):
         raw = model_field.get("value")
         if isinstance(raw, str):
             try:
-                raw = _json.loads(raw)
+                raw = json.loads(raw)
             except ValueError:
                 raw = None
         if isinstance(raw, list) and raw and isinstance(raw[0], dict):
