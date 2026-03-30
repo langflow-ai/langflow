@@ -584,7 +584,7 @@ async def list_deployment_llms(
             user_id=current_user.id,
             db=session,
         )
-    return DeploymentLlmListResponse(llms=deployment_mapper.shape_llm_list_result(llm_list_result))
+    return deployment_mapper.shape_llm_list_result(llm_list_result)
 
 
 @router.post("/executions", response_model=ExecutionCreateResponse, status_code=status.HTTP_201_CREATED)

@@ -53,6 +53,7 @@ from lfx.services.adapters.payload import PayloadSlot
 
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
+    DeploymentLlmListResponse,
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountGetResponse,
     DeploymentProviderAccountUpdateRequest,
@@ -438,9 +439,10 @@ class BaseDeploymentMapper:
     def shape_deployment_list_result(self, provider_result: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_result
 
-    def shape_llm_list_result(self, result: DeploymentListLlmsResult) -> list[str]:
-        """Shape adapter LLM listing into API response model payload."""
-        return list(dict.fromkeys([llm.strip() for llm in result.llms if isinstance(llm, str) and llm.strip()]))
+    def shape_llm_list_result(self, result: DeploymentListLlmsResult) -> DeploymentLlmListResponse:
+        """Shape adapter LLM listing into the API response model."""
+        provider_data = result.provider_result if isinstance(result.provider_result, dict) else None
+        return DeploymentLlmListResponse(provider_data=provider_data)
 
     def shape_config_list_result(self, provider_result: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_result

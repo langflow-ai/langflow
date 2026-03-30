@@ -612,7 +612,6 @@ def test_watsonx_mapper_update_response_raises_on_unmapped_tool_binding() -> Non
 def test_watsonx_mapper_shapes_llm_list_result() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     result = DeploymentListLlmsResult(
-        llms=[],
         provider_result={
             "models": [
                 {"model_name": "granite-3.1-8b"},
@@ -623,12 +622,18 @@ def test_watsonx_mapper_shapes_llm_list_result() -> None:
     )
 
     shaped = mapper.shape_llm_list_result(result)
-    assert shaped == ["granite-3.1-8b", "granite-3.3-8b"]
+    assert shaped.provider_data == {
+        "models": [
+            {"model_name": "granite-3.1-8b"},
+            {"model_name": "granite-3.3-8b"},
+            {"model_name": "granite-3.1-8b"},
+        ]
+    }
 
 
 def test_watsonx_mapper_llm_list_result_raises_for_missing_provider_payload() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
-    result = DeploymentListLlmsResult(llms=[], provider_result=None)
+    result = DeploymentListLlmsResult(provider_result=None)
 
     with pytest.raises(HTTPException) as exc:
         mapper.shape_llm_list_result(result)

@@ -63,6 +63,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
 )
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
+    DeploymentLlmListResponse,
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountUpdateRequest,
     DeploymentUpdateRequest,
@@ -473,7 +474,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             provider_data=provider_api_result.model_dump(mode="json", exclude_none=True),
         )
 
-    def shape_llm_list_result(self, result: DeploymentListLlmsResult) -> list[str]:
+    def shape_llm_list_result(self, result: DeploymentListLlmsResult) -> DeploymentLlmListResponse:
         adapter_provider_result = self._parse_required_payload_slot(
             slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_llm_list_result,
             slot_name="deployment_llm_list_result",
@@ -485,7 +486,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         if api_slot is None:
             msg = "Watsonx deployment_llm_list_result payload slot is not configured."
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        try:
+        try:  # straight pass-through today, so just dump + validate
             api_provider_result: WatsonxApiDeploymentLlmListResultData = api_slot.parse(
                 adapter_provider_result.model_dump(exclude_none=True)
             )
@@ -501,7 +502,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Deployment mapper llm list result payload is invalid: {detail}",
             ) from exc
-        return list(dict.fromkeys([item.model_name for item in api_provider_result.models]))
+        return DeploymentLlmListResponse(provider_data=api_provider_result.model_dump(mode="json", exclude_none=True))
 
     def util_create_snapshot_bindings(
         self,

@@ -282,9 +282,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 provider_data={"models": raw_models},
                 error_prefix=ErrorPrefix.LIST,
             )
-            llms = dedupe_list([model.model_name for model in parsed_models.models])
             return DeploymentListLlmsResult(
-                llms=llms,
                 provider_result=parsed_models.model_dump(exclude_none=True),
             )
         except Exception as exc:  # noqa: BLE001

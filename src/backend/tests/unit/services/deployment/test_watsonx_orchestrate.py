@@ -3108,7 +3108,6 @@ async def test_list_llms_returns_normalized_model_names(monkeypatch):
 
     result = await service.list_llms(user_id="user-1", db=object())
 
-    assert result.llms == ["granite-3.1-8b", "granite-3.3-8b"]
     assert result.provider_result == {
         "models": [
             {"model_name": "granite-3.1-8b"},

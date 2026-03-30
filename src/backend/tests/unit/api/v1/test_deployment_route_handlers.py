@@ -17,6 +17,7 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 from langflow.api.v1.schemas.deployments import (
+    DeploymentLlmListResponse,
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountUpdateRequest,
     DeploymentUpdateRequest,
@@ -1146,14 +1147,15 @@ class TestListDeploymentLlms:
 
         adapter = AsyncMock()
         llm_result = SimpleNamespace(
-            llms=["model-a", "model-b", "model-a"],
             provider_result={"models": [{"model_name": "model-a"}, {"model_name": "model-b"}]},
         )
         adapter.list_llms.return_value = llm_result
         mock_resolve_adapter.return_value = adapter
 
         mapper = MagicMock()
-        mapper.shape_llm_list_result.return_value = ["model-a", "model-b"]
+        mapper.shape_llm_list_result.return_value = DeploymentLlmListResponse(
+            provider_data={"models": [{"model_name": "model-a"}, {"model_name": "model-b"}]}
+        )
         mock_get_mapper.return_value = mapper
 
         response = await list_deployment_llms(
@@ -1162,7 +1164,9 @@ class TestListDeploymentLlms:
             current_user=_fake_user(),
         )
 
-        assert response.llms == ["model-a", "model-b"]
+        assert response == DeploymentLlmListResponse(
+            provider_data={"models": [{"model_name": "model-a"}, {"model_name": "model-b"}]}
+        )
         adapter.list_llms.assert_awaited_once()
         mapper.shape_llm_list_result.assert_called_once_with(llm_result)
 

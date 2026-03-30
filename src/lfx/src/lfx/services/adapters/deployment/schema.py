@@ -396,20 +396,7 @@ class DeploymentListResult(ProviderResultModel[T_DeploymentListResult]):
 
 
 class DeploymentListLlmsResult(ProviderResultModel[T_DeploymentLlmListResult]):
-    """Model representing a result for listing available deployment LLMs."""
-
-    llms: list[NormalizedId] = Field(
-        default_factory=list,
-        description="Provider-available LLM model names for deployment configuration.",
-    )
-
-    @field_validator("llms", mode="before")
-    @classmethod
-    def normalize_llms(cls, value) -> list[str]:
-        if value is None:
-            return []
-        normalized = _normalize_and_validate_id_list([str(item) for item in value], field_name="llm")
-        return list(dict.fromkeys(normalized))
+    """Provider payload container for listing available deployment LLM metadata."""
 
 
 class ConfigListResult(ProviderResultModel[T_ConfigListResult]):
