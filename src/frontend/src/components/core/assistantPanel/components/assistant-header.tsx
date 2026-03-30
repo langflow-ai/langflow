@@ -71,19 +71,6 @@ export function AssistantHeader({
           isExpanded={isExpanded}
         />
 
-        <Button
-          variant="ghost"
-          size="icon"
-          data-testid="assistant-close"
-          className="h-8 w-8"
-          title="Close"
-          onClick={onClose}
-        >
-          <ForwardedIconComponent
-            name="X"
-            className="h-4 w-4 text-muted-foreground"
-          />
-        </Button>
       </div>
     </div>
   );

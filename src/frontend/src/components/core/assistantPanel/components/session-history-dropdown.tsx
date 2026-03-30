@@ -54,8 +54,8 @@ export function SessionHistoryDropdown({
       </DropdownMenuTrigger>
 
       <DropdownMenuContent
-        align={dropAlign}
-        side="right"
+        align="end"
+        side="bottom"
         sideOffset={4}
         className="z-[70] max-h-80 w-72 overflow-y-auto"
       >

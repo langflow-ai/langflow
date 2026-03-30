@@ -86,10 +86,14 @@ async def classify_intent(
                     except json.JSONDecodeError:
                         pass
 
-                # Fallback 3: plain text mentioning "generate_component"
+                # Fallback 3: plain text mentioning known intents
                 if "generate_component" in response_text:
                     logger.info("Extracted generate_component intent from non-JSON response")
                     return IntentResult(translation=text, intent="generate_component")
+
+                if "off_topic" in response_text:
+                    logger.info("Extracted off_topic intent from non-JSON response")
+                    return IntentResult(translation=text, intent="off_topic")
 
                 logger.warning("Intent flow returned non-JSON, treating as question")
                 return IntentResult(translation=response_text, intent="question")

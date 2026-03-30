@@ -26,17 +26,26 @@ Intent Classification:
   Examples: "Create a component that calls an API", "Build me a custom component for...",
   "can you use dataframe output instead?", "add error handling", "make it also support CSV",
   "change the output to return a list", "use requests instead of urllib", "add a timeout parameter"
-- "question": User is ASKING A QUESTION, seeking help, or wants information.
-  Examples: "How do I create a component?", "What is a component?", "Can you explain...", "How to use..."
+- "question": User is ASKING A QUESTION about Langflow, seeking help with Langflow, or wants \
+information about Langflow features, components, flows, or how to use Langflow.
+  Examples: "How do I create a component?", "What is a component?", "Can you explain flows?", \
+"How to connect two components?"
+- "off_topic": The question is NOT about Langflow. It is about other tools, platforms, general \
+knowledge, or anything unrelated to Langflow.
+  Examples: "How does n8n work?", "What is Python?", "Tell me about React", "How to cook pasta", \
+"Explain Docker", "What is AutoGen?", "How does Make.com work?", "Write me a poem"
 
 IMPORTANT rules:
-- "How to create a component" = question (asking for guidance)
+- "How to create a component" = question (asking for Langflow guidance)
 - "Create a component that does X" = generate_component (requesting creation)
 - Short follow-up requests that imply changes to something previously generated = generate_component
   (e.g., "use X instead", "add Y", "change Z", "make it do W", "can you also...", "what about using...")
+- Questions about OTHER tools or platforms (n8n, Make, Zapier, AutoGen, CrewAI, etc.) = off_topic
+- General knowledge questions NOT related to Langflow = off_topic
+- If unsure whether it's about Langflow, classify as "question" (not off_topic)
 
 Output format (JSON only, no markdown):
-{{"translation": "<english text>", "intent": "<generate_component|question>"}}
+{{"translation": "<english text>", "intent": "<generate_component|question|off_topic>"}}
 
 Examples:
 Input: "como criar um componente no langflow"
@@ -59,6 +68,15 @@ Output: {{"translation": "add a retry mechanism with exponential backoff", "inte
 
 Input: "what does the output format look like?"
 Output: {{"translation": "what does the output format look like?", "intent": "question"}}
+
+Input: "como funciona o n8n?"
+Output: {{"translation": "how does n8n work?", "intent": "off_topic"}}
+
+Input: "explain how kubernetes works"
+Output: {{"translation": "explain how kubernetes works", "intent": "off_topic"}}
+
+Input: "write me a poem about cats"
+Output: {{"translation": "write me a poem about cats", "intent": "off_topic"}}
 """
 
 
