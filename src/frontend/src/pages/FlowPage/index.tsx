@@ -20,6 +20,7 @@ import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
 import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
+import { useShortcutsStore } from "@/stores/shortcuts";
 import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
@@ -221,15 +222,16 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
     (state) => state.setAssistantSidebarOpen,
   );
 
-  // Toggle assistant with "A" key (only when not typing in an input)
+  // Toggle assistant with configurable shortcut (only when not typing in an input)
+  const aiAssistantShortcut = useShortcutsStore((state) => state.aiAssistant);
   useHotkeys(
-    "a",
+    aiAssistantShortcut,
     () => setAssistantOpen(!assistantOpen),
     {
       preventDefault: true,
       enableOnFormTags: false,
     },
-    [assistantOpen],
+    [assistantOpen, aiAssistantShortcut],
   );
 
   // Close assistant with Escape

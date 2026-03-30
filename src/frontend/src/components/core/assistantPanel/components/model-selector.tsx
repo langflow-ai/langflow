@@ -38,10 +38,16 @@ export function ModelSelector({
     );
   }, [enabledProviders]);
 
-  // Auto-select first available model if none selected
-  // This ensures the backend always receives a valid model
+  // Auto-select first available model if none selected or if the selected model
+  // is no longer available (e.g., provider was removed or model was disabled)
   useEffect(() => {
-    if (!selectedModel && allModels.length > 0) {
+    if (allModels.length === 0) return;
+
+    const isSelectedModelValid =
+      selectedModel &&
+      allModels.some((m) => m.id === selectedModel.id);
+
+    if (!isSelectedModelValid) {
       const defaultModel = allModels[0];
       onModelChange({
         id: defaultModel.id,
@@ -53,6 +59,15 @@ export function ModelSelector({
   }, [selectedModel, allModels, onModelChange]);
 
   const currentModel = selectedModel || allModels[0] || null;
+
+  // Resolve the provider icon for the currently selected model
+  const currentProviderIcon = useMemo(() => {
+    if (!currentModel) return "Bot";
+    const provider = enabledProviders.find(
+      (p) => p.provider === currentModel.provider,
+    );
+    return provider?.icon || "Bot";
+  }, [currentModel, enabledProviders]);
 
   const handleModelSelect = (model: (typeof allModels)[0]) => {
     onModelChange({
@@ -102,8 +117,10 @@ export function ModelSelector({
           className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground active:!scale-100"
         >
           <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 bg-muted-foreground" />
-            <span className="font-medium tracking-wide">AI</span>
+            <ForwardedIconComponent
+              name={currentProviderIcon}
+              className="h-4 w-4 shrink-0"
+            />
           </span>
           <span>{currentModel?.displayName || "Select model"}</span>
           <ForwardedIconComponent

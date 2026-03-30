@@ -11,7 +11,7 @@ export function AssistantNoModelsState() {
   };
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center px-8">
+    <div className="flex flex-1 flex-col items-center justify-center px-8 pb-6">
       <div className="mb-6 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl">
         <img
           src={langflowAssistantIcon}
@@ -27,10 +27,12 @@ export function AssistantNoModelsState() {
         your settings.
       </p>
       <Button
-        className="h-[46px] w-[265px] gap-2 rounded-xl"
+        variant="outline"
+        size="sm"
+        className="gap-2 text-muted-foreground"
         onClick={handleConfigureModels}
       >
-        <ForwardedIconComponent name="Settings" className="h-5 w-5" />
+        <ForwardedIconComponent name="Settings" className="h-4 w-4" />
         Configure Model Providers
       </Button>
     </div>

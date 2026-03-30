@@ -103,6 +103,15 @@ export function getRandomThinkingMessage(): string {
   return getRandomMessage(REASONING_HEADER_MESSAGES);
 }
 
+// Descriptive messages shown in the input placeholder during post-generation steps
+const PLACEHOLDER_PROGRESS_MESSAGES = [
+  ...ANALYZING_MESSAGES,
+  ...IDENTIFYING_INPUTS_MESSAGES,
+  ...CHECKING_DEPENDENCIES_MESSAGES,
+  ...GENERATING_CODE_MESSAGES,
+  ...VALIDATING_MESSAGES,
+];
+
 export function getRandomPlaceholderMessage(): string {
-  return getRandomMessage(REASONING_HEADER_MESSAGES);
+  return getRandomMessage(PLACEHOLDER_PROGRESS_MESSAGES);
 }

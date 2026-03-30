@@ -111,6 +111,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     currentStep,
     handleSend,
     handleApprove,
+    handleRetry,
     handleStopGeneration,
     handleClearHistory,
     loadSession,
@@ -125,8 +126,8 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     handleClearHistory();
   }, [handleStopGeneration, saveCurrentSession, handleClearHistory]);
 
-  const handleApproveAndClose = (messageId: string) => {
-    handleApprove(messageId);
+  const handleApproveAndClose = (messageId: string, componentCode?: string) => {
+    handleApprove(messageId, componentCode);
     onClose();
   };
 
@@ -248,17 +249,8 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
           onDeleteSession={deleteSession}
           isExpanded={useExpandedSize}
         />
-        {!hasEnabledModels ? (
-          <>
-            <div className="flex flex-1 flex-col overflow-hidden">
-              <AssistantNoModelsState />
-            </div>
-            <AssistantInput
-              onSend={handleSend}
-              disabled={true}
-              placeholder="Configure Model Providers..."
-            />
-          </>
+        {!hasEnabledModels && !hasMessages ? (
+          <AssistantNoModelsState />
         ) : hasMessages ? (
           <StickToBottom
             className="flex flex-1 flex-col overflow-hidden"
@@ -271,16 +263,17 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
                   key={msg.id}
                   message={msg}
                   onApprove={handleApproveAndClose}
+                  onRetry={hasEnabledModels ? handleRetry : undefined}
                 />
               ))}
             </StickToBottom.Content>
             <AssistantInputWithScroll
               onSend={handleSend}
               onStop={handleStopGeneration}
-              disabled={isProcessing}
+              disabled={!hasEnabledModels || isProcessing}
               isProcessing={isProcessing}
               currentStep={currentStep}
-              autoFocus={isOpen}
+              autoFocus={isOpen && hasEnabledModels}
             />
           </StickToBottom>
         ) : (

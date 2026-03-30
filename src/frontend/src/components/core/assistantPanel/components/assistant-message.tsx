@@ -15,7 +15,8 @@ import { AssistantValidationFailed } from "./assistant-validation-failed";
 
 interface AssistantMessageItemProps {
   message: AssistantMessage;
-  onApprove?: (messageId: string) => void;
+  onApprove?: (messageId: string, componentCode?: string) => void;
+  onRetry?: (messageId: string) => void;
 }
 
 function ThinkingIndicator({ message }: { message: string }) {
@@ -40,6 +41,7 @@ function ThinkingIndicator({ message }: { message: string }) {
 export function AssistantMessageItem({
   message,
   onApprove,
+  onRetry,
 }: AssistantMessageItemProps) {
   const { userData } = useContext(AuthContext);
   const isUser = message.role === "user";
@@ -143,7 +145,12 @@ export function AssistantMessageItem({
     // Show validation failure after all retries (only after animation completes)
     const canShowResult = validationAnimationComplete || !message.progress;
     if (hasValidationError && message.result && canShowResult) {
-      return <AssistantValidationFailed result={message.result} />;
+      return (
+        <AssistantValidationFailed
+          result={message.result}
+          onRetry={onRetry ? () => onRetry(message.id) : undefined}
+        />
+      );
     }
 
     // Show successful component result (only after validation animation completes, or if no animation was needed)
@@ -152,6 +159,27 @@ export function AssistantMessageItem({
         <AssistantComponentResult
           result={message.result}
           onApprove={() => onApprove?.(message.id)}
+        />
+      );
+    }
+
+    // Fallback: content contains component code but result didn't capture it
+    // (e.g. misclassified intent where backend streamed code as Q&A text)
+    const componentCodeMatch = message.content?.match(
+      /```python\s*\n([\s\S]*?class\s+(\w+)\s*\(.*Component.*\)[\s\S]*?)```/,
+    );
+    if (componentCodeMatch && message.status === "complete") {
+      const extractedCode = componentCodeMatch[1];
+      const extractedClassName = componentCodeMatch[2];
+      return (
+        <AssistantComponentResult
+          result={{
+            content: message.content,
+            validated: true,
+            componentCode: extractedCode,
+            className: extractedClassName,
+          }}
+          onApprove={() => onApprove?.(message.id, extractedCode)}
         />
       );
     }

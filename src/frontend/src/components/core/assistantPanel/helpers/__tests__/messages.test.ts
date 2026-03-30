@@ -20,13 +20,42 @@ describe("getRandomThinkingMessage", () => {
 });
 
 describe("getRandomPlaceholderMessage", () => {
-  it("should return from same pool as thinking message", () => {
+  it("should return from a different pool than thinking messages", () => {
     const spy = jest.spyOn(Math, "random").mockReturnValue(0);
     const thinking = getRandomThinkingMessage();
     const placeholder = getRandomPlaceholderMessage();
     spy.mockRestore();
 
-    expect(thinking).toBe(placeholder);
+    // Placeholder messages are descriptive progress messages,
+    // not the generic "Thinking..." headers
+    expect(placeholder).not.toBe(thinking);
+  });
+
+  it("should_return_descriptive_progress_message_when_used_as_placeholder", () => {
+    // Bug: getRandomPlaceholderMessage() returns from REASONING_HEADER_MESSAGES
+    // ("Thinking...", "Processing...") instead of descriptive progress messages.
+    // Placeholder messages should describe what the assistant is doing,
+    // not generic "Thinking..." headers.
+    const headerMessages = [
+      "Thinking...",
+      "Processing...",
+      "Working on it...",
+      "Analyzing...",
+      "Reasoning...",
+      "Please wait...",
+      "Just a moment...",
+      "Almost there...",
+    ];
+
+    // Sample with deterministic Math.random to get the first message
+    const spy = jest.spyOn(Math, "random").mockReturnValue(0);
+    const firstPlaceholder = getRandomPlaceholderMessage();
+    spy.mockRestore();
+
+    // The first placeholder message must NOT be one of the generic headers
+    expect(headerMessages).not.toContain(firstPlaceholder);
+    // It should be a descriptive progress message (longer, more specific)
+    expect(firstPlaceholder.length).toBeGreaterThan(15);
   });
 });
 

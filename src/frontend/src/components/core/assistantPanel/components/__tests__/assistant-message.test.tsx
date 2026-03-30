@@ -54,9 +54,20 @@ jest.mock("../assistant-loading-state", () => ({
 jest.mock("../assistant-validation-failed", () => ({
   AssistantValidationFailed: ({
     result,
+    onRetry,
   }: {
     result: { validationError?: string };
-  }) => <div data-testid="validation-failed">{result.validationError}</div>,
+    onRetry?: () => void;
+  }) => (
+    <div data-testid="validation-failed">
+      {result.validationError}
+      {onRetry && (
+        <button data-testid="retry-button" onClick={onRetry}>
+          Try again
+        </button>
+      )}
+    </div>
+  ),
 }));
 
 jest.mock("../../helpers/messages", () => ({
@@ -257,6 +268,29 @@ describe("AssistantMessageItem", () => {
       expect(
         screen.getByText("SyntaxError: invalid syntax"),
       ).toBeInTheDocument();
+    });
+
+    it("should_show_retry_button_when_validation_fails", () => {
+      // Bug: AssistantValidationFailed is rendered without onRetry prop,
+      // so the "Try again" button never appears.
+      const message = createMessage({
+        role: "assistant",
+        content: "",
+        status: "complete",
+        result: {
+          content: "",
+          validated: false,
+          validationError: "SyntaxError: invalid syntax",
+          componentCode: "class Bad(Component): pass",
+        },
+      });
+
+      const onRetry = jest.fn();
+      render(
+        <AssistantMessageItem message={message} onRetry={onRetry} />,
+      );
+
+      expect(screen.getByTestId("retry-button")).toBeInTheDocument();
     });
   });
 

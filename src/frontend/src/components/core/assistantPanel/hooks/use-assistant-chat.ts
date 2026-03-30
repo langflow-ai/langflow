@@ -21,7 +21,8 @@ interface UseAssistantChatReturn {
   isProcessing: boolean;
   currentStep: AgenticStepType | null;
   handleSend: (content: string, model: AssistantModel | null) => Promise<void>;
-  handleApprove: (messageId: string) => Promise<void>;
+  handleApprove: (messageId: string, componentCode?: string) => Promise<void>;
+  handleRetry: (messageId: string) => void;
   handleStopGeneration: () => void;
   handleClearHistory: () => void;
   loadSession: (id: string, msgs: AssistantMessage[]) => void;
@@ -32,6 +33,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentStep, setCurrentStep] = useState<AgenticStepType | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const lastModelRef = useRef<AssistantModel | null>(null);
   const sessionIdRef = useRef<string>(uid.randomUUID(16));
   const [sessionId, setSessionId] = useState<string>(sessionIdRef.current);
 
@@ -60,6 +62,8 @@ export function useAssistantChat(): UseAssistantChatReturn {
       if (!model?.provider || !model?.name) {
         return;
       }
+
+      lastModelRef.current = model;
 
       const userMessage: AssistantMessage = {
         id: uid.randomUUID(10),
@@ -175,14 +179,15 @@ export function useAssistantChat(): UseAssistantChatReturn {
   );
 
   const handleApprove = useCallback(
-    async (messageId: string) => {
+    async (messageId: string, componentCode?: string) => {
       const message = messages.find((m) => m.id === messageId);
-      if (!message?.result?.componentCode) return;
+      const code = componentCode || message?.result?.componentCode;
+      if (!code) return;
 
       try {
         // Backend builds the full frontend_node from code validation; empty placeholder is expected
         const response = await validateComponent({
-          code: message.result.componentCode,
+          code,
           frontend_node: {} as APIClassType,
         });
 
@@ -194,6 +199,25 @@ export function useAssistantChat(): UseAssistantChatReturn {
       }
     },
     [messages, validateComponent, addComponent],
+  );
+
+  const handleRetry = useCallback(
+    (messageId: string) => {
+      // Find the failed assistant message and the user message before it
+      const msgIndex = messages.findIndex((m) => m.id === messageId);
+      if (msgIndex < 1) return;
+
+      const userMessage = messages
+        .slice(0, msgIndex)
+        .reverse()
+        .find((m) => m.role === "user");
+      if (!userMessage?.content || !lastModelRef.current) return;
+
+      // Remove the failed assistant message so a fresh one is created by handleSend
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+      handleSend(userMessage.content, lastModelRef.current);
+    },
+    [messages, handleSend],
   );
 
   const handleStopGeneration = useCallback(() => {
@@ -240,6 +264,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
     currentStep,
     handleSend,
     handleApprove,
+    handleRetry,
     handleStopGeneration,
     handleClearHistory,
     loadSession,
