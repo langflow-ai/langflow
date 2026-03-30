@@ -36,7 +36,7 @@ async def get_message_ids_for_user(session: AsyncSession, user_id: UUID, message
     stmt = (
         select(MessageTable.id)
         .join(Flow, MessageTable.flow_id == Flow.id)
-        .where(MessageTable.id.in_(message_ids))
+        .where(col(MessageTable.id).in_(message_ids))
         .where(Flow.user_id == user_id)
     )
     return (await session.exec(stmt)).all()
@@ -63,7 +63,7 @@ async def delete_messages_for_user(session: AsyncSession, user_id: UUID, message
 
     await session.exec(
         delete(MessageTable)
-        .where(MessageTable.id.in_(owned_message_ids))
+        .where(col(MessageTable.id).in_(owned_message_ids))
         .execution_options(synchronize_session="fetch")
     )
 
@@ -78,7 +78,7 @@ async def delete_messages_for_user_by_session(session: AsyncSession, user_id: UU
 
     await session.exec(
         delete(MessageTable)
-        .where(MessageTable.id.in_(owned_message_ids))
+        .where(col(MessageTable.id).in_(owned_message_ids))
         .execution_options(synchronize_session="fetch")
     )
 

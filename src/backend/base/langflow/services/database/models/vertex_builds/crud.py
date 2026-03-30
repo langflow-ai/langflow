@@ -150,7 +150,7 @@ async def delete_vertex_builds_by_flow_id(db: AsyncSession, flow_id: UUID, user_
         The function commits the transaction automatically.
     """
     owned_flow_subquery = select(Flow.id).where(Flow.id == flow_id, Flow.user_id == user_id)
-    stmt = delete(VertexBuildTable).where(VertexBuildTable.flow_id.in_(owned_flow_subquery))
+    stmt = delete(VertexBuildTable).where(col(VertexBuildTable.flow_id).in_(owned_flow_subquery))
     await db.exec(stmt)
 
 
