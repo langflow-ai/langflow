@@ -4,9 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useGetProviderAccounts } from "@/controllers/API/queries/deployment-provider-accounts";
 import { useGetDeployments } from "@/controllers/API/queries/deployments";
 import DeploymentStepperModal from "./components/deployment-stepper-modal";
-import DeploymentsEmptyState from "./components/deployments-empty-state";
-import DeploymentsLoadingSkeleton from "./components/deployments-loading-skeleton";
-import DeploymentsTable from "./components/deployments-table";
+import DeploymentsContent from "./components/deployments-content";
 import SubTabToggle, {
   type DeploymentSubTab,
 } from "./components/sub-tab-toggle";
@@ -40,19 +38,15 @@ export default function DeploymentsPage() {
         </Button>
       </div>
 
-      {activeSubTab === "deployments" &&
-        (isLoading ? (
-          <DeploymentsLoadingSkeleton />
-        ) : isEmpty ? (
-          <DeploymentsEmptyState
-            onCreateDeployment={() => setStepperOpen(true)}
-          />
-        ) : (
-          <DeploymentsTable
-            deployments={deployments}
-            providerName={providers[0]?.name ?? ""}
-          />
-        ))}
+      {activeSubTab === "deployments" && (
+        <DeploymentsContent
+          isLoading={isLoading}
+          isEmpty={isEmpty}
+          deployments={deployments}
+          providerName={providers[0]?.name ?? ""}
+          onCreateDeployment={() => setStepperOpen(true)}
+        />
+      )}
 
       {activeSubTab === "providers" && (
         <div className="py-24 text-center text-sm text-muted-foreground">
