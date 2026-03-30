@@ -286,7 +286,9 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
               currentStep={currentStep}
               autoFocus={isOpen && hasEnabledModels}
               draftMessage={draftMessageCache}
-              onDraftChange={(draft) => { draftMessageCache = draft; }}
+              onDraftChange={(draft) => {
+                draftMessageCache = draft;
+              }}
             />
           </StickToBottom>
         ) : (
@@ -301,7 +303,9 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
               compact={hasExpandedOnce}
               autoFocus={isOpen}
               draftMessage={draftMessageCache}
-              onDraftChange={(draft) => { draftMessageCache = draft; }}
+              onDraftChange={(draft) => {
+                draftMessageCache = draft;
+              }}
             />
           </>
         )}

@@ -202,7 +202,9 @@ describe("AssistantLoadingState", () => {
 
     it("should not show on first attempt", () => {
       render(
-        <AssistantLoadingState progress={createProgress({ attempt: 1, maxAttempts: 3 })} />,
+        <AssistantLoadingState
+          progress={createProgress({ attempt: 1, maxAttempts: 3 })}
+        />,
       );
       expect(screen.queryByText(/Attempt/)).not.toBeInTheDocument();
     });

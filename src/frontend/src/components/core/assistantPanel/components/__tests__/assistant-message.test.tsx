@@ -286,9 +286,7 @@ describe("AssistantMessageItem", () => {
       });
 
       const onRetry = jest.fn();
-      render(
-        <AssistantMessageItem message={message} onRetry={onRetry} />,
-      );
+      render(<AssistantMessageItem message={message} onRetry={onRetry} />);
 
       expect(screen.getByTestId("retry-button")).toBeInTheDocument();
     });

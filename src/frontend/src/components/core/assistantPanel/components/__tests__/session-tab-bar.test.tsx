@@ -10,11 +10,7 @@ jest.mock("@/components/common/genericIconComponent", () => {
 });
 
 jest.mock("@/components/common/shadTooltipComponent", () => {
-  return function MockTooltip({
-    children,
-  }: {
-    children: React.ReactNode;
-  }) {
+  return function MockTooltip({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   };
 });
@@ -90,7 +86,9 @@ describe("SessionTabBar", () => {
       render(<SessionTabBar {...defaultProps} />);
 
       expect(
-        screen.queryByTestId(`session-tab-close-${defaultProps.activeSessionId}`),
+        screen.queryByTestId(
+          `session-tab-close-${defaultProps.activeSessionId}`,
+        ),
       ).not.toBeInTheDocument();
     });
 
@@ -130,10 +128,7 @@ describe("SessionTabBar", () => {
       const onSelectSession = jest.fn();
 
       render(
-        <SessionTabBar
-          {...defaultProps}
-          onSelectSession={onSelectSession}
-        />,
+        <SessionTabBar {...defaultProps} onSelectSession={onSelectSession} />,
       );
 
       await userEvent.click(screen.getByText("Current session"));
@@ -172,7 +167,11 @@ describe("SessionTabBar", () => {
 
       // Only one tab (current session) — close button hidden when single tab
       // No close button available, so onNewSession won't be triggered
-      expect(screen.queryByTestId(`session-tab-close-${defaultProps.activeSessionId}`)).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId(
+          `session-tab-close-${defaultProps.activeSessionId}`,
+        ),
+      ).not.toBeInTheDocument();
     });
   });
 });

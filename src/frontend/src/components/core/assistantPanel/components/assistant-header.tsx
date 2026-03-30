@@ -99,9 +99,7 @@ export function AssistantHeader({
       {useTabBar && (
         <ShadTooltip
           content={
-            isAtSessionLimit
-              ? `Max ${ASSISTANT_MAX_SESSIONS} sessions`
-              : ""
+            isAtSessionLimit ? `Max ${ASSISTANT_MAX_SESSIONS} sessions` : ""
           }
           side="bottom"
         >

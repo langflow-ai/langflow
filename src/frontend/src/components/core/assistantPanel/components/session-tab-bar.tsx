@@ -129,10 +129,7 @@ export function SessionTabBar({
           className="absolute left-0 top-0 z-10 flex h-full w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
           onClick={() => scrollBy(-ASSISTANT_TAB_SCROLL_AMOUNT)}
         >
-          <ForwardedIconComponent
-            name="ChevronLeft"
-            className="h-4 w-4"
-          />
+          <ForwardedIconComponent name="ChevronLeft" className="h-4 w-4" />
         </button>
       )}
 
@@ -214,13 +211,9 @@ export function SessionTabBar({
           className="absolute right-0 top-0 z-10 flex h-full w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
           onClick={() => scrollBy(ASSISTANT_TAB_SCROLL_AMOUNT)}
         >
-          <ForwardedIconComponent
-            name="ChevronRight"
-            className="h-4 w-4"
-          />
+          <ForwardedIconComponent name="ChevronRight" className="h-4 w-4" />
         </button>
       )}
-
     </div>
   );
 }

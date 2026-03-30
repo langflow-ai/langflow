@@ -168,7 +168,12 @@ export function AssistantMessageItem({
     // Only applies when the message has progress steps from component generation,
     // NOT for plain Q&A responses that happen to contain example code.
     const wasComponentGeneration = message.completedSteps?.some((step) =>
-      ["generating_component", "extracting_code", "validating", "validated"].includes(step),
+      [
+        "generating_component",
+        "extracting_code",
+        "validating",
+        "validated",
+      ].includes(step),
     );
     if (wasComponentGeneration && message.status === "complete") {
       const componentCodeMatch = message.content?.match(

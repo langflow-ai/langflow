@@ -44,8 +44,7 @@ export function ModelSelector({
     if (allModels.length === 0) return;
 
     const isSelectedModelValid =
-      selectedModel &&
-      allModels.some((m) => m.id === selectedModel.id);
+      selectedModel && allModels.some((m) => m.id === selectedModel.id);
 
     if (!isSelectedModelValid) {
       const defaultModel = allModels[0];
