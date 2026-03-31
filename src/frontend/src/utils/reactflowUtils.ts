@@ -198,14 +198,40 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
 
       // Backward compatibility: old flows may have Data/DataFrame types that need to match JSON/Table
       const expectedTargetHandle = scapedJSONStringfy(id);
+      const targetHandlesMatchResult = handlesMatch(
+        expectedTargetHandle,
+        targetHandle,
+      );
       if (
-        (!handlesMatch(expectedTargetHandle, targetHandle) ||
+        (!targetHandlesMatchResult ||
           (targetNode.data.node?.tool_mode && isToolMode) ||
           isAdvanced) &&
         !isLoopInput
       ) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
         brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
+      } else if (
+        targetHandlesMatchResult &&
+        expectedTargetHandle !== targetHandle
+      ) {
+        // Handles match via migration but IDs differ — update edge to use current types
+        // so React Flow can find the DOM handle
+        const edgeInNewEdges = newEdges.find((e) => e.id === edge.id);
+        if (edgeInNewEdges) {
+          edgeInNewEdges.targetHandle = expectedTargetHandle;
+          if (edgeInNewEdges.data) {
+            edgeInNewEdges.data.targetHandle =
+              scapeJSONParse(expectedTargetHandle);
+          }
+          // Update edge ID to reflect new handles
+          edgeInNewEdges.id =
+            "reactflow__edge-" +
+            edgeInNewEdges.source +
+            (edgeInNewEdges.sourceHandle ?? "") +
+            "-" +
+            edgeInNewEdges.target +
+            expectedTargetHandle;
+        }
       }
     }
     if (sourceHandle) {
@@ -213,18 +239,26 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       const name = parsedSourceHandle.name;
 
       if (sourceNode.type == "genericNode") {
-        const output =
-          sourceNode.data.node!.outputs?.find(
-            (output) => output.name === sourceNode.data.selected_output,
-          ) ??
-          sourceNode.data.node!.outputs?.find(
-            (output) =>
-              (output.selected ||
-                (sourceNode.data.node!.outputs?.filter(
-                  (output) => !output.group_outputs,
-                )?.length ?? 0) <= 1) &&
-              output.name === name,
-          );
+        // For components with group_outputs, each output has its own handle,
+        // so we must NOT use selected_output (which would match the wrong output).
+        // Only use selected_output for single-output dropdown components.
+        const hasGroupOutputs = sourceNode.data.node!.outputs?.some(
+          (o) => o.group_outputs,
+        );
+        const outputBySelectedOutput = hasGroupOutputs
+          ? undefined
+          : sourceNode.data.node!.outputs?.find(
+              (output) => output.name === sourceNode.data.selected_output,
+            );
+        const outputByFallback = sourceNode.data.node!.outputs?.find(
+          (output) =>
+            (output.selected ||
+              (sourceNode.data.node!.outputs?.filter(
+                (output) => !output.group_outputs,
+              )?.length ?? 0) <= 1) &&
+            output.name === name,
+        );
+        const output = outputBySelectedOutput ?? outputByFallback;
 
         if (output) {
           const outputTypes =
@@ -241,12 +275,34 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
           const hasAllowsLoop = output?.allows_loop === true;
           // Backward compatibility: old flows may have Data/DataFrame types that need to match JSON/Table
           const expectedSourceHandle = scapedJSONStringfy(id);
-          if (
-            !handlesMatch(expectedSourceHandle, sourceHandle) &&
-            !hasAllowsLoop
-          ) {
+          const sourceMatchResult = handlesMatch(
+            expectedSourceHandle,
+            sourceHandle,
+          );
+          if (!sourceMatchResult && !hasAllowsLoop) {
             newEdges = newEdges.filter((e) => e.id !== edge.id);
             brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
+          } else if (
+            sourceMatchResult &&
+            expectedSourceHandle !== sourceHandle
+          ) {
+            // Handles match via migration but IDs differ — update edge to use current types
+            const edgeInNewEdges = newEdges.find((e) => e.id === edge.id);
+            if (edgeInNewEdges) {
+              edgeInNewEdges.sourceHandle = expectedSourceHandle;
+              if (edgeInNewEdges.data) {
+                edgeInNewEdges.data.sourceHandle =
+                  scapeJSONParse(expectedSourceHandle);
+              }
+              // Update edge ID to reflect new handles
+              edgeInNewEdges.id =
+                "reactflow__edge-" +
+                edgeInNewEdges.source +
+                expectedSourceHandle +
+                "-" +
+                edgeInNewEdges.target +
+                (edgeInNewEdges.targetHandle ?? "");
+            }
           }
         } else {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
@@ -2076,7 +2132,7 @@ export function templatesGenerator(data: APIObjectType) {
   return Object.keys(data).reduce((acc, curr) => {
     Object.keys(data[curr]).forEach((c: keyof APIKindType) => {
       //prevent wrong overwriting of the component template by a group of the same type
-      if (!data[curr][c].flow) acc[c] = data[curr][c];
+      if (!data[curr][c].flow) acc[c] = cloneDeep(data[curr][c]);
     });
     return acc;
   }, {});

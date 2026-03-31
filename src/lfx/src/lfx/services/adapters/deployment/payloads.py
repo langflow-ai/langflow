@@ -24,6 +24,9 @@ T_DeploymentConfigModel = TypeVar("T_DeploymentConfigModel", bound=BaseModel, de
 T_DeploymentUpdate = TypeVar("T_DeploymentUpdate", default=AdapterPayload)
 T_DeploymentUpdateModel = TypeVar("T_DeploymentUpdateModel", bound=BaseModel, default=BaseModel)
 
+T_DeploymentCreate = TypeVar("T_DeploymentCreate", default=AdapterPayload)
+T_DeploymentCreateModel = TypeVar("T_DeploymentCreateModel", bound=BaseModel, default=BaseModel)
+
 T_ExecutionInput = TypeVar("T_ExecutionInput", default=AdapterPayload)
 T_ExecutionInputModel = TypeVar("T_ExecutionInputModel", bound=BaseModel, default=BaseModel)
 
@@ -36,12 +39,27 @@ T_ConfigListParamsModel = TypeVar("T_ConfigListParamsModel", bound=BaseModel, de
 T_SnapshotListParams = TypeVar("T_SnapshotListParams", default=AdapterPayload)
 T_SnapshotListParamsModel = TypeVar("T_SnapshotListParamsModel", bound=BaseModel, default=BaseModel)
 
+# Verify credentials pairs — credentials are provider-specific and carried
+# in provider_data rather than as top-level fields on the base schema.
+T_VerifyCredentials = TypeVar("T_VerifyCredentials", default=AdapterPayload)
+T_VerifyCredentialsModel = TypeVar("T_VerifyCredentialsModel", bound=BaseModel, default=BaseModel)
+
+T_VerifyCredentialsResult = TypeVar("T_VerifyCredentialsResult", default=AdapterPayload)
+T_VerifyCredentialsResultModel = TypeVar("T_VerifyCredentialsResultModel", bound=BaseModel, default=BaseModel)
+
+# Flow artifact provider_data pair
+T_FlowProviderData = TypeVar("T_FlowProviderData", default=AdapterPayload)
+T_FlowProviderDataModel = TypeVar("T_FlowProviderDataModel", bound=BaseModel, default=BaseModel)
+
 # Outbound payload pairs
 T_DeploymentCreateResult = TypeVar("T_DeploymentCreateResult", default=AdapterPayload)
 T_DeploymentCreateResultModel = TypeVar("T_DeploymentCreateResultModel", bound=BaseModel, default=BaseModel)
 
 T_DeploymentOperationResult = TypeVar("T_DeploymentOperationResult", default=AdapterPayload)
 T_DeploymentOperationResultModel = TypeVar("T_DeploymentOperationResultModel", bound=BaseModel, default=BaseModel)
+
+T_DeploymentUpdateResult = TypeVar("T_DeploymentUpdateResult", default=AdapterPayload)
+T_DeploymentUpdateResultModel = TypeVar("T_DeploymentUpdateResultModel", bound=BaseModel, default=BaseModel)
 
 T_DeploymentListResult = TypeVar("T_DeploymentListResult", default=AdapterPayload)
 T_DeploymentListResultModel = TypeVar("T_DeploymentListResultModel", bound=BaseModel, default=BaseModel)
@@ -54,6 +72,10 @@ T_SnapshotListResultModel = TypeVar("T_SnapshotListResultModel", bound=BaseModel
 
 T_ExecutionResult = TypeVar("T_ExecutionResult", default=AdapterPayload)
 T_ExecutionResultModel = TypeVar("T_ExecutionResultModel", bound=BaseModel, default=BaseModel)
+T_ExecutionCreateResult = TypeVar("T_ExecutionCreateResult", default=AdapterPayload)
+T_ExecutionCreateResultModel = TypeVar("T_ExecutionCreateResultModel", bound=BaseModel, default=BaseModel)
+T_ExecutionStatusResult = TypeVar("T_ExecutionStatusResult", default=AdapterPayload)
+T_ExecutionStatusResultModel = TypeVar("T_ExecutionStatusResultModel", bound=BaseModel, default=BaseModel)
 
 T_DeploymentItemData = TypeVar("T_DeploymentItemData", default=AdapterPayload)
 T_DeploymentItemDataModel = TypeVar("T_DeploymentItemDataModel", bound=BaseModel, default=BaseModel)
@@ -85,22 +107,28 @@ class DeploymentPayloadFields(ProviderPayloadSchemas):
 
     # Inbound (request -> adapter)
     deployment_spec: PayloadSlot[T_DeploymentSpecModel] | None = None
+    deployment_create: PayloadSlot[T_DeploymentCreateModel] | None = None
     deployment_config: PayloadSlot[T_DeploymentConfigModel] | None = None
     deployment_update: PayloadSlot[T_DeploymentUpdateModel] | None = None
     execution_input: PayloadSlot[T_ExecutionInputModel] | None = None
     deployment_list_params: PayloadSlot[T_DeploymentListParamsModel] | None = None
     config_list_params: PayloadSlot[T_ConfigListParamsModel] | None = None
     snapshot_list_params: PayloadSlot[T_SnapshotListParamsModel] | None = None
+    flow_artifact: PayloadSlot[T_FlowProviderDataModel] | None = None
+    verify_credentials: PayloadSlot[T_VerifyCredentialsModel] | None = None
 
     # Outbound (adapter -> response)
     deployment_create_result: PayloadSlot[T_DeploymentCreateResultModel] | None = None
     deployment_operation_result: PayloadSlot[T_DeploymentOperationResultModel] | None = None
+    deployment_update_result: PayloadSlot[T_DeploymentUpdateResultModel] | None = None
     deployment_list_result: PayloadSlot[T_DeploymentListResultModel] | None = None
     config_list_result: PayloadSlot[T_ConfigListResultModel] | None = None
     snapshot_list_result: PayloadSlot[T_SnapshotListResultModel] | None = None
-    execution_result: PayloadSlot[T_ExecutionResultModel] | None = None
+    execution_create_result: PayloadSlot[T_ExecutionCreateResultModel] | None = None
+    execution_status_result: PayloadSlot[T_ExecutionStatusResultModel] | None = None
     deployment_item_data: PayloadSlot[T_DeploymentItemDataModel] | None = None
     deployment_status_data: PayloadSlot[T_DeploymentStatusDataModel] | None = None
+    verify_credentials_result: PayloadSlot[T_VerifyCredentialsResultModel] | None = None
 
 
 @dataclass(frozen=True)

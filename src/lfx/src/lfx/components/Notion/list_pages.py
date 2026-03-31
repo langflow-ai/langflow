@@ -2,7 +2,7 @@ import json
 from typing import Any
 
 import requests
-from langchain.tools import StructuredTool
+from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
 from lfx.base.langchain_utilities.model import LCToolComponent
