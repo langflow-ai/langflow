@@ -19,6 +19,13 @@ WatsonxApiResourceNamePrefix = Annotated[
         min_length=1,
     ),
 ]
+WatsonxApiLlmName = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+    ),
+]
 
 
 class WatsonxApiFlowArtifactProviderData(CreateFlowArtifactProviderData):
@@ -34,7 +41,12 @@ class WatsonxApiBindOperation(BaseModel):
 
     op: Literal["bind"]
     flow_version_id: UUID
-    app_ids: list[str] = Field(min_length=1)
+    app_ids: list[str] = Field(
+        description=(
+            "Connection app ids to bind. Use an empty list to create/attach "
+            "the flow version as a tool with no connection bindings."
+        ),
+    )
 
 
 class WatsonxApiUnbindOperation(BaseModel):
@@ -56,6 +68,9 @@ class WatsonxApiRemoveToolOperation(BaseModel):
     flow_version_id: UUID
 
 
+# TODO(wxo-followup): Optionally expose adapter-level `attach_tool` semantics at
+# the API layer if/when we need existing-tool attach-by-id outside flow-version refs.
+# Current API behavior is intentional and sufficient for today.
 WatsonxApiUpdateOperation = Annotated[
     WatsonxApiBindOperation | WatsonxApiUnbindOperation | WatsonxApiRemoveToolOperation,
     Field(discriminator="op"),
@@ -140,11 +155,12 @@ class WatsonxApiDeploymentPayloadBase(BaseModel):
 class WatsonxApiDeploymentUpdatePayload(WatsonxApiDeploymentPayloadBase):
     """Watsonx provider_data API contract for deployment update operations."""
 
+    llm: WatsonxApiLlmName = Field(description="Provider model identifier to use for the deployment agent.")
     resource_name_prefix: WatsonxApiResourceNamePrefix | None = Field(
         default=None,
         description=("Provider-specific naming/deconfliction hint applied only when creating resources."),
     )
-    operations: list[WatsonxApiUpdateOperation] = Field(min_length=1)
+    operations: list[WatsonxApiUpdateOperation] = Field(default_factory=list)
 
     @field_validator("resource_name_prefix")
     @classmethod
@@ -158,6 +174,7 @@ class WatsonxApiDeploymentUpdatePayload(WatsonxApiDeploymentPayloadBase):
 class WatsonxApiDeploymentCreatePayload(WatsonxApiDeploymentPayloadBase):
     """Watsonx provider_data API contract for deployment create operations."""
 
+    llm: WatsonxApiLlmName = Field(description="Provider model identifier to use for the deployment agent.")
     resource_name_prefix: WatsonxApiResourceNamePrefix = Field(
         description=(
             "Provider-specific naming/deconfliction hint applied only when creating resources: "

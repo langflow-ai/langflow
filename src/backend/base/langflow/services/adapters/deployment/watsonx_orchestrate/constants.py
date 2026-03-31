@@ -18,7 +18,6 @@ RETRY_INITIAL_DELAY_SECONDS = 0.5
 PROVIDER_SPEC_RESOURCE_NAME_PREFIX_KEY = "resource_name_prefix"
 WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH = 64
 WXO_RESOURCE_NAME_PREFIX_NAMESPACE = "lf_"
-DEFAULT_WXO_AGENT_LLM = "groq/openai/gpt-oss-120b"
 
 WXO_SANITIZE_RE = re.compile(r"[^a-zA-Z0-9_]")
 WXO_TRANSLATE = str.maketrans({" ": "_", "-": "_"})

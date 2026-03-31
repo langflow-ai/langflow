@@ -279,6 +279,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
         provider_payload: AdapterPayload = create_slot.apply(
             self._build_provider_payload_body(
+                llm=api_provider_payload.llm,
                 resource_name_prefix=api_provider_payload.resource_name_prefix,
                 raw_tool_payloads=[
                     artifact.model_copy(
@@ -371,6 +372,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
         provider_payload: AdapterPayload = update_slot.apply(
             self._build_provider_payload_body(
+                llm=api_provider_payload.llm,
                 resource_name_prefix=api_provider_payload.resource_name_prefix,
                 raw_tool_payloads=[artifact.model_dump(exclude_none=True) for artifact in raw_payloads],
                 connections=api_provider_payload.connections,
@@ -757,6 +759,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 if flow_version_id not in raw_name_by_flow_version_id:
                     msg = f"bind.flow_version_id not found: [{flow_version_id}]"
                     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
+                if not operation.app_ids:
+                    # Empty app_ids means "create/attach raw tool with no connection bindings";
+                    # no provider bind operation is needed for this flow version.
+                    continue
                 provider_operations.append(
                     self._to_bind_provider_operation(
                         raw_name=raw_name_by_flow_version_id[flow_version_id],
@@ -793,12 +799,14 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     def _build_provider_payload_body(
         self,
         *,
+        llm: str,
         resource_name_prefix: str | None,
         raw_tool_payloads: list[dict[str, Any]],
         connections: Any,
         operations: list[AdapterPayload],
     ) -> dict[str, Any]:
         return {
+            "llm": llm,
             "resource_name_prefix": resource_name_prefix,
             "tools": {
                 "raw_payloads": raw_tool_payloads or None,

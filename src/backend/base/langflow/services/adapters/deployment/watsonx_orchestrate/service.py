@@ -92,6 +92,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxDeploymentCreatePayload,
     WatsonxDeploymentCreateResultData,
     WatsonxDeploymentLlmListResultData,
+    WatsonxDeploymentUpdatePayload,
     WatsonxDeploymentUpdateResultData,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
@@ -406,11 +407,30 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 msg = f"Deployment '{agent_id}' not found."
                 raise DeploymentNotFoundError(msg)
 
-            # base agent payload to build for final update call
-            update_payload: dict[str, Any] = build_update_payload_from_spec(payload.spec)
-
             validate_provider_update_request_sections(payload)
-            if payload.provider_data is None:
+            provider_update: WatsonxDeploymentUpdatePayload | None = None
+            if payload.provider_data is not None:
+                provider_update = self._parse_provider_payload(
+                    slot=self.payload_schemas.deployment_update,
+                    slot_name="deployment_update",
+                    provider_data=payload.provider_data,
+                    error_prefix=ErrorPrefix.UPDATE,
+                )
+            # base agent payload to build for final update call
+            update_payload: dict[str, Any] = build_update_payload_from_spec(
+                payload.spec,
+                llm=provider_update.llm if provider_update is not None else None,
+            )
+
+            has_provider_tool_work = bool(
+                provider_update is not None
+                and (
+                    provider_update.put_tools is not None
+                    or provider_update.operations
+                    or provider_update.tools.raw_payloads
+                )
+            )
+            if payload.provider_data is None or not has_provider_tool_work:
                 if not update_payload:
                     msg = "provider_data is required when update operations do not include spec changes."
                     raise InvalidContentError(message=msg)
@@ -421,13 +441,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     update_payload,
                 )
                 return DeploymentUpdateResult(id=deployment_id)
-
-            provider_update = self._parse_provider_payload(
-                slot=self.payload_schemas.deployment_update,
-                slot_name="deployment_update",
-                provider_data=payload.provider_data,
-                error_prefix=ErrorPrefix.UPDATE,
-            )
 
             provider_plan = build_provider_update_plan(
                 agent=agent,

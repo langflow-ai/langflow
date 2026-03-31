@@ -38,6 +38,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import
     to_writable_tool_payload,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
+    WatsonxAttachToolOperation,
     WatsonxBindOperation,
     WatsonxDeploymentUpdatePayload,
     WatsonxProviderUpdateApplyResult,
@@ -137,11 +138,14 @@ def build_provider_update_plan(
     # existing_tool_deltas: per existing tool_id, tracks app_ids to bind/unbind.
     existing_tool_deltas: dict[str, ToolConnectionOps] = {}
     # bind_existing_tool_ids: existing tool_ids explicitly referenced by bind
-    #   operations (used for added-snapshot reporting in the result).
+    #   or attach_tool operations (used for added-snapshot reporting in the result).
     bind_existing_tool_ids = OrderedUniqueStrs()
     # raw_tool_app_ids: per raw tool name, collects operation app_ids to bind
-    #   when the raw tool is created.
-    raw_tool_app_ids: dict[str, OrderedUniqueStrs] = {}
+    #   when the raw tool is created. Initialize with all declared raw tools so
+    #   unbound tools are still created and attached with empty connections.
+    raw_tool_app_ids: dict[str, OrderedUniqueStrs] = {
+        raw_payload.name: OrderedUniqueStrs() for raw_payload in (provider_update.tools.raw_payloads or [])
+    }
     # existing_tool_refs: source_ref ↔ tool_id correlations (created=False)
     #   collected from all operations that reference existing tools (bind,
     #   unbind, remove_tool). Deduped by tool_id before storing in the plan,
@@ -159,13 +163,23 @@ def build_provider_update_plan(
                 existing_tool_refs.append(
                     WatsonxResultToolRefBinding(source_ref=ref.source_ref, tool_id=tool_id, created=False)
                 )
-                delta = _get_or_create_tool_connection_ops(existing_tool_deltas, tool_id=tool_id)
-                delta.bind.extend(operation.app_ids)
+                if operation.app_ids:
+                    delta = _get_or_create_tool_connection_ops(existing_tool_deltas, tool_id=tool_id)
+                    delta.bind.extend(operation.app_ids)
                 continue
 
             raw_name = str(operation.tool.name_of_raw)
             raw_apps = raw_tool_app_ids.setdefault(raw_name, OrderedUniqueStrs())
             raw_apps.extend(operation.app_ids)
+            continue
+
+        if isinstance(operation, WatsonxAttachToolOperation):
+            tool_id = operation.tool.tool_id
+            bind_existing_tool_ids.add(tool_id)
+            final_existing_tool_ids.add(tool_id)
+            existing_tool_refs.append(
+                WatsonxResultToolRefBinding(source_ref=operation.tool.source_ref, tool_id=tool_id, created=False)
+            )
             continue
 
         if isinstance(operation, WatsonxUnbindOperation):
@@ -185,6 +199,7 @@ def build_provider_update_plan(
                     created=False,
                 )
             )
+            bind_existing_tool_ids.discard(operation.tool.tool_id)  # defensive: validator prevents overlap
             final_existing_tool_ids.discard(operation.tool.tool_id)
             continue
 
@@ -275,7 +290,7 @@ def _build_agent_rollback_payload(*, agent: dict[str, Any], final_update_payload
     rollback_payload: dict[str, Any] = {}
     if "tools" in final_update_payload:
         rollback_payload["tools"] = extract_agent_tool_ids(agent)
-    for update_field in ("name", "display_name", "description"):
+    for update_field in ("name", "display_name", "description", "llm"):
         if update_field in final_update_payload and update_field in agent:
             rollback_payload[update_field] = agent[update_field]
     return rollback_payload
@@ -411,20 +426,19 @@ async def apply_provider_update_plan_with_rollback(
     )
 
 
-def build_update_payload_from_spec(spec: BaseDeploymentDataUpdate | None) -> dict[str, Any]:
+def build_update_payload_from_spec(spec: BaseDeploymentDataUpdate | None, *, llm: str | None = None) -> dict[str, Any]:
     """Build agent update payload from deployment spec updates."""
     update_payload: dict[str, Any] = {}
-    if not spec:
-        return update_payload
-
-    spec_updates = spec.model_dump(exclude_unset=True)
-    if "name" in spec_updates:
-        update_payload.update(
-            {
-                "name": validate_wxo_name(spec_updates["name"]),
-                "display_name": spec_updates["name"],
-            }
-        )
-    if "description" in spec_updates:
-        update_payload["description"] = spec_updates["description"]
+    if spec:
+        if spec.name is not None:
+            update_payload.update(
+                {
+                    "name": validate_wxo_name(spec.name),
+                    "display_name": spec.name,
+                }
+            )
+        if spec.description is not None:
+            update_payload["description"] = spec.description
+    if llm is not None:
+        update_payload["llm"] = llm
     return update_payload

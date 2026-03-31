@@ -64,6 +64,8 @@ WxOCredentials = importlib.import_module(
     "langflow.services.adapters.deployment.watsonx_orchestrate.types"
 ).WxOCredentials
 
+TEST_WXO_LLM = "ibm/granite-3.3-8b"
+
 
 def _reload_wxo_auth_modules():
     constants_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.constants")
@@ -308,6 +310,7 @@ def _create_provider_spec(
         "resource_name_prefix": resource_name_prefix,
         "tools": {},
         "connections": {"existing_app_ids": app_ids},
+        "llm": TEST_WXO_LLM,
         "operations": [
             {
                 "op": "bind",
@@ -414,6 +417,7 @@ async def test_create_rejects_missing_resource_name_prefix():
                 provider_data={
                     "tools": {},
                     "connections": {"existing_app_ids": ["app-existing-1"]},
+                    "llm": TEST_WXO_LLM,
                     "operations": [
                         {
                             "op": "bind",
@@ -423,6 +427,41 @@ async def test_create_rejects_missing_resource_name_prefix():
                     ],
                 },
             ),
+        )
+
+
+@pytest.mark.anyio
+async def test_create_rejects_missing_llm():
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+
+    provider_data = _create_provider_spec()
+    provider_data.pop("llm", None)
+
+    with pytest.raises(InvalidContentError, match="Field required"):
+        await service.create(
+            user_id="user-1",
+            db=object(),
+            payload=DeploymentCreate(
+                spec=BaseDeploymentData(
+                    name="my deployment",
+                    description="desc",
+                    type=DeploymentType.AGENT,
+                ),
+                provider_data=provider_data,
+            ),
+        )
+
+
+def test_create_payload_rejects_empty_work():
+    with pytest.raises(
+        ValidationError,
+        match=r"At least one bind/attach_tool operation or tools\.raw_payloads entry must be provided for create",
+    ):
+        payloads_module.WatsonxDeploymentCreatePayload.model_validate(
+            {
+                "resource_name_prefix": "lf_",
+                "llm": TEST_WXO_LLM,
+            }
         )
 
 
@@ -530,6 +569,7 @@ async def test_update_provider_data_binds_existing_tool_and_updates_agent_tools(
             provider_data={
                 "tools": {},
                 "connections": {"existing_app_ids": ["cfg-new"]},
+                "llm": TEST_WXO_LLM,
                 "operations": [
                     {
                         "op": "bind",
@@ -550,6 +590,356 @@ async def test_update_provider_data_binds_existing_tool_and_updates_agent_tools(
     assert updated_tool_payload["binding"]["langflow"]["connections"]["cfg-new"] == "conn-new"
     _, agent_payload = fake_agent.update_calls[0]
     assert agent_payload["tools"] == ["tool-1", "tool-3"]
+    assert agent_payload["llm"] == TEST_WXO_LLM
+
+
+@pytest.mark.anyio
+async def test_update_provider_data_llm_only_updates_agent(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return SimpleNamespace(agent=fake_agent)
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.update(
+        user_id="user-1",
+        deployment_id="dep-1",
+        payload=DeploymentUpdate(provider_data={"llm": TEST_WXO_LLM}),
+        db=object(),
+    )
+
+    assert result.id == "dep-1"
+    assert len(fake_agent.update_calls) == 1
+    _, agent_payload = fake_agent.update_calls[0]
+    assert agent_payload == {"llm": TEST_WXO_LLM}
+
+
+@pytest.mark.anyio
+async def test_update_provider_data_rejects_missing_llm(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return SimpleNamespace(agent=fake_agent)
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(InvalidContentError, match="llm is required for deployment update operations"):
+        await service.update(
+            user_id="user-1",
+            deployment_id="dep-1",
+            payload=DeploymentUpdate(
+                provider_data={
+                    "connections": {"existing_app_ids": ["cfg-1"]},
+                    "operations": [
+                        {"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-1")}, "app_ids": ["cfg-1"]}
+                    ],
+                }
+            ),
+            db=object(),
+        )
+
+
+def test_update_payload_rejects_connections_without_bind_or_unbind_operations():
+    with pytest.raises(
+        ValidationError,
+        match="connections require at least one bind/unbind operation that references app_ids",
+    ):
+        payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
+            {
+                "llm": TEST_WXO_LLM,
+                "connections": {"existing_app_ids": ["cfg-1"]},
+                "operations": [],
+            }
+        )
+
+
+def test_update_payload_rejects_existing_tool_bind_with_empty_app_ids():
+    with pytest.raises(ValidationError):
+        payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
+            {
+                "llm": TEST_WXO_LLM,
+                "operations": [
+                    {
+                        "op": "bind",
+                        "tool": {"tool_id_with_ref": _tool_ref("tool-existing")},
+                        "app_ids": [],
+                    }
+                ],
+            }
+        )
+
+
+def test_update_payload_accepts_attach_tool_operation():
+    payload = payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
+        {
+            "llm": TEST_WXO_LLM,
+            "operations": [
+                {
+                    "op": "attach_tool",
+                    "tool": _tool_ref("tool-existing"),
+                }
+            ],
+        }
+    )
+    attach_op = payload.operations[0]
+    assert isinstance(attach_op, payloads_module.WatsonxAttachToolOperation)
+    assert attach_op.tool.tool_id == "tool-existing"
+
+
+def test_update_payload_rejects_attach_and_bind_for_same_existing_tool():
+    with pytest.raises(
+        ValidationError,
+        match="attach_tool cannot be combined with bind\\.tool\\.tool_id_with_ref",
+    ):
+        payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
+            {
+                "llm": TEST_WXO_LLM,
+                "connections": {"existing_app_ids": ["cfg-1"]},
+                "operations": [
+                    {"op": "attach_tool", "tool": _tool_ref("tool-existing")},
+                    {
+                        "op": "bind",
+                        "tool": {"tool_id_with_ref": _tool_ref("tool-existing")},
+                        "app_ids": ["cfg-1"],
+                    },
+                ],
+            }
+        )
+
+
+def test_update_payload_rejects_remove_with_other_ops_for_same_tool():
+    with pytest.raises(
+        ValidationError,
+        match="remove_tool cannot be combined with bind/attach_tool/unbind for the same tool_id",
+    ):
+        payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
+            {
+                "llm": TEST_WXO_LLM,
+                "connections": {"existing_app_ids": ["cfg-1"]},
+                "operations": [
+                    {"op": "remove_tool", "tool": _tool_ref("tool-existing")},
+                    {
+                        "op": "unbind",
+                        "tool": _tool_ref("tool-existing"),
+                        "app_ids": ["cfg-1"],
+                    },
+                ],
+            }
+        )
+
+
+def test_update_payload_rejects_bind_unbind_overlapping_app_ids_for_same_tool():
+    with pytest.raises(
+        ValidationError,
+        match="bind and unbind app_ids overlap for the same tool_id",
+    ):
+        payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
+            {
+                "llm": TEST_WXO_LLM,
+                "connections": {"existing_app_ids": ["cfg-1"]},
+                "operations": [
+                    {
+                        "op": "bind",
+                        "tool": {"tool_id_with_ref": _tool_ref("tool-existing")},
+                        "app_ids": ["cfg-1"],
+                    },
+                    {
+                        "op": "unbind",
+                        "tool": _tool_ref("tool-existing"),
+                        "app_ids": ["cfg-1"],
+                    },
+                ],
+            }
+        )
+
+
+def test_update_payload_rejects_duplicate_attach_tool_for_same_tool():
+    with pytest.raises(
+        ValidationError,
+        match="Duplicate attach_tool operation for tool_id",
+    ):
+        payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
+            {
+                "llm": TEST_WXO_LLM,
+                "operations": [
+                    {"op": "attach_tool", "tool": _tool_ref("tool-existing")},
+                    {"op": "attach_tool", "tool": _tool_ref("tool-existing")},
+                ],
+            }
+        )
+
+
+def test_update_payload_rejects_duplicate_remove_tool_for_same_tool():
+    with pytest.raises(
+        ValidationError,
+        match="Duplicate remove_tool operation for tool_id",
+    ):
+        payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
+            {
+                "llm": TEST_WXO_LLM,
+                "operations": [
+                    {"op": "remove_tool", "tool": _tool_ref("tool-a")},
+                    {"op": "remove_tool", "tool": _tool_ref("tool-a")},
+                ],
+            }
+        )
+
+
+def test_create_payload_rejects_existing_tool_bind_with_empty_app_ids():
+    with pytest.raises(ValidationError):
+        payloads_module.WatsonxDeploymentCreatePayload.model_validate(
+            {
+                "resource_name_prefix": "lf_",
+                "llm": TEST_WXO_LLM,
+                "operations": [
+                    {
+                        "op": "bind",
+                        "tool": {"tool_id_with_ref": _tool_ref("tool-existing")},
+                        "app_ids": [],
+                    }
+                ],
+            }
+        )
+
+
+def test_create_payload_accepts_attach_tool_operation():
+    payload = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
+        {
+            "resource_name_prefix": "lf_",
+            "llm": TEST_WXO_LLM,
+            "operations": [
+                {
+                    "op": "attach_tool",
+                    "tool": _tool_ref("tool-existing"),
+                }
+            ],
+        }
+    )
+    attach_op = payload.operations[0]
+    assert isinstance(attach_op, payloads_module.WatsonxAttachToolOperation)
+    assert attach_op.tool.tool_id == "tool-existing"
+
+
+def test_create_payload_rejects_attach_and_bind_for_same_existing_tool():
+    with pytest.raises(
+        ValidationError,
+        match="attach_tool cannot be combined with bind\\.tool\\.tool_id_with_ref",
+    ):
+        payloads_module.WatsonxDeploymentCreatePayload.model_validate(
+            {
+                "resource_name_prefix": "lf_",
+                "llm": TEST_WXO_LLM,
+                "connections": {"existing_app_ids": ["cfg-1"]},
+                "operations": [
+                    {"op": "attach_tool", "tool": _tool_ref("tool-existing")},
+                    {
+                        "op": "bind",
+                        "tool": {"tool_id_with_ref": _tool_ref("tool-existing")},
+                        "app_ids": ["cfg-1"],
+                    },
+                ],
+            }
+        )
+
+
+@pytest.mark.anyio
+async def test_update_provider_data_put_tools_with_llm_updates_agent(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1", "tool-2"]})
+    fake_clients = SimpleNamespace(
+        agent=fake_agent,
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.update(
+        user_id="user-1",
+        deployment_id="dep-1",
+        payload=DeploymentUpdate(
+            provider_data={
+                "put_tools": ["tool-a", "tool-b"],
+                "llm": TEST_WXO_LLM,
+            }
+        ),
+        db=object(),
+    )
+
+    assert result.id == "dep-1"
+    assert len(fake_agent.update_calls) == 1
+    _, agent_payload = fake_agent.update_calls[0]
+    assert agent_payload["tools"] == ["tool-a", "tool-b"]
+    assert agent_payload["llm"] == TEST_WXO_LLM
+
+
+@pytest.mark.anyio
+async def test_update_provider_data_creates_raw_tools_without_operations(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
+    fake_tool = FakeToolClient([{"id": "tool-1", "name": "tool-1", "binding": {"langflow": {"connections": {}}}}])
+    fake_connections = FakeConnectionsClient()
+    fake_clients = SimpleNamespace(
+        agent=fake_agent,
+        tool=fake_tool,
+        connections=fake_connections,
+    )
+    captured: dict[str, object] = {}
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    async def mock_create_and_upload(*, clients, tool_bindings, tool_name_prefix):
+        _ = clients
+        captured["tool_bindings"] = tool_bindings
+        captured["tool_name_prefix"] = tool_name_prefix
+        return ["new-tool-raw-1"]
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+    monkeypatch.setattr(
+        update_core_module,
+        "create_and_upload_wxo_flow_tools_with_bindings",
+        mock_create_and_upload,
+    )
+
+    result = await service.update(
+        user_id="user-1",
+        deployment_id="dep-1",
+        payload=DeploymentUpdate(
+            provider_data={
+                "llm": TEST_WXO_LLM,
+                "resource_name_prefix": "lf_",
+                "tools": {
+                    "raw_payloads": [
+                        {
+                            "id": str(UUID("00000000-0000-0000-0000-000000000071")),
+                            "name": "snapshot-new-raw-only",
+                            "description": "desc",
+                            "data": {"nodes": [], "edges": []},
+                            "tags": [],
+                            "provider_data": {"project_id": "project-1", "source_ref": "fv-raw-only-1"},
+                        }
+                    ]
+                },
+            }
+        ),
+        db=object(),
+    )
+
+    assert captured["tool_name_prefix"] == "lf_"
+    assert captured["tool_bindings"][0].connections == {}
+    assert result.provider_result is not None
+    assert result.provider_result.created_snapshot_ids == ["new-tool-raw-1"]
+    assert fake_connections.create_calls == []
+    _, agent_payload = fake_agent.update_calls[0]
+    assert agent_payload["tools"] == ["tool-1", "new-tool-raw-1"]
+    assert agent_payload["llm"] == TEST_WXO_LLM
 
 
 @pytest.mark.anyio
@@ -618,6 +1008,7 @@ async def test_update_provider_data_creates_raw_connection_and_raw_tool(monkeypa
                         }
                     ]
                 },
+                "llm": TEST_WXO_LLM,
                 "operations": [
                     {
                         "op": "bind",
@@ -638,6 +1029,7 @@ async def test_update_provider_data_creates_raw_connection_and_raw_tool(monkeypa
     assert result.provider_result.created_snapshot_ids == ["new-tool-1"]
     _, agent_payload = fake_agent.update_calls[0]
     assert agent_payload["tools"] == ["tool-1", "new-tool-1"]
+    assert agent_payload["llm"] == TEST_WXO_LLM
 
 
 @pytest.mark.anyio
@@ -683,6 +1075,7 @@ async def test_update_provider_data_binds_existing_tool_using_provider_app_id_fo
                         }
                     ]
                 },
+                "llm": TEST_WXO_LLM,
                 "operations": [
                     {
                         "op": "bind",
@@ -740,6 +1133,7 @@ async def test_update_provider_data_mixed_operations_preserve_encounter_order(mo
             provider_data={
                 "tools": {},
                 "connections": {"existing_app_ids": ["cfg-1", "cfg-2"]},
+                "llm": TEST_WXO_LLM,
                 "operations": [
                     {"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-3")}, "app_ids": ["cfg-2", "cfg-1"]},
                     {"op": "unbind", "tool": _tool_ref("tool-1"), "app_ids": ["cfg-1", "cfg-2"]},
@@ -767,6 +1161,7 @@ async def test_update_provider_data_mixed_operations_preserve_encounter_order(mo
 
     _, agent_payload = fake_agent.update_calls[0]
     assert agent_payload["tools"] == ["tool-1", "tool-3"]
+    assert agent_payload["llm"] == TEST_WXO_LLM
 
 
 def test_ordered_unique_strs_preserves_encounter_order_and_safe_discard():
@@ -803,6 +1198,7 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
                     {"app_id": "cfg-raw-2", "environment_variables": {"API_KEY": {"source": "raw", "value": "y"}}},
                 ],
             },
+            "llm": TEST_WXO_LLM,
             "operations": [
                 {
                     "op": "bind",
@@ -810,7 +1206,7 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
                     "app_ids": ["cfg-2", "cfg-1", "cfg-2"],
                 },
                 {"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-a")}, "app_ids": ["cfg-1"]},
-                {"op": "unbind", "tool": _tool_ref("tool-c"), "app_ids": ["cfg-3", "cfg-1", "cfg-3"]},
+                {"op": "unbind", "tool": _tool_ref("tool-c"), "app_ids": ["cfg-3", "cfg-3"]},
                 {"op": "remove_tool", "tool": _tool_ref("tool-b")},
                 {"op": "bind", "tool": {"name_of_raw": "snapshot-raw-1"}, "app_ids": ["cfg-raw-2", "cfg-raw-1"]},
             ],
@@ -831,7 +1227,56 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
 
     delta = plan.existing_tool_deltas["tool-c"]
     assert delta.bind.to_list() == ["cfg-2", "cfg-1"]
-    assert delta.unbind.to_list() == ["cfg-3", "cfg-1"]
+    assert delta.unbind.to_list() == ["cfg-3"]
+
+
+def test_build_provider_update_plan_creates_unbound_raw_tools_alongside_bound_raw_tools():
+    provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
+        {
+            "resource_name_prefix": "lf_",
+            "tools": {
+                "raw_payloads": [
+                    {
+                        "id": str(UUID("00000000-0000-0000-0000-000000000051")),
+                        "name": "snapshot-bound",
+                        "description": "desc",
+                        "data": {"nodes": [], "edges": []},
+                        "tags": [],
+                        "provider_data": {"project_id": "project-1", "source_ref": "fv-bound"},
+                    },
+                    {
+                        "id": str(UUID("00000000-0000-0000-0000-000000000052")),
+                        "name": "snapshot-unbound",
+                        "description": "desc",
+                        "data": {"nodes": [], "edges": []},
+                        "tags": [],
+                        "provider_data": {"project_id": "project-1", "source_ref": "fv-unbound"},
+                    },
+                ],
+            },
+            "connections": {
+                "raw_payloads": [
+                    {"app_id": "cfg", "environment_variables": {"API_KEY": {"source": "raw", "value": "x"}}},
+                ],
+            },
+            "llm": TEST_WXO_LLM,
+            "operations": [
+                {
+                    "op": "bind",
+                    "tool": {"name_of_raw": "snapshot-bound"},
+                    "app_ids": ["cfg"],
+                }
+            ],
+        }
+    )
+    plan = update_core_module.build_provider_update_plan(
+        agent={"id": "dep-1", "tools": []},
+        provider_update=provider_update,
+    )
+
+    assert [item.raw_name for item in plan.raw_tools_to_create] == ["snapshot-bound", "snapshot-unbound"]
+    assert plan.raw_tools_to_create[0].app_ids == ["cfg"]
+    assert plan.raw_tools_to_create[1].app_ids == []
 
 
 def test_build_provider_update_plan_normalizes_resource_name_prefix():
@@ -839,6 +1284,7 @@ def test_build_provider_update_plan_normalizes_resource_name_prefix():
         {
             "resource_name_prefix": "my-prefix!",
             "connections": {"existing_app_ids": ["cfg-1"]},
+            "llm": TEST_WXO_LLM,
             "operations": [{"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-a")}, "app_ids": ["cfg-1"]}],
         }
     )
@@ -856,6 +1302,7 @@ def test_build_provider_update_plan_rejects_non_alpha_resource_name_prefix():
             {
                 "resource_name_prefix": "123-prefix",
                 "connections": {"existing_app_ids": ["cfg-1"]},
+                "llm": TEST_WXO_LLM,
                 "operations": [{"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-a")}, "app_ids": ["cfg-1"]}],
             }
         )
@@ -901,6 +1348,81 @@ def test_build_provider_update_plan_put_tools_empty_clears_all():
     assert plan.final_existing_tool_ids == []
 
 
+def test_build_provider_update_plan_attaches_existing_tool_without_connection_deltas():
+    provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
+        {
+            "llm": TEST_WXO_LLM,
+            "operations": [
+                {
+                    "op": "attach_tool",
+                    "tool": _tool_ref("tool-existing"),
+                }
+            ],
+        }
+    )
+    plan = update_core_module.build_provider_update_plan(
+        agent={"id": "dep-1", "tools": ["tool-a"]},
+        provider_update=provider_update,
+    )
+
+    assert plan.final_existing_tool_ids == ["tool-a", "tool-existing"]
+    assert plan.bind_existing_tool_ids == ["tool-existing"]
+    assert plan.existing_tool_deltas == {}
+
+
+def test_build_provider_create_plan_creates_unbound_raw_tools_without_bind_operations():
+    provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
+        {
+            "resource_name_prefix": "lf_",
+            "tools": {
+                "raw_payloads": [
+                    {
+                        "id": str(UUID("00000000-0000-0000-0000-000000000071")),
+                        "name": "snapshot-unbound",
+                        "description": "desc",
+                        "data": {"nodes": [], "edges": []},
+                        "tags": [],
+                        "provider_data": {"project_id": "project-1", "source_ref": "fv-create-unbound"},
+                    }
+                ]
+            },
+            "llm": TEST_WXO_LLM,
+            "operations": [],
+        }
+    )
+    plan = create_core_module.build_provider_create_plan(
+        deployment_name="my deployment",
+        provider_create=provider_create,
+    )
+
+    assert [item.raw_name for item in plan.raw_tools_to_create] == ["snapshot-unbound"]
+    assert plan.raw_tools_to_create[0].app_ids == []
+    assert plan.selected_operation_app_ids == []
+    assert plan.existing_tool_ids == []
+
+
+def test_build_provider_create_plan_attaches_existing_tool_without_connection_updates():
+    provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
+        {
+            "resource_name_prefix": "lf_",
+            "llm": TEST_WXO_LLM,
+            "operations": [
+                {
+                    "op": "attach_tool",
+                    "tool": _tool_ref("tool-existing"),
+                }
+            ],
+        }
+    )
+    plan = create_core_module.build_provider_create_plan(
+        deployment_name="my deployment",
+        provider_create=provider_create,
+    )
+
+    assert plan.existing_tool_ids == ["tool-existing"]
+    assert plan.existing_tool_bindings == {}
+
+
 @pytest.mark.anyio
 async def test_update_existing_tool_connection_deltas_uses_bind_order_in_errors():
     fake_tool = FakeToolClient([{"id": "tool-c", "name": "tool-c", "binding": {"langflow": {"connections": {}}}}])
@@ -940,6 +1462,7 @@ async def test_apply_provider_create_plan_binds_raw_tools_with_provider_app_ids(
                     {"app_id": "cfg", "environment_variables": {"API_KEY": {"source": "raw", "value": "x"}}}
                 ]
             },
+            "llm": TEST_WXO_LLM,
             "operations": [
                 {"op": "bind", "tool": {"name_of_raw": "snapshot-raw-1"}, "app_ids": ["cfg"]},
             ],
@@ -988,6 +1511,7 @@ async def test_apply_provider_create_plan_binds_raw_tools_with_provider_app_ids(
     assert fake_clients.agent.create_calls
     assert fake_clients.agent.create_calls[0]["name"] == "lf_my_deployment"
     assert fake_clients.agent.create_calls[0]["tools"] == ["created-tool-1"]
+    assert fake_clients.agent.create_calls[0]["llm"] == TEST_WXO_LLM
     assert result.agent_id == "dep-created"
     assert result.app_ids == ["cfg"]
     assert [(binding.tool_id, binding.app_ids) for binding in result.tool_app_bindings] == [("created-tool-1", ["cfg"])]
@@ -1003,6 +1527,7 @@ async def test_apply_provider_create_plan_rolls_back_mutated_existing_tools_with
             "resource_name_prefix": "lf_",
             "tools": {},
             "connections": {"existing_app_ids": ["cfg-1"]},
+            "llm": TEST_WXO_LLM,
             "operations": [{"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-1")}, "app_ids": ["cfg-1"]}],
         }
     )
@@ -1039,6 +1564,7 @@ async def test_apply_provider_create_plan_rolls_back_mutated_existing_tools_with
         agent_display_name,  # noqa: ARG001
         deployment_name,  # noqa: ARG001
         description,  # noqa: ARG001
+        llm,  # noqa: ARG001
     ):
         msg = "create failed"
         raise RuntimeError(msg)
@@ -1082,6 +1608,7 @@ async def test_apply_provider_create_plan_rolls_back_successfully_created_raw_co
                     {"app_id": "cfg-b", "environment_variables": {"API_KEY": {"source": "raw", "value": "y"}}},
                 ]
             },
+            "llm": TEST_WXO_LLM,
             "operations": [
                 {
                     "op": "bind",
@@ -1145,6 +1672,7 @@ async def test_apply_provider_create_plan_rolls_back_all_journaled_raw_connectio
                     {"app_id": "cfg-c", "environment_variables": {"API_KEY": {"source": "raw", "value": "z"}}},
                 ]
             },
+            "llm": TEST_WXO_LLM,
             "operations": [
                 {
                     "op": "bind",
@@ -1207,6 +1735,7 @@ async def test_apply_provider_update_plan_rolls_back_successfully_created_raw_co
                     {"app_id": "cfg-b", "environment_variables": {"API_KEY": {"source": "raw", "value": "y"}}},
                 ]
             },
+            "llm": TEST_WXO_LLM,
             "operations": [
                 {
                     "op": "bind",
@@ -1276,6 +1805,7 @@ async def test_apply_provider_update_plan_rolls_back_all_journaled_raw_connectio
                     {"app_id": "cfg-c", "environment_variables": {"API_KEY": {"source": "raw", "value": "z"}}},
                 ]
             },
+            "llm": TEST_WXO_LLM,
             "operations": [
                 {
                     "op": "bind",
@@ -1381,6 +1911,7 @@ async def test_create_provider_data_prefixes_tool_and_deployment_names_but_not_c
                         {"app_id": "cfg", "environment_variables": {"API_KEY": {"source": "raw", "value": "x"}}}
                     ]
                 },
+                "llm": TEST_WXO_LLM,
                 "operations": [
                     {"op": "bind", "tool": {"name_of_raw": "snapshot-new-1"}, "app_ids": ["cfg"]},
                 ],
@@ -1397,6 +1928,7 @@ async def test_create_provider_data_prefixes_tool_and_deployment_names_but_not_c
     assert fake_clients.agent.create_calls[0]["display_name"] == "my deployment"
     assert fake_clients.agent.create_calls[0]["description"] == "desc"
     assert fake_clients.agent.create_calls[0]["tools"] == ["created-tool-1"]
+    assert fake_clients.agent.create_calls[0]["llm"] == TEST_WXO_LLM
     assert result.config_id is None
     assert result.snapshot_ids == []
     assert result.provider_result is not None
@@ -1493,6 +2025,7 @@ async def test_update_provider_data_maps_raw_connection_conflict_to_deployment_c
                             }
                         ]
                     },
+                    "llm": TEST_WXO_LLM,
                     "operations": [
                         {
                             "op": "bind",
@@ -1560,6 +2093,7 @@ async def test_create_provider_data_maps_raw_connection_conflict_to_deployment_c
                             }
                         ]
                     },
+                    "llm": TEST_WXO_LLM,
                     "operations": [
                         {
                             "op": "bind",
@@ -1582,6 +2116,7 @@ async def test_create_provider_data_maps_raw_connection_conflict_to_deployment_c
         (
             {
                 "tools": {},
+                "llm": TEST_WXO_LLM,
                 "operations": [
                     {
                         "op": "bind",
@@ -1665,6 +2200,7 @@ async def test_update_provider_data_rolls_back_mutated_tools_with_writable_paylo
                 provider_data={
                     "tools": {},
                     "connections": {"existing_app_ids": ["cfg-1"]},
+                    "llm": TEST_WXO_LLM,
                     "operations": [
                         {
                             "op": "bind",
@@ -1752,6 +2288,7 @@ async def test_update_provider_data_rolls_back_partially_created_raw_tools(monke
                             }
                         ]
                     },
+                    "llm": TEST_WXO_LLM,
                     "operations": [
                         {
                             "op": "bind",
@@ -1843,6 +2380,7 @@ async def test_create_provider_data_rolls_back_partially_created_raw_tools(monke
                             }
                         ]
                     },
+                    "llm": TEST_WXO_LLM,
                     "operations": [
                         {
                             "op": "bind",
@@ -3726,7 +4264,7 @@ def test_build_agent_payload_requires_provider_spec():
 
     data = SimpleNamespace(provider_spec=None, description="desc", name="test")
     with pytest.raises(InvalidContentError, match="provider_spec"):
-        build_agent_payload(data=data, tool_ids=[])
+        build_agent_payload(data=data, tool_ids=[], llm=TEST_WXO_LLM)
 
 
 def test_build_agent_payload_structure():
@@ -3737,12 +4275,12 @@ def test_build_agent_payload_structure():
         description="test description",
         name="test",
     )
-    payload = build_agent_payload(data=data, tool_ids=["tool-1", "tool-2"])
+    payload = build_agent_payload(data=data, tool_ids=["tool-1", "tool-2"], llm=TEST_WXO_LLM)
     assert payload["name"] == "agent_name"
     assert payload["display_name"] == "Agent Name"
     assert payload["description"] == "test description"
     assert payload["tools"] == ["tool-1", "tool-2"]
-    assert "llm" in payload
+    assert payload["llm"] == TEST_WXO_LLM
 
 
 def test_extract_agent_tool_ids():
