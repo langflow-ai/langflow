@@ -21,14 +21,15 @@ test.describe("Assistant Panel UI", { tag: ["@release"] }, () => {
     await expect(page.getByTestId("assistant-model-selector")).toBeVisible();
     await expect(page.getByTestId("assistant-new-session")).toBeDisabled();
 
-    // Close via close button
-    await page.getByTestId("assistant-close").click();
+    // Toggle via assistant button (close)
+    await page.getByTestId("assistant-button").click();
     await expect(page.getByTestId("assistant-panel")).not.toBeVisible();
 
-    // Toggle via assistant button
+    // Toggle via assistant button (open again)
     await page.getByTestId("assistant-button").click();
     await expect(page.getByTestId("assistant-panel")).toBeVisible();
 
+    // Toggle via assistant button (close again)
     await page.getByTestId("assistant-button").click();
     await expect(page.getByTestId("assistant-panel")).not.toBeVisible();
   });

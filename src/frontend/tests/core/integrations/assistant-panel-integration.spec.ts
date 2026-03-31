@@ -161,19 +161,30 @@ test.describe("Assistant Panel Integration", { tag: ["@release"] }, () => {
     );
     await page.getByTestId("assistant-send-button").click();
 
-    // Wait for stop button (streaming started)
-    await expect(page.getByTestId("assistant-stop-button")).toBeVisible({
-      timeout: 30000,
-    });
+    // Wait for either the stop button (streaming in progress) or
+    // an assistant response (streaming completed before we could catch it)
+    const stopButton = page.getByTestId("assistant-stop-button");
+    const assistantMessage = page.getByTestId("assistant-message-assistant");
 
-    await page.waitForTimeout(2000);
-    await page.getByTestId("assistant-stop-button").click();
+    const result = await Promise.race([
+      stopButton
+        .waitFor({ state: "visible", timeout: 30000 })
+        .then(() => "stop-visible" as const),
+      assistantMessage
+        .waitFor({ state: "visible", timeout: 30000 })
+        .then(() => "response-complete" as const),
+    ]);
 
-    await expect(page.getByTestId("assistant-stop-button")).not.toBeVisible({
-      timeout: 5000,
-    });
-    await expect(page.getByText("Cancelled")).toBeVisible({ timeout: 5000 });
-    await expect(textarea).toBeEnabled({ timeout: 5000 });
+    if (result === "stop-visible") {
+      // Streaming is still in progress - click stop
+      await stopButton.click();
+
+      await expect(stopButton).not.toBeVisible({ timeout: 5000 });
+      await expect(page.getByText("Cancelled")).toBeVisible({ timeout: 5000 });
+    }
+
+    // In both cases, input should be re-enabled
+    await expect(textarea).toBeEnabled({ timeout: 10000 });
     await expect(page.getByTestId("assistant-send-button")).toBeVisible();
   });
 

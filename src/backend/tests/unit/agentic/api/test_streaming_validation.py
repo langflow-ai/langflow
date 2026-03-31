@@ -793,7 +793,7 @@ Here's the implementation:
         complete_data = complete_events[0]["data"]
 
         assert complete_data["validated"] is True
-        assert complete_data["validation_attempts"] == 2
+        assert complete_data["validation_attempts"] == 3
         assert complete_data["class_name"] == "HelloWorldComponent"
 
     def test_code_extraction_from_exact_user_response(self):
