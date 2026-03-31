@@ -78,6 +78,7 @@ class ErrorPrefix(str, Enum):
     GET_CONFIG = f"{ERROR_PREFIX} getting a deployment config {ERROR_SUFFIX_IN}"
     UPDATE_CONFIG = f"{ERROR_PREFIX} updating a deployment config {ERROR_SUFFIX_IN}"
     DELETE_CONFIG = f"{ERROR_PREFIX} deleting a deployment config {ERROR_SUFFIX_IN}"
+    LIST_LLMS = f"{ERROR_PREFIX} listing deployment LLMs {ERROR_SUFFIX_IN}"
     CREATE_EXECUTION = f"{ERROR_PREFIX} creating a deployment execution {ERROR_SUFFIX_IN}"
     GET_EXECUTION = f"{ERROR_PREFIX} getting a deployment execution {ERROR_SUFFIX_IN}"
 

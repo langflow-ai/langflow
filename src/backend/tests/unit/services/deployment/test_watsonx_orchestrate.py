@@ -285,7 +285,7 @@ def _with_wxo_wrappers(ns):
     """Attach WxOClient SDK wrapper methods to a SimpleNamespace test double."""
     if hasattr(ns, "_base") and ns._base is not None:
         ns.get_agents_raw = lambda params=None: ns._base._get("/agents", params=params)
-        ns.get_models_raw = lambda params=None: ns._base._get("/v1/models", params=params)
+        ns.get_models_raw = lambda params=None: ns._base._get("/models", params=params)
         ns.post_run = lambda *, data: ns._base._post("/runs", data)
         ns.get_run = lambda run_id: ns._base._get(f"/runs/{run_id}")
     return ns
@@ -3625,7 +3625,7 @@ async def test_list_llms_returns_normalized_model_names(monkeypatch):
     fake_agent = FakeAgentClient(
         {"id": "dep-1", "tools": []},
         get_payloads={
-            "/v1/models": [
+            "/models": [
                 {"model_name": "granite-3.1-8b"},
                 {"model_name": "granite-3.3-8b"},
                 {"model_name": "granite-3.1-8b"},
@@ -3660,7 +3660,7 @@ async def test_list_llms_invalid_payload_raises_invalid_content(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_agent = FakeAgentClient(
         {"id": "dep-1", "tools": []},
-        get_payloads={"/v1/models": [{"id": "missing-model-name"}]},
+        get_payloads={"/models": [{"id": "missing-model-name"}]},
     )
     fake_clients = _with_wxo_wrappers(
         SimpleNamespace(

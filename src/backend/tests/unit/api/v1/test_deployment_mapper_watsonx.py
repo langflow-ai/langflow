@@ -829,6 +829,7 @@ def test_watsonx_mapper_update_response_raises_on_unmapped_tool_binding() -> Non
 
 
 def test_watsonx_mapper_shapes_llm_list_result() -> None:
+    """Duplicates are intentionally passed through; deduplication is a client concern."""
     mapper = WatsonxOrchestrateDeploymentMapper()
     result = DeploymentListLlmsResult(
         provider_result={

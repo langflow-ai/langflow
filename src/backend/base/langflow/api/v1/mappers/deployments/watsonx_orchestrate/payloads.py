@@ -153,7 +153,12 @@ class WatsonxApiDeploymentPayloadBase(BaseModel):
 
 
 class WatsonxApiDeploymentUpdatePayload(WatsonxApiDeploymentPayloadBase):
-    """Watsonx provider_data API contract for deployment update operations."""
+    """Watsonx provider_data API contract for deployment update operations.
+
+    ``operations`` defaults to an empty list so that LLM-only updates
+    (changing the model without any tool/connection changes) can be
+    expressed without providing operations.
+    """
 
     llm: WatsonxApiLlmName = Field(description="Provider model identifier to use for the deployment agent.")
     resource_name_prefix: WatsonxApiResourceNamePrefix | None = Field(

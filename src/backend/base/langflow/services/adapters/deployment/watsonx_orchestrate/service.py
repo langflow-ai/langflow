@@ -281,7 +281,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 slot=self.payload_schemas.deployment_llm_list_result,
                 slot_name="deployment_llm_list_result",
                 provider_data={"models": raw_models},
-                error_prefix=ErrorPrefix.LIST,
+                error_prefix=ErrorPrefix.LIST_LLMS,
             )
             return DeploymentListLlmsResult(
                 provider_result=parsed_models.model_dump(exclude_none=True),
@@ -289,9 +289,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         except Exception as exc:  # noqa: BLE001
             raise_as_deployment_error(
                 exc,
-                error_prefix=ErrorPrefix.LIST,
+                error_prefix=ErrorPrefix.LIST_LLMS,
                 log_msg="Unexpected error while listing wxO deployment LLMs",
-                pass_through=(AuthenticationError, AuthorizationError, InvalidContentError),
+                pass_through=(InvalidContentError),
             )
 
     async def list(

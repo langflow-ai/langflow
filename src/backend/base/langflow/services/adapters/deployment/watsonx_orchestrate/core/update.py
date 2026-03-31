@@ -427,7 +427,10 @@ async def apply_provider_update_plan_with_rollback(
 
 
 def build_update_payload_from_spec(spec: BaseDeploymentDataUpdate | None, *, llm: str | None = None) -> dict[str, Any]:
-    """Build agent update payload from deployment spec updates."""
+    """Build agent update payload from deployment spec updates.
+
+    Treats ``None`` values as "not provided".
+    """
     update_payload: dict[str, Any] = {}
     if spec:
         if spec.name is not None:
