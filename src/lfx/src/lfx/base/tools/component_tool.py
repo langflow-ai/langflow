@@ -96,19 +96,18 @@ def _build_output_function(
         # Create an isolated copy to prevent race conditions when this
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
-        local_method = getattr(comp, method_name)
+        local_method = getattr(comp, method_name, output_method)
+        build_started = False
+        result = None
         try:
             if event_manager:
                 event_manager.on_build_start(data={"id": comp.get_id()})
+                build_started = True
+            comp.set_event_manager(event_manager)
+            comp.set_current_output(output_name)
             comp.set(*args, **kwargs)
-            comp._event_manager = event_manager
-            comp._current_output = output_name
             result = local_method()
-            comp._current_output = ""
-            if event_manager:
-                event_manager.on_build_end(data={"id": comp.get_id()})
         except Exception as e:
-            comp._current_output = ""
             logger.error(
                 "Component %s failed during tool mode execution: %s",
                 comp.get_id(),
@@ -116,6 +115,11 @@ def _build_output_function(
                 exc_info=True,
             )
             raise ToolException(str(e)) from e
+        finally:
+            comp.set_current_output("")
+            comp.set_event_manager(None)
+            if build_started and event_manager:
+                event_manager.on_build_end(data={"id": comp.get_id()})
 
         if isinstance(result, Message):
             return result.get_text()
@@ -139,19 +143,18 @@ def _build_output_async_function(
         # Create an isolated copy to prevent race conditions when this
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
-        local_method = getattr(comp, method_name)
+        local_method = getattr(comp, method_name, output_method)
+        build_started = False
+        result = None
         try:
             if event_manager:
-                await asyncio.to_thread(event_manager.on_build_start, data={"id": comp.get_id()})
+                event_manager.on_build_start(data={"id": comp.get_id()})
+                build_started = True
+            comp.set_event_manager(event_manager)
+            comp.set_current_output(output_name)
             comp.set(*args, **kwargs)
-            comp._event_manager = event_manager
-            comp._current_output = output_name
             result = await local_method()
-            comp._current_output = ""
-            if event_manager:
-                await asyncio.to_thread(event_manager.on_build_end, data={"id": comp.get_id()})
         except Exception as e:
-            comp._current_output = ""
             logger.error(
                 "Component %s failed during tool mode execution: %s",
                 comp.get_id(),
@@ -159,6 +162,11 @@ def _build_output_async_function(
                 exc_info=True,
             )
             raise ToolException(str(e)) from e
+        finally:
+            comp.set_current_output("")
+            comp.set_event_manager(None)
+            if build_started and event_manager:
+                event_manager.on_build_end(data={"id": comp.get_id()})
         if isinstance(result, Message):
             return result.get_text()
         if isinstance(result, Data):

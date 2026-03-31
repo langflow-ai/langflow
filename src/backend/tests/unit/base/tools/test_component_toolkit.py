@@ -178,8 +178,7 @@ class TestComponentToolEventEmission:
 
         from lfx.events.event_manager import create_default_event_manager
 
-        calculator_component = CalculatorToolComponent()
-        calculator_component._id = "test-component-id"
+        calculator_component = CalculatorToolComponent(_id="test-component-id")
 
         # Create a mock queue and event manager
         mock_queue = MagicMock()
@@ -217,8 +216,7 @@ class TestComponentToolEventEmission:
                 self.log("computing result", name="Computation Log")
                 return super().run_model()
 
-        logging_component = LoggingCalculator()
-        logging_component._id = "test-component-id"
+        logging_component = LoggingCalculator(_id="test-component-id")
 
         mock_queue = MagicMock()
         event_manager = create_default_event_manager(queue=mock_queue)
@@ -259,8 +257,7 @@ class TestComponentToolEventEmission:
 
         from lfx.events.event_manager import create_default_event_manager
 
-        calculator_component = CalculatorToolComponent()
-        calculator_component._id = "test-component-id"
+        calculator_component = CalculatorToolComponent(_id="test-component-id")
 
         mock_queue = MagicMock()
         event_manager = create_default_event_manager(queue=mock_queue)
@@ -280,8 +277,7 @@ class TestComponentToolEventEmission:
 
         from lfx.events.event_manager import create_default_event_manager
 
-        calculator_component = CalculatorToolComponent()
-        calculator_component._id = "test-component-id"
+        calculator_component = CalculatorToolComponent(_id="test-component-id")
 
         mock_queue = MagicMock()
         event_manager = create_default_event_manager(queue=mock_queue)
@@ -317,8 +313,7 @@ class TestComponentToolAsyncEventEmission:
         from lfx.base.tools.component_tool import _build_output_async_function
         from lfx.events.event_manager import create_default_event_manager
 
-        calculator_component = CalculatorToolComponent()
-        calculator_component._id = "test-async-component-id"
+        calculator_component = CalculatorToolComponent(_id="test-async-component-id")
 
         mock_queue = MagicMock()
         event_manager = create_default_event_manager(queue=mock_queue)
@@ -358,3 +353,122 @@ class TestComponentToolAsyncEventEmission:
 
         # Should return serialized result without errors
         assert result is not None
+
+
+class TestComponentToolExceptionHandling:
+    """Tests for exception path behaviour in component tools."""
+
+    def test_build_end_emitted_on_exception(self):
+        """Verify build_end is still emitted when the component raises, so the frontend does not get stuck."""
+        from unittest.mock import MagicMock, patch
+
+        from lfx.events.event_manager import create_default_event_manager
+
+        calculator_component = CalculatorToolComponent(_id="test-exception-component-id")
+
+        mock_queue = MagicMock()
+        event_manager = create_default_event_manager(queue=mock_queue)
+        calculator_component.set_event_manager(event_manager)
+
+        component_toolkit = ComponentToolkit(component=calculator_component)
+        component_tool = component_toolkit.get_tools()[0]
+
+        with patch.object(CalculatorToolComponent, "run_model", side_effect=ValueError("boom")):
+            # handle_tool_error=True means ToolException is caught and returned as string
+            component_tool.invoke(input={"expression": "1+1"})
+
+        build_end_calls = [
+            call for call in mock_queue.put_nowait.call_args_list if b'"event": "build_end"' in call[0][0][1]
+        ]
+        assert len(build_end_calls) == 1, "build_end must be emitted even when the component raises"
+
+    def test_build_start_emitted_before_exception(self):
+        """Verify build_start is emitted before the exception, and both events are present."""
+        from unittest.mock import MagicMock, patch
+
+        from lfx.events.event_manager import create_default_event_manager
+
+        calculator_component = CalculatorToolComponent(_id="test-exception-component-id")
+
+        mock_queue = MagicMock()
+        event_manager = create_default_event_manager(queue=mock_queue)
+        calculator_component.set_event_manager(event_manager)
+
+        component_toolkit = ComponentToolkit(component=calculator_component)
+        component_tool = component_toolkit.get_tools()[0]
+
+        with patch.object(CalculatorToolComponent, "run_model", side_effect=ValueError("boom")):
+            # handle_tool_error=True means ToolException is caught and returned as string
+            component_tool.invoke(input={"expression": "1+1"})
+
+        all_events = [call[0][0][1] for call in mock_queue.put_nowait.call_args_list]
+        event_types = [
+            next(t for t in (b"build_start", b"build_end") if t in ev)
+            for ev in all_events
+            if b"build_start" in ev or b"build_end" in ev
+        ]
+        assert event_types == [b"build_start", b"build_end"], "build_start must precede build_end"
+
+
+@pytest.mark.asyncio
+class TestComponentToolAsyncExceptionHandling:
+    """Tests for exception path behaviour in async component tools."""
+
+    async def test_async_build_end_emitted_on_exception(self):
+        """Verify build_end is emitted for async tools even when the component raises."""
+        from unittest.mock import MagicMock
+
+        from langchain_core.tools.base import ToolException
+        from lfx.base.tools.component_tool import _build_output_async_function
+        from lfx.events.event_manager import create_default_event_manager
+
+        calculator_component = CalculatorToolComponent(_id="test-async-exception-id")
+
+        mock_queue = MagicMock()
+        event_manager = create_default_event_manager(queue=mock_queue)
+
+        async def async_run_model():
+            msg = "async boom"
+            raise ValueError(msg)
+
+        output_func = _build_output_async_function(calculator_component, async_run_model, event_manager)
+
+        with pytest.raises(ToolException):
+            await output_func()
+
+        build_end_calls = [
+            call for call in mock_queue.put_nowait.call_args_list if b'"event": "build_end"' in call[0][0][1]
+        ]
+        assert len(build_end_calls) == 1, "build_end must be emitted for async tool even when the component raises"
+
+    async def test_sync_tool_in_executor_delivers_events(self):
+        """Verify events are delivered when a sync tool runs in a thread executor (call_soon_threadsafe path)."""
+        import asyncio
+
+        from lfx.events.event_manager import create_default_event_manager
+
+        # Use a real asyncio.Queue so call_soon_threadsafe actually enqueues items
+        real_queue: asyncio.Queue = asyncio.Queue()
+        # EventManager is created here, inside the running event loop, so self._loop is captured
+        event_manager = create_default_event_manager(queue=real_queue)
+
+        calculator_component = CalculatorToolComponent(_id="test-thread-executor-id")
+        calculator_component.set_event_manager(event_manager)
+
+        component_toolkit = ComponentToolkit(component=calculator_component)
+        component_tool = component_toolkit.get_tools()[0]
+
+        loop = asyncio.get_running_loop()
+        # Run the sync tool from a thread — this exercises the call_soon_threadsafe branch
+        await loop.run_in_executor(None, component_tool.invoke, {"expression": "3+3"})
+
+        # Allow scheduled callbacks to run
+        await asyncio.sleep(0)
+
+        received = []
+        while not real_queue.empty():
+            received.append(real_queue.get_nowait())
+
+        event_types = {item[1] for item in received}
+        assert any(b'"event": "build_start"' in ev for ev in event_types), "build_start must be delivered via executor"
+        assert any(b'"event": "build_end"' in ev for ev in event_types), "build_end must be delivered via executor"

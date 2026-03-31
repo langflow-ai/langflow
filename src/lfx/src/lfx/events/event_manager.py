@@ -69,13 +69,6 @@ class EventManager:
         self.events[name] = callback_
 
     def send_event(self, *, event_type: str, data: LoggableType):
-        try:
-            # Simple event creation without heavy dependencies
-            if isinstance(data, dict) and event_type in {"message", "error", "warning", "info", "token"}:
-                # For lfx, keep it simple without playground event creation
-                pass
-        except Exception:  # noqa: BLE001
-            logger.debug(f"Error processing event: {event_type}")
         jsonable_data = jsonable_encoder(data)
         json_data = {"event": event_type, "data": jsonable_data}
         event_id = f"{event_type}-{uuid.uuid4()}"
@@ -102,7 +95,8 @@ class EventManager:
                             "Event loop stopped before event could be scheduled; event_type=%s dropped", event_type
                         )
                 else:
-                    logger.warning("No running event loop to dispatch event_type=%s", event_type)
+                    # Sync context with no event loop — call directly (e.g. unit tests)
+                    self.queue.put_nowait(item)
             except asyncio.QueueFull:
                 logger.warning("Event queue full; dropping event_type=%s", event_type)
             except Exception:  # noqa: BLE001
