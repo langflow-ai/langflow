@@ -356,8 +356,16 @@ jobs:
 
   merge-frontend-coverage:
     name: Merge Frontend Jest + Playwright Coverage Reports
-    needs: [test-frontend-unit, test-frontend]
-    if: always()
+    needs: [path-filter, set-ci-condition, test-frontend-unit, test-frontend]
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (
+        inputs.run-all-tests ||
+        (needs.path-filter.result != 'skipped' &&
+        needs.path-filter.outputs.docs-only != 'true')
+      )
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
