@@ -2,7 +2,8 @@
 
 import asyncio
 import os
-from pydantic import BaseModel, Field
+
+from pydantic import Field
 
 
 async def test_generate():
@@ -52,17 +53,18 @@ async def test_generate():
         )
         print(f"\nResult type: {type(result)}")
         print(f"Result: {result}")
-        
+
         if result:
             print(f"\nGenerated {len(result)} instances:")
             for i, instance in enumerate(result, 1):
                 print(f"  {i}. {instance}")
         else:
             print("\nNo instances generated (result is None or empty)")
-            
+
     except Exception as e:
         print(f"\nError during generation: {e}")
         import traceback
+
         traceback.print_exc()
 
 

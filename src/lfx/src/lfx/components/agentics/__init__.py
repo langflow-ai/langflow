@@ -24,8 +24,8 @@ _dynamic_imports = {
 }
 
 __all__ = [
-    "AgenerateComponent",
     "AMapComponent",
+    "AgenerateComponent",
     "AreduceComponent",
 ]
 
