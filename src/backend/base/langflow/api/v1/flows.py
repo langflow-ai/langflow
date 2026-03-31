@@ -166,7 +166,10 @@ async def read_flows(
             return await apaginate(session, stmt, params=params)
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        import logging as _logging
+
+        _logging.getLogger(__name__).exception("Error listing flows")
+        raise HTTPException(status_code=500, detail="An internal error occurred while listing flows.") from e
 
 
 @router.get("/{flow_id}", response_model=FlowRead, status_code=200)
@@ -412,7 +415,10 @@ async def delete_multiple_flows(
         await db.flush()
         return {"deleted": len(flows_to_delete)}
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        import logging as _logging
+
+        _logging.getLogger(__name__).exception("Error deleting multiple flows")
+        raise HTTPException(status_code=500, detail="An internal error occurred while deleting flows.") from exc
 
 
 @router.post("/download/", status_code=200)
@@ -434,6 +440,8 @@ async def download_multiple_file(
 
 
 _starter_flows_cache: Response | None = None
+_starter_flows_cache_time: float = 0.0
+_STARTER_FLOWS_TTL_SECONDS: float = 300.0  # 5 minutes
 _starter_flows_lock = asyncio.Lock()
 
 
@@ -443,14 +451,18 @@ async def read_basic_examples(
     session: DbSession,
 ):
     """Retrieve a list of basic example flows."""
-    global _starter_flows_cache  # noqa: PLW0603
+    import time
 
-    if _starter_flows_cache is not None:
+    global _starter_flows_cache, _starter_flows_cache_time  # noqa: PLW0603
+
+    now = time.monotonic()
+    if _starter_flows_cache is not None and (now - _starter_flows_cache_time) < _STARTER_FLOWS_TTL_SECONDS:
         return _starter_flows_cache
 
     async with _starter_flows_lock:
         # Double-check after acquiring the lock.
-        if _starter_flows_cache is not None:
+        now = time.monotonic()
+        if _starter_flows_cache is not None and (now - _starter_flows_cache_time) < _STARTER_FLOWS_TTL_SECONDS:
             return _starter_flows_cache
 
         try:
@@ -465,11 +477,15 @@ async def read_basic_examples(
 
             flow_reads = [FlowRead.model_validate(flow, from_attributes=True) for flow in all_starter_folder_flows]
             _starter_flows_cache = compress_response(flow_reads)
+            _starter_flows_cache_time = time.monotonic()
 
             return _starter_flows_cache  # noqa: TRY300
 
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e)) from e
+            import logging as _logging
+
+            _logging.getLogger(__name__).exception("Error loading basic examples")
+            raise HTTPException(status_code=500, detail="An internal error occurred while loading examples.") from e
 
 
 @router.post("/expand/", status_code=200, dependencies=[Depends(get_current_active_user)], include_in_schema=False)

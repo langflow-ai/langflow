@@ -94,7 +94,10 @@ async def download_project_flows(
     except Exception as e:
         if "No result found" in str(e):
             raise HTTPException(status_code=404, detail="Project not found") from e
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        logger.exception("Error downloading project flows for project_id=%s", project_id)
+        raise HTTPException(
+            status_code=500, detail="An internal error occurred while downloading project flows."
+        ) from e
 
 
 async def upload_project_flows(

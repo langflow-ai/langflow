@@ -10,7 +10,7 @@ import re
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path as StdlibPath
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from aiofile import async_open
@@ -119,6 +119,34 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
         return safe_path
 
 
+# Fields that may be updated via setattr on a Flow ORM instance.
+# Any key not in this set is silently dropped to prevent callers from
+# overwriting internal fields (e.g. ``id``, ``user_id``).
+_UPDATABLE_FLOW_FIELDS: frozenset[str] = frozenset(
+    {
+        "name",
+        "description",
+        "data",
+        "is_component",
+        "endpoint_name",
+        "tags",
+        "folder_id",
+        "icon",
+        "icon_bg_color",
+        "locked",
+        "mcp_enabled",
+        "fs_path",
+    }
+)
+
+
+def _apply_update_data(target: Flow, update_data: dict[str, Any]) -> None:
+    """Apply *update_data* to the ORM *target*, restricted to the allowlist."""
+    for key, value in update_data.items():
+        if key in _UPDATABLE_FLOW_FIELDS:
+            setattr(target, key, value)
+
+
 def _endpoint_name_was_explicitly_cleared(flow: FlowCreate | FlowUpdate) -> bool:
     """Return whether the request explicitly asked to clear the endpoint name."""
     return "endpoint_name" in flow.model_fields_set and flow.endpoint_name in (None, "")
@@ -154,6 +182,85 @@ async def _save_flow_to_fs(flow: Flow, user_id: UUID, storage_service: StorageSe
         raise HTTPException(status_code=500, detail=f"Failed to write flow to filesystem: {e}") from e
 
 
+async def _deduplicate_flow_name(session: AsyncSession, name: str, user_id: UUID) -> str:
+    """Return a unique flow name for *user_id*, appending ``(N)`` if needed."""
+    if not (await session.exec(select(Flow).where(Flow.name == name).where(Flow.user_id == user_id))).first():
+        return name
+
+    flows = (
+        await session.exec(
+            select(Flow).where(Flow.name.like(f"{name} (%")).where(Flow.user_id == user_id)  # type: ignore[attr-defined]
+        )
+    ).all()
+
+    # Extract copy-number suffixes: "MyFlow (2)" → 2
+    extract_number = re.compile(rf"^{re.escape(name)} \((\d+)\)$")
+    numbers = [int(m.group(1)) for f in flows if (m := extract_number.search(f.name))]
+
+    return f"{name} ({max(numbers) + 1})" if numbers else f"{name} (1)"
+
+
+async def _deduplicate_endpoint_name(
+    session: AsyncSession,
+    endpoint_name: str,
+    user_id: UUID,
+    *,
+    fail_on_conflict: bool = False,
+) -> str:
+    """Return a unique endpoint name for *user_id*, appending ``-N`` if needed.
+
+    Raises :class:`HTTPException` 409 when *fail_on_conflict* is ``True`` and
+    the name already exists.
+    """
+    existing = (
+        await session.exec(select(Flow).where(Flow.endpoint_name == endpoint_name).where(Flow.user_id == user_id))
+    ).first()
+    if not existing:
+        return endpoint_name
+
+    if fail_on_conflict:
+        raise HTTPException(status_code=409, detail="Endpoint name must be unique")
+
+    flows = (
+        await session.exec(
+            select(Flow)
+            .where(Flow.endpoint_name.like(f"{endpoint_name}-%"))  # type: ignore[union-attr]
+            .where(Flow.user_id == user_id)
+        )
+    ).all()
+
+    numbers: list[int] = []
+    for f in flows:
+        try:
+            numbers.append(int(f.endpoint_name.split("-")[-1]))
+        except ValueError:
+            continue
+
+    next_num = (max(numbers) + 1) if numbers else 1
+    return f"{endpoint_name}-{next_num}"
+
+
+async def _validate_and_assign_folder(
+    session: AsyncSession,
+    db_flow: Flow,
+    user_id: UUID,
+) -> None:
+    """Ensure *db_flow* has a valid ``folder_id`` belonging to *user_id*.
+
+    Falls back to the default folder when the current ``folder_id`` is
+    ``None`` or references a non-existent / other-user's folder.
+    """
+    if db_flow.folder_id is not None:
+        folder_exists = (
+            await session.exec(select(Folder).where(Folder.id == db_flow.folder_id, Folder.user_id == user_id))
+        ).first()
+        if not folder_exists:
+            db_flow.folder_id = None
+
+    if db_flow.folder_id is None:
+        db_flow.folder_id = await get_default_folder_id(session, user_id)
+
+
 async def _new_flow(
     *,
     session: AsyncSession,
@@ -176,10 +283,8 @@ async def _new_flow(
         validate_folder: Validates folder_id exists and belongs to user when upserting from external sources.
     """
     try:
-        # Validate fs_path if provided (will raise HTTPException if invalid)
         await _verify_fs_path(flow.fs_path, user_id, storage_service)
 
-        # Validate folder_id if requested
         if validate_folder and flow.folder_id is not None:
             folder = (
                 await session.exec(select(Folder).where(Folder.id == flow.folder_id, Folder.user_id == user_id))
@@ -189,117 +294,39 @@ async def _new_flow(
 
         # Set user_id (ignore any user_id from body for security)
         flow.user_id = user_id
+        flow.name = await _deduplicate_flow_name(session, flow.name, user_id)
 
-        # Check if the flow.name is unique
-        # there might be flows with name like: "MyFlow", "MyFlow (1)", "MyFlow (2)"
-        # so we need to check if the name is unique with `like` operator
-        # if we find a flow with the same name, we add a number to the end of the name
-        # based on the highest number found
-        if (await session.exec(select(Flow).where(Flow.name == flow.name).where(Flow.user_id == user_id))).first():
-            flows = (
-                await session.exec(
-                    select(Flow).where(Flow.name.like(f"{flow.name} (%")).where(Flow.user_id == user_id)  # type: ignore[attr-defined]
-                )
-            ).all()
-            if flows:
-                # Use regex to extract numbers only from flows that follow the copy naming pattern:
-                # "{original_name} ({number})"
-                # This avoids extracting numbers from the original flow name if it naturally contains parentheses
-                #
-                # Examples:
-                # - For flow "My Flow": matches "My Flow (1)", "My Flow (2)" -> extracts 1, 2
-                # - For flow "Analytics (Q1)": matches "Analytics (Q1) (1)" -> extracts 1
-                #   but does NOT match "Analytics (Q1)" -> avoids extracting the original "1"
-                extract_number = re.compile(rf"^{re.escape(flow.name)} \((\d+)\)$")
-                numbers = []
-                for _flow in flows:
-                    result = extract_number.search(_flow.name)
-                    if result:
-                        numbers.append(int(result.groups(1)[0]))
-                if numbers:
-                    flow.name = f"{flow.name} ({max(numbers) + 1})"
-                else:
-                    flow.name = f"{flow.name} (1)"
-            else:
-                flow.name = f"{flow.name} (1)"
-
-        # Check if the endpoint is unique
-        if (
-            flow.endpoint_name
-            and (
-                await session.exec(
-                    select(Flow).where(Flow.endpoint_name == flow.endpoint_name).where(Flow.user_id == user_id)
-                )
-            ).first()
-        ):
-            if fail_on_endpoint_conflict:
-                raise HTTPException(status_code=409, detail="Endpoint name must be unique")
-
-            # Auto-rename endpoint
-            flows = (
-                await session.exec(
-                    select(Flow)
-                    .where(Flow.endpoint_name.like(f"{flow.endpoint_name}-%"))  # type: ignore[union-attr]
-                    .where(Flow.user_id == user_id)
-                )
-            ).all()
-            if flows:
-                # The endpoint name is like "my-endpoint","my-endpoint-1", "my-endpoint-2"
-                # so we need to get the highest number and add 1
-                numbers = []
-                for f in flows:
-                    try:
-                        numbers.append(int(f.endpoint_name.split("-")[-1]))
-                    except ValueError:
-                        continue
-                next_num = (max(numbers) + 1) if numbers else 1
-                flow.endpoint_name = f"{flow.endpoint_name}-{next_num}"
-            else:
-                flow.endpoint_name = f"{flow.endpoint_name}-1"
+        if flow.endpoint_name:
+            flow.endpoint_name = await _deduplicate_endpoint_name(
+                session, flow.endpoint_name, user_id, fail_on_conflict=fail_on_endpoint_conflict
+            )
 
         # Exclude the id field from FlowCreate so that Flow.id (UUID, non-optional)
         # always gets its default_factory uuid4 unless we explicitly override it below.
-        # Passing id=None via model_validate would cause a Pydantic ValidationError
-        # because Flow.id is typed as UUID, not Optional[UUID].
         db_flow = Flow.model_validate(flow.model_dump(exclude={"id"}))
 
-        # Apply the stable ID: the explicit flow_id param (PUT upsert) takes precedence,
+        # Apply the stable ID: explicit flow_id param (PUT upsert) takes precedence,
         # then flow.id (stable import from FlowCreate), then the uuid4 default.
         effective_id = flow_id if flow_id is not None else flow.id
         if effective_id is not None:
             db_flow.id = effective_id
 
         db_flow.updated_at = datetime.now(timezone.utc)
-
-        # Validate folder_id exists, or fall back to default folder
-        if db_flow.folder_id is not None:
-            folder_exists = (
-                await session.exec(select(Folder).where(Folder.id == db_flow.folder_id, Folder.user_id == user_id))
-            ).first()
-            if not folder_exists:
-                # Folder doesn't exist or doesn't belong to user, use default
-                db_flow.folder_id = None
-
-        if db_flow.folder_id is None:
-            # Make sure flows always have a folder (auto-create default folder if needed)
-            db_flow.folder_id = await get_default_folder_id(session, user_id)
+        await _validate_and_assign_folder(session, db_flow, user_id)
 
         session.add(db_flow)
-
-        # Persist and refresh
         await session.flush()
         await session.refresh(db_flow)
         await _save_flow_to_fs(db_flow, user_id, storage_service)
 
-        # Convert to FlowRead while session is still active
         return FlowRead.model_validate(db_flow, from_attributes=True)
     except Exception as e:
-        # If it is a validation error, return the error message
         if hasattr(e, "errors"):
             raise HTTPException(status_code=400, detail=str(e)) from e
         if isinstance(e, HTTPException):
             raise
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        logger.exception("Error creating flow")
+        raise HTTPException(status_code=500, detail="An internal error occurred while creating the flow.") from e
 
 
 async def _read_flow(
@@ -388,8 +415,7 @@ async def _update_existing_flow(
     if settings_service.settings.remove_api_keys:
         update_data = remove_api_keys(update_data)
 
-    for key, value in update_data.items():
-        setattr(existing_flow, key, value)
+    _apply_update_data(existing_flow, update_data)
 
     webhook_component = get_webhook_component_in_flow(existing_flow.data or {})
     existing_flow.webhook = webhook_component is not None
@@ -423,8 +449,7 @@ async def _patch_flow(
     if settings_service.settings.remove_api_keys:
         update_data = remove_api_keys(update_data)
 
-    for key, value in update_data.items():
-        setattr(db_flow, key, value)
+    _apply_update_data(db_flow, update_data)
 
     # Validate fs_path if it was changed (will raise HTTPException if invalid)
     if "fs_path" in update_data:
@@ -434,16 +459,7 @@ async def _patch_flow(
     db_flow.webhook = webhook_component is not None
     db_flow.updated_at = datetime.now(timezone.utc)
 
-    # Validate folder_id exists, or fall back to default folder
-    if db_flow.folder_id is not None:
-        folder_exists = (
-            await session.exec(select(Folder).where(Folder.id == db_flow.folder_id, Folder.user_id == user_id))
-        ).first()
-        if not folder_exists:
-            db_flow.folder_id = None
-
-    if db_flow.folder_id is None:
-        db_flow.folder_id = await get_default_folder_id(session, user_id)
+    await _validate_and_assign_folder(session, db_flow, user_id)
 
     session.add(db_flow)
     await session.flush()
@@ -507,6 +523,23 @@ async def _upsert_flow_list(
     return flow_reads
 
 
+def _sanitize_flow_filename(raw_name: str, fallback_id: str = "flow") -> str:
+    """Return a filesystem-safe filename from a flow name.
+
+    Strips directory separators, null bytes, and Windows reserved device names.
+    """
+    # Strip directory components
+    name = StdlibPath(raw_name).name
+    # Remove null bytes
+    name = name.replace("\x00", "")
+    # Reject Windows reserved device names (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
+    import re as _re
+
+    if _re.match(r"^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\..+)?$", name, _re.IGNORECASE):
+        name = f"_{name}"
+    return name or fallback_id
+
+
 def _build_flows_download_response(
     flows: list[Flow],
 ) -> StreamingResponse | dict:
@@ -522,7 +555,7 @@ def _build_flows_download_response(
             for flow_dict in normalised_flows:
                 flow_json = orjson_dumps(flow_dict, sort_keys=True)
                 raw_name = str(flow_dict.get("name", "flow"))
-                safe_name = StdlibPath(raw_name).name or str(flow_dict.get("id", "flow"))
+                safe_name = _sanitize_flow_filename(raw_name, str(flow_dict.get("id", "flow")))
                 zip_file.writestr(f"{safe_name}.json", flow_json)
 
         zip_stream.seek(0)

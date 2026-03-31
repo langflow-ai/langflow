@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ast import literal_eval
+import json as _json
 from datetime import timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any
@@ -236,7 +236,13 @@ def build_input_keys_response(langchain_object, artifacts):
     return input_keys_response
 
 
-def validate_is_component(flows: list[Flow]):
+def validate_is_component(flows: list[Flow]) -> list[Flow]:
+    """Return flows with ``is_component`` inferred from flow data when unset.
+
+    Note: mutates the ORM instances in-place because SQLAlchemy requires
+    mutation for dirty-tracking.  This is an intentional exception to the
+    immutability guideline — creating copies would detach them from the session.
+    """
     for flow in flows:
         if not flow.data or flow.is_component is not None:
             continue
@@ -376,8 +382,9 @@ def parse_value(value: Any, input_type: str) -> Any:
         if isinstance(value, dict):
             return value
         try:
-            return literal_eval(value) if value is not None else {}
-        except (ValueError, SyntaxError):
+            parsed = _json.loads(value) if value is not None else {}
+            return parsed if isinstance(parsed, dict) else {}
+        except (ValueError, TypeError):
             return {}
     return value
 

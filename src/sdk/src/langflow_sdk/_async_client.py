@@ -341,12 +341,35 @@ class AsyncLangflowClient:
     async def delete_project(self, project_id: UUID | str) -> None:
         await self._request("DELETE", f"/api/v1/projects/{project_id}")
 
+    _MAX_ZIP_ENTRIES = 500
+    _MAX_ENTRY_BYTES = 50 * 1024 * 1024  # 50 MB per file
+
     async def download_project(self, project_id: UUID | str) -> dict[str, bytes]:
+        """Download all flows in a project.
+
+        Raises :class:`ValueError` if the archive contains more than 500
+        entries or any single entry exceeds 50 MB (zip-bomb protection).
+        """
         resp = await self._request("GET", f"/api/v1/projects/download/{project_id}")
         flows: dict[str, bytes] = {}
         with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
-            for name in zf.namelist():
-                flows[name] = zf.read(name)
+            entries = zf.infolist()
+            if len(entries) > self._MAX_ZIP_ENTRIES:
+                msg = f"ZIP contains {len(entries)} entries, exceeding the limit of {self._MAX_ZIP_ENTRIES}"
+                raise ValueError(msg)
+            for info in entries:
+                if info.file_size > self._MAX_ENTRY_BYTES:
+                    _logger.warning(
+                        "Skipping ZIP entry %r: declared size %d exceeds limit",
+                        info.filename,
+                        info.file_size,
+                    )
+                    continue
+                raw = zf.read(info.filename)
+                if len(raw) > self._MAX_ENTRY_BYTES:
+                    _logger.warning("Skipping ZIP entry %r: actual size %d exceeds limit", info.filename, len(raw))
+                    continue
+                flows[info.filename] = raw
         return flows
 
     async def upload_project(self, zip_bytes: bytes) -> list[Flow]:
