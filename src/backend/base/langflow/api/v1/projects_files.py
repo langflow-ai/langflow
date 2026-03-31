@@ -6,7 +6,6 @@ Extracted from projects.py to reduce file size and separate file I/O concerns.
 import io
 import zipfile
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Annotated
 from urllib.parse import quote
 from uuid import UUID
@@ -26,6 +25,7 @@ from langflow.api.utils import (
 )
 from langflow.api.utils.zip_utils import extract_flows_from_zip
 from langflow.api.v1.flows import create_flows
+from langflow.api.v1.flows_helpers import _sanitize_flow_filename
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
@@ -68,9 +68,7 @@ async def download_project_flows(
 
         with zipfile.ZipFile(zip_stream, "w") as zip_file:
             for flow in normalised_flows:
-                # Sanitize name: keep only the basename (strips path separators and
-                # collapses ".." components) to prevent Zip Slip / path traversal.
-                safe_name = Path(flow["name"]).name or str(flow.get("id", "flow"))
+                safe_name = _sanitize_flow_filename(str(flow["name"]), str(flow.get("id", "flow")))
                 # Serialise with sorted keys and 2-space indent for stable diffs.
                 flow_json = orjson_dumps(flow, sort_keys=True)
                 zip_file.writestr(f"{safe_name}.json", flow_json.encode("utf-8"))

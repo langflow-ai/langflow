@@ -532,10 +532,8 @@ def _sanitize_flow_filename(raw_name: str, fallback_id: str = "flow") -> str:
 
     Strips directory separators, null bytes, and Windows reserved device names.
     """
-    # Strip directory components
-    name = StdlibPath(raw_name).name
-    # Remove null bytes
-    name = name.replace("\x00", "")
+    name = str(raw_name).replace("/", "_").replace("\\", "_")
+    name = name.replace("\x00", "").replace("..", "_").strip()
     # Reject Windows reserved device names (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
     import re as _re
 

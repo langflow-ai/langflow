@@ -43,6 +43,11 @@ from langflow.services.schema import ServiceType
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
 
+def _escape_like(value: str) -> str:
+    """Escape LIKE wildcards and the escape character itself."""
+    return value.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+
+
 @router.post("/", response_model=FolderRead, status_code=201)
 async def create_project(
     *,
@@ -63,9 +68,10 @@ async def create_project(
                 statement=select(Folder).where(Folder.name == new_project.name).where(Folder.user_id == current_user.id)
             )
         ).first():
+            escaped_project_name = _escape_like(new_project.name)
             project_results = await session.exec(
                 select(Folder).where(
-                    Folder.name.like(f"{new_project.name}%"),  # type: ignore[attr-defined]
+                    Folder.name.like(f"{escaped_project_name}%", escape="\\"),  # type: ignore[attr-defined]
                     Folder.user_id == current_user.id,
                 )
             )
@@ -195,7 +201,7 @@ async def read_project(
             if is_flow:
                 stmt = stmt.where(Flow.is_component == False)  # noqa: E712
             if search:
-                _search = search.replace("%", r"\%").replace("_", r"\_")
+                _search = _escape_like(search)
                 stmt = stmt.where(Flow.name.like(f"%{_search}%", escape="\\"))  # type: ignore[attr-defined]
 
             with warnings.catch_warnings():

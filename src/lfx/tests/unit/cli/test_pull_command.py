@@ -355,6 +355,18 @@ class TestWriteFlow:
         result = _write_flow(flow, sdk=sdk, dest_dir=tmp_path, strip_secrets=False, indent=2)
         assert str(_FLOW_ID) in str(result.path)
 
+    def test_logs_debug_when_write_fails(self, tmp_path: Path):
+        from lfx.cli.pull import _write_flow
+
+        flow = _fake_flow_obj(flow_id=_FLOW_ID)
+        sdk = _make_sdk_mock()
+        sdk.normalize_flow.side_effect = RuntimeError("fail")
+
+        with patch("lfx.cli.pull.logger") as mock_logger:
+            _write_flow(flow, sdk=sdk, dest_dir=tmp_path, strip_secrets=False, indent=2)
+
+        mock_logger.debug.assert_called_once_with("Failed to write flow %s", _FLOW_ID, exc_info=True)
+
 
 # ---------------------------------------------------------------------------
 # PullResult

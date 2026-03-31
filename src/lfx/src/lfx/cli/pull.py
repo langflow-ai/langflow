@@ -35,6 +35,7 @@ from rich.console import Console
 from rich.table import Table
 
 from lfx.cli.common import load_sdk, safe_filename
+from lfx.log.logger import logger
 
 console = Console(stderr=True)
 ok_console = Console()
@@ -92,6 +93,7 @@ def _write_flow(
             out_path.write_text(new_content, encoding="utf-8")
         return PullResult(flow_id=flow_id, flow_name=flow_name, path=out_path, status=status)
     except Exception as exc:  # noqa: BLE001
+        logger.debug("Failed to write flow %s", flow_id, exc_info=True)
         dummy_path = dest_dir / f"{flow_id}.json"
         return PullResult(flow_id=flow_id, flow_name=flow_name, path=dummy_path, status="error", error=str(exc))
 

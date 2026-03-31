@@ -37,6 +37,32 @@ async def test_create_project(client: AsyncClient, logged_in_headers, basic_case
     assert "parent_id" in result, "The dictionary must contain a key called 'parent_id'"
 
 
+async def test_create_project_duplicate_name_escapes_like_wildcards(client: AsyncClient, logged_in_headers):
+    unrelated = {
+        "name": "proj_a (7)",
+        "description": "",
+        "flows_list": [],
+        "components_list": [],
+    }
+    wildcard = {
+        "name": "proj_%",
+        "description": "",
+        "flows_list": [],
+        "components_list": [],
+    }
+
+    response = await client.post("api/v1/projects/", json=unrelated, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+
+    response = await client.post("api/v1/projects/", json=wildcard, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["name"] == "proj_%"
+
+    response = await client.post("api/v1/projects/", json=wildcard, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["name"] == "proj_% (1)"
+
+
 async def test_read_projects(client: AsyncClient, logged_in_headers):
     response = await client.get("api/v1/projects/", headers=logged_in_headers)
     result = response.json()
@@ -1736,3 +1762,36 @@ async def test_download_project_with_no_flows_returns_404(client: AsyncClient, l
 
     assert download_response.status_code == status.HTTP_404_NOT_FOUND
     assert download_response.json()["detail"] == "No flows found in project"
+
+
+async def test_download_project_sanitizes_windows_path_characters(
+    client: AsyncClient, logged_in_headers, basic_case, active_user
+):
+    create_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    project_id = create_response.json()["id"]
+
+    async with session_scope() as session:
+        flow_create = FlowCreate(
+            name=r"..\evil\flow",
+            description="Flow with unsafe filename characters",
+            data={"nodes": [], "edges": []},
+            folder_id=project_id,
+            user_id=active_user.id,
+        )
+        flow = Flow.model_validate(flow_create.model_dump(exclude={"id"}))
+        session.add(flow)
+        await session.flush()
+        await session.refresh(flow)
+        await session.commit()
+
+    response = await client.get(f"api/v1/projects/download/{project_id}", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+
+    with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_file:
+        file_names = zip_file.namelist()
+        assert len(file_names) == 1
+        assert "/" not in file_names[0]
+        assert "\\" not in file_names[0]
+        assert ".." not in file_names[0]
+        assert file_names[0].endswith(".json")
