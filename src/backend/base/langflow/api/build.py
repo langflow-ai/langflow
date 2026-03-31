@@ -522,6 +522,7 @@ async def generate_flow_events(
         error_message = ErrorMessage(
             flow_id=flow_id,
             exception=e,
+            session_id=inputs.session,
         )
         event_manager.on_error(data=error_message.data)
         raise
