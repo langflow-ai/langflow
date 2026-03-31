@@ -356,8 +356,16 @@ jobs:
 
   merge-frontend-coverage:
     name: Merge Frontend Jest + Playwright Coverage Reports
-    needs: [test-frontend-unit, test-frontend]
-    if: always()
+    needs: [path-filter, set-ci-condition, test-frontend-unit, test-frontend]
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (
+        inputs.run-all-tests ||
+        (needs.path-filter.result != 'skipped' &&
+        needs.path-filter.outputs.docs-only != 'true')
+      )
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -365,12 +373,14 @@ jobs:
 
       - name: Download Jest Coverage
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: jest-coverage
           path: coverage/jest
 
       - name: Download Playwright Coverage
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           pattern: playwright-coverage-*
           path: coverage/playwright
