@@ -178,11 +178,112 @@ def _run_sync(**kwargs: Any) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Runner base helpers
+# ---------------------------------------------------------------------------
+
+
+def _import_remote_run_request():
+    """Import and return the SDK ``RunRequest`` model with a helpful error."""
+    try:
+        from langflow_sdk.models import RunRequest  # type: ignore[import-untyped]
+    except ImportError as exc:
+        msg = "langflow-sdk is required for remote flow testing. Install: pip install langflow-sdk"
+        raise ImportError(msg) from exc
+    return RunRequest
+
+
+def _build_remote_error_result(exc: Exception) -> FlowResult:
+    """Return a standardized failed ``FlowResult`` for remote runner errors."""
+    return FlowResult(
+        status="error",
+        text=None,
+        messages=[],
+        outputs={},
+        logs="",
+        error=str(exc),
+        timing=None,
+        raw={},
+    )
+
+
+class _BaseLocalFlowRunner:
+    """Shared initialization and argument resolution for local flow runners."""
+
+    def __init__(
+        self,
+        *,
+        default_env_file: str | Path | None = None,
+        default_timeout: float | None = None,
+        base_dir: Path | None = None,
+    ) -> None:
+        self._default_env_file = default_env_file
+        self._default_timeout = default_timeout
+        self._base_dir = base_dir or Path.cwd()
+
+    def _build_run_kwargs(
+        self,
+        flow: str | Path | dict[str, Any],
+        input_value: str | None,
+        *,
+        tweaks: dict[str, dict[str, Any]] | None,
+        global_variables: dict[str, str] | None,
+        env_file: str | Path | None,
+        timeout: float | None,
+        check_variables: bool,
+        session_id: str | None,
+        user_id: str | None,
+        timing: bool,
+    ) -> dict[str, Any]:
+        """Build keyword arguments shared by sync and async local execution."""
+        if env_file or self._default_env_file:
+            _load_dotenv(env_file or self._default_env_file)
+
+        script_path, flow_json = _resolve_flow_args(flow, tweaks, self._base_dir)
+        resolved_timeout = timeout if timeout is not None else self._default_timeout
+
+        return {
+            "script_path": script_path,
+            "flow_json": flow_json,
+            "input_value": input_value,
+            "check_variables": check_variables,
+            "global_variables": global_variables,
+            "session_id": session_id,
+            "user_id": user_id,
+            "timing": timing,
+            "timeout": resolved_timeout,
+        }
+
+
+class _BaseRemoteFlowRunner:
+    """Shared request/error handling for sync and async remote runners."""
+
+    def __init__(self, client: Any) -> None:
+        self._client = client
+
+    def _build_run_request(
+        self,
+        *,
+        input_value: str,
+        input_type: str,
+        output_type: str,
+        tweaks: dict[str, Any] | None,
+    ):
+        """Create an SDK ``RunRequest`` for remote execution."""
+        run_request_model = _import_remote_run_request()
+        return run_request_model(
+            input_value=input_value,
+            input_type=input_type,
+            output_type=output_type,
+            tweaks=tweaks,
+        )
+
+
+# ---------------------------------------------------------------------------
 # Callable classes
 # ---------------------------------------------------------------------------
 
 
-class LocalFlowRunner:
+class LocalFlowRunner(_BaseLocalFlowRunner):
     """Sync callable returned by the :func:`flow_runner` fixture.
 
     Instantiate via the ``flow_runner`` pytest fixture -- do not construct
@@ -200,17 +301,6 @@ class LocalFlowRunner:
 
     Relative paths are resolved against ``--lfx-flow-dir`` (default: ``cwd``).
     """
-
-    def __init__(
-        self,
-        *,
-        default_env_file: str | Path | None = None,
-        default_timeout: float | None = None,
-        base_dir: Path | None = None,
-    ) -> None:
-        self._default_env_file = default_env_file
-        self._default_timeout = default_timeout
-        self._base_dir = base_dir or Path.cwd()
 
     def __call__(
         self,
@@ -240,27 +330,24 @@ class LocalFlowRunner:
             user_id: User ID attached to the graph.
             timing: Include per-component timing in :attr:`FlowResult.timing`.
         """
-        if env_file or self._default_env_file:
-            _load_dotenv(env_file or self._default_env_file)
-
-        script_path, flow_json = _resolve_flow_args(flow, tweaks, self._base_dir)
-        resolved_timeout = timeout if timeout is not None else self._default_timeout
-
         raw = _run_sync(
-            script_path=script_path,
-            flow_json=flow_json,
-            input_value=input_value,
-            check_variables=check_variables,
-            global_variables=global_variables,
-            session_id=session_id,
-            user_id=user_id,
-            timing=timing,
-            timeout=resolved_timeout,
+            **self._build_run_kwargs(
+                flow,
+                input_value,
+                tweaks=tweaks,
+                global_variables=global_variables,
+                env_file=env_file,
+                timeout=timeout,
+                check_variables=check_variables,
+                session_id=session_id,
+                user_id=user_id,
+                timing=timing,
+            )
         )
         return _build_result(raw)
 
 
-class AsyncLocalFlowRunner:
+class AsyncLocalFlowRunner(_BaseLocalFlowRunner):
     """Async callable returned by the :func:`async_flow_runner` fixture.
 
     Use with ``await`` inside an ``async def`` test::
@@ -269,17 +356,6 @@ class AsyncLocalFlowRunner:
             result = await async_flow_runner("flows/greeting.json", input_value="Hello")
             assert result.status == "success"
     """
-
-    def __init__(
-        self,
-        *,
-        default_env_file: str | Path | None = None,
-        default_timeout: float | None = None,
-        base_dir: Path | None = None,
-    ) -> None:
-        self._default_env_file = default_env_file
-        self._default_timeout = default_timeout
-        self._base_dir = base_dir or Path.cwd()
 
     async def __call__(
         self,
@@ -296,22 +372,19 @@ class AsyncLocalFlowRunner:
         timing: bool = False,
     ) -> FlowResult:
         """Execute a flow asynchronously and return a :class:`FlowResult`."""
-        if env_file or self._default_env_file:
-            _load_dotenv(env_file or self._default_env_file)
-
-        script_path, flow_json = _resolve_flow_args(flow, tweaks, self._base_dir)
-        resolved_timeout = timeout if timeout is not None else self._default_timeout
-
         raw = await _run_async(
-            script_path=script_path,
-            flow_json=flow_json,
-            input_value=input_value,
-            check_variables=check_variables,
-            global_variables=global_variables,
-            session_id=session_id,
-            user_id=user_id,
-            timing=timing,
-            timeout=resolved_timeout,
+            **self._build_run_kwargs(
+                flow,
+                input_value,
+                tweaks=tweaks,
+                global_variables=global_variables,
+                env_file=env_file,
+                timeout=timeout,
+                check_variables=check_variables,
+                session_id=session_id,
+                user_id=user_id,
+                timing=timing,
+            )
         )
         return _build_result(raw)
 
@@ -321,7 +394,7 @@ class AsyncLocalFlowRunner:
 # ---------------------------------------------------------------------------
 
 
-class RemoteFlowRunner:
+class RemoteFlowRunner(_BaseRemoteFlowRunner):
     """Sync callable that runs flows against a live Langflow instance.
 
     Returned by :func:`flow_runner` when ``--langflow-env`` or
@@ -337,9 +410,6 @@ class RemoteFlowRunner:
     so that test code is portable between local and remote modes.
     """
 
-    def __init__(self, client: Any) -> None:
-        self._client = client
-
     def __call__(
         self,
         flow_id_or_endpoint: str,
@@ -351,38 +421,22 @@ class RemoteFlowRunner:
         **_kwargs: Any,
     ) -> FlowResult:
         """Run *flow_id_or_endpoint* against the remote instance."""
-        try:
-            from langflow_sdk.models import RunRequest  # type: ignore[import-untyped]
-        except ImportError as exc:
-            msg = "langflow-sdk is required for remote flow testing. Install: pip install langflow-sdk"
-            raise ImportError(msg) from exc
+        request = self._build_run_request(
+            input_value=input_value,
+            input_type=input_type,
+            output_type=output_type,
+            tweaks=tweaks,
+        )
 
         try:
-            response = self._client.run_flow(
-                flow_id_or_endpoint,
-                RunRequest(
-                    input_value=input_value,
-                    input_type=input_type,
-                    output_type=output_type,
-                    tweaks=tweaks,
-                ),
-            )
+            response = self._client.run_flow(flow_id_or_endpoint, request)
         except Exception as exc:  # noqa: BLE001
-            return FlowResult(
-                status="error",
-                text=None,
-                messages=[],
-                outputs={},
-                logs="",
-                error=str(exc),
-                timing=None,
-                raw={},
-            )
+            return _build_remote_error_result(exc)
 
         return _build_result_from_sdk_response(response)
 
 
-class AsyncRemoteFlowRunner:
+class AsyncRemoteFlowRunner(_BaseRemoteFlowRunner):
     """Async callable that runs flows against a live Langflow instance.
 
     Returned by :func:`async_flow_runner` when ``--langflow-env`` or
@@ -392,9 +446,6 @@ class AsyncRemoteFlowRunner:
             result = await async_flow_runner("greeting-endpoint", "Hello!")
             assert result.first_text_output() is not None
     """
-
-    def __init__(self, client: Any) -> None:
-        self._client = client
 
     async def __call__(
         self,
@@ -407,32 +458,16 @@ class AsyncRemoteFlowRunner:
         **_kwargs: Any,
     ) -> FlowResult:
         """Run *flow_id_or_endpoint* asynchronously against the remote instance."""
-        try:
-            from langflow_sdk.models import RunRequest  # type: ignore[import-untyped]
-        except ImportError as exc:
-            msg = "langflow-sdk is required for remote flow testing. Install: pip install langflow-sdk"
-            raise ImportError(msg) from exc
+        request = self._build_run_request(
+            input_value=input_value,
+            input_type=input_type,
+            output_type=output_type,
+            tweaks=tweaks,
+        )
 
         try:
-            response = await self._client.run_flow(
-                flow_id_or_endpoint,
-                RunRequest(
-                    input_value=input_value,
-                    input_type=input_type,
-                    output_type=output_type,
-                    tweaks=tweaks,
-                ),
-            )
+            response = await self._client.run_flow(flow_id_or_endpoint, request)
         except Exception as exc:  # noqa: BLE001
-            return FlowResult(
-                status="error",
-                text=None,
-                messages=[],
-                outputs={},
-                logs="",
-                error=str(exc),
-                timing=None,
-                raw={},
-            )
+            return _build_remote_error_result(exc)
 
         return _build_result_from_sdk_response(response)

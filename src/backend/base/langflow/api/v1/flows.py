@@ -7,10 +7,11 @@ from typing import Annotated
 from uuid import UUID
 
 import orjson
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
+from lfx.services.cache.utils import CACHE_MISS
 from sqlmodel import and_, col, select
 
 from langflow.api.utils import (
@@ -36,6 +37,7 @@ from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
+from langflow.services.cache.service import ThreadingInMemoryCache
 from langflow.services.database.models.flow.model import (
     AccessTypeEnum,
     Flow,
@@ -439,9 +441,8 @@ async def download_multiple_file(
     return _build_flows_download_response(flows)
 
 
-_starter_flows_cache: Response | None = None
-_starter_flows_cache_time: float = 0.0
 _STARTER_FLOWS_TTL_SECONDS: float = 300.0  # 5 minutes
+_starter_flows_cache = ThreadingInMemoryCache(max_size=1, expiration_time=int(_STARTER_FLOWS_TTL_SECONDS))
 _starter_flows_lock = asyncio.Lock()
 
 
@@ -451,19 +452,14 @@ async def read_basic_examples(
     session: DbSession,
 ):
     """Retrieve a list of basic example flows."""
-    import time
-
-    global _starter_flows_cache, _starter_flows_cache_time  # noqa: PLW0603
-
-    now = time.monotonic()
-    if _starter_flows_cache is not None and (now - _starter_flows_cache_time) < _STARTER_FLOWS_TTL_SECONDS:
-        return _starter_flows_cache
+    cached_response = _starter_flows_cache.get("starter_flows")
+    if cached_response is not CACHE_MISS:
+        return cached_response
 
     async with _starter_flows_lock:
-        # Double-check after acquiring the lock.
-        now = time.monotonic()
-        if _starter_flows_cache is not None and (now - _starter_flows_cache_time) < _STARTER_FLOWS_TTL_SECONDS:
-            return _starter_flows_cache
+        cached_response = _starter_flows_cache.get("starter_flows")
+        if cached_response is not CACHE_MISS:
+            return cached_response
 
         try:
             starter_folder = (await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).first()
@@ -476,16 +472,16 @@ async def read_basic_examples(
             ).all()
 
             flow_reads = [FlowRead.model_validate(flow, from_attributes=True) for flow in all_starter_folder_flows]
-            _starter_flows_cache = compress_response(flow_reads)
-            _starter_flows_cache_time = time.monotonic()
-
-            return _starter_flows_cache  # noqa: TRY300
+            response = compress_response(flow_reads)
+            _starter_flows_cache.set("starter_flows", response)
 
         except Exception as e:
             import logging as _logging
 
             _logging.getLogger(__name__).exception("Error loading basic examples")
             raise HTTPException(status_code=500, detail="An internal error occurred while loading examples.") from e
+        else:
+            return response
 
 
 @router.post("/expand/", status_code=200, dependencies=[Depends(get_current_active_user)], include_in_schema=False)

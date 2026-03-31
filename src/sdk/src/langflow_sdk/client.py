@@ -13,19 +13,16 @@ The async counterpart lives in :mod:`langflow_sdk._async_client`.
 
 from __future__ import annotations
 
-import io
-import json
-import zipfile
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import httpx
 
 # Re-export async client so that existing ``from langflow_sdk.client import ...``
 # statements continue to work without changes.
+from langflow_sdk._async_client import AsyncClient, AsyncLangflowClient
+from langflow_sdk._client_common import _ClientCommon
 from langflow_sdk._http import (
     _DEFAULT_TIMEOUT,
-    _HTTP_201_CREATED,
     _build_headers,
     _connection_error,
     _logger,
@@ -44,10 +41,10 @@ from langflow_sdk.models import (
     RunResponse,
     StreamChunk,
 )
-from langflow_sdk.serialization import flow_to_json, normalize_flow
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from pathlib import Path
     from uuid import UUID
 
     from typing_extensions import Self
@@ -58,7 +55,7 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 
-class LangflowClient:
+class LangflowClient(_ClientCommon):
     """Synchronous client for the Langflow REST API.
 
     Prefer the short alias :data:`Client` for new code::
@@ -141,34 +138,36 @@ class LangflowClient:
         page: int = 1,
         size: int = 50,
     ) -> list[Flow]:
-        params: dict[str, Any] = {
-            "remove_example_flows": remove_example_flows,
-            "components_only": components_only,
-            "get_all": get_all,
-            "header_flows": header_flows,
-            "page": page,
-            "size": size,
-        }
-        if folder_id is not None:
-            params["folder_id"] = str(folder_id)
-        resp = self._request("GET", "/api/v1/flows/", params=params)
-        return [Flow.model_validate(f) for f in resp.json()]
+        resp = self._request(
+            "GET",
+            "/api/v1/flows/",
+            params=self._build_flow_list_params(
+                folder_id=folder_id,
+                remove_example_flows=remove_example_flows,
+                components_only=components_only,
+                get_all=get_all,
+                header_flows=header_flows,
+                page=page,
+                size=size,
+            ),
+        )
+        return self._validate_model_list(Flow, resp.json())
 
     def get_flow(self, flow_id: UUID | str) -> Flow:
         resp = self._request("GET", f"/api/v1/flows/{flow_id}")
-        return Flow.model_validate(resp.json())
+        return self._validate_model(Flow, resp.json())
 
     def create_flow(self, flow: FlowCreate) -> Flow:
-        resp = self._request("POST", "/api/v1/flows/", json=flow.model_dump(mode="json", exclude_none=True))
-        return Flow.model_validate(resp.json())
+        resp = self._request("POST", "/api/v1/flows/", json=self._model_payload(flow))
+        return self._validate_model(Flow, resp.json())
 
     def update_flow(self, flow_id: UUID | str, update: FlowUpdate) -> Flow:
         resp = self._request(
             "PATCH",
             f"/api/v1/flows/{flow_id}",
-            json=update.model_dump(mode="json", exclude_none=True),
+            json=self._model_payload(update),
         )
-        return Flow.model_validate(resp.json())
+        return self._validate_model(Flow, resp.json())
 
     def upsert_flow(self, flow_id: UUID | str, flow: FlowCreate) -> tuple[Flow, bool]:
         """Create-or-update a flow by its stable ID.
@@ -179,9 +178,9 @@ class LangflowClient:
         resp = self._request(
             "PUT",
             f"/api/v1/flows/{flow_id}",
-            json=flow.model_dump(mode="json", exclude_none=True),
+            json=self._model_payload(flow),
         )
-        return Flow.model_validate(resp.json()), resp.status_code == _HTTP_201_CREATED
+        return self._upsert_result(Flow, resp)
 
     def delete_flow(self, flow_id: UUID | str) -> None:
         self._request("DELETE", f"/api/v1/flows/{flow_id}")
@@ -194,9 +193,9 @@ class LangflowClient:
         resp = self._request(
             "POST",
             f"/api/v1/run/{flow_id_or_endpoint}",
-            json=request.model_dump(mode="json", exclude_none=True),
+            json=self._model_payload(request),
         )
-        return RunResponse.model_validate(resp.json())
+        return self._validate_model(RunResponse, resp.json())
 
     def run(
         self,
@@ -217,7 +216,7 @@ class LangflowClient:
         """
         return self.run_flow(
             flow_id_or_endpoint,
-            RunRequest(
+            self._build_run_request(
                 input_value=input_value,
                 input_type=input_type,
                 output_type=output_type,
@@ -244,14 +243,15 @@ class LangflowClient:
                 elif chunk.is_end:
                     response = chunk.final_response()
         """
-        payload = RunRequest(
-            input_value=input_value,
-            input_type=input_type,
-            output_type=output_type,
-            tweaks=tweaks,
-            stream=True,
-        ).model_dump(mode="json", exclude_none=True)
-        return self._iter_stream(f"/api/v1/run/{flow_id_or_endpoint}", payload)
+        return self._iter_stream(
+            f"/api/v1/run/{flow_id_or_endpoint}",
+            self._build_stream_payload(
+                input_value=input_value,
+                input_type=input_type,
+                output_type=output_type,
+                tweaks=tweaks,
+            ),
+        )
 
     def _iter_stream(self, path: str, payload: dict[str, Any]) -> Iterator[StreamChunk]:
         """Open a streaming POST request and yield parsed event chunks."""
@@ -259,26 +259,14 @@ class LangflowClient:
             with self._http.stream("POST", path, json=payload) as response:
                 if not response.is_success:
                     body = response.read()
-                    try:
-                        parsed = json.loads(body)
-                        detail = (
-                            parsed.get("detail", body.decode(errors="replace"))
-                            if isinstance(parsed, dict)
-                            else body.decode(errors="replace")
-                        )
-                    except Exception:  # noqa: BLE001
-                        detail = body.decode(errors="replace")
-                    _raise_for_status_code(response.status_code, detail)
+                    _raise_for_status_code(response.status_code, self._extract_error_detail(body))
                 for line in response.iter_lines():
                     raw = line.strip()
                     if not raw:
                         continue
-                    try:
-                        obj = json.loads(raw)
-                        yield StreamChunk(event=obj["event"], data=obj.get("data", {}))
-                    except (json.JSONDecodeError, KeyError):
-                        _logger.debug("Skipping malformed SSE chunk", exc_info=True)
-                        continue
+                    chunk = self._parse_stream_chunk(raw)
+                    if chunk is not None:
+                        yield chunk
         except httpx.ConnectError as exc:
             raise _connection_error(self._base_url, exc) from exc
 
@@ -288,29 +276,26 @@ class LangflowClient:
 
     def list_projects(self) -> list[Project]:
         resp = self._request("GET", "/api/v1/projects/")
-        return [Project.model_validate(p) for p in resp.json()]
+        return self._validate_model_list(Project, resp.json())
 
     def get_project(self, project_id: UUID | str) -> ProjectWithFlows:
         resp = self._request("GET", f"/api/v1/projects/{project_id}")
-        return ProjectWithFlows.model_validate(resp.json())
+        return self._validate_model(ProjectWithFlows, resp.json())
 
     def create_project(self, project: ProjectCreate) -> Project:
-        resp = self._request("POST", "/api/v1/projects/", json=project.model_dump(mode="json", exclude_none=True))
-        return Project.model_validate(resp.json())
+        resp = self._request("POST", "/api/v1/projects/", json=self._model_payload(project))
+        return self._validate_model(Project, resp.json())
 
     def update_project(self, project_id: UUID | str, update: ProjectUpdate) -> Project:
         resp = self._request(
             "PATCH",
             f"/api/v1/projects/{project_id}",
-            json=update.model_dump(mode="json", exclude_none=True),
+            json=self._model_payload(update),
         )
-        return Project.model_validate(resp.json())
+        return self._validate_model(Project, resp.json())
 
     def delete_project(self, project_id: UUID | str) -> None:
         self._request("DELETE", f"/api/v1/projects/{project_id}")
-
-    _MAX_ZIP_ENTRIES = 500
-    _MAX_ENTRY_BYTES = 50 * 1024 * 1024  # 50 MB per file
 
     def download_project(self, project_id: UUID | str) -> dict[str, bytes]:
         """Download all flows in a project.
@@ -322,26 +307,7 @@ class LangflowClient:
         entries or any single entry exceeds 50 MB (zip-bomb protection).
         """
         resp = self._request("GET", f"/api/v1/projects/download/{project_id}")
-        flows: dict[str, bytes] = {}
-        with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
-            entries = zf.infolist()
-            if len(entries) > self._MAX_ZIP_ENTRIES:
-                msg = f"ZIP contains {len(entries)} entries, exceeding the limit of {self._MAX_ZIP_ENTRIES}"
-                raise ValueError(msg)
-            for info in entries:
-                if info.file_size > self._MAX_ENTRY_BYTES:
-                    _logger.warning(
-                        "Skipping ZIP entry %r: declared size %d exceeds limit",
-                        info.filename,
-                        info.file_size,
-                    )
-                    continue
-                raw = zf.read(info.filename)
-                if len(raw) > self._MAX_ENTRY_BYTES:
-                    _logger.warning("Skipping ZIP entry %r: actual size %d exceeds limit", info.filename, len(raw))
-                    continue
-                flows[info.filename] = raw
-        return flows
+        return self._extract_project_archive(resp.content)
 
     def upload_project(self, zip_bytes: bytes) -> list[Flow]:
         """Upload a project ZIP archive and return the created flows."""
@@ -351,7 +317,7 @@ class LangflowClient:
             content=zip_bytes,
             headers={"Content-Type": "application/octet-stream"},
         )
-        return [Flow.model_validate(f) for f in resp.json()]
+        return self._validate_model_list(Flow, resp.json())
 
     # ------------------------------------------------------------------
     # File I/O helpers
@@ -367,13 +333,7 @@ class LangflowClient:
 
             flow, created = client.push("flows/my-flow.json")
         """
-        path = Path(path)
-        data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
-        flow_id = data.get("id")
-        if not flow_id:
-            msg = f"Flow file {str(path)!r} does not contain an 'id' field; cannot upsert"
-            raise ValueError(msg)
-        flow_create = FlowCreate.model_validate({k: v for k, v in data.items() if k != "id"})
+        flow_id, flow_create = self._load_flow_file(path)
         return self.upsert_flow(flow_id, flow_create)
 
     def pull(
@@ -392,12 +352,7 @@ class LangflowClient:
             client.pull("my-flow-id", output="flows/my-flow.json")
         """
         flow = self.get_flow(flow_id)
-        normalized = normalize_flow(flow.model_dump(mode="json"))
-        if output is not None:
-            out = Path(output)
-            out.parent.mkdir(parents=True, exist_ok=True)
-            out.write_text(flow_to_json(normalized), encoding="utf-8")
-        return normalized
+        return self._normalize_and_write_flow(flow.model_dump(mode="json"), output=output)
 
     def push_project(self, directory: str | Path) -> list[tuple[Flow, bool]]:
         """Push all ``*.json`` flow files in *directory* to the server.
@@ -410,8 +365,7 @@ class LangflowClient:
             for flow, created in results:
                 print("created" if created else "updated", flow.name)
         """
-        directory = Path(directory)
-        return [self.push(p) for p in sorted(directory.glob("*.json"))]
+        return [self.push(path) for path in self._project_json_paths(directory)]
 
     def pull_project(
         self,
@@ -437,18 +391,7 @@ class LangflowClient:
             for name, path in written.items():
                 print(name, "->", path)
         """
-        out = Path(output_dir)
-        out.mkdir(parents=True, exist_ok=True)
-        raw_flows = self.download_project(project_id)  # {filename: bytes}
-        written: dict[str, Path] = {}
-        for filename, content in raw_flows.items():
-            data: dict[str, Any] = json.loads(content.decode("utf-8"))
-            normalized = normalize_flow(data)
-            name = str(normalized.get("name") or Path(filename).stem)
-            dest = out / f"{name}.json"
-            dest.write_text(flow_to_json(normalized), encoding="utf-8")
-            written[name] = dest
-        return written
+        return self._write_project_flows(self.download_project(project_id), output_dir=output_dir)
 
 
 # ---------------------------------------------------------------------------
@@ -464,3 +407,5 @@ class LangflowClient:
 #:     flows  = client.list_flows()
 #:     result = client.run_flow("my-endpoint", RunRequest(input_value="Hello"))
 Client = LangflowClient
+
+__all__ = ["AsyncClient", "AsyncLangflowClient", "Client", "LangflowClient"]
