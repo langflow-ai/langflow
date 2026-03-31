@@ -42,7 +42,7 @@ class TestBuildModelConfig:
         result = _build_model_config("Google Generative AI", "gemini-flash")
 
         config = result[0]
-        assert config["metadata"]["model_class"] == "ChatGoogleGenerativeAI"
+        assert config["metadata"]["model_class"] == "ChatGoogleGenerativeAIFixed"
 
     def test_should_build_config_for_groq(self):
         """Should build correct config for Groq."""
