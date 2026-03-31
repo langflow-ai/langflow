@@ -186,7 +186,6 @@ def check_flow_and_raise(
         raise CustomComponentValidationError(message)
 
 
-
 def get_component_hash_lookups_for_validation() -> dict[str, str] | None:
     """Return the cached component hashes, building them synchronously if possible."""
     from lfx.interface.components import component_cache

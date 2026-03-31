@@ -4,7 +4,6 @@ from types import SimpleNamespace
 
 import pytest
 from lfx.graph import Graph
-from lfx.utils.flow_validation import CustomComponentValidationError
 from lfx.graph.graph.utils import (
     find_last_node,
     process_flow,
@@ -16,6 +15,7 @@ from lfx.graph.graph.utils import (
 )
 from lfx.graph.vertex.base import Vertex
 from lfx.interface.components import component_cache
+from lfx.utils.flow_validation import CustomComponentValidationError
 
 # Test cases for the graph module
 

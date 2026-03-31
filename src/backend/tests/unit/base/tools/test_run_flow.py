@@ -6,11 +6,11 @@ from lfx.base.tools.run_flow import RunFlowBaseComponent
 from lfx.graph.graph.base import Graph
 from lfx.graph.vertex.base import Vertex
 from lfx.interface.components import component_cache
-from lfx.utils.flow_validation import CustomComponentValidationError
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.services.cache.utils import CacheMiss
 from lfx.template.field.base import Output
+from lfx.utils.flow_validation import CustomComponentValidationError
 
 
 @pytest.fixture

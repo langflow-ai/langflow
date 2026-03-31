@@ -28,8 +28,8 @@ from lfx.schema.schema import InputValueRequest
 from lfx.services.settings.service import SettingsService
 from lfx.utils.flow_validation import (
     CustomComponentValidationError,
-    get_component_hash_lookups_for_validation,
     code_hash_matches_any_template,
+    get_component_hash_lookups_for_validation,
 )
 from sqlmodel import select
 

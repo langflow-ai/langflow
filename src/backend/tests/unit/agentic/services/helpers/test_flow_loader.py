@@ -10,7 +10,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
-from lfx.utils.flow_validation import CustomComponentValidationError
 from langflow.agentic.services.helpers.flow_loader import (
     _load_graph_from_python,
     _temporary_sys_path,
@@ -18,6 +17,7 @@ from langflow.agentic.services.helpers.flow_loader import (
     load_graph_for_execution,
     resolve_flow_path,
 )
+from lfx.utils.flow_validation import CustomComponentValidationError
 
 
 class TestTemporarySysPath:
