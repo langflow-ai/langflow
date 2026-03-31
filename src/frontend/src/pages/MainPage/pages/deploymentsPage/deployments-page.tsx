@@ -6,6 +6,7 @@ import { useDeleteDeployment } from "@/controllers/API/queries/deployments/use-d
 import { useGetDeployments } from "@/controllers/API/queries/deployments/use-get-deployments";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
+import AddProviderModal from "./components/add-provider-modal";
 import DeploymentStepperModal from "./components/deployment-stepper-modal";
 import DeploymentsContent from "./components/deployments-content";
 import ProvidersContent from "./components/providers-content";
@@ -19,6 +20,7 @@ export default function DeploymentsPage() {
   const [activeSubTab, setActiveSubTab] =
     useState<DeploymentSubTab>("deployments");
   const [stepperOpen, setStepperOpen] = useState(false);
+  const [addProviderOpen, setAddProviderOpen] = useState(false);
   const [testTarget, setTestTarget] = useState<{
     id: string;
     name: string;
@@ -69,11 +71,19 @@ export default function DeploymentsPage() {
       <div className="flex items-center justify-between">
         <SubTabToggle activeTab={activeSubTab} onTabChange={setActiveSubTab} />
         <Button
-          onClick={() => setStepperOpen(true)}
-          data-testid="new-deployment-btn"
+          onClick={() =>
+            activeSubTab === "providers"
+              ? setAddProviderOpen(true)
+              : setStepperOpen(true)
+          }
+          data-testid={
+            activeSubTab === "providers"
+              ? "new-provider-btn"
+              : "new-deployment-btn"
+          }
         >
           <ForwardedIconComponent name="Plus" className="h-4 w-4" />
-          New Deployment
+          {activeSubTab === "providers" ? "New Environment" : "New Deployment"}
         </Button>
       </div>
 
@@ -97,7 +107,7 @@ export default function DeploymentsPage() {
         <ProvidersContent
           isLoading={isLoadingProviders}
           providers={providers}
-          onAddProvider={() => setStepperOpen(true)}
+          onAddProvider={() => setAddProviderOpen(true)}
         />
       )}
 
@@ -121,6 +131,8 @@ export default function DeploymentsPage() {
         deployment={testTarget}
         providerId={testProviderId}
       />
+
+      <AddProviderModal open={addProviderOpen} setOpen={setAddProviderOpen} />
 
       <DeleteConfirmationModal
         open={!!deleteTarget}
