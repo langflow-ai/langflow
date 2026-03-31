@@ -339,7 +339,10 @@ fastparquet = ["fastparquet>=2024.11.0,<2025.0.0"]
 
 # Vision / ML
 vlmrun = ["vlmrun[all]>=0.2.0"]
-cuga = ["cuga>=0.2.10"]
+cuga = [
+    "cuga>=0.2.10; sys_platform != 'darwin'",
+    "cuga>=0.2.10; sys_platform == 'darwin' and platform_machine == 'arm64'",
+]
 mlx = [
     "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
     "mlx-vlm~=0.3.9; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
