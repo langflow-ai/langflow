@@ -55,8 +55,8 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiAgentExecutionStatusResultData,
     WatsonxApiBindOperation,
     WatsonxApiDeploymentCreatePayload,
-    WatsonxApiDeploymentLlmListResultData,
     WatsonxApiDeploymentListProviderData,
+    WatsonxApiDeploymentLlmListResultData,
     WatsonxApiDeploymentUpdatePayload,
     WatsonxApiDeploymentUpdateResultData,
     WatsonxApiFlowArtifactProviderData,
@@ -66,8 +66,8 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
 )
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
-    DeploymentLlmListResponse,
     DeploymentListResponse,
+    DeploymentLlmListResponse,
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountUpdateRequest,
     DeploymentUpdateRequest,

@@ -422,7 +422,7 @@ def test_update_schema_requires_unbind_app_ids() -> None:
                         "op": "unbind",
                         "tool": {"source_ref": "fv-1", "tool_id": "tool-1"},
                     }
-                ]
+                ],
             }
         )
 
