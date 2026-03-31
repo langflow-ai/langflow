@@ -21,16 +21,23 @@ async def mcp_client(client: AsyncClient, logged_in_headers):
     # Inject the test's AsyncClient so requests go through ASGITransport
     lf_client._http = client
 
-    # Patch the per-session contextvars in server.py
-    old_client = mcp_server_module._client_var.get()
-    old_registry = mcp_server_module._registry_var.get()
-    mcp_server_module._client_var.set(lf_client)
+    # Patch the module-level + contextvar state in server.py
+    old_client = mcp_server_module._shared_client
+    old_registry = mcp_server_module._shared_registry
+
+    mcp_server_module._set_client(lf_client)
+    mcp_server_module._shared_registry = None
     mcp_server_module._registry_var.set(None)
 
     yield lf_client
 
     # Restore
-    mcp_server_module._client_var.set(old_client)
+    if old_client is not None:
+        mcp_server_module._set_client(old_client)
+    else:
+        mcp_server_module._shared_client = None
+        mcp_server_module._client_var.set(None)
+    mcp_server_module._shared_registry = old_registry
     mcp_server_module._registry_var.set(old_registry)
     # Don't close the injected client — the fixture owns it
     lf_client._http = None
