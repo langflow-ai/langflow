@@ -50,8 +50,7 @@ class TestBuildSchemaFields:
         # Arrange
         supported_types = ["str", "int", "float", "bool", "dict"]
         fields = [
-            {"name": f"field_{t}", "description": f"A {t} field", "type": t, "multiple": False}
-            for t in supported_types
+            {"name": f"field_{t}", "description": f"A {t} field", "type": t, "multiple": False} for t in supported_types
         ]
 
         # Act
