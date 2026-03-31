@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import threading
 import zipfile
 from typing import Annotated
 from uuid import UUID
@@ -441,8 +442,12 @@ async def download_multiple_file(
     return _build_flows_download_response(flows)
 
 
-_STARTER_FLOWS_TTL_SECONDS: float = 300.0  # 5 minutes
-_starter_flows_cache = ThreadingInMemoryCache(max_size=1, expiration_time=int(_STARTER_FLOWS_TTL_SECONDS))
+# 5 minutes
+_STARTER_FLOWS_TTL_SECONDS: float = 300.0
+_starter_flows_cache: ThreadingInMemoryCache[threading.RLock] = ThreadingInMemoryCache(
+    max_size=1,
+    expiration_time=int(_STARTER_FLOWS_TTL_SECONDS),
+)
 _starter_flows_lock = asyncio.Lock()
 
 
