@@ -108,7 +108,19 @@ class ExportDoclingDocumentComponent(Component):
                 elif self.export_format == "DocTags":
                     content = doc.export_to_doctags()
 
-                results.append(Data(text=content))
+                # Preserve metadata from the DoclingDocument
+                metadata: dict = {"export_format": self.export_format}
+                if hasattr(doc, "name") and doc.name:
+                    metadata["name"] = doc.name
+                if hasattr(doc, "origin") and doc.origin is not None:
+                    if hasattr(doc.origin, "filename") and doc.origin.filename:
+                        metadata["filename"] = doc.origin.filename
+                    if hasattr(doc.origin, "binary_hash") and doc.origin.binary_hash:
+                        metadata["document_id"] = str(doc.origin.binary_hash)
+                    if hasattr(doc.origin, "mimetype") and doc.origin.mimetype:
+                        metadata["mimetype"] = doc.origin.mimetype
+
+                results.append(Data(text=content, data={"text": content, **metadata}))
         except Exception as e:
             msg = f"Error splitting text: {e}"
             raise TypeError(msg) from e
