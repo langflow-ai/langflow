@@ -12,13 +12,14 @@ from lfx.components.agentics.constants import (
 from lfx.components.agentics.helpers.llm_factory import create_llm
 from lfx.components.agentics.helpers.model_config import validate_model_selection
 
+
 if TYPE_CHECKING:
     from crewai import LLM
 
     from lfx.custom.custom_component.component import Component
 
 
-def prepare_llm_from_component(component: Component) -> LLM:
+def prepare_llm_from_component(component: "Component") -> "LLM":
     """Prepare and configure an LLM instance from component settings.
 
     Extracts model selection, validates configuration, retrieves API keys,
