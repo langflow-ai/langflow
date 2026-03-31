@@ -15,11 +15,6 @@ export interface UseMemoriesDataProps {
   onSelectMemory?: (id: string | null) => void;
 }
 
-export interface MemoriesMainContentProps {
-  selectedMemoryId?: string | null;
-  onSelectMemory?: (id: string | null) => void;
-}
-
 export type MemoryActionMutation = {
   mutate: (args: { memoryId: string }) => void;
   isPending: boolean;
@@ -42,11 +37,8 @@ export type MemoryDetailsProps = {
   handleSearch: () => void;
   groupedBySession: Map<string, MemoryDocumentItem[]>;
   handleOpenDocumentPanel: (doc: MemoryDocumentItem) => void;
-  manualUpdateMutation: { isPending: boolean };
-  handleManualUpdate: () => void;
   deleteMutation: MemoryActionMutation;
-  updateMemoryMutation: { isPending: boolean };
-  handleToggleActive: () => void;
+  handleToggleActive: (nextIsActive: boolean) => void;
 };
 
 export type MemoriesSidebarProps = {
@@ -54,6 +46,9 @@ export type MemoriesSidebarProps = {
   filteredMemories: MemoryInfo[];
   memoriesSearch: string;
   setMemoriesSearch: (value: string) => void;
+  fetchNextPage?: () => void;
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
   selectedMemoryId?: string | null;
   currentFlowId?: string;
   onSelectMemory?: (id: string | null) => void;
@@ -94,10 +89,6 @@ export type MemoryStatusBannersProps = {
 
 export type MemoryDetailsHeaderProps = {
   memory: MemoryInfo;
-  isProcessing: boolean;
-  manualUpdateMutation: { isPending: boolean };
-  handleManualUpdate: () => void;
   deleteMutation: MemoryActionMutation;
-  updateMemoryMutation: { isPending: boolean };
-  handleToggleActive: () => void;
+  handleToggleActive: (nextIsActive: boolean) => void;
 };

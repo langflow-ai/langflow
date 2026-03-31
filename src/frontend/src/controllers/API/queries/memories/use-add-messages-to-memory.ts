@@ -3,12 +3,13 @@ import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
-import { isMockMemoriesEnabled, mockMemoriesApi } from "../../mocks/memories";
-import type { AddMessagesToMemoryParams, MemoryInfo } from "./types";
+import type { AddMessagesToMemoryParams, MemoryApiDTO, MemoryInfo } from "./types";
+import { mapMemoryApiToMemoryInfo } from "./mappers";
 
 export const useAddMessagesToMemory: useMutationFunctionType<
   undefined,
-  AddMessagesToMemoryParams
+  AddMessagesToMemoryParams,
+  MemoryInfo
 > = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
@@ -23,25 +24,18 @@ export const useAddMessagesToMemory: useMutationFunctionType<
         "addMessagesToMemory: message_ids must be a non-empty array",
       );
     }
-    const response = isMockMemoriesEnabled()
-      ? {
-          data: await mockMemoriesApi.addMessages(
-            params.memoryId,
-            params.message_ids,
-          ),
-        }
-      : await api.post<MemoryInfo>(
-          `${getURL("MEMORIES")}/${params.memoryId}/add-messages`,
-          {
-            message_ids: params.message_ids,
-          },
-        );
+    const response = await api.post<MemoryApiDTO>(
+      `${getURL("MEMORIES")}/${params.memoryId}/add-messages`,
+      {
+        message_ids: params.message_ids,
+      },
+    );
 
-    queryClient.invalidateQueries({ queryKey: ["useGetMemories"] });
+    queryClient.invalidateQueries({ queryKey: ["useGetMemoriesInfinite"] });
     queryClient.invalidateQueries({
       queryKey: ["useGetMemory", params.memoryId],
     });
-    return response.data;
+    return mapMemoryApiToMemoryInfo(response.data);
   };
 
   const mutation: UseMutationResult<

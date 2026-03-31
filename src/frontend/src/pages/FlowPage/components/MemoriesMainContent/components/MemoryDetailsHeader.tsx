@@ -8,11 +8,7 @@ import type { MemoryDetailsHeaderProps } from "../types";
 
 export function MemoryDetailsHeader({
   memory,
-  isProcessing,
-  manualUpdateMutation,
-  handleManualUpdate,
   deleteMutation,
-  updateMemoryMutation,
   handleToggleActive,
 }: MemoryDetailsHeaderProps) {
   return (
@@ -40,7 +36,6 @@ export function MemoryDetailsHeader({
           <Switch
             checked={memory.is_active}
             onCheckedChange={handleToggleActive}
-            disabled={updateMemoryMutation.isPending}
             aria-label="Auto-capture for this memory"
           />
           <span

@@ -3,8 +3,6 @@ import { formatDate } from "../helpers";
 import { MemoryDetailsProps } from "../types";
 import { MemoryDetailsHeader } from "./MemoryDetailsHeader";
 import { MemoryKnowledgeBaseSection } from "./MemoryKnowledgeBaseSection";
-import { MemoryStatusBanners } from "./MemoryStatusBanners";
-import { Link } from "react-router-dom";
 
 export function MemoryDetails({
   memory,
@@ -19,35 +17,19 @@ export function MemoryDetails({
   handleSearch,
   groupedBySession,
   handleOpenDocumentPanel,
-  manualUpdateMutation,
-  handleManualUpdate,
   deleteMutation,
-  updateMemoryMutation,
   handleToggleActive,
 }: MemoryDetailsProps) {
-  const isProcessing =
-    memory.status === "generating" || memory.status === "updating";
 
   return (
     <>
       <MemoryDetailsHeader
         memory={memory}
-        isProcessing={isProcessing}
-        manualUpdateMutation={manualUpdateMutation}
-        handleManualUpdate={handleManualUpdate}
         deleteMutation={deleteMutation}
-        updateMemoryMutation={updateMemoryMutation}
         handleToggleActive={handleToggleActive}
       />
 
       <div className="flex flex-1 flex-col overflow-auto p-4">
-        <MemoryStatusBanners
-          memory={memory}
-          isProcessing={isProcessing}
-          manualUpdateMutation={manualUpdateMutation}
-          handleManualUpdate={handleManualUpdate}
-        />
-
         <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
           <SummaryCard
             label="Messages Processed"
@@ -81,15 +63,6 @@ export function MemoryDetails({
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-          <span>
-            <span className="font-medium text-foreground">KB:</span>{" "}
-            <Link
-              to={`/assets/knowledge-bases/${encodeURIComponent(memory.kb_name)}/chunks`}
-            >
-              {memory.kb_name}
-            </Link>
-          </span>
-          <span>&middot;</span>
           <span>
             <span className="font-medium text-foreground">Model:</span>{" "}
             {memory.embedding_model}

@@ -3,8 +3,8 @@ import type { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
-import { isMockMemoriesEnabled, mockMemoriesApi } from "../../mocks/memories";
-import type { GetMemoryParams, MemoryInfo } from "./types";
+import type { GetMemoryParams, MemoryApiDTO, MemoryInfo } from "./types";
+import { mapMemoryApiToMemoryInfo } from "./mappers";
 
 export const useGetMemory: useQueryFunctionType<GetMemoryParams, MemoryInfo> = (
   params,
@@ -17,12 +17,10 @@ export const useGetMemory: useQueryFunctionType<GetMemoryParams, MemoryInfo> = (
       throw new Error("memoryId is required");
     }
 
-    if (isMockMemoriesEnabled()) {
-      return await mockMemoriesApi.get(params.memoryId);
-    }
-
-    const res = await api.get(`${getURL("MEMORIES")}/${params.memoryId}`);
-    return res.data;
+    const res = await api.get<MemoryApiDTO>(
+      `${getURL("MEMORIES")}/${params.memoryId}`,
+    );
+    return mapMemoryApiToMemoryInfo(res.data);
   };
 
   const queryResult: UseQueryResult<MemoryInfo, any> = query(

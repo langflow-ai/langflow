@@ -1,5 +1,28 @@
 export type MemoryStatus = "idle" | "generating" | "updating" | "failed";
 
+export interface MemoryApiDTO {
+  id: string;
+  name: string;
+  flow_id: string;
+  user_id: string;
+  threshold: number;
+  auto_capture: boolean;
+  embedding_model: string;
+  preprocessing: boolean;
+  preproc_model?: string;
+  preproc_instructions?: string;
+  kb_name: string;
+  created_at: string;
+}
+
+export interface GetMemoriesApiResponse {
+  items: MemoryApiDTO[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+}
+
 export interface MemoryInfo {
   id: string;
   name: string;
@@ -36,39 +59,26 @@ export interface MemoryDocumentItem {
   message_id: string;
 }
 
-export interface MemoryDocumentsResponse {
-  documents: MemoryDocumentItem[];
-  total: number;
-  sessions: string[];
-}
-
 export interface CreateMemoryPayload {
   name: string;
   flow_id: string;
   embedding_model: string;
-  embedding_provider: string;
-  is_active?: boolean;
-  batch_size?: number;
-  preprocessing_enabled?: boolean;
-  preprocessing_model?: string;
-  preprocessing_prompt?: string;
-  description?: string;
+  threshold?: number;
+  auto_capture?: boolean;
+  preprocessing?: boolean;
+  preproc_model?: string;
+  preproc_instructions?: string;
 }
 
 export interface UpdateMemoryPayload {
   name?: string;
-  description?: string;
-  is_active?: boolean;
-  batch_size?: number;
-  preprocessing_enabled?: boolean;
-  preprocessing_model?: string;
-  preprocessing_prompt?: string;
+  embedding_model?: string;
+  preproc_model?: string;
+  preproc_instructions?: string;
+  threshold?: number;
+  auto_capture?: boolean;
+  preprocessing?: boolean;
 }
-
-export type MockDb = {
-  memories: Record<string, MemoryInfo>;
-  documents: Record<string, MemoryDocumentItem[]>; // memoryId -> docs
-};
 
 export interface AddMessagesToMemoryParams {
   memoryId: string;

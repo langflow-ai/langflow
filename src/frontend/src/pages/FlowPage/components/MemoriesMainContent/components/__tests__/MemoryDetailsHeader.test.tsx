@@ -49,7 +49,7 @@ describe("MemoryDetailsHeader", () => {
     }) as any;
 
   it("renders memory information", () => {
-    const props = makeProps();
+    const props = makeProps({ memory: { ...makeProps().memory, is_active: true } });
     render(<MemoryDetailsHeader {...props} />);
     expect(screen.getByText("Memory One")).toBeInTheDocument();
     expect(screen.getByText("Auto-capture on")).toBeInTheDocument();
@@ -69,6 +69,6 @@ describe("MemoryDetailsHeader", () => {
     const props = makeProps();
     render(<MemoryDetailsHeader {...props} />);
     fireEvent.click(screen.getByLabelText("auto-capture"));
-    expect(props.handleToggleActive).toHaveBeenCalled();
+    expect(props.handleToggleActive).toHaveBeenCalledWith(false);
   });
 });

@@ -1,39 +1,63 @@
-import type { UseQueryResult } from "@tanstack/react-query";
-import type { useQueryFunctionType } from "@/types/api";
+import {
+  useInfiniteQuery,
+  type InfiniteData,
+  type UseInfiniteQueryOptions,
+  type UseInfiniteQueryResult,
+} from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
-import { UseRequestProcessor } from "../../services/request-processor";
-import { isMockMemoriesEnabled, mockMemoriesApi } from "../../mocks/memories";
-import type { GetMemoriesParams, MemoryInfo } from "./types";
+import type { GetMemoriesApiResponse, GetMemoriesParams } from "./types";
+import { mapGetMemoriesApiResponse } from "./mappers";
 
-export const useGetMemories: useQueryFunctionType<
-  GetMemoriesParams,
-  MemoryInfo[]
-> = (params, options?) => {
-  const { query } = UseRequestProcessor();
+type MemoriesPage = ReturnType<typeof mapGetMemoriesApiResponse>;
 
-  const getMemoriesFn = async (): Promise<MemoryInfo[]> => {
-    if (isMockMemoriesEnabled()) {
-      return await mockMemoriesApi.list(params?.flowId);
-    }
+const MEMORIES_INFINITE_QUERY_KEY = "useGetMemoriesInfinite";
 
+const DEFAULT_PAGE_SIZE = 50;
+
+type MemoriesQueryKey = readonly [typeof MEMORIES_INFINITE_QUERY_KEY, string | undefined];
+
+export const useGetMemories = (
+  params: GetMemoriesParams,
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      MemoriesPage,
+      unknown,
+      InfiniteData<MemoriesPage, number>,
+      MemoriesQueryKey,
+      number
+    >,
+    "queryKey" | "queryFn" | "initialPageParam" | "getNextPageParam"
+  >,
+): UseInfiniteQueryResult<InfiniteData<MemoriesPage, number>, unknown> => {
+  const flowId = params?.flowId;
+
+  const getMemoriesPage = async ({
+    pageParam,
+  }: {
+    pageParam: number;
+  }): Promise<MemoriesPage> => {
     const baseUrl = getURL("MEMORIES");
     const url = new URL(baseUrl, window.location.origin);
-    if (params?.flowId) {
-      url.searchParams.set("flow_id", params.flowId);
+    if (flowId) {
+      url.searchParams.set("flow_id", flowId);
     }
-    const res = await api.get(url.toString());
-    return res.data;
+    url.searchParams.set("page", String(pageParam));
+    url.searchParams.set("size", String(DEFAULT_PAGE_SIZE));
+
+    const res = await api.get<GetMemoriesApiResponse>(url.toString());
+    return mapGetMemoriesApiResponse(res.data);
   };
 
-  const queryResult: UseQueryResult<MemoryInfo[], any> = query(
-    ["useGetMemories", params?.flowId],
-    getMemoriesFn,
-    {
-      refetchOnWindowFocus: false,
-      ...options,
-    },
-  );
-
-  return queryResult;
+  return useInfiniteQuery<MemoriesPage, unknown, InfiniteData<MemoriesPage, number>, MemoriesQueryKey, number>({
+    queryKey: [MEMORIES_INFINITE_QUERY_KEY, flowId] as const,
+    queryFn: getMemoriesPage,
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.page < lastPage.pages ? lastPage.page + 1 : undefined,
+    refetchOnWindowFocus: false,
+    retry: 5,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...(options ?? {}),
+  });
 };

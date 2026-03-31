@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useState } from "react";
 import Loading from "@/components/ui/loading";
 import CreateMemoryModal from "@/modals/createMemoryModal";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -6,22 +7,30 @@ import { NoMemorySelected } from "./components/NoMemorySelected";
 import { MemoriesSidebar } from "./components/MemoriesSidebar";
 import { MemoryDetails } from "./components/MemoryDetails";
 import { MemoryDocumentPanel } from "./components/MemoryDocumentPanel";
-import { MemoriesMainContentProps } from "./types";
 
-export default function MemoriesMainContent({
-  selectedMemoryId,
-  onSelectMemory,
-}: MemoriesMainContentProps) {
+export default function MemoriesMainContent() {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const currentFlowName = useFlowsManagerStore(
     (state) => state.currentFlow?.name,
   );
+
+  const [selectedMemoryId, setSelectedMemoryId] = useState<string | null>(null);
+  const onSelectMemory = useCallback((id: string | null) => {
+    setSelectedMemoryId(id);
+  }, []);
+
+  useEffect(() => {
+    setSelectedMemoryId(null);
+  }, [currentFlowId]);
 
   const {
     memories,
     filteredMemories,
     memoriesSearch,
     setMemoriesSearch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     memory,
     isLoading,
     docsData,
@@ -39,10 +48,7 @@ export default function MemoriesMainContent({
     selectedDocument,
     setSelectedDocument,
     handleOpenDocumentPanel,
-    manualUpdateMutation,
-    handleManualUpdate,
     deleteMutation,
-    updateMemoryMutation,
     handleToggleActive,
     createModalOpen,
     setCreateModalOpen,
@@ -59,6 +65,9 @@ export default function MemoriesMainContent({
         filteredMemories={filteredMemories}
         memoriesSearch={memoriesSearch}
         setMemoriesSearch={setMemoriesSearch}
+        fetchNextPage={fetchNextPage}
+        hasNextPage={hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
         selectedMemoryId={selectedMemoryId}
         currentFlowId={currentFlowId ?? undefined}
         onSelectMemory={onSelectMemory}
@@ -88,10 +97,7 @@ export default function MemoriesMainContent({
             handleSearch={handleSearch}
             groupedBySession={groupedBySession}
             handleOpenDocumentPanel={handleOpenDocumentPanel}
-            manualUpdateMutation={manualUpdateMutation}
-            handleManualUpdate={handleManualUpdate}
             deleteMutation={deleteMutation}
-            updateMemoryMutation={updateMemoryMutation}
             handleToggleActive={handleToggleActive}
           />
         )}
@@ -112,7 +118,7 @@ export default function MemoriesMainContent({
         flowId={currentFlowId ?? ""}
         flowName={currentFlowName ?? ""}
         onSuccess={(memoryId) => {
-          onSelectMemory?.(memoryId);
+          onSelectMemory(memoryId);
         }}
       />
     </div>
