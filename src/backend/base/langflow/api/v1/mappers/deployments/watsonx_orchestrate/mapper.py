@@ -498,8 +498,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 detail="Deployment mapper llm list result payload is missing.",
             ) from exc
         except AdapterPayloadValidationError as exc:
-            first_error = exc.error.errors()[0] if exc.error.errors() else {}
-            detail = str(first_error.get("msg") or exc)
+            detail = exc.format_first_error()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Deployment mapper llm list result payload is invalid: {detail}",
@@ -680,8 +679,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 detail=missing_payload_detail,
             ) from exc
         except AdapterPayloadValidationError as exc:
-            first_error = exc.error.errors()[0] if exc.error.errors() else {}
-            detail = str(first_error.get("msg") or exc)
+            detail = exc.format_first_error()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"{malformed_payload_detail} {detail}",
@@ -705,8 +703,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 detail=f"Missing {slot_name} payload.",
             ) from exc
         except AdapterPayloadValidationError as exc:
-            first_error = exc.error.errors()[0] if exc.error.errors() else {}
-            detail = str(first_error.get("msg") or exc)
+            detail = exc.format_first_error()
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Invalid {slot_name} payload: {detail}",

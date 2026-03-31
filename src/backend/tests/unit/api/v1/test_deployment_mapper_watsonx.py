@@ -477,6 +477,37 @@ async def test_watsonx_mapper_rejects_top_level_flow_version_and_config_on_creat
 
 
 @pytest.mark.asyncio
+async def test_watsonx_mapper_create_reports_missing_llm_field_name() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    payload = DeploymentCreateRequest(
+        provider_id=uuid4(),
+        spec={"name": "create-deploy", "description": "", "type": "agent"},
+        provider_data={
+            "resource_name_prefix": "lf_test_",
+            "connections": {"existing_app_ids": ["app-one"]},
+            "operations": [
+                {
+                    "op": "bind",
+                    "flow_version_id": str(uuid4()),
+                    "app_ids": ["app-one"],
+                }
+            ],
+        },
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await mapper.resolve_deployment_create(
+            user_id=uuid4(),
+            project_id=uuid4(),
+            db=_FakeDb([]),
+            payload=payload,
+        )
+
+    assert exc.value.status_code == 422
+    assert exc.value.detail == "Invalid deployment_create payload: Missing required field 'llm'."
+
+
+@pytest.mark.asyncio
 async def test_watsonx_mapper_create_skips_empty_bind_operations_but_keeps_raw_tools() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     flow_version_id = uuid4()

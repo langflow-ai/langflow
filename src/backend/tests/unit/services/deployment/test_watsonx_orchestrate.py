@@ -404,7 +404,7 @@ async def test_create_rejects_legacy_top_level_config_section(monkeypatch):
 async def test_create_rejects_missing_resource_name_prefix():
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
 
-    with pytest.raises(InvalidContentError, match="Field required"):
+    with pytest.raises(InvalidContentError, match=r"Missing required field 'resource_name_prefix'"):
         await service.create(
             user_id="user-1",
             db=object(),
@@ -437,7 +437,7 @@ async def test_create_rejects_missing_llm():
     provider_data = _create_provider_spec()
     provider_data.pop("llm", None)
 
-    with pytest.raises(InvalidContentError, match="Field required"):
+    with pytest.raises(InvalidContentError, match=r"Missing required field 'llm'"):
         await service.create(
             user_id="user-1",
             db=object(),

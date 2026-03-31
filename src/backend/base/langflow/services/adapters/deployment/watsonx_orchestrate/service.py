@@ -155,11 +155,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         try:
             return slot.parse(provider_data)
         except (AdapterPayloadMissingError, AdapterPayloadValidationError) as exc:
-            if isinstance(exc, AdapterPayloadValidationError):
-                first_error = exc.error.errors()[0] if exc.error.errors() else {}
-                msg = str(first_error.get("msg") or exc)
-            else:
-                msg = str(exc)
+            msg = exc.format_first_error() if isinstance(exc, AdapterPayloadValidationError) else str(exc)
             raise InvalidContentError(message=msg) from None
 
     async def create(
