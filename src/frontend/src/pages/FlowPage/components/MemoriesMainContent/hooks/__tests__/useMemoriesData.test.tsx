@@ -1,6 +1,14 @@
 import { act, renderHook } from "@testing-library/react";
 import { useMemoriesData } from "../useMemoriesData";
 
+jest.mock("@tanstack/react-query", () => {
+  const actual = jest.requireActual("@tanstack/react-query");
+  return {
+    ...actual,
+    useQuery: () => ({ data: [] }),
+  };
+});
+
 const mockSetErrorData = jest.fn();
 const mockSetSuccessData = jest.fn();
 
@@ -30,7 +38,23 @@ let memories = [
 ] as any;
 
 jest.mock("@/controllers/API/queries/memories/use-get-memories", () => ({
-  useGetMemories: () => ({ data: memories }),
+  useGetMemories: () => ({
+    data: {
+      pages: [
+        {
+          items: memories,
+          total: memories.length,
+          page: 1,
+          size: 50,
+          pages: 1,
+        },
+      ],
+      pageParams: [1],
+    },
+    fetchNextPage: jest.fn(),
+    hasNextPage: false,
+    isFetchingNextPage: false,
+  }),
 }));
 
 let memoryQueryData: any = {
@@ -150,6 +174,7 @@ describe("useMemoriesData", () => {
   });
 
   it("toggles active state through update mutation", () => {
+    jest.useFakeTimers();
     const { result } = renderHook(() =>
       useMemoriesData({
         currentFlowId: "flow-1",
@@ -159,13 +184,44 @@ describe("useMemoriesData", () => {
     );
 
     act(() => {
-      result.current.handleToggleActive();
+      result.current.handleToggleActive(false);
+    });
+
+    expect(updateMemoryMutation.mutate).not.toHaveBeenCalled();
+
+    act(() => {
+      jest.advanceTimersByTime(300);
     });
 
     expect(updateMemoryMutation.mutate).toHaveBeenCalledWith({
       memoryId: "m1",
-      is_active: false,
+      auto_capture: false,
     });
+
+    jest.useRealTimers();
+  });
+
+  it("does not call update when toggled back within debounce", () => {
+    jest.useFakeTimers();
+    const { result } = renderHook(() =>
+      useMemoriesData({
+        currentFlowId: "flow-1",
+        selectedMemoryId: "m1",
+        onSelectMemory: jest.fn(),
+      }),
+    );
+
+    act(() => {
+      result.current.handleToggleActive(false);
+      result.current.handleToggleActive(true);
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(updateMemoryMutation.mutate).not.toHaveBeenCalled();
+    jest.useRealTimers();
   });
 
   it("commits search and clears selected session", () => {
@@ -231,10 +287,7 @@ describe("useMemoriesData", () => {
       }),
     );
 
-    expect(Array.from(result.current.groupedBySession.keys())).toEqual([
-      "s1",
-      "s2",
-    ]);
+    expect(Array.from(result.current.groupedBySession.keys())).toEqual(["s1", "s2"]);
 
     act(() => {
       result.current.setSelectedSession("s2");

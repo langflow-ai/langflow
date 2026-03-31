@@ -4,6 +4,7 @@ import { MemoryDocumentPanel } from "../MemoryDocumentPanel";
 jest.mock("@/components/ui/dialog", () => ({
   Dialog: ({ children }: any) => <div>{children}</div>,
   DialogContent: ({ children }: any) => <div>{children}</div>,
+  DialogTitle: ({ children }: any) => <div>{children}</div>,
 }));
 
 describe("MemoryDocumentPanel", () => {

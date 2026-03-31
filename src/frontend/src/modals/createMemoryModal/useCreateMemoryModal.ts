@@ -132,21 +132,20 @@ export function useCreateMemoryModal({
       return;
     }
 
-    const parsedBatchSize = Math.max(1, parseInt(batchSizeInput, 10) || 1);
+    const parsedThreshold = Math.max(1, parseInt(batchSizeInput, 10) || 1);
     const embeddingSelection = selectedEmbeddingModel[0];
 
     createMemoryMutation.mutate({
       name: name.trim(),
       flow_id: flowId,
       embedding_model: embeddingSelection?.name,
-      embedding_provider: embeddingSelection?.provider || "Unknown",
-      is_active: true,
-      batch_size: parsedBatchSize,
-      preprocessing_enabled: preprocessingEnabled,
-      preprocessing_model: preprocessingEnabled
+      auto_capture: true,
+      threshold: parsedThreshold,
+      preprocessing: preprocessingEnabled,
+      preproc_model: preprocessingEnabled
         ? selectedPreprocessingModel[0]?.name
         : undefined,
-      preprocessing_prompt:
+      preproc_instructions:
         preprocessingEnabled && preprocessingPrompt.trim()
           ? preprocessingPrompt.trim()
           : undefined,

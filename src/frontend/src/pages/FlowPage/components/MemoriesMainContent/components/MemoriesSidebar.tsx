@@ -1,3 +1,4 @@
+import type { UIEvent } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,11 +11,24 @@ export function MemoriesSidebar({
   filteredMemories,
   memoriesSearch,
   setMemoriesSearch,
+  fetchNextPage,
+  hasNextPage,
+  isFetchingNextPage,
   selectedMemoryId,
   currentFlowId,
   onSelectMemory,
   onCreateMemory,
 }: MemoriesSidebarProps) {
+  
+  const handleScroll = (e: UIEvent<HTMLDivElement>) => {
+    if (!fetchNextPage || !hasNextPage || isFetchingNextPage) return;
+    const el = e.currentTarget;
+    const remaining = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (remaining < 160) {
+      fetchNextPage();
+    }
+  };
+
   return (
     <aside className="flex w-72 shrink-0 flex-col border-r border-border bg-background">
       <div className="border-b border-border px-4 py-3">
@@ -52,7 +66,7 @@ export function MemoriesSidebar({
         />
       </div>
 
-      <div className="flex-1 overflow-auto px-2 pb-4">
+      <div className="flex-1 overflow-auto px-2 pb-4" onScroll={handleScroll}>
         {!filteredMemories.length ? (
           <div className="px-3 py-6 text-center">
             <IconComponent

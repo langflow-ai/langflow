@@ -31,8 +31,12 @@ jest.mock("../components/NoMemorySelected", () => ({
 }));
 
 jest.mock("../components/MemoriesSidebar", () => ({
-  MemoriesSidebar: ({ onCreateMemory }: any) => (
-    <button onClick={onCreateMemory}>open-create</button>
+  MemoriesSidebar: ({ onCreateMemory, onSelectMemory, selectedMemoryId }: any) => (
+    <div>
+      <button onClick={onCreateMemory}>open-create</button>
+      <button onClick={() => onSelectMemory?.("m1")}>select-memory</button>
+      <div>selected:{selectedMemoryId ?? ""}</div>
+    </div>
   ),
 }));
 
@@ -87,63 +91,45 @@ describe("MemoriesMainContent", () => {
   });
 
   it("renders empty state when no memory is selected", () => {
-    render(
-      <MemoriesMainContent
-        selectedMemoryId={null}
-        onSelectMemory={jest.fn()}
-      />,
-    );
+    render(<MemoriesMainContent />);
     expect(screen.getByText("NoMemorySelected")).toBeInTheDocument();
   });
 
   it("renders loading state for selected memory", () => {
     mockedHookValue.isLoading = true;
 
-    render(
-      <MemoriesMainContent selectedMemoryId="m1" onSelectMemory={jest.fn()} />,
-    );
+    render(<MemoriesMainContent />);
+    fireEvent.click(screen.getByText("select-memory"));
     expect(screen.getByText("Loading...")).toBeInTheDocument();
   });
 
   it("renders memory details when selected memory exists", () => {
     mockedHookValue.memory = { id: "m1" };
 
-    render(
-      <MemoriesMainContent selectedMemoryId="m1" onSelectMemory={jest.fn()} />,
-    );
+    render(<MemoriesMainContent />);
+    fireEvent.click(screen.getByText("select-memory"));
     expect(screen.getByText("MemoryDetails")).toBeInTheDocument();
   });
 
   it("opens create modal via sidebar action", () => {
-    render(
-      <MemoriesMainContent selectedMemoryId="m1" onSelectMemory={jest.fn()} />,
-    );
+    render(<MemoriesMainContent />);
 
     fireEvent.click(screen.getByText("open-create"));
     expect(mockSetCreateModalOpen).toHaveBeenCalledWith(true);
   });
 
   it("clears selected document when panel closes", () => {
-    render(
-      <MemoriesMainContent selectedMemoryId="m1" onSelectMemory={jest.fn()} />,
-    );
+    render(<MemoriesMainContent />);
 
     fireEvent.click(screen.getByText("close-panel"));
     expect(mockSetDocumentPanelOpen).toHaveBeenCalledWith(false);
     expect(mockSetSelectedDocument).toHaveBeenCalledWith(null);
   });
 
-  it("forwards create success to onSelectMemory", () => {
-    const onSelectMemory = jest.fn();
-
-    render(
-      <MemoriesMainContent
-        selectedMemoryId="m1"
-        onSelectMemory={onSelectMemory}
-      />,
-    );
+  it("selects created memory after create success", () => {
+    render(<MemoriesMainContent />);
 
     fireEvent.click(screen.getByText("create-success"));
-    expect(onSelectMemory).toHaveBeenCalledWith("m-created");
+    expect(screen.getByText("selected:m-created")).toBeInTheDocument();
   });
 });

@@ -3,8 +3,6 @@ import { formatDate } from "../helpers";
 import { MemoryDetailsProps } from "../types";
 import { MemoryDetailsHeader } from "./MemoryDetailsHeader";
 import { MemoryKnowledgeBaseSection } from "./MemoryKnowledgeBaseSection";
-import { MemoryStatusBanners } from "./MemoryStatusBanners";
-import { Link } from "react-router-dom";
 
 export function MemoryDetails({
   memory,
@@ -20,25 +18,18 @@ export function MemoryDetails({
   groupedBySession,
   handleOpenDocumentPanel,
   deleteMutation,
-  updateMemoryMutation,
   handleToggleActive,
 }: MemoryDetailsProps) {
-  const isProcessing =
-    memory.status === "generating" || memory.status === "updating";
 
   return (
     <>
       <MemoryDetailsHeader
         memory={memory}
-        isProcessing={isProcessing}
         deleteMutation={deleteMutation}
-        updateMemoryMutation={updateMemoryMutation}
         handleToggleActive={handleToggleActive}
       />
 
       <div className="flex flex-1 flex-col overflow-auto p-4">
-        <MemoryStatusBanners memory={memory} isProcessing={isProcessing} />
-
         <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
           <SummaryCard
             label="Messages Processed"

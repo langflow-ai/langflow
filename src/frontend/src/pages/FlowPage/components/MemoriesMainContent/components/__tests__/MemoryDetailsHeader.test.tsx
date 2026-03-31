@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryDetailsHeader } from "../MemoryDetailsHeader";
+import type { MemoryDetailsHeaderProps } from "../../types";
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
@@ -7,10 +8,14 @@ jest.mock("@/components/common/genericIconComponent", () => ({
 }));
 
 jest.mock("@/components/ui/switch", () => ({
-  Switch: ({ onCheckedChange, checked }: any) => (
+  Switch: ({ onCheckedChange, checked, "aria-label": ariaLabel }: {
+    onCheckedChange: (checked: boolean) => void;
+    checked: boolean;
+    "aria-label"?: string;
+  }) => (
     <input
       type="checkbox"
-      aria-label="enabled"
+      aria-label={ariaLabel ?? "switch"}
       checked={checked}
       onChange={(e) => onCheckedChange(e.target.checked)}
     />
@@ -19,7 +24,13 @@ jest.mock("@/components/ui/switch", () => ({
 
 jest.mock("@/modals/deleteConfirmationModal", () => ({
   __esModule: true,
-  default: ({ children, onConfirm }: any) => (
+  default: ({
+    children,
+    onConfirm,
+  }: {
+    children: React.ReactNode;
+    onConfirm: (e: { stopPropagation: () => void }) => void;
+  }) => (
     <div>
       {children}
       <button onClick={() => onConfirm({ stopPropagation: jest.fn() })}>
@@ -30,23 +41,25 @@ jest.mock("@/modals/deleteConfirmationModal", () => ({
 }));
 
 describe("MemoryDetailsHeader", () => {
-  const makeProps = () =>
-    ({
+  const makeProps = (overrides?: Partial<MemoryDetailsHeaderProps>) => {
+    const base: MemoryDetailsHeaderProps = {
       memory: {
         id: "m1",
         name: "Memory One",
         description: "desc",
         status: "idle",
         is_active: true,
-      },
-      isProcessing: false,
+      } as MemoryDetailsHeaderProps["memory"],
       deleteMutation: { mutate: jest.fn(), isPending: false },
-      updateMemoryMutation: { isPending: false },
       handleToggleActive: jest.fn(),
-    }) as any;
+    };
+    return { ...base, ...(overrides ?? {}) };
+  };
 
   it("renders memory information", () => {
-    const props = makeProps();
+    const props = makeProps({
+      memory: { ...makeProps().memory, is_active: true },
+    });
     render(<MemoryDetailsHeader {...props} />);
     expect(screen.getByText("Memory One")).toBeInTheDocument();
     expect(screen.getByText("Enabled")).toBeInTheDocument();
@@ -65,7 +78,7 @@ describe("MemoryDetailsHeader", () => {
   it("toggles auto-capture", () => {
     const props = makeProps();
     render(<MemoryDetailsHeader {...props} />);
-    fireEvent.click(screen.getByLabelText("enabled"));
-    expect(props.handleToggleActive).toHaveBeenCalled();
+    fireEvent.click(screen.getByLabelText(/auto-capture/i));
+    expect(props.handleToggleActive).toHaveBeenCalledWith(false);
   });
 });
