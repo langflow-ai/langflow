@@ -806,9 +806,12 @@ async def update_deployment(
         user_id=current_user.id,
         db=session,
     )
+    deployment_row_id = deployment_row.id
+    deployment_resource_key = deployment_row.resource_key
+    deployment_provider_account_id = deployment_row.deployment_provider_account_id
     adapter_payload = await deployment_mapper.resolve_deployment_update(
         user_id=current_user.id,
-        deployment_db_id=deployment_row.id,
+        deployment_db_id=deployment_row_id,
         db=session,
         payload=payload,
     )
@@ -822,9 +825,9 @@ async def update_deployment(
         project_id=deployment_row.project_id,
         db=session,
     )
-    with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
+    with handle_adapter_errors(), deployment_provider_scope(deployment_provider_account_id):
         update_result: DeploymentUpdateResult = await deployment_adapter.update(
-            deployment_id=deployment_row.resource_key,
+            deployment_id=deployment_resource_key,
             payload=adapter_payload,
             user_id=current_user.id,
             db=session,
@@ -837,7 +840,7 @@ async def update_deployment(
         )
         await apply_flow_version_patch_attachments(
             user_id=current_user.id,
-            deployment_row_id=deployment_row.id,
+            deployment_row_id=deployment_row_id,
             added_snapshot_bindings=added_snapshot_bindings,
             remove_flow_version_ids=remove_flow_version_ids,
             db=session,
@@ -870,7 +873,9 @@ async def update_deployment(
         await rollback_provider_update(
             deployment_adapter=deployment_adapter,
             deployment_mapper=deployment_mapper,
-            deployment_row=deployment_row,
+            deployment_db_id=deployment_row_id,
+            deployment_resource_key=deployment_resource_key,
+            deployment_provider_account_id=deployment_provider_account_id,
             user_id=current_user.id,
             db=session,
         )

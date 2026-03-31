@@ -457,7 +457,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         tool_app_bindings = (
             self._to_api_tool_app_bindings(
                 adapter_tool_app_bindings=adapter_provider_result.tool_app_bindings,
-                adapter_added_snapshot_bindings=adapter_provider_result.added_snapshot_bindings,
+                adapter_snapshot_bindings=adapter_provider_result.referenced_snapshot_bindings,
             )
             if adapter_provider_result.tool_app_bindings is not None
             else None
@@ -822,10 +822,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         self,
         *,
         adapter_tool_app_bindings: list[Any],
-        adapter_added_snapshot_bindings: list[Any],
+        adapter_snapshot_bindings: list[Any],
     ) -> list[WatsonxApiToolAppBinding]:
         tool_id_to_flow_version: dict[str, UUID] = {}
-        for binding in adapter_added_snapshot_bindings:
+        for binding in adapter_snapshot_bindings:
             tool_id = str(binding.tool_id or "").strip()
             source_ref = str(binding.source_ref or "").strip()
             if not tool_id or not source_ref:

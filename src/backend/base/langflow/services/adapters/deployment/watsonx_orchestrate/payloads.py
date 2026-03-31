@@ -564,13 +564,36 @@ class WatsonxToolAppBinding(BaseModel):
 
 
 class WatsonxDeploymentUpdateResultData(BaseModel):
-    """Normalized provider result payload for deployment update."""
+    """Normalized provider result payload for deployment update.
+
+    Semantics:
+    - ``created_snapshot_ids``: IDs of snapshot/tools created during this update.
+    - ``added_snapshot_ids``: IDs of snapshot/tools newly attached to the agent
+      by this update (includes ``created_snapshot_ids`` and newly attached
+      pre-existing tools).
+    - ``created_snapshot_bindings``: ``source_ref -> tool_id`` bindings for
+      snapshots/tools created during this update.
+    - ``added_snapshot_bindings``: ``source_ref -> tool_id`` bindings for
+      snapshots/tools newly attached to the agent by this update.
+    - ``removed_snapshot_bindings``: ``source_ref -> tool_id`` bindings for
+      snapshots/tools detached from the agent by this update.
+    - ``referenced_snapshot_bindings``: all operation-referenced bindings used
+      for correlation/response shaping (includes created, added-existing,
+      removed, and other touched existing refs).
+    """
 
     model_config = ConfigDict(extra="ignore")
 
     created_app_ids: list[NormalizedId] = Field(default_factory=list)
     created_snapshot_ids: list[NormalizedId] = Field(default_factory=list)
+    added_snapshot_ids: list[NormalizedId] = Field(default_factory=list)
+    created_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
+    # Newly attached snapshot/tool refs (created + newly attached existing).
     added_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
+    # Detached snapshot/tool refs.
+    removed_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
+    # Full operation correlation set (created + existing refs).
+    referenced_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
     tool_app_bindings: list[WatsonxToolAppBinding] | None = None
 
     @field_validator("created_app_ids", mode="before")
@@ -583,6 +606,13 @@ class WatsonxDeploymentUpdateResultData(BaseModel):
     @field_validator("created_snapshot_ids", mode="before")
     @classmethod
     def normalize_created_snapshot_ids(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        return [str(snapshot_id).strip() for snapshot_id in value if str(snapshot_id).strip()]
+
+    @field_validator("added_snapshot_ids", mode="before")
+    @classmethod
+    def normalize_added_snapshot_ids(cls, value: Any) -> list[str]:
         if value is None:
             return []
         return [str(snapshot_id).strip() for snapshot_id in value if str(snapshot_id).strip()]
@@ -624,13 +654,23 @@ class WatsonxDeploymentLlmListResultData(BaseModel):
 
 
 class WatsonxProviderUpdateApplyResult(BaseModel):
-    """Public adapter contract for update helper apply results."""
+    """Public adapter contract for update helper apply results.
+
+    Field semantics match ``WatsonxDeploymentUpdateResultData``.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     created_app_ids: list[NormalizedId] = Field(default_factory=list)
+    created_snapshot_ids: list[NormalizedId] = Field(default_factory=list)
     added_snapshot_ids: list[NormalizedId] = Field(default_factory=list)
+    created_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
+    # Newly attached snapshot/tool refs (created + newly attached existing).
     added_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
+    # Detached snapshot/tool refs.
+    removed_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
+    # Full operation correlation set (created + existing refs).
+    referenced_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
 
 
 class WatsonxProviderCreateApplyResult(BaseModel):

@@ -477,7 +477,11 @@ class TestUpdateDeploymentRollback:
             )
 
         mock_rollback.assert_awaited_once()
-        assert mock_rollback.call_args.kwargs["deployment_row"] is dep_row
+        assert mock_rollback.call_args.kwargs["deployment_db_id"] == dep_row.id
+        assert mock_rollback.call_args.kwargs["deployment_resource_key"] == dep_row.resource_key
+        assert (
+            mock_rollback.call_args.kwargs["deployment_provider_account_id"] == dep_row.deployment_provider_account_id
+        )
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.rollback_provider_update", new_callable=AsyncMock)

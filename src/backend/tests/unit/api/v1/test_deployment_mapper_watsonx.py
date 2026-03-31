@@ -741,6 +741,9 @@ def test_watsonx_mapper_shapes_update_response_from_result_schema() -> None:
         provider_result={
             "created_app_ids": ["created-app-1"],
             "added_snapshot_bindings": [
+                {"source_ref": str(new_flow_version_id), "tool_id": "new-tool-1", "created": True}
+            ],
+            "referenced_snapshot_bindings": [
                 {"source_ref": str(new_flow_version_id), "tool_id": "new-tool-1", "created": True},
                 {"source_ref": str(existing_flow_version_id), "tool_id": "existing-tool-1", "created": False},
             ],
@@ -779,7 +782,7 @@ def test_watsonx_mapper_update_response_raises_on_invalid_source_ref() -> None:
         id="provider-id",
         provider_result={
             "created_app_ids": [],
-            "added_snapshot_bindings": [
+            "referenced_snapshot_bindings": [
                 {"source_ref": "not-a-uuid", "tool_id": "tool-1", "created": False},
             ],
             "tool_app_bindings": [
@@ -811,7 +814,7 @@ def test_watsonx_mapper_update_response_raises_on_unmapped_tool_binding() -> Non
         id="provider-id",
         provider_result={
             "created_app_ids": [],
-            "added_snapshot_bindings": [
+            "referenced_snapshot_bindings": [
                 {"source_ref": str(mapped_fv_id), "tool_id": "mapped-tool", "created": True},
             ],
             "tool_app_bindings": [

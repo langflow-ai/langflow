@@ -584,7 +584,8 @@ async def test_update_provider_data_binds_existing_tool_and_updates_agent_tools(
 
     assert result.provider_result is not None
     assert result.provider_result.created_app_ids == []
-    assert result.provider_result.created_snapshot_ids == ["tool-3"]
+    assert result.provider_result.created_snapshot_ids == []
+    assert result.provider_result.added_snapshot_ids == ["tool-3"]
     assert [tool_id for tool_id, _payload in fake_tool.update_calls] == ["tool-3"]
     _, updated_tool_payload = fake_tool.update_calls[0]
     assert updated_tool_payload["binding"]["langflow"]["connections"]["cfg-new"] == "conn-new"
@@ -936,6 +937,7 @@ async def test_update_provider_data_creates_raw_tools_without_operations(monkeyp
     assert captured["tool_bindings"][0].connections == {}
     assert result.provider_result is not None
     assert result.provider_result.created_snapshot_ids == ["new-tool-raw-1"]
+    assert result.provider_result.added_snapshot_ids == ["new-tool-raw-1"]
     assert fake_connections.create_calls == []
     _, agent_payload = fake_agent.update_calls[0]
     assert agent_payload["tools"] == ["tool-1", "new-tool-raw-1"]
@@ -1027,6 +1029,7 @@ async def test_update_provider_data_creates_raw_connection_and_raw_tool(monkeypa
     assert result.provider_result is not None
     assert result.provider_result.created_app_ids == ["cfg"]
     assert result.provider_result.created_snapshot_ids == ["new-tool-1"]
+    assert result.provider_result.added_snapshot_ids == ["new-tool-1"]
     _, agent_payload = fake_agent.update_calls[0]
     assert agent_payload["tools"] == ["tool-1", "new-tool-1"]
     assert agent_payload["llm"] == TEST_WXO_LLM
@@ -1147,7 +1150,8 @@ async def test_update_provider_data_mixed_operations_preserve_encounter_order(mo
     assert validate_calls == ["cfg-1", "cfg-2"]
     assert result.provider_result is not None
     assert result.provider_result.created_app_ids == []
-    assert result.provider_result.created_snapshot_ids == ["tool-3"]
+    assert result.provider_result.created_snapshot_ids == []
+    assert result.provider_result.added_snapshot_ids == ["tool-3"]
 
     # Existing tool updates should follow first encounter order: bind(tool-3) then unbind(tool-1).
     assert [tool_id for tool_id, _payload in fake_tool.update_calls] == ["tool-3", "tool-1"]
@@ -1217,7 +1221,7 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
         provider_update=provider_update,
     )
 
-    assert plan.bind_existing_tool_ids == ["tool-c", "tool-a"]
+    assert [ref.tool_id for ref in plan.added_existing_tool_refs] == ["tool-c"]
     assert plan.final_existing_tool_ids == ["tool-a", "tool-c"]
     assert plan.existing_app_ids == ["cfg-1", "cfg-2", "cfg-3"]
     assert [item.operation_app_id for item in plan.raw_connections_to_create] == ["cfg-raw-1", "cfg-raw-2"]
@@ -1228,6 +1232,7 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
     delta = plan.existing_tool_deltas["tool-c"]
     assert delta.bind.to_list() == ["cfg-2", "cfg-1"]
     assert delta.unbind.to_list() == ["cfg-3"]
+    assert [ref.tool_id for ref in plan.removed_existing_tool_refs] == ["tool-b"]
 
 
 def test_build_provider_update_plan_creates_unbound_raw_tools_alongside_bound_raw_tools():
@@ -1319,7 +1324,7 @@ def test_build_provider_update_plan_put_tools_replaces_agent_tool_list():
     )
 
     assert plan.final_existing_tool_ids == ["tool-x", "tool-y", "tool-z"]
-    assert plan.bind_existing_tool_ids == []
+    assert plan.added_existing_tool_refs == []
     assert plan.raw_tools_to_create == []
     assert plan.existing_tool_deltas == {}
 
@@ -1366,7 +1371,7 @@ def test_build_provider_update_plan_attaches_existing_tool_without_connection_de
     )
 
     assert plan.final_existing_tool_ids == ["tool-a", "tool-existing"]
-    assert plan.bind_existing_tool_ids == ["tool-existing"]
+    assert [ref.tool_id for ref in plan.added_existing_tool_refs] == ["tool-existing"]
     assert plan.existing_tool_deltas == {}
 
 

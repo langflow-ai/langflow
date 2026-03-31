@@ -440,7 +440,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     agent_id,
                     update_payload,
                 )
-                return DeploymentUpdateResult(id=deployment_id)
+                return DeploymentUpdateResult[WatsonxDeploymentUpdateResultData](
+                    id=deployment_id, provider_result=WatsonxDeploymentUpdateResultData()
+                )
 
             provider_plan = build_provider_update_plan(
                 agent=agent,
@@ -462,8 +464,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 provider_result=self.payload_schemas.deployment_update_result.apply(
                     WatsonxDeploymentUpdateResultData(
                         created_app_ids=apply_result.created_app_ids,
-                        created_snapshot_ids=apply_result.added_snapshot_ids,
+                        created_snapshot_ids=apply_result.created_snapshot_ids,
+                        added_snapshot_ids=apply_result.added_snapshot_ids,
+                        created_snapshot_bindings=apply_result.created_snapshot_bindings,
                         added_snapshot_bindings=apply_result.added_snapshot_bindings,
+                        removed_snapshot_bindings=apply_result.removed_snapshot_bindings,
+                        referenced_snapshot_bindings=apply_result.referenced_snapshot_bindings,
                     )
                 ),
             )
