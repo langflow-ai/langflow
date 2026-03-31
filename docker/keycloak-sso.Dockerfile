@@ -88,8 +88,6 @@ RUN apt-get update \
         curl git libpq5 gnupg xz-utils ca-certificates \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs \
-    && npm install -g npm@latest \
-    && npm cache clean --force \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
