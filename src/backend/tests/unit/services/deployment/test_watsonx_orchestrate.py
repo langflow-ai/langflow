@@ -2981,16 +2981,18 @@ async def test_delete_include_provider_cascades_tools_and_configs(monkeypatch):
     fake_agent = FakeAgentClient(
         {"id": "dep-1", "tools": ["tool-1", "tool-2"]},
     )
-    fake_tool = FakeToolClient([
-        {
-            "id": "tool-1",
-            "binding": {"langflow": {"connections": {"app-1": {}}}},
-        },
-        {
-            "id": "tool-2",
-            "binding": {"langflow": {"connections": {"app-2": {}}}},
-        },
-    ])
+    fake_tool = FakeToolClient(
+        [
+            {
+                "id": "tool-1",
+                "binding": {"langflow": {"connections": {"app-1": {}}}},
+            },
+            {
+                "id": "tool-2",
+                "binding": {"langflow": {"connections": {"app-2": {}}}},
+            },
+        ]
+    )
     fake_conn = FakeConnectionsClient()
 
     fake_clients = FakeWXOClients(
@@ -3024,10 +3026,12 @@ async def test_delete_best_effort_on_tool_failure(monkeypatch):
     fake_agent = FakeAgentClient(
         {"id": "dep-1", "tools": ["tool-1", "tool-2"]},
     )
-    fake_tool = FailingToolClient([
-        {"id": "tool-1", "binding": {"langflow": {"connections": {}}}},
-        {"id": "tool-2", "binding": {"langflow": {"connections": {}}}},
-    ])
+    fake_tool = FailingToolClient(
+        [
+            {"id": "tool-1", "binding": {"langflow": {"connections": {}}}},
+            {"id": "tool-2", "binding": {"langflow": {"connections": {}}}},
+        ]
+    )
     fake_conn = FakeConnectionsClient()
 
     fake_clients = FakeWXOClients(

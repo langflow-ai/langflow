@@ -521,8 +521,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             agent = await asyncio.to_thread(clients.agent.get_draft_by_id, agent_id)
         except Exception:  # noqa: BLE001
             logger.warning(
-                "Could not fetch agent %s to discover resources for cascade delete; "
-                "skipping tool/config cleanup.",
+                "Could not fetch agent %s to discover resources for cascade delete; skipping tool/config cleanup.",
                 agent_id,
             )
             return
