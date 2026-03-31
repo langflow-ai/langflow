@@ -20,6 +20,14 @@ def _make_intent(intent="generate_component", translation="test"):
     return IntentResult(intent=intent, translation=translation)
 
 
+def _safe_security():
+    """Return a mock SecurityScanResult that passes."""
+    result = MagicMock()
+    result.is_safe = True
+    result.violations = ()
+    return result
+
+
 def _parse_sse_events(raw_events: list[str]) -> list[dict]:
     """Parse raw SSE strings into dicts."""
     parsed = []
@@ -63,6 +71,8 @@ class TestValidatingStepIncludesCode:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", return_value=mock_validation),
+            patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
+            patch(f"{MODULE}.validate_component_runtime", return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -101,6 +111,8 @@ class TestValidatingStepIncludesCode:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", return_value=mock_validation),
+            patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
+            patch(f"{MODULE}.validate_component_runtime", return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -142,6 +154,7 @@ class TestValidationFailedIncludesDetails:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", return_value=mock_fail),
+            patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -149,7 +162,7 @@ class TestValidationFailedIncludesDetails:
                 flow_filename="TestFlow",
                 input_value="create a component",
                 global_variables={},
-                max_retries=0,
+                max_retries=1,
             )
             raw_events = await _collect_raw_events(gen)
             events = _parse_sse_events(raw_events)
@@ -180,6 +193,7 @@ class TestValidationFailedIncludesDetails:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", return_value=mock_fail),
+            patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -187,7 +201,7 @@ class TestValidationFailedIncludesDetails:
                 flow_filename="TestFlow",
                 input_value="create a component",
                 global_variables={},
-                max_retries=0,
+                max_retries=1,
             )
             raw_events = await _collect_raw_events(gen)
             events = _parse_sse_events(raw_events)
@@ -224,6 +238,8 @@ class TestRetryingStepIncludesError:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", side_effect=[mock_fail, mock_success]),
+            patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
+            patch(f"{MODULE}.validate_component_runtime", return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -264,6 +280,8 @@ class TestRetryingStepIncludesError:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", side_effect=[mock_fail, mock_success]),
+            patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
+            patch(f"{MODULE}.validate_component_runtime", return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -277,7 +295,7 @@ class TestRetryingStepIncludesError:
             events = _parse_sse_events(raw_events)
 
             retrying = _filter_events_by_step(events, "retrying")[0]
-            assert retrying["attempt"] == 0  # First attempt that failed
+            assert retrying["attempt"] == 1  # First attempt (1-indexed)
             assert retrying["max_attempts"] == 2
 
 
@@ -308,6 +326,8 @@ class TestProgressEventSequence:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", return_value=mock_validation),
+            patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
+            patch(f"{MODULE}.validate_component_runtime", return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -356,6 +376,8 @@ class TestProgressEventSequence:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", side_effect=[mock_fail, mock_success]),
+            patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
+            patch(f"{MODULE}.validate_component_runtime", return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -403,6 +425,8 @@ class TestProgressEventSequence:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", return_value=mock_validation),
+            patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
+            patch(f"{MODULE}.validate_component_runtime", return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -440,6 +464,7 @@ class TestProgressEventSequence:
             patch(f"{MODULE}.execute_flow_file_streaming", side_effect=lambda **_kw: mock_streaming()),
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", return_value=mock_fail),
+            patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
