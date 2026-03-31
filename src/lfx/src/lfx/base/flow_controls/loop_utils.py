@@ -231,7 +231,7 @@ async def execute_loop_body(
             # Inject current item into ALL vertices directly connected to Loop.item BEFORE
             # preparing the subgraph. This ensures every start vertex receives the item,
             # allowing fan-out from the loop output to multiple components.
-            for start_vertex_id, start_edge in zip(start_vertex_ids, start_edges):
+            for start_vertex_id, start_edge in zip(start_vertex_ids, start_edges, strict=False):
                 if not hasattr(start_edge.target_handle, "field_name"):
                     msg = f"Edge target_handle missing field_name attribute for loop item injection: {start_edge}"
                     raise ValueError(msg)
@@ -252,7 +252,7 @@ async def execute_loop_body(
             # Fields with type="other" (like HandleInput) are skipped during field param processing
             # They normally get values from edges, but we filtered out the Loop->Parser edge
             # So we must inject the value directly into raw_params
-            for start_vertex_id, start_edge in zip(start_vertex_ids, start_edges):
+            for start_vertex_id, start_edge in zip(start_vertex_ids, start_edges, strict=False):
                 target_param = start_edge.target_handle.field_name
                 start_vertex = iteration_subgraph.get_vertex(start_vertex_id)
                 start_vertex.update_raw_params({target_param: item}, overwrite=True)
