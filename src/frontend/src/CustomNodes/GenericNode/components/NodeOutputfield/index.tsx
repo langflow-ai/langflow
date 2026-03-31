@@ -178,7 +178,11 @@ function NodeOutputField({
     return Object.keys(flowPoolNode?.data?.outputs ?? {}).every(
       (key) => flowPoolNode?.data?.outputs[key]?.message?.length === 0,
     );
-  }, [flowPoolNode?.data?.outputs, flowPoolNode?.data?.logs, internalOutputName]);
+  }, [
+    flowPoolNode?.data?.outputs,
+    flowPoolNode?.data?.logs,
+    internalOutputName,
+  ]);
 
   const disabledOutput = useMemo(
     () => edges.some((edge) => edge.sourceHandle === scapedJSONStringfy(id)),

@@ -210,8 +210,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       get().setFlowPool({ ...prevPool, [nodeId]: [newEntry] });
     } else {
       const latest = prevEntries[prevEntries.length - 1];
-      const existingLogs: LogsLogType[] =
-        latest.data.logs[outputName] ?? [];
+      const existingLogs: LogsLogType[] = latest.data.logs[outputName] ?? [];
       const updatedEntry: VertexBuildTypeAPI = {
         ...latest,
         data: {

@@ -50,7 +50,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
       ? flowPoolNode?.data?.outputs?.[outputName]
       : flowPoolNode?.data?.logs?.[outputName]) ?? {};
   const resultType = Array.isArray(results) ? undefined : results?.type;
-  let resultMessage = Array.isArray(results) ? {} : results?.message ?? {};
+  let resultMessage = Array.isArray(results) ? {} : (results?.message ?? {});
   const RECORD_TYPES = ["array", "message"];
   const JSON_TYPES = ["data", "object"];
   if (resultMessage?.raw) {
@@ -161,7 +161,9 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
         <TextOutputView left={false} value={resultMessageMemoized} />
       </Case>
 
-      <Case condition={RECORD_TYPES.includes(resultType ?? "") && !isToolOutput}>
+      <Case
+        condition={RECORD_TYPES.includes(resultType ?? "") && !isToolOutput}
+      >
         <DataOutputComponent
           rows={
             Array.isArray(resultMessageMemoized)

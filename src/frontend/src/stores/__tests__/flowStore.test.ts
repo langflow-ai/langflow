@@ -738,13 +738,21 @@ describe("useFlowStore", () => {
 
   describe("appendLogToFlowPool", () => {
     const mockLog = { name: "Test Log", message: "hello", type: "info" } as any;
-    const mockLog2 = { name: "Second Log", message: "world", type: "info" } as any;
+    const mockLog2 = {
+      name: "Second Log",
+      message: "world",
+      type: "info",
+    } as any;
 
     it("creates a new pool entry with the log when no entry exists for nodeId", () => {
       const { result } = renderHook(() => useFlowStore());
 
       act(() => {
-        result.current.appendLogToFlowPool("node-99", "component_as_tool", mockLog);
+        result.current.appendLogToFlowPool(
+          "node-99",
+          "component_as_tool",
+          mockLog,
+        );
       });
 
       const entry = result.current.flowPool["node-99"];
@@ -756,13 +764,24 @@ describe("useFlowStore", () => {
       const { result } = renderHook(() => useFlowStore());
 
       act(() => {
-        result.current.appendLogToFlowPool("node-99", "component_as_tool", mockLog);
+        result.current.appendLogToFlowPool(
+          "node-99",
+          "component_as_tool",
+          mockLog,
+        );
       });
       act(() => {
-        result.current.appendLogToFlowPool("node-99", "component_as_tool", mockLog2);
+        result.current.appendLogToFlowPool(
+          "node-99",
+          "component_as_tool",
+          mockLog2,
+        );
       });
 
-      const logs = result.current.flowPool["node-99"].at(-1)!.data.logs["component_as_tool"];
+      const logs =
+        result.current.flowPool["node-99"].at(-1)!.data.logs[
+          "component_as_tool"
+        ];
       expect(logs).toEqual([mockLog, mockLog2]);
     });
 

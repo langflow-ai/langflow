@@ -679,8 +679,15 @@ describe("onEvent — log", () => {
   });
 
   it("logs console.error and does not call appendLogToFlowPool when component_id is missing", async () => {
-    const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
-    const data = { output: "component_as_tool", name: "x", message: "y", type: "info" };
+    const consoleError = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const data = {
+      output: "component_as_tool",
+      name: "x",
+      message: "y",
+      type: "info",
+    };
 
     await onEvent("log", data, [], {});
 
@@ -693,8 +700,15 @@ describe("onEvent — log", () => {
   });
 
   it("logs console.error and does not call appendLogToFlowPool when output is missing", async () => {
-    const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
-    const data = { component_id: "node-1", name: "x", message: "y", type: "info" };
+    const consoleError = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const data = {
+      component_id: "node-1",
+      name: "x",
+      message: "y",
+      type: "info",
+    };
 
     await onEvent("log", data, [], {});
 
@@ -721,7 +735,9 @@ describe("onEvent — build_end guard", () => {
   });
 
   it("logs console.error and does not call updateBuildStatus when data.id is missing", async () => {
-    const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+    const consoleError = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
 
     await onEvent("build_end", {}, [], {});
 
