@@ -390,6 +390,9 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
                 msg = "put_tools is a standalone full replacement and cannot be combined with other fields."
                 raise ValueError(msg)
             return self
+        if self.tools.raw_payloads and self.resource_name_prefix is None:
+            msg = "resource_name_prefix is required when update payload creates raw tools."
+            raise ValueError(msg)
         if self.llm is None:
             msg = "llm is required for deployment update operations."
             raise ValueError(msg)

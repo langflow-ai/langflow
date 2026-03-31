@@ -217,6 +217,25 @@ def test_update_schema_rejects_too_long_resource_name_prefix() -> None:
     assert "cannot exceed" in str(exc.value.error)
 
 
+def test_update_schema_rejects_raw_tools_without_resource_name_prefix() -> None:
+    with pytest.raises(AdapterPayloadValidationError) as exc:
+        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
+            {
+                "llm": "granite-3-8b-instruct",
+                "tools": {"raw_payloads": [_raw_tool("tool-new-1", 33)]},
+                "connections": {"existing_app_ids": ["app-existing-1"]},
+                "operations": [
+                    {
+                        "op": "bind",
+                        "tool": {"name_of_raw": "tool-new-1"},
+                        "app_ids": ["app-existing-1"],
+                    }
+                ],
+            }
+        )
+    assert "resource_name_prefix is required when update payload creates raw tools" in str(exc.value.error)
+
+
 def test_update_schema_rejects_prefixed_app_id_collisions() -> None:
     with pytest.raises(AdapterPayloadValidationError) as exc:
         WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
@@ -261,6 +280,8 @@ def test_update_schema_rejects_tool_reference_with_both_selectors() -> None:
     with pytest.raises(AdapterPayloadValidationError) as exc:
         WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
             {
+                "llm": "granite-3-8b-instruct",
+                "resource_name_prefix": "lf_pref_",
                 "tools": {"raw_payloads": [_raw_tool("tool-new-1", 1)]},
                 "connections": {"existing_app_ids": ["app-existing-1"]},
                 "operations": [
@@ -304,6 +325,8 @@ def test_update_schema_rejects_bind_app_id_not_in_declared_pools() -> None:
     with pytest.raises(AdapterPayloadValidationError) as exc:
         WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
             {
+                "llm": "granite-3-8b-instruct",
+                "resource_name_prefix": "lf_pref_",
                 "tools": {
                     "raw_payloads": [_raw_tool("tool-new-1", 2)],
                 },

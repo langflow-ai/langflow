@@ -156,6 +156,7 @@ def test_watsonx_api_payload_accepts_flow_version_bind_contract() -> None:
     payload = WatsonxApiDeploymentUpdatePayload.model_validate(
         {
             "llm": TEST_WXO_LLM,
+            "resource_name_prefix": "lf_abc_",
             "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
                 {
@@ -174,6 +175,7 @@ def test_watsonx_api_payload_accepts_bind_with_empty_app_ids() -> None:
     payload = WatsonxApiDeploymentUpdatePayload.model_validate(
         {
             "llm": TEST_WXO_LLM,
+            "resource_name_prefix": "lf_abc_",
             "operations": [
                 {
                     "op": "bind",
@@ -212,6 +214,24 @@ def test_watsonx_api_payload_accepts_llm_only_update_contract() -> None:
     )
     assert payload.llm == TEST_WXO_LLM
     assert payload.operations == []
+
+
+def test_watsonx_api_payload_rejects_bind_without_resource_name_prefix() -> None:
+    flow_version_id = uuid4()
+    with pytest.raises(ValidationError, match="resource_name_prefix is required"):
+        WatsonxApiDeploymentUpdatePayload.model_validate(
+            {
+                "llm": TEST_WXO_LLM,
+                "connections": {"existing_app_ids": ["app-one"]},
+                "operations": [
+                    {
+                        "op": "bind",
+                        "flow_version_id": str(flow_version_id),
+                        "app_ids": ["app-one"],
+                    }
+                ],
+            }
+        )
 
 
 def test_watsonx_api_payload_rejects_update_without_llm() -> None:
@@ -582,6 +602,7 @@ async def test_watsonx_mapper_skips_empty_bind_operations_but_keeps_raw_tools() 
     payload = DeploymentUpdateRequest(
         provider_data={
             "llm": TEST_WXO_LLM,
+            "resource_name_prefix": "lf_test_",
             "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
                 {
@@ -872,6 +893,7 @@ def test_watsonx_mapper_exposes_reconciliation_resolvers() -> None:
         DeploymentUpdateRequest(
             provider_data={
                 "llm": TEST_WXO_LLM,
+                "resource_name_prefix": "lf_test_",
                 "connections": {"existing_app_ids": ["app-one"]},
                 "operations": [
                     {"op": "bind", "flow_version_id": str(add_id), "app_ids": ["app-one"]},

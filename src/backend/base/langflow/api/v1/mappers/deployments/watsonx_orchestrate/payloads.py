@@ -175,6 +175,15 @@ class WatsonxApiDeploymentUpdatePayload(WatsonxApiDeploymentPayloadBase):
         validate_resource_name_prefix_for_provider(value)
         return value
 
+    @model_validator(mode="after")
+    def validate_prefix_required_for_bind_operations(self) -> WatsonxApiDeploymentUpdatePayload:
+        if any(isinstance(operation, WatsonxApiBindOperation) for operation in self.operations) and (
+            self.resource_name_prefix is None
+        ):
+            msg = "resource_name_prefix is required when update operations include bind."
+            raise ValueError(msg)
+        return self
+
 
 class WatsonxApiDeploymentCreatePayload(WatsonxApiDeploymentPayloadBase):
     """Watsonx provider_data API contract for deployment create operations."""
