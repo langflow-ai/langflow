@@ -890,7 +890,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.135.2"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
@@ -1765,7 +1765,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.135.2"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",

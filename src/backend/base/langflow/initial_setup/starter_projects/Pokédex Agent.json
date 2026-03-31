@@ -400,7 +400,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.135.2"
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
@@ -781,7 +781,7 @@
                   },
                   {
                     "name": "validators",
-                    "version": "0.35.0"
+                    "version": "0.34.0"
                   },
                   {
                     "name": "lfx",
