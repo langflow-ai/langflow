@@ -2974,8 +2974,8 @@ async def test_delete_deployment_not_found_raises(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_delete_include_provider_cascades_tools_and_configs(monkeypatch):
-    """include_provider=True deletes tools and connections before the agent."""
+async def test_delete_only_deletes_agent_not_tools_or_configs(monkeypatch):
+    """Delete only removes the agent — tools and connections are left untouched."""
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
 
     fake_agent = FakeAgentClient(
@@ -3008,80 +3008,9 @@ async def test_delete_include_provider_cascades_tools_and_configs(monkeypatch):
 
     result = await service.delete(user_id="user-1", deployment_id="dep-1", db=object())
     assert result.id == "dep-1"
-    assert sorted(fake_tool.delete_calls) == ["tool-1", "tool-2"]
-    assert sorted(fake_conn.delete_calls) == ["app-1", "app-2"]
     assert fake_agent.delete_calls == ["dep-1"]
-
-
-@pytest.mark.anyio
-async def test_delete_best_effort_on_tool_failure(monkeypatch):
-    """Tool deletion failure doesn't prevent agent deletion."""
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-
-    class FailingToolClient(FakeToolClient):
-        def delete(self, tool_id: str):
-            self.delete_calls.append(tool_id)
-            raise RuntimeError("tool delete failed")
-
-    fake_agent = FakeAgentClient(
-        {"id": "dep-1", "tools": ["tool-1", "tool-2"]},
-    )
-    fake_tool = FailingToolClient(
-        [
-            {"id": "tool-1", "binding": {"langflow": {"connections": {}}}},
-            {"id": "tool-2", "binding": {"langflow": {"connections": {}}}},
-        ]
-    )
-    fake_conn = FakeConnectionsClient()
-
-    fake_clients = FakeWXOClients(
-        agent=fake_agent,
-        tool=fake_tool,
-        connections=fake_conn,
-    )
-
-    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        return fake_clients
-
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-
-    result = await service.delete(user_id="user-1", deployment_id="dep-1", db=object())
-    assert result.id == "dep-1"
-    # Both tools were attempted despite failures
-    assert sorted(fake_tool.delete_calls) == ["tool-1", "tool-2"]
-    # Agent still deleted
-    assert fake_agent.delete_calls == ["dep-1"]
-
-
-@pytest.mark.anyio
-async def test_delete_best_effort_on_agent_fetch_failure(monkeypatch):
-    """If agent fetch fails during cascade, agent delete still proceeds."""
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-
-    class UnfetchableAgentClient(FakeAgentClient):
-        def get_draft_by_id(self, deployment_id: str):  # noqa: ARG002
-            raise RuntimeError("cannot fetch agent")
-
-    fake_agent = UnfetchableAgentClient({"id": "dep-1", "tools": []})
-    fake_tool = FakeToolClient([])
-    fake_conn = FakeConnectionsClient()
-
-    fake_clients = FakeWXOClients(
-        agent=fake_agent,
-        tool=fake_tool,
-        connections=fake_conn,
-    )
-
-    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        return fake_clients
-
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-
-    result = await service.delete(user_id="user-1", deployment_id="dep-1", db=object())
-    assert result.id == "dep-1"
     assert fake_tool.delete_calls == []
     assert fake_conn.delete_calls == []
-    assert fake_agent.delete_calls == ["dep-1"]
 
 
 @pytest.mark.anyio

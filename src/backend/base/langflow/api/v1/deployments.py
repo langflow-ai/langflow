@@ -413,7 +413,8 @@ async def create_deployment(
     ):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"A deployment named {payload.spec.name!r} already exists for this provider account",
+            detail=f"A deployment named '{payload.spec.name}' already exists. "
+            "Please choose a different name or delete the existing deployment first.",
         )
 
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
@@ -429,8 +430,8 @@ async def create_deployment(
         if existing_deployment is not None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"A deployment for provider resource {str(existing_resource_key)!r} already exists "
-                "for this provider account",
+                detail=f"The agent '{existing_resource_key}' is already managed by Langflow. "
+                "Update it to make changes, or delete the existing deployment first.",
             )
     should_mutate_existing_resource = (
         existing_resource_key is not None
@@ -1031,8 +1032,9 @@ async def delete_deployment(
     include_provider: bool = Query(
         True,
         description=(
-            "When true (default), deletes the agent and its tools/connections "
-            "on the provider, then removes the local DB row. "
+            "When true (default), deletes the agent on the provider, "
+            "then removes the local DB row. Tools and connections on the "
+            "provider are NOT deleted. "
             "When false, only the local Langflow DB row is removed; "
             "nothing is touched on the provider."
         ),

@@ -11,6 +11,7 @@ from fastapi import HTTPException, Query, status
 from fastapi_pagination import Params
 from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import (
+    DeploymentConflictError,
     DeploymentServiceError,
     http_status_for_deployment_error,
 )
@@ -306,6 +307,28 @@ def raise_http_for_value_error(exc: ValueError) -> None:
     raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
+def _friendly_conflict_message(raw_message: str) -> str:
+    """Rewrite provider conflict errors into user-friendly messages."""
+    lower = raw_message.lower()
+    if "agent" in lower and ("already exists" in lower or "conflict" in lower):
+        return (
+            "An agent with this name already exists in the provider. "
+            "Please choose a different name or delete the existing agent first."
+        )
+    if "connection" in lower or "app_id" in lower:
+        return (
+            "A connection referenced in this request already exists in the provider. "
+            "Reference it as an existing connection instead of creating a new one."
+        )
+    if "tool" in lower and ("already exists" in lower or "conflict" in lower):
+        return (
+            "A tool with this name already exists in the provider. "
+            "Please choose a different name."
+        )
+    # Fall back to a cleaned-up version of the raw message.
+    return f"A resource with this name already exists in the provider. {raw_message}"
+
+
 @contextmanager
 def handle_adapter_errors():
     """Map deployment adapter exceptions to appropriate HTTP responses.
@@ -319,9 +342,13 @@ def handle_adapter_errors():
     try:
         yield
     except DeploymentServiceError as exc:
+        http_status = http_status_for_deployment_error(exc)
+        detail = exc.message
+        if isinstance(exc, DeploymentConflictError):
+            detail = _friendly_conflict_message(exc.message)
         raise HTTPException(
-            status_code=http_status_for_deployment_error(exc),
-            detail=exc.message,
+            status_code=http_status,
+            detail=detail,
         ) from exc
     except NotImplementedError as exc:
         raise HTTPException(

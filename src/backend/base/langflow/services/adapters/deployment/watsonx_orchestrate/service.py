@@ -71,8 +71,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution im
     get_agent_run,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import (
-    delete_config_if_exists,
-    delete_tool_if_exists,
     retry_create,
     rollback_created_resources,
 )
@@ -480,19 +478,15 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         deployment_type: DeploymentType | None = None,  # noqa: ARG002
         db: AsyncSession,
     ) -> DeploymentDeleteResult:
-        """Delete the deployment agent and its provider resources.
+        """Delete the deployment agent from the provider.
 
-        Cascade-deletes the agent's bound tools and connections from the
-        provider on a best-effort basis before removing the agent itself.
-        Failures on individual resource deletions are logged but do not
-        prevent the overall delete from proceeding.
+        Only the agent itself is removed. Tools and connections are NOT
+        deleted — direct deletion of tools/connections is not supported
+        by this adapter.
         """
         logger.info("Deleting wxO deployment deployment_id=%s", deployment_id)
         agent_id = _normalize_and_validate_id(str(deployment_id), field_name="deployment_id")
         clients = await self._get_provider_clients(user_id=user_id, db=db)
-
-        await self._delete_provider_resources_best_effort(clients, agent_id)
-
         try:
             await asyncio.to_thread(clients.agent.delete, agent_id)
         except ClientAPIException as e:
@@ -510,58 +504,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             raise DeploymentError(msg, error_code="deployment_error") from exc
 
         return DeploymentDeleteResult(id=agent_id)
-
-    async def _delete_provider_resources_best_effort(
-        self,
-        clients: WxOClient,
-        agent_id: str,
-    ) -> None:
-        """Fetch the agent's tools and connections, then delete them best-effort."""
-        try:
-            agent = await asyncio.to_thread(clients.agent.get_draft_by_id, agent_id)
-        except Exception:  # noqa: BLE001
-            logger.warning(
-                "Could not fetch agent %s to discover resources for cascade delete; skipping tool/config cleanup.",
-                agent_id,
-            )
-            return
-
-        if not agent or not isinstance(agent, dict):
-            return
-
-        tool_ids = extract_agent_tool_ids(agent)
-
-        # Collect config (connection) IDs bound to the agent's tools.
-        app_ids: set[str] = set()
-        if tool_ids:
-            try:
-                tools = await asyncio.to_thread(clients.tool.get_drafts_by_ids, tool_ids)
-            except Exception:  # noqa: BLE001
-                logger.warning(
-                    "Could not fetch tools for agent %s; skipping config cleanup.",
-                    agent_id,
-                )
-                tools = []
-
-            for tool in tools or []:
-                if not isinstance(tool, dict):
-                    continue
-                connections: dict = tool.get("binding", {}).get("langflow", {}).get("connections", {})
-                app_ids.update(connections.keys())
-
-        # Delete tools best-effort.
-        for tool_id in tool_ids:
-            try:
-                await delete_tool_if_exists(clients, tool_id=tool_id)
-            except Exception:  # noqa: BLE001
-                logger.warning("Best-effort delete failed for tool %s on agent %s", tool_id, agent_id)
-
-        # Delete connections best-effort.
-        for app_id in app_ids:
-            try:
-                await delete_config_if_exists(clients, app_id=app_id)
-            except Exception:  # noqa: BLE001
-                logger.warning("Best-effort delete failed for config %s on agent %s", app_id, agent_id)
 
     # TODO: get status normally if its a live agent
     # if its draft, use the current 'exists' or raise not found logic
