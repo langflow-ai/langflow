@@ -365,12 +365,14 @@ jobs:
 
       - name: Download Jest Coverage
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: jest-coverage
           path: coverage/jest
 
       - name: Download Playwright Coverage
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           pattern: playwright-coverage-*
           path: coverage/playwright
