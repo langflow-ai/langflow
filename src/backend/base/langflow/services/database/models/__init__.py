@@ -8,6 +8,7 @@ from .flow_version import FlowVersion
 from .flow_version_deployment_attachment import FlowVersionDeploymentAttachment
 from .folder import Folder
 from .jobs import Job
+from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, MessageIngestionRecord
 from .message import MessageTable
 from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
@@ -24,6 +25,10 @@ __all__ = [
     "FlowVersionDeploymentAttachment",
     "Folder",
     "Job",
+    "MemoryBase",
+    "MemoryBaseSession",
+    "MemoryBaseWorkflowRun",
+    "MessageIngestionRecord",
     "MessageTable",
     "SSOConfig",
     "SSOUserProfile",

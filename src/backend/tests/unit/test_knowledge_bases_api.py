@@ -714,7 +714,7 @@ class TestPerformIngestionTask:
 
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_fresh_chroma_client")
     @patch("langflow.api.utils.kb_helpers.Chroma")
-    @patch("langflow.api.utils.kb_helpers.KBIngestionHelper._build_embeddings", new_callable=AsyncMock)
+    @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper.get_metadata")
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_directory_size")
     @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper.update_text_metrics")
@@ -764,7 +764,7 @@ class TestPerformIngestionTask:
 
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_fresh_chroma_client")
     @patch("langflow.api.utils.kb_helpers.Chroma")
-    @patch("langflow.api.utils.kb_helpers.KBIngestionHelper._build_embeddings", new_callable=AsyncMock)
+    @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", new_callable=AsyncMock)
     @patch("langflow.api.utils.kb_helpers.KBIngestionHelper.cleanup_chroma_chunks_by_job", new_callable=AsyncMock)
     async def test_perform_ingestion_rollback(
         self, mock_cleanup, mock_build, mock_chroma, mock_fresh_client, mock_kb_path
