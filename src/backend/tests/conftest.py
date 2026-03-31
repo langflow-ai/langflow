@@ -24,7 +24,7 @@ from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowR
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User, UserCreate, UserRead
-from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id
+from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id_unchecked
 from langflow.services.deps import get_auth_service, get_db_service, session_scope
 from lfx.components.input_output import ChatInput
 from lfx.graph import Graph
@@ -197,7 +197,7 @@ async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
                 await session.delete(job)
             await session.flush()
 
-            await delete_vertex_builds_by_flow_id(session, flow_id)
+            await delete_vertex_builds_by_flow_id_unchecked(session, flow_id)
         except Exception as e:
             logger.debug(f"Error deleting jobs/vertex builds for flow {flow_id}: {e}")
         try:
