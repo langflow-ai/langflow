@@ -42,20 +42,19 @@ def _normalize_flow_data(flow_data: Mapping[str, Any] | None) -> dict[str, Any] 
 
 
 def _extract_graph_payload(graph: Any) -> Mapping[str, Any] | None:
-    """Extract a graph payload from a Graph-like object for policy validation."""
+    """Extract a graph payload from a Graph-like object for policy validation.
+
+    Only uses ``raw_graph_data`` — the authoritative, unmodified graph
+    payload stored at construction time.  We intentionally avoid falling
+    back to ``graph.dump()`` because dump may omit nodes or return
+    a reconstructed payload that doesn't reflect the original flow
+    definition, which could silently bypass validation.
+    """
     raw_graph_data = getattr(graph, "raw_graph_data", None)
-    if isinstance(raw_graph_data, Mapping) and raw_graph_data != {"nodes": [], "edges": []}:
+    if isinstance(raw_graph_data, Mapping):
         return raw_graph_data
 
-    dump_graph = getattr(graph, "dump", None)
-    if callable(dump_graph):
-        dumped_graph = dump_graph()
-        if isinstance(dumped_graph, Mapping):
-            dumped_data = dumped_graph.get("data")
-            if isinstance(dumped_data, Mapping):
-                return dumped_data
-
-    return raw_graph_data
+    return None
 
 
 def _extract_flow_data(target: Mapping[str, Any] | Any | None) -> dict[str, Any] | None:
@@ -188,7 +187,7 @@ def check_flow_and_raise(
 
 
 
-def _get_component_hash_lookups_for_validation() -> dict[str, str] | None:
+def get_component_hash_lookups_for_validation() -> dict[str, str] | None:
     """Return the cached component hashes, building them synchronously if possible."""
     from lfx.interface.components import component_cache
 
@@ -208,9 +207,19 @@ def validate_flow_for_current_settings(target: Mapping[str, Any] | Any | None) -
     if settings_service is None:
         raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
 
-    normalized_flow_data = _extract_flow_data(target)
     allow_custom_components = settings_service.settings.allow_custom_components
-    type_to_current_hash = _get_component_hash_lookups_for_validation() if not allow_custom_components else None
+    normalized_flow_data = _extract_flow_data(target)
+
+    # If custom components are disabled and we received a target but couldn't
+    # extract any flow data from it, fail fast rather than silently skipping
+    # validation — the caller passed something we can't verify.
+    if not allow_custom_components and target is not None and normalized_flow_data is None:
+        raise CustomComponentValidationError(
+            "Flow validation failed: could not extract graph data from the provided target. "
+            "Ensure the flow payload or Graph object contains valid graph data."
+        )
+
+    type_to_current_hash = get_component_hash_lookups_for_validation() if not allow_custom_components else None
 
     check_flow_and_raise(
         normalized_flow_data,

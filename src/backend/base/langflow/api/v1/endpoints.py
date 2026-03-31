@@ -28,6 +28,7 @@ from lfx.schema.schema import InputValueRequest
 from lfx.services.settings.service import SettingsService
 from lfx.utils.flow_validation import (
     CustomComponentValidationError,
+    get_component_hash_lookups_for_validation,
     code_hash_matches_any_template,
 )
 from sqlmodel import select
@@ -1020,12 +1021,18 @@ async def custom_component(
 ) -> CustomComponentResponse:
     settings_service = get_settings_service()
     if not settings_service.settings.allow_custom_components:
+        # Lazily compute hash lookups if they haven't been built yet
+        # (e.g. during startup before the cache is fully populated).
+        get_component_hash_lookups_for_validation()
+        all_known = component_cache.all_known_hashes
+        if all_known is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Component templates are still initializing. Please try again in a few seconds.",
+            )
         # Allow updating to a known server template (core component update),
         # but block truly custom code.
-        is_known_template = component_cache.all_known_hashes and code_hash_matches_any_template(
-            raw_code.code, component_cache.all_known_hashes
-        )
-        if not is_known_template:
+        if not code_hash_matches_any_template(raw_code.code, all_known):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Custom component creation is disabled",
@@ -1065,10 +1072,14 @@ async def custom_component_update(
     """
     settings_service = get_settings_service()
     if not settings_service.settings.allow_custom_components:
-        is_known_template = component_cache.all_known_hashes and code_hash_matches_any_template(
-            code_request.code, component_cache.all_known_hashes
-        )
-        if not is_known_template:
+        get_component_hash_lookups_for_validation()
+        all_known = component_cache.all_known_hashes
+        if all_known is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Component templates are still initializing. Please try again in a few seconds.",
+            )
+        if not code_hash_matches_any_template(code_request.code, all_known):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Custom component creation is disabled",

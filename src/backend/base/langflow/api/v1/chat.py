@@ -671,6 +671,9 @@ async def build_public_tmp(
             queue_service=queue_service,
             flow_name=flow_name or f"{client_id}_{flow_id}",
         )
+    except CustomComponentValidationError as exc:
+        await logger.awarning(f"Public flow validation failed: {exc}")
+        raise HTTPException(status_code=400, detail="This flow cannot be executed.") from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
