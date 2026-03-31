@@ -287,7 +287,10 @@ describe("useMemoriesData", () => {
       }),
     );
 
-    expect(Array.from(result.current.groupedBySession.keys())).toEqual(["s1", "s2"]);
+    expect(Array.from(result.current.groupedBySession.keys())).toEqual([
+      "s1",
+      "s2",
+    ]);
 
     act(() => {
       result.current.setSelectedSession("s2");

@@ -31,7 +31,11 @@ jest.mock("../components/NoMemorySelected", () => ({
 }));
 
 jest.mock("../components/MemoriesSidebar", () => ({
-  MemoriesSidebar: ({ onCreateMemory, onSelectMemory, selectedMemoryId }: any) => (
+  MemoriesSidebar: ({
+    onCreateMemory,
+    onSelectMemory,
+    selectedMemoryId,
+  }: any) => (
     <div>
       <button onClick={onCreateMemory}>open-create</button>
       <button onClick={() => onSelectMemory?.("m1")}>select-memory</button>

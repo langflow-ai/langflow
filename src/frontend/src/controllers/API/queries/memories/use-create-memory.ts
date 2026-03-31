@@ -22,8 +22,11 @@ export const useCreateMemory: useMutationFunctionType<
         "mutationFn" | "mutationKey"
       >
     | undefined;
-  const { onSettled: userOnSettled, onSuccess: userOnSuccess, ...restOptions } =
-    typedOptions ?? {};
+  const {
+    onSettled: userOnSettled,
+    onSuccess: userOnSuccess,
+    ...restOptions
+  } = typedOptions ?? {};
 
   const createMemoryFn = async (
     params: CreateMemoryPayload,
@@ -75,13 +78,19 @@ export const useCreateMemory: useMutationFunctionType<
             if (alreadyPresent) continue;
 
             const firstPage = pages[0];
-            if (!firstPage || typeof firstPage !== "object" || !Array.isArray(firstPage.items)) {
+            if (
+              !firstPage ||
+              typeof firstPage !== "object" ||
+              !Array.isArray(firstPage.items)
+            ) {
               continue;
             }
 
             const nextFirstItems = [data, ...firstPage.items];
             const nextFirstTotal =
-              typeof firstPage.total === "number" ? firstPage.total + 1 : firstPage.total;
+              typeof firstPage.total === "number"
+                ? firstPage.total + 1
+                : firstPage.total;
 
             const nextPages = [
               { ...firstPage, items: nextFirstItems, total: nextFirstTotal },
@@ -100,7 +109,9 @@ export const useCreateMemory: useMutationFunctionType<
           // Legacy/non-infinite shape: { items: [...] }
           if (!Array.isArray(anyOld.items)) continue;
 
-          const alreadyPresent = anyOld.items.some((item: any) => item?.id === data.id);
+          const alreadyPresent = anyOld.items.some(
+            (item: any) => item?.id === data.id,
+          );
           if (alreadyPresent) continue;
 
           const nextItems = [data, ...anyOld.items];

@@ -20,7 +20,6 @@ export function MemoryDetails({
   deleteMutation,
   handleToggleActive,
 }: MemoryDetailsProps) {
-
   return (
     <>
       <MemoryDetailsHeader

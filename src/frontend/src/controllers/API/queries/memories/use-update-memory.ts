@@ -89,7 +89,12 @@ export const useUpdateMemory: useMutationFunctionType<
     return updated;
   };
 
-  const mutation = useMutation<MemoryInfo, unknown, UpdateMemoryParams, unknown>({
+  const mutation = useMutation<
+    MemoryInfo,
+    unknown,
+    UpdateMemoryParams,
+    unknown
+  >({
     mutationKey: ["useUpdateMemory"],
     mutationFn: updateMemoryFn,
     ...restOptions,

@@ -17,8 +17,8 @@ const MESSAGES_PER_SESSION = 20;
 const buildTimestamp = (offsetSeconds: number) =>
   new Date(Date.UTC(2026, 2, 31, 0, 0, offsetSeconds)).toISOString();
 
-export const FIXED_PREFILL_MESSAGES: PrefillFlowMessage[] = FIXED_SESSIONS.flatMap(
-  (sessionId, sessionIdx) =>
+export const FIXED_PREFILL_MESSAGES: PrefillFlowMessage[] =
+  FIXED_SESSIONS.flatMap((sessionId, sessionIdx) =>
     Array.from({ length: MESSAGES_PER_SESSION }, (_, messageIdx) => {
       const indexWithinSession = messageIdx + 1;
       const globalOffsetSeconds =
@@ -32,4 +32,4 @@ export const FIXED_PREFILL_MESSAGES: PrefillFlowMessage[] = FIXED_SESSIONS.flatM
         timestamp: buildTimestamp(globalOffsetSeconds),
       };
     }),
-);
+  );

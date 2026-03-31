@@ -50,7 +50,13 @@ export const mapMemoryApiToMemoryInfo = (dto: MemoryApiDTO): MemoryInfo => {
 
 export const mapGetMemoriesApiResponse = (
   res: GetMemoriesApiResponse,
-): { items: MemoryInfo[]; total: number; page: number; size: number; pages: number } => {
+): {
+  items: MemoryInfo[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+} => {
   return {
     items: (res.items ?? []).map(mapMemoryApiToMemoryInfo),
     total: res.total,

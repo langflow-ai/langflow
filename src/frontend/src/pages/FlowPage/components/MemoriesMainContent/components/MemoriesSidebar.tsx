@@ -19,7 +19,6 @@ export function MemoriesSidebar({
   onSelectMemory,
   onCreateMemory,
 }: MemoriesSidebarProps) {
-  
   const handleScroll = (e: UIEvent<HTMLDivElement>) => {
     if (!fetchNextPage || !hasNextPage || isFetchingNextPage) return;
     const el = e.currentTarget;

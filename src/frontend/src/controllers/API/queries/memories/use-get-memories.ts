@@ -15,7 +15,10 @@ const MEMORIES_INFINITE_QUERY_KEY = "useGetMemoriesInfinite";
 
 const DEFAULT_PAGE_SIZE = 50;
 
-type MemoriesQueryKey = readonly [typeof MEMORIES_INFINITE_QUERY_KEY, string | undefined];
+type MemoriesQueryKey = readonly [
+  typeof MEMORIES_INFINITE_QUERY_KEY,
+  string | undefined,
+];
 
 export const useGetMemories = (
   params: GetMemoriesParams,
@@ -49,7 +52,13 @@ export const useGetMemories = (
     return mapGetMemoriesApiResponse(res.data);
   };
 
-  return useInfiniteQuery<MemoriesPage, unknown, InfiniteData<MemoriesPage, number>, MemoriesQueryKey, number>({
+  return useInfiniteQuery<
+    MemoriesPage,
+    unknown,
+    InfiniteData<MemoriesPage, number>,
+    MemoriesQueryKey,
+    number
+  >({
     queryKey: [MEMORIES_INFINITE_QUERY_KEY, flowId] as const,
     queryFn: getMemoriesPage,
     initialPageParam: 1,
