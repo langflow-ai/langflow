@@ -376,6 +376,15 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
         validate_resource_name_prefix_for_provider(value)
         return value
 
+    @property
+    def has_tool_work(self) -> bool:
+        """Whether this payload includes tool-level mutations (put_tools, operations, or raw tool creation).
+
+        The service layer uses this to decide between the lightweight
+        spec-only update path and the full provider-plan path.
+        """
+        return bool(self.put_tools is not None or self.operations or self.tools.raw_payloads)
+
     @model_validator(mode="after")
     def validate_has_work(self) -> WatsonxDeploymentUpdatePayload:
         if self.put_tools is not None:
@@ -404,6 +413,13 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
             if self.resource_name_prefix and not self.tools.raw_payloads:
                 msg = "resource_name_prefix without operations requires tools.raw_payloads."
                 raise ValueError(msg)
+            # Remaining valid no-operation cases:
+            # - LLM-only update (no raw_payloads, no connections, no prefix).
+            # - raw_payloads + prefix without operations: tools are created and
+            #   attached to the agent without connection bindings
+            #   (connectionless-tool flow). The plan builder auto-creates
+            #   entries for all declared raw_payloads even without explicit
+            #   bind/attach_tool operations referencing them.
             return self
         return self
 

@@ -50,6 +50,9 @@ class AdapterPayloadValidationError(ValueError):
         """Return a sanitized first validation error message.
 
         Missing-field errors keep explicit field names for UX.
+        Model-level ``value_error`` messages (from model validators) are
+        passed through after stripping the pydantic "Value error, " prefix,
+        since those contain intentional business-logic messages.
         All other errors avoid echoing raw validator text.
         """
         errors = self.error.errors()
@@ -64,6 +67,14 @@ class AdapterPayloadValidationError(ValueError):
             return f"Missing required field '{loc_path}'."
         if loc_path:
             return f"Invalid value for field '{loc_path}'."
+        # Model-level validator errors (empty loc) contain intentional
+        # business-logic messages; expose them after stripping the
+        # pydantic "Value error, " prefix.
+        if first_error.get("type") == "value_error":
+            msg = first_error.get("msg", "")
+            clean = msg.removeprefix("Value error, ")
+            if clean:
+                return clean
         return "Invalid payload."
 
 

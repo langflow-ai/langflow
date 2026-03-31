@@ -464,19 +464,23 @@ async def apply_provider_update_plan_with_rollback(
 def build_update_payload_from_spec(spec: BaseDeploymentDataUpdate | None, *, llm: str | None = None) -> dict[str, Any]:
     """Build agent update payload from deployment spec updates.
 
-    Treats ``None`` values as "not provided".
+    Uses ``exclude_unset=True`` so that fields the caller did not explicitly
+    provide are left untouched on the provider side (e.g. sending
+    ``description=None`` clears the description, while *omitting* description
+    leaves it unchanged).
     """
     update_payload: dict[str, Any] = {}
     if spec:
-        if spec.name is not None:
+        spec_updates = spec.model_dump(exclude_unset=True)
+        if "name" in spec_updates:
             update_payload.update(
                 {
-                    "name": validate_wxo_name(spec.name),
-                    "display_name": spec.name,
+                    "name": validate_wxo_name(spec_updates["name"]),
+                    "display_name": spec_updates["name"],
                 }
             )
-        if spec.description is not None:
-            update_payload["description"] = spec.description
+        if "description" in spec_updates:
+            update_payload["description"] = spec_updates["description"]
     if llm is not None:
         update_payload["llm"] = llm
     return update_payload

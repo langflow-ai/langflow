@@ -418,15 +418,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 llm=provider_update.llm if provider_update is not None else None,
             )
 
-            has_provider_tool_work = bool(
-                provider_update is not None
-                and (
-                    provider_update.put_tools is not None
-                    or provider_update.operations
-                    or provider_update.tools.raw_payloads
-                )
-            )
-            if payload.provider_data is None or not has_provider_tool_work:
+            if payload.provider_data is None or not (provider_update is not None and provider_update.has_tool_work):
                 if not update_payload:
                     msg = "provider_data is required when update operations do not include spec changes."
                     raise InvalidContentError(message=msg)
