@@ -63,7 +63,7 @@ message = await Message.create(
 
 ## Chat Output
 
-The **Chat Output** component ingests `Message`, `Data`, or `DataFrame` data from other components, transforms it into `Message` data if needed, and then emits the final output as a chat message.
+The **Chat Output** component ingests `Message`, `JSON`, or `Table` data from other components, transforms it into `Message` data if needed, and then emits the final output as a chat message.
 For information about these data types, see [Use Langflow data types](/data-types).
 
 In the **Playground**, chat output is limited to the parts of the `Message` object that are relevant to the chat interface, such as the text response, sender name, and file attachments.
@@ -84,11 +84,11 @@ For an example, see the [Langflow quickstart](/get-started-quickstart).
 |sender|Sender Type| Input parameter. Identifies the sender as either `User` or `Language Model`.|
 |sender_name|Sender Name| Input parameter. The name of the sender. If unspecified, defaults to `User` or `Language Model`. |
 |session_id|Session ID| Input parameter. The unique identifier for the chat session. If empty, the current session ID parameter is used.|
-|data_template|Data Template| Input parameter. The template to convert [`Data` input](/data-types#data) to `text`. If empty, it is dynamically set to the `Data` object's `text` key.|
+|data_template|Data Template| Input parameter. The template to convert [`JSON` input](/data-types#json) to `text`. If empty, it is dynamically set to the `JSON` object's `text` key.|
 |background_color|Background Color| Input parameter. The background color of the icon.|
 |chat_icon|Icon| Input parameter. The icon of the message.|
 |text_color|Text Color| Input parameter. The text color of the name.|
-|clean_data|Basic Clean Data| Input parameter. When enabled, [`DataFrame` input](/data-types#dataframe) is cleaned when converted to text. Cleaning removes empty rows, empty lines in cells, and multiple newlines.|
+|clean_data|Basic Clean Data| Input parameter. When enabled, [`Table` input](/data-types#table) is cleaned when converted to text. Cleaning removes empty rows, empty lines in cells, and multiple newlines.|
 
 For information about the resulting `Message` object, including input parameters that are directly mapped to `Message` attributes, see [`Message` data](/data-types#message).
 

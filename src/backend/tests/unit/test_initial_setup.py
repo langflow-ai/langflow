@@ -7,6 +7,7 @@ from copy import deepcopy
 from datetime import datetime
 from pathlib import Path as SyncPath
 from unittest.mock import AsyncMock, patch
+from urllib.parse import urlparse
 
 import pytest
 from anyio import Path
@@ -257,7 +258,8 @@ async def test_detect_github_url(url, expected):
         assert result == expected
 
         # Verify the API call was only made for GitHub repo URLs
-        if "github.com" in url and not any(x in url for x in ["/tree/", "/releases/", "/commit/"]):
+        parsed = urlparse(url)
+        if parsed.hostname == "github.com" and not any(x in url for x in ["/tree/", "/releases/", "/commit/"]):
             mock_get.assert_called_once()
         else:
             mock_get.assert_not_called()
