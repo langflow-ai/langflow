@@ -123,6 +123,19 @@ DeploymentIdQuery = Annotated[
     UUID,
     Query(description="Langflow DB deployment UUID (`deployment.id`)."),
 ]
+IncludeProviderDeleteQuery = Annotated[
+    bool,
+    Query(
+        default=True,
+        description=(
+            "When true (default), deletes the deployment resource (e.g., agent) on the provider, "
+            "then removes the local DB row. Other provider-managed resources "
+            "(for example, tools and connections) are NOT deleted. "
+            "When false, only the local Langflow DB row is removed; "
+            "nothing is changed on the provider."
+        ),
+    ),
+]
 
 
 def _field_was_explicitly_set(model: object, field_name: str) -> bool:
@@ -1029,16 +1042,8 @@ async def delete_deployment(
     deployment_id: DeploymentIdPath,
     session: DbSession,
     current_user: CurrentActiveUser,
-    include_provider: bool = Query(
-        True,
-        description=(
-            "When true (default), deletes the agent on the provider, "
-            "then removes the local DB row. Tools and connections on the "
-            "provider are NOT deleted. "
-            "When false, only the local Langflow DB row is removed; "
-            "nothing is touched on the provider."
-        ),
-    ),
+    *,
+    include_provider: IncludeProviderDeleteQuery,
 ):
     deployment_row, deployment_adapter = await resolve_adapter_from_deployment(
         deployment_id=deployment_id,
