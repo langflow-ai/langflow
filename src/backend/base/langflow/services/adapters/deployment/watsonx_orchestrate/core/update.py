@@ -472,7 +472,7 @@ def build_update_payload_from_spec(spec: BaseDeploymentDataUpdate | None, *, llm
     update_payload: dict[str, Any] = {}
     if spec:
         spec_updates = spec.model_dump(exclude_unset=True)
-        if "name" in spec_updates:
+        if "name" in spec_updates and spec_updates["name"] is not None:
             update_payload.update(
                 {
                     "name": validate_wxo_name(spec_updates["name"]),
