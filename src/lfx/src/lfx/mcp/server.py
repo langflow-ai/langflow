@@ -62,6 +62,7 @@ from lfx.mcp.registry import (
     load_registry,
     search_registry,
 )
+from lfx.services.telemetry import MCPToolPayload, TelemetryService
 
 # Session state. Module-level singletons for stdio (single agent), with
 # contextvars overlay for SSE (multiple concurrent agents).
@@ -69,6 +70,7 @@ _client_var: contextvars.ContextVar[LangflowClient | None] = contextvars.Context
 _registry_var: contextvars.ContextVar[dict[str, dict] | None] = contextvars.ContextVar("_registry", default=None)
 _shared_client: LangflowClient | None = None
 _shared_registry: dict[str, dict] | None = None
+_telemetry: TelemetryService | None = None
 
 mcp = FastMCP(
     "langflow-mcp",
@@ -121,6 +123,44 @@ async def _get_registry() -> dict[str, dict]:
     return _shared_registry
 
 
+def _get_telemetry() -> TelemetryService:
+    global _telemetry  # noqa: PLW0603
+    if _telemetry is None:
+        _telemetry = TelemetryService()
+        _telemetry.start()
+    return _telemetry
+
+
+def _tracked(fn):
+    """Decorator that sends an MCPToolPayload after each tool call."""
+    import functools
+    import time
+
+    @functools.wraps(fn)
+    async def wrapper(*args, **kwargs):
+        t0 = time.monotonic()
+        try:
+            result = await fn(*args, **kwargs)
+        except Exception as exc:
+            with contextlib.suppress(BaseException):
+                await _get_telemetry().log_mcp_tool(
+                    MCPToolPayload(
+                        tool=fn.__name__,
+                        success=False,
+                        seconds=int(time.monotonic() - t0),
+                        error=str(exc)[:200],
+                    )
+                )
+            raise
+        with contextlib.suppress(BaseException):
+            await _get_telemetry().log_mcp_tool(
+                MCPToolPayload(tool=fn.__name__, success=True, seconds=int(time.monotonic() - t0))
+            )
+        return result
+
+    return wrapper
+
+
 async def _get_flow(flow_id: str) -> dict:
     """Fetch a flow from the server."""
     return await _get_client().get(f"/flows/{flow_id}")
@@ -137,6 +177,7 @@ async def _patch_flow(flow_id: str, flow: dict) -> dict:
 
 
 @mcp.tool()
+@_tracked
 async def login(username: str, password: str, server_url: str | None = None) -> dict[str, str]:
     """Authenticate with a Langflow server. Call this first.
 
@@ -165,6 +206,7 @@ async def login(username: str, password: str, server_url: str | None = None) -> 
 
 
 @mcp.tool()
+@_tracked
 async def create_flow(name: str = "Untitled Flow", description: str = "") -> dict[str, Any]:
     """Create a new empty flow. Returns the flow's id, name, and description.
 
@@ -255,6 +297,7 @@ async def _create_prompt_template_vars(flow_id: str, parsed: dict, id_map: dict[
 
 
 @mcp.tool()
+@_tracked
 async def create_flow_from_spec(spec: str, *, validate: bool = True) -> dict[str, Any]:
     """Create a complete flow from a compact text spec. Best for building full flows.
 
@@ -342,6 +385,7 @@ async def create_flow_from_spec(spec: str, *, validate: bool = True) -> dict[str
 
 
 @mcp.tool()
+@_tracked
 async def list_flows(query: str | None = None) -> list[dict[str, Any]]:
     """List flows on the server. Each result includes an ASCII graph diagram.
 
@@ -370,6 +414,7 @@ async def list_flows(query: str | None = None) -> list[dict[str, Any]]:
 
 
 @mcp.tool()
+@_tracked
 async def get_flow_info(flow_id: str) -> dict[str, Any]:
     """Get detailed info about a flow: components, connections, ASCII graph diagram.
 
@@ -385,6 +430,7 @@ async def get_flow_info(flow_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@_tracked
 async def delete_flow(flow_id: str) -> dict[str, str]:
     """Delete a flow from the server.
 
@@ -396,6 +442,7 @@ async def delete_flow(flow_id: str) -> dict[str, str]:
 
 
 @mcp.tool()
+@_tracked
 async def duplicate_flow(flow_id: str, new_name: str | None = None) -> dict[str, Any]:
     """Create a copy of an existing flow.
 
@@ -415,6 +462,7 @@ async def duplicate_flow(flow_id: str, new_name: str | None = None) -> dict[str,
 
 
 @mcp.tool()
+@_tracked
 async def list_starter_projects() -> list[dict[str, Any]]:
     """List pre-built example flows. Use use_starter_project to create one."""
     flows = await _get_client().get("/flows/basic_examples/")
@@ -429,6 +477,7 @@ async def list_starter_projects() -> list[dict[str, Any]]:
 
 
 @mcp.tool()
+@_tracked
 async def use_starter_project(starter_name: str, new_name: str | None = None) -> dict[str, Any]:
     """Create a new flow from a starter project template.
 
@@ -463,6 +512,7 @@ async def use_starter_project(starter_name: str, new_name: str | None = None) ->
 
 
 @mcp.tool()
+@_tracked
 async def add_component(flow_id: str, component_type: str) -> dict[str, Any]:
     """Add a component to a flow. Returns the component's id and display_name.
 
@@ -482,6 +532,7 @@ async def add_component(flow_id: str, component_type: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@_tracked
 async def remove_component(flow_id: str, component_id: str) -> dict[str, str]:
     """Remove a component and all its connections from a flow.
 
@@ -498,6 +549,7 @@ async def remove_component(flow_id: str, component_id: str) -> dict[str, str]:
 
 
 @mcp.tool()
+@_tracked
 async def configure_component(
     flow_id: str,
     component_id: str,
@@ -607,6 +659,7 @@ async def configure_component(
 
 
 @mcp.tool()
+@_tracked
 async def list_components(flow_id: str) -> list[dict[str, Any]]:
     """List all components in a flow with their IDs, names, and types.
 
@@ -618,6 +671,7 @@ async def list_components(flow_id: str) -> list[dict[str, Any]]:
 
 
 @mcp.tool()
+@_tracked
 async def get_component_info(
     flow_id: str,
     component_id: str,
@@ -682,6 +736,7 @@ async def get_component_info(
 
 
 @mcp.tool()
+@_tracked
 async def search_component_types(
     query: str | None = None,
     category: str | None = None,
@@ -699,6 +754,7 @@ async def search_component_types(
 
 
 @mcp.tool()
+@_tracked
 async def describe_component_type(component_type: str) -> dict[str, Any]:
     """Get a component type's definition: inputs (connectable), outputs, fields, and advanced_fields.
 
@@ -714,6 +770,7 @@ async def describe_component_type(component_type: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@_tracked
 async def components(
     query: str | None = None,
     component_type: str | None = None,
@@ -744,6 +801,7 @@ async def components(
 
 
 @mcp.tool()
+@_tracked
 async def connect_components(
     flow_id: str,
     source_id: str,
@@ -784,6 +842,7 @@ async def connect_components(
 
 
 @mcp.tool()
+@_tracked
 async def disconnect_components(
     flow_id: str,
     source_id: str,
@@ -819,6 +878,7 @@ async def disconnect_components(
 
 
 @mcp.tool()
+@_tracked
 async def run_flow(
     flow_id: str,
     input_value: str = "",
@@ -873,6 +933,7 @@ async def run_flow(
 
 
 @mcp.tool()
+@_tracked
 async def build_flow(flow_id: str) -> dict[str, Any]:
     """Trigger a server-side build that validates components and connections.
 
@@ -887,6 +948,7 @@ async def build_flow(flow_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@_tracked
 async def get_build_results(flow_id: str) -> dict[str, Any]:
     """Get per-component build results from the last run of a flow.
 
@@ -929,6 +991,7 @@ async def get_build_results(flow_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@_tracked
 async def get_component_output(
     flow_id: str,
     component_id: str,
@@ -979,6 +1042,7 @@ async def get_component_output(
 
 
 @mcp.tool()
+@_tracked
 async def validate_flow(flow_id: str) -> dict[str, Any]:
     """Validate a flow and return structured per-component results.
 
@@ -1035,6 +1099,7 @@ async def validate_flow(flow_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@_tracked
 async def rename_flow(
     flow_id: str,
     name: str | None = None,
@@ -1061,6 +1126,7 @@ async def rename_flow(
 
 
 @mcp.tool()
+@_tracked
 async def export_flow(flow_id: str) -> dict[str, Any]:
     """Export a flow as a complete JSON object for backup or sharing.
 
@@ -1088,6 +1154,7 @@ async def export_flow(flow_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+@_tracked
 async def update_flow_from_spec(flow_id: str, spec: str) -> dict[str, Any]:
     """Update an existing flow to match a spec, preserving the flow ID.
 
@@ -1169,6 +1236,7 @@ async def _set_frozen(flow_id: str, component_id: str, *, frozen: bool) -> dict[
 
 
 @mcp.tool()
+@_tracked
 async def freeze_component(flow_id: str, component_id: str) -> dict[str, str]:
     """Freeze a component so it uses cached output and skips re-execution.
 
@@ -1185,6 +1253,7 @@ async def freeze_component(flow_id: str, component_id: str) -> dict[str, str]:
 
 
 @mcp.tool()
+@_tracked
 async def unfreeze_component(flow_id: str, component_id: str) -> dict[str, str]:
     """Unfreeze a component so it re-executes on the next run.
 
@@ -1198,6 +1267,7 @@ async def unfreeze_component(flow_id: str, component_id: str) -> dict[str, str]:
 
 
 @mcp.tool()
+@_tracked
 async def layout_flow_tool(flow_id: str) -> dict[str, str]:
     """Re-layout a flow's components using the Sugiyama algorithm.
 
@@ -1214,6 +1284,7 @@ async def layout_flow_tool(flow_id: str) -> dict[str, str]:
 
 
 @mcp.tool()
+@_tracked
 async def notify_done(flow_id: str, summary: str | None = None) -> dict[str, str]:
     """Signal that you are done modifying a flow.
 
@@ -1312,6 +1383,7 @@ def _resolve_refs(value: Any, results: list[Any]) -> Any:
 
 
 @mcp.tool()
+@_tracked
 async def batch(actions: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Execute multiple actions in sequence, returning all results.
 
