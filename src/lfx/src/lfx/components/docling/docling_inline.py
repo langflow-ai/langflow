@@ -265,30 +265,40 @@ class DoclingInlineComponent(BaseFileComponent):
         docling_timeout = 600  # 10 minutes
         poll_interval = 5
 
-        proc = subprocess.Popen(  # noqa: S603
-            [sys.executable, "-u", "-c", self._CHILD_SCRIPT],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        proc.stdin.write(json.dumps(args).encode("utf-8"))
-        proc.stdin.close()
+        # Use a temporary file for stdout to avoid pipe buffer deadlocks.
+        # Docling (and its transitive imports: PyTorch, transformers, etc.) can
+        # write large amounts of output.  With subprocess.PIPE the OS pipe
+        # buffer (~16 KB on macOS) fills up, the child blocks on write, and the
+        # parent - which only reads *after* the child exits - waits forever.
+        import tempfile
 
-        start = time.monotonic()
-        while proc.poll() is None:
-            elapsed = time.monotonic() - start
-            if elapsed >= docling_timeout:
-                proc.kill()
-                proc.wait()
-                msg = f"Docling processing timed out after {docling_timeout}s. Try processing fewer or smaller files."
-                raise TimeoutError(msg)
-            self.log(f"Docling processing in progress ({int(elapsed)}s elapsed)...")
-            time.sleep(poll_interval)
+        with tempfile.TemporaryFile() as stdout_file, tempfile.TemporaryFile() as stderr_file:
+            proc = subprocess.Popen(  # noqa: S603
+                [sys.executable, "-u", "-c", self._CHILD_SCRIPT],
+                stdin=subprocess.PIPE,
+                stdout=stdout_file,
+                stderr=stderr_file,
+            )
+            proc.stdin.write(json.dumps(args).encode("utf-8"))
+            proc.stdin.close()
 
-        stdout_bytes = proc.stdout.read()
-        stderr_bytes = proc.stderr.read()
-        proc.stdout.close()
-        proc.stderr.close()
+            start = time.monotonic()
+            while proc.poll() is None:
+                elapsed = time.monotonic() - start
+                if elapsed >= docling_timeout:
+                    proc.kill()
+                    proc.wait()
+                    msg = (
+                        f"Docling processing timed out after {docling_timeout}s. Try processing fewer or smaller files."
+                    )
+                    raise TimeoutError(msg)
+                self.log(f"Docling processing in progress ({int(elapsed)}s elapsed)...")
+                time.sleep(poll_interval)
+
+            stdout_file.seek(0)
+            stderr_file.seek(0)
+            stdout_bytes = stdout_file.read()
+            stderr_bytes = stderr_file.read()
 
         if not stdout_bytes:
             err_msg = stderr_bytes.decode("utf-8", errors="replace") if stderr_bytes else "no output"
