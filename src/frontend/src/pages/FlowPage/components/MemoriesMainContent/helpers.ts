@@ -31,7 +31,13 @@ export const formatDate = (dateStr?: string) => {
 export const formatTimestamp = (ts?: string) => {
   if (!ts) return "-";
   try {
-    const normalized = ts.includes("T") ? ts : ts.replace(" ", "T");
+    const trimmed = ts.trim();
+    const normalized = (() => {
+      if (trimmed.includes("T")) return trimmed;
+      const parts = trimmed.split(/\s+/g);
+      if (parts.length < 2) return trimmed;
+      return `${parts[0]}T${parts.slice(1).join("")}`;
+    })();
     const d = new Date(normalized);
     if (Number.isNaN(d.getTime())) return ts;
     return d.toLocaleString(undefined, {

@@ -21,7 +21,7 @@ const DEFAULTS: Omit<
   batch_size: 1,
   preprocessing_enabled: false,
   preprocessing_model: undefined,
-  preprocessing_prompt: undefined,
+  preproc_instructions: undefined,
   pending_messages_count: 0,
   updated_at: undefined,
   last_generated_at: undefined,
@@ -40,10 +40,10 @@ export const mapMemoryApiToMemoryInfo = (dto: MemoryApiDTO): MemoryInfo => {
     user_id: dto.user_id,
     flow_id: dto.flow_id,
     created_at: dto.created_at,
-    is_active: dto.auto_capture,
-    preprocessing_enabled: dto.preprocessing,
+    is_active: dto.auto_capture ?? DEFAULTS.is_active,
+    preprocessing_enabled: dto.preprocessing ?? DEFAULTS.preprocessing_enabled,
     preprocessing_model: dto.preproc_model,
-    preprocessing_prompt: dto.preproc_instructions,
+    preproc_instructions: dto.preproc_instructions,
     batch_size: Math.max(1, Math.trunc(dto.threshold ?? 1)),
   };
 };

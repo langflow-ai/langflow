@@ -123,12 +123,15 @@ export default function CreateMemoryModal({
 
         <div className="flex items-center justify-between rounded-lg border border-border p-3">
           <div className="flex flex-col gap-0.5">
-            <Label className="text-sm">LLM Preprocessing</Label>
+            <Label className="text-sm" htmlFor="llm-preprocessing-switch">
+              LLM Preprocessing
+            </Label>
             <span className="text-xs text-muted-foreground">
               Summarize messages with an LLM before ingestion
             </span>
           </div>
           <Switch
+            id="llm-preprocessing-switch"
             checked={preprocessingEnabled}
             onCheckedChange={setPreprocessingEnabled}
           />
