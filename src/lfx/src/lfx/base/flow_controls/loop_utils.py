@@ -96,8 +96,8 @@ def get_loop_body_vertices(
     return loop_body
 
 
-def get_loop_body_start_vertex(vertex: "Vertex", loop_output_name: str = "item") -> str | None:
-    """Get the first vertex in the loop body (connected to loop's output).
+def get_loop_body_start_vertex(vertex: "Vertex", loop_output_name: str = "item") -> list[str]:
+    """Get all vertices directly connected to the loop's output (start of loop body).
 
     Args:
         vertex: The loop component's vertex
@@ -105,16 +105,14 @@ def get_loop_body_start_vertex(vertex: "Vertex", loop_output_name: str = "item")
             (default: "item" for Loop, use "loop" for WhileLoop)
 
     Returns:
-        The vertex ID of the first vertex in the loop body, or None if not found
+        List of vertex IDs directly connected to the loop output
     """
     start_edges = [e for e in vertex.outgoing_edges if e.source_handle.name == loop_output_name]
-    if start_edges:
-        return start_edges[0].target_id
-    return None
+    return [e.target_id for e in start_edges]
 
 
-def get_loop_body_start_edge(vertex: "Vertex", loop_output_name: str = "item"):
-    """Get the edge connecting loop's output to the first vertex in loop body.
+def get_loop_body_start_edge(vertex: "Vertex", loop_output_name: str = "item") -> list:
+    """Get all edges connecting the loop's output to start vertices in the loop body.
 
     Args:
         vertex: The loop component's vertex
@@ -122,12 +120,9 @@ def get_loop_body_start_edge(vertex: "Vertex", loop_output_name: str = "item"):
             (default: "item" for Loop, use "loop" for WhileLoop)
 
     Returns:
-        The edge object, or None if not found
+        List of edge objects from the loop output
     """
-    start_edges = [e for e in vertex.outgoing_edges if e.source_handle.name == loop_output_name]
-    if start_edges:
-        return start_edges[0]
-    return None
+    return [e for e in vertex.outgoing_edges if e.source_handle.name == loop_output_name]
 
 
 def extract_loop_output(results: list, end_vertex_id: str | None) -> Data:
@@ -201,8 +196,8 @@ async def execute_loop_body(
     graph: "Graph",
     data_list: list[Data],
     loop_body_vertex_ids: set[str],
-    start_vertex_id: str | None,
-    start_edge,
+    start_vertex_ids: list[str],
+    start_edges: list,
     end_vertex_id: str | None,
     event_manager=None,
 ) -> list[Data]:
@@ -215,8 +210,8 @@ async def execute_loop_body(
         graph: The graph containing the loop
         data_list: List of Data objects to iterate over
         loop_body_vertex_ids: Set of vertex IDs that form the loop body
-        start_vertex_id: The vertex ID of the first vertex in the loop body
-        start_edge: The edge connecting loop's item output to start vertex (contains target param info)
+        start_vertex_ids: Vertex IDs of all components directly connected to the loop's item output
+        start_edges: Edges connecting the loop's item output to each start vertex
         end_vertex_id: The vertex ID that feeds back to the loop's item input
         event_manager: Optional event manager to pass to subgraph execution for UI events
 
@@ -233,19 +228,17 @@ async def execute_loop_body(
         # while sharing context between iterations (intentional for loop state).
         # Using async context manager ensures proper cleanup of trace tasks on exit.
         async with graph.create_subgraph(loop_body_vertex_ids) as iteration_subgraph:
-            # Inject current item into vertex data BEFORE preparing the subgraph.
-            # This ensures components have data during build/validation.
-            if start_vertex_id and start_edge:
-                # Get the target parameter name from the edge
+            # Inject current item into ALL vertices directly connected to Loop.item BEFORE
+            # preparing the subgraph. This ensures every start vertex receives the item,
+            # allowing fan-out from the loop output to multiple components.
+            for start_vertex_id, start_edge in zip(start_vertex_ids, start_edges):
                 if not hasattr(start_edge.target_handle, "field_name"):
                     msg = f"Edge target_handle missing field_name attribute for loop item injection: {start_edge}"
                     raise ValueError(msg)
                 target_param = start_edge.target_handle.field_name
 
-                # Find and update the start vertex's frontend data before components are built
                 for vertex_data in iteration_subgraph._vertices:  # noqa: SLF001
                     if vertex_data.get("id") == start_vertex_id:
-                        # Inject the loop item into the vertex's template data
                         if "data" in vertex_data and "node" in vertex_data["data"]:
                             template = vertex_data["data"]["node"].get("template", {})
                             if target_param in template:
@@ -259,7 +252,8 @@ async def execute_loop_body(
             # Fields with type="other" (like HandleInput) are skipped during field param processing
             # They normally get values from edges, but we filtered out the Loop->Parser edge
             # So we must inject the value directly into raw_params
-            if start_vertex_id and start_edge:
+            for start_vertex_id, start_edge in zip(start_vertex_ids, start_edges):
+                target_param = start_edge.target_handle.field_name
                 start_vertex = iteration_subgraph.get_vertex(start_vertex_id)
                 start_vertex.update_raw_params({target_param: item}, overwrite=True)
 
