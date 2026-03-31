@@ -9,12 +9,16 @@
             "dataType": "ChatInput",
             "id": "ChatInput-nr0Vp",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "search_query",
             "id": "ArXivComponent-tAHR5",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -32,12 +36,19 @@
             "dataType": "LoopComponent",
             "id": "LoopComponent-GtPZT",
             "name": "item",
-            "output_types": ["JSON"]
+            "output_types": [
+              "JSON"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_data",
             "id": "ParserComponent-pXAMb",
-            "inputTypes": ["DataFrame", "Table", "Data", "JSON"],
+            "inputTypes": [
+              "DataFrame",
+              "Table",
+              "Data",
+              "JSON"
+            ],
             "type": "other"
           }
         },
@@ -54,12 +65,16 @@
             "dataType": "ParserComponent",
             "id": "ParserComponent-pXAMb",
             "name": "parsed_text",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "LanguageModelComponent-XKvly",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -76,13 +91,18 @@
             "dataType": "LanguageModelComponent",
             "id": "LanguageModelComponent-XKvly",
             "name": "text_output",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "dataType": "LoopComponent",
             "id": "LoopComponent-GtPZT",
             "name": "item",
-            "output_types": ["Data", "Message"]
+            "output_types": [
+              "Data",
+              "Message"
+            ]
           }
         },
         "id": "xy-edge__LanguageModelComponent-XKvly{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-XKvlyœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-LoopComponent-GtPZT{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GtPZTœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ,œMessageœ]}",
@@ -98,12 +118,17 @@
             "dataType": "ArXivComponent",
             "id": "ArXivComponent-tAHR5",
             "name": "dataframe",
-            "output_types": ["Table"]
+            "output_types": [
+              "Table"
+            ]
           },
           "targetHandle": {
             "fieldName": "data",
             "id": "LoopComponent-GtPZT",
-            "inputTypes": ["DataFrame", "Table"],
+            "inputTypes": [
+              "DataFrame",
+              "Table"
+            ],
             "type": "other"
           }
         },
@@ -120,12 +145,20 @@
             "dataType": "LoopComponent",
             "id": "LoopComponent-GtPZT",
             "name": "done",
-            "output_types": ["Table"]
+            "output_types": [
+              "Table"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-YAED9",
-            "inputTypes": ["Data", "JSON", "DataFrame", "Table", "Message"],
+            "inputTypes": [
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table",
+              "Message"
+            ],
             "type": "other"
           }
         },
@@ -141,7 +174,10 @@
         "data": {
           "id": "ArXivComponent-tAHR5",
           "node": {
-            "base_classes": ["DataFrame", "Table"],
+            "base_classes": [
+              "DataFrame",
+              "Table"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -149,7 +185,11 @@
             "display_name": "arXiv",
             "documentation": "",
             "edited": false,
-            "field_order": ["search_query", "search_type", "max_results"],
+            "field_order": [
+              "search_query",
+              "search_type",
+              "max_results"
+            ],
             "frozen": false,
             "icon": "arXiv",
             "legacy": false,
@@ -183,7 +223,9 @@
                 "name": "dataframe",
                 "selected": "Table",
                 "tool_mode": true,
-                "types": ["Table"],
+                "types": [
+                  "Table"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -233,7 +275,9 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "The search query for arXiv papers (e.g., 'quantum computing')",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -257,7 +301,13 @@
                 "dynamic": false,
                 "info": "The field to search in",
                 "name": "search_type",
-                "options": ["all", "title", "abstract", "author", "cat"],
+                "options": [
+                  "all",
+                  "title",
+                  "abstract",
+                  "author",
+                  "cat"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -292,7 +342,9 @@
         "data": {
           "id": "ChatOutput-YAED9",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -347,7 +399,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -396,7 +450,9 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -417,7 +473,9 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -465,7 +523,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -483,7 +544,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -504,7 +567,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -560,7 +625,9 @@
         "data": {
           "id": "ChatInput-nr0Vp",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -606,7 +673,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -637,7 +706,9 @@
                 "display_name": "Context ID",
                 "dynamic": false,
                 "info": "The context ID of the chat. Adds an extra layer to the local memory.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -728,7 +799,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -746,7 +820,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -767,7 +843,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -850,7 +928,10 @@
         "data": {
           "id": "LanguageModelComponent-XKvly",
           "node": {
-            "base_classes": ["LanguageModel", "Message"],
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -910,7 +991,9 @@
                 "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -926,7 +1009,9 @@
                 "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": ["LanguageModel"],
+                "types": [
+                  "LanguageModel"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1016,7 +1101,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input text to send to the model",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1101,7 +1188,9 @@
                       "context_length": 128000,
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
-                      "reasoning_models": ["gpt-5.1"]
+                      "reasoning_models": [
+                        "gpt-5.1"
+                      ]
                     },
                     "name": "gpt-5.1",
                     "provider": "OpenAI"
@@ -1126,7 +1215,9 @@
                       "context_length": 128000,
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
-                      "reasoning_models": ["o1"]
+                      "reasoning_models": [
+                        "o1"
+                      ]
                     },
                     "name": "o1",
                     "provider": "OpenAI"
@@ -1198,7 +1289,9 @@
                       "context_length": 128000,
                       "model_class": "ChatOpenAI",
                       "model_name_param": "model",
-                      "reasoning_models": ["gpt-5.1"]
+                      "reasoning_models": [
+                        "gpt-5.1"
+                      ]
                     },
                     "name": "gpt-5.1",
                     "provider": "OpenAI"
@@ -1211,7 +1304,9 @@
                 "display_name": "Ollama API URL",
                 "dynamic": false,
                 "info": "Endpoint of the Ollama API (Ollama only). Defaults to http://localhost:11434",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1278,7 +1373,9 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "A system message that helps set the behavior of the assistant",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1350,7 +1447,12 @@
         "data": {
           "id": "LoopComponent-GtPZT",
           "node": {
-            "base_classes": ["Data", "JSON", "DataFrame", "Table"],
+            "base_classes": [
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1358,12 +1460,14 @@
             "display_name": "Loop",
             "documentation": "https://docs.langflow.org/loop",
             "edited": false,
-            "field_order": ["data"],
+            "field_order": [
+              "data"
+            ],
             "frozen": false,
             "icon": "infinity",
             "legacy": false,
             "metadata": {
-              "code_hash": "7b3604df49e2",
+              "code_hash": "f789817c7cd3",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1383,12 +1487,16 @@
                 "cache": true,
                 "display_name": "Item",
                 "group_outputs": true,
-                "loop_types": ["Message"],
+                "loop_types": [
+                  "Message"
+                ],
                 "method": "item_output",
                 "name": "item",
                 "selected": "JSON",
                 "tool_mode": true,
-                "types": ["JSON"],
+                "types": [
+                  "JSON"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1400,7 +1508,9 @@
                 "name": "done",
                 "selected": "Table",
                 "tool_mode": true,
-                "types": ["Table"],
+                "types": [
+                  "Table"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1423,7 +1533,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from lfx.base.flow_controls.loop_utils import (\n    execute_loop_body,\n    extract_loop_output,\n    get_loop_body_start_edge,\n    get_loop_body_start_vertex,\n    get_loop_body_vertices,\n    validate_data_input,\n)\nfrom lfx.components.processing.converter import convert_to_data\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import HandleInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.template.field.base import Output\n\n\nclass LoopComponent(Component):\n    display_name = \"Loop\"\n    description = (\n        \"Iterates through Data or Message objects, processing items individually \"\n        \"and aggregating results from loop inputs.\"\n    )\n    documentation: str = \"https://docs.langflow.org/loop\"\n    icon = \"infinity\"\n\n    inputs = [\n        HandleInput(\n            name=\"data\",\n            display_name=\"Inputs\",\n            info=\"The initial DataFrame to iterate over.\",\n            input_types=[\"DataFrame\", \"Table\"],\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Item\",\n            name=\"item\",\n            method=\"item_output\",\n            allows_loop=True,\n            loop_types=[\"Message\"],\n            group_outputs=True,\n        ),\n        Output(display_name=\"Done\", name=\"done\", method=\"done_output\", group_outputs=True),\n    ]\n\n    def initialize_data(self) -> None:\n        \"\"\"Initialize the data list, context index, and aggregated list.\"\"\"\n        if self.ctx.get(f\"{self._id}_initialized\", False):\n            return\n\n        # Ensure data is a list of Data objects\n        data_list = self._validate_data(self.data)\n\n        # Store the initial data and context variables\n        self.update_ctx(\n            {\n                f\"{self._id}_data\": data_list,\n                f\"{self._id}_index\": 0,\n                f\"{self._id}_aggregated\": [],\n                f\"{self._id}_initialized\": True,\n            }\n        )\n\n    def _convert_message_to_data(self, message: Message) -> Data:\n        \"\"\"Convert a Message object to a Data object using Type Convert logic.\"\"\"\n        return convert_to_data(message, auto_parse=False)\n\n    def _validate_data(self, data):\n        \"\"\"Validate and return a list of Data objects.\"\"\"\n        return validate_data_input(data)\n\n    def get_loop_body_vertices(self) -> set[str]:\n        \"\"\"Identify vertices in this loop's body via graph traversal.\n\n        Traverses from the loop's \"item\" output to the vertex that feeds back\n        to the loop's \"item\" input, collecting all vertices in between.\n        This naturally handles nested loops by stopping at this loop's feedback edge.\n\n        Returns:\n            Set of vertex IDs that form this loop's body\n        \"\"\"\n        # Check if we have a proper graph context\n        if not hasattr(self, \"_vertex\") or self._vertex is None:\n            return set()\n\n        return get_loop_body_vertices(\n            vertex=self._vertex,\n            graph=self.graph,\n            get_incoming_edge_by_target_param_fn=self.get_incoming_edge_by_target_param,\n        )\n\n    def _get_loop_body_start_vertices(self) -> list[str]:\n        \"\"\"Get all vertices directly connected to the loop's item output.\n\n        Returns:\n            List of vertex IDs directly connected to the loop item output\n        \"\"\"\n        if not hasattr(self, \"_vertex\") or self._vertex is None:\n            return []\n\n        return get_loop_body_start_vertex(vertex=self._vertex)\n\n    def _extract_loop_output(self, results: list) -> Data:\n        \"\"\"Extract the output from subgraph execution results.\n\n        Args:\n            results: List of VertexBuildResult objects from subgraph execution\n\n        Returns:\n            Data object containing the loop iteration output\n        \"\"\"\n        # Get the vertex ID that feeds back to the item input (end of loop body)\n        end_vertex_id = self.get_incoming_edge_by_target_param(\"item\")\n        return extract_loop_output(results=results, end_vertex_id=end_vertex_id)\n\n    async def execute_loop_body(self, data_list: list[Data], event_manager=None) -> list[Data]:\n        \"\"\"Execute loop body for each data item.\n\n        Creates an isolated subgraph for the loop body and executes it\n        for each item in the data list, collecting results.\n\n        Args:\n            data_list: List of Data objects to iterate over\n            event_manager: Optional event manager to pass to subgraph execution for UI events\n\n        Returns:\n            List of Data objects containing results from each iteration\n        \"\"\"\n        # Get the loop body configuration once\n        loop_body_vertex_ids = self.get_loop_body_vertices()\n        start_vertex_ids = self._get_loop_body_start_vertices()\n        start_edges = get_loop_body_start_edge(self._vertex)\n        end_vertex_id = self.get_incoming_edge_by_target_param(\"item\")\n\n        return await execute_loop_body(\n            graph=self.graph,\n            data_list=data_list,\n            loop_body_vertex_ids=loop_body_vertex_ids,\n            start_vertex_ids=start_vertex_ids,\n            start_edges=start_edges,\n            end_vertex_id=end_vertex_id,\n            event_manager=event_manager,\n        )\n\n    def item_output(self) -> Data:\n        \"\"\"Output is no longer used - loop executes internally now.\n\n        This method is kept for backward compatibility but does nothing.\n        The actual loop execution happens in done_output().\n        \"\"\"\n        self.stop(\"item\")\n        return Data(text=\"\")\n\n    async def done_output(self) -> DataFrame:\n        \"\"\"Execute the loop body for all items and return aggregated results.\n\n        This is now the main execution point for the loop. It:\n        1. Gets the data list to iterate over\n        2. Executes the loop body as an isolated subgraph for each item\n        3. Returns the aggregated results\n\n        Args:\n            event_manager: Optional event manager for UI event emission\n        \"\"\"\n        self.initialize_data()\n\n        # Get data list\n        data_list = self.ctx.get(f\"{self._id}_data\", [])\n\n        if not data_list:\n            return DataFrame([])\n\n        # Execute loop body for all items\n        try:\n            aggregated_results = await self.execute_loop_body(data_list, event_manager=self._event_manager)\n            return DataFrame(aggregated_results)\n        except Exception as e:\n            # Log error and return empty DataFrame\n            from lfx.log.logger import logger\n\n            await logger.aerror(f\"Error executing loop body: {e}\")\n            raise\n"
+                "value": "from lfx.base.flow_controls.loop_utils import (\n    execute_loop_body,\n    extract_loop_output,\n    get_loop_body_start_edge,\n    get_loop_body_start_vertex,\n    get_loop_body_vertices,\n    validate_data_input,\n)\nfrom lfx.components.processing.converter import convert_to_data\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import HandleInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.template.field.base import Output\n\n\nclass LoopComponent(Component):\n    display_name = \"Loop\"\n    description = (\n        \"Iterates through Data or Message objects, processing items individually \"\n        \"and aggregating results from loop inputs.\"\n    )\n    documentation: str = \"https://docs.langflow.org/loop\"\n    icon = \"infinity\"\n\n    inputs = [\n        HandleInput(\n            name=\"data\",\n            display_name=\"Inputs\",\n            info=\"The initial DataFrame to iterate over.\",\n            input_types=[\"DataFrame\", \"Table\"],\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Item\",\n            name=\"item\",\n            method=\"item_output\",\n            allows_loop=True,\n            loop_types=[\"Message\"],\n            group_outputs=True,\n        ),\n        Output(display_name=\"Done\", name=\"done\", method=\"done_output\", group_outputs=True),\n    ]\n\n    def initialize_data(self) -> None:\n        \"\"\"Initialize the data list, context index, and aggregated list.\"\"\"\n        if self.ctx.get(f\"{self._id}_initialized\", False):\n            return\n\n        # Ensure data is a list of Data objects\n        data_list = self._validate_data(self.data)\n\n        # Store the initial data and context variables\n        self.update_ctx(\n            {\n                f\"{self._id}_data\": data_list,\n                f\"{self._id}_index\": 0,\n                f\"{self._id}_aggregated\": [],\n                f\"{self._id}_initialized\": True,\n            }\n        )\n\n    def _convert_message_to_data(self, message: Message) -> Data:\n        \"\"\"Convert a Message object to a Data object using Type Convert logic.\"\"\"\n        return convert_to_data(message, auto_parse=False)\n\n    def _validate_data(self, data):\n        \"\"\"Validate and return a list of Data objects.\"\"\"\n        return validate_data_input(data)\n\n    def get_loop_body_vertices(self) -> set[str]:\n        \"\"\"Identify vertices in this loop's body via graph traversal.\n\n        Traverses from the loop's \"item\" output to the vertex that feeds back\n        to the loop's \"item\" input, collecting all vertices in between.\n        This naturally handles nested loops by stopping at this loop's feedback edge.\n\n        Returns:\n            Set of vertex IDs that form this loop's body\n        \"\"\"\n        # Check if we have a proper graph context\n        if not hasattr(self, \"_vertex\") or self._vertex is None:\n            return set()\n\n        return get_loop_body_vertices(\n            vertex=self._vertex,\n            graph=self.graph,\n            get_incoming_edge_by_target_param_fn=self.get_incoming_edge_by_target_param,\n        )\n\n    def _get_loop_body_start_vertex(self) -> str | None:\n        \"\"\"Get the first vertex in the loop body (connected to loop's item output).\n\n        Returns:\n            The vertex ID of the first vertex in the loop body, or None if not found\n        \"\"\"\n        # Check if we have a proper graph context\n        if not hasattr(self, \"_vertex\") or self._vertex is None:\n            return None\n\n        return get_loop_body_start_vertex(vertex=self._vertex)\n\n    def _extract_loop_output(self, results: list) -> Data:\n        \"\"\"Extract the output from subgraph execution results.\n\n        Args:\n            results: List of VertexBuildResult objects from subgraph execution\n\n        Returns:\n            Data object containing the loop iteration output\n        \"\"\"\n        # Get the vertex ID that feeds back to the item input (end of loop body)\n        end_vertex_id = self.get_incoming_edge_by_target_param(\"item\")\n        return extract_loop_output(results=results, end_vertex_id=end_vertex_id)\n\n    async def execute_loop_body(self, data_list: list[Data], event_manager=None) -> list[Data]:\n        \"\"\"Execute loop body for each data item.\n\n        Creates an isolated subgraph for the loop body and executes it\n        for each item in the data list, collecting results.\n\n        Args:\n            data_list: List of Data objects to iterate over\n            event_manager: Optional event manager to pass to subgraph execution for UI events\n\n        Returns:\n            List of Data objects containing results from each iteration\n        \"\"\"\n        # Get the loop body configuration once\n        loop_body_vertex_ids = self.get_loop_body_vertices()\n        start_vertex_id = self._get_loop_body_start_vertex()\n        start_edge = get_loop_body_start_edge(self._vertex)\n        end_vertex_id = self.get_incoming_edge_by_target_param(\"item\")\n\n        return await execute_loop_body(\n            graph=self.graph,\n            data_list=data_list,\n            loop_body_vertex_ids=loop_body_vertex_ids,\n            start_vertex_id=start_vertex_id,\n            start_edge=start_edge,\n            end_vertex_id=end_vertex_id,\n            event_manager=event_manager,\n        )\n\n    def item_output(self) -> Data:\n        \"\"\"Output is no longer used - loop executes internally now.\n\n        This method is kept for backward compatibility but does nothing.\n        The actual loop execution happens in done_output().\n        \"\"\"\n        self.stop(\"item\")\n        return Data(text=\"\")\n\n    async def done_output(self) -> DataFrame:\n        \"\"\"Execute the loop body for all items and return aggregated results.\n\n        This is now the main execution point for the loop. It:\n        1. Gets the data list to iterate over\n        2. Executes the loop body as an isolated subgraph for each item\n        3. Returns the aggregated results\n\n        Args:\n            event_manager: Optional event manager for UI event emission\n        \"\"\"\n        self.initialize_data()\n\n        # Get data list\n        data_list = self.ctx.get(f\"{self._id}_data\", [])\n\n        if not data_list:\n            return DataFrame([])\n\n        # Execute loop body for all items\n        try:\n            aggregated_results = await self.execute_loop_body(data_list, event_manager=self._event_manager)\n            return DataFrame(aggregated_results)\n        except Exception as e:\n            # Log error and return empty DataFrame\n            from lfx.log.logger import logger\n\n            await logger.aerror(f\"Error executing loop body: {e}\")\n            raise\n"
               },
               "data": {
                 "_input_type": "HandleInput",
@@ -1431,7 +1541,10 @@
                 "display_name": "Inputs",
                 "dynamic": false,
                 "info": "The initial DataFrame to iterate over.",
-                "input_types": ["DataFrame", "Table"],
+                "input_types": [
+                  "DataFrame",
+                  "Table"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "data",
@@ -1468,7 +1581,9 @@
         "data": {
           "id": "ParserComponent-pXAMb",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "models_and_agents",
             "conditional_paths": [],
@@ -1477,7 +1592,12 @@
             "display_name": "Parser",
             "documentation": "https://docs.langflow.org/parser",
             "edited": false,
-            "field_order": ["input_data", "mode", "pattern", "sep"],
+            "field_order": [
+              "input_data",
+              "mode",
+              "pattern",
+              "sep"
+            ],
             "frozen": false,
             "icon": "braces",
             "legacy": false,
@@ -1506,7 +1626,9 @@
                 "name": "parsed_text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1537,7 +1659,12 @@
                 "display_name": "JSON or Table",
                 "dynamic": false,
                 "info": "Accepts either a DataFrame or a Data object.",
-                "input_types": ["DataFrame", "Table", "Data", "JSON"],
+                "input_types": [
+                  "DataFrame",
+                  "Table",
+                  "Data",
+                  "JSON"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_data",
@@ -1558,7 +1685,10 @@
                 "dynamic": false,
                 "info": "Convert into raw string instead of using a template.",
                 "name": "mode",
-                "options": ["Parser", "Stringify"],
+                "options": [
+                  "Parser",
+                  "Stringify"
+                ],
                 "override_skip": false,
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -1579,7 +1709,9 @@
                 "display_name": "Template",
                 "dynamic": true,
                 "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1603,7 +1735,9 @@
                 "display_name": "Separator",
                 "dynamic": false,
                 "info": "String used to separate rows/items.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1652,5 +1786,8 @@
   "is_component": false,
   "last_tested_version": "1.7.0",
   "name": "Research Translation Loop",
-  "tags": ["chatbots", "content-generation"]
+  "tags": [
+    "chatbots",
+    "content-generation"
+  ]
 }
