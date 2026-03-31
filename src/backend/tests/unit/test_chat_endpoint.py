@@ -435,7 +435,7 @@ async def test_cancel_build_with_cancelled_error(client, json_memory_chatbot_no_
 
 
 @pytest.mark.benchmark
-async def test_should_have_public_events_endpoint_accessible_without_auth(client, logged_in_headers):
+async def test_should_have_public_events_endpoint_accessible_without_auth(client, logged_in_headers):  # noqa: ARG001
     """Test that public events endpoint exists and is accessible without authentication.
 
     Bug: After sending a message in the Shareable Playground, the chat input resets
@@ -464,7 +464,7 @@ async def test_should_have_public_events_endpoint_accessible_without_auth(client
 
 
 @pytest.mark.benchmark
-async def test_should_have_public_cancel_endpoint_accessible_without_auth(client, logged_in_headers):
+async def test_should_have_public_cancel_endpoint_accessible_without_auth(client, logged_in_headers):  # noqa: ARG001
     """Test that public cancel endpoint exists and is accessible without authentication.
 
     Same root cause as the events bug: the cancel endpoint requires auth
