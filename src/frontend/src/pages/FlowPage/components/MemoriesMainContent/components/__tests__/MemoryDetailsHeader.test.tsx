@@ -60,8 +60,8 @@ describe("MemoryDetailsHeader", () => {
     render(<MemoryDetailsHeader {...props} />);
 
     fireEvent.click(screen.getByText("confirm-delete"));
-    expect(props.deleteMutation.mutate).toHaveBeenCalledWith({
-      memoryId: "m1",
+      expect(props.deleteMutation.mutate).toHaveBeenCalledWith({
+        memoryId: "m1",
     });
   });
 

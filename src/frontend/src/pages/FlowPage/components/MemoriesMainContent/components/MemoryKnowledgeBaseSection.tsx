@@ -123,7 +123,7 @@ export function MemoryKnowledgeBaseSection({
               {Array.from(groupedBySession.entries()).map(([sessionId, docs]) =>
                 docs.map((doc, index) => (
                   <TableRow
-                    key={`${doc.message_id}-${index}`}
+                    key={`${sessionId}-${doc.message_id}-${index}`}
                     className={cn(
                       "cursor-pointer",
                       index === 0 && sessionId !== "(no session)"

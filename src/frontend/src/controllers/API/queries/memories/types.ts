@@ -39,7 +39,7 @@ export interface MemoryInfo {
   batch_size: number;
   preprocessing_enabled: boolean;
   preprocessing_model?: string;
-  preprocessing_prompt?: string;
+  preproc_instructions?: string;
   pending_messages_count: number;
   user_id: string;
   flow_id: string;
@@ -82,7 +82,7 @@ export interface UpdateMemoryPayload {
 
 export interface AddMessagesToMemoryParams {
   memoryId: string;
-  message_ids: string[];
+  messageIds: string[];
 }
 
 export interface DeleteMemoryParams {

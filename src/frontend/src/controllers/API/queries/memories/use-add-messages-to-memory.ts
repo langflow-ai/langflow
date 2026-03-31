@@ -19,7 +19,7 @@ export const useAddMessagesToMemory: useMutationFunctionType<
     if (!params?.memoryId) {
       throw new Error("addMessagesToMemory: missing memoryId");
     }
-    if (!Array.isArray(params.message_ids) || params.message_ids.length === 0) {
+    if (!Array.isArray(params.messageIds) || params.messageIds.length === 0) {
       throw new Error(
         "addMessagesToMemory: message_ids must be a non-empty array",
       );
@@ -27,7 +27,7 @@ export const useAddMessagesToMemory: useMutationFunctionType<
     const response = await api.post<MemoryApiDTO>(
       `${getURL("MEMORIES")}/${params.memoryId}/add-messages`,
       {
-        message_ids: params.message_ids,
+        message_ids: params.messageIds,
       },
     );
 

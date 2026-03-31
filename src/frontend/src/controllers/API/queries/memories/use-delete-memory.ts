@@ -103,7 +103,6 @@ export const useDeleteMemory: useMutationFunctionType<
     mutationFn: deleteMemoryFn,
     ...restOptions,
     onSettled: (data, error, variables, onMutateResult, context) => {
-      queryClient.invalidateQueries({ queryKey: ["useDeleteMemory"] });
       userOnSettled?.(data, error, variables, onMutateResult, context);
     },
     retry: restOptions.retry ?? 3,

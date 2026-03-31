@@ -133,7 +133,7 @@ export function useMemoriesData({
     setSearchQuery("");
 
     setAutoCaptureDraft(null);
-    committedIsActiveRef.current = memory?.is_active ?? null;
+    committedIsActiveRef.current = null;
     if (autoCaptureTimerRef.current) {
       clearTimeout(autoCaptureTimerRef.current);
       autoCaptureTimerRef.current = null;
@@ -235,7 +235,8 @@ export function useMemoriesData({
 
   const handleToggleActive = (nextIsActive: boolean) => {
     if (!memory) return;
-    if (committedIsActiveRef.current === nextIsActive) {
+    const committedIsActive = committedIsActiveRef.current ?? memory.is_active;
+    if (committedIsActive === nextIsActive) {
       if (autoCaptureTimerRef.current) {
         clearTimeout(autoCaptureTimerRef.current);
         autoCaptureTimerRef.current = null;
@@ -253,7 +254,7 @@ export function useMemoriesData({
 
     autoCaptureTimerRef.current = setTimeout(() => {
       // If the committed value already matches, skip a no-op update.
-      if (committedIsActiveRef.current === nextIsActive) {
+      if ((committedIsActiveRef.current ?? memory.is_active) === nextIsActive) {
         setAutoCaptureDraft(null);
         autoCaptureTimerRef.current = null;
         return;

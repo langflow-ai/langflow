@@ -110,6 +110,7 @@ export function MemoriesSidebar({
                       {memoryItem.is_active && (
                         <span
                           className="h-2 w-2 shrink-0 rounded-full bg-accent-emerald-foreground"
+                          role="img"
                           aria-label="Auto-capture enabled"
                           title="Auto-capture enabled"
                         />
