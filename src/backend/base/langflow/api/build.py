@@ -69,8 +69,15 @@ async def start_flow_build(
     current_user: CurrentActiveUser,
     queue_service: JobQueueService,
     flow_name: str | None = None,
+    source_flow_id: uuid.UUID | None = None,
 ) -> str:
     """Start the flow build process by setting up the queue and starting the build task.
+
+    Args:
+        flow_id: The flow ID used for tracking, sessions, and messages.
+        source_flow_id: If provided, the actual flow ID to load from DB.
+            Used by public flows where flow_id is a virtual UUID for session isolation
+            but the flow data must be loaded from the original flow in the database.
 
     Returns:
         the job_id.
@@ -90,6 +97,7 @@ async def start_flow_build(
             log_builds=log_builds,
             current_user=current_user,
             flow_name=flow_name,
+            source_flow_id=source_flow_id,
         )
         queue_service.start_job(job_id, task_coro)
     except Exception as e:
@@ -209,6 +217,7 @@ async def generate_flow_events(
     log_builds: bool,
     current_user: CurrentActiveUser,
     flow_name: str | None = None,
+    source_flow_id: uuid.UUID | None = None,
 ) -> None:
     """Generate events for flow building process.
 
@@ -283,13 +292,19 @@ async def generate_flow_events(
             effective_session_id = flow_id_str
 
         if not data:
-            return await build_graph_from_db(
-                flow_id=flow_id,
+            # For public flows, source_flow_id is the real DB ID, flow_id is virtual.
+            # Load from DB using the real ID, then override graph.flow_id with virtual.
+            db_flow_id = source_flow_id if source_flow_id is not None else flow_id
+            graph = await build_graph_from_db(
+                flow_id=db_flow_id,
                 session=fresh_session,
                 chat_service=chat_service,
                 user_id=str(current_user.id),
                 session_id=effective_session_id,
             )
+            if source_flow_id is not None:
+                graph.flow_id = str(flow_id)
+            return graph
 
         if not flow_name:
             result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
