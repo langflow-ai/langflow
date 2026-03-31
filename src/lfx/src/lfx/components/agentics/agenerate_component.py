@@ -69,6 +69,10 @@ class AgenerateComponent(BaseAgenticComponent):
         IntInput(
             name="batch_size",
             display_name="Number of Rows to Generate",
+            info=(
+                "Number of new synthetic rows to generate. When an Input Table is provided, "
+                "the generated rows are appended to the original data."
+            ),
             value=10,
             advanced=False,
         ),

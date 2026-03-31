@@ -51,6 +51,7 @@ class AMapComponent(BaseAgenticComponent):
             name="source",
             display_name="Input Table",
             info=("Input DataFrame to transform. The schema is automatically inferred from column names and types."),
+            required=True,
         ),
         get_generated_fields_input(),
         BoolInput(
