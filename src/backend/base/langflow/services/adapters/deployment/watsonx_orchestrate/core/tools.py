@@ -261,7 +261,14 @@ def create_wxo_flow_tool(
     tool: LangflowTool = create_langflow_tool(
         tool_definition=flow_definition,
         connections=connections,
-        show_details=False,
+        show_details=True,
+        # TODO: show_details is only set to true because the adk
+        # has a bug where it fails to create requirements
+        # when it is set to False.
+        # Reset to False when the bug is fixed in the adk.
+        # Even better, for us, remove this parameter entirely
+        # and just default to False internally and not expose
+        # it to the caller.
     )
 
     tool_payload = tool.__tool_spec__.model_dump(

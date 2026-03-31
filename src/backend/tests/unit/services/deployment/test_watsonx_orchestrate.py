@@ -65,6 +65,12 @@ WxOCredentials = importlib.import_module(
 ).WxOCredentials
 
 
+def _reload_wxo_auth_modules():
+    constants_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.constants")
+    importlib.reload(constants_module)
+    return importlib.reload(client_module)
+
+
 def _tool_refs(*tool_ids: str) -> list[dict[str, str]]:
     """Build WatsonxToolRefBinding dicts for test data."""
     return [{"source_ref": f"fv-{tid}", "tool_id": tid} for tid in tool_ids]
@@ -3155,6 +3161,58 @@ def test_get_authenticator_unknown_url():
         get_authenticator("https://example.com", "test-key")
 
 
+def test_get_authenticator_uses_default_iam_urls_when_unset(monkeypatch):
+    try:
+        with monkeypatch.context() as context:
+            context.delenv("IBM_IAM_MCSP_DEV_URL_OVERRIDE", raising=False)
+            context.delenv("IBM_IAM_DEV_URL_OVERRIDE", raising=False)
+            reloaded_client_module = _reload_wxo_auth_modules()
+
+            iam_auth = reloaded_client_module.get_authenticator("https://api.region-foobar.cloud.ibm.com", "test-key")
+            mcsp_auth = reloaded_client_module.get_authenticator("https://api.wxo.ibm.com", "test-key")
+
+            assert iam_auth.token_manager.url == "https://iam.cloud.ibm.com"
+            assert mcsp_auth.token_manager.url == "https://iam.platform.saas.ibm.com"
+    finally:
+        _reload_wxo_auth_modules()
+
+
+@pytest.mark.parametrize("env_value", ["", "   "])
+def test_get_authenticator_empty_or_whitespace_env_var_falls_through_to_default(monkeypatch, env_value):
+    try:
+        with monkeypatch.context() as context:
+            context.setenv("IBM_IAM_MCSP_DEV_URL_OVERRIDE", env_value)
+            context.setenv("IBM_IAM_DEV_URL_OVERRIDE", env_value)
+            reloaded_client_module = _reload_wxo_auth_modules()
+
+            iam_auth = reloaded_client_module.get_authenticator("https://api.region-foobar.cloud.ibm.com", "test-key")
+            mcsp_auth = reloaded_client_module.get_authenticator("https://api.wxo.ibm.com", "test-key")
+
+            assert iam_auth.token_manager.url == "https://iam.cloud.ibm.com"
+            assert mcsp_auth.token_manager.url == "https://iam.platform.saas.ibm.com"
+    finally:
+        _reload_wxo_auth_modules()
+
+
+def test_get_authenticator_uses_override_iam_urls(monkeypatch):
+    custom_mcsp_url = "  https://iam.platform.saas.ibm.com/custom-mcsp  "
+    custom_iam_url = "  https://iam.cloud.ibm.com/custom-iam  "
+
+    try:
+        with monkeypatch.context() as context:
+            context.setenv("IBM_IAM_MCSP_DEV_URL_OVERRIDE", custom_mcsp_url)
+            context.setenv("IBM_IAM_DEV_URL_OVERRIDE", custom_iam_url)
+            reloaded_client_module = _reload_wxo_auth_modules()
+
+            iam_auth = reloaded_client_module.get_authenticator("https://api.region-foobar.cloud.ibm.com", "test-key")
+            mcsp_auth = reloaded_client_module.get_authenticator("https://api.wxo.ibm.com", "test-key")
+
+            assert iam_auth.token_manager.url == custom_iam_url.strip()
+            assert mcsp_auth.token_manager.url == custom_mcsp_url.strip()
+    finally:
+        _reload_wxo_auth_modules()
+
+
 @pytest.mark.anyio
 async def test_get_provider_clients_uses_request_scoped_context_memoization(monkeypatch):
     resolve_calls = 0
@@ -4744,9 +4802,6 @@ async def test_verify_credentials_success(monkeypatch):
     class FakeAuthenticator:
         token_manager = FakeTokenManager()
 
-        def validate(self):
-            pass
-
     monkeypatch.setattr(
         service_module,
         "get_authenticator",
@@ -4776,9 +4831,6 @@ async def test_verify_credentials_invalid_key_raises(monkeypatch):
     class FailingAuthenticator:
         token_manager = FakeTokenManager()
 
-        def validate(self):
-            pass
-
     monkeypatch.setattr(
         service_module,
         "get_authenticator",
@@ -4795,27 +4847,17 @@ async def test_verify_credentials_invalid_key_raises(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_verify_credentials_malformed_key_raises(monkeypatch):
-    """verify_credentials raises InvalidContentError when local validation fails."""
+async def test_verify_credentials_malformed_key_from_authenticator_constructor_raises():
+    """verify_credentials raises InvalidContentError when authenticator creation fails validation."""
     from lfx.services.adapters.deployment.exceptions import InvalidContentError
     from lfx.services.adapters.deployment.schema import VerifyCredentials
-
-    class MalformedAuthenticator:
-        def validate(self):
-            msg = "api key contains bad characters"
-            raise ValueError(msg)
-
-    monkeypatch.setattr(
-        service_module,
-        "get_authenticator",
-        lambda **_kwargs: MalformedAuthenticator(),
-    )
 
     svc = WatsonxOrchestrateDeploymentService(settings_service=DummySettingsService())
     payload = VerifyCredentials(
         base_url="https://api.us-south.wxo.cloud.ibm.com",
-        provider_data={"api_key": "bad\x00key"},  # pragma: allowlist secret
+        provider_data={"api_key": "{bad-key}"},  # pragma: allowlist secret
     )
+
     with pytest.raises(InvalidContentError, match="malformed"):
         await svc.verify_credentials(user_id="u1", payload=payload)
 
@@ -4851,6 +4893,60 @@ async def test_verify_credentials_bad_auth_scheme_raises():
 
 
 @pytest.mark.anyio
+async def test_verify_credentials_authenticator_construction_unexpected_error(monkeypatch):
+    """verify_credentials raises DeploymentError when get_authenticator() throws unexpectedly."""
+    from lfx.services.adapters.deployment.exceptions import DeploymentError
+    from lfx.services.adapters.deployment.schema import VerifyCredentials
+
+    def _exploding_authenticator(**_kwargs):
+        msg = "something unexpected"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(
+        service_module,
+        "get_authenticator",
+        _exploding_authenticator,
+    )
+
+    svc = WatsonxOrchestrateDeploymentService(settings_service=DummySettingsService())
+    payload = VerifyCredentials(
+        base_url="https://api.us-south.wxo.cloud.ibm.com",
+        provider_data={"api_key": "some-key"},  # pragma: allowlist secret
+    )
+    with pytest.raises(DeploymentError, match="failed unexpectedly"):
+        await svc.verify_credentials(user_id="u1", payload=payload)
+
+
+@pytest.mark.anyio
+async def test_verify_credentials_forbidden_key_raises(monkeypatch):
+    """verify_credentials raises AuthorizationError when provider returns 403."""
+    from ibm_cloud_sdk_core import ApiException
+    from lfx.services.adapters.deployment.exceptions import AuthorizationError
+    from lfx.services.adapters.deployment.schema import VerifyCredentials
+
+    class FakeTokenManager:
+        def get_token(self):
+            raise ApiException(403, message="forbidden")
+
+    class ForbiddenAuthenticator:
+        token_manager = FakeTokenManager()
+
+    monkeypatch.setattr(
+        service_module,
+        "get_authenticator",
+        lambda **_kwargs: ForbiddenAuthenticator(),
+    )
+
+    svc = WatsonxOrchestrateDeploymentService(settings_service=DummySettingsService())
+    payload = VerifyCredentials(
+        base_url="https://api.us-south.wxo.cloud.ibm.com",
+        provider_data={"api_key": "some-key"},  # pragma: allowlist secret
+    )
+    with pytest.raises(AuthorizationError, match="Credential verification"):
+        await svc.verify_credentials(user_id="u1", payload=payload)
+
+
+@pytest.mark.anyio
 async def test_verify_credentials_provider_unreachable(monkeypatch):
     """verify_credentials raises DeploymentError on network failure."""
     from lfx.services.adapters.deployment.exceptions import DeploymentError
@@ -4863,9 +4959,6 @@ async def test_verify_credentials_provider_unreachable(monkeypatch):
 
     class UnreachableAuthenticator:
         token_manager = FakeTokenManager()
-
-        def validate(self):
-            pass
 
     monkeypatch.setattr(
         service_module,

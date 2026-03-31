@@ -4,13 +4,18 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
-from sqlalchemy import delete
-from sqlmodel import col, select
+from sqlmodel import col, delete, select
 
 from langflow.api.utils import DbSession, custom_params
 from langflow.schema.message import MessageResponse
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.message.crud import (
+    delete_messages_for_user,
+    delete_messages_for_user_by_session,
+    get_message_for_user,
+    get_messages_for_user_by_session,
+)
 from langflow.services.database.models.message.model import MessageRead, MessageTable, MessageUpdate
 from langflow.services.database.models.transactions.crud import transform_transaction_table_for_logs
 from langflow.services.database.models.transactions.model import TransactionLogsResponse, TransactionTable
@@ -25,18 +30,30 @@ router = APIRouter(prefix="/monitor", tags=["Monitor"])
 
 
 @router.get("/builds", dependencies=[Depends(get_current_active_user)])
-async def get_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSession) -> VertexBuildMapModel:
+async def get_vertex_builds(
+    flow_id: Annotated[UUID, Query()],
+    session: DbSession,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+) -> VertexBuildMapModel:
     try:
-        vertex_builds = await get_vertex_builds_by_flow_id(session, flow_id)
+        # Ownership is enforced in the data access layer.
+        # Foreign flow IDs intentionally resolve to an empty payload (200)
+        # to avoid leaking whether the target flow exists.
+        vertex_builds = await get_vertex_builds_by_flow_id(session, flow_id, user_id=current_user.id)
         return VertexBuildMapModel.from_list_of_dicts(vertex_builds)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/builds", status_code=204, dependencies=[Depends(get_current_active_user)])
-async def delete_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSession) -> None:
+async def delete_vertex_builds(
+    flow_id: Annotated[UUID, Query()],
+    session: DbSession,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+) -> None:
     try:
-        await delete_vertex_builds_by_flow_id(session, flow_id)
+        # Keep endpoint idempotent while preventing cross-user deletion.
+        await delete_vertex_builds_by_flow_id(session, flow_id, user_id=current_user.id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -100,9 +117,19 @@ async def get_messages(
 
 
 @router.delete("/messages", status_code=204, dependencies=[Depends(get_current_active_user)])
-async def delete_messages(message_ids: list[UUID], session: DbSession) -> None:
+async def delete_messages(
+    message_ids: list[UUID],
+    session: DbSession,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+) -> None:
     try:
-        await session.exec(delete(MessageTable).where(MessageTable.id.in_(message_ids)))  # type: ignore[attr-defined]
+        # Ownership guard lives in the CRUD layer: only messages belonging to
+        # current_user are selected and deleted; foreign IDs are ignored.
+        #
+        # Practical effect:
+        # - Mixed lists (owned + foreign IDs) only delete owned rows.
+        # - Pure foreign lists keep endpoint idempotent with 204 and no changes.
+        await delete_messages_for_user(session, current_user.id, message_ids)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -112,18 +139,24 @@ async def update_message(
     message_id: UUID,
     message: MessageUpdate,
     session: DbSession,
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     try:
-        db_message = await session.get(MessageTable, message_id)
+        # Fetch is scoped by user ownership. A foreign message ID resolves to
+        # None so callers receive the same 404 as a non-existent message.
+        # This avoids leaking whether another user's message exists.
+        db_message = await get_message_for_user(session, current_user.id, message_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     if not db_message:
+        # Intentionally return 404 for both "not found" and "not owned".
         raise HTTPException(status_code=404, detail="Message not found")
 
     try:
         message_dict = message.model_dump(exclude_unset=True, exclude_none=True)
         if "text" in message_dict and message_dict["text"] != db_message.text:
+            # Keep edit flag consistent for UI/audit consumers when content changes.
             message_dict["edit"] = True
         db_message.sqlmodel_update(message_dict)
         session.add(db_message)
@@ -142,15 +175,18 @@ async def update_session_id(
     old_session_id: str,
     new_session_id: Annotated[str, Query(..., description="The new session ID to update to")],
     session: DbSession,
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> list[MessageResponse]:
     try:
-        # Get all messages with the old session ID
-        stmt = select(MessageTable).where(MessageTable.session_id == old_session_id)
-        messages = (await session.exec(stmt)).all()
+        # Session updates are ownership-scoped to prevent session hijacking
+        # across users that might share or guess a session_id value.
+        # This endpoint is sensitive because a single call can move many rows.
+        messages = await get_messages_for_user_by_session(session, current_user.id, old_session_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     if not messages:
+        # Same response for "session does not exist" and "session exists but is foreign".
         raise HTTPException(status_code=404, detail="No messages found with the given session ID")
 
     try:
@@ -182,26 +218,10 @@ async def delete_messages_session(
     Only deletes messages from sessions belonging to flows owned by the current user.
     """
     try:
-        # First, get message IDs that belong to the user's flows for this session
-        stmt = select(MessageTable.id)
-        stmt = stmt.join(Flow, MessageTable.flow_id == Flow.id)
-        stmt = stmt.where(Flow.user_id == current_user.id)
-        stmt = stmt.where(col(MessageTable.session_id) == session_id)
-
-        result = await session.exec(stmt)
-        message_ids = list(result)
-
-        if not message_ids:
-            # No messages found for this user's flows with this session_id
-            return {"message": "Messages deleted successfully"}
-
-        # Delete only the messages that belong to the user
-        await session.exec(
-            delete(MessageTable)
-            .where(col(MessageTable.id).in_(message_ids))
-            .execution_options(synchronize_session="fetch")
-        )
-        await session.commit()
+        # Keep endpoint idempotent (204) while enforcing ownership in CRUD.
+        # If the session belongs to another user, this becomes a safe no-op.
+        # This preserves existing client behavior while blocking cross-user deletes.
+        await delete_messages_for_user_by_session(session, current_user.id, session_id)
     except Exception as e:
         await session.rollback()
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -287,12 +307,18 @@ async def delete_messages_sessions(
 async def get_transactions(
     flow_id: Annotated[UUID, Query()],
     session: DbSession,
+    current_user: Annotated[User, Depends(get_current_active_user)],
     params: Annotated[Params | None, Depends(custom_params)],
 ) -> Page[TransactionLogsResponse]:
     try:
+        # Flow ownership is part of the SQL filter.
+        # For foreign flow IDs, the endpoint returns an empty page (200)
+        # to preserve response shape and avoid existence leakage.
         stmt = (
             select(TransactionTable)
+            .join(Flow, TransactionTable.flow_id == Flow.id)
             .where(TransactionTable.flow_id == flow_id)
+            .where(Flow.user_id == current_user.id)
             .order_by(col(TransactionTable.timestamp).desc())
         )
         import warnings
