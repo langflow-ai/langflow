@@ -1,0 +1,39 @@
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+:root {
+  --doc-sidebar-width: 300px;
+  --doc-sidebar-hidden-width: 30px;
+}
+
+.docSidebarContainer {
+  display: none;
+}
+
+@media (min-width: 997px) {
+  .docSidebarContainer {
+    display: block;
+    width: var(--doc-sidebar-width);
+    margin-top: calc(-1 * var(--ifm-navbar-height));
+    border-right: 1px solid var(--ifm-toc-border-color);
+    will-change: width;
+    transition: width var(--ifm-transition-fast) ease;
+    clip-path: inset(0);
+  }
+
+  .docSidebarContainerHidden {
+    width: var(--doc-sidebar-hidden-width);
+    cursor: pointer;
+  }
+
+  .sidebarViewport {
+    top: 0;
+    position: sticky;
+    height: 100%;
+    max-height: 100vh;
+  }
+}

@@ -47,10 +47,12 @@ dependencies = [
     "markitdown>=0.1.4,<2.0.0",
     "setuptools>=80.0.0,<81.0.0",
     "wheel>=0.46.2,<1.0.0",
+    "mcp>=1.17.0,<2.0.0",
 ]
 
 [project.scripts]
 lfx = "lfx.__main__:main"
+lfx-mcp = "lfx.mcp.__main__:main"
 
 [build-system]
 requires = ["hatchling"]

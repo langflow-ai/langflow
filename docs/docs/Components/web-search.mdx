@@ -29,7 +29,7 @@ The following steps demonstrate one way that you can use a **Web Search** compon
 
 3. Add a [**Type Convert** component](/type-convert), set the **Output Type** to **Message**, and then connect the **Web Search** component's output to the **Type Convert** component's input.
 
-    By default, the **Web Search** component outputs a `DataFrame`.
+    By default, the **Web Search** component outputs a `Table`.
     Because the **Prompt Template** component only accepts `Message` data, this conversion is required so that the flow can pass the search results to the **Prompt Template** component.
     For more information, see [Web Search output](#web-search-output).
 
@@ -74,7 +74,7 @@ The following steps demonstrate one way that you can use a **Web Search** compon
 | search_mode | Search Mode | Input parameter. Choose search mode: Web (DuckDuckGo), News (Google News), or RSS (Feed Reader). Default: `Web`. |
 | query | Search Query | Input parameter. Keywords to search for. |
 | timeout | Timeout | Input parameter. Timeout for the web search request in seconds. Default: `5`. |
-| results | Results | Output parameter. Returns a `DataFrame` containing `title`, `link`, `snippet`, and `content`. For more information, see [Web Search output](#web-search-output). |
+| results | Results | Output parameter. Returns a `Table` containing `title`, `link`, `snippet`, and `content`. For more information, see [Web Search output](#web-search-output). |
 
 </TabItem>
 <TabItem value="news" label="News Search Mode">
@@ -89,7 +89,7 @@ The following steps demonstrate one way that you can use a **Web Search** compon
 | topic | Topic | Input parameter. One of: `WORLD`, `NATION`, `BUSINESS`, `TECHNOLOGY`, `ENTERTAINMENT`, `SCIENCE`, `SPORTS`, `HEALTH`. |
 | location | Location (Geo) | Input parameter. City, state, or country for location-based news. Leave blank for keyword search. |
 | timeout | Timeout | Input parameter. Timeout for the request in seconds. Default: `5`. |
-| results | Results | Output parameter. A `DataFrame` with the key columns `title`, `link`, `published` and `summary`. For more information, see [Web Search output](#web-search-output). |
+| results | Results | Output parameter. A `Table` with the key columns `title`, `link`, `published` and `summary`. For more information, see [Web Search output](#web-search-output). |
 
 </TabItem>
 <TabItem value="rss" label="RSS Reader Mode">
@@ -99,19 +99,19 @@ The following steps demonstrate one way that you can use a **Web Search** compon
 | search_mode | Search Mode | Input parameter. Choose search mode: Web (DuckDuckGo), News (Google News), or RSS (Feed Reader). Default: `Web`. |
 | query | RSS Feed URL | Input parameter. URL of the RSS feed to parse, such as `https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml`. |
 | timeout | Timeout | Input parameter. Timeout for the RSS feed request in seconds. Default: `5`. |
-| results | Results | Output parameter. A `DataFrame` containing the key columns `title`, `link`, `published` and `summary`. For more information, see [Web Search output](#web-search-output). |
+| results | Results | Output parameter. A `Table` containing the key columns `title`, `link`, `published` and `summary`. For more information, see [Web Search output](#web-search-output). |
 
 </TabItem>
 </Tabs>
 
 ## Web Search output
 
-The **Web Search** component outputs a [`DataFrame`](/data-types#dataframe) with different columns depending on the search mode.
+The **Web Search** component outputs a [`Table`](/data-types#table) with different columns depending on the search mode.
 
 <Tabs>
 <TabItem value="web" label="Web Search Mode">
 
-When using **Web** search mode, the component returns a `DataFrame` containing:
+When using **Web** search mode, the component returns a `Table` containing:
 - `title`: The title of the search result
 - `link`: The URL of the search result
 - `snippet`: A brief snippet from the search result
@@ -120,7 +120,7 @@ When using **Web** search mode, the component returns a `DataFrame` containing:
 </TabItem>
 <TabItem value="news" label="News Search Mode">
 
-When using **News** search mode, the component returns a `DataFrame` containing:
+When using **News** search mode, the component returns a `Table` containing:
 - `title`: The title of the news article
 - `link`: The URL of the news article
 - `published`: The publication date of the article
@@ -129,7 +129,7 @@ When using **News** search mode, the component returns a `DataFrame` containing:
 </TabItem>
 <TabItem value="rss" label="RSS Reader Mode">
 
-When using **RSS** search mode, the component returns a `DataFrame` containing:
+When using **RSS** search mode, the component returns a `Table` containing:
 - `title`: The title of the RSS feed item
 - `link`: The URL of the RSS feed item
 - `published`: The publication date of the item
