@@ -974,7 +974,7 @@ async def test_download_project_zip_sanitizes_flow_names(client: AsyncClient, js
 
     with zipfile.ZipFile(io.BytesIO(download_response.content), "r") as zip_file:
         file_names = zip_file.namelist()
-        assert "escaped-flow.json" in file_names
+        assert "__escaped-flow.json" in file_names
         assert all("/" not in name and ".." not in name for name in file_names)
 
 
