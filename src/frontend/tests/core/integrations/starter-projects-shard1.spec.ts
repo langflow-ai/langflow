@@ -12,9 +12,9 @@ test(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.waitForLoadState("networkidle", { timeout: 30000 });
-    await expect(
-      page.getByTestId("text_card_container").first(),
-    ).toBeVisible({ timeout: 20000 });
+    await expect(page.getByTestId("text_card_container").first()).toBeVisible({
+      timeout: 20000,
+    });
 
     const numberOfTemplates = await page
       .getByTestId("text_card_container")
@@ -52,9 +52,9 @@ test(
 
       await page.getByTestId("side_nav_options_all-templates").click();
       await page.waitForLoadState("networkidle", { timeout: 30000 });
-      await expect(
-        page.getByTestId("text_card_container").first(),
-      ).toBeVisible({ timeout: 20000 });
+      await expect(page.getByTestId("text_card_container").first()).toBeVisible(
+        { timeout: 20000 },
+      );
 
       const targetTemplate = page
         .getByTestId("text_card_container")
@@ -71,9 +71,7 @@ test(
         .getByTestId("update-all-button")
         .count();
       if (updateButtonCount > 0) {
-        console.error(
-          `Outdated component on template: ${template.name}`,
-        );
+        console.error(`Outdated component on template: ${template.name}`);
         numberOfOutdatedComponents++;
       }
     }
