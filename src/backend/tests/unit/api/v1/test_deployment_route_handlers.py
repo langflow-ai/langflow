@@ -131,6 +131,7 @@ class TestCreateDeploymentRollback:
         mock_resolve_adapter.return_value = adapter
         mapper = MagicMock()
         mapper.util_create_flow_version_ids.return_value = []
+        mapper.util_existing_deployment_resource_key_for_create.return_value = None
         mapper.resolve_deployment_create = AsyncMock(return_value=MagicMock())
         mock_get_mapper.return_value = mapper
         mock_resolve_project.return_value = uuid4()
@@ -187,6 +188,7 @@ class TestCreateDeploymentRollback:
         mock_resolve_adapter.return_value = adapter
         mapper = MagicMock()
         mapper.util_create_flow_version_ids.return_value = []
+        mapper.util_existing_deployment_resource_key_for_create.return_value = None
         mapper.resolve_deployment_create = AsyncMock(return_value=MagicMock())
         mock_get_mapper.return_value = mapper
         mock_resolve_project.return_value = uuid4()
@@ -1407,6 +1409,58 @@ class TestDeleteDeployment:
         assert session.rollback.await_count == 2
         assert session.commit.await_count == 2
 
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.delete_deployment_by_id", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_adapter_from_deployment", new_callable=AsyncMock)
+    async def test_include_provider_true_calls_adapter_delete(
+        self,
+        mock_resolve,
+        mock_delete_row,
+    ):
+        """include_provider=True (default) calls adapter.delete to remove provider resources."""
+        from langflow.api.v1.deployments import delete_deployment
+
+        dep_row = _fake_deployment_row()
+        adapter = AsyncMock()
+        mock_resolve.return_value = (dep_row, adapter)
+
+        user = _fake_user()
+        session = AsyncMock()
+
+        response = await delete_deployment(
+            deployment_id=dep_row.id, session=session, current_user=user, include_provider=True
+        )
+
+        assert response.status_code == 204
+        adapter.delete.assert_awaited_once()
+        mock_delete_row.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.delete_deployment_by_id", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_adapter_from_deployment", new_callable=AsyncMock)
+    async def test_include_provider_false_skips_adapter_delete(
+        self,
+        mock_resolve,
+        mock_delete_row,
+    ):
+        """include_provider=False skips the adapter entirely — only the DB row is removed."""
+        from langflow.api.v1.deployments import delete_deployment
+
+        dep_row = _fake_deployment_row()
+        adapter = AsyncMock()
+        mock_resolve.return_value = (dep_row, adapter)
+
+        user = _fake_user()
+        session = AsyncMock()
+
+        response = await delete_deployment(
+            deployment_id=dep_row.id, session=session, current_user=user, include_provider=False
+        )
+
+        assert response.status_code == 204
+        adapter.delete.assert_not_awaited()
+        mock_delete_row.assert_awaited_once()
+
 
 # ---------------------------------------------------------------------------
 # create_deployment: duplicate name returns 409
@@ -1496,6 +1550,7 @@ class TestCreateDeploymentProjectValidation:
         mapper = MagicMock()
         fv_ids = [uuid4(), uuid4()]
         mapper.util_create_flow_version_ids.return_value = fv_ids
+        mapper.util_existing_deployment_resource_key_for_create.return_value = None
         mock_get_mapper.return_value = mapper
         project_id = uuid4()
         mock_resolve_project.return_value = project_id
@@ -1542,6 +1597,7 @@ class TestCreateDeploymentProjectValidation:
         mock_resolve_adapter.return_value = adapter
         mapper = MagicMock()
         mapper.util_create_flow_version_ids.return_value = []
+        mapper.util_existing_deployment_resource_key_for_create.return_value = None
         mapper.resolve_deployment_create = AsyncMock(return_value=MagicMock())
         mock_get_mapper.return_value = mapper
         mock_resolve_project.return_value = uuid4()
@@ -1592,6 +1648,7 @@ class TestCreateDeploymentSchemaValidation:
         mock_resolve_adapter.return_value = adapter
         mapper = MagicMock()
         mapper.util_create_flow_version_ids.return_value = [uuid4()]
+        mapper.util_existing_deployment_resource_key_for_create.return_value = None
         mapper.resolve_deployment_create = AsyncMock(
             side_effect=HTTPException(
                 status_code=422,

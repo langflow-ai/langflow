@@ -1028,28 +1028,38 @@ async def delete_deployment(
     deployment_id: DeploymentIdPath,
     session: DbSession,
     current_user: CurrentActiveUser,
+    include_provider: bool = Query(
+        True,
+        description=(
+            "When true (default), deletes the agent and its tools/connections "
+            "on the provider, then removes the local DB row. "
+            "When false, only the local Langflow DB row is removed; "
+            "nothing is touched on the provider."
+        ),
+    ),
 ):
     deployment_row, deployment_adapter = await resolve_adapter_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
     )
-    try:
-        with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
-            await deployment_adapter.delete(
-                deployment_id=deployment_row.resource_key,
-                user_id=current_user.id,
-                db=session,
+    if include_provider:
+        try:
+            with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
+                await deployment_adapter.delete(
+                    deployment_id=deployment_row.resource_key,
+                    user_id=current_user.id,
+                    db=session,
+                )
+        except HTTPException as exc:
+            if exc.status_code != status.HTTP_404_NOT_FOUND:
+                raise
+            logger.warning(
+                "Deployment %s (resource_key=%s) already missing on provider %s during delete; deleting stale row.",
+                deployment_row.id,
+                deployment_row.resource_key,
+                deployment_row.deployment_provider_account_id,
             )
-    except HTTPException as exc:
-        if exc.status_code != status.HTTP_404_NOT_FOUND:
-            raise
-        logger.warning(
-            "Deployment %s (resource_key=%s) already missing on provider %s during delete; deleting stale row.",
-            deployment_row.id,
-            deployment_row.resource_key,
-            deployment_row.deployment_provider_account_id,
-        )
     await _delete_local_deployment_row_with_commit_retry(
         session=session,
         deployment_id=deployment_row.id,
