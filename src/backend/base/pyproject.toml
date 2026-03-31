@@ -292,7 +292,7 @@ spider = ["spider-client>=0.0.27,<1.0.0"]
 altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0"]
 
 # Toolguard Integration
-"toolguard>=0.2.12,<1.0.0",
+toolguard = ["toolguard>=0.2.10,<1.0.0"]
 
 # Additional LangChain integrations
 langchain-huggingface = ["langchain-huggingface~=1.2.0"]
