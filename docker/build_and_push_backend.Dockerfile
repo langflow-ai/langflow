@@ -42,7 +42,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 ################################
 # RUNTIME
 ################################
-FROM python:3.12.12-slim-trixie AS runtime
+FROM python:3.12.13-slim-trixie AS runtime
 
 # Install minimal runtime dependencies
 RUN apt-get update \
