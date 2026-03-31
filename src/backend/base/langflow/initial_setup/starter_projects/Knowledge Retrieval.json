@@ -259,7 +259,7 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.10.15"
+                    "version": "3.11.7"
                   },
                   {
                     "name": "fastapi",
@@ -545,7 +545,7 @@
                   },
                   {
                     "name": "cryptography",
-                    "version": "43.0.3"
+                    "version": "46.0.6"
                   },
                   {
                     "name": "langchain_chroma",
