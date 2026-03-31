@@ -641,6 +641,7 @@ export type codeAreaModalPropsType = {
   open?: boolean;
   setOpen?: (open: boolean) => void;
   componentId?: string;
+  size?: string;
 };
 
 export type chatMessagePropsType = {

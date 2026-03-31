@@ -58,6 +58,9 @@ class WxOClient:
     def get_models_raw(self, params: dict[str, Any] | None = None) -> Any:
         return self.base._get("/models", params=params)  # noqa: SLF001
 
+    def get_tools_raw(self, params: dict[str, Any] | None = None) -> Any:
+        return self.base._get("/tools", params=params)  # noqa: SLF001
+
     def post_run(self, *, data: dict[str, Any]) -> Any:
         return self.base._post("/runs", data=data)  # noqa: SLF001
 
