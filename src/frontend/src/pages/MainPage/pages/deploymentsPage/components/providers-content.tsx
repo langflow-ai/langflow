@@ -15,6 +15,7 @@ import ProvidersTable from "./providers-table";
 interface ProvidersContentProps {
   isLoading: boolean;
   providers: ProviderAccount[];
+  deletingId?: string | null;
   onAddProvider: () => void;
   onDeleteProvider?: (provider: ProviderAccount) => void;
 }
@@ -79,6 +80,7 @@ function ProvidersEmptyState({ onAddProvider }: { onAddProvider: () => void }) {
 export default function ProvidersContent({
   isLoading,
   providers,
+  deletingId,
   onAddProvider,
   onDeleteProvider,
 }: ProvidersContentProps) {
@@ -86,6 +88,10 @@ export default function ProvidersContent({
   if (providers.length === 0)
     return <ProvidersEmptyState onAddProvider={onAddProvider} />;
   return (
-    <ProvidersTable providers={providers} onDeleteProvider={onDeleteProvider} />
+    <ProvidersTable
+      providers={providers}
+      deletingId={deletingId}
+      onDeleteProvider={onDeleteProvider}
+    />
   );
 }
