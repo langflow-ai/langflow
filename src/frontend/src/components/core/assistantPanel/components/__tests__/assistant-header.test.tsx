@@ -31,14 +31,11 @@ describe("AssistantHeader", () => {
       expect(screen.getByText("Langflow Assistant")).toBeInTheDocument();
     });
 
-    it("should render New session and Close buttons", () => {
+    it("should render New session button", () => {
       render(<AssistantHeader {...defaultProps} />);
 
       expect(
         screen.getByRole("button", { name: /new session/i }),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: /close/i }),
       ).toBeInTheDocument();
     });
   });
@@ -78,14 +75,4 @@ describe("AssistantHeader", () => {
     });
   });
 
-  describe("Close button", () => {
-    it("should call onClose when clicked", async () => {
-      const onClose = jest.fn();
-      render(<AssistantHeader {...defaultProps} onClose={onClose} />);
-
-      await userEvent.click(screen.getByRole("button", { name: /close/i }));
-
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-  });
 });
