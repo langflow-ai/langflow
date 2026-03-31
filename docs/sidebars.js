@@ -266,6 +266,7 @@ module.exports = {
       label: "Components reference",
       items: [
         "Components/concepts-components",
+        "Components/langflow-assistant",
         {
           type: "category",
           label: "Core components",
