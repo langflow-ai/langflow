@@ -9,6 +9,7 @@ from fastapi import HTTPException, status
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentDataUpdate,
     DeploymentCreateResult,
+    DeploymentListLlmsResult,
     DeploymentListResult,
     DeploymentType,
     DeploymentUpdateResult,
@@ -55,6 +56,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiBindOperation,
     WatsonxApiDeploymentCreatePayload,
     WatsonxApiDeploymentListProviderData,
+    WatsonxApiDeploymentLlmListResultData,
     WatsonxApiDeploymentUpdatePayload,
     WatsonxApiDeploymentUpdateResultData,
     WatsonxApiFlowArtifactProviderData,
@@ -65,6 +67,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
     DeploymentListResponse,
+    DeploymentLlmListResponse,
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountUpdateRequest,
     DeploymentUpdateRequest,
@@ -118,6 +121,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         ),
         execution_status_result=PayloadSlot(
             adapter_model=WatsonxApiAgentExecutionStatusResultData,
+            policy=PayloadSlotPolicy.VALIDATE_ONLY,
+        ),
+        deployment_llm_list_result=PayloadSlot(
+            adapter_model=WatsonxApiDeploymentLlmListResultData,
             policy=PayloadSlotPolicy.VALIDATE_ONLY,
         ),
     )
@@ -350,6 +357,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         try:
             return slot.apply(
                 self._build_provider_payload_body(
+                    llm=api_provider_payload.llm,
                     resource_name_prefix=api_provider_payload.resource_name_prefix,
                     raw_tool_payloads=[
                         artifact.model_copy(
@@ -491,6 +499,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         try:
             provider_payload: AdapterPayload = update_slot.apply(
                 self._build_provider_payload_body(
+                    llm=api_provider_payload.llm,
                     resource_name_prefix=api_provider_payload.resource_name_prefix,
                     raw_tool_payloads=[artifact.model_dump(exclude_none=True) for artifact in raw_payloads],
                     connections=api_provider_payload.connections,
@@ -582,7 +591,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         tool_app_bindings = (
             self._to_api_tool_app_bindings(
                 adapter_tool_app_bindings=adapter_provider_result.tool_app_bindings,
-                adapter_added_snapshot_bindings=adapter_provider_result.added_snapshot_bindings,
+                adapter_snapshot_bindings=adapter_provider_result.referenced_snapshot_bindings,
             )
             if adapter_provider_result.tool_app_bindings is not None
             else None
@@ -600,6 +609,35 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             updated_at=deployment_row.updated_at,
             provider_data=provider_api_result.model_dump(mode="json", exclude_none=True),
         )
+
+    def shape_llm_list_result(self, result: DeploymentListLlmsResult) -> DeploymentLlmListResponse:
+        adapter_provider_result = self._parse_required_payload_slot(
+            slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_llm_list_result,
+            slot_name="deployment_llm_list_result",
+            raw=result.provider_result,
+            missing_payload_detail="Deployment provider llm list result is missing provider_result payload.",
+            malformed_payload_detail="Deployment provider llm list result contains invalid provider_result payload.",
+        )
+        api_slot = self.api_payloads.deployment_llm_list_result
+        if api_slot is None:
+            msg = "Watsonx deployment_llm_list_result payload slot is not configured."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+        try:  # straight pass-through today, so just dump + validate
+            api_provider_result: WatsonxApiDeploymentLlmListResultData = api_slot.parse(
+                adapter_provider_result.model_dump(exclude_none=True)
+            )
+        except AdapterPayloadMissingError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Deployment mapper llm list result payload is missing.",
+            ) from exc
+        except AdapterPayloadValidationError as exc:
+            detail = exc.format_first_error()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Deployment mapper llm list result payload is invalid: {detail}",
+            ) from exc
+        return DeploymentLlmListResponse(provider_data=api_provider_result.model_dump(mode="json", exclude_none=True))
 
     def util_create_snapshot_bindings(
         self,
@@ -824,8 +862,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 detail=missing_payload_detail,
             ) from exc
         except AdapterPayloadValidationError as exc:
-            first_error = exc.error.errors()[0] if exc.error.errors() else {}
-            detail = str(first_error.get("msg") or exc)
+            detail = exc.format_first_error()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"{malformed_payload_detail} {detail}",
@@ -849,8 +886,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 detail=f"Missing {slot_name} payload.",
             ) from exc
         except AdapterPayloadValidationError as exc:
-            first_error = exc.error.errors()[0] if exc.error.errors() else {}
-            detail = str(first_error.get("msg") or exc)
+            detail = exc.format_first_error()
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Invalid {slot_name} payload: {detail}",
@@ -903,6 +939,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 if flow_version_id not in raw_name_by_flow_version_id:
                     msg = f"bind.flow_version_id not found: [{flow_version_id}]"
                     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
+                if not operation.app_ids:
+                    # Empty app_ids means "create/attach raw tool with no connection bindings";
+                    # no provider bind operation is needed for this flow version.
+                    continue
                 provider_operations.append(
                     self._to_bind_provider_operation(
                         raw_name=raw_name_by_flow_version_id[flow_version_id],
@@ -939,12 +979,14 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     def _build_provider_payload_body(
         self,
         *,
+        llm: str,
         resource_name_prefix: str | None,
         raw_tool_payloads: list[dict[str, Any]],
         connections: Any,
         operations: list[AdapterPayload],
     ) -> dict[str, Any]:
         return {
+            "llm": llm,
             "resource_name_prefix": resource_name_prefix,
             "tools": {
                 "raw_payloads": raw_tool_payloads or None,
@@ -960,10 +1002,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         self,
         *,
         adapter_tool_app_bindings: list[Any],
-        adapter_added_snapshot_bindings: list[Any],
+        adapter_snapshot_bindings: list[Any],
     ) -> list[WatsonxApiToolAppBinding]:
         tool_id_to_flow_version: dict[str, UUID] = {}
-        for binding in adapter_added_snapshot_bindings:
+        for binding in adapter_snapshot_bindings:
             tool_id = str(binding.tool_id or "").strip()
             source_ref = str(binding.source_ref or "").strip()
             if not tool_id or not source_ref:

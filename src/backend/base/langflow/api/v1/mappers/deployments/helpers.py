@@ -642,7 +642,9 @@ async def rollback_provider_update(
     *,
     deployment_adapter: DeploymentServiceProtocol,
     deployment_mapper: BaseDeploymentMapper,
-    deployment_row: Deployment,
+    deployment_db_id: UUID,
+    deployment_resource_key: str,
+    deployment_provider_account_id: UUID,
     user_id: UUID,
     db: DbSession,
 ) -> None:
@@ -665,16 +667,16 @@ async def rollback_provider_update(
     try:
         rollback_payload = await deployment_mapper.resolve_rollback_update(
             user_id=user_id,
-            deployment_db_id=deployment_row.id,
-            deployment_resource_key=deployment_row.resource_key,
+            deployment_db_id=deployment_db_id,
+            deployment_resource_key=deployment_resource_key,
             db=db,
         )
     except Exception:  # noqa: BLE001
         logger.warning(
             "Failed to build rollback update payload for deployment %s (resource_key=%s). "
             "Provider state may diverge from DB.",
-            deployment_row.id,
-            deployment_row.resource_key,
+            deployment_db_id,
+            deployment_resource_key,
             exc_info=True,
         )
         return
@@ -683,29 +685,29 @@ async def rollback_provider_update(
         logger.warning(
             "No rollback update payload available for deployment %s (resource_key=%s). "
             "Provider state may diverge from DB.",
-            deployment_row.id,
-            deployment_row.resource_key,
+            deployment_db_id,
+            deployment_resource_key,
         )
         return
 
     try:
-        with deployment_provider_scope(deployment_row.deployment_provider_account_id):
+        with deployment_provider_scope(deployment_provider_account_id):
             await deployment_adapter.update(
-                deployment_id=deployment_row.resource_key,
+                deployment_id=deployment_resource_key,
                 payload=rollback_payload,
                 user_id=user_id,
                 db=db,
             )
         logger.info(
             "Rolled back provider update for deployment %s (resource_key=%s) after DB commit failure.",
-            deployment_row.id,
-            deployment_row.resource_key,
+            deployment_db_id,
+            deployment_resource_key,
         )
     except Exception:  # noqa: BLE001
         logger.warning(
             "Compensating update failed for deployment %s (resource_key=%s). Provider state may diverge from DB.",
-            deployment_row.id,
-            deployment_row.resource_key,
+            deployment_db_id,
+            deployment_resource_key,
             exc_info=True,
         )
 
@@ -1087,22 +1089,28 @@ def resolve_added_snapshot_bindings_for_update(
         result=result,
     )
     bindings_by_source_ref = bindings.to_source_ref_map()
-    expected_source_ref_to_flow_version_id = {
+    expected_source_ref_to_flow_version_id: dict[str, UUID] = {
         str(flow_version_id): flow_version_id for flow_version_id in added_flow_version_ids
     }
-    if len(bindings_by_source_ref) != len(expected_source_ref_to_flow_version_id):
-        msg = (
-            f"Snapshot count mismatch on update: {len(added_flow_version_ids)} "
-            f"flow versions vs {len(bindings_by_source_ref)} snapshot bindings"
-        )
+
+    unexpected_source_refs = sorted(
+        source_ref for source_ref in bindings_by_source_ref if source_ref not in expected_source_ref_to_flow_version_id
+    )
+    if unexpected_source_refs:
+        msg = f"Unexpected source_ref in update snapshot bindings: {unexpected_source_refs}"
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+
     snapshot_bindings: list[tuple[UUID, str]] = []
-    for source_ref, snapshot_id in bindings_by_source_ref.items():
-        flow_version_id = expected_source_ref_to_flow_version_id.get(source_ref)
-        if flow_version_id is None:
-            msg = f"Unexpected source_ref in update snapshot bindings: {source_ref}"
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+    missing_source_refs: list[str] = []
+    for source_ref, flow_version_id in expected_source_ref_to_flow_version_id.items():
+        snapshot_id = bindings_by_source_ref.get(source_ref)
+        if snapshot_id is None:
+            missing_source_refs.append(source_ref)
+            continue
         snapshot_bindings.append((flow_version_id, snapshot_id))
+    if missing_source_refs:
+        msg = f"Missing snapshot bindings for added flow versions on update: {missing_source_refs}"
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
     return snapshot_bindings
 
 

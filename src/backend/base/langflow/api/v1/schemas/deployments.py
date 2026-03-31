@@ -240,6 +240,15 @@ class DeploymentTypeListResponse(BaseModel):
     deployment_types: list[DeploymentType]
 
 
+class DeploymentLlmListResponse(BaseModel):
+    """Provider model catalog payload for deployment LLM listing."""
+
+    provider_data: dict[str, Any] | None = Field(
+        default=None,
+        description="Provider-owned opaque model catalog payload returned by the deployment provider.",
+    )
+
+
 class _DeploymentResponseBase(BaseModel):
     """Shared fields for deployment response schemas."""
 

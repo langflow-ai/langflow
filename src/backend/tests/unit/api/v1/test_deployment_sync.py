@@ -48,7 +48,12 @@ def _mock_provider_view(items: list) -> SimpleNamespace:
 
 
 def _mock_deployment_row(resource_key: str, deployment_type: str | None = None) -> SimpleNamespace:
-    return SimpleNamespace(id=uuid4(), resource_key=resource_key, deployment_type=deployment_type)
+    return SimpleNamespace(
+        id=uuid4(),
+        resource_key=resource_key,
+        deployment_type=deployment_type,
+        deployment_provider_account_id=uuid4(),
+    )
 
 
 class _AsyncNoopSavepoint:
@@ -608,7 +613,7 @@ class TestUpdateSnapshotMapping:
     def test_resolve_added_snapshot_bindings_for_update_rejects_unexpected_source_ref(self):
         from langflow.api.v1.mappers.deployments.helpers import resolve_added_snapshot_bindings_for_update
 
-        with pytest.raises(HTTPException, match="Unexpected source_ref"):
+        with pytest.raises(HTTPException, match="Unexpected source_ref in update snapshot bindings"):
             resolve_added_snapshot_bindings_for_update(
                 deployment_mapper=_FakeMapper(),
                 added_flow_version_ids=[uuid4()],
@@ -616,8 +621,23 @@ class TestUpdateSnapshotMapping:
                     id="provider-id",
                     provider_result={
                         "added_snapshot_bindings": [
-                            {"source_ref": "other", "snapshot_id": "snap-1"},
+                            {"source_ref": "other", "snapshot_id": "snap-extra"},
                         ]
+                    },
+                ),
+            )
+
+    def test_resolve_added_snapshot_bindings_for_update_rejects_missing_expected_source_ref(self):
+        from langflow.api.v1.mappers.deployments.helpers import resolve_added_snapshot_bindings_for_update
+
+        with pytest.raises(HTTPException, match="Missing snapshot bindings for added flow versions"):
+            resolve_added_snapshot_bindings_for_update(
+                deployment_mapper=_FakeMapper(),
+                added_flow_version_ids=[uuid4()],
+                result=DeploymentUpdateResult(
+                    id="provider-id",
+                    provider_result={
+                        "added_snapshot_bindings": [],
                     },
                 ),
             )
@@ -1044,7 +1064,9 @@ class TestRollbackProviderUpdate:
         await rollback_provider_update(
             deployment_adapter=adapter,
             deployment_mapper=mapper,
-            deployment_row=dep_row,
+            deployment_db_id=dep_row.id,
+            deployment_resource_key=dep_row.resource_key,
+            deployment_provider_account_id=dep_row.deployment_provider_account_id,
             user_id=uuid4(),
             db=AsyncMock(),
         )
@@ -1066,7 +1088,9 @@ class TestRollbackProviderUpdate:
         await rollback_provider_update(
             deployment_adapter=adapter,
             deployment_mapper=mapper,
-            deployment_row=dep_row,
+            deployment_db_id=dep_row.id,
+            deployment_resource_key=dep_row.resource_key,
+            deployment_provider_account_id=dep_row.deployment_provider_account_id,
             user_id=uuid4(),
             db=AsyncMock(),
         )
@@ -1090,7 +1114,9 @@ class TestRollbackProviderUpdate:
         await rollback_provider_update(
             deployment_adapter=adapter,
             deployment_mapper=mapper,
-            deployment_row=dep_row,
+            deployment_db_id=dep_row.id,
+            deployment_resource_key=dep_row.resource_key,
+            deployment_provider_account_id=dep_row.deployment_provider_account_id,
             user_id=uuid4(),
             db=AsyncMock(),
         )
@@ -1109,7 +1135,9 @@ class TestRollbackProviderUpdate:
         await rollback_provider_update(
             deployment_adapter=adapter,
             deployment_mapper=mapper,
-            deployment_row=dep_row,
+            deployment_db_id=dep_row.id,
+            deployment_resource_key=dep_row.resource_key,
+            deployment_provider_account_id=dep_row.deployment_provider_account_id,
             user_id=uuid4(),
             db=AsyncMock(),
         )

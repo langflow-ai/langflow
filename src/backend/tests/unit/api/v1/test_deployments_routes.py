@@ -39,6 +39,10 @@ def test_types_path_matches_types_endpoint(deployment_routes: list[APIRoute]) ->
     assert _resolve_endpoint_name(deployment_routes, path="/deployments/types") == "list_deployment_types"
 
 
+def test_llms_path_matches_llms_endpoint(deployment_routes: list[APIRoute]) -> None:
+    assert _resolve_endpoint_name(deployment_routes, path="/deployments/llms") == "list_deployment_llms"
+
+
 def test_snapshots_path_matches_snapshots_endpoint(deployment_routes: list[APIRoute]) -> None:
     assert _resolve_endpoint_name(deployment_routes, path="/deployments/snapshots") == "list_deployment_snapshots"
 

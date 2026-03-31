@@ -18,7 +18,6 @@ from lfx.services.adapters.deployment.exceptions import (
 from lfx.services.adapters.deployment.schema import _normalize_and_validate_id
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
-    DEFAULT_WXO_AGENT_LLM,
     WXO_SANITIZE_RE,
     WXO_TRANSLATE,
     ErrorPrefix,
@@ -179,6 +178,7 @@ def build_agent_payload(
     *,
     data: BaseDeploymentData,
     tool_ids: Sequence[str],
+    llm: str,
 ) -> dict[str, Any]:
     if data.provider_spec is None:
         msg = "Deployment data must include provider_spec with a non-empty name and display_name."
@@ -189,6 +189,7 @@ def build_agent_payload(
         deployment_name=str(data.name),
         description=str(data.description or ""),
         tool_ids=tool_ids,
+        llm=llm,
     )
 
 
@@ -199,6 +200,7 @@ def build_agent_payload_from_values(
     deployment_name: str,
     description: str,
     tool_ids: Sequence[str],
+    llm: str,
 ) -> dict[str, Any]:
     return {
         "name": agent_name,
@@ -206,9 +208,7 @@ def build_agent_payload_from_values(
         "description": str(description).strip() or f"Langflow deployment {deployment_name}",
         "tools": list(tool_ids),
         "style": "default",
-        # TODO: make configurable; the llm field is required by the wxO api
-        # but retrieving available llms requires an extra api request.
-        "llm": DEFAULT_WXO_AGENT_LLM,
+        "llm": str(llm).strip(),
     }
 
 

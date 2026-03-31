@@ -35,6 +35,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentDeleteResult,
     DeploymentDuplicateResult,
     DeploymentGetResult,
+    DeploymentListLlmsResult,
     DeploymentListParams,
     DeploymentListResult,
     DeploymentListTypesResult,
@@ -90,6 +91,8 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     PAYLOAD_SCHEMAS,
     WatsonxDeploymentCreatePayload,
     WatsonxDeploymentCreateResultData,
+    WatsonxDeploymentLlmListResultData,
+    WatsonxDeploymentUpdatePayload,
     WatsonxDeploymentUpdateResultData,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
@@ -152,11 +155,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         try:
             return slot.parse(provider_data)
         except (AdapterPayloadMissingError, AdapterPayloadValidationError) as exc:
-            if isinstance(exc, AdapterPayloadValidationError):
-                first_error = exc.error.errors()[0] if exc.error.errors() else {}
-                msg = str(first_error.get("msg") or exc)
-            else:
-                msg = str(exc)
+            msg = exc.format_first_error() if isinstance(exc, AdapterPayloadValidationError) else str(exc)
             raise InvalidContentError(message=msg) from None
 
     async def create(
@@ -263,6 +262,33 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     ) -> DeploymentListTypesResult:
         """List deployment types supported by the provider."""
         return DeploymentListTypesResult(deployment_types=list(SUPPORTED_ADAPTER_DEPLOYMENT_TYPES))
+
+    async def list_llms(
+        self,
+        *,
+        user_id: IdLike,
+        db: AsyncSession,
+    ) -> DeploymentListLlmsResult:
+        """List provider-available LLM model names."""
+        client_manager = await self._get_provider_clients(user_id=user_id, db=db)
+        try:
+            raw_models = await asyncio.to_thread(client_manager.get_models_raw)
+            parsed_models: WatsonxDeploymentLlmListResultData = self._parse_provider_payload(
+                slot=self.payload_schemas.deployment_llm_list_result,
+                slot_name="deployment_llm_list_result",
+                provider_data={"models": raw_models},
+                error_prefix=ErrorPrefix.LIST_LLMS,
+            )
+            return DeploymentListLlmsResult(
+                provider_result=parsed_models.model_dump(exclude_none=True),
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise_as_deployment_error(
+                exc,
+                error_prefix=ErrorPrefix.LIST_LLMS,
+                log_msg="Unexpected error while listing wxO deployment LLMs",
+                pass_through=(InvalidContentError),
+            )
 
     async def list(
         self,
@@ -377,11 +403,22 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 msg = f"Deployment '{agent_id}' not found."
                 raise DeploymentNotFoundError(msg)
 
-            # base agent payload to build for final update call
-            update_payload: dict[str, Any] = build_update_payload_from_spec(payload.spec)
-
             validate_provider_update_request_sections(payload)
-            if payload.provider_data is None:
+            provider_update: WatsonxDeploymentUpdatePayload | None = None
+            if payload.provider_data is not None:
+                provider_update = self._parse_provider_payload(
+                    slot=self.payload_schemas.deployment_update,
+                    slot_name="deployment_update",
+                    provider_data=payload.provider_data,
+                    error_prefix=ErrorPrefix.UPDATE,
+                )
+            # base agent payload to build for final update call
+            update_payload: dict[str, Any] = build_update_payload_from_spec(
+                payload.spec,
+                llm=provider_update.llm if provider_update is not None else None,
+            )
+
+            if payload.provider_data is None or not (provider_update is not None and provider_update.has_tool_work):
                 if not update_payload:
                     msg = "provider_data is required when update operations do not include spec changes."
                     raise InvalidContentError(message=msg)
@@ -391,14 +428,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     agent_id,
                     update_payload,
                 )
-                return DeploymentUpdateResult(id=deployment_id)
-
-            provider_update = self._parse_provider_payload(
-                slot=self.payload_schemas.deployment_update,
-                slot_name="deployment_update",
-                provider_data=payload.provider_data,
-                error_prefix=ErrorPrefix.UPDATE,
-            )
+                return DeploymentUpdateResult[WatsonxDeploymentUpdateResultData](
+                    id=deployment_id, provider_result=WatsonxDeploymentUpdateResultData()
+                )
 
             provider_plan = build_provider_update_plan(
                 agent=agent,
@@ -420,8 +452,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 provider_result=self.payload_schemas.deployment_update_result.apply(
                     WatsonxDeploymentUpdateResultData(
                         created_app_ids=apply_result.created_app_ids,
-                        created_snapshot_ids=apply_result.added_snapshot_ids,
+                        created_snapshot_ids=apply_result.created_snapshot_ids,
+                        added_snapshot_ids=apply_result.added_snapshot_ids,
+                        created_snapshot_bindings=apply_result.created_snapshot_bindings,
                         added_snapshot_bindings=apply_result.added_snapshot_bindings,
+                        removed_snapshot_bindings=apply_result.removed_snapshot_bindings,
+                        referenced_snapshot_bindings=apply_result.referenced_snapshot_bindings,
                     )
                 ),
             )

@@ -17,6 +17,7 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 from langflow.api.v1.schemas.deployments import (
+    DeploymentLlmListResponse,
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountUpdateRequest,
     DeploymentUpdateRequest,
@@ -968,7 +969,11 @@ class TestUpdateDeploymentRollback:
             )
 
         mock_rollback.assert_awaited_once()
-        assert mock_rollback.call_args.kwargs["deployment_row"] is dep_row
+        assert mock_rollback.call_args.kwargs["deployment_db_id"] == dep_row.id
+        assert mock_rollback.call_args.kwargs["deployment_resource_key"] == dep_row.resource_key
+        assert (
+            mock_rollback.call_args.kwargs["deployment_provider_account_id"] == dep_row.deployment_provider_account_id
+        )
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.rollback_provider_update", new_callable=AsyncMock)
@@ -1714,6 +1719,85 @@ class TestUpdateDeploymentProjectValidation:
         mock_validate_fv.assert_awaited_once()
         assert mock_validate_fv.call_args.kwargs["project_id"] == dep_row.project_id
         adapter.update.assert_not_awaited()
+
+
+# ---------------------------------------------------------------------------
+# list_deployment_llms
+# ---------------------------------------------------------------------------
+
+
+class TestListDeploymentLlms:
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_list_llms_returns_shaped_response(
+        self,
+        mock_get_provider_account,
+        mock_get_mapper,
+        mock_resolve_adapter,
+    ):
+        from langflow.api.v1.deployments import list_deployment_llms
+
+        provider_account = _fake_provider_account()
+        mock_get_provider_account.return_value = provider_account
+
+        adapter = AsyncMock()
+        llm_result = SimpleNamespace(
+            provider_result={"models": [{"model_name": "model-a"}, {"model_name": "model-b"}]},
+        )
+        adapter.list_llms.return_value = llm_result
+        mock_resolve_adapter.return_value = adapter
+
+        mapper = MagicMock()
+        mapper.shape_llm_list_result.return_value = DeploymentLlmListResponse(
+            provider_data={"models": [{"model_name": "model-a"}, {"model_name": "model-b"}]}
+        )
+        mock_get_mapper.return_value = mapper
+
+        response = await list_deployment_llms(
+            provider_id=provider_account.id,
+            session=AsyncMock(),
+            current_user=_fake_user(),
+        )
+
+        assert response == DeploymentLlmListResponse(
+            provider_data={"models": [{"model_name": "model-a"}, {"model_name": "model-b"}]}
+        )
+        adapter.list_llms.assert_awaited_once()
+        mapper.shape_llm_list_result.assert_called_once_with(llm_result)
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_list_llms_maps_adapter_error(
+        self,
+        mock_get_provider_account,
+        mock_get_mapper,
+        mock_resolve_adapter,
+    ):
+        from langflow.api.v1.deployments import list_deployment_llms
+
+        provider_account = _fake_provider_account()
+        mock_get_provider_account.return_value = provider_account
+
+        adapter = AsyncMock()
+        adapter.list_llms.side_effect = ServiceUnavailableError(message="provider down")
+        mock_resolve_adapter.return_value = adapter
+
+        mapper = MagicMock()
+        mock_get_mapper.return_value = mapper
+
+        with pytest.raises(HTTPException) as exc_info:
+            await list_deployment_llms(
+                provider_id=provider_account.id,
+                session=AsyncMock(),
+                current_user=_fake_user(),
+            )
+
+        assert exc_info.value.status_code == 503
+        mapper.shape_llm_list_result.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

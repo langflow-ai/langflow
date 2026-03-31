@@ -21,6 +21,13 @@ WatsonxApiResourceNamePrefix = Annotated[
         min_length=1,
     ),
 ]
+WatsonxApiLlmName = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+    ),
+]
 
 
 class WatsonxApiFlowArtifactProviderData(CreateFlowArtifactProviderData):
@@ -36,7 +43,12 @@ class WatsonxApiBindOperation(BaseModel):
 
     op: Literal["bind"]
     flow_version_id: UUID
-    app_ids: list[str] = Field(min_length=1)
+    app_ids: list[str] = Field(
+        description=(
+            "Connection app ids to bind. Use an empty list to create/attach "
+            "the flow version as a tool with no connection bindings."
+        ),
+    )
 
 
 class WatsonxApiUnbindOperation(BaseModel):
@@ -58,6 +70,9 @@ class WatsonxApiRemoveToolOperation(BaseModel):
     flow_version_id: UUID
 
 
+# TODO(wxo-followup): Optionally expose adapter-level `attach_tool` semantics at
+# the API layer if/when we need existing-tool attach-by-id outside flow-version refs.
+# Current API behavior is intentional and sufficient for today.
 WatsonxApiUpdateOperation = Annotated[
     WatsonxApiBindOperation | WatsonxApiUnbindOperation | WatsonxApiRemoveToolOperation,
     Field(discriminator="op"),
@@ -140,13 +155,19 @@ class WatsonxApiDeploymentPayloadBase(BaseModel):
 
 
 class WatsonxApiDeploymentUpdatePayload(WatsonxApiDeploymentPayloadBase):
-    """Watsonx provider_data API contract for deployment update operations."""
+    """Watsonx provider_data API contract for deployment update operations.
 
+    ``operations`` defaults to an empty list so that LLM-only updates
+    (changing the model without any tool/connection changes) can be
+    expressed without providing operations.
+    """
+
+    llm: WatsonxApiLlmName = Field(description="Provider model identifier to use for the deployment agent.")
     resource_name_prefix: WatsonxApiResourceNamePrefix | None = Field(
         default=None,
         description=("Provider-specific naming/deconfliction hint applied only when creating resources."),
     )
-    operations: list[WatsonxApiUpdateOperation] = Field(min_length=1)
+    operations: list[WatsonxApiUpdateOperation] = Field(default_factory=list)
 
     @field_validator("resource_name_prefix")
     @classmethod
@@ -156,10 +177,20 @@ class WatsonxApiDeploymentUpdatePayload(WatsonxApiDeploymentPayloadBase):
         validate_resource_name_prefix_for_provider(value)
         return value
 
+    @model_validator(mode="after")
+    def validate_prefix_required_for_bind_operations(self) -> WatsonxApiDeploymentUpdatePayload:
+        if any(isinstance(operation, WatsonxApiBindOperation) for operation in self.operations) and (
+            self.resource_name_prefix is None
+        ):
+            msg = "resource_name_prefix is required when update operations include bind."
+            raise ValueError(msg)
+        return self
+
 
 class WatsonxApiDeploymentCreatePayload(WatsonxApiDeploymentPayloadBase):
     """Watsonx provider_data API contract for deployment create operations."""
 
+    llm: WatsonxApiLlmName = Field(description="Provider model identifier to use for the deployment agent.")
     resource_name_prefix: WatsonxApiResourceNamePrefix | None = Field(
         default=None,
         description=(
@@ -249,6 +280,31 @@ class WatsonxApiDeploymentUpdateResultData(BaseModel):
         """Return API-safe provider_data subset for deployment update responses."""
         payload = self.model_dump(mode="json", include={"created_app_ids", "tool_app_bindings"}, exclude_none=True)
         return payload or None
+
+
+class WatsonxApiModelOut(BaseModel):
+    """Minimal API-boundary model metadata needed for deployment LLM listing."""
+
+    model_config = {"extra": "ignore"}
+
+    model_name: str = Field(min_length=1)
+
+    @field_validator("model_name")
+    @classmethod
+    def normalize_model_name(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            msg = "model_name must not be empty."
+            raise ValueError(msg)
+        return normalized
+
+
+class WatsonxApiDeploymentLlmListResultData(BaseModel):
+    """API-boundary payload used by mapper LLM-list response shaping."""
+
+    model_config = {"extra": "forbid"}
+
+    models: list[WatsonxApiModelOut] = Field(default_factory=list)
 
 
 class WatsonxApiProviderDeploymentListItem(BaseModel):

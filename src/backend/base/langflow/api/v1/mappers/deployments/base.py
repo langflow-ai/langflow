@@ -38,6 +38,7 @@ from lfx.services.adapters.deployment.schema import (
     ConfigListParams,
     ConfigListResult,
     DeploymentCreateResult,
+    DeploymentListLlmsResult,
     DeploymentListResult,
     DeploymentType,
     DeploymentUpdateResult,
@@ -63,6 +64,7 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
     DeploymentListItem,
     DeploymentListResponse,
+    DeploymentLlmListResponse,
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountGetResponse,
     DeploymentProviderAccountUpdateRequest,
@@ -589,6 +591,11 @@ class BaseDeploymentMapper:
             total=len(entries),
             provider_data={"entries": entries},
         )
+
+    def shape_llm_list_result(self, result: DeploymentListLlmsResult) -> DeploymentLlmListResponse:
+        """Shape adapter LLM listing into the API response model."""
+        provider_data = result.provider_result if isinstance(result.provider_result, dict) else None
+        return DeploymentLlmListResponse(provider_data=provider_data)
 
     def shape_config_list_result(
         self,

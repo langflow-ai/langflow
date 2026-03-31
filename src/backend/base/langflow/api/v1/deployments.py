@@ -55,6 +55,7 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentDuplicateResponse,
     DeploymentGetResponse,
     DeploymentListResponse,
+    DeploymentLlmListResponse,
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountGetResponse,
     DeploymentProviderAccountListResponse,
@@ -647,6 +648,27 @@ async def list_deployment_types(
     return DeploymentTypeListResponse(deployment_types=deployment_types_result.deployment_types)
 
 
+@router.get("/llms", response_model=DeploymentLlmListResponse)
+async def list_deployment_llms(
+    provider_id: DeploymentProviderAccountIdQuery,
+    session: DbSessionReadOnly,
+    current_user: CurrentActiveUser,
+):
+    provider_account = await get_owned_provider_account_or_404(
+        provider_id=provider_id,
+        user_id=current_user.id,
+        db=session,
+    )
+    deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
+    deployment_mapper = get_deployment_mapper(provider_account.provider_key)
+    with handle_adapter_errors(), deployment_provider_scope(provider_id):
+        llm_list_result = await deployment_adapter.list_llms(
+            user_id=current_user.id,
+            db=session,
+        )
+    return deployment_mapper.shape_llm_list_result(llm_list_result)
+
+
 @router.post("/executions", response_model=ExecutionCreateResponse, status_code=status.HTTP_201_CREATED)
 async def create_deployment_execution(
     session: DbSession,
@@ -960,9 +982,12 @@ async def update_deployment(
         user_id=current_user.id,
         db=session,
     )
+    deployment_row_id = deployment_row.id
+    deployment_resource_key = deployment_row.resource_key
+    deployment_provider_account_id = deployment_row.deployment_provider_account_id
     adapter_payload = await deployment_mapper.resolve_deployment_update(
         user_id=current_user.id,
-        deployment_db_id=deployment_row.id,
+        deployment_db_id=deployment_row_id,
         db=session,
         payload=payload,
     )
@@ -976,9 +1001,9 @@ async def update_deployment(
         project_id=deployment_row.project_id,
         db=session,
     )
-    with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
+    with handle_adapter_errors(), deployment_provider_scope(deployment_provider_account_id):
         update_result: DeploymentUpdateResult = await deployment_adapter.update(
-            deployment_id=deployment_row.resource_key,
+            deployment_id=deployment_resource_key,
             payload=adapter_payload,
             user_id=current_user.id,
             db=session,
@@ -991,7 +1016,7 @@ async def update_deployment(
         )
         await apply_flow_version_patch_attachments(
             user_id=current_user.id,
-            deployment_row_id=deployment_row.id,
+            deployment_row_id=deployment_row_id,
             added_snapshot_bindings=added_snapshot_bindings,
             remove_flow_version_ids=remove_flow_version_ids,
             db=session,
@@ -1024,7 +1049,9 @@ async def update_deployment(
         await rollback_provider_update(
             deployment_adapter=deployment_adapter,
             deployment_mapper=deployment_mapper,
-            deployment_row=deployment_row,
+            deployment_db_id=deployment_row_id,
+            deployment_resource_key=deployment_resource_key,
+            deployment_provider_account_id=deployment_provider_account_id,
             user_id=current_user.id,
             db=session,
         )
