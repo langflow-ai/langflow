@@ -39,6 +39,10 @@ def test_types_path_matches_types_endpoint(deployment_routes: list[APIRoute]) ->
     assert _resolve_endpoint_name(deployment_routes, path="/deployments/types") == "list_deployment_types"
 
 
+def test_snapshots_path_matches_snapshots_endpoint(deployment_routes: list[APIRoute]) -> None:
+    assert _resolve_endpoint_name(deployment_routes, path="/deployments/snapshots") == "list_deployment_snapshots"
+
+
 def test_deployment_status_path_matches_status_endpoint(deployment_routes: list[APIRoute]) -> None:
     deployment_id = uuid4()
     assert (

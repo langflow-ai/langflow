@@ -478,7 +478,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         deployment_type: DeploymentType | None = None,  # noqa: ARG002
         db: AsyncSession,
     ) -> DeploymentDeleteResult:
-        """Delete only the deployment agent (keep tools/configs reusable)."""
+        """Delete the deployment agent from the provider.
+
+        Only the agent itself is removed. Tools and connections are NOT
+        deleted — direct deletion of tools/connections is not supported
+        by this adapter.
+        """
         logger.info("Deleting wxO deployment deployment_id=%s", deployment_id)
         agent_id = _normalize_and_validate_id(str(deployment_id), field_name="deployment_id")
         clients = await self._get_provider_clients(user_id=user_id, db=db)
@@ -619,9 +624,44 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         db: AsyncSession,
     ) -> ConfigListResult:
         """List configs visible to this adapter."""
-        agent_id = _require_single_deployment_id(params, resource_label="config")
         clients = await self._get_provider_clients(user_id=user_id, db=db)
+        if not params or not params.deployment_ids:
+            try:
+                raw_connections = await asyncio.to_thread(clients.connections.list)
+            except Exception as exc:  # noqa: BLE001
+                raise_as_deployment_error(
+                    exc,
+                    error_prefix=ErrorPrefix.LIST_CONFIGS,
+                    log_msg="Unexpected error while listing wxO tenant configs",
+                )
 
+            configs: list[ConfigListItem] = []
+            seen_ids: set[str] = set()
+            for connection in raw_connections or []:
+                if not isinstance(connection, dict):
+                    continue
+                config_id = str(connection.get("app_id") or connection.get("id") or "").strip()
+                if not config_id or config_id in seen_ids:
+                    continue
+                seen_ids.add(config_id)
+                config_name = (
+                    str(connection.get("name") or connection.get("display_name") or config_id).strip() or config_id
+                )
+                configs.append(
+                    ConfigListItem(
+                        id=config_id,
+                        name=config_name,
+                        created_at=connection.get("created_at"),
+                        updated_at=connection.get("updated_at"),
+                        provider_data=connection,
+                    )
+                )
+            return ConfigListResult(
+                configs=configs,
+                provider_result={"scope": "tenant"},
+            )
+
+        agent_id = _require_single_deployment_id(params, resource_label="config")
         try:
             agent = await asyncio.to_thread(clients.agent.get_draft_by_id, agent_id)
         except Exception as exc:  # noqa: BLE001
@@ -678,12 +718,14 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     ) -> SnapshotListResult:
         """List snapshots visible to this adapter.
 
-        Supports two modes:
+        Supports three modes:
         - **deployment-scoped**: requires exactly one ``deployment_id`` in params;
           returns tools bound to that agent.
         - **snapshot-ids-only**: when ``snapshot_ids`` is provided and
           ``deployment_ids`` is empty/None, fetches tools directly by ID to
           verify which ones still exist in the provider.
+        - **tenant-scoped**: when neither deployment_ids nor snapshot_ids are
+          provided, returns all draft tools visible in the provider tenant.
         """
         has_deployment_ids = params and params.deployment_ids
         has_snapshot_ids = params and params.snapshot_ids
@@ -698,6 +740,28 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         if has_snapshot_ids and not has_deployment_ids:
             return await verify_tools_by_ids(clients, params.snapshot_ids)  # type: ignore[union-attr]
+        if not has_deployment_ids:
+            try:
+                raw_tools = await asyncio.to_thread(clients.get_tools_raw)
+            except Exception as exc:  # noqa: BLE001
+                raise_as_deployment_error(
+                    exc,
+                    error_prefix=ErrorPrefix.LIST,
+                    log_msg="Unexpected error while listing wxO tenant snapshots",
+                )
+            snapshots = [
+                SnapshotItem(
+                    id=tool["id"],
+                    name=tool.get("name") or tool["id"],
+                    provider_data=tool,
+                )
+                for tool in (raw_tools or [])
+                if isinstance(tool, dict) and tool.get("id")
+            ]
+            return SnapshotListResult(
+                snapshots=snapshots,
+                provider_result={"scope": "tenant"},
+            )
 
         agent_id = _require_single_deployment_id(params, resource_label="snapshot")
 

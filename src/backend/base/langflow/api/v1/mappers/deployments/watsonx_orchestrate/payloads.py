@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
+from lfx.services.adapters.deployment.schema import DeploymentType
 from pydantic import BaseModel, Field, StringConstraints, field_validator, model_validator
 
 from langflow.api.v1.mappers.deployments.contracts import CreateFlowArtifactProviderData
@@ -158,19 +160,52 @@ class WatsonxApiDeploymentUpdatePayload(WatsonxApiDeploymentPayloadBase):
 class WatsonxApiDeploymentCreatePayload(WatsonxApiDeploymentPayloadBase):
     """Watsonx provider_data API contract for deployment create operations."""
 
-    resource_name_prefix: WatsonxApiResourceNamePrefix = Field(
+    resource_name_prefix: WatsonxApiResourceNamePrefix | None = Field(
+        default=None,
         description=(
             "Provider-specific naming/deconfliction hint applied only when creating resources: "
             "applied to names of created tools and deployments."
         ),
     )
-    operations: list[WatsonxApiBindOperation] = Field(min_length=1)
+    operations: list[WatsonxApiBindOperation] = Field(default_factory=list)
+    existing_agent_id: str | None = Field(
+        default=None,
+        description=(
+            "Provider-owned agent id to update/reuse instead of creating a new agent. "
+            "When provided, operations are optional and may be empty for DB-only onboarding."
+        ),
+    )
 
     @field_validator("resource_name_prefix")
     @classmethod
-    def validate_resource_name_prefix(cls, value: str) -> str:
+    def validate_resource_name_prefix(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
         validate_resource_name_prefix_for_provider(value)
         return value
+
+    @field_validator("existing_agent_id")
+    @classmethod
+    def validate_existing_agent_id(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        if not normalized:
+            msg = "existing_agent_id must not be empty or whitespace."
+            raise ValueError(msg)
+        return normalized
+
+    @model_validator(mode="after")
+    def validate_create_operation_requirements(self) -> WatsonxApiDeploymentCreatePayload:
+        has_operations = bool(self.operations)
+        has_raw_connections = bool(self.connections.raw_payloads)
+        if (has_operations or has_raw_connections) and self.resource_name_prefix is None:
+            msg = "resource_name_prefix is required when operations or connections.raw_payloads are provided."
+            raise ValueError(msg)
+        if self.existing_agent_id is None and not has_operations:
+            msg = "operations must include at least one bind operation for new agent creation."
+            raise ValueError(msg)
+        return self
 
 
 class WatsonxApiToolAppBinding(BaseModel):
@@ -214,6 +249,24 @@ class WatsonxApiDeploymentUpdateResultData(BaseModel):
         """Return API-safe provider_data subset for deployment update responses."""
         payload = self.model_dump(mode="json", include={"created_app_ids", "tool_app_bindings"}, exclude_none=True)
         return payload or None
+
+
+class WatsonxApiProviderDeploymentListItem(BaseModel):
+    """Provider-only deployment item returned in list provider_data."""
+
+    resource_key: str = Field(min_length=1, description="Provider-owned deployment identifier.")
+    name: str
+    type: DeploymentType
+    description: str | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    provider_data: dict[str, Any] | None = None
+
+
+class WatsonxApiDeploymentListProviderData(BaseModel):
+    """Provider-level metadata attached to DeploymentListResponse.provider_data."""
+
+    entries: list[WatsonxApiProviderDeploymentListItem] = Field(default_factory=list)
 
 
 class _WatsonxApiAgentExecutionResultBase(BaseModel):

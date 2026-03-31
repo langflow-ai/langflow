@@ -20,7 +20,12 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentProviderAccountUpdateRequest,
     DeploymentUpdateRequest,
 )
-from lfx.services.adapters.deployment.schema import DeploymentCreateResult, DeploymentType, DeploymentUpdateResult
+from lfx.services.adapters.deployment.schema import (
+    DeploymentCreateResult,
+    DeploymentType,
+    DeploymentUpdateResult,
+)
+from lfx.services.adapters.payload import AdapterPayloadValidationError, PayloadSlot
 from lfx.services.adapters.schema import AdapterType
 
 try:
@@ -33,6 +38,9 @@ try:
     from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
         WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
         WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH,
+    )
+    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
+        WatsonxDeploymentUpdateResultData,
     )
 except ModuleNotFoundError:
     pytest.skip(
@@ -65,6 +73,25 @@ def test_watsonx_mapper_is_registered() -> None:
     assert mapper.api_payloads.deployment_update_result is not None
 
 
+def test_watsonx_mapper_provider_list_entry_rejects_non_dict_provider_data() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    item = SimpleNamespace(
+        id="agent-1",
+        name="Agent 1",
+        type=DeploymentType.AGENT,
+        description=None,
+        created_at=None,
+        updated_at=None,
+        provider_data="bad-payload-type",
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        mapper._shape_provider_deployment_list_entry(item)
+
+    assert exc_info.value.status_code == 500
+    assert exc_info.value.detail == "Invalid deployment list item provider_data payload: expected object or null."
+
+
 def test_watsonx_api_payload_accepts_flow_version_create_bind_contract() -> None:
     flow_version_id = uuid4()
     payload = WatsonxApiDeploymentCreatePayload.model_validate(
@@ -82,6 +109,56 @@ def test_watsonx_api_payload_accepts_flow_version_create_bind_contract() -> None
     )
     assert payload.operations[0].op == "bind"
     assert payload.resource_name_prefix == "lf_abc_"
+
+
+def test_watsonx_api_payload_requires_resource_name_prefix_for_existing_agent_operations() -> None:
+    flow_version_id = uuid4()
+    with pytest.raises(
+        ValueError,
+        match=r"resource_name_prefix is required when operations or connections\.raw_payloads are provided",
+    ):
+        WatsonxApiDeploymentCreatePayload.model_validate(
+            {
+                "existing_agent_id": "21b2b5a4-ef72-4697-8731-132163669a46",
+                "connections": {"existing_app_ids": ["app-one"]},
+                "operations": [
+                    {
+                        "op": "bind",
+                        "flow_version_id": str(flow_version_id),
+                        "app_ids": ["app-one"],
+                    }
+                ],
+            }
+        )
+
+
+def test_watsonx_api_payload_requires_resource_name_prefix_for_raw_connection_payloads() -> None:
+    flow_version_id = uuid4()
+    with pytest.raises(
+        ValueError,
+        match=r"resource_name_prefix is required when operations or connections\.raw_payloads are provided",
+    ):
+        WatsonxApiDeploymentCreatePayload.model_validate(
+            {
+                "existing_agent_id": "21b2b5a4-ef72-4697-8731-132163669a46",
+                "connections": {
+                    "raw_payloads": [
+                        {
+                            "app_id": "app-one",
+                            "environment_variables": {},
+                            "provider_config": {},
+                        }
+                    ]
+                },
+                "operations": [
+                    {
+                        "op": "bind",
+                        "flow_version_id": str(flow_version_id),
+                        "app_ids": ["app-one"],
+                    }
+                ],
+            }
+        )
 
 
 def test_watsonx_api_payload_strips_resource_name_prefix_whitespace() -> None:
@@ -213,6 +290,38 @@ def test_watsonx_api_payload_accepts_flow_version_unbind_and_remove_contract() -
     assert payload.operations[1].op == "remove_tool"
 
 
+def test_watsonx_mapper_create_result_from_existing_update_normalizes_slot_payload() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    flow_version_id = uuid4()
+    provider_result = WatsonxDeploymentUpdateResultData.model_validate(
+        {
+            "created_app_ids": ["app-one"],
+            "created_snapshot_ids": ["tool-1"],
+            "added_snapshot_bindings": [
+                {
+                    "source_ref": str(flow_version_id),
+                    "tool_id": "tool-1",
+                    "created": True,
+                }
+            ],
+            "tool_app_bindings": [{"tool_id": "tool-1", "app_ids": ["app-one"]}],
+        }
+    )
+    update_result = SimpleNamespace(provider_result=provider_result)
+
+    create_result = mapper.util_create_result_from_existing_update(
+        existing_resource_key="existing-agent-1",
+        result=update_result,
+    )
+
+    assert create_result.id == "existing-agent-1"
+    assert create_result.provider_result == {
+        "app_ids": ["app-one"],
+        "tools_with_refs": [{"source_ref": str(flow_version_id), "tool_id": "tool-1"}],
+        "tool_app_bindings": [{"tool_id": "tool-1", "app_ids": ["app-one"]}],
+    }
+
+
 def test_watsonx_mapper_resolve_verify_credentials_for_update_uses_decrypted_stored_key(monkeypatch) -> None:
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 
@@ -340,6 +449,102 @@ async def test_watsonx_mapper_translates_create_bind_into_raw_tool_payload() -> 
         "source_ref": str(flow_version_id),
     }
     assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow A"
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_translates_existing_create_bind_into_update_payload() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    flow_version_id = uuid4()
+    flow_id = uuid4()
+    project_id = uuid4()
+    payload = DeploymentCreateRequest(
+        provider_id=uuid4(),
+        spec={"name": "existing-create", "description": "desc", "type": "agent"},
+        provider_data={
+            "existing_agent_id": "21b2b5a4-ef72-4697-8731-132163669a46",
+            "resource_name_prefix": "lf_test_",
+            "connections": {"existing_app_ids": ["app-one"]},
+            "operations": [
+                {
+                    "op": "bind",
+                    "flow_version_id": str(flow_version_id),
+                    "app_ids": ["app-one"],
+                }
+            ],
+        },
+    )
+    row = SimpleNamespace(
+        flow_version_id=flow_version_id,
+        flow_version_data={"nodes": [], "edges": []},
+        flow_id=flow_id,
+        flow_name="Flow A",
+        flow_description="desc",
+        flow_tags=["tag"],
+    )
+
+    resolved = await mapper.resolve_deployment_update_for_existing_create(
+        user_id=uuid4(),
+        project_id=project_id,
+        db=_FakeDb([row]),
+        payload=payload,
+    )
+    provider_data = resolved.provider_data or {}
+
+    assert resolved.spec is not None
+    assert resolved.spec.name == "existing-create"
+    assert provider_data["resource_name_prefix"] == "lf_test_"
+    assert provider_data["tools"]["raw_payloads"][0]["name"] == "Flow A"
+    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow A"
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_maps_create_adapter_payload_validation_errors_to_422(monkeypatch) -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    flow_version_id = uuid4()
+    flow_id = uuid4()
+    payload = DeploymentCreateRequest(
+        provider_id=uuid4(),
+        spec={"name": "create-deploy", "description": "", "type": "agent"},
+        provider_data={
+            "resource_name_prefix": "lf_test_",
+            "connections": {"existing_app_ids": ["app-one"]},
+            "operations": [
+                {
+                    "op": "bind",
+                    "flow_version_id": str(flow_version_id),
+                    "app_ids": ["app-one"],
+                }
+            ],
+        },
+    )
+    row = SimpleNamespace(
+        flow_version_id=flow_version_id,
+        flow_version_data={"nodes": [], "edges": []},
+        flow_id=flow_id,
+        flow_name="Flow A",
+        flow_description="desc",
+        flow_tags=["tag"],
+    )
+
+    fake_validation_error = SimpleNamespace(errors=lambda: [{"msg": "simulated adapter validation failure"}])
+
+    def _raise_adapter_payload_validation_error(_self, _raw):
+        raise AdapterPayloadValidationError(
+            model_name="WatsonxDeploymentCreatePayload",
+            error=fake_validation_error,  # type: ignore[arg-type]
+        )
+
+    monkeypatch.setattr(PayloadSlot, "apply", _raise_adapter_payload_validation_error)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await mapper.resolve_deployment_create(
+            user_id=uuid4(),
+            project_id=uuid4(),
+            db=_FakeDb([row]),
+            payload=payload,
+        )
+    assert exc_info.value.status_code == 422
+    assert exc_info.value.detail == "Invalid deployment_create payload: simulated adapter validation failure"
 
 
 @pytest.mark.asyncio
