@@ -321,10 +321,7 @@ def _friendly_conflict_message(raw_message: str) -> str:
             "Reference it as an existing connection instead of creating a new one."
         )
     if "tool" in lower and ("already exists" in lower or "conflict" in lower):
-        return (
-            "A tool with this name already exists in the provider. "
-            "Please choose a different name."
-        )
+        return "A tool with this name already exists in the provider. Please choose a different name."
     # Fall back to a cleaned-up version of the raw message.
     return f"A resource with this name already exists in the provider. {raw_message}"
 
