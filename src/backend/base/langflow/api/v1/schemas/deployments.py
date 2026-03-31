@@ -10,8 +10,8 @@ Two identifier domains coexist in these schemas:
 
 * **Provider-owned (str)** -- ``reference_id``, ``config_id``,
   ``resource_key``, ``execution_id``, ``provider_tenant_id``,
-  ``provider_key``, ``provider_url``, and ``api_key``. Opaque values
-  assigned or consumed by the external deployment provider.
+  ``provider_key``, and ``provider_url``. Opaque values assigned or
+  consumed by the external deployment provider.
 
 ``provider_data`` dicts are opaque pass-through containers whose contents
 are defined by the provider adapter. Langflow forwards them without
@@ -55,7 +55,14 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentConfig,
     DeploymentType,
 )
-from pydantic import AfterValidator, BaseModel, Field, SecretStr, ValidationInfo, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, field_validator, model_validator
+
+from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
+from langflow.services.database.models.deployment_provider_account.utils import (
+    check_provider_url_allowed,
+    validate_provider_url,
+    validate_provider_url_optional,
+)
 
 # ---------------------------------------------------------------------------
 # Shared validation helpers
@@ -111,6 +118,13 @@ NonEmptyStr = Annotated[str, AfterValidator(_strip_nonempty)]
 """String type that strips whitespace and rejects empty/whitespace-only values."""
 
 
+ValidatedUrl = Annotated[str, AfterValidator(validate_provider_url)]
+"""URL type that enforces HTTPS and normalizes."""
+
+ValidatedUrlOptional = Annotated[str | None, AfterValidator(validate_provider_url_optional)]
+"""Optional URL type that enforces HTTPS and normalizes (None passes through)."""
+
+
 def _validate_flow_version_ids(values: list[str] | None) -> list[str] | None:
     """AfterValidator for optional flow_version_ids query parameter."""
     if values is None:
@@ -130,76 +144,86 @@ FlowVersionIdsQuery = Annotated[list[str] | None, AfterValidator(_validate_flow_
 class DeploymentProviderAccountCreateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
+    name: NonEmptyStr = Field(
+        description=(
+            "User-chosen display name for this provider account. Must be unique per user within a provider_key."
+        ),
+    )
     provider_tenant_id: NonEmptyStr | None = Field(
         default=None,
         description="Provider-owned tenant/organization id. Langflow persists this opaque value.",
     )
-    provider_key: NonEmptyStr = Field(description="Deployment provider key.")
-    provider_url: NonEmptyStr = Field(
+    provider_key: DeploymentProviderKey = Field(description="Deployment provider key.")
+    provider_url: ValidatedUrl = Field(
         description="Provider service URL persisted in Langflow DB for provider-account resolution.",
     )
-    api_key: SecretStr = Field(
+    provider_data: dict[str, Any] = Field(
         min_length=1,
         description=(
-            "Provider credential material. Stored by Langflow as secret data and never returned in read responses."
+            "Provider-specific credential payload. "
+            "Contents are opaque to the API schema; the deployment mapper "
+            "for the target provider_key validates and extracts credentials."
         ),
     )
 
-    @field_validator("api_key", mode="before")
-    @classmethod
-    def normalize_api_key(cls, value: str, info: ValidationInfo) -> str:
-        return _normalize_str(value, field_name=info.field_name)
+    @model_validator(mode="after")
+    def validate_provider_url_allowed(self) -> DeploymentProviderAccountCreateRequest:
+        check_provider_url_allowed(self.provider_url, self.provider_key)
+        return self
 
 
 class DeploymentProviderAccountUpdateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
+    name: NonEmptyStr | None = Field(
+        default=None,
+        description="User-chosen display name. Omit to keep existing value; cannot be set to null.",
+    )
     provider_tenant_id: NonEmptyStr | None = Field(
         default=None,
         description="Provider-owned tenant/organization id. Omit to keep existing value, null to clear.",
     )
-    provider_key: NonEmptyStr | None = Field(
-        default=None,
-        description="Deployment provider key. Omit to keep existing value; cannot be set to null.",
-    )
-    provider_url: NonEmptyStr | None = Field(
+    provider_url: ValidatedUrlOptional = Field(
         default=None,
         description="Provider service URL. Omit to keep existing value; cannot be set to null.",
     )
-    api_key: SecretStr | None = Field(
+    provider_data: dict[str, Any] | None = Field(
         default=None,
         description=(
-            "Provider credential material. Omit to keep existing value; "
-            "provided value replaces stored secret. Cannot be set to null."
+            "Provider-specific credential payload. "
+            "Omit to keep existing credentials; provided value replaces stored credentials. "
+            "Cannot be set to null."
         ),
     )
-
-    @field_validator("api_key", mode="before")
-    @classmethod
-    def normalize_api_key(cls, value: str | None, info: ValidationInfo) -> str | None:
-        return _normalize_optional_str(value, field_name=info.field_name)
 
     @model_validator(mode="after")
     def ensure_any_field_provided(self) -> DeploymentProviderAccountUpdateRequest:
         if not self.model_fields_set:
             msg = "At least one field must be provided for update."
             raise ValueError(msg)
-        # provider_key, provider_url, and api_key are required-on-create;
-        # reject explicit null to prevent clearing these fields.
-        for field_name in ("provider_key", "provider_url", "api_key"):
+        for field_name in ("name", "provider_url", "provider_data"):
             if field_name in self.model_fields_set and getattr(self, field_name) is None:
                 msg = f"'{field_name}' cannot be set to null."
                 raise ValueError(msg)
         return self
 
+    def validate_provider_url_allowed(
+        self,
+        provider_key: DeploymentProviderKey,
+    ) -> DeploymentProviderAccountUpdateRequest:
+        if "provider_url" in self.model_fields_set and self.provider_url is not None:
+            check_provider_url_allowed(self.provider_url, provider_key)
+        return self
+
 
 class DeploymentProviderAccountGetResponse(BaseModel):
     id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
+    name: str = Field(description="User-chosen display name for this provider account.")
     provider_tenant_id: str | None = Field(
         default=None,
         description="Provider-owned tenant/organization identifier persisted as opaque text.",
     )
-    provider_key: str = Field(description="Provider adapter key used by Langflow.")
+    provider_key: DeploymentProviderKey = Field(description="Official provider name used by Langflow.")
     provider_url: str = Field(description="Provider service URL persisted in Langflow DB.")
     created_at: datetime | None = Field(default=None, description="Langflow DB row creation timestamp.")
     updated_at: datetime | None = Field(default=None, description="Langflow DB row update timestamp.")
@@ -477,11 +501,22 @@ class DeploymentCreateRequest(BaseModel):
         default=None,
         description="Langflow DB project id to persist the deployment under. Defaults to user's Starter Project.",
     )
-    flow_version_ids: FlowVersionsAttach | None = Field(
+    flow_version_ids: list[UUID] | None = Field(
         default=None,
         description="Flow version ids to attach to the deployment.",
     )
     config: DeploymentConfigCreate | None = Field(default=None, description="Deployment configuration.")
+    provider_data: dict[str, Any] | None = Field(
+        default=None,
+        description="Provider-owned opaque create payload.",
+    )
+
+    @field_validator("flow_version_ids")
+    @classmethod
+    def validate_create_flow_version_ids(cls, values: list[UUID] | None) -> list[UUID] | None:
+        if values is None:
+            return None
+        return _validate_uuid_list(values, field_name="flow_version_ids")
 
 
 class DeploymentUpdateRequest(BaseModel):
@@ -490,9 +525,13 @@ class DeploymentUpdateRequest(BaseModel):
     spec: _StrictBaseDeploymentDataUpdate | None = Field(
         default=None, description="Deployment metadata updates (service-layer schema, no ID fields)."
     )
-    flow_version_ids: FlowVersionsPatch | None = Field(
+    add_flow_version_ids: list[UUID] | None = Field(
         default=None,
-        description="Flow version attach/detach operations.",
+        description="Flow version ids to attach to the deployment.",
+    )
+    remove_flow_version_ids: list[UUID] | None = Field(
+        default=None,
+        description="Flow version ids to detach from the deployment.",
     )
     config: DeploymentConfigBindingUpdate | None = Field(default=None, description="Deployment configuration update.")
     provider_data: dict[str, Any] | None = Field(
@@ -503,10 +542,40 @@ class DeploymentUpdateRequest(BaseModel):
     @model_validator(mode="after")
     def ensure_any_field_provided(self) -> DeploymentUpdateRequest:
         if not self.model_fields_set:
-            msg = "At least one of 'spec', 'flow_version_ids', 'config', or 'provider_data' must be provided."
+            msg = (
+                "At least one of 'spec', 'add_flow_version_ids', "
+                "'remove_flow_version_ids', 'config', or 'provider_data' must be provided."
+            )
             raise ValueError(msg)
-        if self.spec is None and self.flow_version_ids is None and self.config is None and self.provider_data is None:
-            msg = "At least one of 'spec', 'flow_version_ids', 'config', or 'provider_data' must be provided."
+        if (
+            self.spec is None
+            and self.add_flow_version_ids is None
+            and self.remove_flow_version_ids is None
+            and self.config is None
+            and self.provider_data is None
+        ):
+            msg = (
+                "At least one of 'spec', 'add_flow_version_ids', "
+                "'remove_flow_version_ids', 'config', or 'provider_data' must be provided."
+            )
+            raise ValueError(msg)
+        return self
+
+    @field_validator("add_flow_version_ids", "remove_flow_version_ids")
+    @classmethod
+    def validate_update_flow_version_ids(cls, values: list[UUID] | None, info: ValidationInfo) -> list[UUID] | None:
+        if values is None:
+            return None
+        return _validate_uuid_list(values, field_name=info.field_name)
+
+    @model_validator(mode="after")
+    def validate_update_flow_version_operations(self) -> DeploymentUpdateRequest:
+        add_values = self.add_flow_version_ids or []
+        remove_values = self.remove_flow_version_ids or []
+        overlap = set(add_values).intersection(remove_values)
+        if overlap:
+            ids = ", ".join(sorted(str(v) for v in overlap))
+            msg = f"Flow version ids cannot be present in both add/remove operations: {ids}."
             raise ValueError(msg)
         return self
 
@@ -533,19 +602,23 @@ class ExecutionCreateRequest(BaseModel):
 
 
 class _ExecutionResponseBase(BaseModel):
-    """Shared fields for execution responses."""
+    """Shared fields for execution responses.
 
-    execution_id: str | None = Field(
-        default=None,
-        description=(
-            "Provider-owned opaque execution identifier. "
-            "May be None when the provider acknowledges the request but has not yet assigned an id."
-        ),
-    )
+    Only Langflow-owned identifiers live at the top level.  All
+    provider-owned data (including the provider's ``execution_id``)
+    is returned inside ``provider_data`` so that ownership boundaries
+    stay clear and a future Langflow-managed execution id won't
+    collide with provider terminology.
+    """
+
     deployment_id: UUID = Field(description="Langflow DB deployment UUID.")
     provider_data: dict[str, Any] | None = Field(
         default=None,
-        description="Provider-owned opaque execution result payload.",
+        description=(
+            "Provider-owned opaque execution result payload.  "
+            "Contains at least ``execution_id`` (the provider's opaque run identifier) "
+            "when the provider has assigned one."
+        ),
     )
 
 

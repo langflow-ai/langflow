@@ -452,7 +452,7 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.10.15"
+                    "version": "3.11.7"
                   },
                   {
                     "name": "fastapi",
@@ -1204,7 +1204,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.20"
+                    "version": "1.2.22"
                   }
                 ],
                 "total_dependencies": 3
