@@ -11,9 +11,6 @@ export const customCancelBuildUrl = (
   return `${getBaseUrl()}${playgroundPage ? "build_public_tmp" : "build"}/${jobId}/cancel`;
 };
 
-export const customEventsUrl = (
-  jobId: string,
-  playgroundPage?: boolean,
-) => {
+export const customEventsUrl = (jobId: string, playgroundPage?: boolean) => {
   return `${getBaseUrl()}${playgroundPage ? "build_public_tmp" : "build"}/${jobId}/events`;
 };
