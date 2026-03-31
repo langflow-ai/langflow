@@ -126,7 +126,6 @@ DeploymentIdQuery = Annotated[
 IncludeProviderDeleteQuery = Annotated[
     bool,
     Query(
-        default=True,
         description=(
             "When true (default), deletes the deployment resource (e.g., agent) on the provider, "
             "then removes the local DB row. Other provider-managed resources "
@@ -1043,7 +1042,7 @@ async def delete_deployment(
     session: DbSession,
     current_user: CurrentActiveUser,
     *,
-    include_provider: IncludeProviderDeleteQuery,
+    include_provider: IncludeProviderDeleteQuery = True,
 ):
     deployment_row, deployment_adapter = await resolve_adapter_from_deployment(
         deployment_id=deployment_id,
