@@ -214,8 +214,8 @@ async def execute_flow_with_validation_streaming(
         return False
 
     try:
-        # max_retries is the total number of attempts (including the first try)
-        total_attempts = max_retries
+        # max_retries=0 means 1 attempt (no retries), matching non-streaming semantics
+        total_attempts = max_retries + 1
 
         for attempt in range(total_attempts):
             # Check if client disconnected before starting
