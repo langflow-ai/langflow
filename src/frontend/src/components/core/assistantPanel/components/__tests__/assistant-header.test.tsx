@@ -74,5 +74,4 @@ describe("AssistantHeader", () => {
       expect(onNewSession).toHaveBeenCalledTimes(1);
     });
   });
-
 });
