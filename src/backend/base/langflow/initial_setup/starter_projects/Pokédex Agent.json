@@ -396,11 +396,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.11.7"
+                    "version": null
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.135.1"
+                    "version": null
                   },
                   {
                     "name": "lfx",
@@ -773,11 +773,11 @@
                 "dependencies": [
                   {
                     "name": "aiofiles",
-                    "version": "24.1.0"
+                    "version": null
                   },
                   {
                     "name": "httpx",
-                    "version": "0.28.1"
+                    "version": null
                   },
                   {
                     "name": "validators",
@@ -1243,7 +1243,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": "2.12.5"
+                    "version": null
                   },
                   {
                     "name": "lfx",
@@ -1251,7 +1251,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.22"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 3
