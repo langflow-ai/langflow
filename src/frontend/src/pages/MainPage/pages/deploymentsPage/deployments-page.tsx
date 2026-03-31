@@ -8,6 +8,7 @@ import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import DeploymentStepperModal from "./components/deployment-stepper-modal";
 import DeploymentsContent from "./components/deployments-content";
+import ProvidersContent from "./components/providers-content";
 import SubTabToggle, {
   type DeploymentSubTab,
 } from "./components/sub-tab-toggle";
@@ -28,7 +29,8 @@ export default function DeploymentsPage() {
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
-  const { data: providersData } = useGetProviderAccounts({});
+  const { data: providersData, isLoading: isLoadingProviders } =
+    useGetProviderAccounts({});
   const providers = providersData?.providers ?? [];
   const firstProviderId = providers[0]?.id ?? "";
 
@@ -92,9 +94,11 @@ export default function DeploymentsPage() {
       )}
 
       {activeSubTab === "providers" && (
-        <div className="py-24 text-center text-sm text-muted-foreground">
-          Deployment Providers coming soon
-        </div>
+        <ProvidersContent
+          isLoading={isLoadingProviders}
+          providers={providers}
+          onAddProvider={() => setStepperOpen(true)}
+        />
       )}
 
       <DeploymentStepperModal
