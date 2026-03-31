@@ -41,24 +41,35 @@ async def test_cache_mode_success(mock_component, mock_tool):
     """Test PoliciesComponent in cache mode with valid cached guards."""
     code_dir = mock_component.work_dir / STEP2
 
-    # Mock the cache directory exists
+    # Mock the cache directory exists and toolguard loading
     with (
         patch.object(Path, "exists", return_value=True),
-        patch("lfx.components.policies.policies_component.load_toolguards") as mock_load,
+        patch("lfx.components.policies.policies_component.load_toolguards") as mock_load_guards,
+        patch.object(mock_component, "make_toolguard_result") as mock_make_result,
+        patch("lfx.components.policies.policies_component.load_toolguards_from_memory") as mock_load_memory,
         patch("lfx.components.policies.policies_component.GuardedTool") as mock_guarded_tool,
     ):
-        mock_load.return_value = MagicMock()
+        mock_tg_result = MagicMock()
+        mock_make_result.return_value = mock_tg_result
+        mock_tg_runtime = MagicMock()
+        mock_load_memory.return_value = mock_tg_runtime
         mock_guarded_instance = MagicMock()
         mock_guarded_tool.return_value = mock_guarded_instance
 
         result = await mock_component.guard_tools()
 
-        # Verify load_toolguards was called with correct directory
-        mock_load.assert_called_once_with(code_dir)
+        # Verify load_toolguards was called during validation
+        mock_load_guards.assert_called_once_with(code_dir)
+
+        # Verify make_toolguard_result was called
+        mock_make_result.assert_called_once()
+
+        # Verify load_toolguards_from_memory was called with the result
+        mock_load_memory.assert_called_once_with(mock_tg_result)
 
         # Verify GuardedTool was created for each tool
         assert mock_guarded_tool.call_count == len(mock_component.in_tools)
-        mock_guarded_tool.assert_called_with(mock_tool, mock_component.in_tools, code_dir)
+        mock_guarded_tool.assert_called_with(mock_tool, mock_component.in_tools, mock_tg_runtime)
 
         # Verify result contains guarded tools
         assert len(result) == 1
@@ -82,9 +93,9 @@ async def test_cache_mode_file_not_found(mock_component):
     # Mock the cache directory exists but files are missing
     with (
         patch.object(Path, "exists", return_value=True),
-        patch("lfx.components.policies.policies_component.load_toolguards") as mock_load,
+        patch("lfx.components.policies.policies_component.load_toolguards") as mock_load_guards,
     ):
-        mock_load.side_effect = FileNotFoundError("Guard file not found")
+        mock_load_guards.side_effect = FileNotFoundError("Guard file not found")
 
         with pytest.raises(ValueError, match="Required guard code files missing"):
             await mock_component.guard_tools()
@@ -96,9 +107,9 @@ async def test_cache_mode_corrupted_cache(mock_component):
     # Mock the cache directory exists but code is corrupted
     with (
         patch.object(Path, "exists", return_value=True),
-        patch("lfx.components.policies.policies_component.load_toolguards") as mock_load,
+        patch("lfx.components.policies.policies_component.load_toolguards") as mock_load_guards,
     ):
-        mock_load.side_effect = Exception("Invalid Python syntax")
+        mock_load_guards.side_effect = Exception("Invalid Python syntax")
 
         with pytest.raises(ValueError, match="Failed to load guard code"):
             await mock_component.guard_tools()
@@ -116,10 +127,15 @@ async def test_cache_mode_multiple_tools(mock_component):
 
     with (
         patch.object(Path, "exists", return_value=True),
-        patch("lfx.components.policies.policies_component.load_toolguards") as mock_load,
+        patch("lfx.components.policies.policies_component.load_toolguards") as mock_load_guards,
+        patch.object(mock_component, "make_toolguard_result") as mock_make_result,
+        patch("lfx.components.policies.policies_component.load_toolguards_from_memory") as mock_load_memory,
         patch("lfx.components.policies.policies_component.GuardedTool") as mock_guarded_tool,
     ):
-        mock_load.return_value = MagicMock()
+        mock_tg_result = MagicMock()
+        mock_make_result.return_value = mock_tg_result
+        mock_tg_runtime = MagicMock()
+        mock_load_memory.return_value = mock_tg_runtime
         mock_guarded_instances = [MagicMock(), MagicMock(), MagicMock()]
         mock_guarded_tool.side_effect = mock_guarded_instances
 
@@ -151,7 +167,7 @@ async def test_generate_mode_validation_errors(mock_component):
 
     # Test empty project
     mock_component.project = ""
-    with pytest.raises(ValueError, match="project cannot be empty"):
+    with pytest.raises(ValueError):
         await mock_component.guard_tools()
 
     # Test empty policies
@@ -194,9 +210,28 @@ def test_to_snake_case():
     assert PoliciesComponent._to_snake_case("My Project") == "my_project"
     assert PoliciesComponent._to_snake_case("Test-Project") == "test_project"
     assert PoliciesComponent._to_snake_case("User's Project") == "user_s_project"
-    assert PoliciesComponent._to_snake_case("Project, Name") == "project__name"
+    assert PoliciesComponent._to_snake_case("Project, Name") == "project_name"
     assert PoliciesComponent._to_snake_case("UPPERCASE") == "uppercase"
     assert PoliciesComponent._to_snake_case("Mixed-Case Project's Name") == "mixed_case_project_s_name"
+    
+    # Test path traversal prevention
+    assert PoliciesComponent._to_snake_case("../../etc/passwd") == "etc_passwd"
+    assert PoliciesComponent._to_snake_case("../../../root") == "root"
+    assert PoliciesComponent._to_snake_case("./hidden") == "hidden"
+    assert PoliciesComponent._to_snake_case("path/to/file") == "path_to_file"
+    assert PoliciesComponent._to_snake_case("back\\slash\\path") == "back_slash_path"
+    
+    # Test special characters are sanitized
+    assert PoliciesComponent._to_snake_case("test@#$%project") == "test_project"
+    assert PoliciesComponent._to_snake_case("___multiple___underscores___") == "multiple_underscores"
+    
+    # Test empty/invalid input
+    with pytest.raises(ValueError, match="must contain at least one alphanumeric character"):
+        PoliciesComponent._to_snake_case("...")
+    with pytest.raises(ValueError, match="must contain at least one alphanumeric character"):
+        PoliciesComponent._to_snake_case("___")
+    with pytest.raises(ValueError, match="must contain at least one alphanumeric character"):
+        PoliciesComponent._to_snake_case("@#$%")
 
 
 def test_in_recommended_models(mock_component):

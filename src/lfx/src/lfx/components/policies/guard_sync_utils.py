@@ -50,13 +50,13 @@ def sync_generated_guard_code_inputs(
     Returns:
         Updated build_config dictionary with synchronized code inputs
     """
-    logger.info("Syncing files...")
+    logger.debug("Syncing generated guard code files...")
     generated_field_names = {key for key, value in build_config.items() if is_generated_guard_field(value)}
 
     step2_dir = work_dir / step2_subdir
-    logger.info(f"step2_dir = {step2_dir}")
-    logger.info(f"step2_dir.exists() = {step2_dir.exists()}")
-    logger.info(f"step2_dir.is_dir() = {step2_dir.is_dir()}")
+    logger.debug(f"step2_dir = {step2_dir}")
+    logger.debug(f"step2_dir.exists() = {step2_dir.exists()}")
+    logger.debug(f"step2_dir.is_dir() = {step2_dir.is_dir()}")
     if not step2_dir.exists() or not step2_dir.is_dir():
         for field_name in generated_field_names:
             build_config.pop(field_name, None)
@@ -75,7 +75,7 @@ def sync_generated_guard_code_inputs(
         relative_name = file_path.relative_to(step2_dir).as_posix()
         if not include_file(relative_name):
             continue
-        logger.info("---" + relative_name)
+        logger.debug(f"Processing generated file: {relative_name}")
         next_generated_names.add(relative_name)
         try:
             code_value = file_path.read_text(encoding="utf-8")

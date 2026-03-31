@@ -42,7 +42,6 @@ STEP1 = "Step_1"
 STEP2 = "Step_2"
 BUILD_MODE_GENERATE = "Generate"
 BUILD_MODE_CACHE = "Use Cache"
-GENERATED_GUARD_INFO_PREFIX = "Auto-generated ToolGuard code for "
 
 
 class PoliciesComponent(LCModelComponent):

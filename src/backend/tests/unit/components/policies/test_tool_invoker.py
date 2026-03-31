@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from lfx.components.policies.guarded_tool import ToolInvoker
+from lfx.components.policies.tool_invoker import ToolInvoker
 from mcp.types import CallToolResult
 from pydantic import BaseModel
 
@@ -53,7 +53,7 @@ async def test_tool_invoker_invoke_with_call_tool_result():
 
     # Create a mock CallToolResult
     mock_result = MagicMock(spec=CallToolResult)
-    mock_result.structuredContent = {"result": {"status": "ok", "count": 5}}
+    mock_result.structuredContent = {"status": "ok", "count": 5}
     tool.ainvoke = AsyncMock(return_value=mock_result)
 
     invoker = ToolInvoker([tool])

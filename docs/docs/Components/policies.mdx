@@ -35,10 +35,10 @@ The component operates in two modes:
 ## Usage Notes
 
 - The component requires at least one policy to be defined when `active` is `true`
-- Generated guard code is stored in a working directory structure: `tmp_toolguard/{user_id}/{project_name}/`
+- Generated guard code is stored in a working directory structure: `tmp_toolguard/{project_name}/Step_1/` and `tmp_toolguard/{project_name}/Step_2/`
 - The component performs a two-step process:
-  1. **Step 1**: Generate guard specifications from policies
-  2. **Step 2**: Generate executable guard code from specifications
+  1. **Step 1**: Generate guard specifications from policies (stored in `Step_1/`)
+  2. **Step 2**: Generate executable guard code from specifications (stored in `Step_2/`)
 - When switching between `Generate` and `Use Cache` modes, ensure the cache directory contains valid guard code
 - The component automatically handles module caching and cleanup
 

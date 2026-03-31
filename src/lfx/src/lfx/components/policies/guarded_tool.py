@@ -1,21 +1,24 @@
 import json
-import traceback
-from typing import Any, TypeVar
 
 from langchain_core.messages import ToolCall
-from mcp.types import CallToolResult
-from pydantic import BaseModel
-from toolguard.runtime import IToolInvoker, PolicyViolationException
+from toolguard.runtime import PolicyViolationException
 from toolguard.runtime.runtime import ToolguardRuntime
 
+from lfx.components.policies.tool_invoker import ToolInvoker
 from lfx.field_typing import Tool
-from lfx.field_typing.constants import BaseTool
 from lfx.log.logger import logger
 
 
 class GuardedTool(Tool):
+    """A tool wrapper that applies ToolGuard policy validation before execution.
+
+    This component requires async execution as ToolGuard operates asynchronously.
+    The synchronous `run()` method is not supported and will raise NotImplementedError.
+    Always use `arun()` or async invocation methods.
+    """
+
     _orig_tool: Tool
-    _tool_invoker: IToolInvoker
+    _tool_invoker: ToolInvoker
     _toolguard: ToolguardRuntime
 
     def __init__(self, tool: Tool, all_tools: list[Tool], toolguard: ToolguardRuntime):
@@ -24,8 +27,8 @@ class GuardedTool(Tool):
             description=tool.description,
             args_schema=getattr(tool, "args_schema", None),
             return_direct=getattr(tool, "return_direct", False),
-            func=self._run,
-            coroutine=self._arun,
+            func=self.run,
+            coroutine=self.arun,
             tags=tool.tags,
             metadata=tool.metadata,
             verbose=True,
@@ -61,7 +64,20 @@ class GuardedTool(Tool):
         return tool_input if isinstance(tool_input, dict) else {}
 
     def run(self, tool_input: str | dict | ToolCall, config=None, **kwargs):
-        msg = "GuardedTool.run() is not implemented. consider calling the async version arun()"
+        """Synchronous execution is not supported for GuardedTool.
+
+        ToolGuard requires async execution for policy validation. Please use the
+        async version `arun()` instead, or ensure your execution context supports
+        async tool invocation.
+
+        Raises:
+            NotImplementedError: Always raised as sync execution is not supported.
+        """
+        msg = (
+            "GuardedTool does not support synchronous execution. "
+            "ToolGuard requires async execution for policy validation. "
+            "Please use `arun()` instead or ensure your execution context supports async tool invocation."
+        )
         raise NotImplementedError(msg)
 
     async def arun(self, tool_input: str | dict | ToolCall, config=None, **kwargs):
@@ -85,7 +101,6 @@ class GuardedTool(Tool):
                 }
             except Exception:
                 logger.exception("Unhandled exception in class GuardedTool.arun()")
-                traceback.print_exc()
                 raise
 
 
