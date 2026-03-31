@@ -1,6 +1,11 @@
 import { queryClient } from "@/contexts";
 import type { Message } from "@/types/messages";
-import { findLastBotMessage, updateMessageProperties } from "../message-utils";
+import {
+  addUserMessage,
+  findLastBotMessage,
+  removePlaceholderUserMessage,
+  updateMessageProperties,
+} from "../message-utils";
 
 const QUERY_KEY = ["useGetMessagesQuery", { id: "flow-1", session_id: "s1" }];
 
@@ -128,5 +133,81 @@ describe("updateMessageProperties", () => {
     expect(updated![0].properties).toEqual(
       expect.objectContaining({ build_duration: 500 }),
     );
+  });
+});
+
+describe("removePlaceholderUserMessage", () => {
+  it("should_remove_placeholder_user_message_when_buildFlow_fails", () => {
+    // Arrange — simulate addUserMessage creating a placeholder (id: null)
+    const placeholder = buildMessage({
+      id: null as unknown as string,
+      sender: "User",
+      sender_name: "User",
+      text: "dsada",
+      flow_id: "flow-1",
+      session_id: "s1",
+    });
+    addUserMessage(placeholder);
+
+    // Verify placeholder exists in cache before removal
+    const before = queryClient.getQueryData<Message[]>(QUERY_KEY);
+    expect(before).toHaveLength(1);
+    expect(before![0].id).toBeNull();
+
+    // Act — remove placeholder (simulates error path cleanup)
+    removePlaceholderUserMessage("s1", "flow-1");
+
+    // Assert — placeholder should be gone
+    const after = queryClient.getQueryData<Message[]>(QUERY_KEY);
+    expect(after).toHaveLength(0);
+  });
+
+  it("should_not_remove_real_messages_when_removing_placeholder", () => {
+    // Arrange — cache has a real message and a placeholder
+    const realMessage = buildMessage({
+      id: "msg-real",
+      sender: "User",
+      sender_name: "User",
+      text: "real message",
+      flow_id: "flow-1",
+      session_id: "s1",
+    });
+    const placeholder = buildMessage({
+      id: null as unknown as string,
+      sender: "User",
+      sender_name: "User",
+      text: "placeholder",
+      flow_id: "flow-1",
+      session_id: "s1",
+    });
+    queryClient.setQueryData(QUERY_KEY, [realMessage, placeholder]);
+
+    // Act
+    removePlaceholderUserMessage("s1", "flow-1");
+
+    // Assert — only real message remains
+    const after = queryClient.getQueryData<Message[]>(QUERY_KEY);
+    expect(after).toHaveLength(1);
+    expect(after![0].id).toBe("msg-real");
+  });
+
+  it("should_not_modify_cache_when_no_placeholder_exists", () => {
+    // Arrange — only real messages
+    const realMessage = buildMessage({
+      id: "msg-real",
+      sender: "Machine",
+      text: "bot response",
+      flow_id: "flow-1",
+      session_id: "s1",
+    });
+    queryClient.setQueryData(QUERY_KEY, [realMessage]);
+
+    // Act
+    removePlaceholderUserMessage("s1", "flow-1");
+
+    // Assert — nothing changed
+    const after = queryClient.getQueryData<Message[]>(QUERY_KEY);
+    expect(after).toHaveLength(1);
+    expect(after![0].id).toBe("msg-real");
   });
 });

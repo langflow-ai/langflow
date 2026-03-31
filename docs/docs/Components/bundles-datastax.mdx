@@ -50,7 +50,7 @@ For information about accepted values and functionality, see the [Astra DB Serve
 | keyspace | Keyspace | Input parameter. The keyspace in your database that contains the collection specified in `collection_name`. Default: `default_keyspace`. |
 | collection_name | Collection | Input parameter. The name of the collection that you want to use with this flow. Or, select **New Collection** to create a new collection with limited configuration options. To ensure your collection is configured with the correct embedding provider and search capabilities, it is recommended to create the collection in the Astra Portal or with the Data API *before* configuring this component. For more information, see [Manage collections in Astra DB Serverless](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html). |
 | embedding_model | Embedding Model | Input parameter. Attach an [embedding model component](/components-embedding-models) to generate embeddings. Only available if the specified collection doesn't have a [vectorize integration](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html). If a vectorize integration exists, the component automatically uses the collection's integrated model. |
-| ingest_data | Ingest Data | Input parameter. The documents to load into the specified collection. Accepts `Data` or `DataFrame` input. |
+| ingest_data | Ingest Data | Input parameter. The documents to load into the specified collection. Accepts `JSON` or `Table` input. |
 | search_query | Search Query | Input parameter. The query string for vector search. |
 | cache_vector_store | Cache Vector Store | Input parameter. Whether to cache the vector store in Langflow memory for faster reads. Default: Enabled (`true`). |
 | search_method | Search Method | Input parameter. The search methods to use, either `Hybrid Search` or `Vector Search`. Your collection must be configured to support the chosen option, and the default depends on what your collection supports. All vector-enabled collections in Astra DB Serverless (vector) databases support vector search, but hybrid search requires that you set specific collection settings when creating the collection. These options are only available when creating a collection programmatically. For more information, see [Ways to find data in Astra DB Serverless](https://docs.datastax.com/en/astra-db-serverless/databases/about-search.html) and [Create a collection that supports hybrid search](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/create-collection.html#example-hybrid). |
@@ -135,13 +135,13 @@ This input only appears after connecting a collection that support hybrid search
     * The input sent to the **Structured Output** component is processed by the **Structured Output**, **Language Model**, and **Parser** components to extract space-separated `keywords` used for the lexical search portion of the hybrid search.
 
     The complete hybrid search query is executed against your database using the Data API's `find_and_rerank` command.
-    The API's response is output as a `DataFrame` that is transformed into a text string `Message` by another **Parser** component.
+    The API's response is output as a `Table` that is transformed into a text string `Message` by another **Parser** component.
     Finally, the **Chat Output** component prints the `Message` response to the **Playground**.
 
 9. Optional: Exit the **Playground**, and then click <Icon name="TextSearch" aria-hidden="true"/> **Inspect Output** on each individual component to understand how lexical keywords were constructed and view the raw response from the Data API.
 This is helpful for debugging flows where a certain component isn't receiving input as expected from another component.
 
-    * **Structured Output component**: The output is the `Data` object produced by applying the output schema to the LLM's response to the input message and format instructions.
+    * **Structured Output component**: The output is the `JSON` object produced by applying the output schema to the LLM's response to the input message and format instructions.
     The following example is based on the aforementioned instructions for keyword extraction:
 
         ```
@@ -149,9 +149,9 @@ This is helpful for debugging flows where a certain component isn't receiving in
         2. Question: What characteristics can be identified in my data?
         ```
 
-    * **Parser component**: The output is the string of keywords extracted from the structured output `Data`, and then used as lexical terms for the hybrid search.
+    * **Parser component**: The output is the string of keywords extracted from the structured output `JSON`, and then used as lexical terms for the hybrid search.
 
-    * **Astra DB component**: The output is the `DataFrame` containing the results of the hybrid search as returned by the Data API.
+    * **Astra DB component**: The output is the `Table` containing the results of the hybrid search as returned by the Data API.
 
 </details>
 
@@ -174,7 +174,7 @@ Instead, use the **Astra DB Graph** component that includes both the vector stor
 
 The **Astra DB CQL** component allows agents to query data from CQL tables in Astra DB.
 
-The output is a list of [`Data`](/data-types#data) objects containing the query results from the Astra DB CQL table. Each Data object contains the document fields specified by the projection fields. Limited by the `number_of_results` parameter.
+The output is a list of [`JSON`](/data-types#json) objects containing the query results from the Astra DB CQL table. Each Data object contains the document fields specified by the projection fields. Limited by the `number_of_results` parameter.
 
 ### Astra DB CQL parameters
 
@@ -215,7 +215,7 @@ You can inspect a vector store component's parameters to learn more about the in
 | strategy | Traversal Strategies | Input parameter. The strategy to use for graph traversal. Strategy options are dynamically loaded from available strategies. |
 | search_query | Search Query | Input parameter. The query to search for in the vector store. |
 | graphrag_strategy_kwargs | Strategy Parameters | Input parameter. Optional dictionary of additional parameters for the [retrieval strategy](https://datastax.github.io/graph-rag/reference/graph_retriever/strategies/). |
-| search_results | **Search Results** or **DataFrame** | Output parameter. The results of the graph-based document retrieval as a list of [`Data`](/data-types#data) objects or as a tabular [`DataFrame`](/data-types#dataframe). You can set the desired output type near the component's output port. |
+| search_results | **Search Results** or **DataFrame** | Output parameter. The results of the graph-based document retrieval as a list of [`JSON`](/data-types#json) objects or as a tabular [`Table`](/data-types#table). You can set the desired output type near the component's output port. |
 
 ## Hyper-Converged Database (HCD)
 
@@ -319,7 +319,7 @@ Replace the **Astra DB Tool** component with the [**Astra DB** component](#astra
 The **Astra DB Tool** component enables searching data in Astra DB collections, including hybrid search, vector search, and regular filter-based search.
 Specialized searches require that the collection is pre-configured with the required parameters.
 
-Outputs a list of [`Data`](/data-types#data) objects containing the query results from Astra DB. Each `Data` object contains the document fields specified by the projection attributes. Limited by the `number_of_results` parameter and the upper limit of the Astra DB Data API, depending on the type of search.
+Outputs a list of [`JSON`](/data-types#json) objects containing the query results from Astra DB. Each `JSON` object contains the document fields specified by the projection attributes. Limited by the `number_of_results` parameter and the upper limit of the Astra DB Data API, depending on the type of search.
 
 You can use the component to execute queries directly as isolated steps in a flow, or you can connect it as a [tool for an agent](/agents-tools) to allow the agent to query data from Astra DB collections as needed to respond to user queries.
 
