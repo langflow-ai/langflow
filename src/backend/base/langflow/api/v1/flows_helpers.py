@@ -133,8 +133,12 @@ _UPDATABLE_FLOW_FIELDS: frozenset[str] = frozenset(
         "folder_id",
         "icon",
         "icon_bg_color",
+        "gradient",
         "locked",
         "mcp_enabled",
+        "action_name",
+        "action_description",
+        "access_type",
         "fs_path",
     }
 )

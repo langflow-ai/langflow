@@ -193,6 +193,33 @@ async def test_patch_flow_allows_clearing_endpoint_with_null(client: AsyncClient
     assert response.json()["endpoint_name"] is None
 
 
+async def test_patch_flow_updates_access_and_action_fields(client: AsyncClient, logged_in_headers):
+    """PATCH should persist public-sharing and MCP action metadata fields."""
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": "patch_access_type_flow", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={
+            "access_type": "PUBLIC",
+            "action_name": "shared_action",
+            "action_description": "Shared flow action",
+        },
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+    assert result["access_type"] == "PUBLIC"
+    assert result["action_name"] == "shared_action"
+    assert result["action_description"] == "Shared flow action"
+
+
 async def test_create_flows(client: AsyncClient, logged_in_headers):
     amount_flows = 10
     basic_case = {
