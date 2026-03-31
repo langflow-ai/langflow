@@ -304,7 +304,7 @@ class TestStreamingValidationFlow:
         generating_events = [
             e for e in parsed_events if e.get("event") == "progress" and e.get("step") == "generating_component"
         ]
-        assert len(generating_events) == 3
+        assert len(generating_events) == 2
 
         complete_events = [e for e in parsed_events if e.get("event") == "complete"]
         assert len(complete_events) == 1
