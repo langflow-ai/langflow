@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { useDeleteProviderAccount } from "@/controllers/API/queries/deployment-provider-accounts/use-delete-provider-account";
@@ -35,7 +36,22 @@ export default function DeploymentsPage() {
     null,
   );
 
+  const location = useLocation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
+
+  // Auto-open test modal when navigated from canvas deploy button
+  useEffect(() => {
+    const state = location.state as {
+      testDeployment?: { id: string; name: string };
+      testProviderId?: string;
+    } | null;
+    if (state?.testDeployment && state?.testProviderId) {
+      setTestTarget(state.testDeployment);
+      setTestProviderId(state.testProviderId);
+      // Clear the state so it doesn't re-trigger on re-renders
+      window.history.replaceState({}, "");
+    }
+  }, [location.state]);
 
   const { data: providersData, isLoading: isLoadingProviders } =
     useGetProviderAccounts({});

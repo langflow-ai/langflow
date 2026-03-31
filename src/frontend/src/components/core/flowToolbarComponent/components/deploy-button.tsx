@@ -2,6 +2,7 @@ import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { usePostCreateSnapshot } from "@/controllers/API/queries/flow-version/use-post-create-snapshot";
 import { ENABLE_DEPLOYMENTS } from "@/customization/feature-flags";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import DeploymentStepperModal from "@/pages/MainPage/pages/deploymentsPage/components/deployment-stepper-modal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -18,6 +19,7 @@ function DeployButtonInner() {
   const saveFlow = useSaveFlow();
   const { mutateAsync: createSnapshot } = usePostCreateSnapshot();
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const navigate = useCustomNavigate();
 
   const handleDeploy = async () => {
     if (!currentFlowId) return;
@@ -64,6 +66,16 @@ function DeployButtonInner() {
         setOpen={setDeployModalOpen}
         initialFlowId={currentFlowId}
         initialVersionByFlow={initialVersionByFlow}
+        onTestDeployment={(deployment, providerId) => {
+          setDeployModalOpen(false);
+          navigate("/all", {
+            state: {
+              flowType: "deployments",
+              testDeployment: deployment,
+              testProviderId: providerId,
+            },
+          });
+        }}
       />
     </>
   );
