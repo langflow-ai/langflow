@@ -143,6 +143,21 @@ export const updateMessage = (updatedMessage: Message) => {
   // setQueryData automatically notifies observers - no need to invalidate
 };
 
+export const removePlaceholderUserMessage = (
+  sessionId: string,
+  flowId: string,
+) => {
+  const cacheKey = [MESSAGES_QUERY_KEY, { id: flowId, session_id: sessionId }];
+
+  queryClient.setQueryData(cacheKey, (old: Message[] = []) => {
+    const placeholderIndex = old.findIndex(
+      (msg) => msg.id === null && msg.sender === "User",
+    );
+    if (placeholderIndex === -1) return old;
+    return old.filter((_, idx) => idx !== placeholderIndex);
+  });
+};
+
 export const addUserMessage = (updatedMessage: Message) => {
   const cacheKey = [
     MESSAGES_QUERY_KEY,
