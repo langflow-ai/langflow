@@ -1121,6 +1121,25 @@ async def update_flow_from_spec(flow_id: str, spec: str) -> dict[str, Any]:
     }
 
 
+async def _set_frozen(flow_id: str, component_id: str, *, frozen: bool) -> dict[str, str]:
+    """Set the frozen state of a component."""
+    flow = await _get_flow(flow_id)
+    for node in flow.get("data", {}).get("nodes", []):
+        nid = node.get("data", {}).get("id", node.get("id", ""))
+        if nid == component_id:
+            node_config = node.get("data", {}).get("node")
+            if node_config is None:
+                msg = f"Component '{component_id}' has malformed data (missing 'node' key)"
+                raise ValueError(msg)
+            node_config["frozen"] = frozen
+            await _patch_flow(flow_id, flow)
+            key = "frozen" if frozen else "unfrozen"
+            return {key: component_id}
+
+    msg = f"Component not found: {component_id}"
+    raise ValueError(msg)
+
+
 @mcp.tool()
 async def freeze_component(flow_id: str, component_id: str) -> dict[str, str]:
     """Freeze a component so it uses cached output and skips re-execution.
@@ -1132,20 +1151,7 @@ async def freeze_component(flow_id: str, component_id: str) -> dict[str, str]:
         flow_id: The flow UUID.
         component_id: The component ID to freeze.
     """
-    flow = await _get_flow(flow_id)
-    for node in flow.get("data", {}).get("nodes", []):
-        nid = node.get("data", {}).get("id", node.get("id", ""))
-        if nid == component_id:
-            node_config = node.get("data", {}).get("node")
-            if node_config is None:
-                msg = f"Component '{component_id}' has malformed data (missing 'node' key)"
-                raise ValueError(msg)
-            node_config["frozen"] = True
-            await _patch_flow(flow_id, flow)
-            return {"frozen": component_id}
-
-    msg = f"Component not found: {component_id}"
-    raise ValueError(msg)
+    return await _set_frozen(flow_id, component_id, frozen=True)
 
 
 @mcp.tool()
@@ -1156,20 +1162,7 @@ async def unfreeze_component(flow_id: str, component_id: str) -> dict[str, str]:
         flow_id: The flow UUID.
         component_id: The component ID to unfreeze.
     """
-    flow = await _get_flow(flow_id)
-    for node in flow.get("data", {}).get("nodes", []):
-        nid = node.get("data", {}).get("id", node.get("id", ""))
-        if nid == component_id:
-            node_config = node.get("data", {}).get("node")
-            if node_config is None:
-                msg = f"Component '{component_id}' has malformed data (missing 'node' key)"
-                raise ValueError(msg)
-            node_config["frozen"] = False
-            await _patch_flow(flow_id, flow)
-            return {"unfrozen": component_id}
-
-    msg = f"Component not found: {component_id}"
-    raise ValueError(msg)
+    return await _set_frozen(flow_id, component_id, frozen=False)
 
 
 @mcp.tool()
@@ -1219,6 +1212,16 @@ def _get_tool_map() -> dict[str, Any]:
             "disconnect_components": disconnect_components,
             "run_flow": run_flow,
             "build_flow": build_flow,
+            "validate_flow": validate_flow,
+            "rename_flow": rename_flow,
+            "export_flow": export_flow,
+            "update_flow_from_spec": update_flow_from_spec,
+            "get_build_results": get_build_results,
+            "get_component_output": get_component_output,
+            "components": components,
+            "freeze_component": freeze_component,
+            "unfreeze_component": unfreeze_component,
+            "layout_flow": layout_flow_tool,
         }
     return _TOOL_MAP
 

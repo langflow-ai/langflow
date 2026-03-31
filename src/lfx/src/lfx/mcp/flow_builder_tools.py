@@ -20,6 +20,7 @@ from lfx.graph.flow_builder.flow import empty_flow
 from lfx.graph.flow_builder.layout import layout_flow
 from lfx.io import MessageTextInput, Output
 from lfx.log.logger import logger
+from lfx.mcp.redact import is_sensitive_field
 from lfx.mcp.registry import describe_component, search_registry
 from lfx.schema import Data
 
@@ -32,8 +33,6 @@ from lfx.schema import Data
 _flow_events: deque[dict[str, Any]] = deque()
 _working_flow: dict | None = None
 _current_flow_id: str | None = None
-
-_SENSITIVE_KEYWORDS = {"api_key", "password", "secret", "token", "access_key", "private_key"}
 
 
 def drain_flow_events() -> list[dict[str, Any]]:
@@ -222,7 +221,7 @@ class GetFieldValue(Component):
                 if not isinstance(fdata, dict) or fname in ("code", "_type"):
                     continue
                 value = fdata.get("value")
-                if any(kw in fname.lower() for kw in _SENSITIVE_KEYWORDS) and value:
+                if is_sensitive_field(fname) and value:
                     fields[fname] = "***REDACTED***"
                 else:
                     fields[fname] = value
@@ -235,7 +234,7 @@ class GetFieldValue(Component):
 
         fdata = template[self.field_name]
         value = fdata.get("value") if isinstance(fdata, dict) else fdata
-        if any(kw in self.field_name.lower() for kw in _SENSITIVE_KEYWORDS) and value:
+        if is_sensitive_field(self.field_name) and value:
             value = "***REDACTED***"
         return Data(data={"component_id": self.component_id, "field": self.field_name, "value": value})
 

@@ -6,13 +6,13 @@ Tests the full pipeline: validation, patch generation, dry run, event emission.
 import copy
 
 import jsonpatch
-from lfx.components.tools.flow_builder_tools import (
+from lfx.graph.flow_builder.builder import build_flow_from_spec
+from lfx.mcp.flow_builder_tools import (
     ProposeFieldEdit,
     drain_flow_events,
     init_working_flow,
     reset_working_flow,
 )
-from lfx.graph.flow_builder.builder import build_flow_from_spec
 
 SIMPLE_FLOW_SPEC = """\
 name: Test Flow
