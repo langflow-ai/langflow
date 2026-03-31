@@ -19,7 +19,7 @@ interface AddProviderModalProps {
 
 const EMPTY_CREDENTIALS: ProviderCredentials = {
   name: "",
-  provider_key: "watsonx",
+  provider_key: "watsonx-orchestrate",
   provider_url: "",
   api_key: "",
 };
@@ -31,6 +31,7 @@ export default function AddProviderModal({
   const [credentials, setCredentials] =
     useState<ProviderCredentials>(EMPTY_CREDENTIALS);
   const [isSaving, setIsSaving] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
 
   const { mutateAsync: createProviderAccount } = usePostProviderAccount();
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -43,6 +44,7 @@ export default function AddProviderModal({
   function handleClose() {
     if (isSaving) return;
     setCredentials(EMPTY_CREDENTIALS);
+    setShowApiKey(false);
     setOpen(false);
   }
 
@@ -106,15 +108,28 @@ export default function AddProviderModal({
             <span className="pb-2 text-sm font-medium">
               API Key <span className="text-destructive">*</span>
             </span>
-            <Input
-              type="password"
-              placeholder="Enter your API key"
-              className="bg-muted"
-              value={credentials.api_key}
-              onChange={(e) =>
-                setCredentials({ ...credentials, api_key: e.target.value })
-              }
-            />
+            <div className="relative">
+              <Input
+                type={showApiKey ? "text" : "password"}
+                placeholder="Enter your API key"
+                className="bg-muted pr-10"
+                value={credentials.api_key}
+                onChange={(e) =>
+                  setCredentials({ ...credentials, api_key: e.target.value })
+                }
+              />
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                onClick={() => setShowApiKey((prev) => !prev)}
+                tabIndex={-1}
+              >
+                <ForwardedIconComponent
+                  name={showApiKey ? "EyeOff" : "Eye"}
+                  className="h-4 w-4"
+                />
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-col">
