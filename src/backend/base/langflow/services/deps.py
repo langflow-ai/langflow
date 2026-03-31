@@ -269,3 +269,10 @@ def get_flow_events_service():
     from langflow.services.flow_events.factory import FlowEventsServiceFactory
 
     return get_service(ServiceType.FLOW_EVENTS_SERVICE, FlowEventsServiceFactory())
+
+
+def get_memory_base_service():
+    """Retrieves the MemoryBaseService instance from the service manager."""
+    from langflow.services.memory_base.factory import MemoryBaseServiceFactory
+
+    return get_service(ServiceType.MEMORY_BASE_SERVICE, MemoryBaseServiceFactory())

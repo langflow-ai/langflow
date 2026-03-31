@@ -322,3 +322,15 @@ async def test_session_metadata_retrieval():
     messages = await aget_messages(sender="User", session_id=session_id)
     assert len(messages) == 1
     assert messages[0].session_metadata == initial_metadata
+
+
+@pytest.mark.usefixtures("client")
+async def test_messageupdate_with_session_metadata(sample_session_metadata):
+    """Test MessageUpdate schema with session_metadata."""
+    from langflow.services.database.models.message.model import MessageUpdate
+
+    message_update = MessageUpdate(
+        text="Updated text",
+        session_metadata=sample_session_metadata,
+    )
+    assert message_update.session_metadata == sample_session_metadata

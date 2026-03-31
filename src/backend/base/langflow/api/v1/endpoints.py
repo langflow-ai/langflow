@@ -61,8 +61,17 @@ from langflow.services.auth.utils import (
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
+from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_auth_service, get_session_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import (
+    get_auth_service,
+    get_job_service,
+    get_memory_base_service,
+    get_session_service,
+    get_settings_service,
+    get_task_service,
+    get_telemetry_service,
+)
 from langflow.services.event_manager import create_webhook_event_manager, webhook_event_manager
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
@@ -172,8 +181,8 @@ async def simple_run_flow(
         graph = Graph.from_payload(
             graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name, context=context
         )
-        if run_id is None:
-            run_id = str(uuid4())
+        run_id_uuid = uuid4() if run_id is None else UUID(run_id)
+        run_id = str(run_id_uuid)
         graph.set_run_id(run_id)
         inputs = None
         if input_request.input_value is not None:
@@ -196,15 +205,57 @@ async def simple_run_flow(
                     and (input_request.output_type == "any" or input_request.output_type in vertex.id.lower())  # type: ignore[operator]
                 )
             ]
-        task_result, session_id = await run_graph_internal(
-            graph=graph,
-            flow_id=flow_id_str,
-            session_id=input_request.session_id,
-            inputs=inputs,
-            outputs=outputs,
-            stream=stream,
-            event_manager=event_manager,
-        )
+
+        # Create a WORKFLOW job record so memory-base on_flow_output can track this run.
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required to run flows.",
+            )
+
+        try:
+            _job_svc = get_job_service()
+            await _job_svc.create_job(
+                job_id=run_id_uuid,
+                flow_id=flow.id,
+                user_id=user_id,
+                job_type=JobType.WORKFLOW,
+            )
+            task_result, session_id = await _job_svc.execute_with_status(
+                run_id_uuid,
+                run_graph_internal,
+                graph=graph,
+                flow_id=flow_id_str,
+                session_id=input_request.session_id,
+                inputs=inputs,
+                outputs=outputs,
+                stream=stream,
+                event_manager=event_manager,
+            )
+        except Exception as exc:
+            await logger.aerror(
+                "Workflow job execution failed for flow %s: %s",
+                flow.id,
+                str(exc),
+                exc_info=True,
+            )
+            raise APIException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                exception=exc,
+                flow=flow,
+            ) from exc
+
+        # Fire memory-base auto-capture hook — non-blocking background effect.
+        try:
+            _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only
+            await get_task_service().fire_and_forget_task(
+                get_memory_base_service().on_flow_output,
+                flow_id=flow.id,
+                session_id=session_id,
+                job_id=_run_id_uuid,
+            )
+        except (RuntimeError, ValueError, OSError):
+            await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
         return RunResponse(outputs=task_result, session_id=session_id)
 
@@ -941,6 +992,18 @@ async def experimental_run_flow(
         )
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+    # Fire memory-base auto-capture hook — non-blocking background effect.
+    try:
+        _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only
+        await get_task_service().fire_and_forget_task(
+            get_memory_base_service().on_flow_output,
+            flow_id=flow.id,
+            session_id=session_id,
+            job_id=_run_id_uuid,
+        )
+    except (RuntimeError, ValueError, OSError):
+        await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
     return RunResponse(outputs=task_result, session_id=session_id)
 

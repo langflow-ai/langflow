@@ -32,6 +32,7 @@ class MessageBase(SQLModel):
     properties: Properties = Field(default_factory=Properties)
     category: str = Field(default="message")
     content_blocks: list[ContentBlock] = Field(default_factory=list)
+    session_metadata: dict | None = Field(default=None)
 
     @field_serializer("timestamp")
     def serialize_timestamp(self, value):
@@ -59,7 +60,7 @@ class MessageBase(SQLModel):
         return value
 
     @classmethod
-    def from_message(cls, message: "Message", flow_id: str | UUID | None = None):
+    def from_message(cls, message: "Message", flow_id: str | UUID | None = None, run_id: str | UUID | None = None):
         if message.text is None or not message.sender or not message.sender_name:
             msg = "The message does not have the required fields (text, sender, sender_name)."
             raise ValueError(msg)
@@ -114,6 +115,13 @@ class MessageBase(SQLModel):
                 msg = f"Flow ID {flow_id} is not a valid UUID"
                 raise ValueError(msg) from exc
 
+        if isinstance(run_id, str):
+            try:
+                run_id = UUID(run_id)
+            except ValueError as exc:
+                msg = f"Run ID {run_id} is not a valid UUID"
+                raise ValueError(msg) from exc
+
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,
@@ -123,6 +131,7 @@ class MessageBase(SQLModel):
             files=message.files or [],
             timestamp=timestamp,
             flow_id=flow_id,
+            run_id=run_id,
             properties=properties,
             category=message.category,
             content_blocks=content_blocks,
@@ -149,6 +158,8 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     flow_id: UUID | None = Field(default=None)
+    run_id: UUID | None = Field(default=None, index=True)
+    is_output: bool = Field(default=False)
 
     files: list[str] = Field(sa_column=Column(JSON))
     properties: dict | Properties = Field(  # type: ignore[assignment]
@@ -207,11 +218,9 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
 
     @field_serializer("properties", "content_blocks", "session_metadata")
     @classmethod
-    def serialize_properties_or_content_blocks(cls, value) -> dict | list[dict] | None:
+    def serialize_properties_or_content_blocks(cls, value) -> dict | list[dict]:
         # Redundant sanitization here acts as a defensive measure for rows
         # already in the database that might contain NaN/Infinity values.
-        if value is None:
-            return None
         if isinstance(value, list):
             value = [cls.serialize_properties_or_content_blocks(item) for item in value]
         elif hasattr(value, "model_dump"):
@@ -224,8 +233,9 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
 
 class MessageRead(MessageBase):
     id: UUID
-    flow_id: UUID | None = Field()
+    flow_id: UUID | None = None
     session_metadata: dict | None = None
+    run_id: UUID | None = None
 
 
 class MessageCreate(MessageBase):
@@ -243,3 +253,5 @@ class MessageUpdate(SQLModel):
     error: bool | None = None
     properties: Properties | None = None
     session_metadata: dict | None = None
+    category: str | None = None
+    content_blocks: list[ContentBlock] | None = None
