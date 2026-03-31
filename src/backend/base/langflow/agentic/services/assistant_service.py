@@ -102,7 +102,7 @@ async def execute_flow_with_validation(
                     **result,
                     "validated": False,
                     "validation_error": f"Security violations: {violations_str}",
-                    "validation_attempts": attempt + 1,
+                    "validation_attempts": attempt,
                 }
             current_input = VALIDATION_RETRY_TEMPLATE.format(
                 error=f"Security violations: {violations_str}. Do NOT use dangerous functions.",
@@ -117,7 +117,7 @@ async def execute_flow_with_validation(
                 "validated": True,
                 "class_name": validation.class_name,
                 "component_code": code,
-                "validation_attempts": attempt + 1,
+                "validation_attempts": attempt,
             }
 
         logger.warning(f"Validation failed (attempt {attempt}): {validation.error}")
@@ -128,7 +128,7 @@ async def execute_flow_with_validation(
                 **result,
                 "validated": False,
                 "validation_error": validation.error,
-                "validation_attempts": attempt + 1,
+                "validation_attempts": attempt,
             }
 
         current_input = VALIDATION_RETRY_TEMPLATE.format(error=validation.error, code=code)
@@ -139,7 +139,7 @@ async def execute_flow_with_validation(
         **result,
         "validated": False,
         "validation_error": validation.error,
-        "validation_attempts": attempt + 1,
+        "validation_attempts": attempt,
     }
 
 

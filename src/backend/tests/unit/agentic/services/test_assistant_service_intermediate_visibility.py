@@ -162,7 +162,7 @@ class TestValidationFailedIncludesDetails:
                 flow_filename="TestFlow",
                 input_value="create a component",
                 global_variables={},
-                max_retries=1,
+                max_retries=0,
             )
             raw_events = await _collect_raw_events(gen)
             events = _parse_sse_events(raw_events)
@@ -296,7 +296,7 @@ class TestRetryingStepIncludesError:
 
             retrying = _filter_events_by_step(events, "retrying")[0]
             assert retrying["attempt"] == 1  # First attempt (1-indexed)
-            assert retrying["max_attempts"] == 2
+            assert retrying["max_attempts"] == 3  # max_retries=2 means 3 total attempts
 
 
 class TestProgressEventSequence:

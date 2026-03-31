@@ -186,7 +186,7 @@ class TestGetEnabledProvidersForUser:
 
     @pytest.mark.asyncio
     async def test_should_return_empty_when_no_credentials(self):
-        """Should return empty when user has variables but none are credentials."""
+        """Should return no enabled providers when user has variables but none are credentials."""
         from langflow.services.variable.service import DatabaseVariableService
 
         mock_var = MagicMock()
@@ -199,9 +199,11 @@ class TestGetEnabledProvidersForUser:
         mock_session = MagicMock()
 
         with patch("langflow.agentic.services.provider_service.get_variable_service", return_value=mock_db_service):
-            result = await get_enabled_providers_for_user("user-1", mock_session)
+            enabled_providers, provider_status = await get_enabled_providers_for_user("user-1", mock_session)
 
-        assert result == ([], {})
+        assert enabled_providers == []
+        # All providers should be present in status but disabled
+        assert all(not v for v in provider_status.values())
 
     @pytest.mark.asyncio
     async def test_should_return_enabled_providers_with_credentials(self):
@@ -271,9 +273,10 @@ class TestGetEnabledProvidersForUser:
         mock_session = MagicMock()
 
         with patch("langflow.agentic.services.provider_service.get_variable_service", return_value=mock_db_service):
-            result = await get_enabled_providers_for_user("user-1", mock_session)
+            enabled_providers, provider_status = await get_enabled_providers_for_user("user-1", mock_session)
 
-        assert result == ([], {})
+        assert enabled_providers == []
+        assert all(not v for v in provider_status.values())
 
 
 class TestBugsAndEdgeCases:

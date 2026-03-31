@@ -271,7 +271,7 @@ class TestClassifyIntent:
             )
 
             call_kwargs = mock_execute.call_args[1]
-            assert call_kwargs["flow_filename"] == "TranslationFlow.json"
+            assert call_kwargs["flow_filename"] == "translation_flow.py"
 
 
 class TestIntentResult:
