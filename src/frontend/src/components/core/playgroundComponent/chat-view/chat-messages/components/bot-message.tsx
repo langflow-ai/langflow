@@ -257,7 +257,7 @@ export const BotMessage = memo(
             </div>
 
             {!editMessage && (
-              <div className="invisible absolute -top-4 right-0 group-hover:visible">
+              <div className="invisible absolute bottom-full right-0 group-hover:visible">
                 <EditMessageButton
                   onCopy={() => navigator.clipboard.writeText(chatMessage)}
                   onEdit={() => setEditMessage(true)}
