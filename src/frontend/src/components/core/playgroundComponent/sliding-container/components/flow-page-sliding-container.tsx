@@ -35,8 +35,11 @@ export function FlowPageSlidingContainerContent({
   const {
     activeSessionId,
     sessions,
+    fetchedSessions,
     createSession,
     deleteSession,
+    deleteSessionLocalOnly,
+    bulkDeleteSessions,
     renameSession,
     selectSession,
     clearDefaultSession,
@@ -146,6 +149,7 @@ export function FlowPageSlidingContainerContent({
                 onDeleteSession={deleteSession}
                 onOpenLogs={handleOpenLogs}
                 onRenameSession={renameSession}
+                onBulkDeleteSessions={bulkDeleteSessions}
               />
             </div>
           </div>

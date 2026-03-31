@@ -1,6 +1,7 @@
 import ast
 import contextlib
 import importlib
+import sys
 import warnings
 from types import FunctionType
 from typing import Optional, Union
@@ -308,16 +309,67 @@ def _import_module_with_warnings(module_name):
         return importlib.import_module(module_name)
 
 
+def _resolve_attribute(imported_module, module_name, attr_name):
+    """Resolve a single attribute from a module, falling back to langchain_classic if needed."""
+    try:
+        return getattr(imported_module, attr_name)
+    except AttributeError:
+        pass
+
+    # Try importing as a submodule
+    try:
+        return importlib.import_module(f"{module_name}.{attr_name}")
+    except ModuleNotFoundError:
+        pass
+
+    # For langchain modules, try the langchain_classic equivalent
+    if module_name.startswith("langchain."):
+        classic_module_name = module_name.replace("langchain.", "langchain_classic.", 1)
+        classic_module = importlib.import_module(classic_module_name)
+        return getattr(classic_module, attr_name)
+
+    msg = f"Cannot import name '{attr_name}' from '{module_name}'"
+    raise ImportError(msg)
+
+
 def _handle_module_attributes(imported_module, node, module_name, exec_globals):
     """Handle importing specific attributes from a module."""
     for alias in node.names:
-        try:
-            # First try getting it as an attribute
-            exec_globals[alias.name] = getattr(imported_module, alias.name)
-        except AttributeError:
-            # If that fails, try importing the full module path
-            full_module_path = f"{module_name}.{alias.name}"
-            exec_globals[alias.name] = importlib.import_module(full_module_path)
+        exec_globals[alias.name] = _resolve_attribute(imported_module, module_name, alias.name)
+
+
+class _MissingModulePlaceholder:
+    """Placeholder for modules unavailable on the current platform (e.g. jq on Windows).
+
+    Allows class creation and update_build_config to succeed. Any attribute
+    access raises ModuleNotFoundError so that actual usage at runtime fails
+    with a clear error.
+    """
+
+    def __init__(self, module_name: str) -> None:
+        self._module_name = module_name
+
+    def __getattr__(self, name: str):
+        msg = f"No module named '{self._module_name}'"
+        raise ModuleNotFoundError(msg)
+
+
+def _get_module_fallbacks(module_name: str) -> list[str]:
+    """Return a list of module names to try, including compatibility fallbacks.
+
+    Handles langflow -> lfx and langchain -> langchain_classic remapping at the
+    module level (for entirely removed modules). Attribute-level fallback for
+    removed attributes in still-existing modules is handled by _resolve_attribute.
+
+    Both fallbacks only trigger on import failure, so new langchain 1.0 imports
+    are never replaced.
+    """
+    names = [module_name]
+    if module_name.startswith("langflow."):
+        names.append(module_name.replace("langflow.", "lfx.", 1))
+    if module_name.startswith("langchain."):
+        names.append(module_name.replace("langchain.", "langchain_classic.", 1))
+    return names
 
 
 def prepare_global_scope(module):
@@ -348,8 +400,28 @@ def prepare_global_scope(module):
     for node in imports:
         for alias in node.names:
             module_name = alias.name
-            # Import the full module path to ensure submodules are loaded
-            module_obj = importlib.import_module(module_name)
+
+            module_obj = None
+            for name in _get_module_fallbacks(module_name):
+                try:
+                    module_obj = importlib.import_module(name)
+                    break
+                except ModuleNotFoundError:
+                    continue
+
+            if module_obj is None:
+                if sys.platform == "win32":
+                    # Some C-extension packages (e.g. jq) have no Windows
+                    # wheels.  Insert a lazy placeholder so that class creation
+                    # succeeds and update_build_config can run.  Any real usage
+                    # of the module at runtime will raise ModuleNotFoundError.
+                    variable_name = alias.asname or module_name.split(".")[0]
+                    exec_globals[variable_name] = _MissingModulePlaceholder(module_name)
+                    logger.debug("Module '%s' unavailable on Windows — inserted placeholder", module_name)
+                    continue
+                # On other platforms the package should be installable, so
+                # raise to surface the real error.
+                module_obj = importlib.import_module(module_name)
 
             # Determine the variable name
             if alias.asname:
@@ -359,15 +431,10 @@ def prepare_global_scope(module):
             else:
                 # For dotted imports like "urllib.request", set the variable to the top-level package
                 variable_name = module_name.split(".")[0]
-                exec_globals[variable_name] = importlib.import_module(variable_name)
+                exec_globals[variable_name] = module_obj
 
     for node in import_froms:
-        module_names_to_try = [node.module]
-
-        # If original module starts with langflow, also try lfx equivalent
-        if node.module and node.module.startswith("langflow."):
-            lfx_module_name = node.module.replace("langflow.", "lfx.", 1)
-            module_names_to_try.append(lfx_module_name)
+        module_names_to_try = _get_module_fallbacks(node.module)
 
         success = False
         last_error = None
