@@ -63,6 +63,9 @@ class JobBase(SQLModel):
     asset_type: str | None = Field(
         index=False, nullable=True
     )  # Polymorphic: records if job is related to an entity like a KB, workflow, etc.
+    dedupe_key: str | None = Field(
+        index=True, nullable=True
+    )  # Optional idempotency key to prevent duplicate jobs for the same asset and operation.
 
 
 class Job(JobBase, table=True):  # type: ignore[call-arg]
