@@ -1673,8 +1673,8 @@ class Graph:
             async def get_cache_func(*args, **kwargs):  # noqa: ARG001
                 return CacheMiss()
 
-            async def set_cache_func(*args, **kwargs):
-                pass
+            async def set_cache_func(*args, **kwargs) -> bool:  # noqa: ARG001
+                return True
 
         await self.initialize_run()
         lock = asyncio.Lock()

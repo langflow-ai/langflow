@@ -41,6 +41,6 @@ async def test_frozen_vertex_rebuilds_when_no_cache_service(frozen_chat_flow):
     frozen_vertices = [v for v in graph.vertices if v.frozen]
     assert len(frozen_vertices) > 0, "Expected at least one frozen vertex"
 
-    # This should complete without TypeError
-    results = [result async for result in graph.async_start(inputs={"input_value": "hello"})]
+    # Use arun which goes through process(), the same path as arun_flow_from_json
+    results = await graph.arun(inputs=[{"input_value": "hello"}])
     assert len(results) > 0
