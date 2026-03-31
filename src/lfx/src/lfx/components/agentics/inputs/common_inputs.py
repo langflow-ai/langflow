@@ -50,7 +50,7 @@ GENERATED_FIELDS_TABLE_SCHEMA = [
     },
 ]
 
-GENERATED_FIELDS_DEFAULT_VALUE = []
+GENERATED_FIELDS_DEFAULT_VALUE: list[dict[str, str | bool]] = []
 
 
 def get_model_provider_inputs() -> list:

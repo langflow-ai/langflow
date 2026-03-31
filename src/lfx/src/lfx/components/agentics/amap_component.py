@@ -110,7 +110,7 @@ class AMapComponent(BaseAgenticComponent):
             schema_fields = build_schema_fields(self.schema)
             atype = create_pydantic_model(schema_fields, name="Target")
             if self.return_multiple_instances:
-                final_atype = create_model("ListOfTarget", items=(list[atype], ...))
+                final_atype = create_model("ListOfTarget", items=(list[atype], ...))  # type: ignore[valid-type]
             else:
                 final_atype = atype
 
