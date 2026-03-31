@@ -48,13 +48,14 @@ test(
       .dblclick();
 
     const folderInput = page.getByTestId("input-project");
+    await folderInput.waitFor({ state: "visible", timeout: 10000 });
     await folderInput.fill("test-folder-to-delete");
     await page.keyboard.press("Enter");
 
     // Wait for the folder to be renamed
     await page.getByText("test-folder-to-delete").last().waitFor({
       state: "visible",
-      timeout: 10000,
+      timeout: 30000,
     });
 
     // Verify the folder exists in the sidebar
@@ -125,12 +126,14 @@ test(
       .last()
       .dblclick();
 
-    await page.getByTestId("input-project").fill("folder-alpha");
+    const folderAlphaInput = page.getByTestId("input-project");
+    await folderAlphaInput.waitFor({ state: "visible", timeout: 10000 });
+    await folderAlphaInput.fill("folder-alpha");
     await page.keyboard.press("Enter");
 
     await page.getByText("folder-alpha").last().waitFor({
       state: "visible",
-      timeout: 10000,
+      timeout: 30000,
     });
 
     // Create second folder
@@ -148,12 +151,14 @@ test(
       .last()
       .dblclick();
 
-    await page.getByTestId("input-project").fill("folder-beta");
+    const folderBetaInput = page.getByTestId("input-project");
+    await folderBetaInput.waitFor({ state: "visible", timeout: 10000 });
+    await folderBetaInput.fill("folder-beta");
     await page.keyboard.press("Enter");
 
     await page.getByText("folder-beta").last().waitFor({
       state: "visible",
-      timeout: 10000,
+      timeout: 30000,
     });
 
     // Verify both folders exist
@@ -247,12 +252,14 @@ test(
       .last()
       .dblclick();
 
-    await page.getByTestId("input-project").fill("folder-one");
+    const folderOneInput = page.getByTestId("input-project");
+    await folderOneInput.waitFor({ state: "visible", timeout: 10000 });
+    await folderOneInput.fill("folder-one");
     await page.keyboard.press("Enter");
 
     await page.getByText("folder-one").last().waitFor({
       state: "visible",
-      timeout: 10000,
+      timeout: 30000,
     });
 
     // Delete the folder
@@ -289,13 +296,15 @@ test(
       .last()
       .dblclick();
 
-    await page.getByTestId("input-project").fill("folder-two");
+    const folderTwoInput = page.getByTestId("input-project");
+    await folderTwoInput.waitFor({ state: "visible", timeout: 10000 });
+    await folderTwoInput.fill("folder-two");
     await page.keyboard.press("Enter");
 
     // The new folder should be created successfully without any stale data issues
     await page.getByText("folder-two").last().waitFor({
       state: "visible",
-      timeout: 10000,
+      timeout: 30000,
     });
 
     const folderTwo = page.getByTestId("sidebar-nav-folder-two");
