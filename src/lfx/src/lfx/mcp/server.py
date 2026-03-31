@@ -9,6 +9,7 @@ Tools are organized into 5 groups: auth, flow, component, connection, execution.
 
 from __future__ import annotations
 
+import contextlib
 import contextvars
 from typing import Any
 
@@ -52,43 +53,36 @@ from lfx.mcp.registry import (
     search_registry,
 )
 
-# Session state. Module-level singletons for stdio (single agent), with
-# contextvars overlay for SSE (multiple concurrent agents).
+# Session state.
+#
+# Each session (SSE or stdio) gets its own client and registry via contextvars.
+# For stdio there's only one context so it just works. For SSE, each request
+# gets its own context copy so sessions never leak into each other.
 _client_var: contextvars.ContextVar[LangflowClient | None] = contextvars.ContextVar("_client", default=None)
 _registry_var: contextvars.ContextVar[dict[str, dict] | None] = contextvars.ContextVar("_registry", default=None)
-_shared_client: LangflowClient | None = None
-_shared_registry: dict[str, dict] | None = None
 
 mcp = FastMCP("langflow-mcp-client")
 
 
 def _get_client() -> LangflowClient:
-    # Try contextvar first (SSE sessions), fall back to shared (stdio)
     client = _client_var.get()
-    if client is not None:
-        return client
-    global _shared_client  # noqa: PLW0603
-    if _shared_client is None:
-        _shared_client = LangflowClient()
-    return _shared_client
+    if client is None:
+        client = LangflowClient()
+        _client_var.set(client)
+    return client
 
 
 def _set_client(client: LangflowClient) -> None:
-    global _shared_client  # noqa: PLW0603
     _client_var.set(client)
-    _shared_client = client
 
 
 async def _get_registry() -> dict[str, dict]:
     registry = _registry_var.get()
     if registry is not None:
         return registry
-    global _shared_registry  # noqa: PLW0603
-    if _shared_registry is not None:
-        return _shared_registry
-    _shared_registry = await load_registry(_get_client())
-    _registry_var.set(_shared_registry)
-    return _shared_registry
+    registry = await load_registry(_get_client())
+    _registry_var.set(registry)
+    return registry
 
 
 async def _get_flow(flow_id: str) -> dict:
@@ -121,14 +115,13 @@ async def login(username: str, password: str, server_url: str | None = None) -> 
     Returns:
         Dict with 'status' and 'server_url'.
     """
-    old_client = _client_var.get() or _shared_client
+    old_client = _client_var.get()
     if old_client is not None:
-        await old_client.close()
+        with contextlib.suppress(Exception):
+            await old_client.close()
     client = LangflowClient(server_url=server_url)
     _set_client(client)
     _registry_var.set(None)
-    global _shared_registry  # noqa: PLW0603
-    _shared_registry = None
     await client.login(username, password)
     return {"status": "authenticated", "server_url": client.server_url}
 

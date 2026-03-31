@@ -21,23 +21,17 @@ async def mcp_client(client: AsyncClient, logged_in_headers):
     # Inject the test's AsyncClient so requests go through ASGITransport
     lf_client._http = client
 
-    # Patch the module-level + contextvar state in server.py
-    old_client = mcp_server_module._shared_client
-    old_registry = mcp_server_module._shared_registry
+    # Patch the contextvar state in server.py
+    old_client = mcp_server_module._client_var.get()
+    old_registry = mcp_server_module._registry_var.get()
 
     mcp_server_module._set_client(lf_client)
-    mcp_server_module._shared_registry = None
     mcp_server_module._registry_var.set(None)
 
     yield lf_client
 
     # Restore
-    if old_client is not None:
-        mcp_server_module._set_client(old_client)
-    else:
-        mcp_server_module._shared_client = None
-        mcp_server_module._client_var.set(None)
-    mcp_server_module._shared_registry = old_registry
+    mcp_server_module._client_var.set(old_client)
     mcp_server_module._registry_var.set(old_registry)
     # Don't close the injected client — the fixture owns it
     lf_client._http = None
@@ -242,6 +236,17 @@ class TestConnectComponents:
         # Verify via flow info
         info = await mcp_server_module.get_flow_info(created["id"])
         assert info["edge_count"] == 1
+
+    async def test_connect_incompatible_types_raises(self):
+        created = await mcp_server_module.create_flow("TypeMismatchTest")
+        chat_input = await mcp_server_module.add_component(created["id"], "ChatInput")
+        agent = await mcp_server_module.add_component(created["id"], "Agent")
+        # ChatInput.message outputs Message, Agent.tools accepts Tool — incompatible
+        with pytest.raises(ValueError, match="Type mismatch"):
+            await mcp_server_module.connect_components(created["id"], chat_input["id"], "message", agent["id"], "tools")
+        # Flow should have no edges
+        info = await mcp_server_module.get_flow_info(created["id"])
+        assert info["edge_count"] == 0
 
     async def test_connect_component_as_tool_auto_enables_tool_mode(self):
         created = await mcp_server_module.create_flow("ToolModeAutoTest")
