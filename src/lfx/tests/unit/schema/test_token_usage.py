@@ -438,6 +438,121 @@ class TestAccumulateUsage:
         assert result.total_tokens == 150
 
 
+class TestStreamingTokenAccumulation:
+    """Tests for streaming token accumulation across multiple chunks."""
+
+    def test_accumulates_openai_format_chunks(self):
+        # Simulate OpenAI streaming where usage arrives in response_metadata.token_usage
+        chunks = [
+            SimpleNamespace(
+                content="Hello",
+                usage_metadata=None,
+                response_metadata={"token_usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15}},
+            ),
+            SimpleNamespace(
+                content=" world",
+                usage_metadata=None,
+                response_metadata={"token_usage": {"prompt_tokens": 10, "completion_tokens": 10, "total_tokens": 20}},
+            ),
+            SimpleNamespace(
+                content="!",
+                usage_metadata=None,
+                response_metadata={"token_usage": {"prompt_tokens": 10, "completion_tokens": 15, "total_tokens": 25}},
+            ),
+        ]
+
+        usage_data = None
+        for chunk in chunks:
+            chunk_usage = extract_usage_from_chunk(chunk)
+            usage_data = accumulate_usage(usage_data, chunk_usage)
+
+        assert usage_data is not None
+        assert usage_data.input_tokens == 30
+        assert usage_data.output_tokens == 30
+        assert usage_data.total_tokens == 60
+
+    def test_accumulates_anthropic_format_chunks(self):
+        # Simulate Anthropic streaming where input comes first, then output
+        start_chunk = SimpleNamespace(
+            content="", usage_metadata=None, response_metadata={"usage": {"input_tokens": 100, "output_tokens": 0}}
+        )
+        delta_chunk = SimpleNamespace(
+            content="response text",
+            usage_metadata=None,
+            response_metadata={"usage": {"input_tokens": 0, "output_tokens": 50}},
+        )
+
+        usage_data = None
+        for chunk in [start_chunk, delta_chunk]:
+            chunk_usage = extract_usage_from_chunk(chunk)
+            usage_data = accumulate_usage(usage_data, chunk_usage)
+
+        assert usage_data is not None
+        assert usage_data.input_tokens == 100
+        assert usage_data.output_tokens == 50
+
+    def test_accumulates_usage_metadata_chunks(self):
+        # Simulate standard LangChain usage_metadata format
+        chunks = [
+            SimpleNamespace(
+                content="part1",
+                usage_metadata={"input_tokens": 5, "output_tokens": 3, "total_tokens": 8},
+                response_metadata=None,
+            ),
+            SimpleNamespace(
+                content="part2",
+                usage_metadata={"input_tokens": 5, "output_tokens": 7, "total_tokens": 12},
+                response_metadata=None,
+            ),
+        ]
+
+        usage_data = None
+        for chunk in chunks:
+            chunk_usage = extract_usage_from_chunk(chunk)
+            usage_data = accumulate_usage(usage_data, chunk_usage)
+
+        assert usage_data is not None
+        assert usage_data.input_tokens == 10
+        assert usage_data.output_tokens == 10
+        assert usage_data.total_tokens == 20
+
+    def test_skips_chunks_without_usage_data(self):
+        # Intermediate streaming chunks typically have no usage — only the last chunk does
+        chunks = [
+            SimpleNamespace(content="token1", usage_metadata=None, response_metadata=None),
+            SimpleNamespace(content="token2", usage_metadata=None, response_metadata=None),
+            SimpleNamespace(
+                content="token3",
+                usage_metadata={"input_tokens": 20, "output_tokens": 30, "total_tokens": 50},
+                response_metadata=None,
+            ),
+        ]
+
+        usage_data = None
+        for chunk in chunks:
+            chunk_usage = extract_usage_from_chunk(chunk)
+            usage_data = accumulate_usage(usage_data, chunk_usage)
+
+        assert usage_data is not None
+        assert usage_data.input_tokens == 20
+        assert usage_data.output_tokens == 30
+        assert usage_data.total_tokens == 50
+
+    def test_all_chunks_without_usage_returns_none(self):
+        # If no chunk carries usage, result should be None
+        chunks = [
+            SimpleNamespace(content="a", usage_metadata=None, response_metadata=None),
+            SimpleNamespace(content="b", usage_metadata=None, response_metadata=None),
+        ]
+
+        usage_data = None
+        for chunk in chunks:
+            chunk_usage = extract_usage_from_chunk(chunk)
+            usage_data = accumulate_usage(usage_data, chunk_usage)
+
+        assert usage_data is None
+
+
 class TestNormalizeUsageMetadata:
     """Tests for _normalize_usage_metadata()."""
 
