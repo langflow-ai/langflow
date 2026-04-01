@@ -49,6 +49,8 @@ interface DeploymentStepperContextType {
   setDeploymentName: (name: string) => void;
   deploymentDescription: string;
   setDeploymentDescription: (description: string) => void;
+  selectedLlm: string;
+  setSelectedLlm: (llm: string) => void;
 
   // Step 3: Attach Flows
   initialFlowId: string | null;
@@ -93,6 +95,7 @@ export function DeploymentStepperProvider({
   const [deploymentType, setDeploymentType] = useState<DeploymentType>("agent");
   const [deploymentName, setDeploymentName] = useState("");
   const [deploymentDescription, setDeploymentDescription] = useState("");
+  const [selectedLlm, setSelectedLlm] = useState("");
   const [selectedVersionByFlow, setSelectedVersionByFlow] = useState<
     Map<string, { versionId: string; versionTag: string }>
   >(initialState?.selectedVersionByFlow ?? new Map());
@@ -110,7 +113,9 @@ export function DeploymentStepperProvider({
     (currentStep === 1 &&
       selectedProvider !== null &&
       (selectedInstance !== null || hasValidCredentials)) ||
-    (currentStep === 2 && deploymentName.trim() !== "") ||
+    (currentStep === 2 &&
+      deploymentName.trim() !== "" &&
+      selectedLlm.trim() !== "") ||
     (currentStep === 3 && attachedConnectionByFlow.size > 0) ||
     currentStep === 4;
 
@@ -216,6 +221,7 @@ export function DeploymentStepperProvider({
           type: deploymentType,
         },
         provider_data: {
+          llm: selectedLlm,
           resource_name_prefix: toResourceNamePrefix(deploymentName),
           operations,
           connections: {
@@ -231,6 +237,7 @@ export function DeploymentStepperProvider({
       deploymentDescription,
       deploymentName,
       deploymentType,
+      selectedLlm,
       selectedVersionByFlow,
     ],
   );
@@ -253,6 +260,8 @@ export function DeploymentStepperProvider({
       setDeploymentName,
       deploymentDescription,
       setDeploymentDescription,
+      selectedLlm,
+      setSelectedLlm,
       initialFlowId: initialState?.initialFlowId ?? null,
       connections,
       setConnections,
@@ -276,6 +285,7 @@ export function DeploymentStepperProvider({
       deploymentType,
       deploymentName,
       deploymentDescription,
+      selectedLlm,
       connections,
       selectedVersionByFlow,
       handleSelectVersion,
