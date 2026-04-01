@@ -1,12 +1,12 @@
+import { useMemo, useRef, useState } from "react";
 import { GRADIENT_CLASS_DISABLED } from "@/constants/constants";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
-import { useMemo, useRef, useState } from "react";
 import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
 import { Input } from "../../../../ui/input";
-import { InputProps, TextAreaComponentType } from "../../types";
+import type { InputProps, TextAreaComponentType } from "../../types";
 
 const BACKEND_URL = "BACKEND_URL";
 const MCP_SSE_VALUE = "MCP_SSE";
@@ -59,14 +59,15 @@ export default function CopyFieldAreaComponent({
   handleOnNewValue,
   editNode = false,
   id = "",
-}: InputProps<string, TextAreaComponentType>): JSX.Element {
+  showParameter = true,
+}: InputProps<string, TextAreaComponentType>): JSX.Element | null {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const currentFlow = useFlowStore((state) => state.currentFlow);
-  const endpointName = currentFlow?.endpoint_name ?? "";
+  const endpointName = currentFlow?.endpoint_name ?? currentFlow?.id ?? "";
 
   const valueToRender = useMemo(() => {
     if (value === BACKEND_URL) {
@@ -123,7 +124,9 @@ export default function CopyFieldAreaComponent({
       )}
       <div onClick={handleCopy}>
         <IconComponent
-          dataTestId={`btn_copy_${id?.toLowerCase()}${editNode ? "_advanced" : ""}`}
+          dataTestId={`btn_copy_${id?.toLowerCase()}${
+            editNode ? "_advanced" : ""
+          }`}
           name={isCopied ? "Check" : "Copy"}
           className={cn(
             "cursor-pointer bg-muted",
@@ -137,6 +140,10 @@ export default function CopyFieldAreaComponent({
       </div>
     </>
   );
+
+  if (!showParameter) {
+    return null;
+  }
 
   return (
     <div className={cn("w-full")}>

@@ -1,15 +1,18 @@
-import { EventDeliveryType } from "@/constants/enums";
-import { Pagination, Tag } from "@/types/utils/types";
-import { UtilityStoreType } from "@/types/zustand/utility";
 import { create } from "zustand";
+import { EventDeliveryType } from "@/constants/enums";
+import type { Pagination, Tag } from "@/types/utils/types";
+import type { UtilityStoreType } from "@/types/zustand/utility";
 
 export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
+  awaitingBotResponse: false,
+  setAwaitingBotResponse: (awaitingBotResponse: boolean) =>
+    set({ awaitingBotResponse }),
   clientId: "",
   setClientId: (clientId: string) => set({ clientId }),
   chatValueStore: "",
   setChatValueStore: (value: string) => set({ chatValueStore: value }),
-  selectedItems: [],
-  setSelectedItems: (itemId) => {
+  selectedItems: [] as string[],
+  setSelectedItems: (itemId: string) => {
     if (get().selectedItems.includes(itemId)) {
       set({
         selectedItems: get().selectedItems.filter((item) => item !== itemId),
@@ -38,8 +41,9 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   tags: [],
   setTags: (tags: Tag[]) => set({ tags }),
   featureFlags: {},
-  setFeatureFlags: (featureFlags: Record<string, any>) => set({ featureFlags }),
-  webhookPollingInterval: 5000,
+  setFeatureFlags: (featureFlags: Record<string, unknown>) =>
+    set({ featureFlags }),
+  webhookPollingInterval: 0, // Disabled: SSE provides real-time updates
   setWebhookPollingInterval: (webhookPollingInterval: number) =>
     set({ webhookPollingInterval }),
   currentSessionId: "",
@@ -48,4 +52,13 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   eventDelivery: EventDeliveryType.POLLING,
   setEventDelivery: (eventDelivery: EventDeliveryType) =>
     set({ eventDelivery }),
+  webhookAuthEnable: true,
+  setWebhookAuthEnable: (webhookAuthEnable: boolean) =>
+    set({ webhookAuthEnable }),
+  defaultFolderName: "Starter Project",
+  setDefaultFolderName: (defaultFolderName: string) =>
+    set({ defaultFolderName }),
+  hideGettingStartedProgress: false,
+  setHideGettingStartedProgress: (hideGettingStartedProgress: boolean) =>
+    set({ hideGettingStartedProgress }),
 }));

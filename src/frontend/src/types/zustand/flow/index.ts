@@ -1,5 +1,4 @@
-import { AllNodeType, EdgeType, FlowType } from "@/types/flow";
-import {
+import type {
   Connection,
   Node,
   OnEdgesChange,
@@ -7,10 +6,11 @@ import {
   ReactFlowInstance,
   Viewport,
 } from "@xyflow/react";
-import { BuildStatus, EventDeliveryType } from "../../../constants/enums";
-import { VertexBuildTypeAPI } from "../../api";
-import { ChatInputType, ChatOutputType } from "../../chat";
-import { FlowState } from "../../tabs";
+import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
+import type { BuildStatus, EventDeliveryType } from "../../../constants/enums";
+import type { VertexBuildTypeAPI } from "../../api";
+import type { ChatInputType, ChatOutputType } from "../../chat";
+import type { FlowState } from "../../tabs";
 
 export type FlowPoolObjectType = {
   timestamp: string;
@@ -65,6 +65,8 @@ export type FlowStoreType = {
   dismissedNodes: string[];
   addDismissedNodes: (dismissedNodes: string[]) => void;
   removeDismissedNodes: (dismissedNodes: string[]) => void;
+  dismissedNodesLegacy: string[];
+  addDismissedNodesLegacy: (dismissedNodes: string[]) => void;
   //key x, y
   positionDictionary: { [key: number]: number };
   isPositionAvailable: (position: { x: number; y: number }) => boolean;
@@ -72,7 +74,7 @@ export type FlowStoreType = {
     [key: number]: number;
   }) => void;
   fitViewNode: (nodeId: string) => void;
-  autoSaveFlow: (() => void) | undefined;
+  autoSaveFlow: ((flow?: FlowType) => void) | undefined;
   componentsToUpdate: ComponentsToUpdateType[];
   setComponentsToUpdate: (
     update:
@@ -105,8 +107,15 @@ export type FlowStoreType = {
   addDataToFlowPool: (data: VertexBuildTypeAPI, nodeId: string) => void;
   CleanFlowPool: () => void;
   isBuilding: boolean;
+  buildStartTime: number | null;
+  buildDuration: number | null;
+  buildingFlowId: string | null;
+  buildingSessionId: string | null;
   isPending: boolean;
   setIsBuilding: (isBuilding: boolean) => void;
+  setBuildStartTime: (time: number) => void;
+  setBuildDuration: (duration: number) => void;
+  setBuildingSession: (flowId: string | null, sessionId: string | null) => void;
   setPending: (isPending: boolean) => void;
   resetFlow: (flow: FlowType | undefined) => void;
   resetFlowState: () => void;
@@ -152,6 +161,10 @@ export type FlowStoreType = {
   cleanFlow: () => void;
   setFilterEdge: (newState) => void;
   getFilterEdge: any[];
+  setFilterComponent: (newState) => void;
+  getFilterComponent: string;
+  rightClickedNodeId: string | null;
+  setRightClickedNodeId: (nodeId: string | null) => void;
   onConnect: (connection: Connection) => void;
   unselectAll: () => void;
   playgroundPage: boolean;
@@ -284,7 +297,14 @@ export type FlowStoreType = {
   currentBuildingNodeId: string[] | undefined;
   setCurrentBuildingNodeId: (nodeIds: string[] | undefined) => void;
   clearEdgesRunningByNodes: () => Promise<void>;
+  clearAndSetEdgesRunning: (nextIds?: string[]) => void;
   updateToolMode: (nodeId: string, toolMode: boolean) => void;
+  helperLineEnabled: boolean;
+  setHelperLineEnabled: (helperLineEnabled: boolean) => void;
+  inspectionPanelVisible: boolean;
+  setInspectionPanelVisible: (visible: boolean) => void;
   newChatOnPlayground: boolean;
   setNewChatOnPlayground: (newChat: boolean) => void;
+  stopNodeId: string | undefined;
+  setStopNodeId: (nodeId: string | undefined) => void;
 };

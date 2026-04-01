@@ -1,4 +1,5 @@
-import React, { forwardRef } from "react";
+import type React from "react";
+import { forwardRef } from "react";
 import SvgIcosa from "./Icosa";
 
 export const IcosaIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(

@@ -1,16 +1,17 @@
 import asyncio
 import uuid
-from unittest.mock import MagicMock, patch
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langflow.services.settings.base import Settings
-from langflow.services.settings.service import SettingsService
 from langflow.services.tracing.base import BaseTracer
 from langflow.services.tracing.service import (
     TracingService,
     component_context_var,
     trace_context_var,
 )
+from lfx.services.settings.base import Settings
+from lfx.services.settings.service import SettingsService
 
 
 class MockTracer(BaseTracer):
@@ -20,6 +21,7 @@ class MockTracer(BaseTracer):
         trace_type: str,
         project_name: str,
         trace_id: uuid.UUID,
+        flow_id: str | None = None,
         user_id: str | None = None,
         session_id: str | None = None,
     ) -> None:
@@ -27,6 +29,7 @@ class MockTracer(BaseTracer):
         self.trace_type = trace_type
         self.project_name = project_name
         self.trace_id = trace_id
+        self.flow_id = flow_id
         self.user_id = user_id
         self.session_id = session_id
         self._ready = True
@@ -44,8 +47,8 @@ class MockTracer(BaseTracer):
         trace_id: str,
         trace_name: str,
         trace_type: str,
-        inputs: dict[str, any],
-        metadata: dict[str, any] | None = None,
+        inputs: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
         vertex=None,
     ) -> None:
         self.add_trace_list.append(
@@ -63,7 +66,7 @@ class MockTracer(BaseTracer):
         self,
         trace_id: str,
         trace_name: str,
-        outputs: dict[str, any] | None = None,
+        outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
         logs=(),
     ) -> None:
@@ -79,10 +82,10 @@ class MockTracer(BaseTracer):
 
     def end(
         self,
-        inputs: dict[str, any],
-        outputs: dict[str, any],
+        inputs: dict[str, Any],
+        outputs: dict[str, Any],
         error: Exception | None = None,
-        metadata: dict[str, any] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         self.end_called = True
         self.inputs_param = inputs
@@ -110,8 +113,10 @@ def tracing_service(mock_settings_service):
 @pytest.fixture
 def mock_component():
     component = MagicMock()
-    component._vertex = MagicMock()
-    component._vertex.id = "test_vertex_id"
+    mock_vertex = MagicMock()
+    mock_vertex.id = "test_vertex_id"
+    component._vertex = mock_vertex
+    component.get_vertex = MagicMock(return_value=mock_vertex)
     component.trace_type = "test_trace_type"
     return component
 
@@ -137,6 +142,18 @@ def mock_tracers():
         ),
         patch(
             "langflow.services.tracing.service._get_opik_tracer",
+            return_value=MockTracer,
+        ),
+        patch(
+            "langflow.services.tracing.service._get_traceloop_tracer",
+            return_value=MockTracer,
+        ),
+        patch(
+            "langflow.services.tracing.service._get_native_tracer",
+            return_value=MockTracer,
+        ),
+        patch(
+            "langflow.services.tracing.service._get_openlayer_tracer",
             return_value=MockTracer,
         ),
     ):
@@ -169,6 +186,10 @@ async def test_start_end_tracers(tracing_service):
     assert "langwatch" in trace_context.tracers
     assert "langfuse" in trace_context.tracers
     assert "arize_phoenix" in trace_context.tracers
+    assert "opik" in trace_context.tracers
+    assert "traceloop" in trace_context.tracers
+    assert "native" in trace_context.tracers
+    assert "openlayer" in trace_context.tracers
 
     await tracing_service.end_tracers(outputs)
 
@@ -298,7 +319,8 @@ async def test_get_langchain_callbacks(tracing_service):
         assert tracer.get_langchain_callback_called
 
     # Verify returned callbacks list length
-    assert len(callbacks) == 5  # Five tracers
+    expected = len(trace_context_var.get().tracers)
+    assert len(callbacks) == expected
 
     # Cleanup
     await tracing_service.end_tracers({})
@@ -367,6 +389,98 @@ async def test_cleanup_inputs():
 
 
 @pytest.mark.asyncio
+async def test_cleanup_inputs_masks_password_keyword():
+    """Test that keys containing 'password' are masked."""
+    inputs = {
+        "password": "my-secret-password",  # pragma: allowlist secret
+        "db_password": "db-secret",  # pragma: allowlist secret
+        "normal_key": "visible",
+    }
+
+    cleaned = TracingService._cleanup_inputs(inputs)
+
+    assert cleaned["password"] == "*****"  # noqa: S105
+    assert cleaned["db_password"] == "*****"  # noqa: S105
+    assert cleaned["normal_key"] == "visible"
+
+
+@pytest.mark.asyncio
+async def test_cleanup_inputs_masks_server_url_keyword():
+    """Test that keys containing 'server_url' are masked."""
+    inputs = {
+        "server_url": "http://internal-server:8080",
+        "my_server_url": "http://other-server",
+        "public_url": "http://public.example.com",
+    }
+
+    cleaned = TracingService._cleanup_inputs(inputs)
+
+    assert cleaned["server_url"] == "*****"
+    assert cleaned["my_server_url"] == "*****"
+    assert cleaned["public_url"] == "http://public.example.com"
+
+
+@pytest.mark.asyncio
+async def test_cleanup_inputs_handles_list_of_dicts():
+    """Test that lists containing dicts are recursively cleaned."""
+    inputs = {
+        "items": [
+            {"api_key": "secret1", "name": "item1"},  # pragma: allowlist secret
+            {"password": "secret2", "value": "data"},  # pragma: allowlist secret
+            "plain_string",
+        ]
+    }
+
+    cleaned = TracingService._cleanup_inputs(inputs)
+
+    items = cleaned["items"]
+    assert items[0]["api_key"] == "*****"
+    assert items[0]["name"] == "item1"
+    assert items[1]["password"] == "*****"  # noqa: S105
+    assert items[1]["value"] == "data"
+    assert items[2] == "plain_string"
+
+
+@pytest.mark.asyncio
+async def test_cleanup_inputs_handles_nested_list_in_dict():
+    """Test that nested lists inside dicts are recursively cleaned."""
+    inputs = {
+        "config": {
+            "credentials": [
+                {"api_key": "nested-secret"},  # pragma: allowlist secret
+            ]
+        }
+    }
+
+    cleaned = TracingService._cleanup_inputs(inputs)
+
+    assert cleaned["config"]["credentials"][0]["api_key"] == "*****"
+
+
+@pytest.mark.asyncio
+async def test_cleanup_inputs_does_not_mutate_original():
+    """Test that the original input dict is not modified."""
+    inputs = {
+        "password": "original-password",  # pragma: allowlist secret
+        "server_url": "http://original-url",
+    }
+    original_password = inputs["password"]
+    original_url = inputs["server_url"]
+
+    TracingService._cleanup_inputs(inputs)
+
+    assert inputs["password"] == original_password
+    assert inputs["server_url"] == original_url
+
+
+@pytest.mark.asyncio
+async def test_cleanup_inputs_empty_dict():
+    """Test that empty dict is handled gracefully."""
+    cleaned = TracingService._cleanup_inputs({})
+    assert cleaned == {}
+
+
+@pytest.mark.asyncio
 async def test_start_tracers_with_exception(tracing_service):
     """Test starting tracers with exception handling."""
     run_id = uuid.uuid4()
@@ -382,13 +496,16 @@ async def test_start_tracers_with_exception(tracing_service):
             "_initialize_langsmith_tracer",
             side_effect=Exception("Mock exception"),
         ),
-        patch("langflow.services.tracing.service.logger.debug") as mock_logger,
+        patch("langflow.services.tracing.service.logger") as mock_logger,
     ):
+        # Configure async mock method
+        mock_logger.adebug = AsyncMock()
+
         # start_tracers should return normally even with exception
         await tracing_service.start_tracers(run_id, run_name, user_id, session_id, project_name)
 
         # Verify exception was logged
-        mock_logger.assert_any_call("Error initializing tracers: Mock exception")
+        mock_logger.adebug.assert_any_call("Error initializing tracers: Mock exception")
 
         # Verify trace_context was set even with exception
         trace_context = trace_context_var.get()
@@ -415,7 +532,10 @@ async def test_trace_worker_with_exception(tracing_service):
         msg = "Mock trace function exception"
         raise ValueError(msg)
 
-    with patch("langflow.services.tracing.service.logger.exception") as mock_logger:
+    with patch("langflow.services.tracing.service.logger") as mock_logger:
+        # Configure async mock method
+        mock_logger.aexception = AsyncMock()
+
         # Remove incorrect context manager usage
         await tracing_service.start_tracers(run_id, run_name, user_id, session_id, project_name)
 
@@ -427,7 +547,7 @@ async def test_trace_worker_with_exception(tracing_service):
         await asyncio.sleep(0.1)
 
         # Verify exception was logged
-        mock_logger.assert_called_with("Error processing trace_func")
+        mock_logger.aexception.assert_called_with("Error processing trace_func")
 
         # Cleanup
         await tracing_service.end_tracers({})

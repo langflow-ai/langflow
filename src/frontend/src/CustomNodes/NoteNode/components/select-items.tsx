@@ -1,12 +1,11 @@
+import { memo } from "react";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import {
   SelectContentWithoutPortal,
   SelectItem,
 } from "@/components/ui/select-custom";
 import ToolbarSelectItem from "@/pages/FlowPage/components/nodeToolbarComponent/toolbarSelectItem";
-import { NoteDataType } from "@/types/flow";
-
-import { memo } from "react";
+import type { NoteDataType } from "@/types/flow";
 
 export const SelectItems = memo(
   ({ shortcuts, data }: { shortcuts: any[]; data: NoteDataType }) => (
@@ -40,7 +39,7 @@ export const SelectItems = memo(
           dataTestId="docs-button-modal"
         />
       </SelectItem>
-      <SelectItem value="delete" className="focus:bg-red-400/[.20]">
+      <SelectItem value="delete" className="focus:bg-destructive/[.20]">
         <div className="font-red flex text-status-red">
           <ForwardedIconComponent
             name="Trash2"
@@ -50,7 +49,7 @@ export const SelectItems = memo(
           <span className="absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2]">
             <ForwardedIconComponent
               name="Delete"
-              className="h-4 w-4 stroke-2 text-red-400"
+              className="h-4 w-4 stroke-2 text-destructive"
             />
           </span>
         </div>

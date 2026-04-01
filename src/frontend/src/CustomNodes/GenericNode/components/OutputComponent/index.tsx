@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,16 +7,14 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-
 import {
   Popover,
   PopoverContentWithoutPortal,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import useFlowStore from "@/stores/flowStore";
-import { useRef } from "react";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
-import { outputComponentType } from "../../../../types/components";
+import type { outputComponentType } from "../../../../types/components";
 import { cn } from "../../../../utils/utils";
 
 export default function OutputComponent({
@@ -50,7 +49,7 @@ export default function OutputComponent({
   const singleOutput = displayProxy(
     <span
       className={cn(
-        "px-2 py-1 text-[13px] font-medium",
+        "px-2 py-1 text-sm font-medium",
         isToolMode && "text-secondary",
         frozen ? "text-ice" : "",
       )}
@@ -80,7 +79,7 @@ export default function OutputComponent({
               className="no-focus-visible group flex items-center gap-2"
               data-testid={`dropdown-output-${outputName?.toLowerCase()}`}
             >
-              <div className="flex items-center gap-1 truncate rounded-md px-2 py-1 text-[13px] font-medium group-hover:bg-primary/10">
+              <div className="flex items-center gap-1 truncate rounded-md px-2 py-1 text-sm font-medium group-hover:bg-primary/10">
                 {name}
                 <ForwardedIconComponent
                   name="ChevronDown"

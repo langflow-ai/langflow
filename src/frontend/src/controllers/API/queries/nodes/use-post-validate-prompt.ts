@@ -1,10 +1,10 @@
-import {
+import type { UseMutationResult } from "@tanstack/react-query";
+import type {
   APIClassType,
   PromptTypeAPI,
   ResponseErrorDetailAPI,
   useMutationFunctionType,
 } from "@/types/api";
-import { UseMutationResult } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -13,6 +13,7 @@ interface IPostValidatePrompt {
   name: string;
   template: string;
   frontend_node: APIClassType;
+  mustache?: boolean;
 }
 
 export const usePostValidatePrompt: useMutationFunctionType<
@@ -32,6 +33,7 @@ export const usePostValidatePrompt: useMutationFunctionType<
         name: payload.name,
         template: payload.template,
         frontend_node: payload.frontend_node,
+        mustache: payload.mustache ?? false,
       },
     );
 
@@ -42,7 +44,10 @@ export const usePostValidatePrompt: useMutationFunctionType<
     PromptTypeAPI,
     ResponseErrorDetailAPI,
     IPostValidatePrompt
-  > = mutate(["usePostValidatePrompt"], postValidatePromptFn, options);
+  > = mutate(["usePostValidatePrompt"], postValidatePromptFn, {
+    ...options,
+    retry: 0, // Don't retry validation errors - they're not transient
+  });
 
   return mutation;
 };

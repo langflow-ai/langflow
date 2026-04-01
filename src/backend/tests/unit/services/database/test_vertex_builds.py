@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 from langflow.services.database.models.vertex_builds.crud import log_vertex_build
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase, VertexBuildTable
-from langflow.services.settings.base import Settings
+from lfx.services.settings.base import Settings
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 

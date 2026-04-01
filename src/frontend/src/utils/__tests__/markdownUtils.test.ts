@@ -37,8 +37,8 @@ describe("markdownUtils", () => {
     });
 
     it("should return true for table with extra whitespace", () => {
-      const table = `  | Header 1 | Header 2 |  
-  |----------|----------|  
+      const table = `  | Header 1 | Header 2 |
+  |----------|----------|
   | Cell 1   | Cell 2   |  `;
       expect(isMarkdownTable(table)).toBe(true);
     });

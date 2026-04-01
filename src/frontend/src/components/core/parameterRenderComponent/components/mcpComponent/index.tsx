@@ -1,13 +1,13 @@
+import { useEffect, useMemo, useState } from "react";
 import { useAddMCPServer } from "@/controllers/API/queries/mcp/use-add-mcp-server";
 import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
 import useAlertStore from "@/stores/alertStore";
-import { useEffect, useMemo, useRef, useState } from "react";
 import ListSelectionComponent from "../../../../../CustomNodes/GenericNode/components/ListSelectionComponent";
 import { cn } from "../../../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
-import { InputProps } from "../../types";
+import type { InputProps } from "../../types";
 
 export default function McpComponent({
   value,
@@ -15,8 +15,10 @@ export default function McpComponent({
   handleOnNewValue,
   editNode = false,
   id = "",
-}: InputProps<string, any>): JSX.Element {
-  const { data: mcpServers } = useGetMCPServers();
+  showParameter = true,
+}: InputProps<string, any>): JSX.Element | null {
+  const [open, setOpen] = useState(false);
+  const { data: mcpServers } = useGetMCPServers({ withCounts: true });
   const { mutate: addMcpServer } = useAddMCPServer();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const options = useMemo(
@@ -36,7 +38,6 @@ export default function McpComponent({
       })),
     [mcpServers],
   );
-  const [open, setOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any[]>([]);
   const { name, config } = useMemo(
@@ -131,6 +132,10 @@ export default function McpComponent({
     );
   }, [selectedOption, config]);
 
+  if (!showParameter) {
+    return null;
+  }
+
   return (
     <div className="flex w-full flex-col gap-2">
       {options == null || options.length > 0 || showSaveButton ? (
@@ -187,7 +192,11 @@ export default function McpComponent({
           )}
         </div>
       ) : (
-        <Button size="sm" onClick={handleAddButtonClick}>
+        <Button
+          size="sm"
+          onClick={handleAddButtonClick}
+          data-testid="add-mcp-server-simple-button"
+        >
           <span>Add MCP Server</span>
         </Button>
       )}

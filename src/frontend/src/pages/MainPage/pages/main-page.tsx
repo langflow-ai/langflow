@@ -1,3 +1,6 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { Outlet } from "react-router-dom";
 import SideBarFoldersButtonsComponent from "@/components/core/folderSidebarComponent/components/sideBarFolderButtons";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useDeleteFolders } from "@/controllers/API/queries/folders";
@@ -7,9 +10,6 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
-import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { Outlet } from "react-router-dom";
 import ModalsComponent from "../components/modalsComponent";
 import EmptyPageCommunity from "./empty-page";
 
@@ -59,7 +59,8 @@ export default function CollectionPage(): JSX.Element {
       {flows &&
         examples &&
         folders &&
-        (flows?.length !== examples?.length || folders?.length > 1) && (
+        ((flows?.length !== examples?.length && folders?.length > 0) ||
+          folders?.length > 1) && (
           <SideBarFoldersButtonsComponent
             handleChangeFolder={(id: string) => {
               navigate(`all/folder/${id}`);
@@ -69,7 +70,7 @@ export default function CollectionPage(): JSX.Element {
               setOpenDeleteFolderModal(true);
             }}
             handleFilesClick={() => {
-              navigate("files");
+              navigate("assets");
             }}
           />
         )}
@@ -78,7 +79,8 @@ export default function CollectionPage(): JSX.Element {
           <div
             className={`relative mx-auto flex h-full w-full flex-col overflow-hidden`}
           >
-            {flows?.length !== examples?.length || folders?.length > 1 ? (
+            {(flows?.length !== examples?.length && folders?.length > 0) ||
+            folders?.length > 1 ? (
               <Outlet />
             ) : (
               <CustomEmptyPageCommunity setOpenModal={setOpenModal} />

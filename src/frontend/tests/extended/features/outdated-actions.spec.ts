@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test("user must be able to update outdated components by update all button", async ({
@@ -37,14 +37,14 @@ test("user must be able to update outdated components by update all button", asy
 
   await page.getByTestId("list-card").first().click();
 
-  await expect(page.getByText("Updates are available for 5")).toBeVisible({
+  await expect(page.getByText("Updates are available for 4")).toBeVisible({
     timeout: 30000,
   });
 
-  let outdatedComponents = await page.getByTestId("update-button").count();
-  expect(outdatedComponents).toBe(1);
+  const outdatedComponents = await page.getByTestId("update-button").count();
+  expect(outdatedComponents).toBe(0);
 
-  let outdatedBreakingComponents = await page
+  const outdatedBreakingComponents = await page
     .getByTestId("review-button")
     .count();
   expect(outdatedBreakingComponents).toBe(4);
@@ -63,19 +63,31 @@ test("user must be able to update outdated components by update all button", asy
 
   expect(
     await page.locator('input[data-ref="eInput"]').nth(4).isChecked(),
-  ).toBe(true);
+  ).toBe(false);
 
   expect(
     await page.locator('input[data-ref="eInput"]').nth(5).isChecked(),
   ).toBe(false);
 
-  expect(
-    await page.locator('input[data-ref="eInput"]').nth(6).isChecked(),
-  ).toBe(false);
-
   await page
     .getByRole("checkbox", { name: "Column with Header Selection" })
     .check();
+
+  expect(
+    await page.locator('input[data-ref="eInput"]').nth(2).isChecked(),
+  ).toBe(true);
+
+  expect(
+    await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
+  ).toBe(true);
+
+  expect(
+    await page.locator('input[data-ref="eInput"]').nth(4).isChecked(),
+  ).toBe(true);
+
+  expect(
+    await page.locator('input[data-ref="eInput"]').nth(5).isChecked(),
+  ).toBe(true);
 
   expect(await page.getByTestId("backup-flow-checkbox").isChecked()).toBe(true);
   await page.getByTestId("backup-flow-checkbox").click();
@@ -126,14 +138,14 @@ test("user must be able to update outdated components by each outdated component
 
   await page.getByTestId("list-card").first().click();
 
-  await expect(page.getByText("Updates are available for 5")).toBeVisible({
+  await expect(page.getByText("Updates are available for 4")).toBeVisible({
     timeout: 30000,
   });
 
-  let outdatedComponents = await page.getByTestId("update-button").count();
-  expect(outdatedComponents).toBe(1);
+  const outdatedComponents = await page.getByTestId("update-button").count();
+  expect(outdatedComponents).toBe(0);
 
-  let outdatedBreakingComponents = await page
+  const outdatedBreakingComponents = await page
     .getByTestId("review-button")
     .count();
   expect(outdatedBreakingComponents).toBe(4);
@@ -150,22 +162,6 @@ test("user must be able to update outdated components by each outdated component
 
   await page.getByRole("button", { name: "Update Component" }).click();
 
-  await expect(page.getByTestId("update-button")).toHaveCount(1, {
-    timeout: 5000,
-  });
-
-  await expect(page.getByTestId("review-button")).toHaveCount(3, {
-    timeout: 5000,
-  });
-
-  await expect(page.getByText("Updates are available for 4")).toBeVisible({
-    timeout: 30000,
-  });
-
-  expect(await page.getByTestId("update-all-button")).toHaveText("Review All");
-
-  await page.getByTestId("update-button").first().click();
-
   await expect(page.getByTestId("update-button")).toHaveCount(0, {
     timeout: 5000,
   });
@@ -174,7 +170,13 @@ test("user must be able to update outdated components by each outdated component
     timeout: 5000,
   });
 
+  await expect(page.getByText("Updates are available for 3")).toBeVisible({
+    timeout: 30000,
+  });
+
+  expect(await page.getByTestId("update-all-button")).toHaveText("Review All");
+
   await awaitBootstrapTest(page, { skipModal: true });
 
-  await expect(page.getByText("Backup").count()).toBeGreaterThan(0);
+  expect(await page.getByText("Backup").count()).toBeGreaterThan(0);
 });

@@ -1,7 +1,7 @@
+import { useEffect, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import useTheme from "@/customization/hooks/use-custom-theme";
-import { useEffect, useState } from "react";
 
 export const ThemeButtons = () => {
   const { systemTheme, dark, setThemePreference } = useTheme();
@@ -33,9 +33,9 @@ export const ThemeButtons = () => {
     <div className="relative ml-auto inline-flex rounded-full border border-border">
       {/* Sliding Indicator - Behind the Buttons */}
       <div
-        className={`absolute bottom-0.5 left-[1px] top-0.5 w-[30%] rounded-full bg-amber-400 ${
+        className={`absolute bottom-0.5 left-[1px] top-0.5 w-[30%] rounded-full bg-accent-amber-foreground ${
           hasInteracted ? "transition-all duration-300" : ""
-        } dark:bg-purple-400`}
+        } dark:bg-accent-purple-foreground`}
         style={{
           transform: `translateX(${
             selectedTheme === "light"
@@ -54,7 +54,7 @@ export const ThemeButtons = () => {
         className={`relative z-10 inline-flex items-center rounded-full px-1 ${
           selectedTheme === "light"
             ? "text-foreground"
-            : "text-foreground hover:bg-amber-400 hover:text-background"
+            : "text-foreground hover:bg-accent-amber-foreground hover:text-background"
         }`}
         onClick={() => handleThemeChange("light")}
         data-testid="menu_light_button"

@@ -1,7 +1,7 @@
-import { toCamelCase } from "@/utils/utils";
 import { create } from "zustand";
+import { toCamelCase } from "@/utils/utils";
 import { defaultShortcuts } from "../constants/constants";
-import { shortcutsStoreType } from "../types/store";
+import type { shortcutsStoreType } from "../types/store";
 
 export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
   shortcuts: defaultShortcuts,
@@ -45,12 +45,12 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
       const savedShortcuts = localStorage.getItem("langflow-shortcuts");
       const savedArr = JSON.parse(savedShortcuts!);
       savedArr.forEach(({ name, shortcut }) => {
-        let shortcutName = toCamelCase(name);
+        const shortcutName = toCamelCase(name);
         set({
           [shortcutName]: shortcut,
         });
       });
-      get().setShortcuts(JSON.parse(savedShortcuts!));
+      get().setShortcuts(savedArr);
     }
   },
 }));

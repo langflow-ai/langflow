@@ -1,6 +1,6 @@
-import { useMutationFunctionType } from "@/types/api";
-import { ReactFlowJsonObject } from "@xyflow/react";
-import { AxiosRequestConfig } from "axios";
+import type { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
+import type { AxiosRequestConfig } from "axios";
+import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -42,17 +42,17 @@ export const usePostRetrieveVertexOrder: useMutationFunctionType<
         start_component_id: decodeURIComponent(startNodeId),
       };
     }
-    const data = {
-      data: {},
-    };
+    let requestBody: { nodes: Node[]; edges: Edge[] } | null = null;
     if (flow && flow.nodes && flow.edges) {
       const { nodes, edges } = flow;
-      data["data"]["nodes"] = nodes;
-      data["data"]["edges"] = edges;
+      requestBody = {
+        nodes,
+        edges,
+      };
     }
     const response = await api.post(
       `${getURL("BUILD")}/${flowId}/vertices`,
-      data,
+      requestBody,
       config,
     );
 

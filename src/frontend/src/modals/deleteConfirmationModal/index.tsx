@@ -30,7 +30,7 @@ export default function DeleteConfirmationModal({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild={!children ? true : asChild} tabIndex={-1}>
-        {children ?? <></>}
+        {children}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -46,7 +46,9 @@ export default function DeleteConfirmationModal({
         </DialogHeader>
         <span className="pb-3 text-sm">
           This will permanently delete the {description ?? "flow"}
-          {note ? " " + note : ""}.<br></br>This can't be undone.
+          {note ? " " + note : ""}.<br />
+          <br />
+          This can't be undone.
         </span>
         <DialogFooter>
           <DialogClose asChild>

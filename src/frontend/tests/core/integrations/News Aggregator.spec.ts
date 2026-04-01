@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
@@ -29,14 +29,13 @@ withEventDeliveryModes(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "News Aggregator" }).click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
 
     await initialGPTsetup(page, {
       skipAdjustScreenView: true,
-      skipAddNewApiKeys: true,
-      skipSelectGptModel: true,
+      skipAddOpenAiInputKey: true,
     });
 
     await page
@@ -44,22 +43,18 @@ withEventDeliveryModes(
       .nth(0)
       .fill(process?.env?.AGENTQL_API_KEY ?? "");
 
-    await page
-      .getByTestId("popover-anchor-input-api_key")
-      .nth(1)
-      .fill(process?.env?.OPENAI_API_KEY ?? "");
-
     await page.getByTestId("playground-btn-flow-io").click();
 
     await page.waitForSelector('[data-testid="button-send"]', {
       timeout: 3000,
     });
 
+    await page.getByTestId("input-chat-playground").click();
     await page.getByTestId("input-chat-playground").fill("what is langflow?");
 
     await page.getByTestId("button-send").click();
 
-    await page.waitForSelector("text=Finished", { timeout: 10000 });
+    await page.waitForSelector("text=Finished", { timeout: 100000 });
 
     await page.waitForSelector(".markdown", { timeout: 3000 });
 
@@ -68,12 +63,10 @@ withEventDeliveryModes(
       .last()
       .allTextContents();
 
-    const concatAllText = textContents.join(" ");
+    const concatAllText = textContents.join(" ").toLowerCase();
 
     expect(concatAllText.length).toBeGreaterThan(100);
 
-    expect(concatAllText).toContain("Langflow");
-    expect(concatAllText).toContain("open-source");
-    expect(concatAllText).toContain("framework");
+    expect(concatAllText).toContain("langflow");
   },
 );

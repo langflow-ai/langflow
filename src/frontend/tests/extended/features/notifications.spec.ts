@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -7,12 +7,12 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
-    await page.waitForSelector('[data-testid="disclosure-input / output"]', {
+    await page.waitForSelector('[data-testid="disclosure-input & output"]', {
       timeout: 3000,
       state: "visible",
     });
 
-    await page.getByTestId("disclosure-input / output").click();
+    await page.getByTestId("disclosure-input & output").click();
     await page.waitForSelector('[data-testid="input_outputText Input"]', {
       timeout: 3000,
       state: "visible",

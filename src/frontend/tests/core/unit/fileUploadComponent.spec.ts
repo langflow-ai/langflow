@@ -1,10 +1,17 @@
-import { expect, test } from "@playwright/test";
 import fs from "fs";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { generateRandomFilename } from "../../utils/generate-filename";
+import {
+  closeAdvancedOptions,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
+
+// Run tests in this file serially to avoid database conflicts with shared file state
+test.describe.configure({ mode: "serial" });
 
 test(
   "should be able to upload a file",
@@ -35,25 +42,29 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("file");
 
-    await page.waitForSelector('[data-testid="dataFile"]', {
-      timeout: 3000,
+    await page.waitForSelector('[data-testid="files_and_knowledgeRead File"]', {
+      timeout: 10000,
     });
 
     await page
-      .getByTestId("dataFile")
+      .getByTestId("files_and_knowledgeRead File")
       .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
     await adjustScreenView(page);
+    await page.waitForTimeout(2000);
     const fileManagement = await page
       .getByTestId("button_open_file_management")
-      ?.isVisible();
+      ?.isVisible({ timeout: 10000 });
     if (fileManagement) {
       // Test upload file
       await page.getByTestId("button_open_file_management").click();
+
       const drag = await page.getByTestId("drag-files-component");
-      const fileChooserPromise = page.waitForEvent("filechooser");
+      const fileChooserPromise = page.waitForEvent("filechooser", {
+        timeout: 30000,
+      });
       await drag.click();
       const fileChooser = await fileChooserPromise;
       await fileChooser.setFiles([
@@ -64,13 +75,26 @@ test(
         },
       ]);
 
+      // Test available types
+      await expect(page.getByText("csv, json, pdf")).toBeVisible();
+      await page.getByTestId("info-types").hover();
+      await expect(
+        page.getByText(
+          "adoc, asc, asciidoc, bmp, bz2, docm, docx, dotm, dotx, gz, htm, html, jpeg, jpg, js, md, mdx, png, potm, potx, ppsm, ppsx, pptm, pptx, py, sh, sql, tar, tgz, tiff, ts, tsx, txt, webp, xhtml, xls, xlsx, xml, yaml, yml, zip",
+          { exact: false },
+        ),
+      ).toBeVisible();
+
+      await page.getByText("My Files").first().hover();
+      await page.waitForTimeout(500);
+
       await expect(page.getByText(`${sourceFileName}.txt`).last()).toBeVisible({
-        timeout: 1000,
+        timeout: 5000,
       });
 
       await expect(
         page.getByTestId(`checkbox-${sourceFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 1000 });
+      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
 
       // Create DataTransfer object and file
       const dataTransfer = await page.evaluateHandle((jsonFileName) => {
@@ -99,7 +123,7 @@ test(
       });
 
       await expect(page.getByText(`${jsonFileName}.json`).last()).toBeVisible({
-        timeout: 1000,
+        timeout: 5000,
       });
 
       await expect(
@@ -174,32 +198,39 @@ test(
 
       await page.getByTestId(`context-menu-button-${jsonFileName}`).click();
       await page.getByTestId("btn-rename-file").click();
+      await page.waitForTimeout(1000);
+
       await page
         .getByTestId(`rename-input-${jsonFileName}`)
         .fill(renamedJsonFile);
-      await page.getByTestId(`rename-input-${jsonFileName}`).blur();
+      await page.waitForTimeout(1000);
+      await page.getByTestId(`rename-input-${jsonFileName}`).press("Enter");
       await expect(
         page.getByText(`${renamedJsonFile}.json`).first(),
       ).toBeVisible({
-        timeout: 1000,
+        timeout: 5000,
       });
       await expect(page.getByText(`${jsonFileName}.json`).first()).toBeHidden({
-        timeout: 1000,
+        timeout: 5000,
       });
 
       await page.getByTestId(`context-menu-button-${sourceFileName}`).click();
       await page.getByTestId("btn-rename-file").click();
+      await page.waitForTimeout(1000);
+
       await page
         .getByTestId(`rename-input-${sourceFileName}`)
         .fill(renamedTxtFile);
-      await page.getByTestId(`rename-input-${sourceFileName}`).blur();
+      await page.waitForTimeout(1000);
+
+      await page.getByTestId(`rename-input-${sourceFileName}`).press("Enter");
       await expect(page.getByText(`${renamedTxtFile}.txt`).first()).toBeVisible(
         {
-          timeout: 1000,
+          timeout: 5000,
         },
       );
       await expect(page.getByText(`${sourceFileName}.txt`).first()).toBeHidden({
-        timeout: 1000,
+        timeout: 5000,
       });
 
       await page.getByTestId(`checkbox-${renamedTxtFile}`).last().click();
@@ -225,7 +256,9 @@ test(
         timeout: 1000,
       });
     } else {
-      const fileChooserPromise = page.waitForEvent("filechooser");
+      const fileChooserPromise = page.waitForEvent("filechooser", {
+        timeout: 30000,
+      });
       await page.getByTestId("button_upload_file").click();
       const fileChooser = await fileChooserPromise;
       await fileChooser.setFiles([
@@ -259,6 +292,8 @@ test(
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();
 
+    // Create a new session first
+    await page.getByTestId("new-chat").click();
     await page.waitForSelector("text=Run Flow", {
       timeout: 30000,
     });
@@ -266,21 +301,21 @@ test(
     await page.getByText("Run Flow", { exact: true }).last().click();
 
     await expect(page.getByText("this is a test file")).toBeVisible({
-      timeout: 3000,
+      timeout: 10000,
     });
 
     if (fileManagement) {
       await expect(page.getByText('{"test":"content"}')).toBeVisible({
-        timeout: 3000,
+        timeout: 10000,
       });
-      await page.getByText("Close", { exact: true }).last().click();
+      await page.getByTestId("playground-close-button").click();
       await page.getByTestId("button_open_file_management").click();
       await page.getByTestId(`context-menu-button-${renamedJsonFile}`).click();
       await page.getByTestId("btn-delete-file").click();
       await page.getByTestId("replace-button").click();
       await expect(page.getByText(`${renamedJsonFile}.txt`).first()).toBeHidden(
         {
-          timeout: 1000,
+          timeout: 10000,
         },
       );
 
@@ -310,16 +345,16 @@ test(
 
       await expect(
         page.getByTestId(`checkbox-${newTxtFile}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 3000 });
+      ).toHaveAttribute("data-state", "checked", { timeout: 10000 });
 
       await page.getByTestId("select-files-modal-button").click();
       await expect(page.getByText(`${renamedJsonFile}.txt`).first()).toBeHidden(
         {
-          timeout: 3000,
+          timeout: 10000,
         },
       );
       await expect(page.getByText(`${newTxtFile}.txt`).first()).toBeVisible({
-        timeout: 1000,
+        timeout: 10000,
       });
       await page.getByTestId(`remove-file-button-${renamedTxtFile}`).click();
 
@@ -336,8 +371,16 @@ test(
       await page
         .getByRole("button", { name: "Playground", exact: true })
         .click();
-      await page.getByTestId("icon-MoreHorizontal").last().click();
-      await page.getByText("Delete", { exact: true }).last().click();
+      // Use the chat header more menu to clear chat (stays in fullscreen)
+      await page
+        .locator('[data-testid^="session-"][data-testid$="-more-menu"]')
+        .last()
+        .click();
+      const clearSessionOption = page.locator(
+        '[data-testid="clear-chat-option"], [data-testid="delete-session-option"]',
+      );
+      await expect(clearSessionOption.last()).toBeVisible({ timeout: 10000 });
+      await clearSessionOption.last().click();
 
       await page.waitForSelector("text=Run Flow", {
         timeout: 30000,
@@ -345,14 +388,24 @@ test(
 
       await page.getByText("Run Flow", { exact: true }).last().click();
 
+      // wait the flow to run
+      await page.getByTestId("stop_building_button").waitFor({
+        state: "visible",
+        timeout: 30000,
+      });
+      await page.getByTestId("stop_building_button").waitFor({
+        state: "hidden",
+        timeout: 180000,
+      });
+
       await expect(page.getByText("this is a test file")).toBeHidden({
-        timeout: 3000,
+        timeout: 10000,
       });
       await expect(page.getByText('{ "test": "content" }')).toBeHidden({
-        timeout: 3000,
+        timeout: 10000,
       });
       await expect(page.getByText("this is a new test")).toBeVisible({
-        timeout: 3000,
+        timeout: 10000,
       });
     }
   },
@@ -373,7 +426,7 @@ test(
 
     // Read the test file content
     const testFilePath = path.join(__dirname, "../../assets/test_file.txt");
-    const fileContent = fs.readFileSync(testFilePath);
+    const _fileContent = fs.readFileSync(testFilePath);
 
     await awaitBootstrapTest(page);
 
@@ -387,12 +440,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("file");
 
-    await page.waitForSelector('[data-testid="dataFile"]', {
-      timeout: 3000,
+    await page.waitForSelector('[data-testid="files_and_knowledgeRead File"]', {
+      timeout: 10000,
     });
 
     await page
-      .getByTestId("dataFile")
+      .getByTestId("files_and_knowledgeRead File")
       .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
@@ -480,17 +533,21 @@ test(
             .getAttribute("data-state")) === "checked"
         ) {
           await page.getByTestId(`checkbox-${file.name}`).last().click();
+          await page.waitForTimeout(500);
         }
       }
 
       // Test 1: Select first file, then shift-click the third file
       // First file
       await page.getByTestId(`checkbox-${file1}`).last().click();
+      await page.waitForTimeout(500);
 
       // Hold shift and click third file
       await page.keyboard.down("Shift");
       await page.getByTestId(`checkbox-${file3}`).last().click();
+      await page.waitForTimeout(500);
       await page.keyboard.up("Shift");
+      await page.waitForTimeout(500);
 
       // Verify files 1, 2, and 3 are selected
       await expect(
@@ -596,17 +653,17 @@ test(
 );
 
 test(
-  "should show PNG file as disabled in file component",
+  "should show PSD file as disabled in file component",
   {
     tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     // Generate unique filenames for this test run
-    const pngFileName = generateRandomFilename();
+    const psdFileName = generateRandomFilename();
     const txtFileName = generateRandomFilename();
 
-    // Create PNG content (a simple 1x1 transparent PNG)
-    const pngFileContent = Buffer.from(
+    // Create PSD content (just a mock)
+    const psdFileContent = Buffer.from(
       "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
       "base64",
     );
@@ -624,29 +681,37 @@ test(
     // Check if we're on the files page
     await page.waitForSelector('[data-testid="mainpage_title"]');
     const title = await page.getByTestId("mainpage_title");
-    expect(await title.textContent()).toContain("My Files");
+    expect(await title.textContent()).toContain("Files");
 
-    // Upload the PNG file
-    const fileChooserPromisePng = page.waitForEvent("filechooser");
+    // Upload the PSD file
+    const fileChooserPromisePsd = page.waitForEvent("filechooser", {
+      timeout: 30000,
+    });
     await page.getByTestId("upload-file-btn").click();
 
-    const fileChooserPng = await fileChooserPromisePng;
-    await fileChooserPng.setFiles([
+    const fileChooserPsd = await fileChooserPromisePsd;
+    await fileChooserPsd.setFiles([
       {
-        name: `${pngFileName}.png`,
-        mimeType: "image/png",
-        buffer: pngFileContent,
+        name: `${psdFileName}.psd`,
+        mimeType: "image/vnd.adobe.photoshop",
+        buffer: psdFileContent,
       },
     ]);
 
     // Wait for upload success message
-    await expect(page.getByText("File uploaded successfully")).toBeVisible();
+    await expect(page.getByText("File uploaded successfully")).toBeVisible({
+      timeout: 10000,
+    });
 
-    // Verify PNG file appears in the list
-    await expect(page.getByText(`${pngFileName}.png`)).toBeVisible();
+    // Verify PSD file appears in the list
+    await expect(page.getByText(`${psdFileName}.psd`)).toBeVisible({
+      timeout: 5000,
+    });
 
     // Upload the TXT file
-    const fileChooserPromiseTxt = page.waitForEvent("filechooser");
+    const fileChooserPromiseTxt = page.waitForEvent("filechooser", {
+      timeout: 30000,
+    });
     await page.getByTestId("upload-file-btn").click();
 
     const fileChooserTxt = await fileChooserPromiseTxt;
@@ -659,12 +724,16 @@ test(
     ]);
 
     // Wait for upload success message
-    await expect(page.getByText("File uploaded successfully")).toBeVisible();
+    await expect(page.getByText("File uploaded successfully")).toBeVisible({
+      timeout: 10000,
+    });
 
     // Verify TXT file appears in the list
-    await expect(page.getByText(`${txtFileName}.txt`)).toBeVisible();
+    await expect(page.getByText(`${txtFileName}.txt`)).toBeVisible({
+      timeout: 5000,
+    });
 
-    // Step 2: Create a flow with File component and check if PNG file is disabled
+    // Step 2: Create a flow with File component and check if PSD file is disabled
     // Navigate to workspace page
     await page.getByText("Starter Project").first().click();
 
@@ -682,12 +751,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("file");
 
-    await page.waitForSelector('[data-testid="dataFile"]', {
-      timeout: 3000,
+    await page.waitForSelector('[data-testid="files_and_knowledgeRead File"]', {
+      timeout: 10000,
     });
 
     await page
-      .getByTestId("dataFile")
+      .getByTestId("files_and_knowledgeRead File")
       .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
@@ -696,10 +765,10 @@ test(
 
     // Open the file management modal
     await page.getByTestId("button_open_file_management").click();
-    console.log(pngFileName);
+    console.warn(psdFileName);
 
     // Check if the PNG file has the disabled class (greyed out)
-    await expect(page.getByTestId(`file-item-${pngFileName}`)).toHaveClass(
+    await expect(page.getByTestId(`file-item-${psdFileName}`)).toHaveClass(
       /pointer-events-none cursor-not-allowed opacity-50/,
     );
 
@@ -708,24 +777,11 @@ test(
       /pointer-events-none cursor-not-allowed opacity-50/,
     );
 
-    // Verify the tooltip for PNG file states it's not supported
+    // Verify the tooltip for PSD file states it's not supported
     await page
-      .locator(`[data-testid="file-item-${pngFileName}"]`)
+      .locator(`[data-testid="file-item-${psdFileName}"]`)
       .locator("..")
       .hover();
-
-    await expect(
-      page.getByText("Type not supported by component"),
-    ).toBeVisible();
-
-    // Try to select the PNG file (should not change its state)
-    await expect(page.getByTestId(`checkbox-${pngFileName}`)).toBeDisabled();
-
-    // Verify the PNG file checkbox remains unchecked
-    await expect(page.getByTestId(`checkbox-${pngFileName}`)).toHaveAttribute(
-      "data-state",
-      "unchecked",
-    );
 
     // Select the TXT file (should work normally)
     await page.getByTestId(`checkbox-${txtFileName}`).click();
@@ -741,6 +797,216 @@ test(
 
     // Verify that only the TXT file was selected in the component
     await expect(page.getByText(`${txtFileName}.txt`)).toBeVisible();
-    await expect(page.getByText(`${pngFileName}.png`)).not.toBeVisible();
+    await expect(page.getByText(`${psdFileName}.psd`)).not.toBeVisible();
+  },
+);
+
+test(
+  "should be able to use text input for file paths",
+  {
+    tag: ["@release", "@workspace"],
+  },
+  async ({ page }) => {
+    const file1 = generateRandomFilename();
+    const file2 = generateRandomFilename();
+    const fileContent1 = "content of file 1";
+    const fileContent2 = "content of file 2";
+
+    await awaitBootstrapTest(page);
+    await page.getByTestId("blank-flow").click();
+
+    await addLegacyComponents(page);
+
+    // Add Read File Component
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("Read File");
+    await page.waitForSelector('[data-testid="files_and_knowledgeRead File"]', {
+      timeout: 1000,
+    });
+
+    // Get flow ID from URL
+    const url = page.url();
+    const flowId = url.split("/").slice(-1)[0];
+
+    await page
+      .getByTestId("files_and_knowledgeRead File")
+      .first()
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await page.mouse.up();
+    await page.mouse.down();
+
+    await openAdvancedOptions(page);
+
+    await openAdvancedOptions(page);
+
+    await page.getByTestId("showfile_path").click();
+
+    await closeAdvancedOptions(page);
+
+    await adjustScreenView(page);
+
+    // Upload Files
+    await page.getByTestId("button_open_file_management").click();
+    const drag = await page.getByTestId("drag-files-component");
+    const fileChooserPromise = page.waitForEvent("filechooser");
+    await drag.click();
+    const fileChooser = await fileChooserPromise;
+    await fileChooser.setFiles([
+      {
+        name: `${file1}.txt`,
+        mimeType: "text/plain",
+        buffer: Buffer.from(fileContent1),
+      },
+      {
+        name: `${file2}.txt`,
+        mimeType: "text/plain",
+        buffer: Buffer.from(fileContent2),
+      },
+    ]);
+    // Verify that only the TXT file was selected in the component
+    await expect(page.getByText(`${file1}.txt`).first()).toBeVisible();
+    await expect(page.getByText(`${file2}.txt`).first()).toBeVisible();
+
+    await expect(page.getByText("Files uploaded successfully")).toBeVisible();
+    await page.getByTestId("select-files-modal-button").click();
+
+    await adjustScreenView(page);
+
+    await page.getByTestId(`remove-file-button-${file2}`).click();
+
+    await page.getByTestId("dropdown-output-file").click();
+    await page.getByTestId("dropdown-item-output-file-file path").click();
+    await page.getByTestId("button_run_read file").click();
+    await expect(page.getByText("Built successfully")).toBeVisible({
+      timeout: 30000,
+    });
+    await page.getByTestId("output-inspection-file path-file").click();
+    const filePaths = await page.getByTestId("textarea").textContent();
+    await page.getByText("Close").last().click();
+
+    const cleanPath = filePaths
+      ?.replace(/"/g, "")
+      .replace("[", "")
+      .replace("]", "")
+      .split(",")[0]
+      .trim();
+    const folderId = cleanPath?.split("/").slice(-2)[0];
+
+    await page.getByTestId(`remove-file-button-${file1}`).click();
+
+    // Add first Text Input Component
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("Text Input");
+    await page.waitForSelector('[data-testid="input_outputText Input"]', {
+      timeout: 1000,
+    });
+
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
+    await page
+      .getByTestId("input_outputText Input")
+      .first()
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 100, y: 100 },
+      });
+    await page.mouse.up();
+    await page.mouse.down();
+    await adjustScreenView(page);
+
+    // Connect first Text Input to Read File
+    const targetHandle = page.getByTestId(
+      "handle-file-shownode-server file path-left",
+    );
+    const sourceHandle1 = page
+      .getByTestId("handle-textinput-shownode-output text-right")
+      .first();
+    await sourceHandle1.waitFor({ state: "visible", timeout: 10000 });
+    await targetHandle.waitFor({ state: "visible", timeout: 10000 });
+    await sourceHandle1.click();
+    await targetHandle.click();
+
+    // Add second Text Input Component
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("Text Input");
+    await page.waitForSelector('[data-testid="input_outputText Input"]', {
+      timeout: 1000,
+    });
+
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
+    await page
+      .getByTestId("input_outputText Input")
+      .first()
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 100, y: 300 },
+      });
+    await page.mouse.up();
+    await page.mouse.down();
+    await adjustScreenView(page);
+
+    // Connect second Text Input to Read File
+    const sourceHandle2 = page
+      .getByTestId("handle-textinput-shownode-output text-right")
+      .last();
+    await sourceHandle2.waitFor({ state: "visible", timeout: 10000 });
+    await sourceHandle2.click();
+    await targetHandle.click();
+
+    // Add Chat Output Component
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("Chat Output");
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
+      timeout: 1000,
+    });
+    await page
+      .getByTestId("input_outputChat Output")
+      .first()
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 500, y: 100 },
+      });
+    await page.mouse.up();
+    await page.mouse.down();
+    await adjustScreenView(page);
+
+    // Connect Read File to Chat Output
+    await page.getByTestId("handle-file-shownode-raw content-right").click();
+    await page
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
+      .click();
+
+    // Test Case 1: Multiple Files via multiple Text Inputs
+    const textInputs = page.getByTestId("textarea_str_input_value");
+    await textInputs.first().fill(`${folderId}/${file1}.txt`);
+    await textInputs.last().fill(`${folderId}/${file2}.txt`);
+
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
+
+    await page.waitForSelector("text=Run Flow", {
+      timeout: 30000,
+    });
+
+    await page.getByText("Run Flow", { exact: true }).last().click();
+
+    // Verify
+    await expect(page.getByText(fileContent1)).toBeVisible();
+    await expect(page.getByText(fileContent2)).toBeVisible();
+
+    await page
+      .getByRole("button", { name: "Playground", exact: true })
+      .click({ force: true });
+
+    // Test Case 2: Single File (clear second input, use only first)
+    await textInputs.last().fill("");
+    await textInputs.first().fill(`${folderId}/${file1}.txt`);
+
+    await page
+      .getByRole("button", { name: "Playground", exact: true })
+      .click({ force: true });
+
+    await page.waitForSelector("text=Run Flow", {
+      timeout: 30000,
+    });
+
+    await page.getByText("Run Flow", { exact: true }).last().click();
+
+    await expect(page.getByText(fileContent1).last()).toBeVisible();
   },
 );

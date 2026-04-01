@@ -1,5 +1,5 @@
-import { LoginType, useMutationFunctionType } from "@/types/api";
-import { UseMutationResult } from "@tanstack/react-query";
+import type { UseMutationResult } from "@tanstack/react-query";
+import type { LoginType, useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -29,7 +29,12 @@ export const useLoginUser: useMutationFunctionType<undefined, LoginType> = (
     ["useLoginUser"],
     loginUserFn,
     {
+      retry: false,
       ...options,
+      onSuccess: () => {
+        // Clear all cache to prevent data from previous user
+        queryClient.clear();
+      },
       onSettled: () => {
         queryClient.refetchQueries({ queryKey: ["useGetFolders"] });
         queryClient.refetchQueries({ queryKey: ["useGetTags"] });

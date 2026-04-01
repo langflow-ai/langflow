@@ -5,7 +5,7 @@ from collections import OrderedDict
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from loguru import logger
+from lfx.log.logger import logger
 from typing_extensions import override
 
 from langflow.serialization.serialization import serialize
@@ -16,8 +16,8 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from langchain.callbacks.base import BaseCallbackHandler
+    from lfx.graph.vertex.base import Vertex
 
-    from langflow.graph.vertex.base import Vertex
     from langflow.services.tracing.schema import Log
 
 
@@ -164,7 +164,7 @@ class LangFuseTracer(BaseTracer):
     def _get_config() -> dict:
         secret_key = os.getenv("LANGFUSE_SECRET_KEY", None)
         public_key = os.getenv("LANGFUSE_PUBLIC_KEY", None)
-        host = os.getenv("LANGFUSE_HOST", None)
+        host = os.getenv("LANGFUSE_BASE_URL") or os.getenv("LANGFUSE_HOST")
         if secret_key and public_key and host:
             return {"secret_key": secret_key, "public_key": public_key, "host": host}
         return {}

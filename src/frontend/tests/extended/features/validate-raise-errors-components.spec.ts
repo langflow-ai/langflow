@@ -1,6 +1,8 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { addCustomComponent } from "../../utils/add-custom-component";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
@@ -54,9 +56,7 @@ class CustomComponent(Component):
     );
 
     await addCustomComponent(page);
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
+    await adjustScreenView(page, { numberOfZoomOut: 1 });
 
     await page.waitForTimeout(1000);
 
@@ -65,7 +65,7 @@ class CustomComponent(Component):
     });
     await page.getByTestId("title-Custom Component").click();
 
-    await page.getByTestId("code-button-modal").click();
+    await page.getByTestId("code-button-modal").last().click();
 
     await page.locator(".ace_content").click();
     await page.keyboard.press(`ControlOrMeta+A`);

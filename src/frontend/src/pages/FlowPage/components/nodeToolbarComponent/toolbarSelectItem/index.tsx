@@ -1,6 +1,6 @@
 import ForwardedIconComponent from "../../../../../components/common/genericIconComponent";
 import RenderIcons from "../../../../../components/common/renderIconComponent";
-import { toolbarSelectItemProps } from "../../../../../types/components";
+import type { toolbarSelectItemProps } from "../../../../../types/components";
 
 export default function ToolbarSelectItem({
   value,
@@ -15,7 +15,7 @@ export default function ToolbarSelectItem({
     <div className={`flex ${style}`} data-testid={dataTestId}>
       <ForwardedIconComponent
         name={icon}
-        className={`mr-2 mt-[0.15em] h-4 w-4 ${ping && "animate-pulse text-green-500"}`}
+        className={`mr-2 mt-[0.15em] h-4 w-4 ${ping && "animate-pulse text-accent-emerald-foreground"}`}
       />
       <span>{value}</span>
       <span

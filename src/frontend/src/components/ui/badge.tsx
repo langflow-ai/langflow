@@ -1,9 +1,9 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import * as React from "react";
+import type * as React from "react";
 import { cn } from "../../utils/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center border rounded-full px-2.5 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center border rounded-full px-2.5 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
   {
     variants: {
       variant: {
@@ -17,6 +17,8 @@ const badgeVariants = cva(
         outline: "text-primary/80 border-ring/60",
         secondaryStatic: "bg-muted text-muted-foreground border-0",
         pinkStatic: "bg-accent-pink text-accent-pink-foreground border-0",
+        purpleStatic:
+          "border border-accent-purple-foreground bg-background text-accent-purple-foreground",
         emerald:
           "bg-accent-emerald text-accent-emerald-foreground hover:bg-accent-emerald-hover border-0",
         successStatic:

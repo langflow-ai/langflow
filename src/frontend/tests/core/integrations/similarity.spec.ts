@@ -1,6 +1,9 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { unselectNodes } from "../../utils/unselect-nodes";
+
 import { updateOldComponents } from "../../utils/update-old-components";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -30,7 +33,7 @@ test(
     await page
       .getByText("OpenAI Embeddings", { exact: true })
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 0, y: 0 },
+        targetPosition: { x: 100, y: 100 },
       });
 
     await zoomOut(page, 5);
@@ -111,7 +114,7 @@ test(
 
     await updateOldComponents(page);
 
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
     await page
       .getByTestId("textarea_str_template")
@@ -150,12 +153,13 @@ test(
       .nth(0)
       .fill("similarity_score");
 
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
+
     await page.mouse.wheel(0, 500);
 
     await page.locator(".react-flow__pane").click();
 
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
     //connection 1
     const openAiEmbeddingOutput_0 = await page
@@ -214,7 +218,7 @@ test(
     await embeddingSimilarityOutput.hover();
     await page.mouse.down();
     const filterDataInput = await page
-      .getByTestId("handle-filterdata-shownode-data-left")
+      .getByTestId("handle-filterdata-shownode-json-left")
       .nth(0);
     await filterDataInput.hover();
     await page.mouse.up();
@@ -226,7 +230,7 @@ test(
     await filterDataOutput.hover();
     await page.mouse.down();
     const parseDataInput = await page
-      .getByTestId("handle-parsedata-shownode-data-left")
+      .getByTestId("handle-parsedata-shownode-json-left")
       .nth(0);
     await parseDataInput.hover();
     await page.mouse.up();
@@ -246,6 +250,8 @@ test(
     await page.getByTestId("button_run_text output").click();
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
+
+    await unselectNodes(page);
 
     await page
       .getByTestId(/rf__node-TextOutput-[a-zA-Z0-9]{5}/)

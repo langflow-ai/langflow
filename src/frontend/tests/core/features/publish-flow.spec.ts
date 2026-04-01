@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
@@ -91,7 +91,7 @@ test(
       await expect(page.getByTestId("mainpage_title")).toBeVisible({
         timeout: 10000,
       });
-    } catch (error) {
+    } catch (_error) {
       await page.reload();
       await expect(page.getByTestId("mainpage_title")).toBeVisible({
         timeout: 10000,

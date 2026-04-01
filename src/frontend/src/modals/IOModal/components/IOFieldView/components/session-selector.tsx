@@ -1,3 +1,5 @@
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Input } from "@/components/ui/input";
@@ -8,13 +10,10 @@ import {
   SelectTrigger,
 } from "@/components/ui/select-custom";
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
 import useFlowStore from "@/stores/flowStore";
-import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
-import React, { useEffect, useRef, useState } from "react";
-import { v5 as uuidv5 } from "uuid";
 
 export default function SessionSelector({
   deleteSession,
@@ -27,6 +26,8 @@ export default function SessionSelector({
   setSelectedView,
   playgroundPage,
   setActiveSession,
+  menuOpen,
+  onMenuOpenChange,
 }: {
   deleteSession: (session: string) => void;
   session: string;
@@ -38,17 +39,15 @@ export default function SessionSelector({
   setSelectedView: (view: { type: string; id: string } | undefined) => void;
   playgroundPage: boolean;
   setActiveSession: (session: string) => void;
+  menuOpen?: boolean;
+  onMenuOpenChange?: (open: boolean) => void;
 }) {
-  const clientId = useUtilityStore((state) => state.clientId);
-  let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const currentFlowId = playgroundPage
-    ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
-    : realFlowId;
+  const currentFlowId = useGetFlowId();
   const [isEditing, setIsEditing] = useState(false);
   const [editedSession, setEditedSession] = useState(session);
   const { mutate: updateSessionName } = useUpdateSessionName();
   const inputRef = useRef<HTMLInputElement>(null);
-  const setNewChatOnPlayground = useFlowStore(
+  const _setNewChatOnPlayground = useFlowStore(
     (state) => state.setNewChatOnPlayground,
   );
 
@@ -162,7 +161,7 @@ export default function SessionSelector({
               <button
                 onClick={handleConfirm}
                 data-confirm="true"
-                className="ml-2 text-green-500 hover:text-green-600"
+                className="ml-2 text-accent-emerald-foreground hover:text-accent-emerald-foreground/80"
               >
                 <IconComponent name="Check" className="h-4 w-4" />
               </button>
@@ -191,7 +190,12 @@ export default function SessionSelector({
             </ShadTooltip>
           )}
         </div>
-        <Select value={""} onValueChange={handleSelectChange}>
+        <Select
+          value={""}
+          onValueChange={handleSelectChange}
+          open={menuOpen}
+          onOpenChange={onMenuOpenChange}
+        >
           <ShadTooltip styleClasses="z-50" side="right" content="Options">
             <SelectTrigger
               onClick={(e) => {

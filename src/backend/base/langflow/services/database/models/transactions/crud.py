@@ -1,11 +1,12 @@
 from uuid import UUID
 
-from loguru import logger
+from lfx.log.logger import logger
 from sqlmodel import col, delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.database.models.transactions.model import (
     TransactionBase,
+    TransactionLogsResponse,
     TransactionReadResponse,
     TransactionTable,
 )
@@ -44,7 +45,7 @@ async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> Tra
         IntegrityError: If there is a database integrity error
     """
     if not transaction.flow_id:
-        logger.debug("Transaction flow_id is None")
+        await logger.adebug("Transaction flow_id is None")
         return None
     table = TransactionTable(**transaction.model_dump())
 
@@ -76,7 +77,16 @@ async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> Tra
 
 def transform_transaction_table(
     transaction: list[TransactionTable] | TransactionTable,
-) -> list[TransactionReadResponse]:
+) -> list[TransactionReadResponse] | TransactionReadResponse:
     if isinstance(transaction, list):
         return [TransactionReadResponse.model_validate(t, from_attributes=True) for t in transaction]
     return TransactionReadResponse.model_validate(transaction, from_attributes=True)
+
+
+def transform_transaction_table_for_logs(
+    transaction: list[TransactionTable] | TransactionTable,
+) -> list[TransactionLogsResponse] | TransactionLogsResponse:
+    """Transform transaction data for logs view, excluding error and flow_id."""
+    if isinstance(transaction, list):
+        return [TransactionLogsResponse.model_validate(t, from_attributes=True) for t in transaction]
+    return TransactionLogsResponse.model_validate(transaction, from_attributes=True)

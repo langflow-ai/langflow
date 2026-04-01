@@ -1,12 +1,12 @@
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import {
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
+import type {
   APIClassType,
   APITemplateType,
   InputFieldType,
   TableOptionsTypeAPI,
 } from "@/types/api";
-import { RangeSpecType } from "@/types/components";
-import { ColumnField } from "@/types/utils/functions";
+import type { RangeSpecType } from "@/types/components";
+import type { ColumnField } from "@/types/utils/functions";
 
 // Base type for RefreshParameterComponent children
 export type BaseInputProps<valueType = any> = {
@@ -31,13 +31,15 @@ export type BaseInputProps<valueType = any> = {
   searchCategory?: string[];
   buttonMetadata?: { variant?: string; icon?: string };
   connectionLink?: string;
+  showParameter?: boolean;
+  inspectionPanel?: boolean;
 };
 
 // Generic type for composing input props
 export type InputProps<
   valueType = any,
   T = {},
-  U extends object = object,
+  _U extends object = object,
 > = BaseInputProps<valueType> & T & { placeholder?: string };
 
 export type TableComponentType = {
@@ -65,6 +67,7 @@ export type FloatComponentType = {
 
 export type IntComponentType = {
   rangeSpec: RangeSpecType;
+  name?: string;
 };
 export type ToggleComponentType = {
   size?: "small" | "medium" | "large";
@@ -80,6 +83,7 @@ export type FileComponentType = {
 
 export type PromptAreaComponentType = {
   field_name?: string;
+  isDoubleBrackets?: boolean;
 };
 
 export type LinkComponentType = {
@@ -112,6 +116,7 @@ export type DropDownComponentType = {
   options: string[];
   name: string;
   dialogInputs?: any;
+  externalOptions?: any;
   optionsMetaData?: any[];
   nodeId: string;
   nodeClass: APIClassType;
@@ -140,6 +145,7 @@ export type InputGlobalComponentType = {
 export type MultiselectComponentType = {
   options: string[];
   combobox?: boolean;
+  hideOnSelection?: boolean;
 };
 
 export type TabComponentType = {

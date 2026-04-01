@@ -6,10 +6,11 @@ import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/ext-searchbox";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
-import "ace-builds/src-noconflict/theme-twilight";
+import "ace-builds/src-noconflict/theme-monokai";
+import { cloneDeep } from "lodash";
 import { useEffect, useRef, useState } from "react";
 import AceEditor from "react-ace";
-import ReactAce from "react-ace/lib/ace";
+import type ReactAce from "react-ace/lib/ace";
 import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -26,8 +27,8 @@ import {
 } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
-import { CodeErrorDataTypeAPI } from "../../types/api";
-import { codeAreaModalPropsType } from "../../types/components";
+import type { CodeErrorDataTypeAPI } from "../../types/api";
+import type { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 import ConfirmationModal from "../confirmationModal";
 
@@ -75,8 +76,8 @@ export default function CodeAreaModal({
       {
         onSuccess: (apiReturn) => {
           if (apiReturn) {
-            let importsErrors = apiReturn.imports.errors;
-            let funcErrors = apiReturn.function.errors;
+            const importsErrors = apiReturn.imports.errors;
+            const funcErrors = apiReturn.function.errors;
             if (funcErrors.length === 0 && importsErrors.length === 0) {
               setSuccessData({
                 title: CODE_SUCCESS_ALERT,
@@ -120,9 +121,25 @@ export default function CodeAreaModal({
         onSuccess: ({ data, type }) => {
           if (data && type) {
             setValue(code);
-            clearHandlesFromAdvancedFields(componentId!, data);
+            try {
+              const merged = cloneDeep(data);
+              if (nodeClass?.template && merged?.template) {
+                for (const fieldName of Object.keys(merged.template)) {
+                  if (fieldName === "code") continue;
+                  const existing = nodeClass.template[fieldName];
+                  if (existing && Object.hasOwn(existing, "value")) {
+                    // Preserve the user's current value for this parameter
+                    merged.template[fieldName].value = existing.value;
+                  }
+                }
+              }
 
-            setNodeClass(data, type);
+              clearHandlesFromAdvancedFields(componentId!, merged);
+              setNodeClass(merged, type);
+            } catch (e) {
+              clearHandlesFromAdvancedFields(componentId!, data);
+              setNodeClass(data, type);
+            }
             setError({ detail: { error: undefined, traceback: undefined } });
             setOpen(false);
           }
@@ -221,12 +238,12 @@ export default function CodeAreaModal({
               fontSize={14}
               showGutter
               enableLiveAutocompletion
-              theme={dark ? "twilight" : "github"}
+              theme={dark ? "monokai" : "github"}
               name="CodeEditor"
               onChange={(value) => {
                 setCode(value);
               }}
-              className="h-full min-w-full rounded-lg border-[1px] border-gray-300 custom-scroll dark:border-gray-600"
+              className="h-full min-w-full rounded-lg border-[1px] border-border custom-scroll"
             />
           </div>
           <div

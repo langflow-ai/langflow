@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/utils/utils";
 import IconComponent from "../../../components/common/genericIconComponent";
-import { ChatViewWrapperProps } from "../types/chat-view-wrapper";
+import type { ChatViewWrapperProps } from "../types/chat-view-wrapper";
 import ChatView from "./chatView/components/chat-view";
 
 export const ChatViewWrapper = ({
@@ -13,7 +13,6 @@ export const ChatViewWrapper = ({
   sidebarOpen,
   currentFlowId,
   setSidebarOpen,
-  isPlayground,
   setvisibleSession,
   setSelectedViewField,
   messagesFetched,
@@ -21,7 +20,6 @@ export const ChatViewWrapper = ({
   sendMessage,
   canvasOpen,
   setOpen,
-  playgroundTitle,
   playgroundPage,
 }: ChatViewWrapperProps) => {
   return (
@@ -33,7 +31,7 @@ export const ChatViewWrapper = ({
     >
       <div
         className={cn(
-          "mb-4 flex h-[5%] items-center text-base font-semibold",
+          "flex h-10 shrink-0 items-center text-base font-semibold",
           playgroundPage ? "justify-between" : "lg:justify-start",
         )}
       >
@@ -68,7 +66,7 @@ export const ChatViewWrapper = ({
         <div
           className={cn(
             sidebarOpen ? "pointer-events-none opacity-0" : "",
-            "flex items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+            "flex items-center justify-center rounded-sm ring-offset-background transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
             playgroundPage ? "right-2 top-4" : "absolute right-12 top-2 h-8",
           )}
         >

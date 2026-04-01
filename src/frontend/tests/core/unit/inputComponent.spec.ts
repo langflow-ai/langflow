@@ -1,6 +1,12 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import {
+  closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
 
 test(
   "InputComponent",
@@ -15,11 +21,11 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Chroma");
 
-    await page.waitForSelector('[data-testid="vectorstoresChroma DB"]', {
+    await page.waitForSelector('[data-testid="chromaChroma DB"]', {
       timeout: 3000,
     });
     await page
-      .getByTestId("vectorstoresChroma DB")
+      .getByTestId("chromaChroma DB")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -30,7 +36,7 @@ test(
       .getByTestId("popover-anchor-input-collection_name")
       .fill("collection_name_test_123123123!@#$&*(&%$@");
 
-    let value = await page
+    const value = await page
       .getByTestId("popover-anchor-input-collection_name")
       .inputValue();
 
@@ -38,9 +44,24 @@ test(
       expect(false).toBeTruthy();
     }
 
+    // Test cursor position preservation
+    const input = page.getByTestId("popover-anchor-input-collection_name");
+    await input.click();
+    await input.press("Home"); // Move cursor to start
+    await input.press("ArrowRight"); // Move cursor to position 1
+    await input.press("ArrowRight"); // Move cursor to position 2
+    await input.pressSequentially("X", { delay: 100 }); // Type at position 2
+    const cursorValue = await input.inputValue();
+    if (!cursorValue.startsWith("coX")) {
+      expect(false).toBeTruthy();
+    }
+    await input.fill("collection_name_test_123123123!@#$&*(&%$@");
+
+    await disableInspectPanel(page);
+
     await page.getByTestId("div-generic-node").click();
 
-    await page.getByTestId("edit-button-modal").last().click();
+    await openAdvancedOptions(page);
 
     await page
       .locator('//*[@id="showchroma_server_cors_allow_origins"]')
@@ -104,8 +125,9 @@ test(
         .isChecked(),
     ).toBeFalsy();
 
-    let valueEditNode = await page
+    const valueEditNode = await page
       .getByTestId("popover-anchor-input-collection_name-edit")
+      .nth(0)
       .inputValue();
 
     if (valueEditNode != "collection_name_test_123123123!@#$&*(&%$@") {
@@ -114,9 +136,10 @@ test(
 
     await page
       .getByTestId("popover-anchor-input-collection_name-edit")
+      .nth(0)
       .fill("NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe");
 
-    await page.getByText("Close").last().click();
+    await closeAdvancedOptions(page);
 
     const plusButtonLocator = page.getByTestId("input-collection_name");
     const elementCount = await plusButtonLocator?.count();
@@ -125,11 +148,11 @@ test(
 
       await page.getByTestId("div-generic-node").click();
 
-      await page.getByTestId("edit-button-modal").last().click();
+      await openAdvancedOptions(page);
 
-      await page.getByText("Close").last().click();
+      await closeAdvancedOptions(page);
 
-      let value = await page
+      const value = await page
         .getByTestId("popover-anchor-input-collection_name")
         .inputValue();
 
@@ -137,5 +160,7 @@ test(
         expect(false).toBeTruthy();
       }
     }
+
+    await enableInspectPanel(page);
   },
 );

@@ -1,13 +1,11 @@
+import type React from "react";
+import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import {
   ENABLE_IMAGE_ON_PLAYGROUND,
   ENABLE_VOICE_ASSISTANT,
 } from "@/customization/feature-flags";
-import { FilePreviewType } from "@/types/components";
-import React from "react";
-import {
-  CHAT_INPUT_PLACEHOLDER,
-  CHAT_INPUT_PLACEHOLDER_SEND,
-} from "../../../../../../constants/constants";
+import type { FilePreviewType } from "@/types/components";
+import { CHAT_INPUT_PLACEHOLDER } from "../../../../../../constants/constants";
 import FilePreview from "../../fileComponent/components/file-preview";
 import ButtonSendWrapper from "./button-send-wrapper";
 import TextAreaWrapper from "./text-area-wrapper";
@@ -49,13 +47,40 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
   currentFlowId,
   playgroundPage,
 }) => {
-  const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto custom-scroll`;
+  const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto`;
+
+  // Check if voice mode is available
+  // The /config endpoint returns appropriate config based on auth status
+  const { data: config } = useGetConfig({});
+
+  const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("textarea")) {
+      return;
+    }
+    inputRef.current?.focus();
+    inputRef.current?.setSelectionRange(
+      inputRef.current.value.length,
+      inputRef.current.value.length,
+    );
+  };
+
+  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("textarea")) {
+      return;
+    }
+    e.stopPropagation();
+    e.preventDefault();
+  };
 
   return (
     <div className="flex w-full flex-col-reverse">
       <div
         data-testid="input-wrapper"
-        className="flex w-full flex-col rounded-md border border-input p-4 hover:border-muted-foreground focus:border-[1.75px] has-[:focus]:border-primary"
+        className="flex w-full flex-col rounded-md border cursor-text border-input p-4 hover:border-muted-foreground focus:border-[1.75px] has-[:focus]:border-primary"
+        onClick={onClick}
+        onMouseDown={onMouseDown}
       >
         <TextAreaWrapper
           isBuilding={isBuilding}
@@ -64,11 +89,11 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
           noInput={noInput}
           chatValue={chatValue}
           CHAT_INPUT_PLACEHOLDER={CHAT_INPUT_PLACEHOLDER}
-          CHAT_INPUT_PLACEHOLDER_SEND={CHAT_INPUT_PLACEHOLDER_SEND}
           inputRef={inputRef}
           files={files}
           isDragging={isDragging}
         />
+
         <div className={classNameFilePreview}>
           {files.map((file) => (
             <FilePreview
@@ -95,7 +120,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
             )}
           </div>
           <div className="flex items-center gap-2">
-            {ENABLE_VOICE_ASSISTANT && (
+            {ENABLE_VOICE_ASSISTANT && config?.voice_mode_available && (
               <VoiceButton toggleRecording={() => setShowAudioInput(true)} />
             )}
 

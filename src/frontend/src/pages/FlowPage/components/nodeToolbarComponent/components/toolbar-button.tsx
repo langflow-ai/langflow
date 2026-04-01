@@ -1,8 +1,7 @@
-import { Button } from "@/components/ui/button";
 import { memo } from "react";
-
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
 import ShortcutDisplay from "../shortcutDisplay";
 
@@ -22,7 +21,11 @@ export const ToolbarButton = memo(
     className?: string;
     dataTestId?: string;
   }) => (
-    <ShadTooltip content={<ShortcutDisplay {...shortcut} />} side="top">
+    <ShadTooltip
+      content={<ShortcutDisplay {...shortcut} />}
+      side="top"
+      avoidCollisions={true}
+    >
       <Button
         className={cn("node-toolbar-buttons", className)}
         variant="ghost"

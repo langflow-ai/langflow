@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { renameFlow } from "../../utils/rename-flow";
 
 test(
@@ -101,15 +101,17 @@ test(
 
     try {
       await page.getByTestId("new_project_btn_empty_page").click();
-    } catch (error) {
-      await page.getByText("New Flow", { exact: true }).click();
+    } catch (_error) {
+      await page.getByTestId("new-project-btn").click();
     }
 
     await page.waitForSelector('[data-testid="modal-title"]', {
       timeout: 3000,
     });
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.waitForSelector('[data-testid="fit_view"]', { timeout: 30000 });
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 30000,
+    });
 
     await renameFlow(page, { flowName: userAFlowName });
 

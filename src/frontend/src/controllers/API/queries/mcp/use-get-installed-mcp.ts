@@ -1,4 +1,4 @@
-import { useQueryFunctionType } from "@/types/api";
+import type { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -7,7 +7,11 @@ interface IGetInstalledMCP {
   projectId: string;
 }
 
-type getInstalledMCPResponse = Array<string>;
+type getInstalledMCPResponse = Array<{
+  name: string;
+  installed: boolean;
+  available: boolean;
+}>;
 
 export const useGetInstalledMCP: useQueryFunctionType<
   IGetInstalledMCP,

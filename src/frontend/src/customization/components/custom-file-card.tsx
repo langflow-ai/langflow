@@ -1,5 +1,5 @@
 import FileCard from "@/modals/IOModal/components/chatView/fileComponent/components/file-card";
-import { fileCardPropsType } from "@/types/components";
+import type { fileCardPropsType } from "@/types/components";
 
 export function CustomFileCard({
   fileName,

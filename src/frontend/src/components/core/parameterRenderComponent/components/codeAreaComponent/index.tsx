@@ -4,7 +4,7 @@ import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
-import { InputProps } from "../../types";
+import type { InputProps } from "../../types";
 
 const codeContentClasses = {
   base: "overflow-hidden text-clip whitespace-nowrap",
@@ -52,7 +52,8 @@ export default function CodeAreaComponent({
   handleNodeClass,
   id = "",
   placeholder,
-}: InputProps<string>) {
+  showParameter = true,
+}: InputProps<string>): JSX.Element | null {
   const renderCodeText = () => (
     <span
       id={id}
@@ -104,6 +105,10 @@ export default function CodeAreaComponent({
       />
     </>
   );
+
+  if (!showParameter) {
+    return null;
+  }
 
   return (
     <div className={cn("w-full", disabled && "pointer-events-none")}>

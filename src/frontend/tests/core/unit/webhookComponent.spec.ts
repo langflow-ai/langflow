@@ -1,12 +1,18 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import {
+  closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
 
 test(
   "user should be able to create an api key within a webhook component",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
-    const randomApiKeyDescription =
+    const _randomApiKeyDescription =
       Math.random().toString(36).substring(2, 15) +
       Math.random().toString(36).substring(2, 15);
 
@@ -19,12 +25,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("webhook");
 
-    await page.waitForSelector('[data-testid="dataWebhook"]', {
+    await page.waitForSelector('[data-testid="input_outputWebhook"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("dataWebhook")
+      .getByTestId("input_outputWebhook")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-webhook").click();
@@ -33,7 +39,7 @@ test(
     await adjustScreenView(page);
 
     await page
-      .getByTestId("data_webhook_draggable")
+      .getByTestId("input_output_webhook_draggable")
       .hover()
       .then(async () => {
         await page.waitForSelector("text=Webhook already added", {
@@ -44,8 +50,9 @@ test(
     await page.getByTestId("btn_copy_str_endpoint").click();
     await page.waitForSelector("text=Endpoint URL copied", { timeout: 30000 });
 
+    await disableInspectPanel(page);
     await page.getByTestId("title-Webhook").click();
-    await page.getByTestId("edit-button-modal").click();
+    await openAdvancedOptions(page);
 
     await page
       .getByTestId("button_open_text_area_modal_str_edit_curl_advanced")
@@ -58,6 +65,10 @@ test(
     const flowId = currentUrl.split("/")[2];
 
     expect(curl).toContain(flowId);
+
+    await page.getByText("Close", { exact: true }).last().click();
+    await closeAdvancedOptions(page);
+    await enableInspectPanel(page);
   },
 );
 
@@ -70,6 +81,7 @@ test(
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
+          type: "full",
           webhook_polling_interval: 1000,
         }),
         headers: {
@@ -79,7 +91,7 @@ test(
       });
     });
 
-    const randomApiKeyDescription =
+    const _randomApiKeyDescription =
       Math.random().toString(36).substring(2, 15) +
       Math.random().toString(36).substring(2, 15);
 
@@ -92,12 +104,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("webhook");
 
-    await page.waitForSelector('[data-testid="dataWebhook"]', {
+    await page.waitForSelector('[data-testid="input_outputWebhook"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("dataWebhook")
+      .getByTestId("input_outputWebhook")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-webhook").click();
@@ -106,7 +118,7 @@ test(
     await adjustScreenView(page);
 
     await page
-      .getByTestId("data_webhook_draggable")
+      .getByTestId("input_output_webhook_draggable")
       .hover()
       .then(async () => {
         await page.waitForSelector("text=Webhook already added", {

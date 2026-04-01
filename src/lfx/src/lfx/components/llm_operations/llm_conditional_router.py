@@ -1,0 +1,384 @@
+from typing import Any
+
+from lfx.base.models.unified_models import (
+    apply_provider_variable_config_to_build_config,
+    get_language_model_options,
+    get_llm,
+    get_provider_for_model_name,
+    update_model_options_in_build_config,
+)
+from lfx.custom import Component
+from lfx.io import (
+    BoolInput,
+    MessageInput,
+    MessageTextInput,
+    ModelInput,
+    MultilineInput,
+    Output,
+    SecretStrInput,
+    TableInput,
+)
+from lfx.schema.message import Message
+from lfx.schema.table import EditMode
+
+
+class SmartRouterComponent(Component):
+    display_name = "Smart Router"
+    description = "Routes an input message using LLM-based categorization."
+    icon = "route"
+    name = "SmartRouter"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._matched_category = None
+        self._categorization_result: str | None = None
+
+    inputs = [
+        ModelInput(
+            name="model",
+            display_name="Language Model",
+            info="Select your model provider",
+            real_time_refresh=True,
+            required=True,
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            info="Model Provider API key",
+            real_time_refresh=True,
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="input_text",
+            display_name="Input",
+            info="The primary text input for the operation.",
+            required=True,
+        ),
+        TableInput(
+            name="routes",
+            display_name="Routes",
+            info=(
+                "Define the categories for routing. Each row should have a route/category name "
+                "and optionally a custom output value."
+            ),
+            table_schema=[
+                {
+                    "name": "route_category",
+                    "display_name": "Route Name",
+                    "type": "str",
+                    "description": "Name for the route (used for both output name and category matching)",
+                    "edit_mode": EditMode.INLINE,
+                },
+                {
+                    "name": "route_description",
+                    "display_name": "Route Description",
+                    "type": "str",
+                    "description": "Description of when this route should be used (helps LLM understand the category)",
+                    "default": "",
+                    "edit_mode": EditMode.POPOVER,
+                },
+                {
+                    "name": "output_value",
+                    "display_name": "Route Message (Optional)",
+                    "type": "str",
+                    "description": (
+                        "Optional message to send when this route is matched."
+                        "Leave empty to pass through the original input text."
+                    ),
+                    "default": "",
+                    "edit_mode": EditMode.POPOVER,
+                },
+            ],
+            value=[
+                {
+                    "route_category": "Positive",
+                    "route_description": "Positive feedback, satisfaction, or compliments",
+                    "output_value": "",
+                },
+                {
+                    "route_category": "Negative",
+                    "route_description": "Complaints, issues, or dissatisfaction",
+                    "output_value": "",
+                },
+            ],
+            real_time_refresh=True,
+            required=True,
+        ),
+        MessageInput(
+            name="message",
+            display_name="Override Output",
+            info=(
+                "Optional override message that will replace both the Input and Output Value "
+                "for all routes when filled."
+            ),
+            required=False,
+            advanced=True,
+        ),
+        BoolInput(
+            name="enable_else_output",
+            display_name="Include Else Output",
+            info="Include an Else output for cases that don't match any route.",
+            value=False,
+            advanced=True,
+            real_time_refresh=True,
+        ),
+        MultilineInput(
+            name="custom_prompt",
+            display_name="Additional Instructions",
+            info=(
+                "Additional instructions for LLM-based categorization. "
+                "These will be added to the base prompt. "
+                "Use {input_text} for the input text and {routes} for the available categories."
+            ),
+            advanced=True,
+        ),
+    ]
+
+    outputs: list[Output] = []
+
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
+        """Dynamically update build config with user-filtered model options."""
+        build_config = update_model_options_in_build_config(
+            component=self,
+            build_config=build_config,
+            cache_key_prefix="language_model_options",
+            get_options_func=get_language_model_options,
+            field_name=field_name,
+            field_value=field_value,
+        )
+
+        current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
+        provider = ""
+        if isinstance(current_model_value, list) and current_model_value:
+            selected_model = current_model_value[0]
+            provider = (selected_model.get("provider") or "").strip()
+            if not provider and selected_model.get("name"):
+                provider = get_provider_for_model_name(str(selected_model["name"]))
+
+        if provider:
+            build_config = apply_provider_variable_config_to_build_config(build_config, provider)
+
+        return build_config
+
+    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
+        """Create a dynamic output for each category in the categories table."""
+        if field_name in {"routes", "enable_else_output", "model"}:
+            frontend_node["outputs"] = []
+
+            # Get the routes data - either from field_value (if routes field) or from component state
+            routes_data = field_value if field_name == "routes" else getattr(self, "routes", [])
+
+            # Add a dynamic output for each category - all using the same method
+            for i, row in enumerate(routes_data):
+                route_category = row.get("route_category", f"Category {i + 1}")
+                frontend_node["outputs"].append(
+                    Output(
+                        display_name=route_category,
+                        name=f"category_{i + 1}_result",
+                        method="process_case",
+                        group_outputs=True,
+                    )
+                )
+            # Add default output only if enabled
+            if field_name == "enable_else_output":
+                enable_else = field_value
+            else:
+                enable_else = getattr(self, "enable_else_output", False)
+
+            if enable_else:
+                frontend_node["outputs"].append(
+                    Output(display_name="Else", name="default_result", method="default_response", group_outputs=True)
+                )
+        return frontend_node
+
+    def _get_categorization(self) -> str:
+        """Perform LLM categorization and cache the result.
+
+        This ensures the LLM is called only once per component execution,
+        regardless of how many outputs are connected.
+        """
+        # Return cached result if available
+        if self._categorization_result is not None:
+            return self._categorization_result
+
+        categories = getattr(self, "routes", [])
+        input_text = getattr(self, "input_text", "")
+        llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
+
+        if not llm or not categories:
+            self.status = "No LLM provided for categorization"
+            self._categorization_result = "NONE"
+            return self._categorization_result
+
+        # Create prompt for categorization
+        category_info = []
+        for i, category in enumerate(categories):
+            cat_name = category.get("route_category", f"Category {i + 1}")
+            cat_desc = category.get("route_description", "")
+            if cat_desc and cat_desc.strip():
+                category_info.append(f'"{cat_name}": {cat_desc}')
+            else:
+                category_info.append(f'"{cat_name}"')
+
+        categories_text = "\n".join([f"- {info}" for info in category_info if info])
+
+        # Create base prompt
+        base_prompt = (
+            f"You are a text classifier. Given the following text and categories, "
+            f"determine which category best matches the text.\n\n"
+            f'Text to classify: "{input_text}"\n\n'
+            f"Available categories:\n{categories_text}\n\n"
+            f"Respond with ONLY the exact category name that best matches the text. "
+            f'If none match well, respond with "NONE".\n\n'
+            f"Category:"
+        )
+
+        # Use custom prompt as additional instructions if provided
+        custom_prompt = getattr(self, "custom_prompt", "")
+        if custom_prompt and custom_prompt.strip():
+            self.status = "Using custom prompt as additional instructions"
+            simple_routes = ", ".join(
+                [f'"{cat.get("route_category", f"Category {i + 1}")}"' for i, cat in enumerate(categories)]
+            )
+            formatted_custom = custom_prompt.format(input_text=input_text, routes=simple_routes)
+            prompt = f"{base_prompt}\n\nAdditional Instructions:\n{formatted_custom}"
+        else:
+            self.status = "Using default prompt for LLM categorization"
+            prompt = base_prompt
+
+        self.status = f"Prompt sent to LLM:\n{prompt}"
+
+        try:
+            if hasattr(llm, "invoke"):
+                response = llm.invoke(prompt)
+                if hasattr(response, "content"):
+                    categorization = response.content.strip().strip('"')
+                else:
+                    categorization = str(response).strip().strip('"')
+            else:
+                categorization = str(llm(prompt)).strip().strip('"')
+
+            self.status = f"LLM response: '{categorization}'"
+            self._categorization_result = categorization
+        except RuntimeError as e:
+            self.status = f"Error in LLM categorization: {e!s}"
+            self._categorization_result = "NONE"
+
+        return self._categorization_result
+
+    def process_case(self) -> Message:
+        """Process all categories using LLM categorization and return message for matching category."""
+        # Clear any previous match state (only on first call)
+        if self._categorization_result is None:
+            self._matched_category = None
+
+        # Get categories and input text
+        categories = getattr(self, "routes", [])
+        input_text = getattr(self, "input_text", "")
+
+        # Get the cached categorization result (performs LLM call only once)
+        categorization = self._get_categorization()
+
+        # Find matching category based on LLM response
+        matched_category = None
+        for i, category in enumerate(categories):
+            route_category = category.get("route_category", "")
+            if categorization.lower() == route_category.lower():
+                matched_category = i
+                self.status = f"MATCH FOUND! Category {i + 1} matched with '{categorization}'"
+                break
+
+        if matched_category is not None:
+            # Store the matched category for other outputs to check
+            self._matched_category = matched_category
+
+            # Stop all category outputs except the matched one
+            for i in range(len(categories)):
+                if i != matched_category:
+                    self.stop(f"category_{i + 1}_result")
+
+            # Also stop the default output (if it exists)
+            enable_else = getattr(self, "enable_else_output", False)
+            if enable_else:
+                self.stop("default_result")
+
+            route_category = categories[matched_category].get("route_category", f"Category {matched_category + 1}")
+            self.status = f"Categorized as {route_category}"
+
+            # Check if there's an override output (takes precedence over everything)
+            override_output = getattr(self, "message", None)
+            if (
+                override_output
+                and hasattr(override_output, "text")
+                and override_output.text
+                and str(override_output.text).strip()
+            ):
+                return Message(text=str(override_output.text))
+            if override_output and isinstance(override_output, str) and override_output.strip():
+                return Message(text=str(override_output))
+
+            # Check if there's a custom output value for this category
+            custom_output = categories[matched_category].get("output_value", "")
+            # Treat None, empty string, or whitespace as blank
+            if custom_output and str(custom_output).strip() and str(custom_output).strip().lower() != "none":
+                # Use custom output value
+                return Message(text=str(custom_output))
+            # Use input as default output
+            return Message(text=input_text)
+        # No match found, stop all category outputs
+        for i in range(len(categories)):
+            self.stop(f"category_{i + 1}_result")
+
+        # Check if else output is enabled
+        enable_else = getattr(self, "enable_else_output", False)
+        if enable_else:
+            # The default_response will handle the else case
+            self.stop("process_case")
+            return Message(text="")
+        # No else output, so no output at all
+        self.status = "No match found and Else output is disabled"
+        return Message(text="")
+
+    def default_response(self) -> Message:
+        """Handle the else case when no conditions match."""
+        enable_else = getattr(self, "enable_else_output", False)
+        if not enable_else:
+            self.status = "Else output is disabled"
+            return Message(text="")
+
+        categories = getattr(self, "routes", [])
+        input_text = getattr(self, "input_text", "")
+
+        # Get the cached categorization result (performs LLM call only if not already done)
+        categorization = self._get_categorization()
+
+        # Check if the categorization matches any category
+        has_match = False
+        for i, category in enumerate(categories):
+            route_category = category.get("route_category", "")
+            if categorization.lower() == route_category.lower():
+                has_match = True
+                self.status = f"Match found for '{categorization}' (Category {i + 1}), stopping default_response"
+                break
+
+        if has_match:
+            # A case matches, stop this output
+            self.stop("default_result")
+            return Message(text="")
+
+        # No case matches, check for override output first, then use input as default
+        override_output = getattr(self, "message", None)
+        if (
+            override_output
+            and hasattr(override_output, "text")
+            and override_output.text
+            and str(override_output.text).strip()
+        ):
+            self.status = "Routed to Else (no match) - using override output"
+            return Message(text=str(override_output.text))
+        if override_output and isinstance(override_output, str) and override_output.strip():
+            self.status = "Routed to Else (no match) - using override output"
+            return Message(text=str(override_output))
+
+        self.status = "Routed to Else (no match) - using input as default"
+        return Message(text=input_text)

@@ -1,5 +1,5 @@
 import { usePostUploadFileV2 } from "@/controllers/API/queries/file-management";
-import { useMutationFunctionType } from "@/types/api";
+import type { useMutationFunctionType } from "@/types/api";
 
 interface IPostUploadFile {
   file: File;

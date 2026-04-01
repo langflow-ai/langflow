@@ -1,5 +1,6 @@
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePostValidatePrompt } from "@/controllers/API/queries/nodes/use-post-validate-prompt";
-import React, { useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "../../components/common/sanitizedHTMLWrapper";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
@@ -19,7 +20,7 @@ import {
   regexHighlight,
 } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
-import { PromptModalType } from "../../types/components";
+import type { PromptModalType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
@@ -44,7 +45,7 @@ export default function PromptModal({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const divRef = useRef(null);
-  const divRefPrompt = useRef(null);
+  const _divRefPrompt = useRef(null);
   const { mutate: postValidatePrompt } = usePostValidatePrompt();
   const [clickPosition, setClickPosition] = useState({ x: 0, y: 0 });
   const [scrollPosition, setScrollPosition] = useState(0);
@@ -55,23 +56,24 @@ export default function PromptModal({
     // Match *any* brace run around an identifier
     const regex = /(\{+)([^{}]+)(\}+)/g;
     const matches: string[] = [];
-    let match;
+    let match: RegExpExecArray | null = regex.exec(valueToCheck);
 
-    while ((match = regex.exec(valueToCheck))) {
+    while (match) {
       const [openRun, varName, closeRun] = [match[1], match[2], match[3]];
 
       // keep only odd, balanced runs (actual variables)
       if (openRun.length === closeRun.length && openRun.length % 2 === 1) {
         matches.push(`{${varName}}`); // normalise to single-brace form
       }
+      match = regex.exec(valueToCheck);
     }
 
-    let invalid_chars: string[] = [];
-    let fixed_variables: string[] = [];
-    let input_variables = matches;
-    for (let variable of input_variables) {
-      let new_var = variable;
-      for (let char of INVALID_CHARACTERS) {
+    const invalid_chars: string[] = [];
+    const fixed_variables: string[] = [];
+    const input_variables = matches;
+    for (const variable of input_variables) {
+      const new_var = variable;
+      for (const char of INVALID_CHARACTERS) {
         if (variable.includes(char)) {
           invalid_chars.push(new_var);
         }
@@ -149,7 +151,7 @@ export default function PromptModal({
               : (apiReturn?.frontend_node?.custom_fields?.[""] ?? "");
           }
           if (apiReturn) {
-            let inputVariables = apiReturn.input_variables ?? [];
+            const inputVariables = apiReturn.input_variables ?? [];
             if (
               JSON.stringify(apiReturn?.frontend_node) !== JSON.stringify({})
             ) {
@@ -206,7 +208,8 @@ export default function PromptModal({
 
       // Use caretPositionFromPoint to get the closest text position. Does not work on Safari.
       if ("caretPositionFromPoint" in document) {
-        let range = (document as any).caretPositionFromPoint(x, y)?.offset ?? 0;
+        const range =
+          (document as any).caretPositionFromPoint(x, y)?.offset ?? 0;
         if (range) {
           const position = range;
           textArea.setSelectionRange(position, position);

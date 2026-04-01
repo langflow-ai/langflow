@@ -1,7 +1,9 @@
-import { BASE_URL_API, BASE_URL_API_V2 } from "../../../constants/constants";
+import { getBaseUrl } from "@/customization/utils/urls";
+import { BASE_URL_API_V2 } from "../../../constants/constants";
 
 export const URLs = {
   TRANSACTIONS: `monitor/transactions`,
+  TRACES: `monitor/traces`,
   API_KEY: `api_key`,
   FILES: `files`,
   FILE_MANAGEMENT: `files`,
@@ -12,6 +14,7 @@ export const URLs = {
   USERS: "users",
   LOGOUT: `logout`,
   LOGIN: `login`,
+  SESSION: `session`,
   AUTOLOGIN: "auto_login",
   REFRESH: "refresh",
   BUILD: `build`,
@@ -29,18 +32,26 @@ export const URLs = {
   PUBLIC_FLOW: `flows/public_flow`,
   MCP: `mcp/project`,
   MCP_SERVERS: `mcp/servers`,
+  KNOWLEDGE_BASES: `knowledge_bases`,
+  MODELS: `models`,
+  MODEL_PROVIDERS: `models/providers`,
+  RUN: `run`,
+  RUN_SESSION: `run/session`,
+  REGISTRATION: `registration`,
 } as const;
 
 // IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility
 
 export function getURL(
   key: keyof typeof URLs,
-  params: any = {},
+  params: Record<string, unknown> = {},
   v2: boolean = false,
 ) {
   let url = URLs[key];
-  Object.keys(params).forEach((key) => (url += `/${params[key]}`));
-  return `${v2 ? BASE_URL_API_V2 : BASE_URL_API}${url.toString()}`;
+  for (const paramKey of Object.keys(params)) {
+    url += `/${params[paramKey]}`;
+  }
+  return `${v2 ? BASE_URL_API_V2 : getBaseUrl()}${url}`;
 }
 
 export type URLsType = typeof URLs;

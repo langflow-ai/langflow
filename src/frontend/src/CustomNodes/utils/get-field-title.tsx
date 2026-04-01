@@ -1,4 +1,4 @@
-import { APITemplateType } from "../../types/api";
+import type { APITemplateType } from "../../types/api";
 
 export default function getFieldTitle(
   template: APITemplateType,

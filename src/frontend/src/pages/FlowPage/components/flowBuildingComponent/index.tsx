@@ -1,21 +1,21 @@
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { normalizeTimeString } from "@/CustomNodes/GenericNode/components/NodeStatus/utils/format-run-time";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { BorderTrail } from "@/components/core/border-trail";
 import { Button } from "@/components/ui/button";
 import { TextShimmer } from "@/components/ui/TextShimmer";
 import { BuildStatus } from "@/constants/enums";
-import { normalizeTimeString } from "@/CustomNodes/GenericNode/components/NodeStatus/utils/format-run-time";
 import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
-import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useMemo, useRef, useState } from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import {
   CONTAINER_VARIANTS,
   DISMISS_BUTTON_VARIANTS,
+  getTimeVariants,
   RETRY_BUTTON_VARIANTS,
   STOP_BUTTON_VARIANTS,
-  getTimeVariants,
 } from "./helpers/visual-variants";
 
 export default function FlowBuildingComponent() {
@@ -29,6 +29,7 @@ export default function FlowBuildingComponent() {
   const [dismissed, setDismissed] = useState(false);
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
   const prevIsBuilding = useRef(isBuilding);
+  const startTimeRef = useRef<number | null>(null);
   const pastBuildFlowParams = useFlowStore(
     (state) => state.pastBuildFlowParams,
   );
@@ -50,12 +51,17 @@ export default function FlowBuildingComponent() {
     if (isBuilding && !prevIsBuilding.current) {
       setDismissed(false);
       setDuration(0);
+      startTimeRef.current = Date.now();
     }
 
-    if (isBuilding) {
+    if (isBuilding && startTimeRef.current !== null) {
       intervalId = setInterval(() => {
-        setDuration((prev) => prev + 10);
+        setDuration(Date.now() - startTimeRef.current!);
       }, 10);
+    }
+
+    if (!isBuilding && prevIsBuilding.current) {
+      startTimeRef.current = null;
     }
 
     prevIsBuilding.current = isBuilding;
@@ -246,13 +252,12 @@ export default function FlowBuildingComponent() {
                         transition={{ duration: 0.2 }}
                       >
                         <Markdown
-                          linkTarget="_blank"
                           remarkPlugins={[remarkGfm]}
                           className="my-1.5 align-text-top truncate-doubleline"
                           components={{
                             a: ({ node, ...props }) => (
                               <a
-                                href={props.href}
+                                {...props}
                                 target="_blank"
                                 className="underline"
                                 rel="noopener noreferrer"
@@ -262,7 +267,7 @@ export default function FlowBuildingComponent() {
                             ),
                             p({ node, ...props }) {
                               return (
-                                <span className="inline-block w-fit max-w-full align-text-top">
+                                <span className="inline-block w-fit max-w-full align-text-top truncate-doubleline">
                                   {props.children}
                                 </span>
                               );

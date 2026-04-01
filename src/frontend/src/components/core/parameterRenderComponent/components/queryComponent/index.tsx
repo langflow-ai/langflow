@@ -1,11 +1,11 @@
+import { useRef, useState } from "react";
 import { GRADIENT_CLASS } from "@/constants/constants";
 import QueryModal from "@/modals/queryModal";
-import { useRef, useState } from "react";
 import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
 import { Input } from "../../../../ui/input";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
-import { InputProps, QueryComponentType } from "../../types";
+import type { InputProps, QueryComponentType } from "../../types";
 import { getIconName } from "../inputComponent/components/helpers/get-icon-name";
 
 const inputClasses = {
@@ -60,7 +60,8 @@ export default function QueryComponent({
   display_name,
   info,
   separator,
-}: InputProps<string, QueryComponentType>): JSX.Element {
+  showParameter = true,
+}: InputProps<string, QueryComponentType>): JSX.Element | null {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
 
@@ -118,6 +119,10 @@ export default function QueryComponent({
       />
     </div>
   );
+
+  if (!showParameter) {
+    return null;
+  }
 
   return (
     <div className={cn("w-full", disabled && "pointer-events-none")}>

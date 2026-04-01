@@ -1,4 +1,5 @@
-import React, { forwardRef } from "react";
+import type React from "react";
+import { forwardRef } from "react";
 import SvgSlackIcon from "./SlackIcon";
 
 export const SlackIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(

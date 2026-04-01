@@ -1,14 +1,17 @@
+import type {
+  DataTypeDefinition,
+  SelectionChangedEvent,
+} from "ag-grid-community";
+import type { AgGridReact } from "ag-grid-react";
+import { cloneDeep } from "lodash";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import TableModal from "@/modals/tableModal";
 import { isMarkdownTable } from "@/utils/markdownUtils";
 import { FormatColumns, generateBackendColumnsFromValue } from "@/utils/utils";
-import { DataTypeDefinition, SelectionChangedEvent } from "ag-grid-community";
-import { AgGridReact } from "ag-grid-react";
-import { cloneDeep } from "lodash";
-import { useEffect, useMemo, useRef, useState } from "react";
 import { ForwardedIconComponent } from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
-import { InputProps, TableComponentType } from "../../types";
+import type { InputProps, TableComponentType } from "../../types";
 
 export default function TableNodeComponent({
   tableTitle,
@@ -23,7 +26,8 @@ export default function TableNodeComponent({
   trigger_icon = "Table",
   trigger_text = "Open Table",
   table_icon,
-}: InputProps<any[], TableComponentType>): JSX.Element {
+  showParameter = true,
+}: InputProps<any[], TableComponentType>): JSX.Element | null {
   const dataTypeDefinitions: {
     [cellDataType: string]: DataTypeDefinition<any>;
   } = useMemo(() => {
@@ -226,6 +230,10 @@ export default function TableNodeComponent({
       });
     }
     return [];
+  }
+
+  if (!showParameter) {
+    return null;
   }
 
   return (

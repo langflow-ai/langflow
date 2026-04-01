@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 
@@ -10,14 +10,15 @@ test(
 
     await page.getByTestId("blank-flow").click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
+
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
 
     await page
-      .getByTestId("processingPrompt Template")
+      .getByTestId("models_and_agentsPrompt Template")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-prompt-template").click();
@@ -41,14 +42,14 @@ test(
 
     await page.getByTestId("title-Prompt Template").click();
 
-    await page.waitForSelector('[data-testid="code-button-modal"]', {
+    await expect(page.getByTestId("code-button-modal").last()).toBeVisible({
       timeout: 3000,
     });
 
-    await page.getByTestId("code-button-modal").click();
+    await page.getByTestId("code-button-modal").last().click();
 
-    let code = await extractAndCleanCode(page);
-    let updatedCode = code!.replace("tool_mode=True", "tool_mode=False");
+    const code = await extractAndCleanCode(page);
+    const updatedCode = code!.replace("tool_mode=True", "tool_mode=False");
 
     expect(updatedCode).not.toBe(code);
 

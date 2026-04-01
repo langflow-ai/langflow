@@ -1,4 +1,4 @@
-import { InputProps } from "../../types";
+import type { InputProps } from "../../types";
 
 export function EmptyParameterComponent({
   id,
@@ -6,6 +6,10 @@ export function EmptyParameterComponent({
   editNode,
   handleOnNewValue,
   disabled,
-}: InputProps) {
+  showParameter = true,
+}: InputProps): JSX.Element | null {
+  if (!showParameter) {
+    return null;
+  }
   return <div id={id}></div>;
 }

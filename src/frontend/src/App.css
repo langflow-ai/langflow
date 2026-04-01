@@ -1,3 +1,4 @@
+@import "./style/custom-ace-overrides.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -16,6 +17,16 @@ body {
   -webkit-user-select: none; /* Safari */
   -moz-user-select: none; /* Firefox */
   -ms-user-select: none;
+
+  /* Safari-only fix for playground padding */
+  @media not all and (min-resolution: 0.001dpcm) {
+    @supports (-webkit-appearance: none) {
+      .playground-messages-wrapper {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+    }
+  }
 }
 
 .react-flow__node {
@@ -93,6 +104,35 @@ body {
   background-color: hsl(var(--placeholder-foreground)) !important;
 }
 
+/* Sticky note scrollbar - improved visibility and cursor */
+.sticky-note-scroll::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+.sticky-note-scroll::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.4) !important;
+  border-radius: 999px !important;
+  cursor: pointer !important;
+}
+
+.sticky-note-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.6) !important;
+  cursor: pointer !important;
+}
+
+.sticky-note-scroll::-webkit-scrollbar-track {
+  background-color: transparent !important;
+}
+
+.sticky-note-scroll {
+  scrollbar-color: hsl(var(--muted-foreground) / 0.4) transparent;
+  scrollbar-width: thin;
+}
+
+.sticky-note-scroll:hover {
+  scrollbar-color: hsl(var(--muted-foreground) / 0.6) transparent;
+}
+
 .jv-indent::-webkit-scrollbar-track {
   background-color: hsl(var(--muted)) !important;
   border-radius: 10px;
@@ -112,12 +152,7 @@ body {
 }
 
 .custom-hover:hover {
-  background-color: rgba(
-    99,
-    102,
-    241,
-    0.1
-  ); /* Medium indigo color with 20% opacity */
+  background-color: rgba(99, 102, 241, 0.1); /* Medium indigo color with 20% opacity */
 }
 
 /* This CSS is to not apply the border for the column having 'no-border' class */
@@ -221,4 +256,16 @@ code {
 
 .cm-gutters {
   display: none !important;
+}
+
+.user-select-none {
+  user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Sidebar segmented layout utility */
+.sidebar-segmented {
+  max-width: calc(var(--sidebar-width) - (var(--sidebar-width-icon) + 0.1rem));
+  width: var(--sidebar-width);
 }

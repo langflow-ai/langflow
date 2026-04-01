@@ -1,6 +1,7 @@
 import { INVALID_FILE_SIZE_ALERT } from "@/constants/alerts_constants";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { formatFileSize } from "@/utils/stringManipulation";
+
 const useFileSizeValidator = () => {
   const maxFileSizeUpload = useUtilityStore((state) => state.maxFileSizeUpload);
 

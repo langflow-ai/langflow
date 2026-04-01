@@ -1,5 +1,3 @@
-from .base_file import BaseFileComponent
+"""Backwards compatibility module for langflow.base.data."""
 
-__all__ = [
-    "BaseFileComponent",
-]
+from lfx.base.data import *  # noqa: F403

@@ -1,5 +1,24 @@
-import { DefaultEdge } from "@/CustomEdges";
-import NoteNode from "@/CustomNodes/NoteNode";
+import {
+  type Connection,
+  type Edge,
+  type NodeChange,
+  type OnNodeDrag,
+  type OnSelectionChangeParams,
+  ReactFlow,
+  reconnectEdge,
+  type SelectionDragHandler,
+} from "@xyflow/react";
+import _, { cloneDeep } from "lodash";
+import {
+  type KeyboardEvent,
+  type MouseEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { useHotkeys } from "react-hotkeys-hook";
+import { useShallow } from "zustand/react/shallow";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
 import {
   COLOR_OPTIONS,
@@ -12,43 +31,28 @@ import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
+import InspectionPanel from "@/pages/FlowPage/components/InspectionPanel";
 import { nodeColorsName } from "@/utils/styleUtils";
-import { cn, isSupportedNodeTypes } from "@/utils/utils";
-import {
-  Connection,
-  Edge,
-  OnNodeDrag,
-  OnSelectionChangeParams,
-  ReactFlow,
-  reconnectEdge,
-  SelectionDragHandler,
-} from "@xyflow/react";
-import { AnimatePresence } from "framer-motion";
-import _, { cloneDeep } from "lodash";
-import {
-  KeyboardEvent,
-  MouseEvent,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-import { useHotkeys } from "react-hotkeys-hook";
-import { useShallow } from "zustand/react/shallow";
-import GenericNode from "../../../../CustomNodes/GenericNode";
+import { isSupportedNodeTypes } from "@/utils/utils";
 import {
   INVALID_SELECTION_ERROR_ALERT,
   UPLOAD_ALERT_LIST,
   UPLOAD_ERROR_ALERT,
   WRONG_FILE_ERROR_ALERT,
 } from "../../../../constants/alerts_constants";
+import ExportModal from "../../../../modals/exportModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
-import { APIClassType } from "../../../../types/api";
-import { AllNodeType, EdgeType, NoteNodeType } from "../../../../types/flow";
+import useVersionPreviewStore from "../../../../stores/versionPreviewStore";
+import type { APIClassType } from "../../../../types/api";
+import type {
+  AllNodeType,
+  EdgeType,
+  NoteNodeType,
+} from "../../../../types/flow";
 import {
   generateFlow,
   generateNodeFromFlow,
@@ -58,27 +62,25 @@ import {
   updateIds,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
+import { edgeTypes, nodeTypes } from "../../consts";
 import ConnectionLineComponent from "../ConnectionLineComponent";
+import FlowBuildingComponent from "../flowBuildingComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import UpdateAllComponents from "../UpdateAllComponents";
-import FlowBuildingComponent from "../flowBuildingComponent";
+import HelperLines from "./components/helper-lines";
+import VersionPreviewOverlay from "./components/VersionPreviewOverlay";
+import {
+  getHelperLines,
+  getSnapPosition,
+  type HelperLinesState,
+} from "./helpers/helper-lines";
 import {
   MemoizedBackground,
   MemoizedCanvasControls,
-  MemoizedLogCanvasControls,
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
-
-const nodeTypes = {
-  genericNode: GenericNode,
-  noteNode: NoteNode,
-};
-
-const edgeTypes = {
-  default: DefaultEdge,
-};
 
 export default function Page({
   view,
@@ -92,6 +94,7 @@ export default function Page({
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
+  const setFilterComponent = useFlowStore((state) => state.setFilterComponent);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const setPositionDictionary = useFlowStore(
     (state) => state.setPositionDictionary,
@@ -103,6 +106,9 @@ export default function Page({
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const isEmptyFlow = useRef(nodes.length === 0);
+
+  const previewLabel = useVersionPreviewStore((s) => s.previewLabel);
+  const isPreviewActive = previewLabel !== null;
   const onNodesChange = useFlowStore((state) => state.onNodesChange);
   const onEdgesChange = useFlowStore((state) => state.onEdgesChange);
   const setNodes = useFlowStore((state) => state.setNodes);
@@ -120,9 +126,13 @@ export default function Page({
     (state) => state.setLastCopiedSelection,
   );
   const onConnect = useFlowStore((state) => state.onConnect);
+  const setRightClickedNodeId = useFlowStore(
+    (state) => state.setRightClickedNodeId,
+  );
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const updateCurrentFlow = useFlowStore((state) => state.updateCurrentFlow);
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
+  const [openExportModal, setOpenExportModal] = useState(false);
   const edgeUpdateSuccessful = useRef(true);
 
   const isLocked = useFlowStore(
@@ -211,6 +221,7 @@ export default function Page({
   }, [autoSaveFlow]);
 
   function handleUndo(e: KeyboardEvent) {
+    if (isPreviewActive) return;
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -219,6 +230,7 @@ export default function Page({
   }
 
   function handleRedo(e: KeyboardEvent) {
+    if (isPreviewActive) return;
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -227,6 +239,7 @@ export default function Page({
   }
 
   function handleGroup(e: KeyboardEvent) {
+    if (isPreviewActive) return;
     if (selectionMenuVisible) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -235,6 +248,7 @@ export default function Page({
   }
 
   function handleDuplicate(e: KeyboardEvent) {
+    if (isPreviewActive) return;
     e.preventDefault();
     e.stopPropagation();
     (e as unknown as Event).stopImmediatePropagation();
@@ -271,6 +285,7 @@ export default function Page({
   }
 
   function handleCut(e: KeyboardEvent) {
+    if (isPreviewActive) return;
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -281,6 +296,7 @@ export default function Page({
   }
 
   function handlePaste(e: KeyboardEvent) {
+    if (isPreviewActive) return;
     if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -298,6 +314,8 @@ export default function Page({
   }
 
   function handleDelete(e: KeyboardEvent) {
+    if (isPreviewActive) return;
+    if (isLocked) return;
     if (!isWrappedWithClass(e, "nodelete") && lastSelection) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -315,6 +333,20 @@ export default function Page({
     }
   }
 
+  function handleEscape(e: KeyboardEvent) {
+    if (e.key === "Escape") {
+      setRightClickedNodeId(null);
+    }
+  }
+
+  function handleDownload(e: KeyboardEvent) {
+    if (!isWrappedWithClass(e, "noflow")) {
+      e.preventDefault();
+      (e as unknown as Event).stopImmediatePropagation();
+      setOpenExportModal(true);
+    }
+  }
+
   const undoAction = useShortcutsStore((state) => state.undo);
   const redoAction = useShortcutsStore((state) => state.redo);
   const redoAltAction = useShortcutsStore((state) => state.redoAlt);
@@ -324,6 +356,7 @@ export default function Page({
   const groupAction = useShortcutsStore((state) => state.group);
   const cutAction = useShortcutsStore((state) => state.cut);
   const pasteAction = useShortcutsStore((state) => state.paste);
+  const downloadAction = useShortcutsStore((state) => state.download);
   //@ts-ignore
   useHotkeys(undoAction, handleUndo);
   //@ts-ignore
@@ -343,7 +376,11 @@ export default function Page({
   //@ts-ignore
   useHotkeys(deleteAction, handleDelete);
   //@ts-ignore
+  useHotkeys(downloadAction, handleDownload);
+  //@ts-ignore
   useHotkeys("delete", handleDelete);
+  //@ts-ignore
+  useHotkeys("escape", handleEscape);
 
   const onConnectMod = useCallback(
     (params: Connection) => {
@@ -354,30 +391,107 @@ export default function Page({
     [takeSnapshot, onConnect],
   );
 
-  const onNodeDragStart: OnNodeDrag = useCallback(() => {
-    // 👇 make dragging a node undoable
+  const [helperLines, setHelperLines] = useState<HelperLinesState>({});
+  const [isDragging, setIsDragging] = useState(false);
+  const helperLineEnabled = useFlowStore((state) => state.helperLineEnabled);
 
-    takeSnapshot();
-    // 👉 you can place your event handlers here
-  }, [takeSnapshot]);
+  const onNodeDrag: OnNodeDrag = useCallback(
+    (_, node) => {
+      if (helperLineEnabled) {
+        const currentHelperLines = getHelperLines(node, nodes);
+        setHelperLines(currentHelperLines);
+      }
+    },
+    [helperLineEnabled, nodes],
+  );
 
-  const onNodeDragStop: OnNodeDrag = useCallback(() => {
-    // 👇 make moving the canvas undoable
-    autoSaveFlow();
-    updateCurrentFlow({ nodes });
-    setPositionDictionary({});
-  }, [
-    takeSnapshot,
-    autoSaveFlow,
-    nodes,
-    edges,
-    reactFlowInstance,
-    setPositionDictionary,
-  ]);
+  const onNodeDragStart: OnNodeDrag = useCallback(
+    (_, node) => {
+      // 👇 make dragging a node undoable
+      takeSnapshot();
+      setIsDragging(true);
+      // 👉 you can place your event handlers here
+    },
+    [takeSnapshot],
+  );
+
+  const onNodeDragStop: OnNodeDrag = useCallback(
+    (_, node) => {
+      // 👇 make moving the canvas undoable
+      autoSaveFlow();
+      updateCurrentFlow({ nodes });
+      setPositionDictionary({});
+      setIsDragging(false);
+      setHelperLines({});
+    },
+    [
+      takeSnapshot,
+      autoSaveFlow,
+      nodes,
+      edges,
+      reactFlowInstance,
+      setPositionDictionary,
+    ],
+  );
+
+  const onNodesChangeWithHelperLines = useCallback(
+    (changes: NodeChange<AllNodeType>[]) => {
+      if (!helperLineEnabled) {
+        onNodesChange(changes);
+        return;
+      }
+
+      // Apply snapping to position changes during drag
+      const modifiedChanges = changes.map((change) => {
+        if (
+          change.type === "position" &&
+          "dragging" in change &&
+          "position" in change &&
+          "id" in change &&
+          isDragging
+        ) {
+          const nodeId = change.id as string;
+          const draggedNode = nodes.find((n) => n.id === nodeId);
+
+          if (draggedNode && change.position) {
+            const updatedNode = {
+              ...draggedNode,
+              position: change.position,
+            };
+
+            const snapPosition = getSnapPosition(updatedNode, nodes);
+
+            // Only snap if we're actively dragging
+            if (change.dragging) {
+              // Apply snap if there's a significant difference
+              if (
+                Math.abs(snapPosition.x - change.position.x) > 0.1 ||
+                Math.abs(snapPosition.y - change.position.y) > 0.1
+              ) {
+                return {
+                  ...change,
+                  position: snapPosition,
+                };
+              }
+            } else {
+              // This is the final position change when drag ends
+              // Force snap to ensure it stays where it should
+              return {
+                ...change,
+                position: snapPosition,
+              };
+            }
+          }
+        }
+        return change;
+      });
+
+      onNodesChange(modifiedChanges);
+    },
+    [onNodesChange, nodes, isDragging, helperLineEnabled],
+  );
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
-    // 👇 make dragging a selection undoable
-
     takeSnapshot();
   }, [takeSnapshot]);
 
@@ -393,6 +507,7 @@ export default function Page({
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
+      if (isLocked) return;
       const grabbingElement =
         document.getElementsByClassName("cursor-grabbing");
       if (grabbingElement.length > 0) {
@@ -486,13 +601,38 @@ export default function Page({
   const onSelectionChange = useCallback(
     (flow: OnSelectionChangeParams): void => {
       setLastSelection(flow);
+      if (flow.nodes && (flow.nodes.length === 0 || flow.nodes.length > 1)) {
+        setRightClickedNodeId(null);
+      }
     },
-    [],
+    [setRightClickedNodeId],
+  );
+
+  const onNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: AllNodeType) => {
+      event.preventDefault();
+      if (isLocked) return;
+
+      // Set the right-clicked node ID to show its dropdown menu
+      setRightClickedNodeId(node.id);
+
+      // Focus/select the right-clicked node (same as left-click behavior)
+      setNodes((currentNodes) => {
+        return currentNodes.map((n) => ({
+          ...n,
+          selected: n.id === node.id,
+        }));
+      });
+    },
+    [isLocked, setRightClickedNodeId, setNodes],
   );
 
   const onPaneClick = useCallback(
     (event: React.MouseEvent) => {
       setFilterEdge([]);
+      setFilterComponent("");
+      // Hide right-click dropdown when clicking on the pane
+      setRightClickedNodeId(null);
       if (isAddingNote) {
         const shadowBox = document.getElementById("shadow-box");
         if (shadowBox) {
@@ -517,6 +657,8 @@ export default function Page({
           id: newId,
           type: "noteNode",
           position: position || { x: 0, y: 0 },
+          width: NOTE_NODE_MIN_WIDTH,
+          height: NOTE_NODE_MIN_HEIGHT,
           data: {
             ...data,
             id: newId,
@@ -524,9 +666,18 @@ export default function Page({
         };
         setNodes((nds) => nds.concat(newNode));
         setIsAddingNote(false);
+        // Signal sidebar to revert add_note active state
+        window.dispatchEvent(new Event("lf:end-add-note"));
       }
     },
-    [isAddingNote, setNodes, reactFlowInstance, getNodeId, setFilterEdge],
+    [
+      isAddingNote,
+      setNodes,
+      reactFlowInstance,
+      getNodeId,
+      setFilterEdge,
+      setFilterComponent,
+    ],
   );
 
   const handleEdgeClick = (event, edge) => {
@@ -540,6 +691,13 @@ export default function Page({
 
     const accentColor = `hsl(var(--datatype-${color}))`;
     reactFlowWrapper.current?.style.setProperty("--selected", accentColor);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (isLocked) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
   };
 
   useEffect(() => {
@@ -561,80 +719,157 @@ export default function Page({
     };
   }, [isAddingNote, shadowBoxWidth, shadowBoxHeight]);
 
-  const componentsToUpdate = useFlowStore((state) => state.componentsToUpdate);
+  // Listen for a global event to start the add-note flow from outside components
+  useEffect(() => {
+    const handleStartAddNote = () => {
+      setIsAddingNote(true);
+      const shadowBox = document.getElementById("shadow-box");
+      if (shadowBox) {
+        shadowBox.style.display = "block";
+        shadowBox.style.left = `${position.current.x - shadowBoxWidth / 2}px`;
+        shadowBox.style.top = `${position.current.y - shadowBoxHeight / 2}px`;
+      }
+    };
 
-  const MIN_ZOOM = 0.2;
-  const MAX_ZOOM = 8;
+    window.addEventListener("lf:start-add-note", handleStartAddNote);
+    return () => {
+      window.removeEventListener("lf:start-add-note", handleStartAddNote);
+    };
+  }, [shadowBoxWidth, shadowBoxHeight]);
+
+  const MIN_ZOOM = 0.25;
+  const MAX_ZOOM = 2;
   const fitViewOptions = {
     minZoom: MIN_ZOOM,
     maxZoom: MAX_ZOOM,
   };
 
+  // Get inspection panel visibility from store
+  const inspectionPanelVisible = useFlowStore(
+    (state) => state.inspectionPanelVisible,
+  );
+
+  // Determine if a single generic node is selected
+  const hasSingleGenericNodeSelected =
+    lastSelection?.nodes?.length === 1 &&
+    lastSelection.nodes[0].type === "genericNode";
+
+  // Get the fresh node data from the store instead of using stale reference
+  const selectedNodeId = hasSingleGenericNodeSelected
+    ? lastSelection.nodes[0].id
+    : null;
+  const selectedNode = selectedNodeId
+    ? (nodes.find((n) => n.id === selectedNodeId) as AllNodeType)
+    : null;
+
+  // Determine if InspectionPanel should be visible
+  const showInspectionPanel = inspectionPanelVisible && !!selectedNode;
+
+  // Handler to close the inspection panel by deselecting all nodes
+  const handleCloseInspectionPanel = useCallback(() => {
+    setNodes((nds) =>
+      nds.map((node) => ({
+        ...node,
+        selected: false,
+      })),
+    );
+  }, [setNodes]);
+
+  useEffect(() => {
+    if (inspectionPanelVisible) {
+      setSelectionMenuVisible(false);
+    }
+  }, [inspectionPanelVisible]);
+
   return (
     <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
       {showCanvas ? (
-        <div id="react-flow-id" className="h-full w-full bg-canvas">
-          {!view && (
-            <>
-              <MemoizedLogCanvasControls />
-              <MemoizedCanvasControls
-                setIsAddingNote={setIsAddingNote}
-                position={position.current}
-                shadowBoxWidth={shadowBoxWidth}
-                shadowBoxHeight={shadowBoxHeight}
-              />
-              <FlowToolbar />
-            </>
-          )}
-          <MemoizedSidebarTrigger />
-          <SelectionMenu
-            lastSelection={lastSelection}
-            isVisible={selectionMenuVisible}
-            nodes={lastSelection?.nodes}
-            onClick={handleGroupNode}
-          />
-          <ReactFlow<AllNodeType, EdgeType>
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={isLocked ? undefined : onConnectMod}
-            disableKeyboardA11y={true}
-            onInit={setReactFlowInstance}
-            nodeTypes={nodeTypes}
-            onReconnect={isLocked ? undefined : onEdgeUpdate}
-            onReconnectStart={isLocked ? undefined : onEdgeUpdateStart}
-            onReconnectEnd={isLocked ? undefined : onEdgeUpdateEnd}
-            onNodeDragStart={onNodeDragStart}
-            onSelectionDragStart={onSelectionDragStart}
-            elevateEdgesOnSelect={true}
-            onSelectionEnd={onSelectionEnd}
-            onSelectionStart={onSelectionStart}
-            connectionRadius={30}
-            edgeTypes={edgeTypes}
-            connectionLineComponent={ConnectionLineComponent}
-            onDragOver={onDragOver}
-            onNodeDragStop={onNodeDragStop}
-            onDrop={onDrop}
-            onSelectionChange={onSelectionChange}
-            deleteKeyCode={[]}
-            fitView={isEmptyFlow.current ? false : true}
-            fitViewOptions={fitViewOptions}
-            className="theme-attribution"
-            minZoom={MIN_ZOOM}
-            maxZoom={MAX_ZOOM}
-            zoomOnScroll={!view}
-            zoomOnPinch={!view}
-            panOnDrag={!view}
-            panActivationKeyCode={""}
-            proOptions={{ hideAttribution: true }}
-            onPaneClick={onPaneClick}
-            onEdgeClick={handleEdgeClick}
-          >
-            <FlowBuildingComponent />
-            <UpdateAllComponents />
-            <MemoizedBackground />
-          </ReactFlow>
+        <>
+          <div id="react-flow-id" className="h-full w-full bg-canvas relative">
+            {!view && (
+              <>
+                <MemoizedCanvasControls
+                  selectedNode={selectedNode}
+                  setIsAddingNote={setIsAddingNote}
+                  shadowBoxWidth={shadowBoxWidth}
+                  shadowBoxHeight={shadowBoxHeight}
+                />
+                {!isPreviewActive && <FlowToolbar />}
+                {inspectionPanelVisible && (
+                  <InspectionPanel selectedNode={selectedNode} />
+                )}
+              </>
+            )}
+            <MemoizedSidebarTrigger />
+            <SelectionMenu
+              lastSelection={lastSelection}
+              isVisible={selectionMenuVisible}
+              nodes={lastSelection?.nodes}
+              onClick={handleGroupNode}
+            />
+            <ReactFlow<AllNodeType, EdgeType>
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChangeWithHelperLines}
+              onEdgesChange={onEdgesChange}
+              onConnect={isLocked || isPreviewActive ? undefined : onConnectMod}
+              disableKeyboardA11y={true}
+              nodesFocusable={!isLocked && !isPreviewActive}
+              edgesFocusable={!isLocked && !isPreviewActive}
+              nodesDraggable={!isPreviewActive}
+              nodesConnectable={!isPreviewActive}
+              elementsSelectable={!isPreviewActive}
+              onInit={setReactFlowInstance}
+              nodeTypes={nodeTypes}
+              onReconnect={
+                isLocked || isPreviewActive ? undefined : onEdgeUpdate
+              }
+              onReconnectStart={
+                isLocked || isPreviewActive ? undefined : onEdgeUpdateStart
+              }
+              onReconnectEnd={
+                isLocked || isPreviewActive ? undefined : onEdgeUpdateEnd
+              }
+              onNodeDrag={isPreviewActive ? undefined : onNodeDrag}
+              onNodeDragStart={isPreviewActive ? undefined : onNodeDragStart}
+              onSelectionDragStart={
+                isPreviewActive ? undefined : onSelectionDragStart
+              }
+              elevateEdgesOnSelect={false}
+              onSelectionEnd={isPreviewActive ? undefined : onSelectionEnd}
+              onSelectionStart={isPreviewActive ? undefined : onSelectionStart}
+              connectionRadius={30}
+              edgeTypes={edgeTypes}
+              connectionLineComponent={ConnectionLineComponent}
+              onDragOver={isPreviewActive ? undefined : onDragOver}
+              onNodeDragStop={isPreviewActive ? undefined : onNodeDragStop}
+              onDrop={isPreviewActive ? undefined : onDrop}
+              onSelectionChange={onSelectionChange}
+              deleteKeyCode={[]}
+              fitView={isEmptyFlow.current ? false : true}
+              fitViewOptions={fitViewOptions}
+              className="theme-attribution"
+              tabIndex={isLocked ? -1 : undefined}
+              minZoom={MIN_ZOOM}
+              maxZoom={MAX_ZOOM}
+              zoomOnScroll={!view}
+              zoomOnPinch={!view}
+              selectNodesOnDrag={false}
+              panOnDrag={!view}
+              panActivationKeyCode={""}
+              proOptions={{ hideAttribution: true }}
+              onPaneClick={onPaneClick}
+              onEdgeClick={handleEdgeClick}
+              onKeyDown={handleKeyDown}
+              onNodeContextMenu={onNodeContextMenu}
+            >
+              <FlowBuildingComponent />
+              <UpdateAllComponents />
+              <MemoizedBackground />
+              {helperLineEnabled && <HelperLines helperLines={helperLines} />}
+            </ReactFlow>
+            {isPreviewActive && <VersionPreviewOverlay />}
+          </div>
           <div
             id="shadow-box"
             style={{
@@ -644,16 +879,18 @@ export default function Page({
               backgroundColor: `${shadowBoxBackgroundColor}`,
               opacity: 0.7,
               pointerEvents: "none",
+              borderRadius: "12px",
               // Prevent shadow-box from showing unexpectedly during initial renders
               display: "none",
             }}
           ></div>
-        </div>
+        </>
       ) : (
         <div className="flex h-full w-full items-center justify-center">
           <CustomLoader remSize={30} />
         </div>
       )}
+      <ExportModal open={openExportModal} setOpen={setOpenExportModal} />
     </div>
   );
 }

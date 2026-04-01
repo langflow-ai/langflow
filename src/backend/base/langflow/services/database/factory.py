@@ -6,7 +6,7 @@ from langflow.services.database.service import DatabaseService
 from langflow.services.factory import ServiceFactory
 
 if TYPE_CHECKING:
-    from langflow.services.settings.service import SettingsService
+    from lfx.services.settings.service import SettingsService
 
 
 class DatabaseServiceFactory(ServiceFactory):

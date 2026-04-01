@@ -1,4 +1,4 @@
-import { AxiosRequestConfig, ResponseType } from "axios";
+import type { AxiosRequestConfig, ResponseType } from "axios";
 import { track } from "./analytics";
 
 export const customGetDownloadTypeFolders = (): AxiosRequestConfig => {

@@ -1,5 +1,7 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
@@ -40,20 +42,15 @@ The future of AI is both exciting and uncertain. As the technology continues to 
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
-    await page.getByTestId("add_note").click();
+    await page.getByTestId("sidebar-nav-add_note").click();
 
     const targetElement = page.locator('//*[@id="react-flow-id"]');
     await targetElement.click();
 
     await page.mouse.up();
     await page.mouse.down();
+    await adjustScreenView(page, { numberOfZoomOut: 6 });
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("fit_view").click();
-    await zoomOut(page, 6);
     await page.getByTestId("note_node").click();
 
     await page.locator(".generic-node-desc-text").last().dblclick();
@@ -119,8 +116,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
     await page.getByTestId("more-options-modal").click();
 
     await page.getByText("Copy").click();
-
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
     //double click
     await targetElement.click();

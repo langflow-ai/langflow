@@ -1,6 +1,6 @@
 from typing import Any
 
-from langflow.schema.data import Data
+from lfx.schema.data import Data
 
 
 def convert_to_langchain_type(value):

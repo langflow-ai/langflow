@@ -1,4 +1,5 @@
-import { test } from "@playwright/test";
+import { test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test.describe("Flow Page tests", () => {
@@ -16,9 +17,6 @@ test.describe("Flow Page tests", () => {
 
     await page.getByTestId("sidebar-custom-component-button").click();
 
-    await page.getByTitle("fit view").click();
-    await page.getByTitle("zoom out").click();
-    await page.getByTitle("zoom out").click();
-    await page.getByTitle("zoom out").click();
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
   });
 });

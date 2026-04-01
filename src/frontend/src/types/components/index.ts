@@ -1,21 +1,21 @@
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import { ReactFlowJsonObject } from "@xyflow/react";
-import { ReactElement, ReactNode } from "react";
-import { InputOutput } from "../../constants/enums";
-import {
+import type { ReactFlowJsonObject } from "@xyflow/react";
+import type { ReactElement, ReactNode } from "react";
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
+import type { InputOutput } from "../../constants/enums";
+import type {
   APIClassType,
   APITemplateType,
   InputFieldType,
   OutputFieldProxyType,
 } from "../api";
-import { ChatMessageType } from "../chat";
-import {
+import type { ChatMessageType } from "../chat";
+import type { sourceHandleType, targetHandleType } from "./../flow/index";
+import type {
   AllNodeType,
   FlowStyleType,
   FlowType,
   NodeDataType,
 } from "../flow/index";
-import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
   name?: string;
   autoFocus?: boolean;
@@ -51,6 +51,7 @@ export type InputComponentType = {
   commandWidth?: string;
   blockAddNewGlobalVariable?: boolean;
   hasRefreshButton?: boolean;
+  inspectionPanel?: boolean;
 };
 export type DropDownComponent = {
   disabled?: boolean;
@@ -62,12 +63,21 @@ export type DropDownComponent = {
   handleNodeClass: (value: any, code?: string, type?: string) => void;
   options: string[];
   optionsMetaData?: any[];
-  onSelect: (value: string, dbValue?: boolean, snapshot?: boolean) => void;
+  onSelect: (
+    value: string,
+    dbValue?: boolean,
+    snapshot?: boolean,
+    selectedMetadata?: any,
+  ) => void;
   editNode?: boolean;
   id?: string;
   children?: ReactNode;
   name: string;
-  dialogInputs?: any;
+  dialogInputs?: {
+    fields: { data: { node: APIClassType } };
+    functionality: string;
+  };
+  externalOptions?: any;
   toggle?: boolean;
 };
 export type ParameterComponentType = {
@@ -83,7 +93,7 @@ export type ParameterComponentType = {
   required?: boolean;
   name?: string;
   tooltipTitle: string | undefined;
-  optionalHandle?: Array<String> | null;
+  optionalHandle?: Array<string> | null;
   info?: string;
   proxy?: { field: string; id: string };
   showNode?: boolean;
@@ -98,6 +108,7 @@ export type NodeOutputFieldComponentType = {
   data: NodeDataType;
   title: string;
   id: sourceHandleType;
+  loopInputId?: sourceHandleType;
   colors: string[];
   tooltipTitle: string | undefined;
   showNode: boolean;
@@ -123,13 +134,15 @@ export type NodeInputFieldComponentType = {
   type: string | undefined;
   name: string;
   required: boolean;
-  optionalHandle: Array<String> | undefined | null;
+  optionalHandle: Array<string> | undefined | null;
   lastInput?: boolean;
   info: string;
   proxy: { field: string; id: string } | undefined;
   showNode: boolean;
   colorName?: string[];
   isToolMode?: boolean;
+  isPrimaryInput?: boolean;
+  displayHandle?: boolean;
 };
 
 export type IOJSONInputComponentType = {
@@ -289,6 +302,7 @@ export type TextHighlightType = {
 
 export interface IVarHighlightType {
   name: string;
+  addCurlyBraces?: boolean;
 }
 
 export type IconComponentProps = {
@@ -397,6 +411,7 @@ export type ConfirmationModalType = {
     | "small-h-full"
     | "medium-h-full";
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
+  onOpenAutoFocus?: (e: Event) => void;
 };
 
 export type UserManagementType = {
@@ -478,10 +493,6 @@ export type nodeGroupedObjType = {
   node: string[] | string;
 };
 
-type test = {
-  [char: string]: string;
-};
-
 export type tweakType = Array<{
   [key: string]: {
     [char: string]: string;
@@ -552,7 +563,6 @@ export type ChatInputType = {
     repeat: number;
     files?: string[];
   }) => Promise<void>;
-  playgroundPage: boolean;
 };
 
 export type editNodeToggleType = {
@@ -636,13 +646,15 @@ export type codeAreaModalPropsType = {
 export type chatMessagePropsType = {
   chat: ChatMessageType;
   lastMessage: boolean;
-  updateChat: (
+  updateChat?: (
     chat: ChatMessageType,
     message: string,
     stream_url?: string,
   ) => void;
   closeChat?: () => void;
   playgroundPage?: boolean;
+  isThinking?: boolean;
+  thinkingDuration?: number | null;
 };
 
 export type genericModalPropsType = {

@@ -7,42 +7,63 @@ from httpx import AsyncClient
 from langflow.memory import aadd_messagetables
 
 # Assuming you have these imports available
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.message import MessageCreate, MessageRead, MessageUpdate
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.deps import session_scope
 
 
 @pytest.fixture
-async def created_message():
+async def created_message(active_user):
     async with session_scope() as session:
+        # Create a flow for the user so messages can be filtered by user
+        flow = Flow(name="test_flow_for_message", user_id=active_user.id, data={"nodes": [], "edges": []})
+        session.add(flow)
+        await session.flush()
+
         message = MessageCreate(text="Test message", sender="User", sender_name="User", session_id="session_id")
         messagetable = MessageTable.model_validate(message, from_attributes=True)
+        messagetable.flow_id = flow.id
         messagetables = await aadd_messagetables([messagetable], session)
         return MessageRead.model_validate(messagetables[0], from_attributes=True)
 
 
 @pytest.fixture
-async def created_messages(session):  # noqa: ARG001
+async def created_messages(session, active_user):  # noqa: ARG001
     async with session_scope() as _session:
+        # Create a flow for the user so messages can be filtered by user
+        flow = Flow(name="test_flow_for_messages", user_id=active_user.id, data={"nodes": [], "edges": []})
+        _session.add(flow)
+        await _session.flush()
+
         messages = [
             MessageCreate(text="Test message 1", sender="User", sender_name="User", session_id="session_id2"),
             MessageCreate(text="Test message 2", sender="User", sender_name="User", session_id="session_id2"),
             MessageCreate(text="Test message 3", sender="AI", sender_name="AI", session_id="session_id2"),
         ]
         messagetables = [MessageTable.model_validate(message, from_attributes=True) for message in messages]
+        for mt in messagetables:
+            mt.flow_id = flow.id
         return await aadd_messagetables(messagetables, _session)
 
 
 @pytest.fixture
-async def messages_with_datetime_session_id(session):  # noqa: ARG001
+async def messages_with_datetime_session_id(session, active_user):  # noqa: ARG001
     """Create messages with datetime-like session IDs that contain characters requiring URL encoding."""
     datetime_session_id = "2024-01-15 10:30:45 UTC"  # Contains spaces and colons
     async with session_scope() as _session:
+        # Create a flow for the user so messages can be filtered by user
+        flow = Flow(name="test_flow_for_datetime_messages", user_id=active_user.id, data={"nodes": [], "edges": []})
+        _session.add(flow)
+        await _session.flush()
+
         messages = [
             MessageCreate(text="Datetime message 1", sender="User", sender_name="User", session_id=datetime_session_id),
             MessageCreate(text="Datetime message 2", sender="AI", sender_name="AI", session_id=datetime_session_id),
         ]
         messagetables = [MessageTable.model_validate(message, from_attributes=True) for message in messages]
+        for mt in messagetables:
+            mt.flow_id = flow.id
         created_messages = await aadd_messagetables(messagetables, _session)
         return created_messages, datetime_session_id
 
@@ -150,7 +171,7 @@ async def test_get_messages_with_url_encoded_datetime_session_id(
     client: AsyncClient, messages_with_datetime_session_id, logged_in_headers
 ):
     """Test that URL-encoded datetime session IDs are properly decoded and matched."""
-    created_messages, datetime_session_id = messages_with_datetime_session_id
+    _created_messages, datetime_session_id = messages_with_datetime_session_id
 
     # URL encode the datetime session ID (spaces become %20, colons become %3A)
     encoded_session_id = quote(datetime_session_id)
@@ -178,7 +199,7 @@ async def test_get_messages_with_non_encoded_datetime_session_id(
     client: AsyncClient, messages_with_datetime_session_id, logged_in_headers
 ):
     """Test that non-URL-encoded datetime session IDs also work correctly."""
-    created_messages, datetime_session_id = messages_with_datetime_session_id
+    _created_messages, datetime_session_id = messages_with_datetime_session_id
 
     # Test with non-encoded session ID (should still work due to unquote being safe for non-encoded strings)
     response = await client.get(
@@ -195,16 +216,22 @@ async def test_get_messages_with_non_encoded_datetime_session_id(
 
 
 @pytest.mark.api_key_required
-async def test_get_messages_with_various_encoded_characters(client: AsyncClient, logged_in_headers):
+async def test_get_messages_with_various_encoded_characters(client: AsyncClient, logged_in_headers, active_user):
     """Test various URL-encoded characters in session IDs."""
     # Create a session ID with various special characters
     special_session_id = "test+session:2024@domain.com"
 
     async with session_scope() as session:
+        # Create a flow for the user so messages can be filtered by user
+        flow = Flow(name="test_flow_for_special_chars", user_id=active_user.id, data={"nodes": [], "edges": []})
+        session.add(flow)
+        await session.flush()
+
         message = MessageCreate(
             text="Special chars message", sender="User", sender_name="User", session_id=special_session_id
         )
         messagetable = MessageTable.model_validate(message, from_attributes=True)
+        messagetable.flow_id = flow.id
         await aadd_messagetables([messagetable], session)
 
     # URL encode the session ID

@@ -1,0 +1,14 @@
+# Build outputs
+build/
+dist/
+
+# Dependencies
+node_modules/
+
+# Test outputs
+.nyc_output/
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/

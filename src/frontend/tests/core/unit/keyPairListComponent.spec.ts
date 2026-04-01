@@ -1,6 +1,12 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import {
+  closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
 
 test(
   "KeypairListComponent",
@@ -12,6 +18,11 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
+
+    // Allow for legacy components
+    await page.getByTestId("sidebar-options-trigger").click();
+    await page.getByTestId("sidebar-legacy-switch").click();
+
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("amazon bedrock");
 
@@ -25,13 +36,15 @@ test(
 
     await adjustScreenView(page);
 
+    await disableInspectPanel(page);
+
     await page.getByTestId("div-generic-node").click();
 
-    await page.getByTestId("edit-button-modal").last().click();
+    await openAdvancedOptions(page);
 
     await page.getByTestId("showmodel_kwargs").click();
     expect(await page.getByTestId("showmodel_kwargs").isChecked()).toBeTruthy();
-    await page.getByText("Close").last().click();
+    await closeAdvancedOptions(page);
 
     await page.locator('//*[@id="keypair0"]').click();
     await page.locator('//*[@id="keypair0"]').fill("testtesttesttest");
@@ -69,9 +82,9 @@ test(
       expect(false).toBeTruthy();
     }
 
-    await page.getByTestId("edit-button-modal").last().click();
+    await openAdvancedOptions(page);
 
-    await page.getByText("Close").last().click();
+    await closeAdvancedOptions(page);
 
     const plusButtonLocator = page.locator('//*[@id="plusbtn0"]');
     const elementCount = await plusButtonLocator?.count();
@@ -79,7 +92,7 @@ test(
       expect(true).toBeTruthy();
       await page.getByTestId("div-generic-node").click();
 
-      await page.getByTestId("edit-button-modal").last().click();
+      await openAdvancedOptions(page);
 
       await page.locator('//*[@id="editNodekeypair0"]').click();
       await page
@@ -90,7 +103,7 @@ test(
       const elementKeyCount = await keyPairVerification?.count();
 
       if (elementKeyCount === 1) {
-        await page.getByText("Close").last().click();
+        await closeAdvancedOptions(page);
 
         await page.getByTestId("div-generic-node").click();
 
@@ -112,5 +125,7 @@ test(
     } else {
       expect(false).toBeTruthy();
     }
+
+    await enableInspectPanel(page);
   },
 );

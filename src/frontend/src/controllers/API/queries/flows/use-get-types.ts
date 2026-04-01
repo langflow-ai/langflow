@@ -1,6 +1,10 @@
+import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useTypesStore } from "@/stores/typesStore";
-import { APIObjectType, useQueryFunctionType } from "../../../../types/api";
+import type {
+  APIObjectType,
+  useQueryFunctionType,
+} from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -27,6 +31,11 @@ export const useGetTypes: useQueryFunctionType<
         `${getURL("ALL")}?force_refresh=true`,
       );
       const data = response?.data;
+
+      if (!ENABLE_KNOWLEDGE_BASES) {
+        delete data.knowledge_bases;
+      }
+
       setTypes(data);
       return data;
     } catch (error) {

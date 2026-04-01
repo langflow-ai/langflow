@@ -1,8 +1,10 @@
-import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "user must be able to see output inspection",
@@ -21,9 +23,8 @@ test(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 100000,
-    });
+    await adjustScreenView(page);
+
     await initialGPTsetup(page);
 
     await page.getByTestId("button_run_chat output").last().click();
@@ -57,21 +58,23 @@ test(
     // Add URL component
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("url");
-    await page.waitForSelector('[data-testid="dataURL"]', {
+    await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("dataURL")
+      .getByTestId("data_sourceURL")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 300, y: 200 },
+        targetPosition: { x: 100, y: 200 },
       });
 
     await page.waitForTimeout(1000);
 
     // Get URL node ID
     const urlNode = await page.locator(".react-flow__node").first();
-    const urlNodeId = await urlNode.getAttribute("data-id");
+    const _urlNodeId = await urlNode.getAttribute("data-id");
+
+    await zoomOut(page, 2);
 
     // Add two chat outputs
     await page.getByTestId("sidebar-search-input").click();
@@ -85,7 +88,7 @@ test(
     await page
       .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 700, y: 200 },
+        targetPosition: { x: 500, y: 100 },
       });
 
     await page.waitForTimeout(1000);
@@ -93,15 +96,15 @@ test(
     await page
       .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 700, y: 400 },
+        targetPosition: { x: 500, y: 500 },
       });
-
-    await page.getByTestId("fit_view").click();
 
     // Fill URL input
     await page
       .getByTestId("inputlist_str_urls_0")
       .fill("https://www.example.com");
+
+    await adjustScreenView(page);
 
     await page
       .getByTestId("handle-urlcomponent-shownode-extracted pages-right")

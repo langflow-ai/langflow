@@ -1,10 +1,10 @@
-import { APIClassType } from "@/types/api";
-import { customStringify } from "@/utils/reactflowUtils";
 import { useEffect, useState } from "react";
+import type { APIClassType } from "@/types/api";
+import { customStringify } from "@/utils/reactflowUtils";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { useDarkStore } from "../../stores/darkStore";
-import { NodeDataType } from "../../types/flow";
+import type { NodeDataType } from "../../types/flow";
 import BaseModal from "../baseModal";
 import { EditNodeComponent } from "./components/editNodeComponent";
 
@@ -50,7 +50,12 @@ const EditNodeModal = ({
       </BaseModal.Content>
       <BaseModal.Footer>
         <div className="flex w-full justify-end gap-2 pt-2">
-          <Button onClick={() => setOpen(false)}>Close</Button>
+          <Button
+            onClick={() => setOpen(false)}
+            data-testid="edit-button-close"
+          >
+            Close
+          </Button>
         </div>
       </BaseModal.Footer>
     </BaseModal>

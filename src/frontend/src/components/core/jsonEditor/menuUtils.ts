@@ -1,5 +1,5 @@
 import { faCopy } from "@fortawesome/free-solid-svg-icons";
-import { MenuItem, Mode } from "vanilla-jsoneditor";
+import { type MenuItem, Mode } from "vanilla-jsoneditor";
 
 export const filterTextModeItems = (items: MenuItem[]): MenuItem[] => {
   return items.filter((item) => {

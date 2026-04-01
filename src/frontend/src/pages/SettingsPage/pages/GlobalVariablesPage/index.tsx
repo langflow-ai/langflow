@@ -1,23 +1,25 @@
-import IconComponent, {
-  ForwardedIconComponent,
-} from "../../../../components/common/genericIconComponent";
-import { Button } from "../../../../components/ui/button";
+import type {
+  ColDef,
+  RowClickedEvent,
+  SelectionChangedEvent,
+  ValueFormatterParams,
+} from "ag-grid-community";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import Dropdown from "@/components/core/dropdownComponent";
 import GlobalVariableModal from "@/components/core/GlobalVariableModal/GlobalVariableModal";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
+import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
 import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
 } from "@/controllers/API/queries/variables";
-import { GlobalVariable } from "@/types/global_variables";
-import {
-  ColDef,
-  RowClickedEvent,
-  SelectionChangedEvent,
-} from "ag-grid-community";
-import { useRef, useState } from "react";
+import type { GlobalVariable } from "@/types/global_variables";
+import IconComponent, {
+  ForwardedIconComponent,
+} from "../../../../components/common/genericIconComponent";
 import { Badge } from "../../../../components/ui/badge";
+import { Button } from "../../../../components/ui/button";
 import useAlertStore from "../../../../stores/alertStore";
 
 export default function GlobalVariablesPage() {
@@ -62,6 +64,14 @@ export default function GlobalVariablesPage() {
     },
     {
       field: "value",
+      valueFormatter: (params: ValueFormatterParams<GlobalVariable>) => {
+        const isCreditential = params.data?.type === "Credential";
+
+        if (isCreditential) {
+          return "*****";
+        }
+        return params.value ?? "";
+      },
     },
     {
       headerName: "Apply To Fields",
@@ -78,6 +88,59 @@ export default function GlobalVariablesPage() {
 
   const { data: globalVariables } = useGetGlobalVariables();
   const { mutate: mutateDeleteGlobalVariable } = useDeleteGlobalVariables();
+
+  // Get list of provider variable names to identify provider credentials
+  const providerVariableNames = useMemo(
+    () => new Set(Object.values(PROVIDER_VARIABLE_MAPPING)),
+    [],
+  );
+
+  // Filter out invalid provider credentials
+  const validGlobalVariables = useMemo(() => {
+    if (!globalVariables) return [];
+
+    return globalVariables.filter((variable) => {
+      // Check if this is a provider credential variable
+      const isProviderCredential =
+        variable.type === "Credential" &&
+        providerVariableNames.has(variable.name);
+
+      if (isProviderCredential) {
+        // If validation failed (is_valid === false), filter it out
+        if (variable.is_valid === false) {
+          return false; // Filter out invalid provider credentials
+        }
+      }
+
+      return true; // Keep all other variables and valid provider credentials
+    });
+  }, [globalVariables, providerVariableNames]);
+
+  // Show validation errors for invalid provider credentials (only once when detected)
+  useEffect(() => {
+    if (!globalVariables) return;
+
+    const invalidProviderVars = globalVariables.filter(
+      (variable) =>
+        variable.type === "Credential" &&
+        providerVariableNames.has(variable.name) &&
+        variable.is_valid === false,
+    );
+
+    if (invalidProviderVars.length > 0) {
+      const errorMessages = invalidProviderVars.map(
+        (variable) =>
+          `${variable.name}: ${variable.validation_error || "Invalid API key"}`,
+      );
+      setErrorData({
+        title: "Invalid Provider Credentials Detected",
+        list: [
+          `${invalidProviderVars.length} provider credential(s) with invalid keys have been hidden from the list.`,
+          ...errorMessages,
+        ],
+      });
+    }
+  }, [globalVariables, providerVariableNames, setErrorData]);
 
   async function removeVariables() {
     selectedRows.map(async (row) => {
@@ -105,7 +168,10 @@ export default function GlobalVariablesPage() {
     <div className="flex h-full w-full flex-col justify-between gap-6">
       <div className="flex w-full items-start justify-between gap-6">
         <div className="flex w-full flex-col">
-          <h2 className="flex items-center text-lg font-semibold tracking-tight">
+          <h2
+            className="flex items-center text-lg font-semibold tracking-tight"
+            data-testid="settings_menu_header"
+          >
             Global Variables
             <ForwardedIconComponent
               name="Globe"
@@ -138,7 +204,7 @@ export default function GlobalVariablesPage() {
           suppressRowClickSelection={true}
           pagination={true}
           columnDefs={colDefs}
-          rowData={globalVariables ?? []}
+          rowData={validGlobalVariables ?? []}
           onDelete={removeVariables}
         />
         {initialData.current && (

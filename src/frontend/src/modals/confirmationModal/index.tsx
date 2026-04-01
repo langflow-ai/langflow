@@ -1,9 +1,9 @@
-import GenericIconComponent from "@/components/common/genericIconComponent";
 import { DialogClose } from "@radix-ui/react-dialog";
 import React, { useEffect, useState } from "react";
+import GenericIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
-import {
+import type {
   ConfirmationModalType,
   ContentProps,
   TriggerProps,
@@ -41,6 +41,7 @@ function ConfirmationModal({
   index,
   onConfirm,
   open,
+  onOpenAutoFocus,
   onClose,
   onCancel,
   ...props
@@ -78,7 +79,12 @@ function ConfirmationModal({
   };
 
   return (
-    <BaseModal {...props} open={open} setOpen={setModalOpen}>
+    <BaseModal
+      {...props}
+      open={open}
+      setOpen={setModalOpen}
+      onOpenAutoFocus={onOpenAutoFocus}
+    >
       <BaseModal.Trigger>{triggerChild}</BaseModal.Trigger>
       <BaseModal.Header description={titleHeader ?? null}>
         <span className="pr-2">{title}</span>

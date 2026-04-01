@@ -1,3 +1,5 @@
+import { cloneDeep } from "lodash";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import {
@@ -6,8 +8,6 @@ import {
   hasDuplicateKeys,
 } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
-import { cloneDeep } from "lodash";
-import { useEffect, useState } from "react";
 import IconComponent from "../../../../common/genericIconComponent";
 
 const KeypairListComponent = ({
@@ -17,6 +17,7 @@ const KeypairListComponent = ({
   editNode = false,
   isList = true,
   id,
+  showParameter = true,
 }) => {
   const getTestId = (prefix, index) =>
     `${editNode ? "editNode" : ""}${prefix}${index}`;
@@ -147,6 +148,10 @@ const KeypairListComponent = ({
         </div>
       </div>
     ));
+
+  if (!showParameter) {
+    return null;
+  }
 
   return (
     <div

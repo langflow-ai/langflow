@@ -1,5 +1,5 @@
-import { useQueryFunctionType } from "@/types/api";
-import { MCPSettingsType } from "@/types/mcp";
+import type { useQueryFunctionType } from "@/types/api";
+import type { MCPProjectResponseType } from "@/types/mcp";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -8,7 +8,7 @@ interface IGetFlowsMCP {
   projectId: string;
 }
 
-type getFlowsMCPResponse = Array<MCPSettingsType>;
+type getFlowsMCPResponse = MCPProjectResponseType;
 
 export const useGetFlowsMCP: useQueryFunctionType<
   IGetFlowsMCP,
@@ -24,7 +24,7 @@ export const useGetFlowsMCP: useQueryFunctionType<
       return data;
     } catch (error) {
       console.error(error);
-      return [];
+      return { tools: [], auth_settings: undefined };
     }
   };
 

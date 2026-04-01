@@ -1,7 +1,7 @@
-import useAlertStore from "@/stores/alertStore";
-import { FileType } from "@/types/file_management";
 import { useQueryClient } from "@tanstack/react-query";
-import { ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
+import useAlertStore from "@/stores/alertStore";
+import type { FileType } from "@/types/file_management";
 import { ForwardedIconComponent } from "../../components/common/genericIconComponent";
 import BaseModal from "../baseModal";
 import DragFilesComponent from "./components/dragFilesComponent";
@@ -15,6 +15,7 @@ export default function FileManagerModal({
   files,
   types,
   isList,
+  allowFolderSelection = false,
 }: {
   children?: ReactNode;
   selectedFiles?: string[];
@@ -25,6 +26,7 @@ export default function FileManagerModal({
   files: FileType[];
   types: string[];
   isList?: boolean;
+  allowFolderSelection?: boolean;
 }): JSX.Element {
   const [internalOpen, internalSetOpen] = useState(false);
 
@@ -87,6 +89,8 @@ export default function FileManagerModal({
                 onUpload={handleUpload}
                 types={types}
                 isList={isList ?? false}
+                allowFolderSelection={allowFolderSelection}
+                existingFiles={files}
               />
             </div>
             <div className="flex flex-1 flex-col overflow-hidden">
