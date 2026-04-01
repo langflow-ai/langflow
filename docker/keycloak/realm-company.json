@@ -1,0 +1,123 @@
+{
+  "realm": "company",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": false,
+  "clients": [
+    {
+      "clientId": "langflow-project-a",
+      "name": "Langflow Project A",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "secret-project-a",
+      "redirectUris": ["http://localhost:7860/*"],
+      "webOrigins": ["http://localhost:7860"],
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false
+    },
+    {
+      "clientId": "langflow-project-b",
+      "name": "Langflow Project B",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "secret-project-b",
+      "redirectUris": ["http://localhost:7861/*"],
+      "webOrigins": ["http://localhost:7861"],
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false
+    }
+  ],
+  "users": [
+    {
+      "username": "EMP001",
+      "enabled": true,
+      "firstName": "철수",
+      "lastName": "김",
+      "email": "emp001@company.com",
+      "credentials": [{"type": "password", "value": "pass001", "temporary": false}]
+    },
+    {
+      "username": "EMP002",
+      "enabled": true,
+      "firstName": "영희",
+      "lastName": "이",
+      "email": "emp002@company.com",
+      "credentials": [{"type": "password", "value": "pass002", "temporary": false}]
+    },
+    {
+      "username": "EMP003",
+      "enabled": true,
+      "firstName": "민준",
+      "lastName": "박",
+      "email": "emp003@company.com",
+      "credentials": [{"type": "password", "value": "pass003", "temporary": false}]
+    },
+    {
+      "username": "EMP004",
+      "enabled": true,
+      "firstName": "지은",
+      "lastName": "최",
+      "email": "emp004@company.com",
+      "credentials": [{"type": "password", "value": "pass004", "temporary": false}]
+    },
+    {
+      "username": "EMP005",
+      "enabled": true,
+      "firstName": "우진",
+      "lastName": "정",
+      "email": "emp005@company.com",
+      "credentials": [{"type": "password", "value": "pass005", "temporary": false}]
+    },
+    {
+      "username": "EMP006",
+      "enabled": true,
+      "firstName": "수현",
+      "lastName": "강",
+      "email": "emp006@company.com",
+      "credentials": [{"type": "password", "value": "pass006", "temporary": false}]
+    },
+    {
+      "username": "EMP007",
+      "enabled": true,
+      "firstName": "서연",
+      "lastName": "윤",
+      "email": "emp007@company.com",
+      "credentials": [{"type": "password", "value": "pass007", "temporary": false}]
+    },
+    {
+      "username": "EMP008",
+      "enabled": true,
+      "firstName": "도현",
+      "lastName": "임",
+      "email": "emp008@company.com",
+      "credentials": [{"type": "password", "value": "pass008", "temporary": false}]
+    },
+    {
+      "username": "EMP009",
+      "enabled": true,
+      "firstName": "지우",
+      "lastName": "한",
+      "email": "emp009@company.com",
+      "credentials": [{"type": "password", "value": "pass009", "temporary": false}]
+    },
+    {
+      "username": "EMP010",
+      "enabled": true,
+      "firstName": "세훈",
+      "lastName": "오",
+      "email": "emp010@company.com",
+      "credentials": [{"type": "password", "value": "pass010", "temporary": false}]
+    }
+  ]
+}

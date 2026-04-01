@@ -1,7 +1,7 @@
 name: Docker Release (Keycloak SSO)
 
 # v*-hynix 태그를 push하면 자동으로 GitHub Release 생성 + Docker 이미지 빌드/푸시
-# 사용법: git tag v1.8.1-hynix && git push origin v1.8.1-hynix
+# 사용법: git tag v1.9.0-hynix && git push origin v1.9.0-hynix
 
 on:
   push:
@@ -10,13 +10,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "빌드할 git 태그 (예: v1.8.1-hynix)"
+        description: "빌드할 git 태그 (예: v1.9.0-hynix)"
         required: true
         type: string
-
-env:
-  REGISTRY: docker.io
-  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/langflow-hynix
 
 jobs:
   release:
@@ -42,10 +38,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
@@ -53,7 +55,9 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: |
+            ghcr.io/${{ github.repository_owner }}/langflow-hynix
+            ${{ secrets.DOCKERHUB_USERNAME }}/langflow-hynix
           tags: |
             type=raw,value=${{ steps.tag.outputs.name }}
             type=raw,value=latest
@@ -75,12 +79,19 @@ jobs:
         with:
           tag: ${{ steps.tag.outputs.name }}
           generateReleaseNotes: true
+          allowUpdates: true
           token: ${{ secrets.GITHUB_TOKEN }}
           body: |
             ## Docker Image
 
+            **ghcr.io:**
             ```bash
-            docker pull ghcr.io/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.name }}
+            docker pull ghcr.io/${{ github.repository_owner }}/langflow-hynix:${{ steps.tag.outputs.name }}
+            ```
+
+            **Docker Hub:**
+            ```bash
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/langflow-hynix:${{ steps.tag.outputs.name }}
             ```
 
             ### 실행 예시
@@ -94,6 +105,7 @@ jobs:
               -e KEYCLOAK_CLIENT_SECRET=<secret> \
               -e KEYCLOAK_REDIRECT_URI=http://localhost:7860/api/v1/keycloak/callback \
               -e KEYCLOAK_SHARED_USERNAME=langflow-shared \
+              -e KEYCLOAK_HCP_API_URL=http://hcp-api.com/v1/projects/your-project/roles \
               -e LANGFLOW_SECRET_KEY=<random-32-chars> \
-              ghcr.io/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.name }}
+              ghcr.io/${{ github.repository_owner }}/langflow-hynix:${{ steps.tag.outputs.name }}
             ```
