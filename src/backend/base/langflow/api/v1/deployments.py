@@ -1259,12 +1259,7 @@ async def list_deployment_attachment_details(
                 )
             for snap in snapshot_result.snapshots:
                 if snap.provider_data and isinstance(snap.provider_data, dict):
-                    conns = (
-                        snap.provider_data
-                        .get("binding", {})
-                        .get("langflow", {})
-                        .get("connections", {})
-                    )
+                    conns = snap.provider_data.get("binding", {}).get("langflow", {}).get("connections", {})
                     if isinstance(conns, dict) and conns:
                         connections_by_snapshot[str(snap.id)] = list(conns.keys())
         except Exception:  # noqa: BLE001

@@ -462,8 +462,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             flow_version_ids=ordered_flow_version_ids,
         )
         raw_name_by_flow_version_id = {
-            flow_version_id: artifact.name
-            for flow_version_id, _version_number, _project_id, artifact in flow_artifacts
+            flow_version_id: artifact.name for flow_version_id, _version_number, _project_id, artifact in flow_artifacts
         }
         raw_payloads = [
             artifact.model_copy(

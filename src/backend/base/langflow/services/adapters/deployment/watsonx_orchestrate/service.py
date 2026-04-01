@@ -388,7 +388,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             deployment_type=DeploymentType.AGENT,
             provider_data={
                 **({"llm": agent["llm"]} if isinstance(agent, dict) and agent.get("llm") else {}),
-            } or None,
+            }
+            or None,
         )
 
     async def update(
