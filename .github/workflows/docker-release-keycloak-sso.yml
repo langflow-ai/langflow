@@ -6,7 +6,7 @@ name: Docker Release (Keycloak SSO)
 on:
   push:
     tags:
-      - "v*-hynix"
+      - "v*-hynix*"
   workflow_dispatch:
     inputs:
       tag:
