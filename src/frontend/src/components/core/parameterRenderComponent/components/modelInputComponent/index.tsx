@@ -8,6 +8,7 @@ import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ModelProviderModal from "@/modals/modelProviderModal";
 import useAlertStore from "@/stores/alertStore";
 import type { APIClassType } from "@/types/api";
+import { useModelConnectionLogic } from "./hooks/useModelConnectionLogic";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import { Command } from "../../../../ui/command";
@@ -58,6 +59,12 @@ export default function ModelInputComponent({
     parameterId: "model",
     nodeId: nodeId || "",
     node: (nodeClass as APIClassType) || null,
+  });
+
+  const { handleExternalOptions } = useModelConnectionLogic({
+    nodeId: nodeId || "",
+    closePopover: () => setOpen(false),
+    clearSelection: () => {},
   });
 
   const modelType =
@@ -295,6 +302,17 @@ export default function ModelInputComponent({
             "refresh-model-list",
           )}
           {renderManageProvidersButton()}
+          {externalOptions?.fields?.data?.node && (
+            <div className="border-t bg-background">
+              {renderFooterButton(
+                externalOptions.fields.data.node.display_name ||
+                  "Connect other models",
+                externalOptions.fields.data.node.icon || "CornerDownLeft",
+                () => handleExternalOptions("connect_other_models"),
+                "connect-other-models",
+              )}
+            </div>
+          )}
         </Command>
       </PopoverContentInput>
     );
