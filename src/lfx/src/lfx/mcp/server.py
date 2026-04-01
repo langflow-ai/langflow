@@ -526,6 +526,7 @@ async def configure_component(
 
     # Separate dynamic fields from static ones
     static_params = {}
+    warnings = []
     for key, value in params.items():
         if needs_server_update(template, key):
             # Handle tool_mode specially
@@ -555,16 +556,28 @@ async def configure_component(
                     template[key] = {"value": value}
                 code = template.get("code", {}).get("value", "")
                 tool_mode = node["data"]["node"].get("tool_mode", False)
-                updated = await client.post(
-                    "/custom_component/update",
-                    json_data={
-                        "code": code,
-                        "template": template,
-                        "field": key,
-                        "field_value": value,
-                        "tool_mode": tool_mode,
-                    },
-                )
+                try:
+                    updated = await client.post(
+                        "/custom_component/update",
+                        json_data={
+                            "code": code,
+                            "template": template,
+                            "field": key,
+                            "field_value": value,
+                            "tool_mode": tool_mode,
+                        },
+                    )
+                except RuntimeError:
+                    # Server refresh failed (e.g. missing API key for model list).
+                    # The value is already set in the template above, so save it
+                    # locally and warn the agent.
+                    warnings.append(
+                        f"Field '{key}' was set to '{value}' but the server-side "
+                        f"refresh failed. This usually means a required credential "
+                        f"(like an API key) is not configured on the component yet. "
+                        f"Set the credential first, then reconfigure '{key}'."
+                    )
+                    continue
                 if not isinstance(updated, dict) or "template" not in updated:
                     msg = f"Server returned invalid response for '{key}' update on '{component_id}'"
                     raise RuntimeError(msg)
@@ -578,7 +591,10 @@ async def configure_component(
         fb_configure(flow, component_id, static_params)
 
     await _patch_flow(flow_id, flow)
-    return {"component_id": component_id, "configured": list(params.keys())}
+    result: dict[str, Any] = {"component_id": component_id, "configured": list(params.keys())}
+    if warnings:
+        result["warnings"] = warnings
+    return result
 
 
 @mcp.tool()

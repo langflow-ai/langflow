@@ -1157,7 +1157,7 @@ async def test_update_provider_data_mixed_operations_preserve_encounter_order(mo
     # Existing tool updates are dispatched concurrently via asyncio.gather, so
     # completion order is non-deterministic.  Assert the set of updated tool ids
     # and look up each payload by tool_id.
-    update_calls_by_id = {tool_id: payload for tool_id, payload in fake_tool.update_calls}
+    update_calls_by_id = dict(fake_tool.update_calls)
     assert set(update_calls_by_id) == {"tool-3", "tool-1"}
 
     tool3_payload = update_calls_by_id["tool-3"]
