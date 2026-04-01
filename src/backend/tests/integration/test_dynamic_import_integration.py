@@ -245,7 +245,7 @@ class TestDynamicImportIntegration:
             "AstraDBChatComponent",
             "AstraDBToolComponent",
             "AstraDBCQLToolComponent",
-            "AstraAssistantManager",
+            "GraphRAGComponent",
         ]
 
         for name in component_names:
