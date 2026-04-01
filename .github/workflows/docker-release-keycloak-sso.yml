@@ -1,7 +1,7 @@
 name: Docker Release (Keycloak SSO)
 
 # v*-hynix 태그를 push하면 자동으로 GitHub Release 생성 + Docker 이미지 빌드/푸시
-# 사용법: git tag v1.9.0-hynix && git push origin v1.9.0-hynix
+# 사용법: git tag v1.8.0-hynix-rc0 && git push origin v1.8.0-hynix-rc0
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "빌드할 git 태그 (예: v1.9.0-hynix)"
+        description: "빌드할 git 태그 (예: v1.8.0-hynix-rc0)"
         required: true
         type: string
 
