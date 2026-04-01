@@ -70,6 +70,8 @@ from langflow.api.v1.schemas.deployments import (
     ExecutionCreateResponse,
     ExecutionStatusResponse,
     FlowVersionIdsQuery,
+    SnapshotUpdateRequest,
+    SnapshotUpdateResponse,
 )
 from langflow.services.adapters.deployment.context import deployment_provider_scope
 from langflow.services.database.models.deployment.crud import (
@@ -103,6 +105,7 @@ from langflow.services.database.models.deployment_provider_account.crud import (
     update_provider_account as update_provider_account_row,
 )
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
+    get_attachment_by_provider_snapshot_id,
     list_deployment_attachments,
 )
 
@@ -857,6 +860,97 @@ async def list_deployment_snapshots(
         snapshot_result,
         page=page,
         size=size,
+    )
+
+
+@router.patch(
+    "/snapshots/{provider_snapshot_id}",
+    response_model=SnapshotUpdateResponse,
+)
+async def update_snapshot(
+    provider_snapshot_id: Annotated[
+        str,
+        Path(min_length=1, description="Provider-owned snapshot identifier (e.g. WXO tool_id)."),
+    ],
+    *,
+    body: SnapshotUpdateRequest,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+):
+    """Replace an existing provider snapshot's content with a new flow version.
+
+    Resolves the deployment context from the attachment record linked to
+    ``provider_snapshot_id``.  Only Langflow-tracked snapshots (those with
+    a ``flow_version_deployment_attachment`` row) can be updated.
+    """
+    from langflow.services.database.models.deployment.crud import get_deployment as get_deployment_row
+    from langflow.services.database.models.flow_version.crud import get_flow_version_entry
+
+    attachment = await get_attachment_by_provider_snapshot_id(
+        session,
+        user_id=current_user.id,
+        provider_snapshot_id=provider_snapshot_id.strip(),
+    )
+    if attachment is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No attachment found for provider_snapshot_id '{provider_snapshot_id}'.",
+        )
+
+    deployment = await get_deployment_row(
+        session,
+        user_id=current_user.id,
+        deployment_id=attachment.deployment_id,
+    )
+    if deployment is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Deployment for attachment (deployment_id={attachment.deployment_id}) not found.",
+        )
+
+    flow_version = await get_flow_version_entry(
+        session,
+        version_id=body.flow_version_id,
+        user_id=current_user.id,
+    )
+    if flow_version is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Flow version '{body.flow_version_id}' not found.",
+        )
+    if flow_version.data is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Flow version '{body.flow_version_id}' has no data.",
+        )
+
+    provider_account = await get_owned_provider_account_or_404(
+        provider_id=deployment.deployment_provider_account_id,
+        user_id=current_user.id,
+        db=session,
+    )
+    deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
+
+    flow_definition = dict(flow_version.data)
+    flow_definition["id"] = str(flow_version.flow_id)
+
+    with handle_adapter_errors(), deployment_provider_scope(deployment.deployment_provider_account_id):
+        await deployment_adapter.update_snapshot(
+            user_id=current_user.id,
+            db=session,
+            provider_snapshot_id=provider_snapshot_id.strip(),
+            flow_definition=flow_definition,
+            project_id=str(deployment.project_id),
+        )
+
+    attachment.flow_version_id = body.flow_version_id
+    session.add(attachment)
+    await session.commit()
+    await session.refresh(attachment)
+
+    return SnapshotUpdateResponse(
+        flow_version_id=body.flow_version_id,
+        provider_snapshot_id=provider_snapshot_id.strip(),
     )
 
 

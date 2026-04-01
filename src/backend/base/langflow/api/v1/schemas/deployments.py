@@ -666,3 +666,30 @@ class ExecutionStatusResponse(_ExecutionResponseBase):
     Intentionally distinct from ``ExecutionCreateResponse`` even though both
     currently share the same shape, mirroring the service-layer separation.
     """
+
+
+# ---------------------------------------------------------------------------
+# Snapshot sub-resource schemas
+# ---------------------------------------------------------------------------
+
+
+class SnapshotUpdateRequest(BaseModel):
+    """Request body for PATCH /api/v1/snapshots/{provider_snapshot_id}.
+
+    Updates the content of an existing provider snapshot with a new
+    flow version's artifact.  The ``provider_snapshot_id`` is supplied
+    as a path parameter; only ``flow_version_id`` is in the body.
+    """
+
+    model_config = {"extra": "forbid"}
+
+    flow_version_id: UUID = Field(
+        description="Langflow flow version whose artifact will replace the snapshot content.",
+    )
+
+
+class SnapshotUpdateResponse(BaseModel):
+    """Response for PATCH /api/v1/snapshots/{provider_snapshot_id}."""
+
+    flow_version_id: UUID
+    provider_snapshot_id: str
