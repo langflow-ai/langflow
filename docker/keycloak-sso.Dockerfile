@@ -58,7 +58,7 @@ COPY ./src/frontend /tmp/src/frontend
 WORKDIR /tmp/src/frontend
 RUN --mount=type=cache,target=/root/.npm \
     npm ci \
-    && NODE_OPTIONS="--max-old-space-size=4096" JOBS=1 npm run build \
+    && LANGFLOW_AUTO_LOGIN=false NODE_OPTIONS="--max-old-space-size=4096" JOBS=1 npm run build \
     && rm -rf /app/src/backend/base/langflow/frontend \
     && cp -r build /app/src/backend/base/langflow/frontend
 

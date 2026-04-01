@@ -180,7 +180,7 @@ async def keycloak_callback(
                 status_code=status.HTTP_302_FOUND,
             )
 
-        if employee_number not in allowed:
+        if employee_number.upper() not in allowed:
             return RedirectResponse(
                 url=f"/login?error=unauthorized&employee={employee_number}",
                 status_code=status.HTTP_302_FOUND,

@@ -30,7 +30,7 @@ async def fetch_allowed_employees(hcp_api_url: str, timeout: int = 10) -> set[st
     allowed: set[str] = set()
     for role_key in ("managers", "deployApprovers", "developers"):
         for emp_id in response_body.get(role_key, []):
-            allowed.add(str(emp_id))
+            allowed.add(str(emp_id).upper())
 
     logger.info("HCP roles API returned %d allowed employees", len(allowed))
     return allowed
