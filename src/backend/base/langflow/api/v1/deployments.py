@@ -894,15 +894,17 @@ async def update_snapshot(
     from langflow.services.database.models.deployment.crud import get_deployment as get_deployment_row
     from langflow.services.database.models.flow_version.crud import get_flow_version_entry
 
+    snapshot_id = provider_snapshot_id.strip()
+
     attachment = await get_attachment_by_provider_snapshot_id(
         session,
         user_id=current_user.id,
-        provider_snapshot_id=provider_snapshot_id.strip(),
+        provider_snapshot_id=snapshot_id,
     )
     if attachment is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No attachment found for provider_snapshot_id '{provider_snapshot_id}'.",
+            detail=f"No attachment found for provider_snapshot_id '{snapshot_id}'.",
         )
 
     deployment = await get_deployment_row(
@@ -937,6 +939,9 @@ async def update_snapshot(
         user_id=current_user.id,
         db=session,
     )
+    # NOTE: update_snapshot is currently only implemented on the WXO adapter.
+    # If additional adapters are added, this method should be promoted to the
+    # adapter protocol / base class.
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
 
     flow_definition = dict(flow_version.data)
@@ -946,11 +951,14 @@ async def update_snapshot(
         await deployment_adapter.update_snapshot(
             user_id=current_user.id,
             db=session,
-            provider_snapshot_id=provider_snapshot_id.strip(),
+            provider_snapshot_id=snapshot_id,
             flow_definition=flow_definition,
             project_id=str(deployment.project_id),
         )
 
+    # Provider mutation succeeded — update the local attachment record.
+    # If the DB flush fails, attempt a best-effort compensating re-upload
+    # of the previous flow version's artifact
     previous_flow_version_id = attachment.flow_version_id
     attachment.flow_version_id = body.flow_version_id
     session.add(attachment)
@@ -959,20 +967,43 @@ async def update_snapshot(
         await session.refresh(attachment)
     except Exception:
         await session.rollback()
-        logger.warning(
-            "DB commit failed after provider snapshot update for snapshot '%s'. "
-            "Provider content now reflects flow_version_id=%s but the attachment "
-            "record still points to flow_version_id=%s. Manual reconciliation may be needed.",
-            provider_snapshot_id,
-            body.flow_version_id,
-            previous_flow_version_id,
-            exc_info=True,
-        )
+        try:
+            prev_version = await get_flow_version_entry(
+                session,
+                version_id=previous_flow_version_id,
+                user_id=current_user.id,
+            )
+            if prev_version and prev_version.data:
+                prev_definition = dict(prev_version.data)
+                prev_definition["id"] = str(prev_version.flow_id)
+                with deployment_provider_scope(deployment.deployment_provider_account_id):
+                    await deployment_adapter.update_snapshot(
+                        user_id=current_user.id,
+                        db=session,
+                        provider_snapshot_id=snapshot_id,
+                        flow_definition=prev_definition,
+                        project_id=str(deployment.project_id),
+                    )
+                logger.info(
+                    "Restored provider snapshot '%s' to previous flow_version_id=%s after DB commit failure.",
+                    snapshot_id,
+                    previous_flow_version_id,
+                )
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "Best-effort rollback failed for snapshot '%s'. "
+                "Provider content reflects flow_version_id=%s but attachment "
+                "record points to flow_version_id=%s. Manual reconciliation may be needed.",
+                snapshot_id,
+                body.flow_version_id,
+                previous_flow_version_id,
+                exc_info=True,
+            )
         raise
 
     return SnapshotUpdateResponse(
         flow_version_id=body.flow_version_id,
-        provider_snapshot_id=provider_snapshot_id.strip(),
+        provider_snapshot_id=snapshot_id,
     )
 
 

@@ -208,7 +208,7 @@ class WatsonxApiDeploymentPayloadBase(BaseModel):
                         msg = f"unbind.operation app_ids must reference connections.existing_app_ids only: [{app_id!r}]"
                         raise ValueError(msg)
 
-            if isinstance(operation, WatsonxApiBindToolOperation):
+            elif isinstance(operation, WatsonxApiBindToolOperation):
                 bind_tool_ids.add(operation.tool_id.strip())
                 for app_id in operation.app_ids:
                     referenced_app_ids.add(app_id)
@@ -219,7 +219,7 @@ class WatsonxApiDeploymentPayloadBase(BaseModel):
                             f"[{app_id!r}]"
                         )
                         raise ValueError(msg)
-            if isinstance(operation, WatsonxApiUnbindToolOperation):
+            elif isinstance(operation, WatsonxApiUnbindToolOperation):
                 unbind_tool_ids.add(operation.tool_id.strip())
                 for app_id in operation.app_ids:
                     referenced_app_ids.add(app_id)
@@ -236,7 +236,7 @@ class WatsonxApiDeploymentPayloadBase(BaseModel):
                             f"connections.existing_app_ids only: [{app_id!r}]"
                         )
                         raise ValueError(msg)
-            if isinstance(operation, WatsonxApiRemoveToolByIdOperation):
+            elif isinstance(operation, WatsonxApiRemoveToolByIdOperation):
                 remove_tool_ids.add(operation.tool_id.strip())
 
         remove_conflicts = remove_tool_ids.intersection(bind_tool_ids | unbind_tool_ids)

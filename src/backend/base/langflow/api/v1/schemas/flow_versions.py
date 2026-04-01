@@ -15,7 +15,6 @@ class FlowVersionDeploymentInfo(BaseModel):
     deployment_id: UUID
     tool_id: str | None = None
     tool_name: str | None = None
-    app_ids: list[str] | None = None
 
 
 class FlowVersionReadWithDeployments(FlowVersionRead):

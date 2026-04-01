@@ -1178,6 +1178,9 @@ async def build_deployment_info_map(
     ]
     tool_name_by_id: dict[str, str] = {}
     if snapshot_ids:
+        # TODO: N+1 — batch-fetch provider accounts instead of querying
+        # one-by-one per attachment.  Acceptable for now because the set
+        # of distinct provider accounts per request is small (typically 1).
         providers_by_key: dict[str, list[str]] = defaultdict(list)
         for att in relevant_attachments:
             if not att.provider_snapshot_id:

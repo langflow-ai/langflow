@@ -674,7 +674,7 @@ class ExecutionStatusResponse(_ExecutionResponseBase):
 
 
 class SnapshotUpdateRequest(BaseModel):
-    """Request body for PATCH /api/v1/snapshots/{provider_snapshot_id}.
+    """Request body for PATCH /deployments/snapshots/{provider_snapshot_id}.
 
     Updates the content of an existing provider snapshot with a new
     flow version's artifact.  The ``provider_snapshot_id`` is supplied

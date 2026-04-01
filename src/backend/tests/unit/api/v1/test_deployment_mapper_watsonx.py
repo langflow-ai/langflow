@@ -791,7 +791,7 @@ async def test_watsonx_mapper_translates_flow_version_bind_into_raw_tool_payload
         }
     )
 
-    db = _MultiQueryFakeDb(first_rows=[row], subsequent_rows=[])
+    db = _MultiQueryFakeDb(flow_rows=[row], attachment_rows=[])
 
     resolved = await mapper.resolve_deployment_update(
         user_id=uuid4(),
@@ -857,7 +857,7 @@ async def test_watsonx_mapper_skips_empty_bind_operations_but_keeps_raw_tools() 
         }
     )
 
-    db = _MultiQueryFakeDb(first_rows=[row_unbound, row_bound], subsequent_rows=[])
+    db = _MultiQueryFakeDb(flow_rows=[row_unbound, row_bound], attachment_rows=[])
 
     resolved = await mapper.resolve_deployment_update(
         user_id=uuid4(),
@@ -1358,23 +1358,21 @@ def test_wxo_mapper_resolve_verify_credentials_rejects_extra_fields() -> None:
 
 
 class _MultiQueryFakeDb:
-    """Fake DB that returns different rows for sequential queries.
+    """Fake DB that dispatches rows based on the queried table.
 
-    The first exec() call returns ``first_rows``, subsequent calls
-    return ``subsequent_rows``.  This supports resolve_deployment_update
-    which issues one query for flow artifacts and another for
-    attachment snapshot lookups.
+    Routes ``flow_version_deployment_attachment`` queries to
+    ``attachment_rows`` and everything else (flow artifact queries)
+    to ``flow_rows``.  This avoids fragile call-order coupling.
     """
 
-    def __init__(self, first_rows, subsequent_rows=None):
-        self._first_rows = first_rows
-        self._subsequent_rows = subsequent_rows if subsequent_rows is not None else []
-        self._call_count = 0
+    def __init__(self, flow_rows, attachment_rows=None):
+        self._flow_rows = flow_rows
+        self._attachment_rows = attachment_rows if attachment_rows is not None else []
 
-    async def exec(self, _statement):
-        self._call_count += 1
-        rows = self._first_rows if self._call_count == 1 else self._subsequent_rows
-        return _FakeExecResult(rows)
+    async def exec(self, statement):
+        if "flow_version_deployment_attachment" in str(statement):
+            return _FakeExecResult(self._attachment_rows)
+        return _FakeExecResult(self._flow_rows)
 
 
 @pytest.mark.asyncio
@@ -1415,7 +1413,7 @@ async def test_watsonx_mapper_bind_reuses_existing_tool_when_attachment_exists()
         }
     )
 
-    db = _MultiQueryFakeDb(first_rows=[flow_row], subsequent_rows=[attachment_row])
+    db = _MultiQueryFakeDb(flow_rows=[flow_row], attachment_rows=[attachment_row])
 
     resolved = await mapper.resolve_deployment_update(
         user_id=uuid4(),
@@ -1464,7 +1462,7 @@ async def test_watsonx_mapper_bind_creates_new_tool_when_no_attachment() -> None
         }
     )
 
-    db = _MultiQueryFakeDb(first_rows=[flow_row], subsequent_rows=[])
+    db = _MultiQueryFakeDb(flow_rows=[flow_row], attachment_rows=[])
 
     resolved = await mapper.resolve_deployment_update(
         user_id=uuid4(),
@@ -1513,7 +1511,7 @@ async def test_watsonx_mapper_bind_reuse_with_empty_app_ids_emits_attach_tool() 
         }
     )
 
-    db = _MultiQueryFakeDb(first_rows=[flow_row], subsequent_rows=[attachment_row])
+    db = _MultiQueryFakeDb(flow_rows=[flow_row], attachment_rows=[attachment_row])
 
     resolved = await mapper.resolve_deployment_update(
         user_id=uuid4(),
