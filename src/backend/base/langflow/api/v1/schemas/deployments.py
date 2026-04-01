@@ -57,7 +57,9 @@ from lfx.services.adapters.deployment.schema import (
 )
 from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, field_validator, model_validator
 
-from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
+from langflow.services.database.models.deployment_provider_account.schemas import (
+    DeploymentProviderKey,
+)
 from langflow.services.database.models.deployment_provider_account.utils import (
     check_provider_url_allowed,
     validate_provider_url,
@@ -693,3 +695,27 @@ class SnapshotUpdateResponse(BaseModel):
 
     flow_version_id: UUID
     provider_snapshot_id: str
+
+
+class DetectEnvVarsRequest(BaseModel):
+    """Request body for detecting environment variables from flow version IDs."""
+
+    reference_ids: list[UUID] = Field(
+        description="Flow version UUIDs to scan for global variable references.",
+    )
+
+
+class DetectedEnvVar(BaseModel):
+    """A single detected environment variable reference."""
+
+    key: str = Field(description="The global variable name used as the env var key.")
+    global_variable_name: str | None = Field(
+        default=None,
+        description="The Langflow global variable name, if the field is linked to one.",
+    )
+
+
+class DetectEnvVarsResponse(BaseModel):
+    """Response containing detected environment variable references."""
+
+    variables: list[DetectedEnvVar] = Field(default_factory=list)

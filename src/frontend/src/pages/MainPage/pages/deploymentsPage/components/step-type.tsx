@@ -1,0 +1,142 @@
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useGetDeploymentLlms } from "@/controllers/API/queries/deployments/use-get-deployment-llms";
+import { cn } from "@/utils/utils";
+import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
+
+const TYPE_OPTIONS = [
+  {
+    type: "agent" as const,
+    label: "Agent",
+    description: "Conversational agent with chat interface and tool calling",
+    icon: "MessageSquare",
+    iconBg: "border-accent-pink-foreground/20 bg-accent-pink-foreground/20",
+  },
+];
+
+export default function StepType() {
+  const {
+    deploymentType,
+    setDeploymentType,
+    deploymentName,
+    setDeploymentName,
+    deploymentDescription,
+    setDeploymentDescription,
+    selectedLlm,
+    setSelectedLlm,
+    selectedInstance,
+  } = useDeploymentStepper();
+
+  const providerId = selectedInstance?.id ?? "";
+  const { data: llmData, isLoading: llmsLoading } = useGetDeploymentLlms(
+    { providerId },
+    { enabled: !!providerId },
+  );
+  const llmModels = llmData?.provider_data?.models ?? [];
+  return (
+    <div className="flex w-full flex-col gap-6 overflow-y-auto py-3">
+      <h2 className="text-lg font-semibold">Deployment Type</h2>
+
+      <div className="flex flex-col gap-3">
+        <span className="text-sm font-medium">
+          Choose Type <span className="text-destructive">*</span>
+        </span>
+        <div
+          className="grid grid-cols-2 gap-3"
+          role="radiogroup"
+          aria-label="Deployment type"
+        >
+          {TYPE_OPTIONS.map((option) => (
+            <label
+              key={option.type}
+              data-testid={`deployment-type-${option.type}`}
+              className={cn(
+                "flex cursor-pointer items-start gap-3 rounded-lg border bg-muted p-3 text-left transition-colors",
+                deploymentType === option.type
+                  ? "border-2 border-foreground"
+                  : "border-border hover:border-muted-foreground",
+              )}
+            >
+              <input
+                type="radio"
+                name="deployment-type"
+                value={option.type}
+                checked={deploymentType === option.type}
+                onChange={() => setDeploymentType(option.type)}
+                className="sr-only"
+              />
+              <div
+                className={cn(
+                  "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border p-2",
+                  option.iconBg,
+                )}
+              >
+                <ForwardedIconComponent
+                  name={option.icon}
+                  className="h-5 w-5"
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium">{option.label}</span>
+                <p className="text-xs text-muted-foreground">
+                  {option.description}
+                </p>
+              </div>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col">
+        <span className="pb-2 text-sm font-medium">
+          Agent Name <span className="text-destructive">*</span>
+        </span>
+        <Input
+          placeholder="e.g., Sales Bot"
+          className="bg-muted"
+          value={deploymentName}
+          onChange={(e) => setDeploymentName(e.target.value)}
+        />
+      </div>
+
+      <div className="flex flex-col">
+        <span className="pb-2 text-sm font-medium">Description</span>
+        <Textarea
+          placeholder="Describe the agent's purpose..."
+          rows={3}
+          className="resize-none bg-muted placeholder:text-placeholder-foreground"
+          value={deploymentDescription}
+          onChange={(e) => setDeploymentDescription(e.target.value)}
+        />
+      </div>
+
+      <div className="flex flex-col">
+        <span className="pb-2 text-sm font-medium">
+          Model <span className="text-destructive">*</span>
+        </span>
+        <Select value={selectedLlm} onValueChange={setSelectedLlm}>
+          <SelectTrigger className="bg-muted">
+            <SelectValue
+              placeholder={llmsLoading ? "Loading models..." : "Select a model"}
+            />
+          </SelectTrigger>
+          <SelectContent>
+            {llmModels.map((model) => (
+              <SelectItem key={model.model_name} value={model.model_name}>
+                {model.model_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
+}
