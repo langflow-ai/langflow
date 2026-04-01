@@ -2004,7 +2004,7 @@ async def test_update_provider_data_maps_raw_connection_conflict_to_deployment_c
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
     monkeypatch.setattr(shared_core_module, "create_config", mock_create_config)
 
-    with pytest.raises(DeploymentConflictError, match="error details"):
+    with pytest.raises(DeploymentConflictError, match=r"A connection with app_id 'cfg' already exists in the provider"):
         await service.update(
             user_id="user-1",
             deployment_id="dep-1",
@@ -2068,7 +2068,7 @@ async def test_create_provider_data_maps_raw_connection_conflict_to_deployment_c
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
     monkeypatch.setattr(shared_core_module, "create_config", mock_create_config)
 
-    with pytest.raises(DeploymentConflictError, match="error details"):
+    with pytest.raises(DeploymentConflictError, match=r"A connection with app_id 'cfg' already exists in the provider"):
         await service.create(
             user_id="user-1",
             payload=DeploymentCreate(
