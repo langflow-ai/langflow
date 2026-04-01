@@ -116,7 +116,7 @@ export function DeploymentStepperProvider({
     (currentStep === 2 &&
       deploymentName.trim() !== "" &&
       selectedLlm.trim() !== "") ||
-    (currentStep === 3 && attachedConnectionByFlow.size > 0) ||
+    (currentStep === 3 && selectedVersionByFlow.size > 0) ||
     currentStep === 4;
 
   const handleNext = useCallback(() => {
@@ -201,11 +201,8 @@ export function DeploymentStepperProvider({
 
       const operations: DeploymentCreateRequest["provider_data"]["operations"] =
         [];
-      for (const [flowId, connectionIds] of Array.from(
-        attachedConnectionByFlow,
-      )) {
-        const versionEntry = selectedVersionByFlow.get(flowId);
-        if (!versionEntry || connectionIds.length === 0) continue;
+      for (const [flowId, versionEntry] of Array.from(selectedVersionByFlow)) {
+        const connectionIds = attachedConnectionByFlow.get(flowId) ?? [];
         operations.push({
           op: "bind",
           flow_version_id: versionEntry.versionId,

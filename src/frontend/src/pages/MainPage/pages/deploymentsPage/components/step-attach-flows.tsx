@@ -209,6 +209,18 @@ export default function StepAttachFlows() {
     setEnvVars([{ id: crypto.randomUUID(), key: "", value: "" }]);
   }, [envVars, newConnectionName, setConnections]);
 
+  const handleSkipConnection = useCallback(() => {
+    if (effectiveFlowId) {
+      onAttachConnection((prev) => {
+        const next = new Map(prev);
+        next.delete(effectiveFlowId);
+        return next;
+      });
+    }
+    setRightPanel("versions");
+    setSelectedConnections(new Set());
+  }, [effectiveFlowId, onAttachConnection]);
+
   const handleChangeFlow = useCallback(() => {
     setRightPanel("versions");
     setSelectedConnections(new Set());
@@ -276,6 +288,7 @@ export default function StepAttachFlows() {
           selectedFlowId={effectiveFlowId}
           selectedVersionByFlow={selectedVersionByFlow}
           attachedConnectionByFlow={attachedConnectionByFlow}
+          connections={connections}
           onSelectFlow={handleSelectFlow}
         />
 
@@ -288,7 +301,6 @@ export default function StepAttachFlows() {
               isLoadingVersions={isLoadingVersions}
               pendingVersion={pendingVersion}
               selectedVersionByFlow={selectedVersionByFlow}
-              attachedConnectionByFlow={attachedConnectionByFlow}
               onSelectPending={setPendingVersion}
               onAttach={handleAttachFlow}
             />
@@ -316,6 +328,7 @@ export default function StepAttachFlows() {
               onEnvVarSelectGlobalVar={handleEnvVarSelectGlobalVar}
               onAddEnvVar={handleAddEnvVar}
               onChangeFlow={handleChangeFlow}
+              onSkipConnection={handleSkipConnection}
               onAttachConnection={handleAttachConnection}
               onCreateConnection={handleCreateConnection}
             />
