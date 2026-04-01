@@ -391,7 +391,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             return Data(data={})
 
         if isinstance(raw_query, dict):
-            query_body = raw_query
+            query_body = copy.deepcopy(raw_query)
         elif isinstance(raw_query, str):
             s = raw_query.strip()
 
@@ -414,15 +414,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             msg = f"Unsupported raw_search query type: {type(raw_query)!r}"
             raise TypeError(msg)
 
-        # Apply filter_expression if configured (same parsing as search())
-        filter_obj = None
-        if getattr(self, "filter_expression", "") and self.filter_expression.strip():
-            try:
-                filter_obj = json.loads(self.filter_expression)
-            except json.JSONDecodeError as e:
-                msg = f"Invalid filter_expression JSON: {e}"
-                raise ValueError(msg) from e
-
+        filter_obj = self._parse_filter_expression()
         filter_clauses = self._coerce_filter_clauses(filter_obj)
 
         if filter_clauses:
@@ -445,14 +437,14 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         if filter_obj:
             # Apply limit if not already set in the raw query
             if "size" not in query_body:
-                limit = filter_obj.get("limit")
+                limit = self._resolve_limit(filter_obj, default_limit=None)
                 if limit is not None:
                     query_body["size"] = limit
 
             # Apply score_threshold / scoreThreshold as min_score if not already set
             if "min_score" not in query_body:
-                score_threshold = filter_obj.get("score_threshold") or filter_obj.get("scoreThreshold")
-                if isinstance(score_threshold, (int, float)) and score_threshold > 0:
+                score_threshold = self._resolve_score_threshold(filter_obj)
+                if score_threshold is not None:
                     query_body["min_score"] = score_threshold
 
         client = self.build_client()
@@ -1361,6 +1353,60 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
                 context_clauses.append({"terms": {field: values}})
         return context_clauses
 
+    def _parse_filter_expression(self) -> dict | None:
+        """Parse and validate optional filter_expression JSON.
+
+        Returns:
+            Parsed JSON object as a dict, or None when unset/blank.
+
+        Raises:
+            ValueError: If JSON is invalid or does not decode to an object.
+        """
+        filter_expression = getattr(self, "filter_expression", "")
+        if not isinstance(filter_expression, str) or not filter_expression.strip():
+            return None
+        try:
+            filter_obj = json.loads(filter_expression)
+        except json.JSONDecodeError as e:
+            msg = f"Invalid filter_expression JSON: {e}"
+            raise ValueError(msg) from e
+
+        if not isinstance(filter_obj, dict):
+            msg = "Invalid filter_expression JSON: expected a JSON object."
+            raise ValueError(msg)
+        return filter_obj
+
+    def _resolve_limit(self, filter_obj: dict | None, default_limit: int | None) -> int | None:
+        """Resolve an integer result limit from filter settings."""
+        if not filter_obj:
+            return default_limit
+        raw_limit = filter_obj.get("limit", default_limit)
+        if raw_limit is None:
+            return None
+        if isinstance(raw_limit, bool):
+            msg = "Invalid filter_expression.limit: expected a positive integer."
+            raise ValueError(msg)
+        try:
+            limit = int(raw_limit)
+        except (TypeError, ValueError) as e:
+            msg = "Invalid filter_expression.limit: expected a positive integer."
+            raise ValueError(msg) from e
+        if limit <= 0:
+            msg = "Invalid filter_expression.limit: expected a positive integer."
+            raise ValueError(msg)
+        return limit
+
+    def _resolve_score_threshold(self, filter_obj: dict | None) -> float | None:
+        """Resolve optional positive min score from filter settings."""
+        if not filter_obj:
+            return None
+        score_threshold = filter_obj.get("score_threshold")
+        if score_threshold is None:
+            score_threshold = filter_obj.get("scoreThreshold")
+        if not isinstance(score_threshold, (int, float)) or score_threshold <= 0:
+            return None
+        return float(score_threshold)
+
     def _detect_available_models(self, client: OpenSearch, filter_clauses: list[dict] | None = None) -> list[str]:
         """Detect which embedding models have documents in the index.
 
@@ -1526,13 +1572,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         q = (query or "").strip()
 
         # Parse optional filter expression
-        filter_obj = None
-        if getattr(self, "filter_expression", "") and self.filter_expression.strip():
-            try:
-                filter_obj = json.loads(self.filter_expression)
-            except json.JSONDecodeError as e:
-                msg = f"Invalid filter_expression JSON: {e}"
-                raise ValueError(msg) from e
+        filter_obj = self._parse_filter_expression()
 
         if not self.embedding:
             msg = "Embedding is required to run hybrid search (KNN + keyword)."
@@ -1806,8 +1846,8 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         all_filters = [*filter_clauses, exists_any_embedding]
 
         # Get limit and score threshold
-        limit = (filter_obj or {}).get("limit", self.number_of_results)
-        score_threshold = (filter_obj or {}).get("score_threshold", 0)
+        limit = self._resolve_limit(filter_obj, default_limit=self.number_of_results)
+        score_threshold = self._resolve_score_threshold(filter_obj)
 
         # Determine the best aggregation field for filename based on index mapping
         filename_agg_field = self._get_filename_agg_field(index_properties)
@@ -1858,7 +1898,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             "size": limit,
         }
 
-        if isinstance(score_threshold, (int, float)) and score_threshold > 0:
+        if score_threshold is not None:
             body["min_score"] = score_threshold
 
         logger.info(
