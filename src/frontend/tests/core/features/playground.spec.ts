@@ -4,6 +4,7 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
+import { disableInspectPanel } from "../../utils/open-advanced-options";
 
 test(
   "fresh start playground",
@@ -20,6 +21,8 @@ test(
     });
 
     await page.getByTestId("blank-flow").click();
+
+    await disableInspectPanel(page);
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
@@ -85,6 +88,7 @@ test(
     await page.getByTestId("input-chat-playground").fill("message 1");
     await page.keyboard.press("Enter");
     await expect(page.getByTestId("chat-message-User-message 1")).toBeVisible();
+    await expect(page.getByTestId("chat-message-AI-message 1")).toBeVisible();
 
     //check edit message
     await page.getByTestId("chat-message-User-message 1").hover();

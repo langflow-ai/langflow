@@ -131,6 +131,16 @@ def test_payload_slot_raises_typed_validation_error() -> None:
         slot.parse({"missing": "region"})
     assert exc.value.model_name == "_SpecModel"
     assert exc.value.error is not None
+    assert exc.value.format_first_error() == "Missing required field 'region'."
+
+
+def test_payload_validation_error_formats_non_missing_with_field_path() -> None:
+    slot = PayloadSlot(_ApiLikeConfigModel)
+
+    with pytest.raises(AdapterPayloadValidationError, match="Invalid payload") as exc:
+        slot.parse({"retries": "not-an-int"})
+
+    assert exc.value.format_first_error() == "Invalid value for field 'retries'."
 
 
 def test_payload_slot_raises_typed_missing_error_for_none() -> None:
