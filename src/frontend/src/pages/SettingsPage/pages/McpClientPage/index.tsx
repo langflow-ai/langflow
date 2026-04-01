@@ -64,7 +64,7 @@ function getClaudeCodeCommand(serverUrl: string): string {
 
 export default function McpClientPage() {
   const [selectedAgent, setSelectedAgent] = useState<AgentTab>("bob");
-  const [isCopied, setIsCopied] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const { host, protocol } = customGetHostProtocol();
   const serverUrl = `${protocol}//${host}`;
@@ -76,10 +76,11 @@ export default function McpClientPage() {
     [serverUrl],
   );
 
-  const copyToClipboard = useCallback((text: string) => {
-    navigator.clipboard?.writeText(text).then(() => {
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 1000);
+  const copyToClipboard = useCallback((text: string, key: string) => {
+    if (!navigator.clipboard) return;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 1000);
     });
   }, []);
 
@@ -115,7 +116,7 @@ export default function McpClientPage() {
               )}
               onClick={() => {
                 setSelectedAgent(agent.id);
-                setIsCopied(false);
+                setCopiedKey(null);
               }}
             >
               <ForwardedIconComponent
@@ -142,10 +143,10 @@ export default function McpClientPage() {
                   unstyled
                   size="icon"
                   className="h-4 w-4 text-muted-foreground hover:text-foreground"
-                  onClick={() => copyToClipboard(claudeCommand)}
+                  onClick={() => copyToClipboard(claudeCommand, "command")}
                 >
                   <ForwardedIconComponent
-                    name={isCopied ? "Check" : "Copy"}
+                    name={copiedKey === "command" ? "Check" : "Copy"}
                     className="h-4 w-4"
                     aria-hidden="true"
                   />
@@ -172,10 +173,10 @@ export default function McpClientPage() {
                 unstyled
                 size="icon"
                 className="h-4 w-4 text-muted-foreground hover:text-foreground"
-                onClick={() => copyToClipboard(mcpJson)}
+                onClick={() => copyToClipboard(mcpJson, "json")}
               >
                 <ForwardedIconComponent
-                  name={isCopied ? "Check" : "Copy"}
+                  name={copiedKey === "json" ? "Check" : "Copy"}
                   className="h-4 w-4"
                   aria-hidden="true"
                 />
