@@ -76,7 +76,7 @@ def get_message(payload):
     from lfx.schema.data import Data
 
     message = None
-    if hasattr(payload, "data"):
+    if isinstance(payload, Data):
         message = payload.data
 
     elif hasattr(payload, "model_dump"):
@@ -99,13 +99,31 @@ def build_output_logs(vertex, result) -> dict:
 
     outputs: dict[str, OutputValue] = {}
     component_instance: Component = result[0]
+    results_payload: dict[str, object] = component_instance.get_results() or {}
+    artifacts_payload: dict[str, object] = component_instance.get_artifacts() or {}
     for index, output in enumerate(vertex.outputs):
-        if component_instance.status is None:
-            payload = component_instance.get_results()
-            output_result = payload.get(output["name"])
+        output_name = output.get("name", f"output_{index}")
+        declared_types = output.get("types") or []
+        prefer_results = any(t in declared_types for t in ("Table", "DataFrame"))
+        prefer_artifact_raw = any(t in declared_types for t in ("Message",))
+
+        result_value = results_payload.get(output_name)
+        artifact_raw_value = None
+        artifact_entry = artifacts_payload.get(output_name)
+        if isinstance(artifact_entry, dict):
+            artifact_raw_value = artifact_entry.get("raw")
+
+        if prefer_results:
+            output_result = result_value if result_value is not None else artifact_raw_value
+        elif prefer_artifact_raw:
+            output_result = artifact_raw_value if artifact_raw_value is not None else result_value
         else:
-            payload = component_instance.get_artifacts()
-            output_result = payload.get(output["name"], {}).get("raw")
+            if component_instance.status is None:
+                output_result = result_value
+            else:
+                output_result = artifact_raw_value
+            if output_result is None:
+                output_result = result_value if result_value is not None else artifact_raw_value
         message = get_message(output_result)
         type_ = get_type(output_result)
 
@@ -126,8 +144,7 @@ def build_output_logs(vertex, result) -> dict:
                 if isinstance(message, DataFrame):
                     message = message.to_dict(orient="records")
                 message = [serialize(item) for item in message]
-        name = output.get("name", f"output_{index}")
-        outputs |= {name: OutputValue(message=message, type=type_).model_dump()}
+        outputs |= {output_name: OutputValue(message=message, type=type_).model_dump()}
 
     return outputs
 
