@@ -12,6 +12,7 @@ from fastapi import HTTPException, Query, status
 from fastapi_pagination import Params
 from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import (
+    DeploymentConflictError,
     DeploymentServiceError,
     http_status_for_deployment_error,
 )
@@ -312,6 +313,25 @@ def raise_http_for_value_error(exc: ValueError) -> None:
     raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
+def _friendly_conflict_message(raw_message: str) -> str:
+    """Rewrite provider conflict errors into user-friendly messages."""
+    lower = raw_message.lower()
+    if "agent" in lower and ("already exists" in lower or "conflict" in lower):
+        return (
+            "An agent with this name already exists in the provider. "
+            "Please choose a different name or delete the existing agent first."
+        )
+    if "connection" in lower or "app_id" in lower:
+        return (
+            "A connection referenced in this request already exists in the provider. "
+            "Reference it as an existing connection instead of creating a new one."
+        )
+    if "tool" in lower and ("already exists" in lower or "conflict" in lower):
+        return "A tool with this name already exists in the provider. Please choose a different name."
+    # Fall back to a cleaned-up version of the raw message.
+    return f"A resource with this name already exists in the provider. {raw_message}"
+
+
 @contextmanager
 def handle_adapter_errors():
     """Map deployment adapter exceptions to appropriate HTTP responses.
@@ -325,9 +345,13 @@ def handle_adapter_errors():
     try:
         yield
     except DeploymentServiceError as exc:
+        http_status = http_status_for_deployment_error(exc)
+        detail = exc.message
+        if isinstance(exc, DeploymentConflictError):
+            detail = _friendly_conflict_message(exc.message)
         raise HTTPException(
-            status_code=http_status_for_deployment_error(exc),
-            detail=exc.message,
+            status_code=http_status,
+            detail=detail,
         ) from exc
     except NotImplementedError as exc:
         raise HTTPException(
@@ -549,10 +573,12 @@ async def rollback_provider_create(
     provider_id: UUID,
     resource_id: object,
     provider_result: Any | None = None,
+    allow_delete_fallback: bool = True,
     user_id: UUID,
     db: DbSession,
 ) -> None:
     """Best-effort compensating cleanup after a failed DB commit on create."""
+    # TODO: Add this method to the deployment service protocol.
     rollback_create_result = getattr(deployment_adapter, "rollback_create_result", None)
     if provider_result is not None and callable(rollback_create_result):
         try:
@@ -564,13 +590,23 @@ async def rollback_provider_create(
                     db=db,
                 )
         except Exception:  # noqa: BLE001
-            logger.warning(
-                "Extended rollback failed for provider resource %s on provider account %s; "
-                "falling back to basic delete.",
-                resource_id,
-                provider_id,
-                exc_info=True,
-            )
+            if allow_delete_fallback:
+                logger.warning(
+                    "Extended rollback failed for provider resource %s on provider account %s; "
+                    "falling back to basic delete.",
+                    resource_id,
+                    provider_id,
+                    exc_info=True,
+                )
+            else:
+                logger.warning(
+                    "Extended rollback failed for existing provider resource %s on provider account %s; "
+                    "skipping delete fallback.",
+                    resource_id,
+                    provider_id,
+                    exc_info=True,
+                )
+                return
         else:
             logger.info(
                 "Rolled back provider create result for resource %s on provider account %s after DB commit failure.",
@@ -578,6 +614,14 @@ async def rollback_provider_create(
                 provider_id,
             )
             return
+    if not allow_delete_fallback:
+        logger.warning(
+            "Skipping delete fallback for existing provider resource %s on provider account %s; "
+            "provider side-effects may require manual cleanup.",
+            resource_id,
+            provider_id,
+        )
+        return
     try:
         with deployment_provider_scope(provider_id):
             await deployment_adapter.delete(
@@ -604,7 +648,9 @@ async def rollback_provider_update(
     *,
     deployment_adapter: DeploymentServiceProtocol,
     deployment_mapper: BaseDeploymentMapper,
-    deployment_row: Deployment,
+    deployment_db_id: UUID,
+    deployment_resource_key: str,
+    deployment_provider_account_id: UUID,
     user_id: UUID,
     db: DbSession,
 ) -> None:
@@ -627,16 +673,16 @@ async def rollback_provider_update(
     try:
         rollback_payload = await deployment_mapper.resolve_rollback_update(
             user_id=user_id,
-            deployment_db_id=deployment_row.id,
-            deployment_resource_key=deployment_row.resource_key,
+            deployment_db_id=deployment_db_id,
+            deployment_resource_key=deployment_resource_key,
             db=db,
         )
     except Exception:  # noqa: BLE001
         logger.warning(
             "Failed to build rollback update payload for deployment %s (resource_key=%s). "
             "Provider state may diverge from DB.",
-            deployment_row.id,
-            deployment_row.resource_key,
+            deployment_db_id,
+            deployment_resource_key,
             exc_info=True,
         )
         return
@@ -645,29 +691,29 @@ async def rollback_provider_update(
         logger.warning(
             "No rollback update payload available for deployment %s (resource_key=%s). "
             "Provider state may diverge from DB.",
-            deployment_row.id,
-            deployment_row.resource_key,
+            deployment_db_id,
+            deployment_resource_key,
         )
         return
 
     try:
-        with deployment_provider_scope(deployment_row.deployment_provider_account_id):
+        with deployment_provider_scope(deployment_provider_account_id):
             await deployment_adapter.update(
-                deployment_id=deployment_row.resource_key,
+                deployment_id=deployment_resource_key,
                 payload=rollback_payload,
                 user_id=user_id,
                 db=db,
             )
         logger.info(
             "Rolled back provider update for deployment %s (resource_key=%s) after DB commit failure.",
-            deployment_row.id,
-            deployment_row.resource_key,
+            deployment_db_id,
+            deployment_resource_key,
         )
     except Exception:  # noqa: BLE001
         logger.warning(
             "Compensating update failed for deployment %s (resource_key=%s). Provider state may diverge from DB.",
-            deployment_row.id,
-            deployment_row.resource_key,
+            deployment_db_id,
+            deployment_resource_key,
             exc_info=True,
         )
 
@@ -1186,22 +1232,28 @@ def resolve_added_snapshot_bindings_for_update(
         result=result,
     )
     bindings_by_source_ref = bindings.to_source_ref_map()
-    expected_source_ref_to_flow_version_id = {
+    expected_source_ref_to_flow_version_id: dict[str, UUID] = {
         str(flow_version_id): flow_version_id for flow_version_id in added_flow_version_ids
     }
-    if len(bindings_by_source_ref) != len(expected_source_ref_to_flow_version_id):
-        msg = (
-            f"Snapshot count mismatch on update: {len(added_flow_version_ids)} "
-            f"flow versions vs {len(bindings_by_source_ref)} snapshot bindings"
-        )
+
+    unexpected_source_refs = sorted(
+        source_ref for source_ref in bindings_by_source_ref if source_ref not in expected_source_ref_to_flow_version_id
+    )
+    if unexpected_source_refs:
+        msg = f"Unexpected source_ref in update snapshot bindings: {unexpected_source_refs}"
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+
     snapshot_bindings: list[tuple[UUID, str]] = []
-    for source_ref, snapshot_id in bindings_by_source_ref.items():
-        flow_version_id = expected_source_ref_to_flow_version_id.get(source_ref)
-        if flow_version_id is None:
-            msg = f"Unexpected source_ref in update snapshot bindings: {source_ref}"
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+    missing_source_refs: list[str] = []
+    for source_ref, flow_version_id in expected_source_ref_to_flow_version_id.items():
+        snapshot_id = bindings_by_source_ref.get(source_ref)
+        if snapshot_id is None:
+            missing_source_refs.append(source_ref)
+            continue
         snapshot_bindings.append((flow_version_id, snapshot_id))
+    if missing_source_refs:
+        msg = f"Missing snapshot bindings for added flow versions on update: {missing_source_refs}"
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
     return snapshot_bindings
 
 
