@@ -3,16 +3,21 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import type { FlowType } from "@/types/flow";
 import { cn } from "@/utils/utils";
+import type { ConnectionItem } from "../types";
 
 export const FlowListPanel = memo(function FlowListPanel({
   flows,
   selectedFlowId,
   selectedVersionByFlow,
+  attachedConnectionByFlow,
+  connections,
   onSelectFlow,
 }: {
   flows: FlowType[];
   selectedFlowId: string | null;
   selectedVersionByFlow: Map<string, { versionId: string; versionTag: string }>;
+  attachedConnectionByFlow: Map<string, string[]>;
+  connections: ConnectionItem[];
   onSelectFlow: (flowId: string) => void;
 }) {
   return (
@@ -25,6 +30,10 @@ export const FlowListPanel = memo(function FlowListPanel({
           const entry = selectedVersionByFlow.get(flow.id);
           const versionLabel = entry?.versionTag || null;
           const attached = selectedVersionByFlow.has(flow.id);
+          const connectionIds = attachedConnectionByFlow.get(flow.id) ?? [];
+          const connectionNames = connectionIds
+            .map((cid) => connections.find((c) => c.id === cid)?.name)
+            .filter(Boolean);
           return (
             <button
               key={flow.id}
@@ -66,6 +75,11 @@ export const FlowListPanel = memo(function FlowListPanel({
                     </Badge>
                   )}
                 </div>
+                {connectionNames.length > 0 && (
+                  <p className="truncate text-xs text-muted-foreground">
+                    {connectionNames.join(", ")}
+                  </p>
+                )}
               </div>
             </button>
           );

@@ -287,6 +287,8 @@ export default function StepAttachFlows() {
           flows={flows}
           selectedFlowId={effectiveFlowId}
           selectedVersionByFlow={selectedVersionByFlow}
+          attachedConnectionByFlow={attachedConnectionByFlow}
+          connections={connections}
           onSelectFlow={handleSelectFlow}
         />
 
