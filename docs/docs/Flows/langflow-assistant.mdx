@@ -1,5 +1,5 @@
 ---
-title: Create custom components with Langflow Assistant
+title: Build flows and components with Langflow Assistant
 slug: /langflow-assistant
 ---
 
@@ -170,8 +170,12 @@ You'll then iterate on the code based on the results in the **Playground**.
     To inspect the code, click **View Code**.
     To add the component to the canvas, click **Add to Canvas**.
 
-6. Connect the component to a **Chat Input** and **Chat Output** components.
-    Your flow should look like the following:
+6. Connect the component to **Chat Input** and **Chat Output** components.
+    At this point your flow has three connected components:
+
+    * **Chat Input** sends the text that contains URLs into the **URLTitleExtractor** so the flow runs when you chat in the **Playground** or send a prompt from an app.
+    * **URLTitleExtractor** reads that text, finds URLs, fetches each page, and outputs a [Table](/data-types#table) with `url`, `title`, and `status` columns.
+    * **Chat Output** receives **URLTitleExtractor**'s result and displays the [Table](/data-types#table) back to the user or calling application.
 
     ![A custom URL Title Extractor component connected to a chat input and chat output](/img/lf-assistant-flow.png)
 
@@ -185,7 +189,7 @@ You'll then iterate on the code based on the results in the **Playground**.
     ```
 8. Run the flow.
     The output will be similar to the following, with a Table with one row per URL, including page titles and status codes.
-    ```df
+    ```text
     | url | title | status |
     | --- | --- | --- |
     | https://langflow.org | Langflow \| Low-code AI builder for agentic and RAG applications | 200 |
