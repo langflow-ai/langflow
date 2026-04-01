@@ -18,6 +18,7 @@ from lfx.io import (
     StrInput,
 )
 from lfx.schema.message import Message
+from lfx.schema.token_usage import accumulate_usage, extract_usage_from_message
 
 ND_MODEL_MAPPING = {
     "gpt-4o": {"provider": "openai", "model": "gpt-4o"},
@@ -182,6 +183,9 @@ class NotDiamondComponent(Component):
             runnable=chosen_model,
             input_value=input_value,
             system_message=system_message,
+            token_usage_callback=lambda msg: setattr(
+                self, "_token_usage", accumulate_usage(self._token_usage, extract_usage_from_message(msg))
+            ),
         )
 
     def _format_input(
