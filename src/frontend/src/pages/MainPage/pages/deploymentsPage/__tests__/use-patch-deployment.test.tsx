@@ -67,10 +67,9 @@ describe("usePatchDeployment", () => {
       });
     });
 
-    expect(mockPatch).toHaveBeenCalledWith(
-      "/api/v1/deployments/deploy-1",
-      { spec: { description: "Updated" } },
-    );
+    expect(mockPatch).toHaveBeenCalledWith("/api/v1/deployments/deploy-1", {
+      spec: { description: "Updated" },
+    });
   });
 
   it("strips deployment_id from the body (only used in URL)", async () => {

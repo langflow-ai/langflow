@@ -4,12 +4,19 @@ import {
   DeploymentStepperProvider,
   useDeploymentStepper,
 } from "../contexts/deployment-stepper-context";
-import { mockDeployment, mockDeploymentNoLlm, mockProviderAccount } from "./test-utils";
+import {
+  mockDeployment,
+  mockDeploymentNoLlm,
+  mockProviderAccount,
+} from "./test-utils";
 
 // Minimal mocks required by the context
-jest.mock("@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account", () => ({
-  usePostProviderAccount: jest.fn(),
-}));
+jest.mock(
+  "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account",
+  () => ({
+    usePostProviderAccount: jest.fn(),
+  }),
+);
 jest.mock("@/controllers/API/queries/deployments/use-post-deployment", () => ({
   usePostDeployment: jest.fn(),
 }));
@@ -17,7 +24,11 @@ jest.mock("@/controllers/API/queries/deployments/use-patch-deployment", () => ({
   usePatchDeployment: jest.fn(),
 }));
 
-function renderStepperHook(initialState?: Parameters<typeof DeploymentStepperProvider>[0]["initialState"]) {
+function renderStepperHook(
+  initialState?: Parameters<
+    typeof DeploymentStepperProvider
+  >[0]["initialState"],
+) {
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <DeploymentStepperProvider initialState={initialState}>
       {children}
@@ -267,7 +278,11 @@ describe("DeploymentStepperContext – buildDeploymentUpdatePayload", () => {
 
     const payload = result.current.buildDeploymentUpdatePayload();
     expect(payload.provider_data?.operations).toEqual([
-      { op: "bind", flow_version_id: "version-abc", app_ids: ["conn-existing"] },
+      {
+        op: "bind",
+        flow_version_id: "version-abc",
+        app_ids: ["conn-existing"],
+      },
     ]);
     expect(payload.provider_data?.connections).toEqual({
       existing_app_ids: ["conn-existing"],
@@ -341,7 +356,8 @@ describe("DeploymentStepperContext – remove/unbind flows", () => {
     const { result } = renderStepperHook(editInitialState);
     // Don't remove anything
     const payload = result.current.buildDeploymentUpdatePayload();
-    const ops = (payload.provider_data?.operations as Array<{ op: string }>) ?? [];
+    const ops =
+      (payload.provider_data?.operations as Array<{ op: string }>) ?? [];
     const removeOps = ops.filter((o) => o.op === "remove_tool");
     expect(removeOps).toHaveLength(0);
   });
@@ -349,7 +365,8 @@ describe("DeploymentStepperContext – remove/unbind flows", () => {
   it("does NOT emit bind for pre-existing unchanged flows", () => {
     const { result } = renderStepperHook(editInitialState);
     const payload = result.current.buildDeploymentUpdatePayload();
-    const ops = (payload.provider_data?.operations as Array<{ op: string }>) ?? [];
+    const ops =
+      (payload.provider_data?.operations as Array<{ op: string }>) ?? [];
     const bindOps = ops.filter((o) => o.op === "bind");
     expect(bindOps).toHaveLength(0);
   });
@@ -376,7 +393,8 @@ describe("DeploymentStepperContext – remove/unbind flows", () => {
 
     // The deployment payload should NOT have operations for the version change
     const payload = result.current.buildDeploymentUpdatePayload();
-    const ops = (payload.provider_data?.operations as Array<{ op: string }>) ?? [];
+    const ops =
+      (payload.provider_data?.operations as Array<{ op: string }>) ?? [];
     expect(ops.filter((o) => o.op === "bind")).toHaveLength(0);
     expect(ops.filter((o) => o.op === "remove_tool")).toHaveLength(0);
   });

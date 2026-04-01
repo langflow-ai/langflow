@@ -16,10 +16,7 @@ export interface DeploymentUpdateRequest {
     raw_payload?: {
       name: string;
       description?: string;
-      environment_variables?: Record<
-        string,
-        { value: string; source: "raw" }
-      >;
+      environment_variables?: Record<string, { value: string; source: "raw" }>;
     };
     unbind?: boolean;
   };

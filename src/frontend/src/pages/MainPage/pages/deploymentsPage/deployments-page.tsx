@@ -37,8 +37,9 @@ export default function DeploymentsPage() {
   );
 
   // Edit mode state
-  const [editingDeployment, setEditingDeployment] =
-    useState<Deployment | null>(null);
+  const [editingDeployment, setEditingDeployment] = useState<Deployment | null>(
+    null,
+  );
 
   const location = useLocation();
   const setErrorData = useAlertStore((state) => state.setErrorData);

@@ -1,7 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import React from "react";
 import DeploymentStepperModal from "../components/deployment-stepper-modal";
-import { mockDeployment, mockProviderAccount, createTestWrapper } from "./test-utils";
+import {
+  mockDeployment,
+  mockProviderAccount,
+  createTestWrapper,
+} from "./test-utils";
 
 // Mock child step components to avoid deep dependency tree
 jest.mock("../components/step-provider", () => {
@@ -29,7 +33,9 @@ jest.mock("../components/step-review", () => {
 });
 
 jest.mock("../components/step-deploy-status", () => {
-  const Mock = () => <div data-testid="step-deploy-status">StepDeployStatus</div>;
+  const Mock = () => (
+    <div data-testid="step-deploy-status">StepDeployStatus</div>
+  );
   Mock.displayName = "StepDeployStatus";
   return { __esModule: true, default: Mock };
 });
@@ -41,9 +47,12 @@ jest.mock("../components/deployment-stepper", () => {
 });
 
 // Mock API hooks
-jest.mock("@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account", () => ({
-  usePostProviderAccount: () => ({ mutateAsync: jest.fn() }),
-}));
+jest.mock(
+  "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account",
+  () => ({
+    usePostProviderAccount: () => ({ mutateAsync: jest.fn() }),
+  }),
+);
 
 jest.mock("@/controllers/API/queries/deployments/use-post-deployment", () => ({
   usePostDeployment: () => ({ mutateAsync: jest.fn() }),
@@ -53,14 +62,23 @@ jest.mock("@/controllers/API/queries/deployments/use-patch-deployment", () => ({
   usePatchDeployment: () => ({ mutateAsync: jest.fn() }),
 }));
 
-const mockAttachmentsReturn: { data: any; isLoading: boolean } = { data: null, isLoading: false };
-jest.mock("@/controllers/API/queries/deployments/use-get-deployment-attachments", () => ({
-  useGetDeploymentAttachments: () => mockAttachmentsReturn,
-}));
+const mockAttachmentsReturn: { data: any; isLoading: boolean } = {
+  data: null,
+  isLoading: false,
+};
+jest.mock(
+  "@/controllers/API/queries/deployments/use-get-deployment-attachments",
+  () => ({
+    useGetDeploymentAttachments: () => mockAttachmentsReturn,
+  }),
+);
 
-jest.mock("@/controllers/API/queries/deployments/use-patch-deployment-snapshot", () => ({
-  usePatchDeploymentSnapshot: () => ({ mutateAsync: jest.fn() }),
-}));
+jest.mock(
+  "@/controllers/API/queries/deployments/use-patch-deployment-snapshot",
+  () => ({
+    usePatchDeploymentSnapshot: () => ({ mutateAsync: jest.fn() }),
+  }),
+);
 
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
@@ -86,9 +104,13 @@ jest.mock("@/components/ui/dialog", () => ({
 }));
 
 jest.mock("@/components/common/genericIconComponent", () => {
-  const Mock = ({ name, ...props }: { name: string; [key: string]: unknown }) => (
-    <span data-testid={`icon-${name}`} {...props} />
-  );
+  const Mock = ({
+    name,
+    ...props
+  }: {
+    name: string;
+    [key: string]: unknown;
+  }) => <span data-testid={`icon-${name}`} {...props} />;
   Mock.displayName = "ForwardedIconComponent";
   return Mock;
 });

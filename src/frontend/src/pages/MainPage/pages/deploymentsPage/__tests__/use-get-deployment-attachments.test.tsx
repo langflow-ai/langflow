@@ -36,9 +36,7 @@ describe("useGetDeploymentAttachments", () => {
   });
 
   it("registers a query with the correct key", () => {
-    renderHook(() =>
-      useGetDeploymentAttachments({ deploymentId: "deploy-1" }),
-    );
+    renderHook(() => useGetDeploymentAttachments({ deploymentId: "deploy-1" }));
 
     expect(mockQueryFn).toHaveBeenCalledWith(
       ["useGetDeploymentAttachments", { deploymentId: "deploy-1" }],
@@ -64,9 +62,7 @@ describe("useGetDeploymentAttachments", () => {
       },
     });
 
-    renderHook(() =>
-      useGetDeploymentAttachments({ deploymentId: "deploy-1" }),
-    );
+    renderHook(() => useGetDeploymentAttachments({ deploymentId: "deploy-1" }));
 
     // Execute the query function that was registered
     const queryFn = mockQueryFn.mock.calls[0][1];

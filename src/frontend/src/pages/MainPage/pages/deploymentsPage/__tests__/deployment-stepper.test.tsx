@@ -5,9 +5,12 @@ import { DeploymentStepperProvider } from "../contexts/deployment-stepper-contex
 import { mockDeployment, mockProviderAccount } from "./test-utils";
 
 // Minimal mocks
-jest.mock("@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account", () => ({
-  usePostProviderAccount: jest.fn(),
-}));
+jest.mock(
+  "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account",
+  () => ({
+    usePostProviderAccount: jest.fn(),
+  }),
+);
 jest.mock("@/controllers/API/queries/deployments/use-post-deployment", () => ({
   usePostDeployment: jest.fn(),
 }));
@@ -16,7 +19,9 @@ jest.mock("@/controllers/API/queries/deployments/use-patch-deployment", () => ({
 }));
 
 function renderStepper(
-  initialState?: Parameters<typeof DeploymentStepperProvider>[0]["initialState"],
+  initialState?: Parameters<
+    typeof DeploymentStepperProvider
+  >[0]["initialState"],
 ) {
   return render(
     <DeploymentStepperProvider initialState={initialState}>

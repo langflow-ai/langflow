@@ -5,9 +5,13 @@ import DeploymentsTable from "../components/deployments-table";
 import { mockDeployment } from "./test-utils";
 
 jest.mock("@/components/common/genericIconComponent", () => {
-  const Mock = ({ name, ...props }: { name: string; [key: string]: unknown }) => (
-    <span data-testid={`icon-${name}`} {...props} />
-  );
+  const Mock = ({
+    name,
+    ...props
+  }: {
+    name: string;
+    [key: string]: unknown;
+  }) => <span data-testid={`icon-${name}`} {...props} />;
   Mock.displayName = "ForwardedIconComponent";
   return Mock;
 });
@@ -43,27 +47,35 @@ describe("DeploymentsTable", () => {
     render(<DeploymentsTable {...defaultProps} />);
 
     // Open the actions dropdown
-    const actionsBtn = screen.getByTestId(`actions-deployment-${mockDeployment.id}`);
+    const actionsBtn = screen.getByTestId(
+      `actions-deployment-${mockDeployment.id}`,
+    );
     await user.click(actionsBtn);
 
     // Click Update
     const updateItem = screen.getByText("Update");
     await user.click(updateItem);
 
-    expect(defaultProps.onUpdateDeployment).toHaveBeenCalledWith(mockDeployment);
+    expect(defaultProps.onUpdateDeployment).toHaveBeenCalledWith(
+      mockDeployment,
+    );
   });
 
   it("calls onDeleteDeployment when Delete menu item is clicked", async () => {
     const user = userEvent.setup();
     render(<DeploymentsTable {...defaultProps} />);
 
-    const actionsBtn = screen.getByTestId(`actions-deployment-${mockDeployment.id}`);
+    const actionsBtn = screen.getByTestId(
+      `actions-deployment-${mockDeployment.id}`,
+    );
     await user.click(actionsBtn);
 
     const deleteItem = screen.getByText("Delete");
     await user.click(deleteItem);
 
-    expect(defaultProps.onDeleteDeployment).toHaveBeenCalledWith(mockDeployment);
+    expect(defaultProps.onDeleteDeployment).toHaveBeenCalledWith(
+      mockDeployment,
+    );
   });
 
   it("calls onTestDeployment when Play button is clicked", async () => {
@@ -78,10 +90,7 @@ describe("DeploymentsTable", () => {
 
   it("shows loading state when deployment is being deleted", () => {
     render(
-      <DeploymentsTable
-        {...defaultProps}
-        deletingId={mockDeployment.id}
-      />,
+      <DeploymentsTable {...defaultProps} deletingId={mockDeployment.id} />,
     );
     expect(screen.getByTestId("loading")).toBeInTheDocument();
   });
@@ -91,7 +100,9 @@ describe("DeploymentsTable", () => {
     const { onUpdateDeployment, ...propsWithout } = defaultProps;
     render(<DeploymentsTable {...propsWithout} />);
 
-    const actionsBtn = screen.getByTestId(`actions-deployment-${mockDeployment.id}`);
+    const actionsBtn = screen.getByTestId(
+      `actions-deployment-${mockDeployment.id}`,
+    );
     await user.click(actionsBtn);
 
     const updateItem = screen.getByText("Update");

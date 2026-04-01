@@ -147,8 +147,8 @@ export function DeploymentStepperProvider({
   // Extract LLM: prefer the provider-sourced value from the attachments endpoint,
   // fall back to provider_data on the deployment object.
   const initialLlm =
-    initialState?.initialLlmFromProvider
-    ?? (typeof editingDeployment?.provider_data?.llm === "string"
+    initialState?.initialLlmFromProvider ??
+    (typeof editingDeployment?.provider_data?.llm === "string"
       ? editingDeployment.provider_data.llm
       : "");
   const [selectedLlm, setSelectedLlm] = useState(initialLlm);
@@ -158,14 +158,15 @@ export function DeploymentStepperProvider({
   >(initialState?.selectedVersionByFlow ?? new Map());
   const [connections, setConnections] = useState<ConnectionItem[]>([]);
   const initialAttachedRef = useMemo(
-    () => initialState?.initialAttachedConnectionByFlow ?? new Map<string, string[]>(),
+    () =>
+      initialState?.initialAttachedConnectionByFlow ??
+      new Map<string, string[]>(),
     // Only compute once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
-  const [attachedConnectionByFlow, setAttachedConnectionByFlow] = useState<
-    Map<string, string[]>
-  >(initialAttachedRef);
+  const [attachedConnectionByFlow, setAttachedConnectionByFlow] =
+    useState<Map<string, string[]>>(initialAttachedRef);
   const [removedFlowIds, setRemovedFlowIds] = useState<Set<string>>(new Set());
 
   const handleRemoveAttachedFlow = useCallback((flowId: string) => {
@@ -372,7 +373,9 @@ export function DeploymentStepperProvider({
   const buildDeploymentUpdatePayload =
     useCallback((): DeploymentUpdateRequest => {
       if (!editingDeployment) {
-        throw new Error("buildDeploymentUpdatePayload called outside edit mode");
+        throw new Error(
+          "buildDeploymentUpdatePayload called outside edit mode",
+        );
       }
 
       const result: DeploymentUpdateRequest = {
@@ -443,7 +446,8 @@ export function DeploymentStepperProvider({
         attachedConnectionByFlow,
       )) {
         const versionEntry = selectedVersionByFlow.get(flowId);
-        if (!versionEntry || !bindFlowVersionIds.has(versionEntry.versionId)) continue;
+        if (!versionEntry || !bindFlowVersionIds.has(versionEntry.versionId))
+          continue;
         connectionIds.forEach((id) => newConnectionIds.add(id));
       }
 
@@ -475,7 +479,8 @@ export function DeploymentStepperProvider({
       // Always build provider_data with the current LLM (required by Watsonx)
       // and any operations / connection changes.
       const hasOperations = operations.length > 0;
-      const hasConnections = existingAppIds.length > 0 || rawPayloads.length > 0;
+      const hasConnections =
+        existingAppIds.length > 0 || rawPayloads.length > 0;
       const llmToSend = selectedLlm || initialLlm;
 
       if (llmToSend || hasOperations || hasConnections) {

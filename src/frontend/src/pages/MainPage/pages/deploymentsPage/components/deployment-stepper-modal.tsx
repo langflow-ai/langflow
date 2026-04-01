@@ -61,7 +61,11 @@ export default function DeploymentStepperModal({
 
   // Build the selectedVersionByFlow and attachedConnectionByFlow maps from
   // existing attachments so the Attach Flows step shows current state.
-  const { editVersionByFlow, editAttachedConnectionByFlow, editSnapshotByFlow } = useMemo(() => {
+  const {
+    editVersionByFlow,
+    editAttachedConnectionByFlow,
+    editSnapshotByFlow,
+  } = useMemo(() => {
     if (!isEditMode || !attachmentsData?.attachments?.length) {
       return {
         editVersionByFlow: undefined,
