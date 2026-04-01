@@ -108,26 +108,40 @@ function DeploymentStepperModalContent({
   const { mutateAsync: createProviderAccount } = usePostProviderAccount();
   const { mutateAsync: createDeployment } = usePostDeployment();
 
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+
   const isDeploying = deploymentPhase === "deploying";
   const isDeployed = deploymentPhase === "deployed";
   const isInDeployPhase = isDeploying || isDeployed;
+
+  const handleStepNext = async () => {
+    if (currentStep === 1 && needsProviderAccountCreation) {
+      const accountPayload = buildProviderAccountPayload();
+      if (!accountPayload) return;
+      try {
+        setIsCreatingAccount(true);
+        const newAccount = await createProviderAccount(accountPayload);
+        setSelectedInstance(newAccount);
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : "Something went wrong";
+        setErrorData({
+          title: "Failed to create provider account",
+          list: [message],
+        });
+        return;
+      } finally {
+        setIsCreatingAccount(false);
+      }
+    }
+    handleNext();
+  };
 
   const handleDeploy = async () => {
     try {
       setDeploymentPhase("deploying");
       onDeployingChange(true);
-      let providerId = selectedInstance?.id;
-
-      if (needsProviderAccountCreation) {
-        const accountPayload = buildProviderAccountPayload();
-        if (!accountPayload) {
-          setDeploymentPhase("idle");
-          return;
-        }
-        const newAccount = await createProviderAccount(accountPayload);
-        setSelectedInstance(newAccount);
-        providerId = newAccount.id;
-      }
+      const providerId = selectedInstance?.id;
 
       if (!providerId) {
         setDeploymentPhase("idle");
@@ -216,8 +230,8 @@ function DeploymentStepperModalContent({
             </Button>
             {!isInDeployPhase && (
               <Button
-                onClick={currentStep === 4 ? handleDeploy : handleNext}
-                disabled={!canGoNext}
+                onClick={currentStep === 4 ? handleDeploy : handleStepNext}
+                disabled={!canGoNext || isCreatingAccount}
                 data-testid="deployment-stepper-next"
               >
                 {currentStep === 4 ? (
@@ -225,6 +239,8 @@ function DeploymentStepperModalContent({
                     <ForwardedIconComponent name="Rocket" className="h-4 w-4" />
                     Deploy
                   </>
+                ) : isCreatingAccount ? (
+                  "Connecting..."
                 ) : (
                   "Next"
                 )}
