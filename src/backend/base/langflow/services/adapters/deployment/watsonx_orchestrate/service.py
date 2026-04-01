@@ -27,6 +27,7 @@ from lfx.services.adapters.deployment.exceptions import (
 )
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
+    BaseFlowArtifact,
     ConfigListItem,
     ConfigListParams,
     ConfigListResult,
@@ -51,6 +52,7 @@ from lfx.services.adapters.deployment.schema import (
     SnapshotItem,
     SnapshotListParams,
     SnapshotListResult,
+    SnapshotUpdateResult,
     VerifyCredentials,
     VerifyCredentialsResult,
     _normalize_and_validate_id,
@@ -934,38 +936,30 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         *,
         user_id: IdLike,
         db: AsyncSession,
-        provider_snapshot_id: str,
-        flow_definition: dict[str, Any],
-        project_id: str,  # noqa: ARG002
-    ) -> dict[str, Any]:
-        """Replace an existing snapshot's content with a new flow artifact.
+        snapshot_id: str,
+        flow_artifact: BaseFlowArtifact,
+    ) -> SnapshotUpdateResult:
+        """Replace an existing snapshot's artifact content.
 
-        This is a content-only mutation -- it does not affect which agent
-        the snapshot is attached to or its connection bindings.
+        This is a content-only mutation -- it re-uploads the artifact zip
+        without touching the tool's name, metadata, or connection bindings.
 
-        **Blast-radius boundary:** callers must verify that
-        ``provider_snapshot_id`` is tracked by a Langflow attachment
-        record before calling this method; this prevents accidental
-        overwrites of externally managed WXO tools.
+        **Blast-radius boundary:** callers must verify that ``snapshot_id``
+        is tracked by a Langflow attachment record before calling this
+        method; this prevents accidental overwrites of externally managed
+        WXO tools.
         """
         from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import (
             create_langflow_tool as _create_langflow_tool,
         )
 
-        clients = await self._get_provider_clients(user_id=user_id, db=db)
-
-        tools = await asyncio.to_thread(clients.tool.get_drafts_by_ids, [provider_snapshot_id])
-        if not tools or not isinstance(tools[0], dict) or not tools[0].get("id"):
-            msg = f"Snapshot '{provider_snapshot_id}' not found in provider."
-            raise DeploymentNotFoundError(msg)
-
-        from langflow.services.adapters.deployment.watsonx_orchestrate.utils import validate_wxo_name
+        from langflow.services.adapters.deployment.watsonx_orchestrate.utils import normalize_wxo_name
         from langflow.utils.version import get_version_info
 
-        # Normalize and validate flow name for WXO — the SDK requires alphanumeric + underscore only.
-        flow_definition["name"] = validate_wxo_name(flow_definition.get("name") or "")
+        clients = await self._get_provider_clients(user_id=user_id, db=db)
 
-        # Ensure last_tested_version is present — required by the SDK.
+        flow_definition = flow_artifact.model_dump(exclude={"provider_data"})
+        flow_definition["name"] = normalize_wxo_name(flow_definition.get("name") or "")
         if not flow_definition.get("last_tested_version"):
             detected_version = (get_version_info() or {}).get("version")
             if detected_version:
@@ -984,10 +978,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         await asyncio.to_thread(
             upload_tool_artifact_bytes,
             clients,
-            tool_id=provider_snapshot_id,
+            tool_id=snapshot_id,
             artifact_bytes=artifact_bytes,
         )
-        return {"provider_snapshot_id": provider_snapshot_id}
+        return SnapshotUpdateResult(snapshot_id=snapshot_id)
 
     async def teardown(self) -> None:
         """Teardown provider-specific resources."""

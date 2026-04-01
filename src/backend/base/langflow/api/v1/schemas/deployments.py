@@ -138,6 +138,25 @@ FlowVersionIdsQuery = Annotated[list[str] | None, AfterValidator(_validate_flow_
 """Query parameter type that validates and cleans an optional list of flow version id strings."""
 
 
+def _validate_flow_ids(values: list[UUID] | None) -> list[UUID] | None:
+    """AfterValidator for optional flow_ids query parameter.
+
+    Deduplicates and enforces max length of 1 today; remove the length
+    guard when multi-flow filtering is needed.
+    """
+    if values is None:
+        return None
+    validated = _validate_uuid_list(values, field_name="flow_ids")
+    if len(validated) > 1:
+        msg = "flow_ids currently supports at most 1 value."
+        raise ValueError(msg)
+    return validated
+
+
+FlowIdsQuery = Annotated[list[UUID] | None, AfterValidator(_validate_flow_ids)]
+"""Query parameter type that validates and cleans an optional list of flow id UUIDs (max 1 today)."""
+
+
 # ---------------------------------------------------------------------------
 # Provider sub-resource schemas
 # ---------------------------------------------------------------------------
@@ -279,6 +298,19 @@ class DeploymentGetResponse(_DeploymentResponseBase):
     attached_count: int = Field(default=0, ge=0, description="Number of flow versions attached to this deployment.")
 
 
+class DeploymentListItemAttachment(BaseModel):
+    """A matched flow-version attachment on a deployment list item.
+
+    Populated only when a ``flow_ids`` or ``flow_version_ids`` filter is
+    active, giving the caller the attachment-level detail it needs
+    (e.g. the ``provider_snapshot_id`` required by the snapshot-update
+    endpoint) without a second round-trip.
+    """
+
+    flow_version_id: UUID
+    provider_snapshot_id: str | None = None
+
+
 class DeploymentListItem(_DeploymentResponseBase):
     """Deployment representation used in list responses.
 
@@ -287,6 +319,13 @@ class DeploymentListItem(_DeploymentResponseBase):
 
     resource_key: str = Field(description="Provider-owned stable resource identifier.")
     attached_count: int = Field(default=0, ge=0, description="Number of flow versions attached to this deployment.")
+    matched_attachments: list[DeploymentListItemAttachment] | None = Field(
+        default=None,
+        description=(
+            "Flow-version attachments that matched the active flow_ids or "
+            "flow_version_ids filter.  None when no such filter is active."
+        ),
+    )
 
 
 class _PaginatedResponse(BaseModel):
@@ -695,24 +734,6 @@ class SnapshotUpdateResponse(BaseModel):
 
     flow_version_id: UUID
     provider_snapshot_id: str
-
-
-class FlowDeploymentAttachmentItem(BaseModel):
-    """A single deployment attached to a flow version."""
-
-    deployment_id: UUID
-    deployment_name: str
-    deployment_type: str
-    provider_snapshot_id: str
-    provider_key: str
-    flow_version_id: UUID
-    updated_at: datetime
-
-
-class FlowDeploymentAttachmentsResponse(BaseModel):
-    """Response for GET /deployments/flow-attachments/{flow_id}."""
-
-    attachments: list[FlowDeploymentAttachmentItem]
 
 
 class DetectEnvVarsRequest(BaseModel):
