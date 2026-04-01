@@ -10,6 +10,13 @@ import {
   CardHeader,
   CardTitle,
 } from "../../../../../../components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const LanguageFormComponent = () => {
   const { t, i18n } = useTranslation();
@@ -31,21 +38,21 @@ const LanguageFormComponent = () => {
         <CardDescription>{t("settings.languageDescription")}</CardDescription>
       </CardHeader>
       <CardContent>
-        <select
-          aria-label={t("settings.languageSelectAriaLabel")}
-          value={i18n.language}
-          onChange={(e) => handleChange(e.target.value)}
-          className="rounded border border-border bg-background px-2 py-1.5 text-sm text-foreground"
-        >
-          {SUPPORTED_LANGUAGES.map((lang) => (
-            <option key={lang.code} value={lang.code}>
-              {lang.label}
-              {lang.code === "en"
-                ? ` (${t("settings.languageRecommended")})`
-                : ""}
-            </option>
-          ))}
-        </select>
+        <Select value={i18n.language} onValueChange={handleChange}>
+          <SelectTrigger aria-label={t("settings.languageSelectAriaLabel")}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SUPPORTED_LANGUAGES.map((lang) => (
+              <SelectItem key={lang.code} value={lang.code}>
+                {lang.label}
+                {lang.code === "en"
+                  ? ` (${t("settings.languageRecommended")})`
+                  : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </CardContent>
     </Card>
   );
