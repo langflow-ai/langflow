@@ -1154,14 +1154,17 @@ async def test_update_provider_data_mixed_operations_preserve_encounter_order(mo
     assert result.provider_result.created_snapshot_ids == []
     assert result.provider_result.added_snapshot_ids == ["tool-3"]
 
-    # Existing tool updates should follow first encounter order: bind(tool-3) then unbind(tool-1).
-    assert [tool_id for tool_id, _payload in fake_tool.update_calls] == ["tool-3", "tool-1"]
+    # Existing tool updates are dispatched concurrently via asyncio.gather, so
+    # completion order is non-deterministic.  Assert the set of updated tool ids
+    # and look up each payload by tool_id.
+    update_calls_by_id = {tool_id: payload for tool_id, payload in fake_tool.update_calls}
+    assert set(update_calls_by_id) == {"tool-3", "tool-1"}
 
-    _, tool3_payload = fake_tool.update_calls[0]
+    tool3_payload = update_calls_by_id["tool-3"]
     assert list(tool3_payload["binding"]["langflow"]["connections"]) == ["cfg-2", "cfg-1"]
     assert tool3_payload["binding"]["langflow"]["connections"] == {"cfg-2": "conn-cfg-2", "cfg-1": "conn-cfg-1"}
 
-    _, tool1_payload = fake_tool.update_calls[1]
+    tool1_payload = update_calls_by_id["tool-1"]
     assert tool1_payload["binding"]["langflow"]["connections"] == {}
 
     _, agent_payload = fake_agent.update_calls[0]
@@ -2004,7 +2007,7 @@ async def test_update_provider_data_maps_raw_connection_conflict_to_deployment_c
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
     monkeypatch.setattr(shared_core_module, "create_config", mock_create_config)
 
-    with pytest.raises(DeploymentConflictError, match="error details"):
+    with pytest.raises(DeploymentConflictError, match=r"A connection with app_id 'cfg' already exists in the provider"):
         await service.update(
             user_id="user-1",
             deployment_id="dep-1",
@@ -2068,7 +2071,7 @@ async def test_create_provider_data_maps_raw_connection_conflict_to_deployment_c
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
     monkeypatch.setattr(shared_core_module, "create_config", mock_create_config)
 
-    with pytest.raises(DeploymentConflictError, match="error details"):
+    with pytest.raises(DeploymentConflictError, match=r"A connection with app_id 'cfg' already exists in the provider"):
         await service.create(
             user_id="user-1",
             payload=DeploymentCreate(
