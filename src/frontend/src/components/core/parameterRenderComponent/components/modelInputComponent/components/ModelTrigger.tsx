@@ -50,13 +50,16 @@ const ModelTrigger = ({
   if (!hasEnabledProviders && !showEmptyState && options.length === 0) {
     return (
       <Button
-        variant="default"
-        size="sm"
-        className="w-full"
+        variant="outline"
+        size="xs"
+        className="dropdown-component-false-outline w-full justify-start gap-2 py-2 font-normal"
         onClick={onOpenManageProviders}
       >
-        <ForwardedIconComponent name="Brain" className="h-4 w-4" />
-        <div className="text-[13px]">{placeholder}</div>
+        <ForwardedIconComponent
+          name="Brain"
+          className="h-4 w-4 flex-shrink-0 text-muted-foreground"
+        />
+        <div className="text-[13px] text-muted-foreground">{placeholder}</div>
       </Button>
     );
   }

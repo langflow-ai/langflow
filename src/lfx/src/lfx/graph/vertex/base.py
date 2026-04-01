@@ -20,6 +20,7 @@ from lfx.log.logger import logger
 from lfx.schema.artifact import ArtifactType
 from lfx.schema.data import Data
 from lfx.schema.message import Message
+from lfx.schema.properties import Usage
 from lfx.schema.schema import INPUT_FIELD_NAME, OutputValue, build_output_logs
 from lfx.utils.schemas import ChatOutputResponse
 from lfx.utils.util import sync_to_async
@@ -457,6 +458,70 @@ class Vertex:
 
         return messages
 
+    def _get_all_upstream_vertices(self) -> list[Vertex]:
+        """Walk all upstream vertices using edges, deduplicating by ID."""
+        visited: set[str] = set()
+        result: list[Vertex] = []
+        stack = [edge.source_id for edge in self.graph.edges if edge.target_id == self.id]
+
+        while stack:
+            vid = stack.pop()
+            if vid in visited:
+                continue
+            visited.add(vid)
+            vertex = self.graph.get_vertex(vid)
+            result.append(vertex)
+            stack.extend(edge.source_id for edge in self.graph.edges if edge.target_id == vid)
+
+        return result
+
+    def _accumulate_upstream_token_usage(self) -> Usage | None:
+        """Accumulate token usage from all upstream vertices.
+
+        Walks all recursive predecessors via edges, deduplicates by vertex ID,
+        and sums their token usage into a single total.
+        """
+        predecessors = self._get_all_upstream_vertices()
+        total_input = 0
+        total_output = 0
+        has_data = False
+
+        for predecessor in predecessors:
+            if predecessor.result and predecessor.result.token_usage:
+                usage = predecessor.result.token_usage
+                total_input += usage.input_tokens or 0
+                total_output += usage.output_tokens or 0
+                has_data = True
+
+        # Include own token usage if present
+        if self.custom_component:
+            own_usage = self.custom_component._token_usage  # noqa: SLF001
+            if own_usage:
+                total_input += own_usage.input_tokens or 0
+                total_output += own_usage.output_tokens or 0
+                has_data = True
+
+        if not has_data:
+            return None
+
+        return Usage(
+            input_tokens=total_input,
+            output_tokens=total_output,
+            total_tokens=total_input + total_output,
+        )
+
+    def _extract_token_usage(self) -> Usage | None:
+        """Extract token usage from the custom component if available.
+
+        Output vertices don't show token usage on the node badge because
+        the accumulated total is displayed on the chat message instead.
+        """
+        if self.is_output:
+            return None
+        if self.custom_component and self.custom_component._token_usage:  # noqa: SLF001
+            return self.custom_component._token_usage  # noqa: SLF001
+        return None
+
     def finalize_build(self) -> None:
         result_dict = self.get_built_result()
         # We need to set the artifacts to pass information
@@ -464,6 +529,7 @@ class Vertex:
         self.set_artifacts()
         artifacts = self.artifacts_raw
         messages = self.extract_messages_from_artifacts(artifacts) if isinstance(artifacts, dict) else []
+        token_usage = self._extract_token_usage()
         result_dict = ResultData(
             results=result_dict,
             artifacts=artifacts,
@@ -472,6 +538,7 @@ class Vertex:
             messages=messages,
             component_display_name=self.display_name,
             component_id=self.id,
+            token_usage=token_usage,
         )
         self.set_result(result_dict)
 
