@@ -216,7 +216,7 @@
                 "dependencies": [
                   {
                     "name": "httpx",
-                    "version": null
+                    "version": "0.28.1"
                   },
                   {
                     "name": "lfx",
@@ -886,11 +886,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": null
+                    "version": "3.11.7"
                   },
                   {
                     "name": "fastapi",
-                    "version": null
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
@@ -1178,7 +1178,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": null
+                    "version": "2.12.5"
                   },
                   {
                     "name": "lfx",
@@ -1186,7 +1186,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": null
+                    "version": "1.2.22"
                   }
                 ],
                 "total_dependencies": 3
@@ -1757,15 +1757,15 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": null
+                    "version": "3.11.7"
                   },
                   {
                     "name": "pandas",
-                    "version": null
+                    "version": "2.2.3"
                   },
                   {
                     "name": "fastapi",
-                    "version": null
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
