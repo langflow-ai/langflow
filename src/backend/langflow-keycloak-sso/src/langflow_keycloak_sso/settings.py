@@ -43,8 +43,15 @@ class KeycloakSettings(BaseSettings):
     # When empty, the router constructs a fallback from REDIRECT_URI base + "/login".
     LOGOUT_REDIRECT_URI: str = ""
 
-    # Removed: GROUPS_CLAIM — group-based mapping is no longer used.
-    # Authorization is fully delegated to Keycloak (client-level access control).
+    # HCP (Hynix Cloud Platform) API-based authorization.
+    # When set, after Keycloak authentication the user's employee number is checked
+    # against the HCP roles API.  Only employees listed in managers / deployApprovers /
+    # developers are allowed to log in.
+    # Example: http://hcp-api.com/v1/projects/marcel/roles
+    HCP_API_URL: str = ""
+
+    # Which claim in the Keycloak id_token / access_token contains the employee number.
+    EMPLOYEE_CLAIM: str = "preferred_username"
 
     @property
     def token_endpoint(self) -> str:

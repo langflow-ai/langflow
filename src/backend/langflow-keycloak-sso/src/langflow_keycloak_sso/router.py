@@ -13,6 +13,7 @@ from fastapi.responses import RedirectResponse
 from langflow.api.utils.core import DbSession
 from langflow.services.deps import get_auth_service, get_settings_service
 
+from .hcp_client import fetch_allowed_employees
 from .keycloak_client import KeycloakClient
 from .mapping import get_or_create_shared_user
 from .settings import get_keycloak_settings
@@ -149,10 +150,41 @@ async def keycloak_callback(
 
     # 3b. Verify nonce in id_token to prevent replay attacks
     id_token: str = token_response.get("id_token", "")
-    if id_token and nonce:
+    id_claims: dict = {}
+    if id_token:
         id_claims = pyjwt.decode(id_token, options={"verify_signature": False})
-        if id_claims.get("nonce") != nonce:
+        if nonce and id_claims.get("nonce") != nonce:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Nonce mismatch in id_token")
+
+    # 3c. HCP API authorization — check employee number against project roles
+    if s.HCP_API_URL:
+        employee_number = ""
+        # Try id_token claims first, then fall back to access_token
+        if id_claims:
+            employee_number = str(id_claims.get(s.EMPLOYEE_CLAIM, ""))
+        if not employee_number:
+            access_claims = client.verify_and_decode(access_token)
+            employee_number = str(access_claims.get(s.EMPLOYEE_CLAIM, ""))
+
+        if not employee_number:
+            return RedirectResponse(
+                url="/login?error=no_employee_id",
+                status_code=status.HTTP_302_FOUND,
+            )
+
+        try:
+            allowed = await fetch_allowed_employees(s.HCP_API_URL)
+        except Exception:
+            return RedirectResponse(
+                url="/login?error=hcp_unavailable",
+                status_code=status.HTTP_302_FOUND,
+            )
+
+        if employee_number not in allowed:
+            return RedirectResponse(
+                url=f"/login?error=unauthorized&employee={employee_number}",
+                status_code=status.HTTP_302_FOUND,
+            )
 
     # 4. Log into the shared account (auto-created on first login)
     user = await get_or_create_shared_user(db, s.SHARED_USERNAME)

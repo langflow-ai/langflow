@@ -320,6 +320,32 @@ async def token(
     }
 
 
+# ---------------------------------------------------------------------------
+# Mock HCP roles API — mirrors http://hcp-api.com/v1/projects/{project}/roles
+# ---------------------------------------------------------------------------
+
+# Project → allowed employees mapping (simulates HCP API per-project roles)
+HCP_PROJECT_ROLES: dict[str, dict] = {
+    "project-a": {
+        "managers": ["EMP001"],
+        "deployApprovers": ["EMP002"],
+        "developers": ["EMP003", "EMP004", "EMP005"],
+    },
+    "project-b": {
+        "managers": ["EMP001"],
+        "deployApprovers": ["EMP002"],
+        "developers": ["EMP006", "EMP007", "EMP008"],
+    },
+}
+
+
+@app.get("/v1/projects/{project_name}/roles")
+async def hcp_roles(project_name: str):
+    """Mock HCP roles API endpoint."""
+    roles = HCP_PROJECT_ROLES.get(project_name, {"managers": [], "deployApprovers": [], "developers": []})
+    return {"response": roles}
+
+
 @app.get("/admin", include_in_schema=False)
 async def admin_page():
     """Read-only page: employees, groups, and client access."""
