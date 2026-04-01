@@ -674,11 +674,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": null
+                    "version": "3.11.7"
                   },
                   {
                     "name": "fastapi",
-                    "version": null
+                    "version": "0.135.1"
                   },
                   {
                     "name": "lfx",
@@ -1172,7 +1172,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": null
+                    "version": "2.12.5"
                   },
                   {
                     "name": "trustcall",
@@ -1751,11 +1751,11 @@
                 "dependencies": [
                   {
                     "name": "astrapy",
-                    "version": null
+                    "version": "2.2.1"
                   },
                   {
                     "name": "langchain_core",
-                    "version": null
+                    "version": "1.2.22"
                   },
                   {
                     "name": "lfx",
@@ -1763,7 +1763,7 @@
                   },
                   {
                     "name": "langchain_astradb",
-                    "version": null
+                    "version": "1.0.0"
                   }
                 ],
                 "total_dependencies": 4
