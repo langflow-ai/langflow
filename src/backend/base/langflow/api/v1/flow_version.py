@@ -160,44 +160,8 @@ async def list_flow_versions(
         )
 
     max_entries = get_settings_service().settings.max_flow_version_entries_per_flow
-    entries = [_version_to_read(entry, is_deployed=is_deployed) for entry, is_deployed in rows]
-
-    if deployment_ids and has_providers:
-        from langflow.api.v1.mappers.deployments.helpers import build_deployment_info_map
-        from langflow.api.v1.schemas.flow_versions import (
-            FlowVersionReadWithDeployments,
-            FlowVersionWithDeploymentsListResponse,
-        )
-
-        try:
-            dep_info_map = await build_deployment_info_map(
-                db=session,
-                user_id=current_user.id,
-                deployment_ids=deployment_ids,
-                flow_version_ids={e.id for e in entries},
-            )
-        except Exception:  # noqa: BLE001
-            logger.warning(
-                "Deployment enrichment failed for flow %s; returning without tool metadata",
-                flow_id,
-                exc_info=True,
-            )
-            dep_info_map = {}
-
-        enriched_entries = [
-            FlowVersionReadWithDeployments(
-                **entry.model_dump(),
-                deployments=dep_info_map.get(entry.id, []),
-            )
-            for entry in entries
-        ]
-        return FlowVersionWithDeploymentsListResponse(
-            entries=enriched_entries,
-            max_entries=max_entries,
-        )
-
     return FlowVersionListResponse(
-        entries=entries,
+        entries=[_version_to_read(entry, is_deployed=is_deployed) for entry, is_deployed in rows],
         max_entries=max_entries,
     )
 
