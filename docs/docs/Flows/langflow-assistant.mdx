@@ -188,15 +188,15 @@ You'll then iterate on the code based on the results in the **Playground**.
     https://this-domain-should-not-resolve-12345.invalid
     ```
 8. Run the flow.
-    The output will be similar to the following, with a Table with one row per URL, including page titles and status codes.
-    ```text
+    The output will be similar to the following, with a [Table](/data-types#table) with one row per URL, including page titles and status codes.
+
     | url | title | status |
     | --- | --- | --- |
     | https://langflow.org | Langflow \| Low-code AI builder for agentic and RAG applications | 200 |
     | https://github.com/langflow-ai/langflow | GitHub - langflow-ai/langflow: Langflow is a powerful tool for building and deploying AI-powered agents and workflows. - GitHub | 200 |
     | https://python.org | Welcome to Python.org | 200 |
     | https://this-domain-should-not-resolve-12345.invalid |  |  |
-    ```
+
 9. To iterate further, tell **Langflow Assistant** what you want.
     For example, prompt it to `Update URLTitleExtractor to add max_urls (default 5) and skip duplicates.`.
 
