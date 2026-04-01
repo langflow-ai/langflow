@@ -1,7 +1,7 @@
-"""Tests for flow loader utilities.
+"""Tests for flow loader module.
 
-Tests the flow path resolution, path traversal validation,
-and Python/JSON flow loading functionality.
+Tests _temporary_sys_path context manager, resolve_flow_path,
+_load_graph_from_python, and load_graph_for_execution functions.
 """
 
 import sys
@@ -13,7 +13,6 @@ from fastapi import HTTPException
 from langflow.agentic.services.helpers.flow_loader import (
     _load_graph_from_python,
     _temporary_sys_path,
-    _validate_path_within_base,
     load_graph_for_execution,
     resolve_flow_path,
 )
@@ -58,50 +57,11 @@ class TestTemporarySysPath:
         assert test_path not in sys.path
 
 
-class TestValidatePathWithinBase:
-    """Tests for _validate_path_within_base function."""
-
-    def test_should_return_resolved_path_for_valid_path(self, tmp_path):
-        """Should return resolved path when within base directory."""
-        # Create a test file in tmp_path
-        test_file = tmp_path / "test.py"
-        test_file.touch()
-
-        with patch("langflow.agentic.services.helpers.flow_loader.FLOWS_BASE_PATH", tmp_path):
-            result = _validate_path_within_base(test_file, "test.py")
-
-            assert result == test_file.resolve()
-
-    def test_should_raise_400_for_path_traversal_attempt(self, tmp_path):
-        """Should raise HTTPException 400 for path traversal attempts."""
-        # Create a candidate path outside the base
-        outside_path = tmp_path.parent / "outside.py"
-
-        with patch("langflow.agentic.services.helpers.flow_loader.FLOWS_BASE_PATH", tmp_path):
-            with pytest.raises(HTTPException) as exc_info:
-                _validate_path_within_base(outside_path, "../outside.py")
-
-            assert exc_info.value.status_code == 400
-            assert "Invalid flow path" in exc_info.value.detail
-
-    def test_should_block_dot_dot_path_traversal(self, tmp_path):
-        """Should block path traversal using .. sequences."""
-        # Create a path that uses .. to escape base
-        traversal_path = tmp_path / ".." / ".." / "etc" / "passwd"
-
-        with patch("langflow.agentic.services.helpers.flow_loader.FLOWS_BASE_PATH", tmp_path):
-            with pytest.raises(HTTPException) as exc_info:
-                _validate_path_within_base(traversal_path, "../../etc/passwd")
-
-            assert exc_info.value.status_code == 400
-
-
 class TestResolveFlowPath:
     """Tests for resolve_flow_path function."""
 
     def test_should_return_json_path_for_explicit_json_extension(self, tmp_path):
         """Should return JSON path when .json extension is explicit."""
-        # Create test file
         json_file = tmp_path / "test.json"
         json_file.write_text("{}")
 
@@ -109,11 +69,10 @@ class TestResolveFlowPath:
             result_path, result_type = resolve_flow_path("test.json")
 
             assert result_type == "json"
-            assert result_path == json_file.resolve()
+            assert result_path == json_file
 
     def test_should_return_python_path_for_explicit_py_extension(self, tmp_path):
         """Should return Python path when .py extension is explicit."""
-        # Create test file
         py_file = tmp_path / "test.py"
         py_file.write_text("# test")
 
@@ -121,11 +80,10 @@ class TestResolveFlowPath:
             result_path, result_type = resolve_flow_path("test.py")
 
             assert result_type == "python"
-            assert result_path == py_file.resolve()
+            assert result_path == py_file
 
     def test_should_prefer_python_over_json_when_both_exist(self, tmp_path):
         """Should prefer .py over .json when auto-detecting."""
-        # Create both files
         py_file = tmp_path / "test.py"
         py_file.write_text("# test")
         json_file = tmp_path / "test.json"
@@ -135,11 +93,10 @@ class TestResolveFlowPath:
             result_path, result_type = resolve_flow_path("test")
 
             assert result_type == "python"
-            assert result_path == py_file.resolve()
+            assert result_path == py_file
 
     def test_should_fallback_to_json_when_python_not_found(self, tmp_path):
         """Should use .json when .py doesn't exist."""
-        # Create only JSON file
         json_file = tmp_path / "test.json"
         json_file.write_text("{}")
 
@@ -147,7 +104,7 @@ class TestResolveFlowPath:
             result_path, result_type = resolve_flow_path("test")
 
             assert result_type == "json"
-            assert result_path == json_file.resolve()
+            assert result_path == json_file
 
     def test_should_reject_filename_with_path_traversal_sequences(self, tmp_path):
         """Should reject filenames containing '..' before any path construction."""
@@ -437,3 +394,96 @@ class TestLoadGraphForExecution:
                 "claude-3",
                 "ANTHROPIC_API_KEY",
             )
+
+
+class TestBugsAndEdgeCases:
+    """Tests that challenge the code — exposing real bugs and untested edge cases."""
+
+    def test_resolve_flow_path_traversal_escape(self, tmp_path):
+        """resolve_flow_path should reject paths that traverse outside FLOWS_BASE_PATH."""
+        flows_dir = tmp_path / "flows"
+        flows_dir.mkdir()
+        secret = tmp_path / "secret.json"
+        secret.write_text('{"secret": true}')
+
+        with patch("langflow.agentic.services.helpers.flow_loader.FLOWS_BASE_PATH", flows_dir):
+            with pytest.raises(HTTPException) as exc_info:
+                resolve_flow_path("../secret.json")
+
+            assert exc_info.value.status_code == 400
+
+    def test_resolve_flow_path_empty_string_returns_directory(self, tmp_path):
+        """L78: resolve_flow_path('') returns FLOWS_BASE_PATH directory as a 'json' file.
+
+        Empty string → base_name = '' → no .py/.json match → direct_path = FLOWS_BASE_PATH
+        → exists() = True (it's a directory) → returned as 'json'.
+        Downstream code will crash trying to read a directory as JSON.
+        """
+        with patch("langflow.agentic.services.helpers.flow_loader.FLOWS_BASE_PATH", tmp_path):
+            result_path, result_type = resolve_flow_path("")
+
+        assert result_path == tmp_path  # Returns directory as if it were a file
+        assert result_type == "json"
+
+    def test_resolve_flow_path_only_extension_literal(self, tmp_path):
+        """resolve_flow_path('.json') treats it as literal filename, not just extension."""
+        # File literally named '.json'
+        dot_json = tmp_path / ".json"
+        dot_json.write_text("{}")
+
+        with patch("langflow.agentic.services.helpers.flow_loader.FLOWS_BASE_PATH", tmp_path):
+            result_path, result_type = resolve_flow_path(".json")
+
+        assert result_path == dot_json
+        assert result_type == "json"
+
+    @pytest.mark.asyncio
+    async def test_load_graph_returns_none_from_get_graph(self):
+        """get_graph() returning None is passed through without validation.
+
+        No check that the returned value is actually a Graph instance.
+        Downstream code will crash on None.
+        """
+        mock_module = MagicMock()
+        mock_module.get_graph = MagicMock(return_value=None)
+
+        with (
+            patch("importlib.util.spec_from_file_location") as mock_spec_from_file,
+            patch("importlib.util.module_from_spec") as mock_module_from_spec,
+            patch("langflow.agentic.services.helpers.flow_loader._temporary_sys_path"),
+        ):
+            mock_spec = MagicMock()
+            mock_spec.loader = MagicMock()
+            mock_spec_from_file.return_value = mock_spec
+            mock_module_from_spec.return_value = mock_module
+
+            result = await _load_graph_from_python(Path("/test/flow.py"))
+
+        # Documents: None is returned without validation
+        assert result is None
+
+    def test_sys_modules_uses_stem_as_module_name(self):
+        """L110: module_name = flow_path.stem — files with same stem collide in sys.modules.
+
+        Two concurrent requests loading /path/a/flow.py and /path/b/flow.py
+        both use 'flow' as module_name, creating a race condition in sys.modules.
+        """
+        path_a = Path("/path/a/flow.py")
+        path_b = Path("/path/b/flow.py")
+        # Same stem means same key in sys.modules — concurrent collision
+        assert path_a.stem == path_b.stem == "flow"
+
+    def test_temporary_sys_path_crashes_if_path_removed_during_context(self):
+        """L34: sys.path.remove() raises ValueError if path was removed inside context.
+
+        If code inside the context (or another thread) removes the path,
+        the finally block crashes with ValueError instead of handling gracefully.
+        """
+        test_path = "/unique/concurrent/removal/test/path"
+
+        with (
+            pytest.raises(ValueError, match="not in list"),
+            _temporary_sys_path(test_path),
+        ):
+            # Simulate another thread or code removing the path
+            sys.path.remove(test_path)

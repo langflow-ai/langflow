@@ -1,30 +1,24 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useGetDeploymentLlms } from "@/controllers/API/queries/deployments/use-get-deployment-llms";
 import { cn } from "@/utils/utils";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
-import type { DeploymentType } from "../types";
 
-const TYPE_OPTIONS: {
-  type: DeploymentType;
-  label: string;
-  description: string;
-  icon: string;
-  iconBg: string;
-}[] = [
+const TYPE_OPTIONS = [
   {
-    type: "agent",
+    type: "agent" as const,
     label: "Agent",
     description: "Conversational agent with chat interface and tool calling",
     icon: "MessageSquare",
     iconBg: "border-accent-pink-foreground/20 bg-accent-pink-foreground/20",
-  },
-  {
-    type: "mcp",
-    label: "MCP Server",
-    description: "Model Context Protocol server for tool integration",
-    icon: "Layers",
-    iconBg: "border-accent-blue-foreground/20 bg-accent-blue-foreground/20",
   },
 ];
 
@@ -36,7 +30,17 @@ export default function StepType() {
     setDeploymentName,
     deploymentDescription,
     setDeploymentDescription,
+    selectedLlm,
+    setSelectedLlm,
+    selectedInstance,
   } = useDeploymentStepper();
+
+  const providerId = selectedInstance?.id ?? "";
+  const { data: llmData, isLoading: llmsLoading } = useGetDeploymentLlms(
+    { providerId },
+    { enabled: !!providerId },
+  );
+  const llmModels = llmData?.provider_data?.models ?? [];
   return (
     <div className="flex w-full flex-col gap-6 overflow-y-auto py-3">
       <h2 className="text-lg font-semibold">Deployment Type</h2>
@@ -93,8 +97,7 @@ export default function StepType() {
 
       <div className="flex flex-col">
         <span className="pb-2 text-sm font-medium">
-          {deploymentType === "agent" ? "Agent" : "Server"} Name{" "}
-          <span className="text-destructive">*</span>
+          Agent Name <span className="text-destructive">*</span>
         </span>
         <Input
           placeholder="e.g., Sales Bot"
@@ -113,6 +116,26 @@ export default function StepType() {
           value={deploymentDescription}
           onChange={(e) => setDeploymentDescription(e.target.value)}
         />
+      </div>
+
+      <div className="flex flex-col">
+        <span className="pb-2 text-sm font-medium">
+          Model <span className="text-destructive">*</span>
+        </span>
+        <Select value={selectedLlm} onValueChange={setSelectedLlm}>
+          <SelectTrigger className="bg-muted">
+            <SelectValue
+              placeholder={llmsLoading ? "Loading models..." : "Select a model"}
+            />
+          </SelectTrigger>
+          <SelectContent>
+            {llmModels.map((model) => (
+              <SelectItem key={model.model_name} value={model.model_name}>
+                {model.model_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );

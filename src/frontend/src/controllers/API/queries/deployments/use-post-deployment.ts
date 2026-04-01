@@ -11,6 +11,7 @@ export interface DeploymentCreateRequest {
     type: string;
   };
   provider_data: {
+    llm: string;
     resource_name_prefix: string;
     operations: Array<{
       op: "bind";

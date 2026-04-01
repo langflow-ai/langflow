@@ -9,6 +9,7 @@ export default function StepReview() {
   const {
     deploymentType,
     deploymentName,
+    selectedLlm,
     connections,
     selectedVersionByFlow,
     attachedConnectionByFlow,
@@ -92,6 +93,14 @@ export default function StepReview() {
                   {deploymentName || "—"}
                 </span>
               </div>
+              {selectedLlm && (
+                <div className="flex items-start gap-2">
+                  <span className="w-10 text-xs text-muted-foreground">
+                    Model
+                  </span>
+                  <span className="text-sm text-foreground">{selectedLlm}</span>
+                </div>
+              )}
             </div>
           </div>
 
