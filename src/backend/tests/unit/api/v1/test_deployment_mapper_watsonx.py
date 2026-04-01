@@ -126,6 +126,7 @@ def test_watsonx_api_payload_requires_resource_name_prefix_for_existing_agent_op
         WatsonxApiDeploymentCreatePayload.model_validate(
             {
                 "existing_agent_id": "21b2b5a4-ef72-4697-8731-132163669a46",
+                "llm": TEST_WXO_LLM,
                 "connections": {"existing_app_ids": ["app-one"]},
                 "operations": [
                     {
@@ -147,6 +148,7 @@ def test_watsonx_api_payload_requires_resource_name_prefix_for_raw_connection_pa
         WatsonxApiDeploymentCreatePayload.model_validate(
             {
                 "existing_agent_id": "21b2b5a4-ef72-4697-8731-132163669a46",
+                "llm": TEST_WXO_LLM,
                 "connections": {
                     "raw_payloads": [
                         {
@@ -559,6 +561,7 @@ async def test_watsonx_mapper_translates_existing_create_bind_into_update_payloa
         spec={"name": "existing-create", "description": "desc", "type": "agent"},
         provider_data={
             "existing_agent_id": "21b2b5a4-ef72-4697-8731-132163669a46",
+            "llm": TEST_WXO_LLM,
             "resource_name_prefix": "lf_test_",
             "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
@@ -603,6 +606,7 @@ async def test_watsonx_mapper_maps_create_adapter_payload_validation_errors_to_4
         provider_id=uuid4(),
         spec={"name": "create-deploy", "description": "", "type": "agent"},
         provider_data={
+            "llm": TEST_WXO_LLM,
             "resource_name_prefix": "lf_test_",
             "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
