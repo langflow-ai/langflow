@@ -319,22 +319,29 @@ export function DeploymentStepperProvider({
         result.spec = { description: deploymentDescription };
       }
 
-      // Flow version changes
-      const newFlowVersionIds = Array.from(selectedVersionByFlow.values()).map(
-        (v) => v.versionId,
-      );
-      if (newFlowVersionIds.length > 0) {
-        result.add_flow_version_ids = newFlowVersionIds;
+      // Watsonx requires ALL flow version and config changes to go through
+      // provider_data (not top-level add_flow_version_ids / config fields).
+      // The LLM field is always required in provider_data by the Watsonx schema.
+
+      // Build bind operations from newly attached flows
+      const operations: Array<{
+        op: "bind";
+        flow_version_id: string;
+        app_ids: string[];
+      }> = [];
+      for (const [flowId, connectionIds] of Array.from(
+        attachedConnectionByFlow,
+      )) {
+        const versionEntry = selectedVersionByFlow.get(flowId);
+        if (!versionEntry || connectionIds.length === 0) continue;
+        operations.push({
+          op: "bind",
+          flow_version_id: versionEntry.versionId,
+          app_ids: connectionIds,
+        });
       }
 
-      // Provider data changes (LLM, connections, operations)
-      const providerDataUpdate: Record<string, unknown> = {};
-
-      if (selectedLlm !== initialLlm) {
-        providerDataUpdate.llm = selectedLlm;
-      }
-
-      // Build operations from attached flows (same structure as create)
+      // Collect connection details
       const allConnectionIds = new Set<string>();
       Array.from(attachedConnectionByFlow.values()).forEach((ids) => {
         ids.forEach((id) => allConnectionIds.add(id));
@@ -365,33 +372,17 @@ export function DeploymentStepperProvider({
         }
       });
 
-      const operations: Array<{
-        op: "bind";
-        flow_version_id: string;
-        app_ids: string[];
-      }> = [];
-      for (const [flowId, connectionIds] of Array.from(
-        attachedConnectionByFlow,
-      )) {
-        const versionEntry = selectedVersionByFlow.get(flowId);
-        if (!versionEntry || connectionIds.length === 0) continue;
-        operations.push({
-          op: "bind",
-          flow_version_id: versionEntry.versionId,
-          app_ids: connectionIds,
-        });
-      }
+      // Always build provider_data with the current LLM (required by Watsonx)
+      // and any operations / connection changes.
+      const hasOperations = operations.length > 0;
+      const hasConnections = existingAppIds.length > 0 || rawPayloads.length > 0;
+      const llmToSend = selectedLlm || initialLlm;
 
-      if (
-        operations.length > 0 ||
-        existingAppIds.length > 0 ||
-        rawPayloads.length > 0 ||
-        Object.keys(providerDataUpdate).length > 0
-      ) {
+      if (llmToSend || hasOperations || hasConnections) {
         result.provider_data = {
-          ...providerDataUpdate,
-          ...(operations.length > 0 && { operations }),
-          ...((existingAppIds.length > 0 || rawPayloads.length > 0) && {
+          ...(llmToSend && { llm: llmToSend }),
+          ...(hasOperations && { operations }),
+          ...(hasConnections && {
             connections: {
               existing_app_ids: existingAppIds,
               raw_payloads: rawPayloads,
@@ -402,13 +393,7 @@ export function DeploymentStepperProvider({
 
       // Backend requires at least one field. If nothing changed, send current
       // description so the request is still valid (backend treats same-value as no-op).
-      if (
-        !result.spec &&
-        !result.add_flow_version_ids &&
-        !result.remove_flow_version_ids &&
-        !result.config &&
-        !result.provider_data
-      ) {
+      if (!result.spec && !result.provider_data) {
         result.spec = { description: deploymentDescription };
       }
 

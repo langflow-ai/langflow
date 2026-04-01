@@ -209,48 +209,46 @@ describe("DeploymentStepperContext – buildDeploymentUpdatePayload", () => {
     expect(payload.provider_data?.llm).toBe("ibm/granite-3-2b-instruct");
   });
 
-  it("does NOT send provider_data when LLM is unchanged", () => {
+  it("always sends LLM in provider_data (required by Watsonx)", () => {
     const { result } = renderStepperHook({
       editingDeployment: mockDeployment,
       editingProviderAccount: mockProviderAccount,
     });
-    // Don't change anything
+    // Don't change anything — LLM should still be in provider_data
     const payload = result.current.buildDeploymentUpdatePayload();
-    expect(payload.provider_data).toBeUndefined();
+    expect(payload.provider_data?.llm).toBe("ibm/granite-3-8b-instruct");
   });
 
-  it("sends fallback spec when nothing changed (backend requires at least one field)", () => {
+  it("sends fallback spec when nothing changed and no LLM set", () => {
     const { result } = renderStepperHook({
-      editingDeployment: mockDeployment,
-      editingProviderAccount: mockProviderAccount,
+      editingDeployment: mockDeploymentNoLlm,
     });
     const payload = result.current.buildDeploymentUpdatePayload();
-    // Fallback: sends current description
+    // No LLM and no changes → fallback sends description
     expect(payload.spec).toBeDefined();
-    expect(payload.spec?.description).toBe("A test agent");
+    expect(payload.spec?.description).toBe("");
   });
 
-  it("includes add_flow_version_ids when new flow versions are selected", () => {
+  it("never sends top-level add_flow_version_ids (Watsonx uses provider_data.operations)", () => {
     const { result } = renderStepperHook({
       editingDeployment: mockDeployment,
       editingProviderAccount: mockProviderAccount,
     });
 
-    act(() =>
-      result.current.handleSelectVersion("flow-1", "version-abc", "v1.0"),
-    );
-
-    const payload = result.current.buildDeploymentUpdatePayload();
-    expect(payload.add_flow_version_ids).toEqual(["version-abc"]);
-  });
-
-  it("does NOT include add_flow_version_ids when no new versions are selected", () => {
-    const { result } = renderStepperHook({
-      editingDeployment: mockDeployment,
-      editingProviderAccount: mockProviderAccount,
+    act(() => {
+      result.current.handleSelectVersion("flow-1", "version-abc", "v1.0");
+      result.current.setAttachedConnectionByFlow(
+        new Map([["flow-1", ["conn-1"]]]),
+      );
     });
+
     const payload = result.current.buildDeploymentUpdatePayload();
+    // Must NOT have top-level flow version fields
     expect(payload.add_flow_version_ids).toBeUndefined();
+    expect(payload.remove_flow_version_ids).toBeUndefined();
+    expect(payload.config).toBeUndefined();
+    // Instead, bind operations go through provider_data
+    expect(payload.provider_data?.operations).toBeDefined();
   });
 
   it("includes operations and connections in provider_data when flows are attached", () => {
