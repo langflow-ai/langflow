@@ -39,9 +39,6 @@ from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, model_val
 from langflow.services.database.models.deployment_provider_account.schemas import (
     DeploymentProviderKey,
 )
-from langflow.services.database.models.deployment_provider_account.utils import (
-    validate_provider_url,
-)
 
 # ---------------------------------------------------------------------------
 # Shared validation helpers
@@ -80,10 +77,6 @@ def _strip_nonempty(value: str, info: ValidationInfo) -> str:
 
 NonEmptyStr = Annotated[str, AfterValidator(_strip_nonempty)]
 """String type that strips whitespace and rejects empty/whitespace-only values."""
-
-
-ValidatedUrl = Annotated[str, AfterValidator(validate_provider_url)]
-"""URL type that enforces HTTPS and normalizes."""
 
 
 def _validate_flow_version_ids(values: list[UUID] | None) -> list[UUID] | None:
