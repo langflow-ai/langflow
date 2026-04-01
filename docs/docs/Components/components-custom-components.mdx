@@ -255,7 +255,7 @@ Outputs are defined in a class-level `outputs` list. When Langflow renders a com
 
 An output is usually an instance of `Output` from `lfx.io`.
 
-For example, this component has one `output` that returns a `DataFrame`:
+For example, this component has one `output` that returns a `Table`:
 
 ```python
 from lfx.io import Output
@@ -278,21 +278,21 @@ def build_df(self) -> DataFrame:
 
 The `Output` creates a connector point in the visual editor labeled **DataFrame Output**. The `name="df_out"` parameter identifies this output, while `display_name="DataFrame Output"` shows the label in the UI. The `method="build_df"` parameter tells Langflow to call the `build_df` method when this output is connected to another component.
 
-The `build_df` method processes data and returns a `DataFrame`. The `-> DataFrame` type annotation helps Langflow validate connections and provides color-coding in the visual editor. You can also set `self.status` to show progress messages in the UI.
+The `build_df` method processes data and returns a `Table`. The `-> DataFrame` type annotation helps Langflow validate connections and provides color-coding in the visual editor. You can also set `self.status` to show progress messages in the UI.
 
 For a complete list of all available parameters, see the [Output class definition](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/template/field/base.py) in the Langflow codebase. Common parameters include:
 
 **Additional return types:**
 * **`Message`**: Structured chat messages
-* **`Data`**: Flexible object with `.data` and optional `.text`
-* **`DataFrame`**: Tabular data (pandas DataFrame subclass)
+* **`JSON`**: Flexible object with `.data` and optional `.text`
+* **`Table`**: Tabular data (pandas DataFrame subclass)
 * **Primitive types**: `str`, `int`, `bool`, not recommended for type consistency
 
 #### Associated methods
 
-Each output is linked to a method where the output method name must match the method name. The method typically returns objects like `Message`, `Data`, or `DataFrame`, and can use inputs with `self.<input_name>`.
+Each output is linked to a method where the output method name must match the method name. The method typically returns objects like `Message`, `JSON`, or `Table`, and can use inputs with `self.<input_name>`.
 
-For example, the `Output` defines a connector point called `file_contents` that will call the `read_file` method when connected. The `read_file` method accesses the filename input with `self.filename`, reads the file content, sets a status message, and returns the content wrapped in a `Data` object.
+For example, the `Output` defines a connector point called `file_contents` that will call the `read_file` method when connected. The `read_file` method accesses the filename input with `self.filename`, reads the file content, sets a status message, and returns the content wrapped in a `JSON` object.
 
 ```python
 Output(
@@ -403,7 +403,7 @@ inputs = [
 
 In Langflow, typed annotations allow Langflow to visually guide users and maintain flow consistency.
 Always annotate your output methods with return types like `-> Data`, `-> Message`, or `-> DataFrame` to enable proper visual editor color-coding and validation.
-Use `Data`, `Message`, or `DataFrame` wrappers instead of returning plain structures for better consistency. Stay consistent with types across your components to make flows predictable and easier to build.
+Use `JSON`, `Message`, or `Table` wrappers instead of returning plain structures for better consistency. Stay consistent with types across your components to make flows predictable and easier to build.
 
 Typed annotations provide color-coding where outputs like `-> Data` or `-> Message` get distinct colors, automatic validation that blocks incompatible connections, and improved readability for users to quickly understand data flow between components.
 
@@ -422,7 +422,7 @@ def produce_message(self) -> Message:
 </TabItem>
 <TabItem value="data" label="Data">
 
-For structured data like dicts or partial texts. Connects only to `DataInput` (ports that accept `Data`).
+For structured data like dicts or partial texts. Connects only to `DataInput` (ports that accept `JSON`).
 
 ```python
 def get_processed_data(self) -> Data:
@@ -433,7 +433,7 @@ def get_processed_data(self) -> Data:
 </TabItem>
 <TabItem value="dataframe" label="DataFrame">
 
-For tabular data. Connects only to `DataFrameInput` (ports that accept `DataFrame`).
+For tabular data. Connects only to `DataFrameInput` (ports that accept `Table`).
 
 ```python
 def build_df(self) -> DataFrame:
@@ -444,7 +444,7 @@ def build_df(self) -> DataFrame:
 </TabItem>
 <TabItem value="primitives" label="Primitive Types">
 
-Returning primitives is allowed, but wrapping in `Data` or `Message` is recommended for better consistency in the visual editor.
+Returning primitives is allowed, but wrapping in `JSON` or `Message` is recommended for better consistency in the visual editor.
 
 ```python
 def compute_sum(self) -> int:
@@ -543,7 +543,7 @@ def compute_result(self) -> str:
     # ...
 ```
 
-Alternatively, instead of stopping a flow abruptly, you can return a `Data` object containing an `"error"` field. This approach allows the flow to continue operating and enables downstream components to detect and handle the error gracefully.
+Alternatively, instead of stopping a flow abruptly, you can return a `JSON` object containing an `"error"` field. This approach allows the flow to continue operating and enables downstream components to detect and handle the error gracefully.
 
 ```python
 def run_model(self) -> Data:

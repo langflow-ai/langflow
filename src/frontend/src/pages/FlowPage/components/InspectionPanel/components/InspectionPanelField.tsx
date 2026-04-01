@@ -2,7 +2,6 @@ import { useCallback, useMemo } from "react";
 import NodeInputInfo from "@/CustomNodes/GenericNode/components/NodeInputInfo";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
-import { AssistantButton } from "@/components/common/assistant";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import {
@@ -15,7 +14,6 @@ import {
   CustomParameterLabel,
   getCustomParameterTitle,
 } from "@/customization/components/custom-parameter";
-import { LANGFLOW_AGENTIC_EXPERIENCE } from "@/customization/feature-flags";
 import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
@@ -154,15 +152,6 @@ export default function InspectionPanelField({
                 </ShadTooltip>
               )}
             </div>
-            {LANGFLOW_AGENTIC_EXPERIENCE &&
-              data.node?.template[name]?.ai_enabled && (
-                <AssistantButton
-                  compData={id}
-                  handleOnNewValue={handleOnNewValue}
-                  inputValue={data.node?.template[name]?.value}
-                  type="field"
-                />
-              )}
           </div>
           <CustomParameterLabel
             name={name}

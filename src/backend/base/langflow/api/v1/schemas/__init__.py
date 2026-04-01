@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 from enum import Enum
-from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
 
@@ -179,7 +178,7 @@ class UploadFileResponse(BaseModel):
     """Upload file response schema."""
 
     flow_id: str = Field(serialization_alias="flowId")
-    file_path: Path
+    file_path: str
 
 
 class StreamData(BaseModel):
@@ -366,6 +365,7 @@ class BaseConfigResponse(BaseModel):
     for basic functionality (file uploads, event delivery, voice mode, timeouts).
     """
 
+    feature_flags: FeatureFlags
     max_file_size_upload: int
     event_delivery: Literal["polling", "streaming", "direct"]
     voice_mode_available: bool
@@ -392,6 +392,7 @@ class PublicConfigResponse(BaseConfigResponse):
             PublicConfigResponse: An instance populated with public-safe configuration values.
         """
         return cls(
+            feature_flags=FEATURE_FLAGS,
             max_file_size_upload=settings.max_file_size_upload,
             event_delivery=settings.event_delivery,
             voice_mode_available=settings.voice_mode_available,
@@ -406,7 +407,6 @@ class ConfigResponse(BaseConfigResponse):
     """
 
     type: Literal["full"] = "full"
-    feature_flags: FeatureFlags
     serialization_max_items_length: int
     serialization_max_text_length: int
     auto_saving: bool

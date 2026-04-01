@@ -205,6 +205,7 @@ async def test_get_config_unauthenticated_returns_expected_fields(client: AsyncC
     # Verify expected public fields are present
     assert "max_file_size_upload" in result, "Response must contain 'max_file_size_upload'"
     assert "event_delivery" in result, "Response must contain 'event_delivery'"
+    assert "feature_flags" in result, "Response must contain 'feature_flags'"
     assert "voice_mode_available" in result, "Response must contain 'voice_mode_available'"
     assert "frontend_timeout" in result, "Response must contain 'frontend_timeout'"
 
@@ -227,7 +228,6 @@ async def test_get_config_unauthenticated_does_not_expose_sensitive_fields(clien
         "auto_saving",
         "auto_saving_interval",
         "health_check_max_retries",
-        "feature_flags",
         "webhook_polling_interval",
         "serialization_max_items_length",
         "webhook_auth_enable",
@@ -250,6 +250,8 @@ async def test_get_config_unauthenticated_returns_correct_field_types(client: As
     assert isinstance(result["max_file_size_upload"], int), "max_file_size_upload must be an integer"
     assert isinstance(result["frontend_timeout"], int), "frontend_timeout must be an integer"
     assert isinstance(result["voice_mode_available"], bool), "voice_mode_available must be a boolean"
+    assert isinstance(result["feature_flags"], dict), "feature_flags must be an object"
+    assert result["feature_flags"].get("wxo_deployments") is False, "wxo_deployments flag should default to false"
     assert result["event_delivery"] in ["polling", "streaming", "direct"], (
         "event_delivery must be one of: polling, streaming, direct"
     )
