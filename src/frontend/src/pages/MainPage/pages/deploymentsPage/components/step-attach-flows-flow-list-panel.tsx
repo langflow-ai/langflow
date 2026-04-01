@@ -3,11 +3,14 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import type { FlowType } from "@/types/flow";
 import { cn } from "@/utils/utils";
+import type { ConnectionItem } from "../types";
 
 export const FlowListPanel = memo(function FlowListPanel({
   flows,
   selectedFlowId,
   selectedVersionByFlow,
+  attachedConnectionByFlow,
+  connections,
   removedFlowIds,
   onSelectFlow,
   onRemoveFlow,
@@ -16,6 +19,8 @@ export const FlowListPanel = memo(function FlowListPanel({
   flows: FlowType[];
   selectedFlowId: string | null;
   selectedVersionByFlow: Map<string, { versionId: string; versionTag: string }>;
+  attachedConnectionByFlow: Map<string, string[]>;
+  connections: ConnectionItem[];
   removedFlowIds?: Set<string>;
   onSelectFlow: (flowId: string) => void;
   onRemoveFlow?: (flowId: string) => void;
@@ -32,6 +37,10 @@ export const FlowListPanel = memo(function FlowListPanel({
           const versionLabel = entry?.versionTag || null;
           const attached = selectedVersionByFlow.has(flow.id);
           const isRemoved = removedFlowIds?.has(flow.id) ?? false;
+          const connectionIds = attachedConnectionByFlow.get(flow.id) ?? [];
+          const connectionNames = connectionIds
+            .map((cid) => connections.find((c) => c.id === cid)?.name)
+            .filter(Boolean);
           return (
             <button
               key={flow.id}
@@ -83,6 +92,11 @@ export const FlowListPanel = memo(function FlowListPanel({
                     </Badge>
                   )}
                 </div>
+                {connectionNames.length > 0 && !isRemoved && (
+                  <p className="truncate text-xs text-muted-foreground">
+                    {connectionNames.join(", ")}
+                  </p>
+                )}
               </div>
               {/* Detach / undo buttons for existing attachments */}
               {attached && !isRemoved && onRemoveFlow && (

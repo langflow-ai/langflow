@@ -291,6 +291,8 @@ export default function StepAttachFlows() {
           flows={flows}
           selectedFlowId={effectiveFlowId}
           selectedVersionByFlow={selectedVersionByFlow}
+          attachedConnectionByFlow={attachedConnectionByFlow}
+          connections={connections}
           removedFlowIds={isEditMode ? removedFlowIds : undefined}
           onSelectFlow={handleSelectFlow}
           onRemoveFlow={isEditMode ? handleRemoveAttachedFlow : undefined}

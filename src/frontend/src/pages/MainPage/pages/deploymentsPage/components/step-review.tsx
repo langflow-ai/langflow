@@ -34,30 +34,34 @@ export default function StepReview() {
   const reviewFlows = Array.from(selectedVersionByFlow.entries()).map(
     ([flowId, { versionId, versionTag }]) => {
       const flow = allFlows.find((f) => f.id === flowId);
+      const connectionIds = attachedConnectionByFlow.get(flowId) ?? [];
+      const flowConnections = connectionIds
+        .map((cid) => connections.find((c) => c.id === cid))
+        .filter((c): c is (typeof connections)[number] => c != null);
+
+      // Collect unique env var keys across this flow's connections
+      const seenKeys = new Set<string>();
+      const envVars: Array<{ key: string; masked: string }> = [];
+      for (const conn of flowConnections) {
+        if (conn.environmentVariables) {
+          for (const key of Object.keys(conn.environmentVariables)) {
+            if (!seenKeys.has(key)) {
+              seenKeys.add(key);
+              envVars.push({ key, masked: "••••••••" });
+            }
+          }
+        }
+      }
+
       return {
         flowId,
         flowName: flow?.name ?? "Unknown",
         versionLabel: versionTag || versionId,
+        connectionNames: flowConnections.map((c) => c.name),
+        envVars,
       };
     },
   );
-
-  // Collect all env vars from attached connections across all flows
-  const allEnvVars: Array<{ key: string; masked: string }> = [];
-  const seenKeys = new Set<string>();
-  Array.from(attachedConnectionByFlow.values()).forEach((connectionIds) => {
-    connectionIds.forEach((cid) => {
-      const conn = connections.find((c) => c.id === cid);
-      if (conn?.environmentVariables) {
-        Object.keys(conn.environmentVariables).forEach((key) => {
-          if (!seenKeys.has(key)) {
-            seenKeys.add(key);
-            allEnvVars.push({ key, masked: "••••••••" });
-          }
-        });
-      }
-    });
-  });
 
   return (
     <div className="flex flex-col gap-4 py-3">
@@ -90,14 +94,14 @@ export default function StepReview() {
                   </span>
                 </div>
               </div>
-              <div className="flex items-start gap-2">
+              <div className="flex items-center gap-2">
                 <span className="w-10 text-xs text-muted-foreground">Name</span>
                 <span className="text-sm text-foreground">
                   {deploymentName || "—"}
                 </span>
               </div>
               {selectedLlm && (
-                <div className="flex items-start gap-2">
+                <div className="flex items-center gap-2">
                   <span className="w-10 text-xs text-muted-foreground">
                     Model
                   </span>
@@ -140,41 +144,77 @@ export default function StepReview() {
         </div>
       </div>
 
-      {/* Configuration section */}
-      {allEnvVars.length > 0 && (
-        <div className="rounded-xl border border-border bg-background p-4">
-          <div className="flex flex-col gap-3">
-            <span className="text-sm font-medium text-foreground">
-              Configuration
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">
-                Env Variables
-              </span>
-              <span className="text-xs text-foreground">
-                {allEnvVars.length}{" "}
-                {allEnvVars.length === 1 ? "variable" : "variables"}
-              </span>
-            </div>
-            <div className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border">
-              {allEnvVars.map(({ key, masked }) => (
-                <div
-                  key={key}
-                  className="flex items-center justify-between bg-muted/40 px-3 py-2"
-                >
-                  <span className="font-mono text-xs text-foreground">
-                    {key}
+      {/* Configuration section – scoped per flow */}
+      {reviewFlows.length > 0 && (
+        <div className="flex flex-col gap-3">
+          {reviewFlows.map((item) => (
+            <div
+              key={item.flowId}
+              className="rounded-xl border border-border bg-background p-4"
+            >
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <ForwardedIconComponent
+                    name="Link"
+                    className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                  />
+                  <span className="text-sm font-medium text-foreground">
+                    {item.flowName}
                   </span>
+                  <Badge
+                    variant="secondaryStatic"
+                    size="tag"
+                    className="bg-accent-purple-muted text-accent-purple-muted-foreground"
+                  >
+                    {item.versionLabel}
+                  </Badge>
+                </div>
+
+                {item.connectionNames.length > 0 && (
                   <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">=</span>
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {masked}
+                    <span className="text-xs text-muted-foreground">
+                      Connections
+                    </span>
+                    <span className="text-xs text-foreground">
+                      {item.connectionNames.join(", ")}
                     </span>
                   </div>
-                </div>
-              ))}
+                )}
+
+                {item.envVars.length > 0 && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        Env Variables
+                      </span>
+                      <span className="text-xs text-foreground">
+                        {item.envVars.length}{" "}
+                        {item.envVars.length === 1 ? "variable" : "variables"}
+                      </span>
+                    </div>
+                    <div className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border">
+                      {item.envVars.map(({ key, masked }) => (
+                        <div
+                          key={key}
+                          className="flex items-center justify-between bg-muted/40 px-3 py-2"
+                        >
+                          <span className="font-mono text-xs text-foreground">
+                            {key}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">=</span>
+                            <span className="font-mono text-xs text-muted-foreground">
+                              {masked}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+          ))}
         </div>
       )}
     </div>
