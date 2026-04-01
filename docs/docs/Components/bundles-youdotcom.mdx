@@ -1,0 +1,84 @@
+---
+title: You.com
+slug: /bundles-youdotcom
+description: You.com bundle components for web search, content extraction, and AI-powered research.
+sidebar_position: 50
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **You.com** bundle.
+
+For more information, see the [You.com API documentation](https://docs.you.com).
+
+## You.com Search
+
+This component calls the You.com Search API to perform web searches optimized for LLMs and RAG pipelines.
+
+It returns search results as a [`DataFrame`](/data-types#dataframe) with titles, URLs, descriptions, and snippets.
+
+### You.com Search parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your You.com API key. |
+| query | String | Input parameter. The search query to execute. Supports operators like `site:`, `filetype:`, `AND`, `OR`, `NOT`. |
+| max_results | Integer | Input parameter. Maximum number of results to return (1-100). Default: `10`. |
+| country | String | Input parameter. Two-letter country code to filter results by country. |
+| safesearch | String | Input parameter. Content moderation filter: `off`, `moderate`, or `strict`. Default: `moderate`. |
+| freshness | String | Input parameter. Filter results by recency: `day`, `week`, `month`, or `year`. |
+| livecrawl | String | Input parameter. Which sections to live-crawl for full page content: `web`, `news`, or `all`. |
+| livecrawl_formats | String | Input parameter. Format for live-crawled content: `html` or `markdown`. |
+| language | String | Input parameter. BCP 47 language code to filter results by language. |
+
+## You.com Contents
+
+This component calls the You.com Contents API to extract clean content from any URL. It supports markdown, HTML, and metadata extraction, making it useful for RAG pipelines and content processing.
+
+It returns extracted content as a [`DataFrame`](/data-types#dataframe) with URLs, titles, and content.
+
+### You.com Contents parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your You.com API key. |
+| urls | String | Input parameter. Comma-separated list of URLs to extract content from. |
+| formats | String | Input parameter. Output format: `markdown`, `html`, or `metadata`. Default: `markdown`. |
+| crawl_timeout | Integer | Input parameter. Timeout in seconds for page crawling (1-60). Default: `10`. |
+
+## You.com Research
+
+This component calls the You.com Research API to perform multi-step reasoning with comprehensive web research. It takes a complex question and returns a detailed markdown answer with inline citations and sources.
+
+It has three outputs:
+
+* **Combined**: The research answer with sources appended as a [`Message`](/data-types#message), suitable for piping into chat outputs or other LLMs.
+* **Answer**: The research answer only as a [`Message`](/data-types#message).
+* **Sources**: The cited sources as a [`DataFrame`](/data-types#dataframe) with URLs, titles, and snippets.
+
+### You.com Research parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your You.com API key. |
+| query | String | Input parameter. The research question to investigate (max 40,000 characters). |
+| research_effort | String | Input parameter. Controls depth and time spent researching: `lite`, `standard`, `deep`, or `exhaustive`. Default: `standard`. |
+
+:::note
+Research queries can take 30 seconds to several minutes depending on the effort level. The `exhaustive` effort level provides the most thorough results but takes the longest.
+:::
+
+## See also
+
+* [**SearchApi** bundle](/bundles-searchapi)
+* [**Bing** bundle](/bundles-bing)
+* [**DuckDuckGo** bundle](/bundles-duckduckgo)

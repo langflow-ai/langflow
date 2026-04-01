@@ -427,6 +427,7 @@ module.exports = {
             "Components/bundles-weaviate",
             "Components/bundles-wikipedia",
             "Components/bundles-xai",
+            "Components/bundles-youdotcom",
           ],
         },
         "Components/components-custom-components",
