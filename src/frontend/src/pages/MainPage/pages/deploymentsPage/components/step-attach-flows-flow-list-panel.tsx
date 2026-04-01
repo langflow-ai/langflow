@@ -8,13 +8,11 @@ export const FlowListPanel = memo(function FlowListPanel({
   flows,
   selectedFlowId,
   selectedVersionByFlow,
-  attachedConnectionByFlow,
   onSelectFlow,
 }: {
   flows: FlowType[];
   selectedFlowId: string | null;
   selectedVersionByFlow: Map<string, { versionId: string; versionTag: string }>;
-  attachedConnectionByFlow: Map<string, string[]>;
   onSelectFlow: (flowId: string) => void;
 }) {
   return (
@@ -26,7 +24,7 @@ export const FlowListPanel = memo(function FlowListPanel({
         {flows.map((flow) => {
           const entry = selectedVersionByFlow.get(flow.id);
           const versionLabel = entry?.versionTag || null;
-          const attached = attachedConnectionByFlow.has(flow.id);
+          const attached = selectedVersionByFlow.has(flow.id);
           return (
             <button
               key={flow.id}
