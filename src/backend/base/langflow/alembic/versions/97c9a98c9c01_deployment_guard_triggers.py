@@ -166,6 +166,43 @@ def _upgrade_postgresql() -> None:
         """
     )
 
+    op.execute(
+        """
+        CREATE FUNCTION prevent_cross_project_attachment()
+        RETURNS TRIGGER
+        AS $$
+        DECLARE
+            flow_project_id UUID;
+            deployment_project_id UUID;
+        BEGIN
+            SELECT f.folder_id INTO flow_project_id
+            FROM flow_version fv
+            JOIN flow f ON f.id = fv.flow_id
+            WHERE fv.id = NEW.flow_version_id;
+
+            SELECT d.project_id INTO deployment_project_id
+            FROM deployment d
+            WHERE d.id = NEW.deployment_id;
+
+            IF flow_project_id IS DISTINCT FROM deployment_project_id THEN
+                RAISE EXCEPTION '%',
+                    'DEPLOYMENT_GUARD:CROSS_PROJECT_ATTACHMENT:'
+                    || 'Cannot attach a flow version to a deployment in a different project.';
+            END IF;
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+        """
+    )
+    op.execute(
+        """
+        CREATE TRIGGER trg_prevent_cross_project_attachment
+        BEFORE INSERT ON flow_version_deployment_attachment
+        FOR EACH ROW
+        EXECUTE FUNCTION prevent_cross_project_attachment();
+        """
+    )
+
 
 def _upgrade_sqlite() -> None:
     op.execute(
@@ -254,14 +291,40 @@ def _upgrade_sqlite() -> None:
         "END;\n"
     )
 
+    op.execute(
+        "CREATE TRIGGER trg_prevent_cross_project_attachment\n"
+        "BEFORE INSERT ON flow_version_deployment_attachment\n"
+        "FOR EACH ROW\n"
+        "WHEN (\n"
+        "    SELECT f.folder_id\n"
+        "    FROM flow_version fv\n"
+        "    JOIN flow f ON f.id = fv.flow_id\n"
+        "    WHERE fv.id = NEW.flow_version_id\n"
+        ") IS NOT (\n"
+        "    SELECT d.project_id\n"
+        "    FROM deployment d\n"
+        "    WHERE d.id = NEW.deployment_id\n"
+        ")\n"
+        "BEGIN\n"
+        "    SELECT RAISE(\n"
+        "        ABORT,\n"
+        "        'DEPLOYMENT_GUARD:CROSS_PROJECT_ATTACHMENT:"
+        "Cannot attach a flow version to a deployment in a different project.'\n"
+        "    );\n"
+        "END;\n"
+    )
+
 
 def _downgrade_postgresql() -> None:
+    op.execute("DROP TRIGGER IF EXISTS trg_prevent_cross_project_attachment ON flow_version_deployment_attachment;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_deployment_provider_account_move ON deployment;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_deployment_project_move ON deployment;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_flow_move_if_deployed ON flow;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_folder_delete_if_has_deployments ON folder;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_flow_version_delete_if_deployed ON flow_version;")
 
+    # LIFO order: last function created in upgrade is dropped first
+    op.execute("DROP FUNCTION IF EXISTS prevent_cross_project_attachment();")
     op.execute("DROP FUNCTION IF EXISTS prevent_deployment_provider_account_move();")
     op.execute("DROP FUNCTION IF EXISTS prevent_deployment_project_move();")
     op.execute("DROP FUNCTION IF EXISTS prevent_flow_move_if_deployed();")
@@ -270,6 +333,7 @@ def _downgrade_postgresql() -> None:
 
 
 def _downgrade_sqlite() -> None:
+    op.execute("DROP TRIGGER IF EXISTS trg_prevent_cross_project_attachment;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_deployment_provider_account_move;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_deployment_project_move;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_flow_move_if_deployed;")

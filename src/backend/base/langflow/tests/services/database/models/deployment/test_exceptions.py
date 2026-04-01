@@ -81,6 +81,45 @@ def test_parse_deployment_guard_error_deployment_provider_account_move() -> None
     )
 
 
+def test_parse_deployment_guard_error_cross_project_attachment() -> None:
+    message = (
+        "DEPLOYMENT_GUARD:CROSS_PROJECT_ATTACHMENT:Cannot attach a flow version to a deployment in a different project."
+    )
+    exc = _SimulatedDbError(message)
+
+    parsed = parse_deployment_guard_error(exc)
+
+    assert isinstance(parsed, DeploymentGuardError)
+    assert parsed.detail == "Cannot attach a flow version to a deployment in a different project."
+
+
 def test_parse_deployment_guard_error_returns_none_when_absent() -> None:
     parsed = parse_deployment_guard_error(Exception("plain error"))
+    assert parsed is None
+
+
+def test_parse_deployment_guard_error_from_implicit_context_chain() -> None:
+    """Parser should walk __context__ (implicit chaining), not just __cause__."""
+    guard_message = "DEPLOYMENT_GUARD:FLOW_VERSION_DEPLOYED:Cannot delete flow version because it is attached."
+    try:
+        try:
+            raise _SimulatedDbError(guard_message)
+        except _SimulatedDbError:
+            msg = "wrapped"
+            raise _OuterWrapperError(msg)  # noqa: B904 — intentional implicit chain
+    except _OuterWrapperError as exc:
+        parsed = parse_deployment_guard_error(exc)
+
+    assert isinstance(parsed, DeploymentGuardError)
+    assert parsed.detail == "Cannot delete flow version because it is attached."
+
+
+def test_parse_deployment_guard_error_handles_cyclic_chain() -> None:
+    """Parser must not loop forever when an exception chain contains a cycle."""
+    exc_a = Exception("a")
+    exc_b = Exception("b")
+    exc_a.__cause__ = exc_b
+    exc_b.__cause__ = exc_a
+
+    parsed = parse_deployment_guard_error(exc_a)
     assert parsed is None
