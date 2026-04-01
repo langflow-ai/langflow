@@ -1,5 +1,6 @@
 """Tests for LocalStorageService."""
 
+import sys
 from unittest.mock import Mock
 
 import anyio
@@ -361,3 +362,59 @@ class TestLocalStorageServiceEdgeCases:
         # Verify all files were saved
         listed = await local_storage_service.list_files(flow_id)
         assert len(listed) == 10
+
+    async def test_repeated_immediate_read_after_write(self, local_storage_service):
+        """Test repeated immediate read-after-write remains stable."""
+        flow_id = "immediate_read_flow"
+
+        for i in range(200):
+            file_name = f"file_{i}.bin"
+            data = f"content_{i}".encode()
+
+            await local_storage_service.save_file(flow_id, file_name, data)
+            retrieved = await local_storage_service.get_file(flow_id, file_name)
+
+            assert retrieved == data
+
+    async def test_concurrent_immediate_read_after_write(self, local_storage_service):
+        """Test save then immediate read under concurrency."""
+        flow_id = "concurrent_immediate_read_flow"
+        total_files = 100
+
+        async def save_then_read(index: int) -> None:
+            file_name = f"file_{index}.bin"
+            data = f"content_{index}".encode()
+            await local_storage_service.save_file(flow_id, file_name, data)
+            retrieved = await local_storage_service.get_file(flow_id, file_name)
+            assert retrieved == data
+
+        async with anyio.create_task_group() as tg:
+            for i in range(total_files):
+                tg.start_soon(save_then_read, i)
+
+        listed = await local_storage_service.list_files(flow_id)
+        assert len(listed) == total_files
+
+    @pytest.mark.skipif(sys.platform != "linux", reason="Linux-specific caio leak regression test")
+    async def test_storage_operations_do_not_leak_caio_contexts(self, local_storage_service):
+        """Test storage operations do not leak caio contexts on Linux."""
+        try:
+            from aiofile.aio import DEFAULT_CONTEXT_STORE
+        except ImportError:
+            pytest.skip("aiofile not installed")
+
+        contexts_before = len(DEFAULT_CONTEXT_STORE)
+
+        for i in range(50):
+            file_name = f"file_{i}.txt"
+            data = f"context-{i}".encode()
+            await local_storage_service.save_file("caio_leak_guard", file_name, data)
+            retrieved = await local_storage_service.get_file("caio_leak_guard", file_name)
+            assert retrieved == data
+
+        contexts_after = len(DEFAULT_CONTEXT_STORE)
+
+        assert contexts_after == contexts_before, (
+            f"LocalStorageService leaked {contexts_after - contexts_before} caio context(s). "
+            "This can trigger SystemError(11, 'Resource temporarily unavailable') on Linux."
+        )
