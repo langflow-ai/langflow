@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import aiofiles
 
@@ -116,7 +116,7 @@ class LocalStorageService(StorageService):
         file_path = folder_path / file_name
 
         try:
-            mode = "ab" if append else "wb"
+            mode: Literal["ab", "wb"] = "ab" if append else "wb"
             async with aiofiles.open(str(file_path), mode) as f:
                 await f.write(data)
             action = "appended to" if append else "saved"
