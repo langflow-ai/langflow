@@ -39,7 +39,7 @@ The following example flow uses one **Chroma DB** component for both reads and w
 
 ![ChromaDB receiving split text](/img/component-chroma-db.png)
 
-* When writing, it splits `Data` from a [**URL** component](/url) into chunks, computes embeddings with attached **Embedding Model** component, and then loads the chunks and embeddings into the Chroma vector store.
+* When writing, it splits `JSON` from a [**URL** component](/url) into chunks, computes embeddings with attached **Embedding Model** component, and then loads the chunks and embeddings into the Chroma vector store.
 To trigger writes, click <Icon name="Play" aria-hidden="true"/> **Run component** on the **Chroma DB** component.
 
 * When reading, it uses chat input to perform a similarity search on the vector store, and then print the search results to the chat.
@@ -61,7 +61,7 @@ For information about accepted values and functionality, see the provider's docu
 |------|------|-------------|
 | **Collection Name** (`collection_name`) | String | Input parameter.  The name of your Chroma vector store collection. Default: `langflow`. |
 | **Persist Directory** (`persist_directory`) | String | Input parameter. To persist the Chroma database, enter a relative or absolute path to a directory to store the `chroma.sqlite3` file. Leave empty for an ephemeral database. When reading or writing to an existing persistent database, specify the path to the persistent directory. |
-| **Ingest Data** (`ingest_data`) | Data or DataFrame | Input parameter. `Data` or `DataFrame` input containing the records to write to the vector store. Only relevant for writes. |
+| **Ingest Data** (`ingest_data`) | JSON or Table | Input parameter. `JSON` or `Table` input containing the records to write to the vector store. Only relevant for writes. |
 | **Search Query** (`search_query`) | String | Input parameter. The query to use for vector search. Only relevant for reads. |
 | **Cache Vector Store** (`cache_vector_store`) | Boolean | Input parameter. If `true`, the component caches the vector store in memory for faster reads. Default: Enabled (`true`). |
 | **Embedding** (`embedding`) | Embeddings | Input parameter. The embedding function to use for the vector store. By default, Chroma DB uses its built-in embeddings model, or you can attach an **Embedding Model** component to use a different provider or model. |

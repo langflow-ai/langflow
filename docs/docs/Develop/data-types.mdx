@@ -14,7 +14,7 @@ Understanding these structures helps you build applications that provide valid i
 [Component ports](/concepts-components#component-ports) represent the data types that each component can send and receive.
 Some data types are self-evident from the fields they are attached to; for example, a **System Message** field accepts [message data](#message).
 [Port colors](/concepts-components#port-colors) also indicate the port's data type.
-For example **Data** ports, represented by <Icon name="Circle" size="16" aria-label="Red data port" style={{ color: '#dc2626', fill: '#dc2626' }} />, either accept or emit [structured data objects](#data).
+For example **JSON** ports, represented by <Icon name="Circle" size="16" aria-label="Red data port" style={{ color: '#dc2626', fill: '#dc2626' }} />, either accept or emit [structured data objects](#json).
 
 When building flows, connect output ports to input ports of the same type (color) to transfer that type of data between two components.
 
@@ -25,25 +25,30 @@ Click a port to <Icon name="Search" aria-hidden="true" /> **Search** for compati
 * If two components have incompatible data types, you can use a processing component like the [**Type Convert** component](/type-convert) to convert the data between components.
 :::
 
-## Data
+## JSON
 
-**Data** ports <Icon name="Circle" size="16" aria-label="Red data port" style={{ color: '#dc2626', fill: '#dc2626' }} /> accept or produce the `Data` type, which is a structured data object, like a JSON payload that you might send to an API.
+:::tip
+In Langflow version 1.9.0, the `Data` type and port were renamed to `JSON`.
+Flows using `Data` are backwards compatible.
+:::
+
+**JSON** ports <Icon name="Circle" size="16" aria-label="Red data port" style={{ color: '#dc2626', fill: '#dc2626' }} /> accept or produce the `JSON` type, which is a structured data object, like a JSON payload that you might send to an API.
 This data type is used to pass key-value pairs between components, such as user profiles, settings, or other structured information.
 
-`Data` objects include a primary text field, indicated by a `text_key`, and additional metadata.
+`JSON` objects include a primary text field, indicated by a `text_key`, and additional metadata.
 
 ### Schema and attributes
 
-The schema is defined in [`data.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/schema/data.py).
+The schema is defined in [`data.py`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/schema/data.py).
 
 The following attributes are available:
 
-- `data`: A `Data` object stores key-value pairs within the `.data` attribute. This is the `Data` object's core dictionary. Each key is a field name, and the values can be any supported data type.
+- `data`: A `JSON` object stores key-value pairs within the `.data` attribute. This is the `JSON` object's core dictionary. Each key is a field name, and the values can be any supported data type.
 - `text_key`: The key in `data` that is considered the primary text value.
 - `default_value`: Fallback if `text_key` is missing. The default `text_key` is `"text"`.
 
 ```python
-data_obj = Data(
+data_obj = JSON(
     text_key="text",
     data={
         "text": "Hello world",
@@ -54,8 +59,8 @@ data_obj = Data(
 )
 ```
 
-`Data` objects can be serialized to JSON, created from JSON, or created from other dictionary data.
-However, the resulting `Data` object is a structured object with validation and methods, not a plain dictionary.
+`JSON` objects can be serialized to JSON, created from JSON, or created from other dictionary data.
+However, the resulting `JSON` object is a structured object with validation and methods, not a plain dictionary.
 For example, when serialized into JSON, the previous Python example becomes the following JSON object:
 
 ```json
@@ -70,21 +75,26 @@ For example, when serialized into JSON, the previous Python example becomes the 
 }
 ```
 
-## DataFrame
+## Table
 
-**DataFrame** ports <Icon name="Circle" size="16" aria-label="Pink dataframe port" style={{ color: '#ec4899', fill:'#ec4899' }} /> accept or produce [pandas DataFrames](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html), which are similar to the tabular CSV data.
+:::tip
+In Langflow version 1.9.0, the `DataFrame` type and port were renamed to `Table`.
+Flows using `DataFrame` are backwards compatible.
+:::
 
-Use the `DataFrame` type to work with data containing multiple rows or records.
+**Table** ports <Icon name="Circle" size="16" aria-label="Pink dataframe port" style={{ color: '#ec4899', fill:'#ec4899' }} /> accept or produce [pandas DataFrames](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html), which are similar to tabular CSV data.
+
+Use the `Table` type to work with data containing multiple rows or records.
 
 ### Schema and attributes
 
-The schema is defined in [`dataframe.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/schema/dataframe.py).
+The schema is defined in [`dataframe.py`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/schema/dataframe.py).
 
 The following attributes are available:
 
 - **Full pandas compatibility**: All pandas DataFrame methods and functionality are supported
 
-- **Langflow integration**: Accepts lists of [`Data` objects](#data), dictionaries, or existing DataFrames.
+- **Langflow integration**: Accepts lists of [`JSON` objects](#json), dictionaries, or existing DataFrames.
 
 - **Convenience methods**:
    - `to_data_list()`
@@ -94,11 +104,11 @@ The following attributes are available:
    - `to_data()`
    - `to_message()`
 
-- **Text key support**: Maintains `text_key` and `default_value` attributes for [`Data` object](#data) compatibility.
+- **Text key support**: Maintains `text_key` and `default_value` attributes for [`JSON` object](#json) compatibility.
 
-### DataFrame structure
+### Table structure
 
-A DataFrame has a tabular data structure with rows and columns.
+A Table has a tabular data structure with rows and columns.
 Keys are columns, and each object in the array is a row.
 
 ```json
@@ -116,7 +126,7 @@ Keys are columns, and each object in the array is a row.
 ]
 ```
 
-When represented as tabular data, the preceding DataFrame object is structured as follows:
+When represented as tabular data, the preceding Table object is structured as follows:
 
 ```text
 | name | age | email |
@@ -163,7 +173,7 @@ For more information, see the [**Message History** component](/message-history).
 
 ## Message
 
-**Message** ports <Icon name="Circle" size="16" aria-label="Indigo message port" style={{ color: '#4f46e5', fill: '#4f46e5' }} /> accept or produce `Message` data, which extends the [`Data` type](#data) with additional fields and methods for text input typically used in chat flows.
+**Message** ports <Icon name="Circle" size="16" aria-label="Indigo message port" style={{ color: '#4f46e5', fill: '#4f46e5' }} /> accept or produce `Message` data, which extends the [`JSON` type](#json) with additional fields and methods for text input typically used in chat flows.
 
 This data type is used by many components.
 
@@ -180,7 +190,7 @@ The component then constructs a complete `Message` object before passing the dat
 
 ### Schema, structure, and attributes
 
-The `Message` schema is defined in [`message.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/schema/message.py).
+The `Message` schema is defined in [`message.py`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/schema/message.py).
 Some `Message` attributes have their own schema definitions, such as [`content_block.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/schema/content_block.py).
 
 `Message` data is structured as a JSON object.
@@ -264,7 +274,7 @@ The following example shows how to inspect the output of a [**Type Convert** com
 3. On the **Type Convert** component, click <Icon name="Play" aria-hidden="true"/> **Run component**, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output**.
 
     The default output is `Message` data, which is the same as the input coming from the **Chat Input** component.
-    To see the `Message` data converted to `Data` or `DataFrame`, change the **Output Type** on the **Type Convert** component, and then rerun the component.
+    To see the `Message` data converted to `JSON` or `Table`, change the **Output Type** on the **Type Convert** component, and then rerun the component.
 
     <Tabs>
     <TabItem value="Message" label="Message" default>
@@ -274,7 +284,7 @@ The following example shows how to inspect the output of a [**Type Convert** com
     ```
 
     </TabItem>
-    <TabItem value="Data" label="Data">
+    <TabItem value="JSON" label="JSON">
 
     ```json
     {
@@ -310,7 +320,7 @@ The following example shows how to inspect the output of a [**Type Convert** com
     ```
 
     </TabItem>
-    <TabItem value="DataFrame" label="DataFrame">
+    <TabItem value="Table" label="Table">
 
     ```text
     | Field | Value |

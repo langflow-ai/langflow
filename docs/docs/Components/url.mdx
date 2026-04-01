@@ -42,15 +42,15 @@ There are two settings that control the output of the **URL** component at diffe
 
 * **Output data type**: In the component's output field (near the output port) you can select the structure of the outgoing data when it is passed to other components:
 
-    * **Extracted Pages**: Outputs a [`DataFrame`](/data-types#dataframe) that breaks the crawled pages into columns for the entire page content (`text`) and metadata like `url` and `title`.
+    * **Extracted Pages**: Outputs a [`Table`](/data-types#table) that breaks the crawled pages into columns for the entire page content (`text`) and metadata like `url` and `title`.
     * **Raw Content**: Outputs a [`Message`](/data-types#message) containing the entire text, Markdown, or HTML from the crawled pages, including metadata, in a single block of text.
 
-When used as a standard component in a flow, the **URL** component must be connected to a component that accepts the selected output data type (`DataFrame` or `Message`).
+When used as a standard component in a flow, the **URL** component must be connected to a component that accepts the selected output data type (`Table` or `Message`).
 You can connect the **URL** component directly to a compatible component, or you can use a [**Type Convert** component](/type-convert) to convert the output to another type before passing the data to other components if the data types aren't directly compatible.
 
 Processing components like the **Type Convert** component are useful with the **URL** component because it can extract a large amount of data from the crawled pages.
 For example, if you only want to pass specific fields to other components, you can use a [**Parser** component](/parser) to extract only that data from the crawled pages before passing the data to other components.
 
 When used in **Tool Mode** with an **Agent** component, the **URL** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
-The agent decides whether to use the **URL** component based on the user's query, and it can process the `DataFrame` or `Message` output directly.
+The agent decides whether to use the **URL** component based on the user's query, and it can process the `Table` or `Message` output directly.
 
