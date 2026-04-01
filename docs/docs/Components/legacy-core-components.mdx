@@ -43,13 +43,13 @@ The following Logic components are in legacy status:
 
 As an alternative to this legacy component, see the [**If-Else** component](/if-else).
 
-The **Condition** component routes `Data` objects based on a condition applied to a specified key, including Boolean validation.
+The **Condition** component routes `JSON` objects based on a condition applied to a specified key, including Boolean validation.
 It supports `true_output` and `false_output` for routing the results based on the condition evaluation.
 
 This component is useful in workflows that require conditional routing of complex data structures, enabling dynamic decision-making based on data content.
 
-It can process either a single `Data` object or a list of `Data` objects.
-The following actions occur when processing a list of `Data` objects:
+It can process either a single `JSON` object or a list of `JSON` objects.
+The following actions occur when processing a list of `JSON` objects:
 
 - Each object in the list is evaluated individually.
 - Objects meeting the condition go to `true_output`.
@@ -60,7 +60,7 @@ The **Condition** component accepts the following parameters:
 
 | Name          | Type     | Description                                 |
 |---------------|----------|---------------------------------------------|
-| data_input    | Data     | Input parameter. The Data object or list of Data objects to process. This input can handle both single items and lists. |
+| data_input    | JSON | Input parameter. The Data object or list of Data objects to process. This input can handle both single items and lists. |
 | key_name      | String   | Input parameter. The name of the key in the Data object to check.     |
 | operator      | Dropdown | Input parameter. The operator to apply. Options: `equals`, `not equals`, `contains`, `starts with`, `ends with`, `boolean validator`. Default: `equals`. |
 | compare_value | String   | Input parameter. The value to compare against. Not shown/used when operator is `boolean validator`. |
@@ -122,30 +122,30 @@ The following Processing components are in legacy status:
 <details>
 <summary>Alter Metadata</summary>
 
-Replace this legacy component with the [**Data Operations** component](/data-operations).
+Replace this legacy component with the [**JSON Operations** component](/data-operations).
 
-This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both `Message` and `Data` objects, and can also create a new `Data` object from user-provided text.
+This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both `Message` and `JSON` objects, and can also create a new `JSON` object from user-provided text.
 
 It accepts the following parameters:
 
 | Name | Display Name | Info |
 |------|--------------|------|
 | input_value | Input | Input parameter. Objects to which Metadata should be added. |
-| text_in | User Text | Input parameter. Text input; the value is contained in the 'text' attribute of the `Data` object. Empty text entries are ignored. |
+| text_in | User Text | Input parameter. Text input; the value is contained in the 'text' attribute of the `JSON` object. Empty text entries are ignored. |
 | metadata | Metadata | Input parameter. Metadata to add to each object. |
 | remove_fields | Fields to Remove | Input parameter. Metadata fields to remove. |
-| data | Data | Output parameter. List of Input objects, each with added metadata. |
+| data | JSON | Output parameter. List of Input objects, each with added metadata. |
 
 </details>
 
 <details>
 <summary>Combine Data</summary>
 
-Replace this legacy component with the [**Data Operations** component](/data-operations) or the [**Loop** component](/loop).
+Replace this legacy component with the [**JSON Operations** component](/data-operations) or the [**Loop** component](/loop).
 
-This component combines multiple data sources into a single unified `Data` object.
+This component combines multiple data sources into a single unified `JSON` object.
 
-The component iterates through a list of `Data` objects, merging them into a single `Data` object (`merged_data`).
+The component iterates through a list of `JSON` objects, merging them into a single `JSON` object (`merged_data`).
 If the input list is empty, it returns an empty data object.
 If there's only one input data object, it returns that object unchanged.
 
@@ -156,7 +156,7 @@ The merging process uses the addition operator to combine data objects.
 <details>
 <summary>Combine Text</summary>
 
-Replace this legacy component with the [**Data Operations** component](/data-operations).
+Replace this legacy component with the [**JSON Operations** component](/data-operations).
 
 This component concatenates two text inputs into a single text chunk using a specified delimiter, outputting a `Message` object with the combined text.
 
@@ -166,7 +166,7 @@ This component concatenates two text inputs into a single text chunk using a spe
 <summary>Create Data</summary>
 
 Replace this legacy component with the [**Dynamic Create Data** component](/dynamic-create-data).
-This component dynamically creates a `Data` object with a specified number of fields and a text key.
+This component dynamically creates a `JSON` object with a specified number of fields and a text key.
 
 It accepts the following parameters:
 
@@ -174,18 +174,18 @@ It accepts the following parameters:
 |------|--------------|------|
 | number_of_fields | Number of Fields | Input parameter. The number of fields to be added to the record. |
 | text_key | Text Key | Input parameter. Key that identifies the field to be used as the text content. |
-| text_key_validator | Text Key Validator | Input parameter. If enabled, checks if the given `Text Key` is present in the given `Data`. |
+| text_key_validator | Text Key Validator | Input parameter. If enabled, checks if the given `Text Key` is present in the given `JSON`. |
 
 </details>
 
 <details>
 <summary>Data to DataFrame/Data to Message</summary>
 
-Replace these legacy components with newer Processing components, such as the [**Data Operations** component](/data-operations) and [**Type Convert** component](/type-convert).
+Replace these legacy components with newer Processing components, such as the [**JSON Operations** component](/data-operations) and [**Type Convert** component](/type-convert).
 
-These components converted one or more `Data` objects into a `DataFrame` or `Message` object.
+These components converted one or more `JSON` objects into a `Table` or `Message` object.
 
-For the **Data to DataFrame** component, each `Data` object corresponds to one row in the resulting `DataFrame`.
+For the **Data to DataFrame** component, each `JSON` object corresponds to one row in the resulting `Table`.
 Fields from the `.data` attribute become columns, and the `.text` field (if present) is placed in a `text` column.
 
 </details>
@@ -193,25 +193,25 @@ Fields from the `.data` attribute become columns, and the `.text` field (if pres
 <details>
 <summary>Extract Key</summary>
 
-Replace this legacy component with the [**Data Operations** component](/data-operations).
+Replace this legacy component with the [**JSON Operations** component](/data-operations).
 
-This component extracts a specific key from a `Data` object and returns the value associated with that key.
+This component extracts a specific key from a `JSON` object and returns the value associated with that key.
 
 </details>
 
 <details>
 <summary>Filter Data</summary>
 
-Replace this legacy component with the [**Data Operations** component](/data-operations).
+Replace this legacy component with the [**JSON Operations** component](/data-operations).
 
-This component filters a `Data` object based on a list of keys (`filter_criteria`), returning a new `Data` object (`filtered_data`) that contains only the key-value pairs that match the filter criteria.
+This component filters a `JSON` object based on a list of keys (`filter_criteria`), returning a new `JSON` object (`filtered_data`) that contains only the key-value pairs that match the filter criteria.
 
 </details>
 
 <details>
 <summary>Filter Values</summary>
 
-Replace this legacy component with the [**Data Operations** component](/data-operations).
+Replace this legacy component with the [**JSON Operations** component](/data-operations).
 
 The Filter values component filters a list of data items based on a specified key, filter value, and comparison operator.
 
@@ -251,22 +251,22 @@ It accepts the following parameters:
 
 Replace this legacy component with the [**Type Convert** component](/type-convert).
 
-This component converts `Message` objects to `Data` objects.
+This component converts `Message` objects to `JSON` objects.
 
 </details>
 
 <details>
 <summary>Parse DataFrame</summary>
 
-Replace this legacy component with the [**DataFrame Operations** component](/dataframe-operations) or [**Parser** component](/parser).
+Replace this legacy component with the [**Table Operations** component](/dataframe-operations) or [**Parser** component](/parser).
 
-This component converts `DataFrame` objects into plain text using templates.
+This component converts `Table` objects into plain text using templates.
 
 It accepts the following parameters:
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| df | DataFrame | Input parameter. The DataFrame to convert to text rows. |
+| df | Table | Input parameter. The DataFrame to convert to text rows. |
 | template | Template | Input parameter. Template for formatting (use `{column_name}` placeholders). |
 | sep | Separator | Input parameter. String to join rows in output. |
 | text | Text | Output parameter. All rows combined into single text. |
@@ -278,7 +278,7 @@ It accepts the following parameters:
 
 Replace this legacy component with the [**Parser** component](/parser).
 
-This component converts and extracts JSON fields in `Message` and `Data` objects using JQ queries, then returns `filtered_data`, which is a list of `Data` objects.
+This component converts and extracts JSON fields in `Message` and `JSON` objects using JQ queries, then returns `filtered_data`, which is a list of `JSON` objects.
 
 </details>
 
@@ -294,9 +294,9 @@ This component extracts patterns in text using regular expressions. It can be us
 <details>
 <summary>Select Data</summary>
 
-Replace this legacy component with the [**Data Operations** component](/data-operations).
+Replace this legacy component with the [**JSON Operations** component](/data-operations).
 
-This component selects a single `Data` object from a list.
+This component selects a single `JSON` object from a list.
 
 It accepts the following parameters:
 
@@ -304,14 +304,14 @@ It accepts the following parameters:
 |------|--------------|------|
 | data_list | Data List | Input parameter. List of data to select from |
 | data_index | Data Index | Input parameter. Index of the data to select |
-| selected_data | Selected Data | Output parameter. The selected `Data` object. |
+| selected_data | Selected Data | Output parameter. The selected `JSON` object. |
 
 </details>
 
 <details>
 <summary>Update Data</summary>
 
-Replace this legacy component with the [**Data Operations** component](/data-operations).
+Replace this legacy component with the [**JSON Operations** component](/data-operations).
 
 This component dynamically updates or appends data with specified fields.
 
@@ -319,11 +319,11 @@ It accepts the following parameters:
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| old_data | Data | Input parameter. The records to update. |
+| old_data | JSON | Input parameter. The records to update. |
 | number_of_fields | Number of Fields | Input parameter. The number of fields to add. The maximum is 15. |
 | text_key | Text Key | Input parameter. The key for text content. |
 | text_key_validator | Text Key Validator | Input parameter. Validates the text key presence. |
-| data | Data | Output parameter. The updated Data objects. |
+| data | JSON | Output parameter. The updated Data objects. |
 
 </details>
 

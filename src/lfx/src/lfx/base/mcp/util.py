@@ -1224,7 +1224,23 @@ class MCPStdioClient:
         self._component_cache = component_cache
 
     async def _connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
-        """Connect to MCP server using stdio transport (SDK style)."""
+        """Connect to MCP server using stdio transport (SDK style).
+
+        .. todo:: Remove the ``bash -c`` / ``cmd /c`` shell wrapper and pass
+           command + args directly to ``StdioServerParameters`` (i.e.
+           ``shell=False`` semantics).  This would eliminate an entire class of
+           injection vectors (shell metacharacters, IFS manipulation,
+           BASH_ENV/BASH_FUNC_* startup injection) and allow removing several
+           entries from ``DANGEROUS_ENV_VARS`` in ``schemas.py``.  Requires:
+           1. Changing the signature to accept ``(command, args)`` separately.
+           2. Updating ``update_tools()`` to stop joining into a shell string.
+           3. Handling multi-word ``command`` config values (e.g.
+              ``"uvx mcp-server-fetch"``) by splitting at the caller.
+           4. Verifying Windows PATH resolution works without ``cmd /c``
+              (e.g. ``.cmd`` wrapper scripts like ``npx.cmd``).
+           5. Replacing the ``|| echo 'Command failed…'`` error-reporting
+              pattern with proper exit-code handling from ``anyio.open_process``.
+        """
         from mcp import StdioServerParameters
 
         command = shlex.split(command_str)
