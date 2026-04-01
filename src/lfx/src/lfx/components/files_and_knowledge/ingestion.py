@@ -278,6 +278,55 @@ class KnowledgeIngestionComponent(Component):
         metadata_path = kb_path / "embedding_metadata.json"
         metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
 
+    def _update_metadata_metrics(self, kb_path: Path, chroma: Chroma) -> None:
+        """Update embedding_metadata.json with accurate chunk/word/character counts.
+
+        This ensures the Knowledge Base modal displays correct stats after
+        component-based ingestion, matching the behavior of API-based ingestion.
+        """
+        metadata_path = kb_path / "embedding_metadata.json"
+        if not metadata_path.exists():
+            return
+
+        try:
+            metadata = json.loads(metadata_path.read_text())
+            collection = chroma._collection  # noqa: SLF001
+            chunks = collection.count()
+            metadata["chunks"] = chunks
+
+            if chunks > 0:
+                total_words = 0
+                total_characters = 0
+                batch_size = 5000
+
+                for offset in range(0, chunks, batch_size):
+                    results = collection.get(
+                        include=["documents"],
+                        limit=batch_size,
+                        offset=offset,
+                    )
+                    if not results["documents"]:
+                        break
+
+                    text_series = pd.Series(results["documents"]).astype(str).fillna("")
+                    total_characters += int(text_series.str.len().sum())
+                    total_words += int(text_series.str.split().str.len().sum())
+
+                metadata["words"] = total_words
+                metadata["characters"] = total_characters
+                metadata["avg_chunk_size"] = round(total_characters / chunks, 1)
+
+            # Update directory size
+            total_size = 0
+            for file_path in kb_path.rglob("*"):
+                if file_path.is_file():
+                    total_size += file_path.stat().st_size
+            metadata["size"] = total_size
+
+            metadata_path.write_text(json.dumps(metadata, indent=2))
+        except Exception as e:  # noqa: BLE001
+            self.log(f"Warning: Could not update metadata metrics: {e}")
+
     def _save_kb_files(
         self,
         kb_path: Path,
@@ -334,39 +383,40 @@ class KnowledgeIngestionComponent(Component):
         df_source: pd.DataFrame,
         config_list: list[dict[str, Any]],
         embedding_function,
-    ) -> None:
-        """Create vector store following Local DB component pattern."""
-        try:
-            # Set up vector store directory
-            vector_store_dir = await self._kb_path()
-            if not vector_store_dir:
-                msg = "Knowledge base path is not set. Please create a new knowledge base first."
-                raise ValueError(msg)
-            vector_store_dir.mkdir(parents=True, exist_ok=True)
+    ) -> Chroma:
+        """Create vector store following Local DB component pattern.
 
-            # Convert DataFrame to Data objects (following Local DB pattern)
-            data_objects = await self._convert_df_to_data_objects(df_source, config_list)
+        Returns the Chroma instance so callers can use it for metrics updates.
+        """
+        # Set up vector store directory
+        vector_store_dir = await self._kb_path()
+        if not vector_store_dir:
+            msg = "Knowledge base path is not set. Please create a new knowledge base first."
+            raise ValueError(msg)
+        vector_store_dir.mkdir(parents=True, exist_ok=True)
 
-            # Create vector store
-            chroma = Chroma(
-                persist_directory=str(vector_store_dir),
-                embedding_function=embedding_function,
-                collection_name=self.knowledge_base,
-            )
+        # Convert DataFrame to Data objects (following Local DB pattern)
+        data_objects = await self._convert_df_to_data_objects(df_source, config_list)
 
-            # Convert Data objects to LangChain Documents
-            documents = []
-            for data_obj in data_objects:
-                doc = data_obj.to_lc_document()
-                documents.append(doc)
+        # Create vector store
+        chroma = Chroma(
+            persist_directory=str(vector_store_dir),
+            embedding_function=embedding_function,
+            collection_name=self.knowledge_base,
+        )
 
-            # Add documents to vector store
-            if documents:
-                chroma.add_documents(documents)
-                self.log(f"Added {len(documents)} documents to vector store '{self.knowledge_base}'")
+        # Convert Data objects to LangChain Documents
+        documents = []
+        for data_obj in data_objects:
+            doc = data_obj.to_lc_document()
+            documents.append(doc)
 
-        except (OSError, ValueError, RuntimeError) as e:
-            self.log(f"Error creating vector store: {e}")
+        # Add documents to vector store
+        if documents:
+            chroma.add_documents(documents)
+            self.log(f"Added {len(documents)} documents to vector store '{self.knowledge_base}'")
+
+        return chroma
 
     async def _convert_df_to_data_objects(
         self, df_source: pd.DataFrame, config_list: list[dict[str, Any]]
@@ -598,10 +648,14 @@ class KnowledgeIngestionComponent(Component):
             )
 
             # Create vector store following Local DB component pattern
-            await self._create_vector_store(df_source, config_list, embedding_function=embedding_function)
+            chroma = await self._create_vector_store(df_source, config_list, embedding_function=embedding_function)
 
             # Save KB files (using File Component storage patterns)
             self._save_kb_files(kb_path, config_list)
+
+            # Update embedding_metadata.json with accurate text metrics
+            # so the KB modal and API show correct chunks/words/characters
+            self._update_metadata_metrics(kb_path, chroma)
 
             # Build metadata response
             meta: dict[str, Any] = {
