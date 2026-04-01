@@ -71,6 +71,11 @@ module.exports = {
           id: "Flows/concepts-flows-import",
           label: "Import and export flows"
         },
+        {
+          type: "doc",
+          id: "Flows/langflow-assistant",
+          label: "Build flows and components with Langflow Assistant"
+        },
       ],
     },
     {
@@ -266,7 +271,6 @@ module.exports = {
       label: "Components reference",
       items: [
         "Components/concepts-components",
-        "Components/langflow-assistant",
         {
           type: "category",
           label: "Core components",
