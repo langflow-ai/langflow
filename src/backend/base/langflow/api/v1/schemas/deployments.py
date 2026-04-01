@@ -344,6 +344,30 @@ class DeploymentSnapshotListResponse(_PaginatedResponse):
     snapshots: list[DeploymentSnapshotListItem]
 
 
+class DeploymentFlowVersionListItem(BaseModel):
+    """Flow version metadata attached to a deployment."""
+
+    id: UUID = Field(description="Langflow flow version UUID (`flow_version.id`).")
+    flow_id: UUID = Field(description="Langflow flow UUID (`flow.id`) for this version.")
+    version_number: int = Field(ge=1, description="Flow version number.")
+    attached_at: datetime | None = Field(
+        default=None,
+        description="Timestamp when this flow version was attached to the deployment.",
+    )
+    provider_snapshot_id: str | None = Field(
+        default=None,
+        description="Provider-owned snapshot/tool identifier linked by the attachment.",
+    )
+    provider_data: dict[str, Any] | None = Field(
+        default=None,
+        description="Provider-owned opaque payload for this attached flow version.",
+    )
+
+
+class DeploymentFlowVersionListResponse(_PaginatedResponse):
+    flow_versions: list[DeploymentFlowVersionListItem]
+
+
 class DeploymentCreateResponse(_DeploymentResponseBase):
     """API response for deployment creation."""
 

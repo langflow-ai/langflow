@@ -12,6 +12,8 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentConfigListItem,
     DeploymentConfigListResponse,
     DeploymentCreateRequest,
+    DeploymentFlowVersionListItem,
+    DeploymentFlowVersionListResponse,
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountGetResponse,
     DeploymentProviderAccountUpdateRequest,
@@ -417,3 +419,46 @@ class TestDeploymentConfigListResponse:
         assert response.page == 1
         assert response.size == 20
         assert response.total == 0
+
+
+class TestDeploymentFlowVersionListSchemas:
+    def test_flow_version_list_item_uses_attached_at(self):
+        from datetime import datetime, timezone
+
+        now = datetime.now(tz=timezone.utc)
+        item = DeploymentFlowVersionListItem(
+            id=uuid4(),
+            flow_id=uuid4(),
+            version_number=3,
+            attached_at=now,
+            provider_snapshot_id="tool-1",
+            provider_data={"connection_app_ids": ["cfg-1"]},
+        )
+        assert item.attached_at == now
+        assert item.provider_snapshot_id == "tool-1"
+        assert item.provider_data == {"connection_app_ids": ["cfg-1"]}
+
+    def test_flow_version_list_item_does_not_expose_description_or_created_at(self):
+        assert "description" not in DeploymentFlowVersionListItem.model_fields
+        assert "created_at" not in DeploymentFlowVersionListItem.model_fields
+
+    def test_flow_version_list_response_wraps_items_with_pagination(self):
+        response = DeploymentFlowVersionListResponse(
+            flow_versions=[
+                DeploymentFlowVersionListItem(
+                    id=uuid4(),
+                    flow_id=uuid4(),
+                    version_number=1,
+                    attached_at=None,
+                    provider_snapshot_id=None,
+                    provider_data=None,
+                )
+            ],
+            page=2,
+            size=5,
+            total=9,
+        )
+        assert len(response.flow_versions) == 1
+        assert response.page == 2
+        assert response.size == 5
+        assert response.total == 9

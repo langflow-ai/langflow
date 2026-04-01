@@ -104,6 +104,22 @@ def ensure_langflow_connections_binding(tool_payload: dict[str, Any]) -> dict[st
     return _ensure_dict(langflow, "connections")
 
 
+def extract_langflow_connections_binding(tool_payload: dict[str, Any]) -> dict[str, str]:
+    """Extract ``binding.langflow.connections`` from a provider tool payload.
+
+    Read-path helper: returns ``{}`` for missing or malformed nested shapes
+    without mutating the input payload.
+    """
+    binding = tool_payload.get("binding")
+    if not isinstance(binding, dict):
+        return {}
+    langflow = binding.get("langflow")
+    if not isinstance(langflow, dict):
+        return {}
+    connections = langflow.get("connections")
+    return connections if isinstance(connections, dict) else {}
+
+
 async def update_existing_tool_connection_bindings(
     *,
     clients: WxOClient,
@@ -500,13 +516,16 @@ async def verify_tools_by_ids(
             log_msg="Unexpected error while verifying wxO tool snapshots by ID",
         )
 
-    return SnapshotListResult(
-        snapshots=[
+    snapshots: list[SnapshotItem] = []
+    for tool in tools or []:
+        if not isinstance(tool, dict) or not tool.get("id"):
+            continue
+        connections = extract_langflow_connections_binding(tool)
+        snapshots.append(
             SnapshotItem(
                 id=tool["id"],
                 name=tool.get("name") or tool["id"],
+                provider_data={"connections": connections} if connections else None,
             )
-            for tool in (tools or [])
-            if isinstance(tool, dict) and tool.get("id")
-        ],
-    )
+        )
+    return SnapshotListResult(snapshots=snapshots)

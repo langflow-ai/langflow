@@ -15,6 +15,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentUpdateResult,
     ExecutionCreateResult,
     ExecutionStatusResult,
+    SnapshotListResult,
     VerifyCredentials,
 )
 from lfx.services.adapters.deployment.schema import (
@@ -69,6 +70,8 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
 )
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
+    DeploymentFlowVersionListItem,
+    DeploymentFlowVersionListResponse,
     DeploymentListResponse,
     DeploymentLlmListResponse,
     DeploymentProviderAccountCreateRequest,
@@ -95,6 +98,10 @@ if TYPE_CHECKING:
 
     from langflow.services.database.models.deployment.model import Deployment
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+    from langflow.services.database.models.flow_version.model import FlowVersion
+    from langflow.services.database.models.flow_version_deployment_attachment.model import (
+        FlowVersionDeploymentAttachment,
+    )
 
 
 @register_mapper(AdapterType.DEPLOYMENT, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
@@ -872,6 +879,55 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             total=total,
             provider_data=validated_payload,
         )
+
+    def shape_flow_version_list_result(
+        self,
+        *,
+        rows: list[tuple[FlowVersionDeploymentAttachment, FlowVersion]],
+        snapshot_result: SnapshotListResult | None,
+        page: int,
+        size: int,
+        total: int,
+    ) -> DeploymentFlowVersionListResponse:
+        snapshot_data_by_id = {
+            snapshot_id: (snapshot.provider_data if isinstance(snapshot.provider_data, dict) else None)
+            for snapshot in (snapshot_result.snapshots if snapshot_result else [])
+            if (snapshot_id := str(snapshot.id or "").strip())
+        }
+
+        flow_versions: list[DeploymentFlowVersionListItem] = []
+        for attachment, flow_version in rows:
+            snapshot_id = (attachment.provider_snapshot_id or "").strip() or None
+            flow_versions.append(
+                DeploymentFlowVersionListItem(
+                    id=flow_version.id,
+                    flow_id=flow_version.flow_id,
+                    version_number=flow_version.version_number,
+                    attached_at=attachment.created_at,
+                    provider_snapshot_id=snapshot_id,
+                    provider_data=self.shape_deployment_flow_version_item_data(
+                        snapshot_data_by_id.get(snapshot_id) if snapshot_id else None
+                    ),
+                )
+            )
+
+        return DeploymentFlowVersionListResponse(
+            flow_versions=flow_versions,
+            page=page,
+            size=size,
+            total=total,
+        )
+
+    def shape_deployment_flow_version_item_data(
+        self,
+        snapshot_data: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        if not snapshot_data:
+            return None
+        raw_connections = snapshot_data.get("connections", {})
+        if not isinstance(raw_connections, dict) or not raw_connections:
+            return None
+        return {"connection_app_ids": list(raw_connections.keys())}
 
     def _shape_provider_deployment_list_entry(self, item: Any) -> dict[str, Any]:
         item_provider_data = item.provider_data

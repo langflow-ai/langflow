@@ -3172,6 +3172,55 @@ async def test_list_snapshots_without_deployment_id_lists_tenant_scope(monkeypat
     assert result.provider_result == {"scope": "tenant"}
 
 
+@pytest.mark.anyio
+async def test_verify_tools_by_ids_returns_only_connections_provider_data():
+    fake_clients = SimpleNamespace(
+        tool=FakeToolClient(
+            [
+                {
+                    "id": "tool-1",
+                    "name": "Tool One",
+                    "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
+                    "extra": "ignored",
+                },
+                {
+                    "id": "tool-2",
+                    "name": "Tool Two",
+                    "binding": {"langflow": {"connections": {}}},
+                    "extra": "ignored",
+                },
+            ]
+        )
+    )
+
+    result = await tools_module.verify_tools_by_ids(fake_clients, ["tool-1", "tool-2"])
+
+    assert [snapshot.id for snapshot in result.snapshots] == ["tool-1", "tool-2"]
+    assert result.snapshots[0].provider_data == {"connections": {"cfg-1": "conn-1"}}
+    assert result.snapshots[1].provider_data is None
+
+
+@pytest.mark.anyio
+async def test_verify_tools_by_ids_tolerates_malformed_connections_payload():
+    fake_clients = SimpleNamespace(
+        tool=FakeToolClient(
+            [
+                {
+                    "id": "tool-1",
+                    "name": "Tool One",
+                    "binding": {"langflow": {"connections": ["not-a-dict"]}},
+                }
+            ]
+        )
+    )
+
+    result = await tools_module.verify_tools_by_ids(fake_clients, ["tool-1"])
+
+    assert len(result.snapshots) == 1
+    assert result.snapshots[0].id == "tool-1"
+    assert result.snapshots[0].provider_data is None
+
+
 # ---------------------------------------------------------------------------
 # Retry / backoff tests
 # ---------------------------------------------------------------------------

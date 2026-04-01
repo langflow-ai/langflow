@@ -82,6 +82,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.status impor
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
     build_langflow_artifact_bytes,
+    extract_langflow_connections_binding,
     upload_tool_artifact_bytes,
     verify_tools_by_ids,
 )
@@ -739,7 +740,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         for tool in tools or []:
             if not isinstance(tool, dict):
                 continue
-            connections: dict = tool.get("binding", {}).get("langflow", {}).get("connections", {})
+            connections = extract_langflow_connections_binding(tool)
             if not connections:
                 continue
             app_ids.update(connections.keys())

@@ -25,6 +25,8 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentListLlmsResult,
     DeploymentType,
     DeploymentUpdateResult,
+    SnapshotItem,
+    SnapshotListResult,
 )
 from lfx.services.adapters.payload import AdapterPayloadValidationError, PayloadSlot
 from lfx.services.adapters.schema import AdapterType
@@ -95,6 +97,63 @@ def test_watsonx_mapper_provider_list_entry_rejects_non_dict_provider_data() -> 
 
     assert exc_info.value.status_code == 500
     assert exc_info.value.detail == "Invalid deployment list item provider_data payload: expected object or null."
+
+
+def test_watsonx_mapper_shapes_flow_version_item_data_from_connections() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+
+    shaped = mapper.shape_deployment_flow_version_item_data({"connections": {"cfg-1": "conn-1", "cfg-2": "conn-2"}})
+
+    assert shaped == {"connection_app_ids": ["cfg-1", "cfg-2"]}
+
+
+def test_watsonx_mapper_flow_version_item_data_returns_none_for_missing_or_invalid_connections() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+
+    assert mapper.shape_deployment_flow_version_item_data(None) is None
+    assert mapper.shape_deployment_flow_version_item_data({}) is None
+    assert mapper.shape_deployment_flow_version_item_data({"connections": []}) is None
+    assert mapper.shape_deployment_flow_version_item_data({"connections": {}}) is None
+
+
+def test_watsonx_mapper_shapes_flow_version_list_result_with_enrichment() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    attached_at = datetime.now(tz=timezone.utc)
+    flow_version_id = uuid4()
+    flow_id = uuid4()
+
+    rows = [
+        (
+            SimpleNamespace(provider_snapshot_id="tool-1", created_at=attached_at),
+            SimpleNamespace(id=flow_version_id, flow_id=flow_id, version_number=3),
+        )
+    ]
+    snapshot_result = SnapshotListResult(
+        snapshots=[
+            SnapshotItem(
+                id="tool-1",
+                name="Tool 1",
+                provider_data={"connections": {"cfg-1": "conn-1"}},
+            )
+        ]
+    )
+
+    shaped = mapper.shape_flow_version_list_result(
+        rows=rows,
+        snapshot_result=snapshot_result,
+        page=1,
+        size=20,
+        total=1,
+    )
+
+    assert shaped.total == 1
+    assert len(shaped.flow_versions) == 1
+    assert shaped.flow_versions[0].id == flow_version_id
+    assert shaped.flow_versions[0].flow_id == flow_id
+    assert shaped.flow_versions[0].version_number == 3
+    assert shaped.flow_versions[0].attached_at == attached_at
+    assert shaped.flow_versions[0].provider_snapshot_id == "tool-1"
+    assert shaped.flow_versions[0].provider_data == {"connection_app_ids": ["cfg-1"]}
 
 
 def test_watsonx_api_payload_accepts_flow_version_create_bind_contract() -> None:

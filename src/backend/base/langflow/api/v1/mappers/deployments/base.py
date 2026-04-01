@@ -62,6 +62,8 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentConfigListItem,
     DeploymentConfigListResponse,
     DeploymentCreateRequest,
+    DeploymentFlowVersionListItem,
+    DeploymentFlowVersionListResponse,
     DeploymentListItem,
     DeploymentListResponse,
     DeploymentLlmListResponse,
@@ -91,6 +93,10 @@ if TYPE_CHECKING:
 
     from langflow.services.database.models.deployment.model import Deployment
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+    from langflow.services.database.models.flow_version.model import FlowVersion
+    from langflow.services.database.models.flow_version_deployment_attachment.model import (
+        FlowVersionDeploymentAttachment,
+    )
 
 
 @dataclass(frozen=True)
@@ -297,6 +303,34 @@ class BaseDeploymentMapper:
             )
             for row, attached_count, matched_flow_versions in rows_with_counts
         ]
+
+    def shape_flow_version_list_result(
+        self,
+        *,
+        rows: list[tuple[FlowVersionDeploymentAttachment, FlowVersion]],
+        snapshot_result: SnapshotListResult | None,
+        page: int,
+        size: int,
+        total: int,
+    ) -> DeploymentFlowVersionListResponse:
+        _ = snapshot_result
+        flow_versions = [
+            DeploymentFlowVersionListItem(
+                id=flow_version.id,
+                flow_id=flow_version.flow_id,
+                version_number=flow_version.version_number,
+                attached_at=attachment.created_at,
+                provider_snapshot_id=(attachment.provider_snapshot_id or "").strip() or None,
+                provider_data=None,
+            )
+            for attachment, flow_version in rows
+        ]
+        return DeploymentFlowVersionListResponse(
+            flow_versions=flow_versions,
+            page=page,
+            size=size,
+            total=total,
+        )
 
     def shape_deployment_create_result(self, provider_result: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_result

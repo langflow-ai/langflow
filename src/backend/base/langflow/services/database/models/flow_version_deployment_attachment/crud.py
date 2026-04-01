@@ -15,6 +15,8 @@ if TYPE_CHECKING:
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
+    from langflow.services.database.models.flow_version.model import FlowVersion
+
 
 async def create_deployment_attachment(
     db: AsyncSession,
@@ -77,6 +79,37 @@ async def list_deployment_attachments(
             FlowVersionDeploymentAttachment.deployment_id == deployment_id,
         )
         .order_by(FlowVersionDeploymentAttachment.created_at)
+    )
+    return list((await db.exec(stmt)).all())
+
+
+async def list_deployment_attachments_with_versions(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment_id: UUID,
+    offset: int,
+    limit: int,
+) -> list[tuple[FlowVersionDeploymentAttachment, FlowVersion]]:
+    """Return paginated attachment rows joined with their flow version metadata."""
+    from langflow.services.database.models.flow_version.model import FlowVersion
+
+    if limit <= 0:
+        return []
+
+    stmt = (
+        select(FlowVersionDeploymentAttachment, FlowVersion)
+        .join(FlowVersion, FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id)
+        .where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            FlowVersionDeploymentAttachment.deployment_id == deployment_id,
+        )
+        .order_by(
+            col(FlowVersionDeploymentAttachment.created_at).desc(),
+            col(FlowVersionDeploymentAttachment.updated_at).desc(),
+        )
+        .offset(offset)
+        .limit(limit)
     )
     return list((await db.exec(stmt)).all())
 
@@ -240,3 +273,17 @@ async def count_attachments_by_deployment_ids(
     )
     rows = (await db.exec(stmt)).all()
     return {deployment_id: int(count) for deployment_id, count in rows}
+
+
+async def count_deployment_attachments(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment_id: UUID,
+) -> int:
+    stmt = select(func.count()).where(
+        FlowVersionDeploymentAttachment.user_id == user_id,
+        FlowVersionDeploymentAttachment.deployment_id == deployment_id,
+    )
+    total = (await db.exec(stmt)).one()
+    return int(total or 0)
