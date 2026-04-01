@@ -6,24 +6,16 @@ from uuid import UUID
 from lfx.base.models.unified_models import (
     get_model_provider_variable_mapping,
     get_provider_required_variable_keys,
+    get_unified_models_detailed,
 )
 from lfx.log.logger import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from langflow.services.deps import get_variable_service
-from langflow.services.variable.constants import CREDENTIAL_TYPE
 from langflow.services.variable.service import DatabaseVariableService, VariableService
 
 # Preferred providers in order of priority
 PREFERRED_PROVIDERS = ["Anthropic", "OpenAI", "Google Generative AI", "Groq"]
-
-# Default models per provider
-DEFAULT_MODELS: dict[str, str] = {
-    "Anthropic": "claude-sonnet-4-5-20250514",
-    "OpenAI": "gpt-5.4",
-    "Google Generative AI": "gemini-2.0-flash",
-    "Groq": "llama-3.3-70b-versatile",
-}
 
 
 async def get_enabled_providers_for_user(
@@ -40,10 +32,9 @@ async def get_enabled_providers_for_user(
         return [], {}
 
     all_variables = await variable_service.get_all(user_id=user_id, session=session)
-    credential_names = {var.name for var in all_variables if var.type == CREDENTIAL_TYPE}
-
-    if not credential_names:
-        return [], {}
+    # Include all variable types (credentials and regular variables)
+    # so providers like Ollama (which use non-secret variables) are detected
+    all_variable_names = {var.name for var in all_variables}
 
     provider_variable_map = get_model_provider_variable_mapping()
 
@@ -52,8 +43,9 @@ async def get_enabled_providers_for_user(
 
     for provider in provider_variable_map:
         # Check if ALL required variables for this provider are present
+        # in either database variables or environment variables
         required_keys = get_provider_required_variable_keys(provider)
-        is_enabled = all(key in credential_names for key in required_keys)
+        is_enabled = all(key in all_variable_names or os.getenv(key) for key in required_keys)
 
         provider_status[provider] = is_enabled
         if is_enabled:
@@ -82,14 +74,16 @@ async def check_api_key(
     return api_key
 
 
-def get_default_provider(enabled_providers: list[str]) -> str | None:
-    """Get the default provider from enabled providers based on priority."""
-    for preferred in PREFERRED_PROVIDERS:
-        if preferred in enabled_providers:
-            return preferred
-    return enabled_providers[0] if enabled_providers else None
-
-
 def get_default_model(provider: str) -> str | None:
-    """Get the default model for a provider."""
-    return DEFAULT_MODELS.get(provider)
+    """Get the default model for a provider dynamically from the unified models registry."""
+    models_by_provider = get_unified_models_detailed(
+        providers=[provider],
+        include_unsupported=False,
+        include_deprecated=False,
+        only_defaults=True,
+    )
+    for provider_dict in models_by_provider:
+        models = provider_dict.get("models", [])
+        if models:
+            return models[0].get("model_name")
+    return None

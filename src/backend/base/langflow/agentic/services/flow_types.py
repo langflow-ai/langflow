@@ -14,8 +14,14 @@ STREAMING_EVENT_TIMEOUT_SECONDS = 300.0
 # Assistant configuration
 MAX_VALIDATION_RETRIES = 3
 VALIDATION_UI_DELAY_SECONDS = 0.3
-LANGFLOW_ASSISTANT_FLOW = "LangflowAssistant"
-TRANSLATION_FLOW = "TranslationFlow"
+LANGFLOW_ASSISTANT_FLOW = "LangflowAssistant.json"
+TRANSLATION_FLOW = "translation_flow.py"
+
+OFF_TOPIC_REFUSAL_MESSAGE = (
+    "I appreciate your interest, but I'm the Langflow Assistant and can only help with "
+    "Langflow-related topics such as building components, creating flows, configuring "
+    "deployments, and troubleshooting issues. Could you rephrase your question about Langflow?"
+)
 
 VALIDATION_RETRY_TEMPLATE = """The previous component code has an error. Please fix it.
 
@@ -35,7 +41,7 @@ class IntentResult:
     """Result from intent classification flow."""
 
     translation: str
-    intent: str  # "generate_component" or "question"
+    intent: str  # "generate_component", "question", or "off_topic"
 
 
 @dataclass

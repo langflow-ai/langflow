@@ -6,7 +6,10 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { ensureCheckboxChecked } from "../../utils/ensure-checkbox-checked";
 import { generateRandomFilename } from "../../utils/generate-filename";
-import { enableInspectPanel } from "../../utils/open-advanced-options";
+import {
+  disableInspectPanel,
+  enableInspectPanel,
+} from "../../utils/open-advanced-options";
 
 // Run tests in this file serially to avoid database conflicts with shared file state
 test.describe.configure({ mode: "serial" });
@@ -34,6 +37,8 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
+
+    await disableInspectPanel(page);
 
     await addLegacyComponents(page);
 
@@ -432,6 +437,8 @@ test(
     });
     await page.getByTestId("blank-flow").click();
 
+    await disableInspectPanel(page);
+
     await addLegacyComponents(page);
 
     await page.getByTestId("sidebar-search-input").click();
@@ -812,6 +819,8 @@ test(
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
 
+    await disableInspectPanel(page);
+
     await addLegacyComponents(page);
 
     // Add Read File Component
@@ -864,12 +873,14 @@ test(
     await expect(page.getByText("Files uploaded successfully")).toBeVisible();
     await page.getByTestId("select-files-modal-button").click();
 
-    await adjustScreenView(page);
+    await adjustScreenView(page, { numberOfZoomOut: 2 });
 
     await page.getByTestId(`remove-file-button-${file2}`).click();
 
     await page.getByTestId("dropdown-output-file").click();
-    await page.getByTestId("dropdown-item-output-file-file path").click();
+    await page
+      .getByTestId("dropdown-item-output-file-file path")
+      .click({ force: true });
     await page.getByTestId("button_run_read file").click();
     await expect(page.getByText("Built successfully")).toBeVisible({
       timeout: 30000,
