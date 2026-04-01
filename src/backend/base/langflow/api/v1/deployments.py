@@ -74,6 +74,8 @@ from langflow.api.v1.schemas.deployments import (
     ExecutionCreateResponse,
     ExecutionStatusResponse,
     FlowVersionIdsQuery,
+    SnapshotUpdateRequest,
+    SnapshotUpdateResponse,
 )
 from langflow.services.adapters.deployment.context import deployment_provider_scope
 from langflow.services.database.models.deployment.crud import (
@@ -111,6 +113,7 @@ from langflow.services.database.models.flow_version.crud import (
 )
 from langflow.services.database.models.flow_version.exceptions import FlowVersionNotFoundError
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
+    get_attachment_by_provider_snapshot_id,
     list_deployment_attachments,
 )
 
@@ -793,7 +796,15 @@ async def list_deployment_configs(
     page: Annotated[int, Query(ge=1)] = 1,
     size: Annotated[int, Query(ge=1, le=50)] = 20,
 ):
-    """List deployment configs."""
+    """List deployment configs.
+
+    Provider account resolution priority:
+    1. Both provider_id and deployment_id given → use provider_id, validate
+       the deployment belongs to it (404 if mismatched).
+    2. Only deployment_id given → infer provider from the deployment row.
+    3. Only provider_id given → tenant-scoped listing (no deployment filter).
+    4. Neither given → 422.
+    """
     deployment_row = None
     provider_account = (
         await get_owned_provider_account_or_404(
@@ -889,6 +900,142 @@ async def list_deployment_snapshots(
         snapshot_result,
         page=page,
         size=size,
+    )
+
+
+@router.patch(
+    "/snapshots/{provider_snapshot_id}",
+    response_model=SnapshotUpdateResponse,
+)
+async def update_snapshot(
+    provider_snapshot_id: Annotated[
+        str,
+        Path(min_length=1, description="Provider-owned snapshot identifier (e.g. WXO tool_id)."),
+    ],
+    *,
+    body: SnapshotUpdateRequest,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+):
+    """Replace an existing provider snapshot's content with a new flow version.
+
+    Resolves the deployment context from the attachment record linked to
+    ``provider_snapshot_id``.  Only Langflow-tracked snapshots (those with
+    a ``flow_version_deployment_attachment`` row) can be updated.
+    """
+    from langflow.services.database.models.deployment.crud import get_deployment as get_deployment_row
+    from langflow.services.database.models.flow_version.crud import get_flow_version_entry
+
+    snapshot_id = provider_snapshot_id.strip()
+
+    attachment = await get_attachment_by_provider_snapshot_id(
+        session,
+        user_id=current_user.id,
+        provider_snapshot_id=snapshot_id,
+    )
+    if attachment is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No attachment found for provider_snapshot_id '{snapshot_id}'.",
+        )
+
+    deployment = await get_deployment_row(
+        session,
+        user_id=current_user.id,
+        deployment_id=attachment.deployment_id,
+    )
+    if deployment is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Deployment for attachment (deployment_id={attachment.deployment_id}) not found.",
+        )
+
+    flow_version = await get_flow_version_entry(
+        session,
+        version_id=body.flow_version_id,
+        user_id=current_user.id,
+    )
+    if flow_version is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Flow version '{body.flow_version_id}' not found.",
+        )
+    if flow_version.data is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Flow version '{body.flow_version_id}' has no data.",
+        )
+
+    provider_account = await get_owned_provider_account_or_404(
+        provider_id=deployment.deployment_provider_account_id,
+        user_id=current_user.id,
+        db=session,
+    )
+    # NOTE: update_snapshot is currently only implemented on the WXO adapter.
+    # If additional adapters are added, this method should be promoted to the
+    # adapter protocol / base class.
+    deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
+
+    flow_definition = dict(flow_version.data)
+    flow_definition["id"] = str(flow_version.flow_id)
+
+    with handle_adapter_errors(), deployment_provider_scope(deployment.deployment_provider_account_id):
+        await deployment_adapter.update_snapshot(
+            user_id=current_user.id,
+            db=session,
+            provider_snapshot_id=snapshot_id,
+            flow_definition=flow_definition,
+            project_id=str(deployment.project_id),
+        )
+
+    # Provider mutation succeeded — update the local attachment record.
+    # If the DB flush fails, attempt a best-effort compensating re-upload
+    # of the previous flow version's artifact
+    previous_flow_version_id = attachment.flow_version_id
+    attachment.flow_version_id = body.flow_version_id
+    session.add(attachment)
+    try:
+        await session.flush()
+        await session.refresh(attachment)
+    except Exception:
+        await session.rollback()
+        try:
+            prev_version = await get_flow_version_entry(
+                session,
+                version_id=previous_flow_version_id,
+                user_id=current_user.id,
+            )
+            if prev_version and prev_version.data:
+                prev_definition = dict(prev_version.data)
+                prev_definition["id"] = str(prev_version.flow_id)
+                with deployment_provider_scope(deployment.deployment_provider_account_id):
+                    await deployment_adapter.update_snapshot(
+                        user_id=current_user.id,
+                        db=session,
+                        provider_snapshot_id=snapshot_id,
+                        flow_definition=prev_definition,
+                        project_id=str(deployment.project_id),
+                    )
+                logger.info(
+                    "Restored provider snapshot '%s' to previous flow_version_id=%s after DB commit failure.",
+                    snapshot_id,
+                    previous_flow_version_id,
+                )
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "Best-effort rollback failed for snapshot '%s'. "
+                "Provider content reflects flow_version_id=%s but attachment "
+                "record points to flow_version_id=%s. Manual reconciliation may be needed.",
+                snapshot_id,
+                body.flow_version_id,
+                previous_flow_version_id,
+                exc_info=True,
+            )
+        raise
+
+    return SnapshotUpdateResponse(
+        flow_version_id=body.flow_version_id,
+        provider_snapshot_id=snapshot_id,
     )
 
 

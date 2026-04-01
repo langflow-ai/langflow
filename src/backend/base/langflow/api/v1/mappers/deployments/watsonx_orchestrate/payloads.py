@@ -62,7 +62,11 @@ class WatsonxApiUnbindOperation(BaseModel):
 
 
 class WatsonxApiRemoveToolOperation(BaseModel):
-    """Remove-tool operation for an attached flow-version tool."""
+    """Remove-tool operation for an attached flow-version tool.
+
+    Resolves tool_id from flow_version_deployment_attachment and detaches
+    the tool from the agent.  The attachment record is also deleted.
+    """
 
     model_config = {"extra": "forbid"}
 
@@ -70,11 +74,74 @@ class WatsonxApiRemoveToolOperation(BaseModel):
     flow_version_id: UUID
 
 
-# TODO(wxo-followup): Optionally expose adapter-level `attach_tool` semantics at
-# the API layer if/when we need existing-tool attach-by-id outside flow-version refs.
-# Current API behavior is intentional and sufficient for today.
+# ---------------------------------------------------------------------------
+# Tool-id-based operations
+#
+# These operations give clients direct control over WXO tools by provider
+# tool_id, without requiring a Langflow flow_version_id.  They run in
+# parallel to the flow-version-id operations above:
+#
+# - flow_version_id ops are convenient: Langflow resolves the tool_id
+#   from internal attachment state and manages the attachment lifecycle.
+# - tool_id ops are explicit: the client supplies the provider tool_id
+#   directly.  These operations do NOT create or modify
+#   flow_version_deployment_attachment records -- they are purely
+#   provider-side agent composition changes.
+# ---------------------------------------------------------------------------
+
+
+class WatsonxApiBindToolOperation(BaseModel):
+    """Attach an existing tool to the agent and optionally bind connections.
+
+    Subsumes a separate "add_tool" operation: at the adapter level, a bind
+    with ``tool_id_with_ref`` handles both "add tool to agent if not
+    present" and "bind connections" in a single code path.  Empty
+    ``app_ids`` means attach-only (no connection bindings).
+    """
+
+    model_config = {"extra": "forbid"}
+
+    op: Literal["bind_tool"]
+    tool_id: str = Field(min_length=1, description="Provider-owned tool identifier.")
+    app_ids: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Connection app ids to bind.  Use an empty list to attach "
+            "the tool to the agent without binding connections."
+        ),
+    )
+
+
+class WatsonxApiUnbindToolOperation(BaseModel):
+    """Unbind connections from an existing tool (tool stays attached).
+
+    Only modifies connection bindings on the tool; does not detach
+    the tool from the agent.
+    """
+
+    model_config = {"extra": "forbid"}
+
+    op: Literal["unbind_tool"]
+    tool_id: str = Field(min_length=1, description="Provider-owned tool identifier.")
+    app_ids: list[str] = Field(min_length=1)
+
+
+class WatsonxApiRemoveToolByIdOperation(BaseModel):
+    """Detach a tool from the agent by provider tool_id."""
+
+    model_config = {"extra": "forbid"}
+
+    op: Literal["remove_tool_by_id"]
+    tool_id: str = Field(min_length=1, description="Provider-owned tool identifier.")
+
+
 WatsonxApiUpdateOperation = Annotated[
-    WatsonxApiBindOperation | WatsonxApiUnbindOperation | WatsonxApiRemoveToolOperation,
+    WatsonxApiBindOperation
+    | WatsonxApiUnbindOperation
+    | WatsonxApiRemoveToolOperation
+    | WatsonxApiBindToolOperation
+    | WatsonxApiUnbindToolOperation
+    | WatsonxApiRemoveToolByIdOperation,
     Field(discriminator="op"),
 ]
 
@@ -120,6 +187,10 @@ class WatsonxApiDeploymentPayloadBase(BaseModel):
         valid_app_ids = existing_app_ids.union(raw_app_ids)
         referenced_app_ids: set[str] = set()
 
+        bind_tool_ids: set[str] = set()
+        unbind_tool_ids: set[str] = set()
+        remove_tool_ids: set[str] = set()
+
         for operation in getattr(self, "operations", []):
             if isinstance(operation, (WatsonxApiBindOperation, WatsonxApiUnbindOperation)):
                 for app_id in operation.app_ids:
@@ -136,6 +207,45 @@ class WatsonxApiDeploymentPayloadBase(BaseModel):
                     if app_id in raw_app_ids:
                         msg = f"unbind.operation app_ids must reference connections.existing_app_ids only: [{app_id!r}]"
                         raise ValueError(msg)
+
+            elif isinstance(operation, WatsonxApiBindToolOperation):
+                bind_tool_ids.add(operation.tool_id.strip())
+                for app_id in operation.app_ids:
+                    referenced_app_ids.add(app_id)
+                    if app_id not in valid_app_ids:
+                        msg = (
+                            "operation app_ids must be declared in "
+                            "connections.existing_app_ids or connections.raw_payloads[*].app_id: "
+                            f"[{app_id!r}]"
+                        )
+                        raise ValueError(msg)
+            elif isinstance(operation, WatsonxApiUnbindToolOperation):
+                unbind_tool_ids.add(operation.tool_id.strip())
+                for app_id in operation.app_ids:
+                    referenced_app_ids.add(app_id)
+                    if app_id not in valid_app_ids:
+                        msg = (
+                            "operation app_ids must be declared in "
+                            "connections.existing_app_ids or connections.raw_payloads[*].app_id: "
+                            f"[{app_id!r}]"
+                        )
+                        raise ValueError(msg)
+                    if app_id in raw_app_ids:
+                        msg = (
+                            f"unbind_tool.operation app_ids must reference "
+                            f"connections.existing_app_ids only: [{app_id!r}]"
+                        )
+                        raise ValueError(msg)
+            elif isinstance(operation, WatsonxApiRemoveToolByIdOperation):
+                remove_tool_ids.add(operation.tool_id.strip())
+
+        remove_conflicts = remove_tool_ids.intersection(bind_tool_ids | unbind_tool_ids)
+        if remove_conflicts:
+            msg = (
+                "remove_tool_by_id cannot be combined with bind_tool/unbind_tool "
+                f"for the same tool_id: {sorted(remove_conflicts)}"
+            )
+            raise ValueError(msg)
 
         unused_existing_app_ids = existing_app_ids.difference(referenced_app_ids)
         if unused_existing_app_ids:
@@ -187,6 +297,12 @@ class WatsonxApiDeploymentUpdatePayload(WatsonxApiDeploymentPayloadBase):
         return self
 
 
+WatsonxApiCreateOperation = Annotated[
+    WatsonxApiBindOperation | WatsonxApiBindToolOperation,
+    Field(discriminator="op"),
+]
+
+
 class WatsonxApiDeploymentCreatePayload(WatsonxApiDeploymentPayloadBase):
     """Watsonx provider_data API contract for deployment create operations."""
 
@@ -198,7 +314,7 @@ class WatsonxApiDeploymentCreatePayload(WatsonxApiDeploymentPayloadBase):
             "applied to names of created tools and deployments."
         ),
     )
-    operations: list[WatsonxApiBindOperation] = Field(default_factory=list)
+    operations: list[WatsonxApiCreateOperation] = Field(default_factory=list)
     existing_agent_id: str | None = Field(
         default=None,
         description=(
@@ -230,21 +346,33 @@ class WatsonxApiDeploymentCreatePayload(WatsonxApiDeploymentPayloadBase):
     def validate_create_operation_requirements(self) -> WatsonxApiDeploymentCreatePayload:
         has_operations = bool(self.operations)
         has_raw_connections = bool(self.connections.raw_payloads)
-        if (has_operations or has_raw_connections) and self.resource_name_prefix is None:
-            msg = "resource_name_prefix is required when operations or connections.raw_payloads are provided."
+        has_flow_version_bind = any(isinstance(op, WatsonxApiBindOperation) for op in self.operations)
+        if (has_flow_version_bind or has_raw_connections) and self.resource_name_prefix is None:
+            msg = (
+                "resource_name_prefix is required when operations include bind "
+                "or connections.raw_payloads are provided."
+            )
             raise ValueError(msg)
         if self.existing_agent_id is None and not has_operations:
-            msg = "operations must include at least one bind operation for new agent creation."
+            msg = "operations must include at least one bind or bind_tool operation for new agent creation."
             raise ValueError(msg)
         return self
 
 
 class WatsonxApiToolAppBinding(BaseModel):
-    """API response shape for a Watsonx tool binding."""
+    """API response shape for a Watsonx tool binding.
+
+    Always includes ``tool_id`` (the provider-owned tool identifier).
+    ``flow_version_id`` is populated when the tool was created or
+    referenced through a flow-version-id operation; it is ``None``
+    for tool-id-based operations whose ``source_ref`` is not a valid
+    Langflow UUID.
+    """
 
     model_config = {"extra": "forbid"}
 
-    flow_version_id: UUID
+    flow_version_id: UUID | None = None
+    tool_id: str = Field(min_length=1, description="Provider-owned tool identifier.")
     app_ids: list[str] = Field(default_factory=list)
 
     @field_validator("app_ids", mode="before")
