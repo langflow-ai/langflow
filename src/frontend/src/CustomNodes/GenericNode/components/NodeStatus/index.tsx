@@ -19,6 +19,7 @@ import { useShortcutsStore } from "@/stores/shortcuts";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { VertexBuildTypeAPI } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
+import { formatTokenCount } from "@/utils/format-token-count";
 import { findLastNode } from "@/utils/reactflowUtils";
 import { classNames, cn } from "@/utils/utils";
 import IconComponent from "../../../../components/common/genericIconComponent";
@@ -70,7 +71,9 @@ export default function NodeStatus({
   );
 
   const connectionLink = nodeAuth?.value;
-  const apiKeyValue = (data.node?.template as any)?.api_key?.value ?? "";
+  const apiKeyValue =
+    (data.node?.template as Record<string, { value?: string }>)?.api_key
+      ?.value ?? "";
   const isAuthenticated = nodeAuth?.value === "validated";
 
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
@@ -120,8 +123,11 @@ export default function NodeStatus({
         }));
 
         const updatedAuth = Object.values(newNode?.template ?? {}).find(
-          (value: any) => value?.type === "auth",
-        ) as any;
+          (value): value is { type: string; value?: string } =>
+            typeof value === "object" &&
+            value !== null &&
+            (value as { type?: string }).type === "auth",
+        );
         const oauthUrl = updatedAuth?.value;
 
         if (
@@ -392,9 +398,9 @@ export default function NodeStatus({
           {showNodeStatus && (
             <ShadTooltip
               styleClasses={cn(
-                "border rounded-xl",
+                "border rounded-xl p-2",
                 conditionSuccess
-                  ? "border-accent-emerald-foreground bg-success-background"
+                  ? "bg-zinc-700"
                   : "border-destructive bg-error-background",
               )}
               content={
@@ -410,9 +416,27 @@ export default function NodeStatus({
               <div className="cursor-help">
                 {conditionSuccess && validationStatus?.data?.duration ? (
                   <div
-                    className="flex rounded-sm px-1 font-mono text-xs text-accent-emerald-foreground transition-colors hover:bg-accent-emerald"
+                    className="flex items-center gap-1 rounded-sm px-1 font-mono text-xs text-accent-emerald-foreground transition-colors hover:bg-accent-emerald"
                     data-testid={`node_duration_` + display_name.toLowerCase()}
                   >
+                    {validationStatus?.data?.token_usage && (
+                      <span
+                        className="flex items-center gap-1"
+                        data-testid={`node-token-count-${display_name.toLowerCase()}`}
+                      >
+                        <IconComponent
+                          name="Coins"
+                          className="h-3 w-3 text-muted-foreground"
+                          strokeWidth={ICON_STROKE_WIDTH}
+                        />
+                        <span>
+                          {formatTokenCount(
+                            validationStatus.data.token_usage.total_tokens,
+                          )}
+                        </span>
+                        <span className="text-muted-foreground">|</span>
+                      </span>
+                    )}
                     <span>
                       {normalizeTimeString(validationStatus?.data?.duration)}
                     </span>
