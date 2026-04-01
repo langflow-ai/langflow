@@ -61,12 +61,12 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         while "$ref" in s:
             ref_name = s["$ref"].split("/")[-1]
             if ref_name in visited:
-                logger.warning(f"Parsing input schema: Circular $ref detected for '{ref_name}', treating as string")
+                logger.warning("Parsing input schema: Circular $ref detected for '%s', treating as string", ref_name)
                 return {"type": "string"}
             visited.add(ref_name)
             s = defs.get(ref_name)
             if s is None:
-                logger.warning(f"Parsing input schema: Definition '{ref_name}' not found")
+                logger.warning("Parsing input schema: Definition '%s' not found", ref_name)
                 return {"type": "string"}
         return s
 
@@ -149,7 +149,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
                 return model_cache[refname]
             # Self-referential: this $ref is already being built — fall back to dict
             if refname in building:
-                logger.warning(f"Parsing input schema: Self-referential $ref '{refname}' detected, treating as dict")
+                logger.warning("Parsing input schema: Self-referential $ref '%s' detected, treating as dict", refname)
                 return dict  # type: ignore[return-value]
             target = defs.get(refname)
             if not target:
@@ -168,7 +168,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             return model_cache[name]
         # Self-referential: this model name is already being built — fall back to dict
         if name in building:
-            logger.warning(f"Parsing input schema: Self-referential model '{name}' detected, treating as dict")
+            logger.warning("Parsing input schema: Self-referential model '%s' detected, treating as dict", name)
             return dict  # type: ignore[return-value]
 
         building.add(name)

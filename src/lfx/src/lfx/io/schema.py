@@ -13,6 +13,7 @@ from lfx.inputs.inputs import (
     IntInput,
     MessageTextInput,
 )
+from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
 
 # Maximum number of options to include as enum in tool schemas.
@@ -64,16 +65,6 @@ def flatten_schema(root_schema: dict[str, Any]) -> dict[str, Any]:
     flat_props: dict[str, dict[str, Any]] = {}
     required_list: list[str] = []
 
-    def _resolve_if_ref(schema: dict[str, Any]) -> dict[str, Any]:
-        visited: set[str] = set()
-        while "$ref" in schema:
-            ref_name = schema["$ref"].split("/")[-1]
-            if ref_name in visited:
-                return {}  # Circular $ref chain — stop
-            visited.add(ref_name)
-            schema = defs.get(ref_name, {})
-        return schema
-
     def _walk(
         name: str,
         schema: dict[str, Any],
@@ -86,9 +77,18 @@ def flatten_schema(root_schema: dict[str, Any]) -> dict[str, Any]:
         while "$ref" in schema:
             ref_name = schema["$ref"].split("/")[-1]
             if ref_name in _visiting_refs or ref_name in visited:
+                logger.warning(
+                    "Flattening schema: circular/self-referential $ref '%s' detected, skipping field '%s'",
+                    ref_name,
+                    name,
+                )
                 return  # Self-referential schema — stop recursion
             visited.add(ref_name)
-            schema = defs.get(ref_name, {})
+            resolved = defs.get(ref_name)
+            if resolved is None:
+                logger.warning("Flattening schema: definition '%s' not found, skipping field '%s'", ref_name, name)
+                return
+            schema = resolved
         # Merge newly resolved refs into the visiting set for nested calls
         new_visiting = _visiting_refs | visited
 
