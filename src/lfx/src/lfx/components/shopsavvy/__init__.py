@@ -1,4 +1,4 @@
-from .product_search import ShopSavvyProductSearchComponent
 from .price_comparison import ShopSavvyPriceComparisonComponent
+from .product_search import ShopSavvyProductSearchComponent
 
-__all__ = ["ShopSavvyProductSearchComponent", "ShopSavvyPriceComparisonComponent"]
+__all__ = ["ShopSavvyPriceComparisonComponent", "ShopSavvyProductSearchComponent"]

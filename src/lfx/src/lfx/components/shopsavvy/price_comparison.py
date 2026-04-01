@@ -1,5 +1,3 @@
-import json
-
 import httpx
 from langchain_core.tools import StructuredTool, ToolException
 from pydantic import BaseModel, Field
@@ -16,9 +14,7 @@ class ShopSavvyPriceComparisonSchema(BaseModel):
     identifier: str = Field(
         ..., description="Product identifier: barcode/UPC, ASIN, URL, model number, or product name."
     )
-    retailer: str | None = Field(
-        None, description='Optional retailer domain to filter by (e.g. "amazon.com").'
-    )
+    retailer: str | None = Field(None, description='Optional retailer domain to filter by (e.g. "amazon.com").')
 
 
 class ShopSavvyPriceComparisonComponent(LCToolComponent):
