@@ -23,15 +23,13 @@ from lfx.components.agentics.helpers.model_config import validate_model_selectio
 from lfx.components.helpers import CurrentDateComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.custom.custom_component.component import get_component_toolkit
-from lfx.field_typing.range_spec import RangeSpec
 from lfx.helpers.base_model import build_model_from_schema
 from lfx.inputs.inputs import BoolInput, DropdownInput, ModelInput, StrInput
-from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput, TableInput
+from lfx.io import IntInput, MessageTextInput, MultilineInput, Output
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
-from lfx.schema.table import EditMode
 
 
 def set_advanced_true(component_input):
@@ -56,13 +54,6 @@ class AgentComponent(ToolCallingAgentComponent):
             info="Select your model provider",
             real_time_refresh=True,
             required=True,
-        ),
-        SecretStrInput(
-            name="api_key",
-            display_name="API Key",
-            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
-            real_time_refresh=True,
-            advanced=True,
         ),
         DropdownInput(
             name="base_url_ibm_watsonx",
@@ -101,74 +92,6 @@ class AgentComponent(ToolCallingAgentComponent):
             info="Number of chat history messages to retrieve.",
             advanced=True,
             show=True,
-        ),
-        IntInput(
-            name="max_tokens",
-            display_name="Max Tokens",
-            info="Maximum number of tokens to generate. Field name varies by provider.",
-            advanced=True,
-            range_spec=RangeSpec(min=1, max=128000, step=1, step_type="int"),
-        ),
-        MultilineInput(
-            name="format_instructions",
-            display_name="Output Format Instructions",
-            info="Generic Template for structured output formatting. Valid only with Structured response.",
-            value=(
-                "You are an AI that extracts structured JSON objects from unstructured text. "
-                "Use a predefined schema with expected types (str, int, float, bool, dict). "
-                "Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all. "
-                "Fill missing or ambiguous values with defaults: null for missing values. "
-                "Remove exact duplicates but keep variations that have different field values. "
-                "Always return valid JSON in the expected format, never throw errors. "
-                "If multiple objects can be extracted, return them all in the structured format."
-            ),
-            advanced=True,
-        ),
-        TableInput(
-            name="output_schema",
-            display_name="Output Schema",
-            info=(
-                "Schema Validation: Define the structure and data types for structured output. "
-                "No validation if no output schema."
-            ),
-            advanced=True,
-            required=False,
-            value=[],
-            table_schema=[
-                {
-                    "name": "name",
-                    "display_name": "Name",
-                    "type": "str",
-                    "description": "Specify the name of the output field.",
-                    "default": "field",
-                    "edit_mode": EditMode.INLINE,
-                },
-                {
-                    "name": "description",
-                    "display_name": "Description",
-                    "type": "str",
-                    "description": "Describe the purpose of the output field.",
-                    "default": "description of field",
-                    "edit_mode": EditMode.POPOVER,
-                },
-                {
-                    "name": "type",
-                    "display_name": "Type",
-                    "type": "str",
-                    "edit_mode": EditMode.INLINE,
-                    "description": ("Indicate the data type of the output field (e.g., str, int, float, bool, dict)."),
-                    "options": ["str", "int", "float", "bool", "dict"],
-                    "default": "str",
-                },
-                {
-                    "name": "multiple",
-                    "display_name": "As List",
-                    "type": "boolean",
-                    "description": "Set to True if this output field should be a list of the specified type.",
-                    "default": "False",
-                    "edit_mode": EditMode.INLINE,
-                },
-            ],
         ),
         *LCToolsAgentComponent.get_base_inputs(),
         # removed memory inputs from agent component

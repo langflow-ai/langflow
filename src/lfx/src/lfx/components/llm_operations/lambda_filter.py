@@ -10,7 +10,7 @@ from lfx.base.models.unified_models import (
     handle_model_input_update,
 )
 from lfx.custom.custom_component.component import Component
-from lfx.io import DataInput, IntInput, ModelInput, MultilineInput, Output, SecretStrInput
+from lfx.io import DataInput, ModelInput, MultilineInput, Output
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
@@ -38,6 +38,9 @@ DATA_TRANSFORM_PROMPT = (
     "Just a string starting with lambda."
 )
 
+_SAMPLE_SIZE = 1000
+_MAX_SIZE = 30000
+
 
 class LambdaFilterComponent(Component):
     display_name = "Smart Transform"
@@ -49,7 +52,7 @@ class LambdaFilterComponent(Component):
     inputs = [
         DataInput(
             name="data",
-            display_name="JSON",
+            display_name="Input",
             info="The structured data or text messages to filter or transform using a lambda function.",
             input_types=["Data", "JSON", "DataFrame", "Table", "Message"],
             is_list=True,
@@ -62,13 +65,6 @@ class LambdaFilterComponent(Component):
             real_time_refresh=True,
             required=True,
         ),
-        SecretStrInput(
-            name="api_key",
-            display_name="API Key",
-            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
-            real_time_refresh=True,
-            advanced=True,
-        ),
         MultilineInput(
             name="filter_instruction",
             display_name="Instructions",
@@ -79,20 +75,6 @@ class LambdaFilterComponent(Component):
             ),
             value="Transform the data to...",
             required=True,
-        ),
-        IntInput(
-            name="sample_size",
-            display_name="Sample Size",
-            info="For large datasets, number of items to sample from head/tail.",
-            value=1000,
-            advanced=True,
-        ),
-        IntInput(
-            name="max_size",
-            display_name="Max Size",
-            info="Number of characters for the data to be considered large.",
-            value=30000,
-            advanced=True,
         ),
     ]
 
@@ -197,11 +179,11 @@ class LambdaFilterComponent(Component):
     def _build_text_prompt(self, text: str) -> str:
         """Build prompt for text/Message transformation."""
         text_length = len(text)
-        if text_length > self.max_size:
+        if text_length > _MAX_SIZE:
             text_preview = (
                 f"Text length: {text_length} characters\n\n"
-                f"First {self.sample_size} characters:\n{text[: self.sample_size]}\n\n"
-                f"Last {self.sample_size} characters:\n{text[-self.sample_size :]}"
+                f"First {_SAMPLE_SIZE} characters:\n{text[:_SAMPLE_SIZE]}\n\n"
+                f"Last {_SAMPLE_SIZE} characters:\n{text[-_SAMPLE_SIZE:]}"
             )
         else:
             text_preview = text
@@ -213,10 +195,10 @@ class LambdaFilterComponent(Component):
         dump = json.dumps(data)
         dump_structure = json.dumps(self.get_data_structure(data))
 
-        if len(dump) > self.max_size:
+        if len(dump) > _MAX_SIZE:
             data_sample = (
-                f"Data is too long to display...\n\nFirst lines (head): {dump[: self.sample_size]}\n\n"
-                f"Last lines (tail): {dump[-self.sample_size :]}"
+                f"Data is too long to display...\n\nFirst lines (head): {dump[:_SAMPLE_SIZE]}\n\n"
+                f"Last lines (tail): {dump[-_SAMPLE_SIZE:]}"
             )
         else:
             data_sample = dump
@@ -250,7 +232,7 @@ class LambdaFilterComponent(Component):
             data = self._extract_structured_data()
             prompt = self._build_data_prompt(data)
 
-        llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
+        llm = get_llm(model=self.model, user_id=self.user_id, api_key=None)
         response = await llm.ainvoke(prompt)
         self._token_usage = extract_usage_from_message(response)
         response_text = response.content if hasattr(response, "content") else str(response)

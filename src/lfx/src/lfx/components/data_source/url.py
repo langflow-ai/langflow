@@ -10,7 +10,7 @@ from markitdown import MarkItDown
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.helpers.data import safe_convert
-from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SliderInput, TableInput
+from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SliderInput
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
@@ -126,28 +126,6 @@ class URLComponent(Component):
             required=False,
             advanced=True,
         ),
-        TableInput(
-            name="headers",
-            display_name="Headers",
-            info="The headers to send with the request",
-            table_schema=[
-                {
-                    "name": "key",
-                    "display_name": "Header",
-                    "type": "str",
-                    "description": "Header name",
-                },
-                {
-                    "name": "value",
-                    "display_name": "Value",
-                    "type": "str",
-                    "description": "Header value",
-                },
-            ],
-            value=[{"key": "User-Agent", "value": USER_AGENT}],
-            advanced=True,
-            input_types=["DataFrame", "Table"],
-        ),
         BoolInput(
             name="filter_text_html",
             display_name="Filter Text/HTML",
@@ -160,22 +138,6 @@ class URLComponent(Component):
             name="continue_on_failure",
             display_name="Continue on Failure",
             info="If enabled, continues crawling even if some requests fail.",
-            value=True,
-            required=False,
-            advanced=True,
-        ),
-        BoolInput(
-            name="check_response_status",
-            display_name="Check Response Status",
-            info="If enabled, checks the response status of the request.",
-            value=False,
-            required=False,
-            advanced=True,
-        ),
-        BoolInput(
-            name="autoset_encoding",
-            display_name="Autoset Encoding",
-            info="If enabled, automatically sets the encoding of the request.",
             value=True,
             required=False,
             advanced=True,
@@ -247,7 +209,7 @@ class URLComponent(Component):
         Returns:
             RecursiveUrlLoader: Configured loader instance
         """
-        headers_dict = {header["key"]: header["value"] for header in self.headers if header["value"] is not None}
+        headers_dict = {"User-Agent": USER_AGENT}
         extractors = {
             "HTML": self._html_extractor,
             "Markdown": self._markdown_extractor,
@@ -263,10 +225,10 @@ class URLComponent(Component):
             extractor=extractor,
             timeout=self.timeout,
             headers=headers_dict,
-            check_response_status=self.check_response_status,
+            check_response_status=False,
             continue_on_failure=self.continue_on_failure,
             base_url=url,  # Add base_url to ensure consistent domain crawling
-            autoset_encoding=self.autoset_encoding,  # Enable automatic encoding detection
+            autoset_encoding=True,  # Enable automatic encoding detection
             exclude_dirs=[],  # Allow customization of excluded directories
             link_regex=None,  # Allow customization of link filtering
         )

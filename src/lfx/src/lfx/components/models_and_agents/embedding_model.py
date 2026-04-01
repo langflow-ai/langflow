@@ -14,7 +14,6 @@ from lfx.io import (
     IntInput,
     MessageTextInput,
     ModelInput,
-    SecretStrInput,
     StrInput,
 )
 
@@ -49,13 +48,6 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             required=True,
             model_type="embedding",
             input_types=["Embeddings"],  # Override default to accept Embeddings instead of LanguageModel
-        ),
-        SecretStrInput(
-            name="api_key",
-            display_name="API Key",
-            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
-            real_time_refresh=True,
-            advanced=True,
         ),
         MessageTextInput(
             name="api_base",
@@ -95,12 +87,6 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             "Only supported by certain models.",
             advanced=True,
         ),
-        IntInput(
-            name="chunk_size",
-            display_name="Chunk Size",
-            advanced=True,
-            value=1000,
-        ),
         FloatInput(
             name="request_timeout",
             display_name="Request Timeout",
@@ -111,11 +97,6 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             display_name="Max Retries",
             advanced=True,
             value=3,
-        ),
-        BoolInput(
-            name="show_progress_bar",
-            display_name="Show Progress Bar",
-            advanced=True,
         ),
         DictInput(
             name="model_kwargs",
@@ -148,13 +129,13 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         return get_embeddings(
             model=self.model,
             user_id=self.user_id,
-            api_key=self.api_key,
+            api_key=None,
             api_base=self.api_base,
             dimensions=self.dimensions,
-            chunk_size=self.chunk_size,
+            chunk_size=1000,
             request_timeout=self.request_timeout,
             max_retries=self.max_retries,
-            show_progress_bar=self.show_progress_bar,
+            show_progress_bar=False,
             model_kwargs=self.model_kwargs,
             watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
             watsonx_project_id=getattr(self, "project_id", None),

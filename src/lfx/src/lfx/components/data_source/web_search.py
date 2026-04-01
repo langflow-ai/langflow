@@ -61,16 +61,6 @@ class WebSearchComponent(Component):
             advanced=True,
         ),
         MessageTextInput(
-            name="ceid",
-            display_name="Country:Language (ceid)",
-            info="e.g. US:en, FR:fr. Default: US:en.",
-            tool_mode=False,
-            value="US:en",
-            input_types=[],
-            required=False,
-            advanced=True,
-        ),
-        MessageTextInput(
             name="topic",
             display_name="Topic",
             info="One of: WORLD, NATION, BUSINESS, TECHNOLOGY, ENTERTAINMENT, SCIENCE, SPORTS, HEALTH.",

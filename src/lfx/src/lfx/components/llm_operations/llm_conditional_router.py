@@ -12,7 +12,6 @@ from lfx.io import (
     ModelInput,
     MultilineInput,
     Output,
-    SecretStrInput,
     TableInput,
 )
 from lfx.schema.message import Message
@@ -38,13 +37,6 @@ class SmartRouterComponent(Component):
             info="Select your model provider",
             real_time_refresh=True,
             required=True,
-        ),
-        SecretStrInput(
-            name="api_key",
-            display_name="API Key",
-            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
-            real_time_refresh=True,
-            advanced=True,
         ),
         MessageTextInput(
             name="input_text",
@@ -181,7 +173,7 @@ class SmartRouterComponent(Component):
 
         categories = getattr(self, "routes", [])
         input_text = getattr(self, "input_text", "")
-        llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
+        llm = get_llm(model=self.model, user_id=self.user_id, api_key=None)
 
         if not llm or not categories:
             self.status = "No LLM provided for categorization"

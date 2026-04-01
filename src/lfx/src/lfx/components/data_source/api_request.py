@@ -155,23 +155,6 @@ class APIRequestComponent(Component):
             ),
             advanced=True,
         ),
-        BoolInput(
-            name="save_to_file",
-            display_name="Save to File",
-            value=False,
-            info="Save the API response to a temporary file",
-            advanced=True,
-        ),
-        BoolInput(
-            name="include_httpx_metadata",
-            display_name="Include HTTPx Metadata",
-            value=False,
-            info=(
-                "Include properties such as headers, status_code, response_headers, "
-                "and redirection_history in the output."
-            ),
-            advanced=True,
-        ),
     ]
 
     outputs = [
@@ -304,8 +287,6 @@ class APIRequestComponent(Component):
         timeout: int = 5,
         *,
         follow_redirects: bool = True,
-        save_to_file: bool = False,
-        include_httpx_metadata: bool = False,
     ) -> Data:
         method = method.upper()
         if method not in {"GET", "POST", "PATCH", "PUT", "DELETE"}:
@@ -337,7 +318,7 @@ class APIRequestComponent(Component):
                 for redirect in response.history
             ]
 
-            is_binary, file_path = await self._response_info(response, with_file_path=save_to_file)
+            is_binary, _ = await self._response_info(response, with_file_path=False)
             response_headers = self._headers_to_dict(response.headers)
 
             # Base metadata
@@ -350,25 +331,6 @@ class APIRequestComponent(Component):
             if redirection_history:
                 metadata["redirection_history"] = redirection_history
 
-            if save_to_file:
-                mode = "wb" if is_binary else "w"
-                encoding = response.encoding if mode == "w" else None
-                if file_path:
-                    await aiofiles_os.makedirs(file_path.parent, exist_ok=True)
-                    if is_binary:
-                        async with aiofiles.open(file_path, "wb") as f:
-                            await f.write(response.content)
-                            await f.flush()
-                    else:
-                        async with aiofiles.open(file_path, "w", encoding=encoding) as f:
-                            await f.write(response.text)
-                            await f.flush()
-                    metadata["file_path"] = str(file_path)
-
-                if include_httpx_metadata:
-                    metadata.update({"headers": headers})
-                return Data(data=metadata)
-
             # Handle response content
             if is_binary:
                 result = response.content
@@ -380,9 +342,6 @@ class APIRequestComponent(Component):
                     result = response.text.encode("utf-8")
 
             metadata["result"] = result
-
-            if include_httpx_metadata:
-                metadata.update({"headers": headers})
 
             return Data(data=metadata)
         except (httpx.HTTPError, httpx.RequestError, httpx.TimeoutException) as exc:
@@ -429,8 +388,6 @@ class APIRequestComponent(Component):
         body = self.body or {}
         timeout = self.timeout
         follow_redirects = self.follow_redirects
-        save_to_file = self.save_to_file
-        include_httpx_metadata = self.include_httpx_metadata
 
         # Security warning when redirects are enabled
         if follow_redirects:
@@ -482,17 +439,20 @@ class APIRequestComponent(Component):
                 body,
                 timeout,
                 follow_redirects=follow_redirects,
-                save_to_file=save_to_file,
-                include_httpx_metadata=include_httpx_metadata,
             )
         self.status = result
         return result
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         """Update the build config based on the selected mode."""
+        if field_name == "curl_input" and self.mode == "cURL" and self.curl_input:
+            return self.parse_curl(self.curl_input, build_config)
+
+        if field_name == "method":
+            set_field_display(build_config, "query_params", value=(field_value != "GET"))
+            return build_config
+
         if field_name != "mode":
-            if field_name == "curl_input" and self.mode == "cURL" and self.curl_input:
-                return self.parse_curl(self.curl_input, build_config)
             return build_config
 
         if field_value == "cURL":
