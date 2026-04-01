@@ -959,6 +959,18 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             msg = f"Snapshot '{provider_snapshot_id}' not found in provider."
             raise DeploymentNotFoundError(msg)
 
+        from langflow.services.adapters.deployment.watsonx_orchestrate.utils import validate_wxo_name
+        from langflow.utils.version import get_version_info
+
+        # Normalize and validate flow name for WXO — the SDK requires alphanumeric + underscore only.
+        flow_definition["name"] = validate_wxo_name(flow_definition.get("name") or "")
+
+        # Ensure last_tested_version is present — required by the SDK.
+        if not flow_definition.get("last_tested_version"):
+            detected_version = (get_version_info() or {}).get("version")
+            if detected_version:
+                flow_definition["last_tested_version"] = detected_version
+
         tool = _create_langflow_tool(
             tool_definition=flow_definition,
             connections={},

@@ -60,3 +60,22 @@ export interface Deployment {
   resource_key: string;
   attached_count: number;
 }
+
+export interface FlowDeploymentAttachment {
+  deployment_id: string;
+  deployment_name: string;
+  deployment_type: DeploymentType;
+  provider_snapshot_id: string;
+  provider_key: string;
+  flow_version_id: string;
+  updated_at: string;
+}
+
+export interface FlowDeploymentAttachmentsResponse {
+  attachments: FlowDeploymentAttachment[];
+}
+
+export interface SnapshotUpdateResponse {
+  flow_version_id: string;
+  provider_snapshot_id: string;
+}

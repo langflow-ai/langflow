@@ -697,6 +697,24 @@ class SnapshotUpdateResponse(BaseModel):
     provider_snapshot_id: str
 
 
+class FlowDeploymentAttachmentItem(BaseModel):
+    """A single deployment attached to a flow version."""
+
+    deployment_id: UUID
+    deployment_name: str
+    deployment_type: str
+    provider_snapshot_id: str
+    provider_key: str
+    flow_version_id: UUID
+    updated_at: datetime
+
+
+class FlowDeploymentAttachmentsResponse(BaseModel):
+    """Response for GET /deployments/flow-attachments/{flow_id}."""
+
+    attachments: list[FlowDeploymentAttachmentItem]
+
+
 class DetectEnvVarsRequest(BaseModel):
     """Request body for detecting environment variables from flow version IDs."""
 
