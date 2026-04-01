@@ -1,6 +1,5 @@
 import { Background, Panel } from "@xyflow/react";
-import { cloneDeep } from "lodash";
-import { memo, useCallback } from "react";
+import { memo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import CanvasControlButton from "@/components/core/canvasControlsComponent/CanvasControlButton";
@@ -8,7 +7,6 @@ import CanvasControls from "@/components/core/canvasControlsComponent/CanvasCont
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
-import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useFlowStore from "@/stores/flowStore";
 import { AllNodeType } from "@/types/flow";
 import { cn } from "@/utils/utils";
@@ -33,36 +31,30 @@ export const MemoizedCanvasControls = memo(
     shadowBoxHeight,
     selectedNode,
   }: MemoizedCanvasControlsProps) => {
-    const currentFlow = useFlowStore(useShallow((state) => state.currentFlow));
-    const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
-    const saveFlow = useSaveFlow();
-    const isLocked = currentFlow?.locked ?? false;
-
-    const handleToggleLock = useCallback(() => {
-      if (!currentFlow) return;
-      const newFlow = cloneDeep(currentFlow);
-      newFlow.locked = !isLocked;
-      saveFlow(newFlow);
-      setCurrentFlow(newFlow);
-    }, [currentFlow, isLocked, saveFlow, setCurrentFlow]);
+    const isLocked = useFlowStore(
+      useShallow((state) => state.currentFlow?.locked),
+    );
 
     return (
       <CanvasControls selectedNode={selectedNode}>
         <Button
           unstyled
+          unselectable="on"
           size="icon"
           data-testid="lock-status"
-          className="group flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
-          title={isLocked ? "Unlock flow" : "Lock flow"}
-          onClick={handleToggleLock}
+          className="flex items-center justify-center px-2 rounded-none gap-1 cursor-default"
+          title={`Lock status: ${isLocked ? "Locked" : "Unlocked"}`}
         >
           <ForwardedIconComponent
             name={isLocked ? "Lock" : "Unlock"}
             className={cn(
-              "h-[18px] w-[18px] text-muted-foreground group-hover:text-foreground",
+              "!h-[18px] !w-[18px] text-muted-foreground",
               isLocked && "text-destructive",
             )}
           />
+          {isLocked && (
+            <span className="text-xs text-destructive">Flow Locked</span>
+          )}
         </Button>
       </CanvasControls>
     );

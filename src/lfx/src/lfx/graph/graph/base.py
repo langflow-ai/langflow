@@ -367,8 +367,6 @@ class Graph:
         if reset_output_values:
             self._reset_all_output_values()
 
-        await self.initialize_run()
-
         # The idea is for this to return a generator that yields the result of
         # each step call and raise StopIteration when the graph is done
         if config is not None:

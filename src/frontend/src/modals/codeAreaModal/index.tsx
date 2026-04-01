@@ -43,7 +43,6 @@ export default function CodeAreaModal({
   open: myOpen,
   setOpen: mySetOpen,
   componentId,
-  size = "x-large",
 }: codeAreaModalPropsType): JSX.Element {
   const [code, setCode] = useState(value);
   const [open, setOpen] =
@@ -207,7 +206,7 @@ export default function CodeAreaModal({
       }}
       open={open}
       setOpen={setOpen}
-      size={size as "x-large" | "large" | "medium" | "small"}
+      size="x-large"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
@@ -268,26 +267,16 @@ export default function CodeAreaModal({
             </div>
           </div>
           <div className="flex h-fit w-full justify-end">
-            {readonly ? (
-              <Button
-                className="mt-3"
-                onClick={() => setOpen(false)}
-                type="button"
-                data-testid="codeModalOkBtn"
-              >
-                Done
-              </Button>
-            ) : (
-              <Button
-                className="mt-3"
-                onClick={processCode}
-                type="submit"
-                id="checkAndSaveBtn"
-                data-testid="checkAndSaveBtn"
-              >
-                Check & Save
-              </Button>
-            )}
+            <Button
+              className="mt-3"
+              onClick={processCode}
+              type="submit"
+              id="checkAndSaveBtn"
+              disabled={readonly}
+              data-testid="checkAndSaveBtn"
+            >
+              Check & Save
+            </Button>
           </div>
         </div>
         <ConfirmationModal

@@ -19,8 +19,6 @@ test(
     });
     await page.getByTestId("blank-flow").click();
 
-    await disableInspectPanel(page);
-
     // Allow for legacy components
     await page.getByTestId("sidebar-options-trigger").click();
     await page.getByTestId("sidebar-legacy-switch").click();
@@ -36,6 +34,8 @@ test(
       .getByTestId("amazonAmazon Bedrock")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
+    await adjustScreenView(page);
+
     await disableInspectPanel(page);
 
     await page.getByTestId("div-generic-node").click();
@@ -45,10 +45,6 @@ test(
     await page.getByTestId("showmodel_kwargs").click();
     expect(await page.getByTestId("showmodel_kwargs").isChecked()).toBeTruthy();
     await closeAdvancedOptions(page);
-
-    await adjustScreenView(page, {
-      numberOfZoomOut: 2,
-    });
 
     await page.locator('//*[@id="keypair0"]').click();
     await page.locator('//*[@id="keypair0"]').fill("testtesttesttest");

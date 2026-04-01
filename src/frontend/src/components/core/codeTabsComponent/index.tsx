@@ -7,13 +7,11 @@ import { Button } from "../../ui/button";
 type SimplifiedCodeTabProps = {
   code: string;
   language: string;
-  maxHeight?: string;
 };
 
 export default function SimplifiedCodeTabComponent({
   code,
   language,
-  maxHeight,
 }: SimplifiedCodeTabProps) {
   const [isCopied, setIsCopied] = useState<boolean>(false);
 
@@ -55,8 +53,7 @@ export default function SimplifiedCodeTabComponent({
       <SyntaxHighlighter
         language={language.toLowerCase()}
         style={tomorrow}
-        className="!mt-0 h-full w-full overflow-auto !rounded-b-md !rounded-t-none border border-border text-left custom-scroll"
-        customStyle={maxHeight ? { maxHeight } : undefined}
+        className="!mt-0 h-full w-full overflow-scroll !rounded-b-md !rounded-t-none border border-border text-left !custom-scroll"
       >
         {code}
       </SyntaxHighlighter>
