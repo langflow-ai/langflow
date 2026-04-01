@@ -8,8 +8,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { usePostProviderAccount } from "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account";
+import { usePatchDeployment } from "@/controllers/API/queries/deployments/use-patch-deployment";
 import { usePostDeployment } from "@/controllers/API/queries/deployments/use-post-deployment";
 import useAlertStore from "@/stores/alertStore";
+import type { Deployment, ProviderAccount } from "../types";
 import {
   DeploymentStepperProvider,
   useDeploymentStepper,
@@ -30,6 +32,10 @@ interface DeploymentStepperModalProps {
   ) => void;
   initialFlowId?: string;
   initialVersionByFlow?: Map<string, { versionId: string; versionTag: string }>;
+  /** When provided, the modal opens in edit mode. */
+  editingDeployment?: Deployment | null;
+  /** The provider account for the deployment being edited. */
+  editingProviderAccount?: ProviderAccount | null;
 }
 
 export default function DeploymentStepperModal({
@@ -38,6 +44,8 @@ export default function DeploymentStepperModal({
   onTestDeployment,
   initialFlowId,
   initialVersionByFlow,
+  editingDeployment,
+  editingProviderAccount,
 }: DeploymentStepperModalProps) {
   const [isDeploying, setIsDeploying] = useState(false);
 
@@ -57,6 +65,8 @@ export default function DeploymentStepperModal({
           initialState={{
             initialFlowId,
             selectedVersionByFlow: initialVersionByFlow,
+            editingDeployment: editingDeployment ?? undefined,
+            editingProviderAccount: editingProviderAccount ?? undefined,
           }}
         >
           <DeploymentStepperModalContent
@@ -92,7 +102,10 @@ function DeploymentStepperModalContent({
   } | null>(null);
 
   const {
+    isEditMode,
+    editingDeployment,
     currentStep,
+    totalSteps,
     canGoNext,
     handleNext,
     handleBack,
@@ -101,12 +114,14 @@ function DeploymentStepperModalContent({
     needsProviderAccountCreation,
     buildProviderAccountPayload,
     buildDeploymentPayload,
+    buildDeploymentUpdatePayload,
   } = useDeploymentStepper();
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const { mutateAsync: createProviderAccount } = usePostProviderAccount();
   const { mutateAsync: createDeployment } = usePostDeployment();
+  const { mutateAsync: updateDeployment } = usePatchDeployment();
 
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
 
@@ -114,8 +129,16 @@ function DeploymentStepperModalContent({
   const isDeployed = deploymentPhase === "deployed";
   const isInDeployPhase = isDeploying || isDeployed;
 
+  // In edit mode, the logical step for content is shifted
+  // Create mode: step 1=Provider, 2=Type, 3=AttachFlows, 4=Review
+  // Edit mode:   step 1=Type, 2=AttachFlows, 3=Review
+  const logicalStep = isEditMode ? currentStep + 1 : currentStep;
+
+  // The provider step (step 1 create mode) needs account creation
+  const isProviderStep = !isEditMode && currentStep === 1;
+
   const handleStepNext = async () => {
-    if (currentStep === 1 && needsProviderAccountCreation) {
+    if (isProviderStep && needsProviderAccountCreation) {
       const accountPayload = buildProviderAccountPayload();
       if (!accountPayload) return;
       try {
@@ -141,26 +164,49 @@ function DeploymentStepperModalContent({
     try {
       setDeploymentPhase("deploying");
       onDeployingChange(true);
-      const providerId = selectedInstance?.id;
 
-      if (!providerId) {
-        setDeploymentPhase("idle");
-        return;
+      if (isEditMode) {
+        // Update existing deployment
+        const payload = buildDeploymentUpdatePayload();
+        const result = await updateDeployment(payload);
+        if (
+          result &&
+          typeof result === "object" &&
+          "id" in result &&
+          "name" in result
+        ) {
+          setCreatedDeployment({
+            id: String(result.id),
+            name: String(result.name),
+          });
+        } else {
+          setCreatedDeployment({
+            id: editingDeployment!.id,
+            name: editingDeployment!.name,
+          });
+        }
+      } else {
+        // Create new deployment
+        const providerId = selectedInstance?.id;
+        if (!providerId) {
+          setDeploymentPhase("idle");
+          return;
+        }
+        const payload = buildDeploymentPayload(providerId);
+        const result = await createDeployment(payload);
+        if (
+          result &&
+          typeof result === "object" &&
+          "id" in result &&
+          "name" in result
+        ) {
+          setCreatedDeployment({
+            id: String(result.id),
+            name: String(result.name),
+          });
+        }
       }
 
-      const payload = buildDeploymentPayload(providerId);
-      const result = await createDeployment(payload);
-      if (
-        result &&
-        typeof result === "object" &&
-        "id" in result &&
-        "name" in result
-      ) {
-        setCreatedDeployment({
-          id: String(result.id),
-          name: String(result.name),
-        });
-      }
       setDeploymentPhase("deployed");
       onDeployingChange(false);
     } catch (err: unknown) {
@@ -168,27 +214,48 @@ function DeploymentStepperModalContent({
       onDeployingChange(false);
       const message =
         err instanceof Error ? err.message : "Something went wrong";
-      setErrorData({ title: "Failed to create deployment", list: [message] });
+      const action = isEditMode ? "update" : "create";
+      setErrorData({
+        title: `Failed to ${action} deployment`,
+        list: [message],
+      });
     }
   };
 
   const handleTest = () => {
     if (!createdDeployment || !selectedInstance?.id) return;
-    onTestDeployment(createdDeployment, selectedInstance.id);
+    onTestDeployment?.(createdDeployment, selectedInstance.id);
     setOpen(false);
   };
 
+  const isFinalStep = currentStep === totalSteps;
+  const actionLabel = isEditMode ? "Update" : "Deploy";
+  const actionIcon = isEditMode ? "Save" : "Rocket";
+  const progressLabel = isEditMode ? "Updating..." : "Deploying...";
+  const successLabel = isEditMode
+    ? "Update successful"
+    : "Deployment successful";
+  const successDescription = isEditMode
+    ? createdDeployment
+      ? `"${createdDeployment.name}" has been updated.`
+      : "Your deployment has been updated."
+    : createdDeployment
+      ? `"${createdDeployment.name}" is live and ready to use.`
+      : "Your deployment is live and ready to use.";
+
   return (
     <>
-      <DialogTitle className="sr-only">Create New Deployment</DialogTitle>
+      <DialogTitle className="sr-only">
+        {isEditMode ? "Update Deployment" : "Create New Deployment"}
+      </DialogTitle>
       <DialogDescription className="sr-only">
-        Step {currentStep} of 4
+        Step {currentStep} of {totalSteps}
       </DialogDescription>
 
       {/* Title + Stepper */}
       <div className="flex flex-col gap-4 px-6 pt-6">
         <h2 className="text-center text-2xl font-semibold">
-          Create New Deployment
+          {isEditMode ? "Update Deployment" : "Create New Deployment"}
         </h2>
         <DeploymentStepper />
       </div>
@@ -200,13 +267,14 @@ function DeploymentStepperModalContent({
             <StepDeployStatus
               phase={isDeploying ? "deploying" : "deployed"}
               deploymentName={createdDeployment?.name}
+              isEditMode={isEditMode}
             />
           ) : (
             <>
-              {currentStep === 1 && <StepProvider />}
-              {currentStep === 2 && <StepType />}
-              {currentStep === 3 && <StepAttachFlows />}
-              {currentStep === 4 && <StepReview />}
+              {logicalStep === 1 && <StepProvider />}
+              {logicalStep === 2 && <StepType />}
+              {logicalStep === 3 && <StepAttachFlows />}
+              {logicalStep === 4 && <StepReview />}
             </>
           )}
         </div>
@@ -230,14 +298,17 @@ function DeploymentStepperModalContent({
             </Button>
             {!isInDeployPhase && (
               <Button
-                onClick={currentStep === 4 ? handleDeploy : handleStepNext}
+                onClick={isFinalStep ? handleDeploy : handleStepNext}
                 disabled={!canGoNext || isCreatingAccount}
                 data-testid="deployment-stepper-next"
               >
-                {currentStep === 4 ? (
+                {isFinalStep ? (
                   <>
-                    <ForwardedIconComponent name="Rocket" className="h-4 w-4" />
-                    Deploy
+                    <ForwardedIconComponent
+                      name={actionIcon}
+                      className="h-4 w-4"
+                    />
+                    {actionLabel}
                   </>
                 ) : isCreatingAccount ? (
                   "Connecting..."
@@ -249,18 +320,26 @@ function DeploymentStepperModalContent({
             {isDeploying && (
               <Button disabled data-testid="deployment-stepper-next">
                 <ForwardedIconComponent
-                  name="Rocket"
+                  name={actionIcon}
                   className="h-4 w-4 animate-pulse"
                 />
-                Deploying...
+                {progressLabel}
               </Button>
             )}
-            {isDeployed && onTestDeployment && (
+            {isDeployed && onTestDeployment && !isEditMode && (
               <Button
                 data-testid="deployment-stepper-test"
                 onClick={handleTest}
               >
                 Test
+              </Button>
+            )}
+            {isDeployed && isEditMode && (
+              <Button
+                data-testid="deployment-stepper-done"
+                onClick={() => setOpen(false)}
+              >
+                Done
               </Button>
             )}
           </div>

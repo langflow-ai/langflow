@@ -36,6 +36,10 @@ export default function DeploymentsPage() {
     null,
   );
 
+  // Edit mode state
+  const [editingDeployment, setEditingDeployment] =
+    useState<Deployment | null>(null);
+
   const location = useLocation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
@@ -57,6 +61,7 @@ export default function DeploymentsPage() {
     useGetProviderAccounts({});
   const providers = providersData?.providers ?? [];
   const firstProviderId = providers[0]?.id ?? "";
+  const firstProvider = providers[0] ?? null;
 
   const { data, isLoading } = useGetDeployments(
     { provider_id: firstProviderId },
@@ -110,6 +115,19 @@ export default function DeploymentsPage() {
     );
   }
 
+  function handleUpdateDeployment(deployment: Deployment) {
+    setEditingDeployment(deployment);
+    setStepperOpen(true);
+  }
+
+  function handleStepperClose(open: boolean) {
+    setStepperOpen(open);
+    if (!open) {
+      // Clear editing state when modal closes
+      setEditingDeployment(null);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4 pt-4">
       <div className="flex items-center justify-between">
@@ -143,6 +161,7 @@ export default function DeploymentsPage() {
             setTestTarget(deployment);
             setTestProviderId(firstProviderId);
           }}
+          onUpdateDeployment={handleUpdateDeployment}
           onDeleteDeployment={setDeleteTarget}
         />
       )}
@@ -159,11 +178,13 @@ export default function DeploymentsPage() {
 
       <DeploymentStepperModal
         open={stepperOpen}
-        setOpen={setStepperOpen}
+        setOpen={handleStepperClose}
         onTestDeployment={(deployment, providerId) => {
           setTestTarget(deployment);
           setTestProviderId(providerId);
         }}
+        editingDeployment={editingDeployment}
+        editingProviderAccount={firstProvider}
       />
 
       <TestDeploymentModal

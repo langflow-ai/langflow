@@ -6,11 +6,13 @@ type DeploymentPhase = "deploying" | "deployed";
 interface StepDeployStatusProps {
   phase: DeploymentPhase;
   deploymentName?: string;
+  isEditMode?: boolean;
 }
 
 export default function StepDeployStatus({
   phase,
   deploymentName,
+  isEditMode,
 }: StepDeployStatusProps) {
   const isDeploying = phase === "deploying";
 
@@ -53,14 +55,26 @@ export default function StepDeployStatus({
       {/* Text */}
       <div className="flex flex-col items-center gap-2 text-center">
         <h3 className="text-xl font-semibold">
-          {isDeploying ? "Deploying…" : "Deployment successful"}
+          {isDeploying
+            ? isEditMode
+              ? "Updating…"
+              : "Deploying…"
+            : isEditMode
+              ? "Update successful"
+              : "Deployment successful"}
         </h3>
         <p className="max-w-xs text-sm text-muted-foreground">
           {isDeploying
-            ? "Your deployment is being provisioned. This usually takes a few seconds."
-            : deploymentName
-              ? `"${deploymentName}" is live and ready to use.`
-              : "Your deployment is live and ready to use."}
+            ? isEditMode
+              ? "Your deployment is being updated. This usually takes a few seconds."
+              : "Your deployment is being provisioned. This usually takes a few seconds."
+            : isEditMode
+              ? deploymentName
+                ? `"${deploymentName}" has been updated.`
+                : "Your deployment has been updated."
+              : deploymentName
+                ? `"${deploymentName}" is live and ready to use.`
+                : "Your deployment is live and ready to use."}
         </p>
       </div>
 

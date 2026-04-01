@@ -7,6 +7,7 @@ import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
 
 export default function StepReview() {
   const {
+    isEditMode,
     deploymentType,
     deploymentName,
     selectedLlm,
@@ -63,7 +64,9 @@ export default function StepReview() {
       <div>
         <h2 className="text-lg font-semibold">Review & Confirm</h2>
         <p className="text-sm text-muted-foreground">
-          Review your deployment details before creating.
+          {isEditMode
+            ? "Review your changes before updating."
+            : "Review your deployment details before creating."}
         </p>
       </div>
 

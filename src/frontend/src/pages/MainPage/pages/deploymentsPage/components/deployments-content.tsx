@@ -11,6 +11,7 @@ interface DeploymentsContentProps {
   deletingId?: string | null;
   onCreateDeployment: () => void;
   onTestDeployment: (deployment: Deployment) => void;
+  onUpdateDeployment: (deployment: Deployment) => void;
   onDeleteDeployment: (deployment: Deployment) => void;
 }
 
@@ -22,6 +23,7 @@ export default function DeploymentsContent({
   deletingId,
   onCreateDeployment,
   onTestDeployment,
+  onUpdateDeployment,
   onDeleteDeployment,
 }: DeploymentsContentProps) {
   if (isLoading) return <DeploymentsLoadingSkeleton />;
@@ -33,6 +35,7 @@ export default function DeploymentsContent({
       providerName={providerName}
       deletingId={deletingId}
       onTestDeployment={onTestDeployment}
+      onUpdateDeployment={onUpdateDeployment}
       onDeleteDeployment={onDeleteDeployment}
     />
   );
