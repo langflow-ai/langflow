@@ -229,6 +229,18 @@ class DeploymentProviderAccountGetResponse(BaseModel):
     updated_at: datetime | None = Field(default=None, description="Langflow DB row update timestamp.")
 
 
+class DeploymentProviderAccountValidateResponse(BaseModel):
+    """Response for credential verification without persisting a provider account."""
+
+    valid: bool = Field(description="True when provider credentials were verified successfully.")
+    provider_key: DeploymentProviderKey = Field(description="Deployment provider key used for verification.")
+    provider_url: str = Field(description="Normalized provider service URL used for verification.")
+    resolved_provider_tenant_id: str | None = Field(
+        default=None,
+        description="Tenant id resolved from URL/provider input using provider mapper rules.",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Deployment resource schemas
 # ---------------------------------------------------------------------------

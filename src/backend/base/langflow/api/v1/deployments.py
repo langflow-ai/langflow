@@ -60,6 +60,7 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentProviderAccountGetResponse,
     DeploymentProviderAccountListResponse,
     DeploymentProviderAccountUpdateRequest,
+    DeploymentProviderAccountValidateResponse,
     DeploymentRedeployResponse,
     DeploymentSnapshotListResponse,
     DeploymentStatusResponse,
@@ -233,6 +234,39 @@ async def _delete_local_deployment_row_with_commit_retry(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Deployment was deleted from the provider, but local cleanup failed. Retry the delete request.",
             ) from exc
+
+
+@router.post(
+    "/providers/validate",
+    response_model=DeploymentProviderAccountValidateResponse,
+    status_code=status.HTTP_200_OK,
+    tags=["Deployment Providers"],
+)
+async def validate_provider_account_credentials(
+    session: DbSession,  # noqa: ARG001
+    payload: DeploymentProviderAccountCreateRequest,
+    current_user: CurrentActiveUser,
+):
+    deployment_mapper = get_deployment_mapper(payload.provider_key)
+    deployment_adapter = resolve_deployment_adapter(payload.provider_key)
+    with handle_adapter_errors():
+        verify_input = deployment_mapper.resolve_verify_credentials(payload=payload)
+        await deployment_adapter.verify_credentials(
+            user_id=current_user.id,
+            payload=verify_input,
+        )
+
+    resolved_provider_tenant_id = resolve_provider_tenant_id(
+        deployment_mapper=deployment_mapper,
+        provider_url=payload.provider_url,
+        provider_tenant_id=payload.provider_tenant_id,
+    )
+    return DeploymentProviderAccountValidateResponse(
+        valid=True,
+        provider_key=payload.provider_key,
+        provider_url=payload.provider_url,
+        resolved_provider_tenant_id=resolved_provider_tenant_id,
+    )
 
 
 @router.post(
