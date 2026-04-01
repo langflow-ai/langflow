@@ -22,7 +22,7 @@ import type { Deployment, DeploymentType } from "../types";
 
 interface DeploymentsTableProps {
   deployments: Deployment[];
-  providerName: string;
+  providerMap: Record<string, string>;
   deletingId?: string | null;
   onTestDeployment: (deployment: Deployment) => void;
   onDuplicateDeployment?: (deployment: Deployment) => void;
@@ -59,7 +59,7 @@ function formatDate(iso: string) {
 
 export default function DeploymentsTable({
   deployments,
-  providerName,
+  providerMap,
   deletingId,
   onTestDeployment,
   onDuplicateDeployment,
@@ -108,7 +108,9 @@ export default function DeploymentsTable({
                 </span>
               </TableCell>
               <TableCell>
-                <span className="text-sm">{providerName}</span>
+                <span className="text-sm">
+                  {providerMap[deployment.provider_account_id ?? ""] ?? "—"}
+                </span>
               </TableCell>
               <TableCell>
                 <span className="text-sm">

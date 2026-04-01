@@ -29,9 +29,6 @@ export const usePatchSnapshot: useMutationFunctionType<
   return mutate(["usePatchSnapshot"], fn, {
     ...options,
     onSuccess: (...args) => {
-      queryClient.refetchQueries({
-        queryKey: ["useGetFlowDeploymentAttachments"],
-      });
       queryClient.refetchQueries({ queryKey: ["useGetDeployments"] });
       options?.onSuccess?.(...args);
     },

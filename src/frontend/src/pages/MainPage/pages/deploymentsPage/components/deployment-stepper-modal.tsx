@@ -9,11 +9,12 @@ import {
 } from "@/components/ui/dialog";
 import { usePostProviderAccount } from "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account";
 import { usePostDeployment } from "@/controllers/API/queries/deployments/use-post-deployment";
-import useAlertStore from "@/stores/alertStore";
 import {
   DeploymentStepperProvider,
   useDeploymentStepper,
 } from "../contexts/deployment-stepper-context";
+import { useErrorAlert } from "../hooks/use-error-alert";
+import type { DeploymentProvider, ProviderAccount } from "../types";
 import DeploymentStepper from "./deployment-stepper";
 import StepAttachFlows from "./step-attach-flows";
 import StepDeployStatus from "./step-deploy-status";
@@ -30,6 +31,8 @@ interface DeploymentStepperModalProps {
   ) => void;
   initialFlowId?: string;
   initialVersionByFlow?: Map<string, { versionId: string; versionTag: string }>;
+  initialProvider?: DeploymentProvider;
+  initialInstance?: ProviderAccount;
 }
 
 export default function DeploymentStepperModal({
@@ -38,6 +41,8 @@ export default function DeploymentStepperModal({
   onTestDeployment,
   initialFlowId,
   initialVersionByFlow,
+  initialProvider,
+  initialInstance,
 }: DeploymentStepperModalProps) {
   const [isDeploying, setIsDeploying] = useState(false);
 
@@ -54,9 +59,13 @@ export default function DeploymentStepperModal({
         closeButtonClassName="top-5 right-4"
       >
         <DeploymentStepperProvider
+          key={`${open}-${initialProvider?.id ?? ""}-${initialInstance?.id ?? ""}`}
           initialState={{
             initialFlowId,
             selectedVersionByFlow: initialVersionByFlow,
+            initialProvider,
+            initialInstance,
+            initialStep: initialProvider && initialInstance ? 2 : 1,
           }}
         >
           <DeploymentStepperModalContent
@@ -93,6 +102,7 @@ function DeploymentStepperModalContent({
 
   const {
     currentStep,
+    minStep,
     canGoNext,
     handleNext,
     handleBack,
@@ -103,7 +113,7 @@ function DeploymentStepperModalContent({
     buildDeploymentPayload,
   } = useDeploymentStepper();
 
-  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const showError = useErrorAlert();
 
   const { mutateAsync: createProviderAccount } = usePostProviderAccount();
   const { mutateAsync: createDeployment } = usePostDeployment();
@@ -123,12 +133,7 @@ function DeploymentStepperModalContent({
         const newAccount = await createProviderAccount(accountPayload);
         setSelectedInstance(newAccount);
       } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : "Something went wrong";
-        setErrorData({
-          title: "Failed to create provider account",
-          list: [message],
-        });
+        showError("Failed to create provider account", err);
         return;
       } finally {
         setIsCreatingAccount(false);
@@ -166,15 +171,13 @@ function DeploymentStepperModalContent({
     } catch (err: unknown) {
       setDeploymentPhase("idle");
       onDeployingChange(false);
-      const message =
-        err instanceof Error ? err.message : "Something went wrong";
-      setErrorData({ title: "Failed to create deployment", list: [message] });
+      showError("Failed to create deployment", err);
     }
   };
 
   const handleTest = () => {
     if (!createdDeployment || !selectedInstance?.id) return;
-    onTestDeployment(createdDeployment, selectedInstance.id);
+    onTestDeployment?.(createdDeployment, selectedInstance.id);
     setOpen(false);
   };
 
@@ -213,21 +216,19 @@ function DeploymentStepperModalContent({
 
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-border px-6 py-4">
-          {!isDeployed && (
-            <button
-              type="button"
-              onClick={handleBack}
-              disabled={currentStep === 1 || isDeploying}
-              className="text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
-            >
-              Back
-            </button>
-          )}
-          {isDeployed && <span />}
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            {isDeployed ? "Close" : "Cancel"}
+          </Button>
           <div className="flex items-center gap-3">
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              {isDeployed ? "Close" : "Cancel"}
-            </Button>
+            {!isDeployed && (
+              <Button
+                variant="outline"
+                onClick={handleBack}
+                disabled={currentStep === minStep || isDeploying}
+              >
+                Back
+              </Button>
+            )}
             {!isInDeployPhase && (
               <Button
                 onClick={currentStep === 4 ? handleDeploy : handleStepNext}

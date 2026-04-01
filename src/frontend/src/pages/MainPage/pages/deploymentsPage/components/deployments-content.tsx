@@ -7,7 +7,7 @@ interface DeploymentsContentProps {
   isLoading: boolean;
   isEmpty: boolean;
   deployments: Deployment[];
-  providerName: string;
+  providerMap: Record<string, string>;
   deletingId?: string | null;
   onCreateDeployment: () => void;
   onTestDeployment: (deployment: Deployment) => void;
@@ -18,7 +18,7 @@ export default function DeploymentsContent({
   isLoading,
   isEmpty,
   deployments,
-  providerName,
+  providerMap,
   deletingId,
   onCreateDeployment,
   onTestDeployment,
@@ -30,7 +30,7 @@ export default function DeploymentsContent({
   return (
     <DeploymentsTable
       deployments={deployments}
-      providerName={providerName}
+      providerMap={providerMap}
       deletingId={deletingId}
       onTestDeployment={onTestDeployment}
       onDeleteDeployment={onDeleteDeployment}

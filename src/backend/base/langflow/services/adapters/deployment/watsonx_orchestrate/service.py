@@ -959,6 +959,11 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         clients = await self._get_provider_clients(user_id=user_id, db=db)
 
         flow_definition = flow_artifact.model_dump(exclude={"provider_data"})
+        flow_id = flow_definition.get("id")
+        if flow_id is None:
+            msg = "flow_definition must have an id"
+            raise ValueError(msg)
+        flow_definition["id"] = str(flow_id)
         flow_definition["name"] = normalize_wxo_name(flow_definition.get("name") or "")
         if not flow_definition.get("last_tested_version"):
             detected_version = (get_version_info() or {}).get("version")

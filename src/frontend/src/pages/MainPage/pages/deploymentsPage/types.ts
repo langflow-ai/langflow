@@ -65,20 +65,8 @@ export interface Deployment {
   resource_key: string;
   attached_count: number;
   matched_attachments: DeploymentMatchedAttachment[] | null;
-}
-
-export interface FlowDeploymentAttachment {
-  deployment_id: string;
-  deployment_name: string;
-  deployment_type: DeploymentType;
-  provider_snapshot_id: string;
-  provider_key: string;
-  flow_version_id: string;
-  updated_at: string;
-}
-
-export interface FlowDeploymentAttachmentsResponse {
-  attachments: FlowDeploymentAttachment[];
+  /** Populated client-side when merging deployments from multiple providers. */
+  provider_account_id?: string;
 }
 
 export interface SnapshotUpdateResponse {
