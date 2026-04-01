@@ -743,6 +743,12 @@
       "0.3.1": "cbeeaef8889a"
     }
   },
+  "Astra Assistant Agent": {
+    "versions": {
+      "0.3.0": "4716d3b7c350",
+      "0.3.1": "4716d3b7c350"
+    }
+  },
   "AstraDBChatMemory": {
     "versions": {
       "0.3.0": "bafc81f78c76",
@@ -779,10 +785,28 @@
       "0.3.1": "00f7944e3c3e"
     }
   },
+  "AssistantsCreateAssistant": {
+    "versions": {
+      "0.3.0": "8d9869d9a89d",
+      "0.3.1": "8d9869d9a89d"
+    }
+  },
+  "AssistantsCreateThread": {
+    "versions": {
+      "0.3.0": "5d40a73accfd",
+      "0.3.1": "5d40a73accfd"
+    }
+  },
   "Dotenv": {
     "versions": {
       "0.3.0": "343ea9aaca1b",
       "0.3.1": "343ea9aaca1b"
+    }
+  },
+  "AssistantsGetAssistantName": {
+    "versions": {
+      "0.3.0": "1f60da161fd3",
+      "0.3.1": "1f60da161fd3"
     }
   },
   "GetEnvVar": {
@@ -801,6 +825,18 @@
     "versions": {
       "0.3.0": "25f009b9e171",
       "0.3.1": "25f009b9e171"
+    }
+  },
+  "AssistantsListAssistants": {
+    "versions": {
+      "0.3.0": "17e9c5c78a6e",
+      "0.3.1": "17e9c5c78a6e"
+    }
+  },
+  "AssistantsRun": {
+    "versions": {
+      "0.3.0": "5e219cd290d3",
+      "0.3.1": "5e219cd290d3"
     }
   },
   "DeepSeekModelComponent": {
