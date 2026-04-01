@@ -1372,8 +1372,8 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             raise ValueError(msg) from e
 
         if not isinstance(filter_obj, dict):
-            msg = "Invalid filter_expression JSON: expected a JSON object."
-            raise ValueError(msg)
+            msg = "Invalid filter_expression JSON type: expected a JSON object."
+            raise TypeError(msg)
         return filter_obj
 
     def _resolve_limit(self, filter_obj: dict | None, default_limit: int | None) -> int | None:
@@ -1385,7 +1385,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             return None
         if isinstance(raw_limit, bool):
             msg = "Invalid filter_expression.limit: expected a positive integer."
-            raise ValueError(msg)
+            raise TypeError(msg)
         try:
             limit = int(raw_limit)
         except (TypeError, ValueError) as e:

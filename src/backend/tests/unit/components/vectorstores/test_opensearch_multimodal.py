@@ -429,7 +429,7 @@ class TestOpenSearchMultimodalComponent(ComponentTestBaseWithoutClient):
     def test_raw_search_filter_expression_requires_json_object(self, component_class, default_kwargs):
         """Test raw_search rejects non-object JSON filter_expression values."""
         component = component_class().set(**default_kwargs, filter_expression='["owner"]')
-        with pytest.raises(ValueError, match="expected a JSON object"):
+        with pytest.raises(TypeError, match="expected a JSON object"):
             component.raw_search({"query": {"match_all": {}}})
 
     def test_raw_search_does_not_mutate_input_query_dict(self, component_class, default_kwargs):
@@ -451,7 +451,7 @@ class TestOpenSearchMultimodalComponent(ComponentTestBaseWithoutClient):
     def test_raw_search_rejects_non_integer_limit(self, component_class, default_kwargs):
         """Test raw_search rejects invalid non-integer filter limit values."""
         component = component_class().set(**default_kwargs, filter_expression='{"limit":"abc"}')
-        with pytest.raises(ValueError, match="filter_expression.limit"):
+        with pytest.raises(ValueError, match=r"filter_expression\.limit"):
             component.raw_search({"query": {"match_all": {}}})
 
     async def test_update_build_config_auth_basic(self, component_class):
