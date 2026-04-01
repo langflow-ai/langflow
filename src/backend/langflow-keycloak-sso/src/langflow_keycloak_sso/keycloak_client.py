@@ -50,8 +50,7 @@ class KeycloakClient:
             token,
             signing_key.key,
             algorithms=["RS256", "RS512", "ES256", "ES384", "ES512"],
-            audience=self._client_id,
-            options={"verify_exp": True},
+            options={"verify_exp": True, "verify_aud": False},
         )
         return payload
 
