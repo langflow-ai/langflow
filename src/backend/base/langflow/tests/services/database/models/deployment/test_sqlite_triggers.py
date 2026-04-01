@@ -28,7 +28,7 @@ from sqlalchemy import delete, event, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import StaticPool
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 if TYPE_CHECKING:
@@ -226,6 +226,55 @@ def _assert_guard(exc: IntegrityError, expected_code: str, expected_detail: str)
 async def _execute_and_commit(db: AsyncSession, statement) -> None:
     await db.exec(statement)
     await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_flow_version_delete_succeeds_without_attachment(
+    db: AsyncSession,
+    flow_version: FlowVersion,
+) -> None:
+    """Deleting a flow version with no deployment attachment must succeed."""
+    await _execute_and_commit(db, delete(FlowVersion).where(FlowVersion.id == flow_version.id))
+    result = (await db.exec(select(FlowVersion).where(FlowVersion.id == flow_version.id))).first()
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_project_delete_succeeds_without_deployments(
+    db: AsyncSession,
+    source_project: Folder,
+    flow: Flow,  # noqa: ARG001
+) -> None:
+    """Deleting a project with no deployments must succeed (flows remain orphaned or re-assigned)."""
+    await db.exec(update(Flow).where(Flow.folder_id == source_project.id).values(folder_id=None))
+    await _execute_and_commit(db, delete(Folder).where(Folder.id == source_project.id))
+    result = (await db.exec(select(Folder).where(Folder.id == source_project.id))).first()
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_flow_move_succeeds_without_deployment_in_source_project(
+    db: AsyncSession,
+    flow: Flow,
+    target_project: Folder,
+) -> None:
+    """Moving a flow that has no deployments in the source project must succeed."""
+    await _execute_and_commit(db, update(Flow).where(Flow.id == flow.id).values(folder_id=target_project.id))
+    moved = (await db.exec(select(Flow).where(Flow.id == flow.id))).first()
+    assert moved is not None
+    assert moved.folder_id == target_project.id
+
+
+@pytest.mark.asyncio
+async def test_deployment_name_update_succeeds(
+    db: AsyncSession,
+    deployment: Deployment,
+) -> None:
+    """Updating non-guarded columns on deployment must succeed."""
+    await _execute_and_commit(db, update(Deployment).where(Deployment.id == deployment.id).values(name="renamed"))
+    updated = (await db.exec(select(Deployment).where(Deployment.id == deployment.id))).first()
+    assert updated is not None
+    assert updated.name == "renamed"
 
 
 @pytest.mark.asyncio

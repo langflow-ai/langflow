@@ -153,6 +153,10 @@ async def delete_user(
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")
 
+    # Unlike delete_flow / delete_project we intentionally skip a best-effort
+    # provider sync here: syncing every deployment across all of a user's
+    # projects would be too expensive.  The DB guard trigger is the
+    # authoritative check and will block the cascade if deployments remain.
     try:
         await session.delete(user_db)
         # Flush eagerly so DB triggers/constraints run inside this handler.

@@ -19,6 +19,7 @@ _DETAIL_TRUNCATION_MARKERS = (
 
 
 def _clean_guard_detail(detail: str) -> str:
+    """Strip SQLAlchemy/driver noise from a raw trigger message to produce a client-safe detail string."""
     cleaned = detail.strip()
     for marker in _DETAIL_TRUNCATION_MARKERS:
         if marker in cleaned:
