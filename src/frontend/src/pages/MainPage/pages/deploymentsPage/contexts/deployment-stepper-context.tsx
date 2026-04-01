@@ -403,18 +403,15 @@ export function DeploymentStepperProvider({
       const initialVersionByFlow = initialState?.selectedVersionByFlow;
       const snapshotByFlow = initialState?.initialSnapshotByFlow;
 
-      for (const [flowId, connectionIds] of Array.from(
-        attachedConnectionByFlow,
-      )) {
-        const versionEntry = selectedVersionByFlow.get(flowId);
-        if (!versionEntry || connectionIds.length === 0) continue;
-
+      // Check all flows in selectedVersionByFlow for new additions
+      for (const [flowId, versionEntry] of Array.from(selectedVersionByFlow)) {
         const originalVersion = initialVersionByFlow?.get(flowId);
         if (originalVersion) {
           // Existing flow — version changes are handled by getSnapshotUpdates
           continue;
         }
-        // Brand new flow → bind
+        // Brand new flow → bind (with or without connections)
+        const connectionIds = attachedConnectionByFlow.get(flowId) ?? [];
         operations.push({
           op: "bind",
           flow_version_id: versionEntry.versionId,
