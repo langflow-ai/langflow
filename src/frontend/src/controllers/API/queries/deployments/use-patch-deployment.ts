@@ -45,6 +45,7 @@ export const usePatchDeployment: useMutationFunctionType<
     ...options,
     onSuccess: (...args) => {
       queryClient.refetchQueries({ queryKey: ["useGetDeployments"] });
+      queryClient.removeQueries({ queryKey: ["useGetDeploymentAttachments"] });
       options?.onSuccess?.(...args);
     },
   });

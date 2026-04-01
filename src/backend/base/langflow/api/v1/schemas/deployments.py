@@ -344,6 +344,34 @@ class DeploymentSnapshotListResponse(_PaginatedResponse):
     snapshots: list[DeploymentSnapshotListItem]
 
 
+class DeploymentAttachmentItem(BaseModel):
+    """A flow version currently attached to a deployment."""
+
+    flow_version_id: UUID = Field(description="Langflow flow version UUID.")
+    flow_id: UUID = Field(description="Langflow flow UUID.")
+    flow_name: str = Field(description="Human-readable flow name.")
+    version_tag: str = Field(description="Version label, e.g. 'v3'.")
+    provider_snapshot_id: str | None = Field(
+        default=None,
+        description="Provider-owned snapshot/tool identifier (e.g. wxO tool ID).",
+    )
+    connection_ids: list[str] = Field(
+        default_factory=list,
+        description="App/connection IDs bound to this tool via the provider.",
+    )
+    created_at: datetime | None = None
+
+
+class DeploymentAttachmentListResponse(BaseModel):
+    """Response for listing a deployment's attached flow versions."""
+
+    attachments: list[DeploymentAttachmentItem]
+    llm: str | None = Field(
+        default=None,
+        description="The LLM model currently configured on the deployment (from provider).",
+    )
+
+
 class DeploymentCreateResponse(_DeploymentResponseBase):
     """API response for deployment creation."""
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,7 +8,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { usePostProviderAccount } from "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account";
+import { useGetDeploymentAttachments } from "@/controllers/API/queries/deployments/use-get-deployment-attachments";
 import { usePatchDeployment } from "@/controllers/API/queries/deployments/use-patch-deployment";
+import { usePatchDeploymentSnapshot } from "@/controllers/API/queries/deployments/use-patch-deployment-snapshot";
 import { usePostDeployment } from "@/controllers/API/queries/deployments/use-post-deployment";
 import useAlertStore from "@/stores/alertStore";
 import type { Deployment, ProviderAccount } from "../types";
@@ -48,6 +50,58 @@ export default function DeploymentStepperModal({
   editingProviderAccount,
 }: DeploymentStepperModalProps) {
   const [isDeploying, setIsDeploying] = useState(false);
+  const isEditMode = !!editingDeployment;
+
+  // Fetch existing attachments when editing so the stepper can show them
+  const { data: attachmentsData, isLoading: isLoadingAttachments } =
+    useGetDeploymentAttachments(
+      { deploymentId: editingDeployment?.id ?? "" },
+      { enabled: open && isEditMode && !!editingDeployment?.id },
+    );
+
+  // Build the selectedVersionByFlow and attachedConnectionByFlow maps from
+  // existing attachments so the Attach Flows step shows current state.
+  const { editVersionByFlow, editAttachedConnectionByFlow, editSnapshotByFlow } = useMemo(() => {
+    if (!isEditMode || !attachmentsData?.attachments?.length) {
+      return {
+        editVersionByFlow: undefined,
+        editAttachedConnectionByFlow: undefined,
+        editSnapshotByFlow: undefined,
+      };
+    }
+    const versionMap = new Map<
+      string,
+      { versionId: string; versionTag: string }
+    >();
+    const connectionMap = new Map<string, string[]>();
+    const snapshotMap = new Map<string, string>();
+
+    for (const att of attachmentsData.attachments) {
+      versionMap.set(att.flow_id, {
+        versionId: att.flow_version_id,
+        versionTag: att.version_tag,
+      });
+      if (att.provider_snapshot_id) {
+        snapshotMap.set(att.flow_id, att.provider_snapshot_id);
+      }
+      // Use the real connection_ids from the provider if available,
+      // otherwise fall back to provider_snapshot_id so the flow shows
+      // as ATTACHED in the list panel.
+      const connIds =
+        att.connection_ids.length > 0
+          ? att.connection_ids
+          : att.provider_snapshot_id
+            ? [att.provider_snapshot_id]
+            : [att.flow_version_id];
+      connectionMap.set(att.flow_id, connIds);
+    }
+
+    return {
+      editVersionByFlow: versionMap,
+      editAttachedConnectionByFlow: connectionMap,
+      editSnapshotByFlow: snapshotMap,
+    };
+  }, [isEditMode, attachmentsData]);
 
   return (
     <Dialog
@@ -61,20 +115,33 @@ export default function DeploymentStepperModal({
         className="flex h-[85vh] w-[900px] !max-w-none flex-col gap-0 overflow-hidden border-none bg-transparent p-0 shadow-none"
         closeButtonClassName="top-5 right-4"
       >
-        <DeploymentStepperProvider
-          initialState={{
-            initialFlowId,
-            selectedVersionByFlow: initialVersionByFlow,
-            editingDeployment: editingDeployment ?? undefined,
-            editingProviderAccount: editingProviderAccount ?? undefined,
-          }}
-        >
-          <DeploymentStepperModalContent
-            setOpen={setOpen}
-            onTestDeployment={onTestDeployment}
-            onDeployingChange={setIsDeploying}
-          />
-        </DeploymentStepperProvider>
+        {/* In edit mode, wait for attachments to load before mounting the provider
+            so the initial state includes existing flow versions. */}
+        {isEditMode && isLoadingAttachments ? (
+          <div className="flex flex-1 items-center justify-center">
+            <span className="text-sm text-muted-foreground">
+              Loading deployment data...
+            </span>
+          </div>
+        ) : (
+          <DeploymentStepperProvider
+            initialState={{
+              initialFlowId,
+              selectedVersionByFlow: initialVersionByFlow ?? editVersionByFlow,
+              editingDeployment: editingDeployment ?? undefined,
+              editingProviderAccount: editingProviderAccount ?? undefined,
+              initialAttachedConnectionByFlow: editAttachedConnectionByFlow,
+              initialSnapshotByFlow: editSnapshotByFlow,
+              initialLlmFromProvider: attachmentsData?.llm ?? undefined,
+            }}
+          >
+            <DeploymentStepperModalContent
+              setOpen={setOpen}
+              onTestDeployment={onTestDeployment}
+              onDeployingChange={setIsDeploying}
+            />
+          </DeploymentStepperProvider>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -115,6 +182,7 @@ function DeploymentStepperModalContent({
     buildProviderAccountPayload,
     buildDeploymentPayload,
     buildDeploymentUpdatePayload,
+    getSnapshotUpdates,
   } = useDeploymentStepper();
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -122,6 +190,7 @@ function DeploymentStepperModalContent({
   const { mutateAsync: createProviderAccount } = usePostProviderAccount();
   const { mutateAsync: createDeployment } = usePostDeployment();
   const { mutateAsync: updateDeployment } = usePatchDeployment();
+  const { mutateAsync: updateSnapshot } = usePatchDeploymentSnapshot();
 
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
 
@@ -166,25 +235,20 @@ function DeploymentStepperModalContent({
       onDeployingChange(true);
 
       if (isEditMode) {
-        // Update existing deployment
-        const payload = buildDeploymentUpdatePayload();
-        const result = await updateDeployment(payload);
-        if (
-          result &&
-          typeof result === "object" &&
-          "id" in result &&
-          "name" in result
-        ) {
-          setCreatedDeployment({
-            id: String(result.id),
-            name: String(result.name),
-          });
-        } else {
-          setCreatedDeployment({
-            id: editingDeployment!.id,
-            name: editingDeployment!.name,
-          });
+        // First, update any existing tools whose version changed (in-place).
+        const snapshotUpdates = getSnapshotUpdates();
+        for (const snap of snapshotUpdates) {
+          await updateSnapshot(snap);
         }
+
+        // Then, update the deployment itself (new binds, removals, LLM, description)
+        const payload = buildDeploymentUpdatePayload();
+        await updateDeployment(payload);
+
+        // Auto-close on successful edit — no success screen needed.
+        onDeployingChange(false);
+        setOpen(false);
+        return;
       } else {
         // Create new deployment
         const providerId = selectedInstance?.id;

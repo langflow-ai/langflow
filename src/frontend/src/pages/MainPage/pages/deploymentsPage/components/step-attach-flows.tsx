@@ -17,6 +17,7 @@ type RightPanelView = "versions" | "connections";
 
 export default function StepAttachFlows() {
   const {
+    isEditMode,
     initialFlowId,
     connections,
     setConnections,
@@ -24,6 +25,9 @@ export default function StepAttachFlows() {
     handleSelectVersion: onSelectVersion,
     attachedConnectionByFlow,
     setAttachedConnectionByFlow: onAttachConnection,
+    removedFlowIds,
+    handleRemoveAttachedFlow,
+    handleUndoRemoveFlow,
   } = useDeploymentStepper();
 
   const { folderId } = useParams();
@@ -276,7 +280,10 @@ export default function StepAttachFlows() {
           selectedFlowId={effectiveFlowId}
           selectedVersionByFlow={selectedVersionByFlow}
           attachedConnectionByFlow={attachedConnectionByFlow}
+          removedFlowIds={isEditMode ? removedFlowIds : undefined}
           onSelectFlow={handleSelectFlow}
+          onRemoveFlow={isEditMode ? handleRemoveAttachedFlow : undefined}
+          onUndoRemoveFlow={isEditMode ? handleUndoRemoveFlow : undefined}
         />
 
         {/* Right panel */}

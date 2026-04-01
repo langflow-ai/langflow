@@ -275,3 +275,147 @@ describe("DeploymentStepperContext – buildDeploymentUpdatePayload", () => {
     });
   });
 });
+
+describe("DeploymentStepperContext – remove/unbind flows", () => {
+  const editInitialState = {
+    editingDeployment: mockDeployment,
+    editingProviderAccount: mockProviderAccount,
+    selectedVersionByFlow: new Map([
+      ["flow-1", { versionId: "ver-1", versionTag: "v1" }],
+      ["flow-2", { versionId: "ver-2", versionTag: "v2" }],
+    ]),
+    initialAttachedConnectionByFlow: new Map([
+      ["flow-1", ["conn-a"]],
+      ["flow-2", ["conn-b"]],
+    ]),
+  };
+
+  it("starts with empty removedFlowIds", () => {
+    const { result } = renderStepperHook(editInitialState);
+    expect(result.current.removedFlowIds.size).toBe(0);
+  });
+
+  it("handleRemoveAttachedFlow adds to removedFlowIds and removes from maps", () => {
+    const { result } = renderStepperHook(editInitialState);
+
+    act(() => result.current.handleRemoveAttachedFlow("flow-1"));
+
+    expect(result.current.removedFlowIds.has("flow-1")).toBe(true);
+    expect(result.current.attachedConnectionByFlow.has("flow-1")).toBe(false);
+    expect(result.current.selectedVersionByFlow.has("flow-1")).toBe(false);
+    // flow-2 should be unaffected
+    expect(result.current.attachedConnectionByFlow.has("flow-2")).toBe(true);
+    expect(result.current.selectedVersionByFlow.has("flow-2")).toBe(true);
+  });
+
+  it("handleUndoRemoveFlow restores flow to maps", () => {
+    const { result } = renderStepperHook(editInitialState);
+
+    act(() => result.current.handleRemoveAttachedFlow("flow-1"));
+    expect(result.current.removedFlowIds.has("flow-1")).toBe(true);
+
+    act(() => result.current.handleUndoRemoveFlow("flow-1"));
+    expect(result.current.removedFlowIds.has("flow-1")).toBe(false);
+    expect(result.current.attachedConnectionByFlow.has("flow-1")).toBe(true);
+    expect(result.current.selectedVersionByFlow.has("flow-1")).toBe(true);
+  });
+
+  it("buildDeploymentUpdatePayload emits remove_tool for removed flows", () => {
+    const { result } = renderStepperHook(editInitialState);
+
+    act(() => result.current.handleRemoveAttachedFlow("flow-1"));
+
+    const payload = result.current.buildDeploymentUpdatePayload();
+    const ops = payload.provider_data?.operations as Array<{
+      op: string;
+      flow_version_id: string;
+    }>;
+    expect(ops).toBeDefined();
+    const removeOps = ops.filter((o) => o.op === "remove_tool");
+    expect(removeOps).toEqual([
+      { op: "remove_tool", flow_version_id: "ver-1" },
+    ]);
+  });
+
+  it("does NOT emit remove_tool for flows that were not removed", () => {
+    const { result } = renderStepperHook(editInitialState);
+    // Don't remove anything
+    const payload = result.current.buildDeploymentUpdatePayload();
+    const ops = (payload.provider_data?.operations as Array<{ op: string }>) ?? [];
+    const removeOps = ops.filter((o) => o.op === "remove_tool");
+    expect(removeOps).toHaveLength(0);
+  });
+
+  it("does NOT emit bind for pre-existing unchanged flows", () => {
+    const { result } = renderStepperHook(editInitialState);
+    const payload = result.current.buildDeploymentUpdatePayload();
+    const ops = (payload.provider_data?.operations as Array<{ op: string }>) ?? [];
+    const bindOps = ops.filter((o) => o.op === "bind");
+    expect(bindOps).toHaveLength(0);
+  });
+
+  it("getSnapshotUpdates returns snapshot update when version changes on existing flow", () => {
+    const stateWithSnapshots = {
+      ...editInitialState,
+      initialSnapshotByFlow: new Map([
+        ["flow-1", "tool-id-1"],
+        ["flow-2", "tool-id-2"],
+      ]),
+    };
+    const { result } = renderStepperHook(stateWithSnapshots);
+
+    // Change flow-1 from ver-1 to ver-1-new
+    act(() => {
+      result.current.handleSelectVersion("flow-1", "ver-1-new", "v3");
+    });
+
+    const snapUpdates = result.current.getSnapshotUpdates();
+    expect(snapUpdates).toEqual([
+      { provider_snapshot_id: "tool-id-1", flow_version_id: "ver-1-new" },
+    ]);
+
+    // The deployment payload should NOT have operations for the version change
+    const payload = result.current.buildDeploymentUpdatePayload();
+    const ops = (payload.provider_data?.operations as Array<{ op: string }>) ?? [];
+    expect(ops.filter((o) => o.op === "bind")).toHaveLength(0);
+    expect(ops.filter((o) => o.op === "remove_tool")).toHaveLength(0);
+  });
+
+  it("getSnapshotUpdates returns empty when version stays the same", () => {
+    const stateWithSnapshots = {
+      ...editInitialState,
+      initialSnapshotByFlow: new Map([["flow-1", "tool-id-1"]]),
+    };
+    const { result } = renderStepperHook(stateWithSnapshots);
+
+    // "Change" flow-1 to the same version it already has
+    act(() => {
+      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+    });
+
+    expect(result.current.getSnapshotUpdates()).toHaveLength(0);
+  });
+
+  it("getSnapshotUpdates skips removed flows", () => {
+    const stateWithSnapshots = {
+      ...editInitialState,
+      initialSnapshotByFlow: new Map([
+        ["flow-1", "tool-id-1"],
+        ["flow-2", "tool-id-2"],
+      ]),
+    };
+    const { result } = renderStepperHook(stateWithSnapshots);
+
+    // Remove flow-1, change flow-2 version
+    act(() => {
+      result.current.handleRemoveAttachedFlow("flow-1");
+      result.current.handleSelectVersion("flow-2", "ver-2-new", "v5");
+    });
+
+    const snapUpdates = result.current.getSnapshotUpdates();
+    // Only flow-2 should have a snapshot update (flow-1 is removed, not updated)
+    expect(snapUpdates).toEqual([
+      { provider_snapshot_id: "tool-id-2", flow_version_id: "ver-2-new" },
+    ]);
+  });
+});

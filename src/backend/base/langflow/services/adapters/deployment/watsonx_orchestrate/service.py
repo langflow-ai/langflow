@@ -344,6 +344,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     provider_data={
                         "snapshot_ids": extract_agent_tool_ids(agent),
                         "environment": derive_agent_environment(agent),
+                        **({"llm": agent["llm"]} if agent.get("llm") else {}),
                     },
                 )
                 for agent in raw_agents
@@ -385,6 +386,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         return get_deployment_detail_metadata(
             data=agent,
             deployment_type=DeploymentType.AGENT,
+            provider_data={
+                **({"llm": agent["llm"]} if isinstance(agent, dict) and agent.get("llm") else {}),
+            } or None,
         )
 
     async def update(

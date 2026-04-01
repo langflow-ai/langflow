@@ -505,6 +505,7 @@ async def verify_tools_by_ids(
             SnapshotItem(
                 id=tool["id"],
                 name=tool.get("name") or tool["id"],
+                provider_data=tool,
             )
             for tool in (tools or [])
             if isinstance(tool, dict) and tool.get("id")

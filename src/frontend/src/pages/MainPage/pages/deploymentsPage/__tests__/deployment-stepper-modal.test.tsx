@@ -53,6 +53,15 @@ jest.mock("@/controllers/API/queries/deployments/use-patch-deployment", () => ({
   usePatchDeployment: () => ({ mutateAsync: jest.fn() }),
 }));
 
+const mockAttachmentsReturn: { data: any; isLoading: boolean } = { data: null, isLoading: false };
+jest.mock("@/controllers/API/queries/deployments/use-get-deployment-attachments", () => ({
+  useGetDeploymentAttachments: () => mockAttachmentsReturn,
+}));
+
+jest.mock("@/controllers/API/queries/deployments/use-patch-deployment-snapshot", () => ({
+  usePatchDeploymentSnapshot: () => ({ mutateAsync: jest.fn() }),
+}));
+
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
   default: () => ({
@@ -135,5 +144,52 @@ describe("DeploymentStepperModal", () => {
   it("does not render when open is false", () => {
     render(<DeploymentStepperModal {...defaultProps} open={false} />);
     expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
+  });
+
+  it("shows loading state while attachments are being fetched in edit mode", () => {
+    mockAttachmentsReturn.data = null;
+    mockAttachmentsReturn.isLoading = true;
+    render(
+      <DeploymentStepperModal
+        {...defaultProps}
+        editingDeployment={mockDeployment}
+        editingProviderAccount={mockProviderAccount}
+      />,
+    );
+    expect(screen.getByText("Loading deployment data...")).toBeInTheDocument();
+    expect(screen.queryByTestId("step-type")).not.toBeInTheDocument();
+    // Reset
+    mockAttachmentsReturn.data = null;
+    mockAttachmentsReturn.isLoading = false;
+  });
+
+  it("renders stepper content after attachments load in edit mode", () => {
+    mockAttachmentsReturn.data = {
+      attachments: [
+        {
+          flow_version_id: "fv-1",
+          flow_id: "flow-1",
+          flow_name: "My Flow",
+          version_tag: "v2",
+          provider_snapshot_id: "tool-1",
+          connection_ids: ["conn-a"],
+          created_at: null,
+        },
+      ],
+    };
+    mockAttachmentsReturn.isLoading = false;
+    render(
+      <DeploymentStepperModal
+        {...defaultProps}
+        editingDeployment={mockDeployment}
+        editingProviderAccount={mockProviderAccount}
+      />,
+    );
+    expect(
+      screen.queryByText("Loading deployment data..."),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("step-type")).toBeInTheDocument();
+    // Reset
+    mockAttachmentsReturn.data = null;
   });
 });

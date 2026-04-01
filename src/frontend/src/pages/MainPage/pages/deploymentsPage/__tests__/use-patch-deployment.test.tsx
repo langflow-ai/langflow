@@ -19,6 +19,7 @@ jest.mock("@/controllers/API/helpers/constants", () => ({
 
 // Mock UseRequestProcessor to provide real mutate/queryClient behavior
 const mockRefetchQueries = jest.fn();
+const mockRemoveQueries = jest.fn();
 jest.mock("@/controllers/API/services/request-processor", () => ({
   UseRequestProcessor: () => ({
     mutate: (
@@ -42,6 +43,7 @@ jest.mock("@/controllers/API/services/request-processor", () => ({
     },
     queryClient: {
       refetchQueries: mockRefetchQueries,
+      removeQueries: mockRemoveQueries,
     },
   }),
 }));
@@ -104,6 +106,9 @@ describe("usePatchDeployment", () => {
 
     expect(mockRefetchQueries).toHaveBeenCalledWith({
       queryKey: ["useGetDeployments"],
+    });
+    expect(mockRemoveQueries).toHaveBeenCalledWith({
+      queryKey: ["useGetDeploymentAttachments"],
     });
   });
 

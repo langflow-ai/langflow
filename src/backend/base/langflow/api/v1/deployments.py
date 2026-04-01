@@ -50,6 +50,8 @@ from langflow.api.v1.mappers.deployments.helpers import (
     validate_project_scoped_flow_version_ids,
 )
 from langflow.api.v1.schemas.deployments import (
+    DeploymentAttachmentItem,
+    DeploymentAttachmentListResponse,
     DeploymentConfigListResponse,
     DeploymentCreateRequest,
     DeploymentCreateResponse,
@@ -1144,6 +1146,149 @@ async def get_deployment(
         resource_key=deployment_row.resource_key,
         attached_count=attached_count,
     )
+
+
+@router.get("/{deployment_id}/attachments", response_model=DeploymentAttachmentListResponse)
+async def list_deployment_attachment_details(
+    deployment_id: DeploymentIdPath,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+):
+    """List flow versions currently attached to a deployment with rich metadata.
+
+    Performs a best-effort snapshot-level sync with the provider before
+    returning results, then enriches each attachment with its per-tool
+    connection bindings from the provider.
+    """
+    from lfx.services.adapters.deployment.schema import SnapshotListParams
+    from sqlmodel import select
+
+    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.database.models.flow_version.model import FlowVersion
+    from langflow.services.database.models.flow_version_deployment_attachment.model import (
+        FlowVersionDeploymentAttachment,
+    )
+
+    deployment_row, deployment_adapter, deployment_mapper = await resolve_adapter_mapper_from_deployment(
+        deployment_id=deployment_id,
+        user_id=current_user.id,
+        db=session,
+    )
+
+    # Fetch the current LLM from the provider agent metadata.
+    deployment_llm: str | None = None
+    try:
+        with deployment_provider_scope(deployment_row.deployment_provider_account_id):
+            deployment_detail = await deployment_adapter.get(
+                user_id=current_user.id,
+                deployment_id=deployment_row.resource_key,
+                db=session,
+            )
+        if deployment_detail.provider_data and isinstance(deployment_detail.provider_data, dict):
+            deployment_llm = deployment_detail.provider_data.get("llm")
+    except Exception:  # noqa: BLE001
+        logger.warning(
+            "Failed to fetch LLM for deployment %s; returning without LLM data",
+            deployment_id,
+            exc_info=True,
+        )
+
+    # Best-effort snapshot-level sync: prune stale attachment rows whose
+    # provider_snapshot_id no longer exists on the provider.
+    try:
+        attachments = await list_deployment_attachments(
+            session, user_id=current_user.id, deployment_id=deployment_row.id
+        )
+        snapshot_ids_to_verify = deployment_mapper.util_snapshot_ids_to_verify(attachments)
+        if snapshot_ids_to_verify:
+            with deployment_provider_scope(deployment_row.deployment_provider_account_id):
+                known_snapshots = await fetch_provider_snapshot_keys(
+                    deployment_adapter=deployment_adapter,
+                    user_id=current_user.id,
+                    provider_id=deployment_row.deployment_provider_account_id,
+                    db=session,
+                    snapshot_ids=snapshot_ids_to_verify,
+                )
+                await sync_attachment_snapshot_ids(
+                    user_id=current_user.id,
+                    deployment_ids=[deployment_row.id],
+                    attachments=attachments,
+                    known_snapshot_ids=known_snapshots,
+                    db=session,
+                )
+    except Exception:  # noqa: BLE001
+        logger.warning(
+            "Snapshot-level sync failed for deployment %s attachments; returning unverified data",
+            deployment_id,
+            exc_info=True,
+        )
+        await session.rollback()
+
+    # 1) DB join: attachment → flow_version → flow
+    stmt = (
+        select(
+            FlowVersionDeploymentAttachment.flow_version_id,
+            FlowVersion.flow_id,
+            Flow.name.label("flow_name"),  # type: ignore[attr-defined]
+            FlowVersion.version_number,
+            FlowVersionDeploymentAttachment.provider_snapshot_id,
+            FlowVersionDeploymentAttachment.created_at,
+        )
+        .join(FlowVersion, FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id)
+        .join(Flow, Flow.id == FlowVersion.flow_id)
+        .where(
+            FlowVersionDeploymentAttachment.user_id == current_user.id,
+            FlowVersionDeploymentAttachment.deployment_id == deployment_id,
+        )
+        .order_by(FlowVersionDeploymentAttachment.created_at)
+    )
+    rows = (await session.exec(stmt)).all()
+
+    # 2) Collect provider_snapshot_ids for connection enrichment
+    snapshot_ids = [row.provider_snapshot_id for row in rows if row.provider_snapshot_id]
+
+    # 3) Fetch tool payloads from provider → extract per-tool connection bindings
+    connections_by_snapshot: dict[str, list[str]] = {}
+    if snapshot_ids:
+        try:
+            with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
+                snapshot_result = await deployment_adapter.list_snapshots(
+                    user_id=current_user.id,
+                    params=SnapshotListParams(snapshot_ids=snapshot_ids),
+                    db=session,
+                )
+            for snap in snapshot_result.snapshots:
+                if snap.provider_data and isinstance(snap.provider_data, dict):
+                    conns = (
+                        snap.provider_data
+                        .get("binding", {})
+                        .get("langflow", {})
+                        .get("connections", {})
+                    )
+                    if isinstance(conns, dict) and conns:
+                        connections_by_snapshot[str(snap.id)] = list(conns.keys())
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "Connection enrichment failed for deployment %s; returning attachments without connection data",
+                deployment_id,
+                exc_info=True,
+            )
+
+    items = [
+        DeploymentAttachmentItem(
+            flow_version_id=row.flow_version_id,
+            flow_id=row.flow_id,
+            flow_name=row.flow_name,
+            version_tag=f"v{row.version_number}",
+            provider_snapshot_id=row.provider_snapshot_id,
+            connection_ids=connections_by_snapshot.get(row.provider_snapshot_id, [])
+            if row.provider_snapshot_id
+            else [],
+            created_at=row.created_at,
+        )
+        for row in rows
+    ]
+    return DeploymentAttachmentListResponse(attachments=items, llm=deployment_llm)
 
 
 @router.patch(

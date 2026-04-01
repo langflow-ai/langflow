@@ -9,13 +9,19 @@ export const FlowListPanel = memo(function FlowListPanel({
   selectedFlowId,
   selectedVersionByFlow,
   attachedConnectionByFlow,
+  removedFlowIds,
   onSelectFlow,
+  onRemoveFlow,
+  onUndoRemoveFlow,
 }: {
   flows: FlowType[];
   selectedFlowId: string | null;
   selectedVersionByFlow: Map<string, { versionId: string; versionTag: string }>;
   attachedConnectionByFlow: Map<string, string[]>;
+  removedFlowIds?: Set<string>;
   onSelectFlow: (flowId: string) => void;
+  onRemoveFlow?: (flowId: string) => void;
+  onUndoRemoveFlow?: (flowId: string) => void;
 }) {
   return (
     <div className="flex w-[280px] flex-shrink-0 flex-col border-r border-border">
@@ -27,6 +33,7 @@ export const FlowListPanel = memo(function FlowListPanel({
           const entry = selectedVersionByFlow.get(flow.id);
           const versionLabel = entry?.versionTag || null;
           const attached = attachedConnectionByFlow.has(flow.id);
+          const isRemoved = removedFlowIds?.has(flow.id) ?? false;
           return (
             <button
               key={flow.id}
@@ -35,6 +42,7 @@ export const FlowListPanel = memo(function FlowListPanel({
               onClick={() => onSelectFlow(flow.id)}
               className={cn(
                 "flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors",
+                isRemoved && "opacity-50",
                 selectedFlowId === flow.id ? "bg-muted" : "hover:bg-muted/60",
               )}
             >
@@ -49,7 +57,7 @@ export const FlowListPanel = memo(function FlowListPanel({
                   <span className="truncate text-sm font-semibold">
                     {flow.name}
                   </span>
-                  {versionLabel && (
+                  {versionLabel && !isRemoved && (
                     <Badge
                       variant="secondaryStatic"
                       size="tag"
@@ -58,7 +66,7 @@ export const FlowListPanel = memo(function FlowListPanel({
                       {versionLabel}
                     </Badge>
                   )}
-                  {attached && (
+                  {attached && !isRemoved && (
                     <Badge
                       variant="secondaryStatic"
                       size="tag"
@@ -67,8 +75,49 @@ export const FlowListPanel = memo(function FlowListPanel({
                       ATTACHED
                     </Badge>
                   )}
+                  {isRemoved && (
+                    <Badge
+                      variant="secondaryStatic"
+                      size="tag"
+                      className="bg-destructive/10 text-destructive"
+                    >
+                      REMOVED
+                    </Badge>
+                  )}
                 </div>
               </div>
+              {/* Detach / undo buttons for existing attachments */}
+              {attached && !isRemoved && onRemoveFlow && (
+                <button
+                  type="button"
+                  data-testid={`detach-flow-${flow.id}`}
+                  className="flex-shrink-0 rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  title="Detach flow"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveFlow(flow.id);
+                  }}
+                >
+                  <ForwardedIconComponent name="X" className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {isRemoved && onUndoRemoveFlow && (
+                <button
+                  type="button"
+                  data-testid={`undo-remove-flow-${flow.id}`}
+                  className="flex-shrink-0 rounded p-1 text-muted-foreground hover:bg-accent-blue-muted hover:text-accent-blue-muted-foreground"
+                  title="Undo detach"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onUndoRemoveFlow(flow.id);
+                  }}
+                >
+                  <ForwardedIconComponent
+                    name="Undo2"
+                    className="h-3.5 w-3.5"
+                  />
+                </button>
+              )}
             </button>
           );
         })}
