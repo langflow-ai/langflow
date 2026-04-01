@@ -80,7 +80,11 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.status impor
     get_deployment_detail_metadata,
     get_deployment_metadata,
 )
-from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import verify_tools_by_ids
+from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
+    build_langflow_artifact_bytes,
+    upload_tool_artifact_bytes,
+    verify_tools_by_ids,
+)
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.update import (
     apply_provider_update_plan_with_rollback,
     build_provider_update_plan,
@@ -924,6 +928,54 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             ) from exc
 
         return VerifyCredentialsResult()
+
+    async def update_snapshot(
+        self,
+        *,
+        user_id: IdLike,
+        db: AsyncSession,
+        provider_snapshot_id: str,
+        flow_definition: dict[str, Any],
+        project_id: str,  # noqa: ARG002
+    ) -> dict[str, Any]:
+        """Replace an existing snapshot's content with a new flow artifact.
+
+        This is a content-only mutation -- it does not affect which agent
+        the snapshot is attached to or its connection bindings.
+
+        **Blast-radius boundary:** callers must verify that
+        ``provider_snapshot_id`` is tracked by a Langflow attachment
+        record before calling this method; this prevents accidental
+        overwrites of externally managed WXO tools.
+        """
+        from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import (
+            create_langflow_tool as _create_langflow_tool,
+        )
+
+        clients = await self._get_provider_clients(user_id=user_id, db=db)
+
+        tools = await asyncio.to_thread(clients.tool.get_drafts_by_ids, [provider_snapshot_id])
+        if not tools or not isinstance(tools[0], dict) or not tools[0].get("id"):
+            msg = f"Snapshot '{provider_snapshot_id}' not found in provider."
+            raise DeploymentNotFoundError(msg)
+
+        tool = _create_langflow_tool(
+            tool_definition=flow_definition,
+            connections={},
+            show_details=True,
+        )
+
+        artifact_bytes = build_langflow_artifact_bytes(
+            tool=tool,
+            flow_definition=flow_definition,
+        )
+        await asyncio.to_thread(
+            upload_tool_artifact_bytes,
+            clients,
+            tool_id=provider_snapshot_id,
+            artifact_bytes=artifact_bytes,
+        )
+        return {"provider_snapshot_id": provider_snapshot_id}
 
     async def teardown(self) -> None:
         """Teardown provider-specific resources."""

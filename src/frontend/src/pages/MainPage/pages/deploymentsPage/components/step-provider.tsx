@@ -109,6 +109,8 @@ function NewEnvironmentForm({
   credentials: ProviderCredentials;
   onCredentialsChange: (credentials: ProviderCredentials) => void;
 }) {
+  const [showApiKey, setShowApiKey] = useState(false);
+
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
@@ -140,18 +142,31 @@ function NewEnvironmentForm({
           <span className="pb-2 text-sm font-medium">
             API Key <span className="text-destructive">*</span>
           </span>
-          <Input
-            type="password"
-            placeholder="Enter your API key"
-            className="bg-muted"
-            value={credentials.api_key}
-            onChange={(e) =>
-              onCredentialsChange({
-                ...credentials,
-                api_key: e.target.value,
-              })
-            }
-          />
+          <div className="relative">
+            <Input
+              type={showApiKey ? "text" : "password"}
+              placeholder="Enter your API key"
+              className="bg-muted pr-10"
+              value={credentials.api_key}
+              onChange={(e) =>
+                onCredentialsChange({
+                  ...credentials,
+                  api_key: e.target.value,
+                })
+              }
+            />
+            <button
+              type="button"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              onClick={() => setShowApiKey((prev) => !prev)}
+              tabIndex={-1}
+            >
+              <ForwardedIconComponent
+                name={showApiKey ? "EyeOff" : "Eye"}
+                className="h-4 w-4"
+              />
+            </button>
+          </div>
         </div>
         <div className="flex flex-col">
           <span className="pb-2 text-sm font-medium">

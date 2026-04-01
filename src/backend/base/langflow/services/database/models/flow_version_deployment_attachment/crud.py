@@ -200,6 +200,24 @@ async def list_attachments_for_flow_with_provider_info(
     return [(attachment, provider_account_id, provider_key) for attachment, provider_account_id, provider_key in rows]
 
 
+async def get_attachment_by_provider_snapshot_id(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    provider_snapshot_id: str,
+) -> FlowVersionDeploymentAttachment | None:
+    """Look up an attachment by its provider_snapshot_id.
+
+    Used by the PATCH /snapshots/{provider_snapshot_id} endpoint to
+    resolve the deployment context for a provider-owned snapshot.
+    """
+    stmt = select(FlowVersionDeploymentAttachment).where(
+        FlowVersionDeploymentAttachment.user_id == user_id,
+        FlowVersionDeploymentAttachment.provider_snapshot_id == provider_snapshot_id,
+    )
+    return (await db.exec(stmt)).first()
+
+
 async def count_attachments_by_deployment_ids(
     db: AsyncSession,
     *,

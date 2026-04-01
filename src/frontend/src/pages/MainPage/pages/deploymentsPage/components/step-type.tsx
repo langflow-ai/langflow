@@ -97,8 +97,7 @@ export default function StepType() {
 
       <div className="flex flex-col">
         <span className="pb-2 text-sm font-medium">
-          Agent Name{" "}
-          <span className="text-destructive">*</span>
+          Agent Name <span className="text-destructive">*</span>
         </span>
         <Input
           placeholder="e.g., Sales Bot"
@@ -126,9 +125,7 @@ export default function StepType() {
         <Select value={selectedLlm} onValueChange={setSelectedLlm}>
           <SelectTrigger className="bg-muted">
             <SelectValue
-              placeholder={
-                llmsLoading ? "Loading models..." : "Select a model"
-              }
+              placeholder={llmsLoading ? "Loading models..." : "Select a model"}
             />
           </SelectTrigger>
           <SelectContent>
