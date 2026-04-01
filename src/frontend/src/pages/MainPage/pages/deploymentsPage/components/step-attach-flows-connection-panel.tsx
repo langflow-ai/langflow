@@ -26,6 +26,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
   onEnvVarSelectGlobalVar,
   onAddEnvVar,
   onChangeFlow,
+  onSkipConnection,
   onAttachConnection,
   onCreateConnection,
 }: {
@@ -45,6 +46,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
   onEnvVarSelectGlobalVar: (id: string, selected: string) => void;
   onAddEnvVar: () => void;
   onChangeFlow: () => void;
+  onSkipConnection: () => void;
   onAttachConnection: () => void;
   onCreateConnection: () => void;
 }) {
@@ -205,6 +207,9 @@ export const ConnectionPanel = memo(function ConnectionPanel({
         <div className="flex items-center gap-3 pt-4">
           <Button variant="outline" onClick={onChangeFlow}>
             Change Flow
+          </Button>
+          <Button variant="outline" onClick={onSkipConnection}>
+            Skip
           </Button>
           {connectionTab === "available" ? (
             <Button

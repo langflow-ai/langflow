@@ -235,7 +235,7 @@ export function DeploymentStepperProvider({
     }
     if (logical === 3) {
       // In edit mode, the user can skip attaching new flows (they may only update name/LLM)
-      return isEditMode || attachedConnectionByFlow.size > 0;
+      return isEditMode || selectedVersionByFlow.size > 0;
     }
     // Review step — always true
     return true;
@@ -247,7 +247,8 @@ export function DeploymentStepperProvider({
     hasValidCredentials,
     deploymentName,
     selectedLlm,
-    attachedConnectionByFlow,
+    selectedVersionByFlow,
+    isEditMode,
   ]);
 
   const handleNext = useCallback(() => {
@@ -330,11 +331,8 @@ export function DeploymentStepperProvider({
 
       const operations: DeploymentCreateRequest["provider_data"]["operations"] =
         [];
-      for (const [flowId, connectionIds] of Array.from(
-        attachedConnectionByFlow,
-      )) {
-        const versionEntry = selectedVersionByFlow.get(flowId);
-        if (!versionEntry || connectionIds.length === 0) continue;
+      for (const [flowId, versionEntry] of Array.from(selectedVersionByFlow)) {
+        const connectionIds = attachedConnectionByFlow.get(flowId) ?? [];
         operations.push({
           op: "bind",
           flow_version_id: versionEntry.versionId,

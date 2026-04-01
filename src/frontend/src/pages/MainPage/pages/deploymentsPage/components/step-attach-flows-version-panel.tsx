@@ -11,7 +11,6 @@ export const VersionPanel = memo(function VersionPanel({
   isLoadingVersions,
   pendingVersion,
   selectedVersionByFlow,
-  attachedConnectionByFlow,
   onSelectPending,
   onAttach,
 }: {
@@ -20,7 +19,6 @@ export const VersionPanel = memo(function VersionPanel({
   isLoadingVersions: boolean;
   pendingVersion: string | null;
   selectedVersionByFlow: Map<string, { versionId: string; versionTag: string }>;
-  attachedConnectionByFlow: Map<string, string[]>;
   onSelectPending: (id: string) => void;
   onAttach: () => void;
 }) {
@@ -33,7 +31,6 @@ export const VersionPanel = memo(function VersionPanel({
   }
 
   const attachedEntry = selectedVersionByFlow.get(selectedFlow.id);
-  const hasConnection = attachedConnectionByFlow.has(selectedFlow.id);
 
   return (
     <>
@@ -71,7 +68,7 @@ export const VersionPanel = memo(function VersionPanel({
                   <span className="flex flex-col">
                     <span className="flex items-center gap-2 text-sm font-medium leading-tight">
                       {version.version_tag}
-                      {isAttachedVersion && hasConnection && (
+                      {isAttachedVersion && (
                         <Badge
                           variant="secondaryStatic"
                           size="tag"
