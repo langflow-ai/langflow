@@ -689,7 +689,7 @@ class SnapshotUpdateRequest(BaseModel):
 
 
 class SnapshotUpdateResponse(BaseModel):
-    """Response for PATCH /api/v1/snapshots/{provider_snapshot_id}."""
+    """Response for PATCH /deployments/snapshots/{provider_snapshot_id}."""
 
     flow_version_id: UUID
     provider_snapshot_id: str
