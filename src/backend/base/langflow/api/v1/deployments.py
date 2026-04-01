@@ -764,7 +764,15 @@ async def list_deployment_configs(
     page: Annotated[int, Query(ge=1)] = 1,
     size: Annotated[int, Query(ge=1, le=50)] = 20,
 ):
-    """List deployment configs."""
+    """List deployment configs.
+
+    Provider account resolution priority:
+    1. Both provider_id and deployment_id given → use provider_id, validate
+       the deployment belongs to it (404 if mismatched).
+    2. Only deployment_id given → infer provider from the deployment row.
+    3. Only provider_id given → tenant-scoped listing (no deployment filter).
+    4. Neither given → 422.
+    """
     deployment_row = None
     provider_account = (
         await get_owned_provider_account_or_404(
@@ -943,10 +951,24 @@ async def update_snapshot(
             project_id=str(deployment.project_id),
         )
 
+    previous_flow_version_id = attachment.flow_version_id
     attachment.flow_version_id = body.flow_version_id
     session.add(attachment)
-    await session.commit()
-    await session.refresh(attachment)
+    try:
+        await session.flush()
+        await session.refresh(attachment)
+    except Exception:
+        await session.rollback()
+        logger.warning(
+            "DB commit failed after provider snapshot update for snapshot '%s'. "
+            "Provider content now reflects flow_version_id=%s but the attachment "
+            "record still points to flow_version_id=%s. Manual reconciliation may be needed.",
+            provider_snapshot_id,
+            body.flow_version_id,
+            previous_flow_version_id,
+            exc_info=True,
+        )
+        raise
 
     return SnapshotUpdateResponse(
         flow_version_id=body.flow_version_id,

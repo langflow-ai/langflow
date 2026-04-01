@@ -1161,6 +1161,9 @@ async def build_deployment_info_map(
     if not relevant_attachments:
         return {}
 
+    # TODO: N+1 — batch-fetch deployment rows and provider accounts instead
+    # of querying one-by-one in a loop.  Acceptable for now because the set
+    # of distinct deployment_ids per request is small (typically 1-3).
     dep_ids = list({att.deployment_id for att in relevant_attachments})
     dep_rows_by_id: dict[UUID, Deployment] = {}
     for dep_id in dep_ids:
