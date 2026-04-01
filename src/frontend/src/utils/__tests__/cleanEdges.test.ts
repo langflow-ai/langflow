@@ -229,18 +229,22 @@ function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       const name = parsedSourceHandle.name;
 
       if (sourceNode.type === "genericNode") {
-        const output =
-          sourceNode.data.node.outputs?.find(
-            (o) => o.name === sourceNode.data.selected_output,
-          ) ??
-          sourceNode.data.node.outputs?.find(
-            (o) =>
-              (o.selected ||
-                (sourceNode.data.node.outputs?.filter(
-                  (out) => !out.group_outputs,
-                )?.length ?? 0) <= 1) &&
-              o.name === name,
-          );
+        const hasGroupOutputs = sourceNode.data.node.outputs?.some(
+          (o) => o.group_outputs,
+        );
+        const output = hasGroupOutputs
+          ? sourceNode.data.node.outputs?.find((o) => o.name === name)
+          : (sourceNode.data.node.outputs?.find(
+              (o) => o.name === sourceNode.data.selected_output,
+            ) ??
+            sourceNode.data.node.outputs?.find(
+              (o) =>
+                (o.selected ||
+                  (sourceNode.data.node.outputs?.filter(
+                    (out) => !out.group_outputs,
+                  )?.length ?? 0) <= 1) &&
+                o.name === name,
+            ));
 
         if (output) {
           const outputTypes =
@@ -568,6 +572,85 @@ describe("cleanEdges", () => {
   });
 
   describe("Basic edge validation", () => {
+    it("should preserve grouped output edge when selected_output points to another output", () => {
+      const sourceNode: AllNodeType = {
+        id: "JSONParser-123",
+        type: "genericNode",
+        data: {
+          id: "JSONParser-123",
+          type: "JSONParserComponent",
+          selected_output: "parsed_data",
+          node: {
+            display_name: "JSON Parser",
+            template: {},
+            outputs: [
+              {
+                name: "parsed_data",
+                display_name: "Parsed Data",
+                types: ["JSON"],
+                selected: "JSON",
+                group_outputs: true,
+              },
+              {
+                name: "error_output",
+                display_name: "Error Output",
+                types: ["Message"],
+                selected: "Message",
+                group_outputs: true,
+              },
+            ],
+          },
+        },
+      };
+
+      const targetNode: AllNodeType = {
+        id: "ChatOutput-456",
+        type: "genericNode",
+        data: {
+          id: "ChatOutput-456",
+          type: "ChatOutput",
+          node: {
+            display_name: "Chat Output",
+            template: {
+              input_value: {
+                type: "other",
+                input_types: ["Data", "JSON", "DataFrame", "Table", "Message"],
+                display_name: "Inputs",
+              },
+            },
+            outputs: [],
+          },
+        },
+      };
+
+      const targetHandle = scapedJSONStringfy({
+        type: "other",
+        fieldName: "input_value",
+        id: "ChatOutput-456",
+        inputTypes: ["Data", "JSON", "DataFrame", "Table", "Message"],
+      });
+
+      const sourceHandle = scapedJSONStringfy({
+        id: "JSONParser-123",
+        name: "error_output",
+        output_types: ["Message"],
+        dataType: "JSONParserComponent",
+      });
+
+      const edge: EdgeType = {
+        id: "edge-grouped-error-output",
+        source: "JSONParser-123",
+        target: "ChatOutput-456",
+        sourceHandle,
+        targetHandle,
+      };
+
+      const result = cleanEdges([sourceNode, targetNode], [edge]);
+
+      expect(result.edges.length).toBe(1);
+      expect(result.brokenEdges.length).toBe(0);
+    });
+
     it("should remove edge when source node does not exist", () => {
       const targetNodeBasic: AllNodeType = {
         id: "Target-456",
