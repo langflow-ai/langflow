@@ -13,6 +13,7 @@ export interface ConnectionItem {
   variableCount: number;
   isNew: boolean;
   environmentVariables: Record<string, string>;
+  globalVarKeys?: Set<string>;
 }
 
 export interface DeploymentProvider {

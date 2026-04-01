@@ -189,8 +189,13 @@ export default function StepAttachFlows() {
   const handleCreateConnection = useCallback(() => {
     const filteredVars = envVars.filter((v) => v.key.trim());
     const environmentVariables: Record<string, string> = {};
+    const globalVarKeys = new Set<string>();
     for (const v of filteredVars) {
-      environmentVariables[v.key.trim()] = v.value;
+      const key = v.key.trim();
+      environmentVariables[key] = v.value;
+      if (v.globalVar) {
+        globalVarKeys.add(key);
+      }
     }
     const newConn = {
       id: `conn_${crypto.randomUUID().replace(/-/g, "_")}`,
@@ -198,6 +203,7 @@ export default function StepAttachFlows() {
       variableCount: filteredVars.length,
       isNew: true,
       environmentVariables,
+      globalVarKeys,
     };
     setConnections((prev) => [...prev, newConn]);
     setSelectedConnections(
