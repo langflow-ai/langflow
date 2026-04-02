@@ -14,7 +14,7 @@ except ModuleNotFoundError:
         allow_module_level=True,
     )
 
-from langflow.services.adapters.deployment.watsonx_orchestrate.constants import WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH
+
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxAgentExecutionResultData,
     WatsonxDeploymentCreatePayload,
@@ -72,7 +72,6 @@ def test_create_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> Non
     assert slot.deployment_create is not None
 
     payload = {
-        "resource_name_prefix": "lf_pref_",
         "llm": "granite-3-8b-instruct",
         "tools": {
             "raw_payloads": [_raw_tool("tool-new-1", 11)],
@@ -96,7 +95,6 @@ def test_create_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> Non
     }
 
     applied = slot.deployment_create.apply(payload)
-    assert applied["resource_name_prefix"] == "lf_pref_"
     assert applied["operations"][0]["tool"]["name_of_raw"] == "tool-new-1"
 
 
@@ -106,7 +104,6 @@ def test_create_schema_dedupes_duplicate_raw_tool_names() -> None:
     assert slot.deployment_create is not None
 
     payload = {
-        "resource_name_prefix": "lf_pref_",
         "llm": "granite-3-8b-instruct",
         "tools": {
             "raw_payloads": [
@@ -132,49 +129,12 @@ def test_create_schema_dedupes_duplicate_raw_tool_names() -> None:
     assert raw_payloads[0]["provider_data"]["source_ref"] == "fv-101"
 
 
-def test_create_schema_rejects_blank_resource_name_prefix() -> None:
-    with pytest.raises(AdapterPayloadValidationError) as exc:
-        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_create.apply(  # type: ignore[union-attr]
-            {
-                "resource_name_prefix": "   ",
-                "operations": [
-                    {
-                        "op": "bind",
-                        "tool": {"tool_id_with_ref": {"source_ref": "fv-1", "tool_id": "tool-existing-1"}},
-                        "app_ids": ["app-existing-1"],
-                    }
-                ],
-                "connections": {"existing_app_ids": ["app-existing-1"]},
-            }
-        )
-    assert "String should have at least 1 character" in str(exc.value.error)
-
-
-def test_create_schema_rejects_too_long_resource_name_prefix() -> None:
-    with pytest.raises(AdapterPayloadValidationError) as exc:
-        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_create.apply(  # type: ignore[union-attr]
-            {
-                "resource_name_prefix": "a" * (WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH - len("lf_") + 1),
-                "operations": [
-                    {
-                        "op": "bind",
-                        "tool": {"tool_id_with_ref": {"source_ref": "fv-1", "tool_id": "tool-existing-1"}},
-                        "app_ids": ["app-existing-1"],
-                    }
-                ],
-                "connections": {"existing_app_ids": ["app-existing-1"]},
-            }
-        )
-    assert "cannot exceed" in str(exc.value.error)
-
-
 def test_update_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> None:
     slot = WatsonxOrchestrateDeploymentService.payload_schemas
     assert slot is not None
     assert slot.deployment_update is not None
 
     payload = {
-        "resource_name_prefix": "lf_pref_",
         "llm": "granite-3-8b-instruct",
         "tools": {
             "raw_payloads": [_raw_tool("tool-new-1", 1)],
@@ -202,49 +162,10 @@ def test_update_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> Non
     assert applied["operations"][1]["tool"]["tool_id_with_ref"]["tool_id"] == "tool-existing-1"
 
 
-def test_update_schema_rejects_too_long_resource_name_prefix() -> None:
-    with pytest.raises(AdapterPayloadValidationError) as exc:
-        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
-            {
-                "resource_name_prefix": "a" * (WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH - len("lf_") + 1),
-                "llm": "granite-3-8b-instruct",
-                "connections": {"existing_app_ids": ["app-existing-1"]},
-                "operations": [
-                    {
-                        "op": "bind",
-                        "tool": {"tool_id_with_ref": {"source_ref": "fv-1", "tool_id": "tool-existing-1"}},
-                        "app_ids": ["app-existing-1"],
-                    }
-                ],
-            }
-        )
-    assert "cannot exceed" in str(exc.value.error)
-
-
-def test_update_schema_rejects_raw_tools_without_resource_name_prefix() -> None:
-    with pytest.raises(AdapterPayloadValidationError) as exc:
-        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
-            {
-                "llm": "granite-3-8b-instruct",
-                "tools": {"raw_payloads": [_raw_tool("tool-new-1", 33)]},
-                "connections": {"existing_app_ids": ["app-existing-1"]},
-                "operations": [
-                    {
-                        "op": "bind",
-                        "tool": {"name_of_raw": "tool-new-1"},
-                        "app_ids": ["app-existing-1"],
-                    }
-                ],
-            }
-        )
-    assert "resource_name_prefix is required when update payload creates raw tools" in str(exc.value.error)
-
-
 def test_update_schema_rejects_prefixed_app_id_collisions() -> None:
     with pytest.raises(AdapterPayloadValidationError) as exc:
         WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
             {
-                "resource_name_prefix": "lf_",
                 "llm": "granite-3-8b-instruct",
                 "connections": {
                     "existing_app_ids": ["dup"],
@@ -267,7 +188,6 @@ def test_update_schema_rejects_missing_raw_tool_reference() -> None:
         WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
             {
                 "llm": "granite-3-8b-instruct",
-                "resource_name_prefix": "lf_pref_",
                 "connections": {
                     "existing_app_ids": ["app-existing-1"],
                 },
@@ -288,7 +208,6 @@ def test_update_schema_rejects_tool_reference_with_both_selectors() -> None:
         WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
             {
                 "llm": "granite-3-8b-instruct",
-                "resource_name_prefix": "lf_pref_",
                 "tools": {"raw_payloads": [_raw_tool("tool-new-1", 1)]},
                 "connections": {"existing_app_ids": ["app-existing-1"]},
                 "operations": [
@@ -334,7 +253,6 @@ def test_update_schema_rejects_bind_app_id_not_in_declared_pools() -> None:
         WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
             {
                 "llm": "granite-3-8b-instruct",
-                "resource_name_prefix": "lf_pref_",
                 "tools": {
                     "raw_payloads": [_raw_tool("tool-new-1", 2)],
                 },
@@ -376,7 +294,6 @@ def test_update_schema_rejects_unused_raw_connection_app_ids() -> None:
         WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
             {
                 "llm": "granite-3-8b-instruct",
-                "resource_name_prefix": "lf_pref_",
                 "tools": {"raw_payloads": [_raw_tool("tool-new-1", 3)]},
                 "connections": {"raw_payloads": [_raw_connection("app-new-1"), _raw_connection("app-unused")]},
                 "operations": [
@@ -491,17 +408,6 @@ def test_update_schema_rejects_put_tools_with_operations() -> None:
                         "app_ids": ["app-1"],
                     }
                 ],
-            }
-        )
-    assert "standalone full replacement and cannot be combined" in str(exc.value.error)
-
-
-def test_update_schema_rejects_put_tools_with_resource_name_prefix() -> None:
-    with pytest.raises(AdapterPayloadValidationError) as exc:
-        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
-            {
-                "put_tools": ["tool-id-1"],
-                "resource_name_prefix": "lf_",
             }
         )
     assert "standalone full replacement and cannot be combined" in str(exc.value.error)

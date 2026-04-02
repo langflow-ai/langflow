@@ -230,7 +230,6 @@ def create_wxo_flow_tool(
     *,
     flow_payload: BaseFlowArtifact[WatsonxFlowArtifactProviderData],
     connections: dict[str, str],
-    tool_name_prefix: str,
 ) -> tuple[dict[str, Any], bytes]:
     """Create a Watsonx Orchestrate flow tool specification.
 
@@ -242,7 +241,6 @@ def create_wxo_flow_tool(
     Args:
         flow_payload: The flow payload to create the tool specification for.
         connections: The connections dictionary to create the tool specification for.
-        tool_name_prefix: Deterministic prefix for the resulting tool name.
 
     Returns:
         Tuple[dict[str, Any], bytes]: a tuple containing:
@@ -297,8 +295,7 @@ def create_wxo_flow_tool(
     current_name = str(tool_payload.get("name") or "").strip()
 
     if current_name:
-        normalized_current_name = normalize_wxo_name(current_name)
-        tool_payload["name"] = f"{tool_name_prefix}{normalized_current_name}"
+        tool_payload["name"] = normalize_wxo_name(current_name)
 
     (tool_payload.setdefault("binding", {}).setdefault("langflow", {})["project_id"]) = project_id
 
@@ -329,7 +326,6 @@ async def create_and_upload_wxo_flow_tools(
     clients: WxOClient,
     flow_payloads: list[BaseFlowArtifact[WatsonxFlowArtifactProviderData]],
     connections: dict[str, str],
-    tool_name_prefix: str,
 ) -> list[str]:
     tool_bindings = [
         FlowToolBindingSpec(
@@ -341,7 +337,6 @@ async def create_and_upload_wxo_flow_tools(
     return await create_and_upload_wxo_flow_tools_with_bindings(
         clients=clients,
         tool_bindings=tool_bindings,
-        tool_name_prefix=tool_name_prefix,
     )
 
 
@@ -349,13 +344,11 @@ async def create_and_upload_wxo_flow_tools_with_bindings(
     *,
     clients: WxOClient,
     tool_bindings: list[FlowToolBindingSpec],
-    tool_name_prefix: str,
 ) -> list[str]:
     specs = [
         create_wxo_flow_tool(
             flow_payload=tool_binding.flow_payload,
             connections=tool_binding.connections,
-            tool_name_prefix=tool_name_prefix,
         )
         for tool_binding in tool_bindings
     ]
@@ -412,7 +405,6 @@ async def upload_wxo_flow_tool(
 def build_snapshot_tool_names(
     *,
     snapshots: SnapshotItems | None,
-    tool_name_prefix: str,
 ) -> list[str]:
     if snapshots is None:
         return []
@@ -423,7 +415,7 @@ def build_snapshot_tool_names(
         if not normalized_tool_name:
             msg = "Snapshot name must include at least one alphanumeric character."
             raise InvalidContentError(message=msg)
-        tool_names.append(f"{tool_name_prefix}{normalized_tool_name}")
+        tool_names.append(normalized_tool_name)
     return tool_names
 
 
@@ -431,14 +423,9 @@ async def process_raw_flows_with_app_id(
     clients: WxOClient,
     app_id: str,
     flows: list[BaseFlowArtifact[WatsonxFlowArtifactProviderData]],
-    tool_name_prefix: str,
 ) -> list[WatsonxToolRefBinding]:
     """Create langflow tools in wxO and connect them to the given app_id."""
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
-
-    if not tool_name_prefix.strip():
-        msg = "Snapshot creation requires a non-empty tool_name_prefix."
-        raise InvalidDeploymentOperationError(message=msg)
 
     connection = await validate_connection(clients.connections, app_id=app_id)
 
@@ -446,7 +433,6 @@ async def process_raw_flows_with_app_id(
         clients=clients,
         flow_payloads=flows,
         connections={app_id: connection.connection_id},
-        tool_name_prefix=tool_name_prefix,
     )
     if len(created_tool_ids) != len(flows):
         msg = "Flow upload result mismatch: created tool ids count does not match the number of flow payloads."

@@ -303,14 +303,12 @@ def _attach_provider_clients(service: WatsonxOrchestrateDeploymentService, clien
 
 def _create_provider_spec(
     *,
-    resource_name_prefix: str = "lf_test_",
     existing_tool_ids: list[str] | None = None,
     existing_app_ids: list[str] | None = None,
 ) -> dict:
     tool_ids = existing_tool_ids or ["tool-existing-1"]
     app_ids = existing_app_ids or ["app-existing-1"]
     return {
-        "resource_name_prefix": resource_name_prefix,
         "tools": {},
         "connections": {"existing_app_ids": app_ids},
         "llm": TEST_WXO_LLM,
@@ -404,36 +402,6 @@ async def test_create_rejects_legacy_top_level_config_section(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_create_rejects_missing_resource_name_prefix():
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-
-    with pytest.raises(InvalidContentError, match=r"Missing required field 'resource_name_prefix'"):
-        await service.create(
-            user_id="user-1",
-            db=object(),
-            payload=DeploymentCreate(
-                spec=BaseDeploymentData(
-                    name="my deployment",
-                    description="desc",
-                    type=DeploymentType.AGENT,
-                ),
-                provider_data={
-                    "tools": {},
-                    "connections": {"existing_app_ids": ["app-existing-1"]},
-                    "llm": TEST_WXO_LLM,
-                    "operations": [
-                        {
-                            "op": "bind",
-                            "tool": {"tool_id_with_ref": _tool_ref("tool-existing-1")},
-                            "app_ids": ["app-existing-1"],
-                        }
-                    ],
-                },
-            ),
-        )
-
-
-@pytest.mark.anyio
 async def test_create_rejects_missing_llm():
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
 
@@ -462,7 +430,6 @@ def test_create_payload_rejects_empty_work():
     ):
         payloads_module.WatsonxDeploymentCreatePayload.model_validate(
             {
-                "resource_name_prefix": "lf_",
                 "llm": TEST_WXO_LLM,
             }
         )
@@ -796,7 +763,6 @@ def test_create_payload_rejects_existing_tool_bind_with_empty_app_ids():
     with pytest.raises(ValidationError):
         payloads_module.WatsonxDeploymentCreatePayload.model_validate(
             {
-                "resource_name_prefix": "lf_",
                 "llm": TEST_WXO_LLM,
                 "operations": [
                     {
@@ -812,7 +778,6 @@ def test_create_payload_rejects_existing_tool_bind_with_empty_app_ids():
 def test_create_payload_accepts_attach_tool_operation():
     payload = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
         {
-            "resource_name_prefix": "lf_",
             "llm": TEST_WXO_LLM,
             "operations": [
                 {
@@ -834,7 +799,6 @@ def test_create_payload_rejects_attach_and_bind_for_same_existing_tool():
     ):
         payloads_module.WatsonxDeploymentCreatePayload.model_validate(
             {
-                "resource_name_prefix": "lf_",
                 "llm": TEST_WXO_LLM,
                 "connections": {"existing_app_ids": ["cfg-1"]},
                 "operations": [
@@ -899,10 +863,9 @@ async def test_update_provider_data_creates_raw_tools_without_operations(monkeyp
     async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
         return fake_clients
 
-    async def mock_create_and_upload(*, clients, tool_bindings, tool_name_prefix):
+    async def mock_create_and_upload(*, clients, tool_bindings):
         _ = clients
         captured["tool_bindings"] = tool_bindings
-        captured["tool_name_prefix"] = tool_name_prefix
         return ["new-tool-raw-1"]
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
@@ -918,7 +881,6 @@ async def test_update_provider_data_creates_raw_tools_without_operations(monkeyp
         payload=DeploymentUpdate(
             provider_data={
                 "llm": TEST_WXO_LLM,
-                "resource_name_prefix": "lf_",
                 "tools": {
                     "raw_payloads": [
                         {
@@ -936,7 +898,6 @@ async def test_update_provider_data_creates_raw_tools_without_operations(monkeyp
         db=object(),
     )
 
-    assert captured["tool_name_prefix"] == "lf_"
     assert captured["tool_bindings"][0].connections == {}
     assert result.provider_result is not None
     assert result.provider_result.created_snapshot_ids == ["new-tool-raw-1"]
@@ -971,11 +932,10 @@ async def test_update_provider_data_creates_raw_connection_and_raw_tool(monkeypa
     async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
         return SimpleNamespace(connection_id=f"conn-{app_id}")
 
-    async def mock_create_and_upload(*, clients, tool_bindings, tool_name_prefix):
+    async def mock_create_and_upload(*, clients, tool_bindings):
         _ = clients
         first_binding = tool_bindings[0]
         captured["connections"] = first_binding.connections
-        captured["tool_name_prefix"] = tool_name_prefix
         return ["new-tool-1"]
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
@@ -992,7 +952,6 @@ async def test_update_provider_data_creates_raw_connection_and_raw_tool(monkeypa
         deployment_id="dep-1",
         payload=DeploymentUpdate(
             provider_data={
-                "resource_name_prefix": "lf_",
                 "tools": {
                     "raw_payloads": [
                         {
@@ -1028,7 +987,6 @@ async def test_update_provider_data_creates_raw_connection_and_raw_tool(monkeypa
 
     assert captured["created_app_id"] == "cfg"
     assert captured["connections"] == {"cfg": "conn-cfg"}
-    assert captured["tool_name_prefix"] == "lf_"
     assert result.provider_result is not None
     assert result.provider_result.created_app_ids == ["cfg"]
     assert result.provider_result.created_snapshot_ids == ["new-tool-1"]
@@ -1071,7 +1029,6 @@ async def test_update_provider_data_binds_existing_tool_using_provider_app_id_fo
         deployment_id="dep-1",
         payload=DeploymentUpdate(
             provider_data={
-                "resource_name_prefix": "lf_",
                 "tools": {},
                 "connections": {
                     "raw_payloads": [
@@ -1185,7 +1142,6 @@ def test_ordered_unique_strs_preserves_encounter_order_and_safe_discard():
 def test_build_provider_update_plan_preserves_operation_encounter_order():
     provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
         {
-            "resource_name_prefix": "lf_",
             "tools": {
                 "raw_payloads": [
                     {
@@ -1241,7 +1197,6 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
 def test_build_provider_update_plan_creates_unbound_raw_tools_alongside_bound_raw_tools():
     provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
         {
-            "resource_name_prefix": "lf_",
             "tools": {
                 "raw_payloads": [
                     {
@@ -1286,34 +1241,6 @@ def test_build_provider_update_plan_creates_unbound_raw_tools_alongside_bound_ra
     assert plan.raw_tools_to_create[0].app_ids == ["cfg"]
     assert plan.raw_tools_to_create[1].app_ids == []
 
-
-def test_build_provider_update_plan_normalizes_resource_name_prefix():
-    provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
-        {
-            "resource_name_prefix": "my-prefix!",
-            "connections": {"existing_app_ids": ["cfg-1"]},
-            "llm": TEST_WXO_LLM,
-            "operations": [{"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-a")}, "app_ids": ["cfg-1"]}],
-        }
-    )
-    plan = update_core_module.build_provider_update_plan(
-        agent={"id": "dep-1", "tools": []},
-        provider_update=provider_update,
-    )
-
-    assert plan.resource_prefix == "lf_my_prefix"
-
-
-def test_build_provider_update_plan_rejects_non_alpha_resource_name_prefix():
-    with pytest.raises(ValidationError, match="start with a letter"):
-        payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
-            {
-                "resource_name_prefix": "123-prefix",
-                "connections": {"existing_app_ids": ["cfg-1"]},
-                "llm": TEST_WXO_LLM,
-                "operations": [{"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-a")}, "app_ids": ["cfg-1"]}],
-            }
-        )
 
 
 def test_build_provider_update_plan_put_tools_replaces_agent_tool_list():
@@ -1381,7 +1308,6 @@ def test_build_provider_update_plan_attaches_existing_tool_without_connection_de
 def test_build_provider_create_plan_creates_unbound_raw_tools_without_bind_operations():
     provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
         {
-            "resource_name_prefix": "lf_",
             "tools": {
                 "raw_payloads": [
                     {
@@ -1412,7 +1338,6 @@ def test_build_provider_create_plan_creates_unbound_raw_tools_without_bind_opera
 def test_build_provider_create_plan_attaches_existing_tool_without_connection_updates():
     provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
         {
-            "resource_name_prefix": "lf_",
             "llm": TEST_WXO_LLM,
             "operations": [
                 {
@@ -1452,7 +1377,6 @@ async def test_update_existing_tool_connection_deltas_uses_bind_order_in_errors(
 async def test_apply_provider_create_plan_binds_raw_tools_with_provider_app_ids(monkeypatch):
     provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
         {
-            "resource_name_prefix": "lf_",
             "tools": {
                 "raw_payloads": [
                     {
@@ -1488,11 +1412,10 @@ async def test_apply_provider_create_plan_binds_raw_tools_with_provider_app_ids(
     )
     captured: dict[str, Any] = {}
 
-    async def mock_create_and_upload(*, clients, tool_bindings, tool_name_prefix):
+    async def mock_create_and_upload(*, clients, tool_bindings):
         _ = clients
         first_binding = tool_bindings[0]
         captured["connections"] = first_binding.connections
-        captured["tool_name_prefix"] = tool_name_prefix
         return ["created-tool-1"]
 
     monkeypatch.setattr(
@@ -1515,7 +1438,6 @@ async def test_apply_provider_create_plan_binds_raw_tools_with_provider_app_ids(
 
     assert fake_clients.connections.create_calls == [{"app_id": "cfg"}]
     assert captured["connections"] == {"cfg": "conn-cfg"}
-    assert captured["tool_name_prefix"] == "lf_"
     assert fake_clients.agent.create_calls
     assert fake_clients.agent.create_calls[0]["name"] == "lf_my_deployment"
     assert fake_clients.agent.create_calls[0]["tools"] == ["created-tool-1"]
@@ -1532,7 +1454,6 @@ async def test_apply_provider_create_plan_binds_raw_tools_with_provider_app_ids(
 async def test_apply_provider_create_plan_rolls_back_mutated_existing_tools_with_writable_payload(monkeypatch):
     provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
         {
-            "resource_name_prefix": "lf_",
             "tools": {},
             "connections": {"existing_app_ids": ["cfg-1"]},
             "llm": TEST_WXO_LLM,
@@ -1608,7 +1529,6 @@ async def test_apply_provider_create_plan_rolls_back_successfully_created_raw_co
 ):
     provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
         {
-            "resource_name_prefix": "lf_",
             "tools": {},
             "connections": {
                 "raw_payloads": [
@@ -1671,7 +1591,6 @@ async def test_apply_provider_create_plan_rolls_back_all_journaled_raw_connectio
 ):
     provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
         {
-            "resource_name_prefix": "lf_",
             "tools": {},
             "connections": {
                 "raw_payloads": [
@@ -1735,7 +1654,6 @@ async def test_apply_provider_update_plan_rolls_back_successfully_created_raw_co
 ):
     provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
         {
-            "resource_name_prefix": "lf_",
             "tools": {},
             "connections": {
                 "raw_payloads": [
@@ -1804,7 +1722,6 @@ async def test_apply_provider_update_plan_rolls_back_all_journaled_raw_connectio
 ):
     provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
         {
-            "resource_name_prefix": "lf_",
             "tools": {},
             "connections": {
                 "raw_payloads": [
@@ -1878,11 +1795,10 @@ async def test_create_provider_data_prefixes_tool_and_deployment_names_but_not_c
     )
     captured: dict[str, Any] = {}
 
-    async def mock_create_and_upload(*, clients, tool_bindings, tool_name_prefix):
+    async def mock_create_and_upload(*, clients, tool_bindings):
         _ = clients
         first_binding = tool_bindings[0]
         captured["connections"] = first_binding.connections
-        captured["tool_name_prefix"] = tool_name_prefix
         return ["created-tool-1"]
 
     _attach_provider_clients(service, fake_clients)
@@ -1901,7 +1817,6 @@ async def test_create_provider_data_prefixes_tool_and_deployment_names_but_not_c
                 type=DeploymentType.AGENT,
             ),
             provider_data={
-                "resource_name_prefix": "lf_",
                 "tools": {
                     "raw_payloads": [
                         {
@@ -1930,7 +1845,6 @@ async def test_create_provider_data_prefixes_tool_and_deployment_names_but_not_c
 
     assert fake_clients.connections.create_calls == [{"app_id": "cfg"}]
     assert captured["connections"] == {"cfg": "conn-cfg"}
-    assert captured["tool_name_prefix"] == "lf_"
     assert fake_clients.agent.create_calls
     assert fake_clients.agent.create_calls[0]["name"] == "lf_my_deployment"
     assert fake_clients.agent.create_calls[0]["display_name"] == "my deployment"
@@ -2012,7 +1926,6 @@ async def test_update_provider_data_maps_raw_connection_conflict_to_deployment_c
             deployment_id="dep-1",
             payload=DeploymentUpdate(
                 provider_data={
-                    "resource_name_prefix": "lf_",
                     "tools": {
                         "raw_payloads": [
                             {
@@ -2080,7 +1993,6 @@ async def test_create_provider_data_maps_raw_connection_conflict_to_deployment_c
                     type=DeploymentType.AGENT,
                 ),
                 provider_data={
-                    "resource_name_prefix": "lf_",
                     "tools": {
                         "raw_payloads": [
                             {
@@ -2253,8 +2165,8 @@ async def test_update_provider_data_rolls_back_partially_created_raw_tools(monke
     async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
         return SimpleNamespace(connection_id=f"conn-{app_id}")
 
-    async def mock_create_and_upload_with_bindings(*, clients, tool_bindings, tool_name_prefix):
-        _ = clients, tool_bindings, tool_name_prefix
+    async def mock_create_and_upload_with_bindings(*, clients, tool_bindings):
+        _ = clients, tool_bindings
         raise core_tools_module.ToolUploadBatchError(
             created_tool_ids=["created-tool-1"],
             errors=[RuntimeError("upload failed")],
@@ -2275,7 +2187,6 @@ async def test_update_provider_data_rolls_back_partially_created_raw_tools(monke
             deployment_id="dep-1",
             payload=DeploymentUpdate(
                 provider_data={
-                    "resource_name_prefix": "lf_",
                     "tools": {
                         "raw_payloads": [
                             {
@@ -2336,8 +2247,8 @@ async def test_create_provider_data_rolls_back_partially_created_raw_tools(monke
     async def mock_validate_connection(connections_client, *, app_id):  # noqa: ARG001
         return SimpleNamespace(connection_id=f"conn-{app_id}")
 
-    async def mock_create_and_upload_with_bindings(*, clients, tool_bindings, tool_name_prefix):
-        _ = clients, tool_bindings, tool_name_prefix
+    async def mock_create_and_upload_with_bindings(*, clients, tool_bindings):
+        _ = clients, tool_bindings
         msg = "upload failed"
         raise core_tools_module.ToolUploadBatchError(
             created_tool_ids=["created-tool-1"],
@@ -2367,7 +2278,6 @@ async def test_create_provider_data_rolls_back_partially_created_raw_tools(monke
                     type=DeploymentType.AGENT,
                 ),
                 provider_data={
-                    "resource_name_prefix": "lf_",
                     "tools": {
                         "raw_payloads": [
                             {
@@ -2423,12 +2333,10 @@ async def test_process_raw_flows_with_app_id_awaits_connection_validation(monkey
         clients,
         flow_payloads,
         connections,
-        tool_name_prefix,
     ):
         captured["clients"] = clients
         captured["flow_payloads"] = flow_payloads
         captured["connections"] = connections
-        captured["tool_name_prefix"] = tool_name_prefix
         return []
 
     monkeypatch.setattr(
@@ -2445,12 +2353,10 @@ async def test_process_raw_flows_with_app_id_awaits_connection_validation(monkey
         clients=fake_clients,
         app_id="app-1",
         flows=[],
-        tool_name_prefix="lf_test_",
     )
 
     assert result == []
     assert captured["connections"] == {"app-1": "conn-123"}
-    assert captured["tool_name_prefix"] == "lf_test_"
 
 
 @pytest.mark.anyio
@@ -2470,7 +2376,6 @@ async def test_process_raw_flows_with_app_id_returns_source_ref_bindings(monkeyp
         clients,  # noqa: ARG001
         flow_payloads,  # noqa: ARG001
         connections,  # noqa: ARG001
-        tool_name_prefix,  # noqa: ARG001
     ):
         return ["tool-1", "tool-2"]
 
@@ -2511,7 +2416,6 @@ async def test_process_raw_flows_with_app_id_returns_source_ref_bindings(monkeyp
                 ),
             ),
         ],
-        tool_name_prefix="lf_test_",
     )
 
     assert [
@@ -2549,7 +2453,6 @@ async def test_process_raw_flows_with_app_id_accepts_typed_provider_data(monkeyp
         clients,  # noqa: ARG001
         flow_payloads,  # noqa: ARG001
         connections,  # noqa: ARG001
-        tool_name_prefix,  # noqa: ARG001
     ):
         return ["tool-1"]
 
@@ -2579,7 +2482,6 @@ async def test_process_raw_flows_with_app_id_accepts_typed_provider_data(monkeyp
                 ),
             ),
         ],
-        tool_name_prefix="lf_test_",
     )
 
     assert len(result) == 1
@@ -2604,7 +2506,6 @@ async def test_process_raw_flows_with_app_id_rejects_plain_dict_provider_data(mo
         clients,  # noqa: ARG001
         flow_payloads,  # noqa: ARG001
         connections,  # noqa: ARG001
-        tool_name_prefix,  # noqa: ARG001
     ):
         return ["tool-1"]
 
@@ -2635,7 +2536,6 @@ async def test_process_raw_flows_with_app_id_rejects_plain_dict_provider_data(mo
                     provider_data={"project_id": "project-1", "source_ref": "fv-dict-1"},
                 ),
             ],
-            tool_name_prefix="lf_test_",
         )
 
 
@@ -2695,7 +2595,6 @@ def test_create_wxo_flow_tool_keeps_load_from_db_global_values_unprefixed(monkey
     create_wxo_flow_tool(
         flow_payload=flow_payload,
         connections={},
-        tool_name_prefix="lf_test_",
     )
 
     template = captured_tool_definition["data"]["nodes"][0]["data"]["node"]["template"]
@@ -2763,7 +2662,6 @@ def test_create_wxo_flow_tool_excludes_provider_data_from_artifact(monkeypatch):
     create_wxo_flow_tool(
         flow_payload=flow_payload,
         connections={},
-        tool_name_prefix="lf_test_",
     )
 
     assert "provider_data" not in captured_flow_definition
@@ -2790,11 +2688,10 @@ def test_create_wxo_flow_tool_requires_provider_data_project_id():
         create_wxo_flow_tool(
             flow_payload=flow_payload,
             connections={},
-            tool_name_prefix="lf_test_",
         )
 
 
-def test_create_wxo_flow_tool_prefixes_name_for_raw_payload(monkeypatch):
+def test_create_wxo_flow_tool_normalizes_name_for_raw_payload(monkeypatch):
     flow_payload = BaseFlowArtifact[payloads_module.WatsonxFlowArtifactProviderData](
         id="00000000-0000-0000-0000-000000000001",
         name="basicllmwxo",
@@ -2828,10 +2725,9 @@ def test_create_wxo_flow_tool_prefixes_name_for_raw_payload(monkeypatch):
     tool_payload, artifact_bytes = create_wxo_flow_tool(
         flow_payload=flow_payload,
         connections={},
-        tool_name_prefix="lf_abcdef_",
     )
 
-    assert tool_payload["name"] == "lf_abcdef_basicllmwxo"
+    assert tool_payload["name"] == "basicllmwxo"
     assert tool_payload["binding"]["langflow"]["project_id"] == "project-123"
     assert artifact_bytes == b"artifact"
 
@@ -4267,7 +4163,7 @@ async def test_create_and_upload_wxo_flow_tools_with_bindings_journals_created_i
     monkeypatch.setattr(
         tools_module,
         "create_wxo_flow_tool",
-        lambda flow_payload, connections, tool_name_prefix: (  # noqa: ARG005
+        lambda flow_payload, _connections: (
             {"name": flow_payload.name, "description": flow_payload.description},
             b"artifact",
         ),
@@ -4302,66 +4198,10 @@ async def test_create_and_upload_wxo_flow_tools_with_bindings_journals_created_i
         await tools_module.create_and_upload_wxo_flow_tools_with_bindings(
             clients=fake_clients,
             tool_bindings=bindings,
-            tool_name_prefix="lf_",
         )
 
     assert set(exc.value.created_tool_ids) == {"tool-1", "tool-2"}
     assert len(created_calls) == 2
-
-
-def test_resolve_resource_name_prefix_uses_caller_provided_prefix():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import resolve_resource_name_prefix
-
-    assert resolve_resource_name_prefix(caller_prefix="custom_abc_") == "lf_custom_abc_"
-
-
-def test_resolve_resource_name_prefix_does_not_double_prefix_lf_namespace():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import resolve_resource_name_prefix
-
-    assert resolve_resource_name_prefix(caller_prefix="lf_custom_abc_") == "lf_custom_abc_"
-
-
-def test_resolve_resource_name_prefix_rejects_empty_string():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import resolve_resource_name_prefix
-
-    with pytest.raises(InvalidContentError, match="non-empty string"):
-        resolve_resource_name_prefix(caller_prefix="")
-
-
-def test_resolve_resource_name_prefix_rejects_non_alpha_start():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import resolve_resource_name_prefix
-
-    with pytest.raises(InvalidContentError, match="start with a letter"):
-        resolve_resource_name_prefix(caller_prefix="123_prefix_")
-
-
-def test_resolve_resource_name_prefix_rejects_only_special_chars():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import resolve_resource_name_prefix
-
-    with pytest.raises(InvalidContentError, match="alphanumeric"):
-        resolve_resource_name_prefix(caller_prefix="!!!")
-
-
-def test_resolve_resource_name_prefix_normalizes_caller_prefix():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import resolve_resource_name_prefix
-
-    assert resolve_resource_name_prefix(caller_prefix="my-prefix!") == "lf_my_prefix"
-
-
-def test_resolve_resource_name_prefix_rejects_too_long_prefix():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.constants import WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import resolve_resource_name_prefix
-
-    with pytest.raises(InvalidContentError, match="cannot exceed"):
-        resolve_resource_name_prefix(caller_prefix="a" * (WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH - len("lf_") + 1))
-
-
-def test_resolve_resource_name_prefix_accepts_max_length_when_already_prefixed():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.constants import WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import resolve_resource_name_prefix
-
-    caller_prefix = "lf_" + ("a" * (WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH - len("lf_")))
-    assert resolve_resource_name_prefix(caller_prefix=caller_prefix) == caller_prefix
 
 
 def test_extract_error_detail_json_string():
@@ -4917,7 +4757,7 @@ async def test_create_maps_409_conflict_to_deployment_conflict_error():
                     description="desc",
                     type=DeploymentType.AGENT,
                 ),
-                provider_data=_create_provider_spec(resource_name_prefix="lf_test_"),
+                provider_data=_create_provider_spec(),
             ),
         )
 
@@ -4950,7 +4790,7 @@ async def test_create_maps_422_to_invalid_content_error():
                     description="desc",
                     type=DeploymentType.AGENT,
                 ),
-                provider_data=_create_provider_spec(resource_name_prefix="lf_test_"),
+                provider_data=_create_provider_spec(),
             ),
         )
 
@@ -5231,7 +5071,7 @@ async def test_create_preserves_exception_chain_on_unexpected_error():
                     description="desc",
                     type=DeploymentType.AGENT,
                 ),
-                provider_data=_create_provider_spec(resource_name_prefix="lf_test_"),
+                provider_data=_create_provider_spec(),
             ),
         )
 

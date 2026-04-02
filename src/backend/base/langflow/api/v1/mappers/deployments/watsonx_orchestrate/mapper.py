@@ -382,7 +382,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             return slot.apply(
                 self._build_provider_payload_body(
                     llm=api_provider_payload.llm,
-                    resource_name_prefix=api_provider_payload.resource_name_prefix,
                     raw_tool_payloads=[
                         artifact.model_copy(
                             update={
@@ -554,7 +553,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             provider_payload: AdapterPayload = update_slot.apply(
                 self._build_provider_payload_body(
                     llm=api_provider_payload.llm,
-                    resource_name_prefix=api_provider_payload.resource_name_prefix,
                     raw_tool_payloads=[artifact.model_dump(exclude_none=True) for artifact in filtered_raw_payloads],
                     connections=api_provider_payload.connections,
                     operations=provider_operations,
@@ -1231,14 +1229,12 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         self,
         *,
         llm: str,
-        resource_name_prefix: str | None,
         raw_tool_payloads: list[dict[str, Any]],
         connections: Any,
         operations: list[AdapterPayload],
     ) -> dict[str, Any]:
         return {
             "llm": llm,
-            "resource_name_prefix": resource_name_prefix,
             "tools": {
                 "raw_payloads": raw_tool_payloads or None,
             },
