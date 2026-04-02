@@ -136,7 +136,9 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                   placeholder="e.g., SALES_BOT_PROD"
                   className="bg-muted"
                   value={newConnectionName}
-                  onChange={(e) => onNameChange(e.target.value)}
+                  onChange={(e) =>
+                    onNameChange(e.target.value.replace(/[^a-zA-Z0-9_ ]/g, ""))
+                  }
                 />
               </div>
               <div className="flex flex-col">

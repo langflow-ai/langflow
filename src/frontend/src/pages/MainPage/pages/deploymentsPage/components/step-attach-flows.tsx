@@ -48,7 +48,6 @@ export default function StepAttachFlows() {
         (f.folder_id === currentFolderId || f.id === initialFlowId),
     );
   }, [flowsData, currentFolderId, initialFlowId]);
-  // TODO: replace with real API data
 
   const [selectedFlowId, setSelectedFlowId] = useState<string | null>(
     initialFlowId ?? null,
@@ -199,8 +198,13 @@ export default function StepAttachFlows() {
         globalVarKeys.add(key);
       }
     }
+    const sanitizedId = newConnectionName
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/[^a-z0-9_]/g, "");
     const newConn = {
-      id: `conn_${crypto.randomUUID().replace(/-/g, "_")}`,
+      id: sanitizedId,
       name: newConnectionName.trim(),
       variableCount: filteredVars.length,
       isNew: true,
@@ -311,7 +315,7 @@ export default function StepAttachFlows() {
               selectedVersionByFlow={selectedVersionByFlow}
               toolName={
                 effectiveFlowId
-                  ? toolNameByFlow.get(effectiveFlowId) ?? ""
+                  ? (toolNameByFlow.get(effectiveFlowId) ?? "")
                   : ""
               }
               onToolNameChange={(name) => {
