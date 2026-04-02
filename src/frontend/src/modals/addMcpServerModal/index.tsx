@@ -3,6 +3,7 @@ import { nanoid } from "nanoid";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import InputListComponent from "@/components/core/parameterRenderComponent/components/inputListComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,7 @@ import IOKeyPairInputWithVariables from "@/modals/IOModal/components/IOFieldView
 import type { MCPServerType } from "@/types/mcp";
 import { extractMcpServersFromJson } from "@/utils/mcpUtils";
 import { parseString } from "@/utils/stringManipulation";
+import { cn } from "@/utils/utils";
 
 const MCP_SETTINGS_PAGE = "/settings/mcp-servers";
 
@@ -358,9 +360,16 @@ export default function AddMcpServerModal({
               id="global-variable-modal-inputs"
             >
               {error && (
-                <div className="mb-4 rounded-md bg-destructive/10 px-4 py-2 text-xs font-medium text-destructive">
-                  {error}
-                </div>
+                <ShadTooltip content={error}>
+                  <div
+                    className={cn(
+                      "absolute right-4 top-4 truncate text-xs font-medium text-destructive",
+                      type === "JSON" ? "w-3/5" : "w-4/5",
+                    )}
+                  >
+                    {error}
+                  </div>
+                </ShadTooltip>
               )}
               <TabsContent value="JSON" className="flex flex-col p-0 m-0">
                 <Label className="!text-mmd mb-2">Paste in JSON config</Label>
