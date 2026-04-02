@@ -31,6 +31,7 @@ from lfx.base.models.openai_constants import (
     OPENAI_EMBEDDING_MODELS_DETAILED,
     OPENAI_MODELS_DETAILED,
 )
+from lfx.base.models.custom_provider_utils import get_custom_provider_credentials, get_custom_provider_options
 from lfx.base.models.watsonx_constants import WATSONX_MODELS_DETAILED
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
@@ -1057,6 +1058,10 @@ def get_language_model_options(
 
             options.append(option)
 
+    # Append custom provider models (per-user, from DB)
+    custom_options = get_custom_provider_options(user_id)
+    options.extend(custom_options)
+
     # Add disabled providers (providers that exist in metadata but have no enabled models)
     if user_id:
         for provider, metadata in model_provider_metadata.items():
@@ -1460,6 +1465,39 @@ def get_llm(
     model_name = model.get("name")
     provider = model.get("provider")
     metadata = model.get("metadata", {})
+
+    # --- Custom provider fast path ---
+    if metadata.get("is_custom_provider") and metadata.get("custom_provider_id"):
+        custom_provider_id = metadata["custom_provider_id"]
+
+        creds = get_custom_provider_credentials(custom_provider_id, user_id)
+        if creds is None:
+            msg = (
+                f"Custom provider '{custom_provider_id}' not found. "
+                "It may have been deleted. Please reconfigure the model in Settings → Model Providers."
+            )
+            raise ValueError(msg)
+
+        base_url, decrypted_key = creds
+        cp_model_class = get_model_class("ChatOpenAI")
+
+        cp_kwargs: dict[str, Any] = {
+            "model": model_name,
+            "base_url": base_url,
+            "api_key": decrypted_key,
+            "streaming": stream,
+        }
+        if temperature is not None:
+            cp_kwargs["temperature"] = temperature
+        if max_tokens is not None and max_tokens != "":
+            try:
+                max_tokens_int = int(max_tokens)
+                if max_tokens_int >= 1:
+                    cp_kwargs["max_tokens"] = max_tokens_int
+            except (TypeError, ValueError):
+                pass
+
+        return cp_model_class(**cp_kwargs)
 
     # Get model class and parameter names from metadata
     api_key_param = metadata.get("api_key_param", "api_key")

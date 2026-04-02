@@ -13,8 +13,14 @@ from .transactions import TransactionTable
 from .user import User
 from .variable import Variable
 
+# CustomProvider must be imported AFTER User to ensure SQLAlchemy can resolve
+# the "User" string reference in CustomProvider.user relationship.
+from .custom_provider import CustomProvider, CustomProviderModel
+
 __all__ = [
     "ApiKey",
+    "CustomProvider",
+    "CustomProviderModel",
     "Deployment",
     "DeploymentProviderAccount",
     "File",

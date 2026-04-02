@@ -10,6 +10,7 @@ from langflow.schema.serialize import UUIDstr
 
 if TYPE_CHECKING:
     from langflow.services.database.models.api_key.model import ApiKey
+    from langflow.services.database.models.custom_provider.model import CustomProvider
     from langflow.services.database.models.deployment.model import Deployment
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
     from langflow.services.database.models.file.model import File
@@ -61,6 +62,10 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
         sa_relationship_kwargs={"cascade": "delete"},
     )
     folders: list["Folder"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "delete"},
+    )
+    custom_providers: list["CustomProvider"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
     )
