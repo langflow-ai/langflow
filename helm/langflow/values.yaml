@@ -39,5 +39,12 @@ ssl:
 langflow:
   secretKey: ""          # ignored if existingSecret is set
   storage: 5Gi
+  storageClass: ""       # e.g. sc-nfs-app-retain
+
+# -- NFS PersistentVolume (created automatically when nfs.enabled=true)
+nfs:
+  enabled: false
+  server: ""             # e.g. 10.0.0.1
+  basePath: ""           # e.g. /nfs/langflow  (subdirectory /<empno> is appended automatically)
 
 resources: {}
