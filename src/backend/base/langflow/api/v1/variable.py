@@ -296,7 +296,7 @@ def _derive_env_var_name(field_key: str, template: dict) -> str:
     return field_key.upper()
 
 
-@router.post("/detections", response_model=DetectVarsResponse)
+@router.post("/detections", response_model=DetectVarsResponse, include_in_schema=False)
 async def detect_env_vars(
     payload: DetectVarsRequest,
     session: DbSession,
@@ -316,6 +316,7 @@ async def detect_env_vars(
     """
     global_var_keys: dict[str, str] = {}
     password_keys: dict[str, str] = {}
+    unresolved_ids: list[UUID] = []
 
     for version_id in payload.flow_version_ids:
         try:
@@ -325,6 +326,7 @@ async def detect_env_vars(
                 user_id=current_user.id,
             )
         except FlowVersionNotFoundError:
+            unresolved_ids.append(version_id)
             continue
 
         data = version.data
@@ -352,4 +354,4 @@ async def detect_env_vars(
         DetectedEnvVar(key=k, global_variable_name=None) for k in sorted(password_keys) if k not in global_var_keys
     )
 
-    return DetectVarsResponse(variables=merged)
+    return DetectVarsResponse(variables=merged, unresolved_ids=unresolved_ids)
