@@ -75,6 +75,11 @@ describe("fileUtils", () => {
       expect(isAllowedChatAttachmentFile(file)).toBe(true);
     });
 
+    it("allows mdx when mdx mime type is present", () => {
+      const file = new File(["# Hello"], "docs.mdx", { type: "text/mdx" });
+      expect(isAllowedChatAttachmentFile(file)).toBe(true);
+    });
+
     it("allows non-image allowed mime types", () => {
       const file = new File(["name,age\nAda,32"], "data.csv", {
         type: "text/csv",

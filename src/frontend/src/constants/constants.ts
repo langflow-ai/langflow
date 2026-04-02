@@ -888,6 +888,8 @@ export const ALLOWED_CHAT_ATTACHMENT_INPUT_MIME_TYPES = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "text/plain",
   "text/markdown",
+  "text/mdx",
+  "application/mdx",
   "application/json",
   "application/x-yaml",
   "application/yaml",

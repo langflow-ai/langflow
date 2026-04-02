@@ -12,7 +12,7 @@ export type FilePreviewDisplayProps = {
   /**
    * File can be:
    * - Browser File object (for input context)
-   * - Server file path object { path: string; type?: string; name?: string; cacheKey?: string | number }
+   * - Server file path object { path: string; type?: string; name?: string;}
    * - Server file path string
    */
   file:
