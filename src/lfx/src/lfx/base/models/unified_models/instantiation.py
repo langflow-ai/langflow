@@ -46,7 +46,7 @@ def get_llm(
 
     # Safely extract model configuration
     if not model or not isinstance(model, list) or len(model) == 0:
-        msg = "No model selected. Please select a language model from the available options."
+        msg = "A model selection is required"
         raise ValueError(msg)
 
     # Extract the first model (only one expected)
