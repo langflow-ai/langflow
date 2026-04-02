@@ -190,3 +190,62 @@ class TestSkipLoadFromDbWhenModelHasEdge:
 
         # Assert
         assert "description" not in load_from_db_fields
+
+    def test_should_skip_secret_load_from_db_when_connection_mode_active(self):
+        """Secret fields must NOT be resolved via load_from_db when the model
+        field has _connection_mode: true (user chose 'Connect other models')."""
+        # Arrange
+        template = {
+            "model": {
+                "type": "model",
+                "value": [],
+                "show": True,
+                "_connection_mode": True,
+            },
+            "api_key": {
+                "type": "str",
+                "_input_type": "SecretStrInput",
+                "password": True,
+                "load_from_db": True,
+                "value": "",
+                "show": True,
+            },
+        }
+        handler = self._create_handler_with_template(template, model_has_edge=False)
+
+        # Act
+        load_from_db_fields: list[str] = []
+        params: dict = {}
+        handler._process_direct_type_field("api_key", template["api_key"], params, load_from_db_fields)
+
+        # Assert — api_key must NOT be in load_from_db_fields
+        assert "api_key" not in load_from_db_fields
+
+    def test_should_allow_secret_load_from_db_when_connection_mode_false(self):
+        """Secret fields should be resolved normally when _connection_mode is false."""
+        # Arrange
+        template = {
+            "model": {
+                "type": "model",
+                "value": [{"name": "gpt-4", "provider": "OpenAI"}],
+                "show": True,
+                "_connection_mode": False,
+            },
+            "api_key": {
+                "type": "str",
+                "_input_type": "SecretStrInput",
+                "password": True,
+                "load_from_db": True,
+                "value": "OPENAI_API_KEY",
+                "show": True,
+            },
+        }
+        handler = self._create_handler_with_template(template, model_has_edge=False)
+
+        # Act
+        load_from_db_fields: list[str] = []
+        params: dict = {}
+        handler._process_direct_type_field("api_key", template["api_key"], params, load_from_db_fields)
+
+        # Assert — api_key SHOULD be in load_from_db_fields
+        assert "api_key" in load_from_db_fields

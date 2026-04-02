@@ -146,11 +146,11 @@ describe("useModelConnectionLogic", () => {
 
   describe("connection mode clears template value (stale config prevention)", () => {
     it("should clear value to empty array when entering connection mode", () => {
-      // Simulates what clearSelection does: sets value to []
-      const previousValue = [{ name: "gpt-4", icon: "Bot", provider: "OpenAI" }];
+      const previousValue = [
+        { name: "gpt-4", icon: "Bot", provider: "OpenAI" },
+      ];
       const clearedValue: any[] = [];
 
-      // After clearSelection, value should be empty — not the old model
       expect(clearedValue).toEqual([]);
       expect(clearedValue).not.toEqual(previousValue);
     });
@@ -158,10 +158,110 @@ describe("useModelConnectionLogic", () => {
     it("should never send a string value to handleOnNewValue", () => {
       // The old bug: handleOnNewValue({ value: "connect_other_models" })
       // caused "string indices must be integers, not 'str'" on the backend.
-      // Connection mode now sends [] instead.
       const newValue: any[] = [];
       expect(typeof newValue).not.toBe("string");
       expect(Array.isArray(newValue)).toBe(true);
+    });
+  });
+
+  describe("credential clearing in connection mode", () => {
+    // Pure logic: useModelConnectionLogic.setNode clears password fields
+    const clearCredentialFields = (
+      template: Record<string, any>,
+    ): Record<string, any> => {
+      const updated = { ...template };
+      if (updated.model) {
+        updated.model = {
+          ...updated.model,
+          value: [],
+          _connection_mode: true,
+        };
+      }
+      for (const [key, field] of Object.entries(updated)) {
+        if (field?.password || field?._input_type === "SecretStrInput") {
+          updated[key] = { ...field, value: "", load_from_db: false };
+        }
+      }
+      return updated;
+    };
+
+    it("should clear model value and set _connection_mode flag", () => {
+      const template = {
+        model: {
+          type: "model",
+          value: [{ name: "gpt-4", provider: "OpenAI" }],
+        },
+        api_key: {
+          type: "str",
+          password: true,
+          _input_type: "SecretStrInput",
+          load_from_db: true,
+          value: "OPENAI_API_KEY",
+        },
+      };
+
+      const result = clearCredentialFields(template);
+
+      expect(result.model.value).toEqual([]);
+      expect(result.model._connection_mode).toBe(true);
+    });
+
+    it("should clear password fields value and disable load_from_db", () => {
+      const template = {
+        model: { type: "model", value: [{ name: "gpt-4" }] },
+        api_key: {
+          type: "str",
+          password: true,
+          _input_type: "SecretStrInput",
+          load_from_db: true,
+          value: "OPENAI_API_KEY",
+        },
+        temperature: {
+          type: "float",
+          value: 0.7,
+          password: false,
+        },
+      };
+
+      const result = clearCredentialFields(template);
+
+      expect(result.api_key.value).toBe("");
+      expect(result.api_key.load_from_db).toBe(false);
+      // Non-secret fields should not be affected
+      expect(result.temperature.value).toBe(0.7);
+    });
+  });
+
+  describe("exiting connection mode clears _connection_mode flag", () => {
+    const exitConnectionMode = (
+      template: Record<string, any>,
+    ): Record<string, any> => {
+      const updated = { ...template };
+      if (updated.model?._connection_mode) {
+        updated.model = { ...updated.model, _connection_mode: false };
+      }
+      return updated;
+    };
+
+    it("should set _connection_mode to false when selecting a model", () => {
+      const template = {
+        model: { type: "model", value: [], _connection_mode: true },
+      };
+
+      const result = exitConnectionMode(template);
+
+      expect(result.model._connection_mode).toBe(false);
+    });
+
+    it("should not change template when _connection_mode is already false", () => {
+      const template = {
+        model: { type: "model", value: [{ name: "gpt-4" }], _connection_mode: false },
+      };
+
+      const result = exitConnectionMode(template);
+
+      expect(result.model._connection_mode).toBe(false);
+      expect(result.model.value).toEqual([{ name: "gpt-4" }]);
     });
   });
 });

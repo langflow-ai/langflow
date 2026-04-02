@@ -9,6 +9,7 @@ import ModelProviderModal from "@/modals/modelProviderModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import type { APIClassType } from "@/types/api";
+import type { NodeDataType } from "@/types/flow";
 import { useModelConnectionLogic } from "./hooks/useModelConnectionLogic";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
@@ -210,14 +211,29 @@ export default function ModelInputComponent({
       if (nodeId) {
         const store = useFlowStore.getState();
         const node = store.getNode(nodeId);
-        const modelField = (node?.data as any)?.node?.template?.model;
-        if (modelField?._connection_mode) {
-          store.setNode(nodeId, (prev) => {
-            const data = prev.data as any;
-            data._connectionMode = false;
-            data.node.template.model._connection_mode = false;
-            return { ...prev, data };
-          }, false);
+        const nodeData = node?.data as NodeDataType | undefined;
+        if (nodeData?.node?.template?.model?._connection_mode) {
+          store.setNode(
+            nodeId,
+            (prev) => ({
+              ...prev,
+              data: {
+                ...prev.data,
+                _connectionMode: false,
+                node: {
+                  ...(prev.data as NodeDataType).node,
+                  template: {
+                    ...(prev.data as NodeDataType).node.template,
+                    model: {
+                      ...(prev.data as NodeDataType).node.template.model,
+                      _connection_mode: false,
+                    },
+                  },
+                },
+              } as NodeDataType,
+            }),
+            false,
+          );
         }
       }
       const selectedOption = flatOptions.find(
