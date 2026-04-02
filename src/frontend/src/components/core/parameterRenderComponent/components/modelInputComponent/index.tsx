@@ -181,10 +181,14 @@ export default function ModelInputComponent({
       // Clear connection mode flag on node data
       if (nodeId) {
         const store = useFlowStore.getState();
-        store.setNode(nodeId, (node) => ({
-          ...node,
-          data: { ...node.data, _connectionMode: false },
-        }), false);
+        store.setNode(
+          nodeId,
+          (node) => ({
+            ...node,
+            data: { ...node.data, _connectionMode: false },
+          }),
+          false,
+        );
       }
       const selectedOption = flatOptions.find(
         (option) => option.name === modelName,
