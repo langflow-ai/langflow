@@ -247,7 +247,13 @@ def _collect_flow_files(sources: list[str], dir_path: str | None) -> list[Path]:
         if not p.exists():
             console.print(f"[red]Error:[/red] File not found: {p}")
             raise typer.Exit(1)
-        paths.append(p)
+        if p.is_dir():
+            dir_jsons = sorted(p.glob("*.json"))
+            if not dir_jsons:
+                console.print(f"[yellow]Warning:[/yellow] No *.json files found in {p}")
+            paths.extend(dir_jsons)
+        else:
+            paths.append(p)
 
     return paths
 
