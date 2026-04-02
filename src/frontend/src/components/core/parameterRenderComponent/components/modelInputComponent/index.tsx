@@ -7,7 +7,10 @@ import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-t
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ModelProviderModal from "@/modals/modelProviderModal";
 import useAlertStore from "@/stores/alertStore";
+import useFlowStore from "@/stores/flowStore";
 import type { APIClassType } from "@/types/api";
+import type { NodeDataType } from "@/types/flow";
+import { useModelConnectionLogic } from "./hooks/useModelConnectionLogic";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import { Command } from "../../../../ui/command";
@@ -48,6 +51,31 @@ export default function ModelInputComponent({
     useState(false);
   const [isRefreshingAfterClose, setIsRefreshingAfterClose] = useState(false);
   const [refreshOptions, setRefreshOptions] = useState(false);
+
+  // Connection mode: local state for reactivity, persisted in node data for reload
+  const [isConnectionMode, setIsConnectionMode] = useState(() => {
+    if (!nodeId) return false;
+    const node = useFlowStore.getState().nodes.find((n) => n.id === nodeId);
+    return (node?.data as any)?._connectionMode === true;
+  });
+
+  const setConnectionMode = useCallback(
+    (enabled: boolean) => {
+      setIsConnectionMode(enabled);
+      if (!nodeId) return;
+      const store = useFlowStore.getState();
+      store.setNode(
+        nodeId,
+        (node) => ({
+          ...node,
+          data: { ...node.data, _connectionMode: enabled },
+        }),
+        false,
+      );
+    },
+    [nodeId],
+  );
+
   const { refreshAllModelInputs } = useRefreshModelInputs();
 
   // Ref to track if we've already processed the empty options state
@@ -58,6 +86,19 @@ export default function ModelInputComponent({
     parameterId: "model",
     nodeId: nodeId || "",
     node: (nodeClass as APIClassType) || null,
+  });
+
+  const { handleExternalOptions } = useModelConnectionLogic({
+    nodeId: nodeId || "",
+    closePopover: () => setOpen(false),
+    clearSelection: () => {
+      // Only set the _connectionMode flag on the node data.
+      // Don't call handleOnNewValue — it triggers a backend round-trip
+      // that tries to resolve __default_language_model__ and fails.
+      // The credential fields are cleared by useModelConnectionLogic
+      // directly in the node template via setNode.
+      setConnectionMode(true);
+    },
   });
 
   const modelType =
@@ -111,9 +152,15 @@ export default function ModelInputComponent({
 
   // Derive the currently selected model from the value prop
   const selectedModel = useMemo(() => {
-    // If we're in connection mode, we don't have a normal selected model
-    if (value === "connect_other_models") {
-      return null;
+    // If we're in connection mode, show the connection option as selected
+    if (isConnectionMode) {
+      return {
+        name:
+          externalOptions?.fields?.data?.node?.display_name ||
+          "Connect other models",
+        icon: externalOptions?.fields?.data?.node?.icon || "CornerDownLeft",
+        provider: "",
+      } as SelectedModel;
     }
 
     const currentName = value?.[0]?.name;
@@ -133,11 +180,15 @@ export default function ModelInputComponent({
       // Or keep displaying the stale one? Original logic selected first available.
       (flatOptions.length > 0 ? flatOptions[0] : null)
     );
-  }, [value, flatOptions]);
+  }, [value, flatOptions, isConnectionMode, externalOptions]);
 
   useEffect(() => {
-    // Only proceed if we have options and haven't selected a value
-    if (flatOptions.length > 0 && (!value || value.length === 0)) {
+    // Only proceed if we have options, haven't selected a value, and NOT in connection mode
+    if (
+      flatOptions.length > 0 &&
+      (!value || value.length === 0) &&
+      !isConnectionMode
+    ) {
       // Check ref to avoid infinite loops
       if (!hasProcessedEmptyRef.current) {
         const firstOption = flatOptions[0];
@@ -162,6 +213,37 @@ export default function ModelInputComponent({
    */
   const handleModelSelect = useCallback(
     (modelName: string) => {
+      setConnectionMode(false);
+      // Clear the _connection_mode flag from the model field template
+      // so the backend resumes normal update_build_config behavior.
+      if (nodeId) {
+        const store = useFlowStore.getState();
+        const node = store.getNode(nodeId);
+        const nodeData = node?.data as NodeDataType | undefined;
+        if (nodeData?.node?.template?.model?._connection_mode) {
+          store.setNode(
+            nodeId,
+            (prev) => ({
+              ...prev,
+              data: {
+                ...prev.data,
+                _connectionMode: false,
+                node: {
+                  ...(prev.data as NodeDataType).node,
+                  template: {
+                    ...(prev.data as NodeDataType).node.template,
+                    model: {
+                      ...(prev.data as NodeDataType).node.template.model,
+                      _connection_mode: false,
+                    },
+                  },
+                },
+              } as NodeDataType,
+            }),
+            false,
+          );
+        }
+      }
       const selectedOption = flatOptions.find(
         (option) => option.name === modelName,
       );
@@ -295,6 +377,17 @@ export default function ModelInputComponent({
             "refresh-model-list",
           )}
           {renderManageProvidersButton()}
+          {externalOptions?.fields?.data?.node && (
+            <div className="border-t bg-background">
+              {renderFooterButton(
+                externalOptions.fields.data.node.display_name ||
+                  "Connect other models",
+                externalOptions.fields.data.node.icon || "CornerDownLeft",
+                () => handleExternalOptions("connect_other_models"),
+                "connect-other-models",
+              )}
+            </div>
+          )}
         </Command>
       </PopoverContentInput>
     );

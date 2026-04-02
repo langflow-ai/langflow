@@ -1,15 +1,8 @@
-import io
-import json
-import zipfile
-from datetime import datetime, timezone
+import warnings
 from typing import Annotated, cast
-from urllib.parse import quote
 from uuid import UUID
 
-import orjson
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Response, UploadFile, status
-from fastapi.encoders import jsonable_encoder
-from fastapi.responses import StreamingResponse
 from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
@@ -18,25 +11,23 @@ from sqlalchemy import or_, update
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
-from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, custom_params, remove_api_keys
-from langflow.api.utils.mcp.config_utils import validate_mcp_server_for_project
-from langflow.api.utils.zip_utils import extract_flows_from_zip
-from langflow.api.v1.auth_helpers import handle_auth_settings_update
-from langflow.api.v1.flows import create_flows
-from langflow.api.v1.mcp_projects import (
-    get_project_sse_url,  # noqa: F401
-    get_project_streamable_http_url,
-    register_project_with_composer,
+from langflow.api.utils import (
+    CurrentActiveUser,
+    DbSession,
+    cascade_delete_flow,
+    custom_params,
 )
-from langflow.api.v1.schemas import FlowListCreate
-from langflow.api.v2.mcp import update_server
-from langflow.helpers.flow import generate_unique_flow_name
-from langflow.helpers.folders import generate_unique_folder_name
+from langflow.api.v1.auth_helpers import handle_auth_settings_update
+from langflow.api.v1.mcp_projects import register_project_with_composer
+from langflow.api.v1.projects_files import download_project_flows, upload_project_flows
+from langflow.api.v1.projects_mcp_helpers import (
+    cleanup_mcp_on_delete,
+    handle_mcp_server_rename,
+    register_mcp_servers_for_project,
+)
 from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLDER_NAME
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
-from langflow.services.database.models.api_key.crud import create_api_key
-from langflow.services.database.models.api_key.model import ApiKeyCreate
-from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
+from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
     Folder,
@@ -46,10 +37,15 @@ from langflow.services.database.models.folder.model import (
     FolderUpdate,
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
-from langflow.services.deps import get_service, get_settings_service, get_storage_service
+from langflow.services.deps import get_service, get_settings_service
 from langflow.services.schema import ServiceType
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
+
+
+def _escape_like(value: str) -> str:
+    """Escape LIKE wildcards and the escape character itself."""
+    return value.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
 
 
 @router.post("/", response_model=FolderRead, status_code=201)
@@ -72,31 +68,42 @@ async def create_project(
                 statement=select(Folder).where(Folder.name == new_project.name).where(Folder.user_id == current_user.id)
             )
         ).first():
+            escaped_project_name = _escape_like(new_project.name)
             project_results = await session.exec(
                 select(Folder).where(
-                    Folder.name.like(f"{new_project.name}%"),  # type: ignore[attr-defined]
+                    Folder.name.like(f"{escaped_project_name}%", escape="\\"),  # type: ignore[attr-defined]
                     Folder.user_id == current_user.id,
                 )
             )
             if project_results:
                 project_names = [project.name for project in project_results]
-                # TODO: this throws an error if the name contains non-numeric content in parentheses
-                project_numbers = [int(name.split("(")[-1].split(")")[0]) for name in project_names if "(" in name]
+                project_numbers = []
+                for name in project_names:
+                    if "(" not in name:
+                        continue
+                    try:
+                        project_numbers.append(int(name.split("(")[-1].split(")")[0]))
+                    except ValueError:
+                        continue
                 if project_numbers:
                     new_project.name = f"{new_project.name} ({max(project_numbers) + 1})"
                 else:
                     new_project.name = f"{new_project.name} (1)"
 
         settings_service = get_settings_service()
+        mcp_auth: dict = {"auth_type": "none"}
 
+        if project.auth_settings:
+            mcp_auth = project.auth_settings.copy()
+            new_project.auth_settings = encrypt_auth_settings(mcp_auth)
         # If AUTO_LOGIN is false, automatically enable API key authentication
-        default_auth = {"auth_type": "none"}
-        if not settings_service.auth_settings.AUTO_LOGIN and not new_project.auth_settings:
-            default_auth = {"auth_type": "apikey"}
-            new_project.auth_settings = encrypt_auth_settings(default_auth)
+        elif not settings_service.auth_settings.AUTO_LOGIN:
+            mcp_auth = {"auth_type": "apikey"}
+            new_project.auth_settings = encrypt_auth_settings(mcp_auth)
             await logger.adebug(
-                f"Auto-enabled API key authentication for project {new_project.name} "
-                f"({new_project.id}) due to AUTO_LOGIN=false"
+                "Auto-enabled API key authentication for project %s (%s) due to AUTO_LOGIN=false",
+                new_project.name,
+                new_project.id,
             )
 
         session.add(new_project)
@@ -105,91 +112,7 @@ async def create_project(
 
         # Auto-register MCP server for this project with configured default auth
         if get_settings_service().settings.add_projects_to_mcp_servers:
-            try:
-                # Build Streamable HTTP URL (preferred transport) and legacy SSE URL (for docs/errors)
-                streamable_http_url = await get_project_streamable_http_url(new_project.id)
-                # legacy SSE URL
-                # sse_url = await get_project_sse_url(new_project.id)
-
-                # Prepare server config based on auth type same as new project
-                if default_auth.get("auth_type", "none") == "apikey":
-                    # Create API key for API key authentication
-                    api_key_name = f"MCP Project {new_project.name} - default"
-                    unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), current_user.id)
-                    # Starting v>=1.7.1, we use Streamable HTTP transport by default
-                    command = "uvx"
-                    args = [
-                        "mcp-proxy",
-                        "--transport",
-                        "streamablehttp",
-                        "--headers",
-                        "x-api-key",
-                        unmasked_api_key.api_key,
-                        streamable_http_url,
-                    ]
-                elif default_auth.get("auth_type", "none") == "oauth":
-                    msg = "OAuth authentication is not yet implemented for MCP server creation during project creation."
-                    logger.warning(msg)
-                    raise HTTPException(status_code=501, detail=msg)
-                else:  # default_auth_type == "none"
-                    # No authentication - direct connection
-                    command = "uvx"
-                    args = [
-                        "mcp-proxy",
-                        "--transport",
-                        "streamablehttp",
-                        streamable_http_url,
-                    ]
-
-                server_config = {"command": command, "args": args}
-
-                # Validate MCP server for this project
-                validation_result = await validate_mcp_server_for_project(
-                    new_project.id,
-                    new_project.name,
-                    current_user,
-                    session,
-                    get_storage_service(),
-                    get_settings_service(),
-                    operation="create",
-                )
-
-                # Handle conflicts
-                if validation_result.has_conflict:
-                    await logger.aerror(validation_result.conflict_message)
-                    raise HTTPException(
-                        status_code=409,  # Conflict - semantically correct for name conflicts
-                        detail=validation_result.conflict_message,
-                    )
-
-                # Log if updating existing server
-                if validation_result.should_skip:
-                    msg = (
-                        f"MCP server '{validation_result.server_name}' "
-                        f"already exists for project {new_project.id}, updating"
-                    )
-                    await logger.adebug(msg)
-
-                server_name = validation_result.server_name
-
-                await update_server(
-                    server_name,
-                    server_config,
-                    current_user,
-                    session,
-                    get_storage_service(),
-                    get_settings_service(),
-                )
-            except HTTPException:
-                # Re-raise HTTP validation errors (conflicts, etc.)
-                raise
-            except NotImplementedError:
-                msg = "OAuth as default MCP authentication type is not yet implemented"
-                await logger.aerror(msg)
-                raise
-            except Exception as e:  # noqa: BLE001
-                msg = f"Failed to auto-register MCP server for project {new_project.id}: {e}"
-                await logger.aexception(msg, exc_info=True)
+            await register_mcp_servers_for_project(new_project, mcp_auth, current_user, session)
 
         if project.components_list:
             update_statement_components = (
@@ -278,9 +201,8 @@ async def read_project(
             if is_flow:
                 stmt = stmt.where(Flow.is_component == False)  # noqa: E712
             if search:
-                stmt = stmt.where(Flow.name.like(f"%{search}%"))  # type: ignore[attr-defined]
-
-            import warnings
+                _search = _escape_like(search)
+                stmt = stmt.where(Flow.name.like(f"%{_search}%", escape="\\"))  # type: ignore[attr-defined]
 
             with warnings.catch_warnings():
                 warnings.filterwarnings(
@@ -343,88 +265,13 @@ async def update_project(
             should_start_mcp_composer = auth_result["should_start_composer"]
             should_stop_mcp_composer = auth_result["should_stop_composer"]
 
-        # Handle other updates
+        # Handle project rename and corresponding MCP server rename
         if project.name and project.name != existing_project.name:
             old_project_name = existing_project.name
             existing_project.name = project.name
 
-            # Update corresponding MCP server name if auto-add is enabled
             if get_settings_service().settings.add_projects_to_mcp_servers:
-                try:
-                    # Validate old server (for this specific project)
-                    old_validation = await validate_mcp_server_for_project(
-                        existing_project.id,
-                        old_project_name,
-                        current_user,
-                        session,
-                        get_storage_service(),
-                        get_settings_service(),
-                        operation="update",
-                    )
-
-                    # Validate new server name (check for conflicts)
-                    new_validation = await validate_mcp_server_for_project(
-                        existing_project.id,
-                        project.name,
-                        current_user,
-                        session,
-                        get_storage_service(),
-                        get_settings_service(),
-                        operation="update",
-                    )
-
-                    # Only proceed if server names would be different
-                    if old_validation.server_name != new_validation.server_name:
-                        # Check if new server name would conflict with different project
-                        if new_validation.has_conflict:
-                            await logger.aerror(new_validation.conflict_message)
-                            raise HTTPException(
-                                status_code=409,  # Conflict - semantically correct for name conflicts
-                                detail=new_validation.conflict_message,
-                            )
-
-                        # If old server exists and matches this project, proceed with rename
-                        if old_validation.server_exists and old_validation.project_id_matches:
-                            # Remove the old server
-                            await update_server(
-                                old_validation.server_name,
-                                {},  # Empty config for deletion
-                                current_user,
-                                session,
-                                get_storage_service(),
-                                get_settings_service(),
-                                delete=True,
-                            )
-
-                            # Add server with new name and existing config
-                            await update_server(
-                                new_validation.server_name,
-                                old_validation.existing_config or {},
-                                current_user,
-                                session,
-                                get_storage_service(),
-                                get_settings_service(),
-                            )
-
-                            msg = (
-                                f"Updated MCP server name from {old_validation.server_name} "
-                                f"to {new_validation.server_name}"
-                            )
-                            await logger.adebug(msg)
-                        else:
-                            msg = (
-                                f"Old MCP server '{old_validation.server_name}' "
-                                "not found for this project, skipping rename"
-                            )
-                            await logger.adebug(msg)
-
-                except HTTPException:
-                    # Re-raise HTTP validation errors (conflicts, etc.)
-                    raise
-                except Exception as e:  # noqa: BLE001
-                    # Log but don't fail the project update if MCP server handling fails
-                    msg = f"Failed to handle MCP server name update for project rename: {e}"
-                    await logger.awarning(msg)
+                await handle_mcp_server_rename(existing_project, old_project_name, project.name, current_user, session)
 
         if project.description is not None:
             existing_project.description = project.description
@@ -438,22 +285,21 @@ async def update_project(
 
         # Start MCP Composer if auth changed to OAuth
         if should_start_mcp_composer:
-            msg = (
-                f"Auth settings changed to OAuth for project {existing_project.name} ({existing_project.id}), "
-                "starting MCP Composer"
+            await logger.adebug(
+                "Auth settings changed to OAuth for project %s (%s), starting MCP Composer",
+                existing_project.name,
+                existing_project.id,
             )
-            await logger.adebug(msg)
             background_tasks.add_task(register_project_with_composer, existing_project)
 
         # Stop MCP Composer if auth changed FROM OAuth to something else
         elif should_stop_mcp_composer:
-            msg = (
-                f"Auth settings changed from OAuth for project {existing_project.name} ({existing_project.id}), "
-                "stopping MCP Composer"
+            await logger.ainfo(
+                "Auth settings changed from OAuth for project %s (%s), stopping MCP Composer",
+                existing_project.name,
+                existing_project.id,
             )
-            await logger.ainfo(msg)
 
-            # Get the MCP Composer service and stop the project's composer
             mcp_composer_service: MCPComposerService = cast(
                 MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
             )
@@ -517,67 +363,13 @@ async def delete_project(
     # Prevent deletion of the Langflow Assistant folder
     if project.name == ASSISTANT_FOLDER_NAME:
         msg = f"Cannot delete the '{ASSISTANT_FOLDER_NAME}' folder, that contains pre-built flows."
-        await logger.adebug(msg)
+        await logger.adebug("Cannot delete the '%s' folder, that contains pre-built flows.", ASSISTANT_FOLDER_NAME)
         raise HTTPException(
             status_code=403,
             detail=msg,
         )
 
-    # Check if project has OAuth authentication and stop MCP Composer if needed
-    if project.auth_settings and project.auth_settings.get("auth_type") == "oauth":
-        try:
-            mcp_composer_service: MCPComposerService = cast(
-                MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
-            )
-            await mcp_composer_service.stop_project_composer(str(project_id))
-            await logger.adebug(f"Stopped MCP Composer for deleted OAuth project {project.name} ({project_id})")
-        except Exception as e:  # noqa: BLE001
-            # Log but don't fail the deletion if MCP Composer cleanup fails
-            await logger.aerror(f"Failed to stop MCP Composer for deleted project {project_id}: {e}")
-
-    # Delete corresponding MCP server if auto-add was enabled
-    if get_settings_service().settings.add_projects_to_mcp_servers:
-        try:
-            # Validate MCP server for this specific project
-            validation_result = await validate_mcp_server_for_project(
-                project_id,
-                project.name,
-                current_user,
-                session,
-                get_storage_service(),
-                get_settings_service(),
-                operation="delete",
-            )
-
-            # Only delete if server exists and matches this project ID
-            if validation_result.server_exists and validation_result.project_id_matches:
-                await update_server(
-                    validation_result.server_name,
-                    {},  # Empty config for deletion
-                    current_user,
-                    session,
-                    get_storage_service(),
-                    get_settings_service(),
-                    delete=True,
-                )
-                msg = (
-                    f"Deleted MCP server {validation_result.server_name} for "
-                    f"deleted project {project.name} ({project_id})"
-                )
-                await logger.adebug(msg)
-            elif validation_result.server_exists and not validation_result.project_id_matches:
-                msg = (
-                    f"MCP server '{validation_result.server_name}' exists but belongs to different project, "
-                    "skipping deletion"
-                )
-                await logger.adebug(msg)
-            else:
-                msg = f"No MCP server found for deleted project {project.name} ({project_id})"
-                await logger.adebug(msg)
-
-        except Exception as e:  # noqa: BLE001
-            # Log but don't fail the project deletion if MCP server handling fails
-            await logger.awarning(f"Failed to handle MCP server cleanup for deleted project {project_id}: {e}")
+    await cleanup_mcp_on_delete(project, project_id, current_user, session)
 
     try:
         await session.delete(project)
@@ -594,47 +386,7 @@ async def download_file(
     current_user: CurrentActiveUser,
 ):
     """Download all flows from project as a zip file."""
-    try:
-        query = select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id)
-        result = await session.exec(query)
-        project = result.first()
-
-        if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
-
-        flows_query = select(Flow).where(Flow.folder_id == project_id)
-        flows_result = await session.exec(flows_query)
-        flows = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows_result.all()]
-
-        if not flows:
-            raise HTTPException(status_code=404, detail="No flows found in project")
-
-        flows_without_api_keys = [remove_api_keys(flow.model_dump()) for flow in flows]
-        zip_stream = io.BytesIO()
-
-        with zipfile.ZipFile(zip_stream, "w") as zip_file:
-            for flow in flows_without_api_keys:
-                flow_json = json.dumps(jsonable_encoder(flow))
-                zip_file.writestr(f"{flow['name']}.json", flow_json.encode("utf-8"))
-
-        zip_stream.seek(0)
-
-        current_time = datetime.now(tz=timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")
-        filename = f"{current_time}_{project.name}_flows.zip"
-
-        # URL encode filename handle non-ASCII (ex. Cyrillic)
-        encoded_filename = quote(filename)
-
-        return StreamingResponse(
-            zip_stream,
-            media_type="application/x-zip-compressed",
-            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"},
-        )
-
-    except Exception as e:
-        if "No result found" in str(e):
-            raise HTTPException(status_code=404, detail="Project not found") from e
-        raise HTTPException(status_code=500, detail=str(e)) from e
+    return await download_project_flows(session=session, project_id=project_id, current_user=current_user)
 
 
 @router.post("/upload/", response_model=list[FlowRead], status_code=201)
@@ -649,87 +401,4 @@ async def upload_file(
     Accepts either a JSON file with project metadata (folder_name, folder_description, flows)
     or a ZIP file containing individual flow JSON files (as produced by the download endpoint).
     """
-    if file is None:
-        raise HTTPException(status_code=400, detail="No file provided")
-
-    contents = await file.read()
-
-    if not contents:
-        raise HTTPException(status_code=400, detail="The uploaded file is empty")
-
-    # Detect ZIP files and extract flow data
-    if zipfile.is_zipfile(io.BytesIO(contents)):
-        try:
-            flows_data = await extract_flows_from_zip(contents)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e)) from e
-        if not flows_data:
-            raise HTTPException(status_code=400, detail="No valid flow JSON files found in the ZIP")
-
-        # Use the uploaded filename (without extension) as the project name
-        project_name_base = file.filename.rsplit(".", 1)[0] if file.filename else "Imported Project"
-        project_name_base = project_name_base or "Imported Project"
-        data: dict = {
-            "folder_name": project_name_base,
-            "folder_description": "",
-            "flows": flows_data,
-        }
-    else:
-        try:
-            data = orjson.loads(contents)
-        except orjson.JSONDecodeError as e:
-            raise HTTPException(status_code=400, detail=f"Invalid JSON file: {e}") from e
-
-    if not data:
-        raise HTTPException(status_code=400, detail="No flows found in the file")
-
-    project_name = await generate_unique_folder_name(data["folder_name"], current_user.id, session)
-
-    data["folder_name"] = project_name
-
-    project = FolderCreate(name=data["folder_name"], description=data.get("folder_description", ""))
-
-    new_project = Folder.model_validate(project, from_attributes=True)
-    new_project.id = None
-    new_project.user_id = current_user.id
-
-    settings_service = get_settings_service()
-
-    # If AUTO_LOGIN is false, automatically enable API key authentication
-    if not settings_service.auth_settings.AUTO_LOGIN and not new_project.auth_settings:
-        default_auth = {"auth_type": "apikey"}
-        new_project.auth_settings = encrypt_auth_settings(default_auth)
-        await logger.adebug(
-            f"Auto-enabled API key authentication for uploaded project {new_project.name} "
-            f"({new_project.id}) due to AUTO_LOGIN=false"
-        )
-
-    session.add(new_project)
-    await session.flush()
-    await session.refresh(new_project)
-    del data["folder_name"]
-    data.pop("folder_description", None)
-
-    if "flows" in data:
-        flow_list = FlowListCreate(flows=[FlowCreate(**flow) for flow in data["flows"]])
-    else:
-        raise HTTPException(status_code=400, detail="No flows found in the data")
-    # Generate unique names, tracking names already assigned within this batch
-    # to avoid collisions when multiple flows would get the same generated name
-    used_names_in_batch: set[str] = set()
-    for flow in flow_list.flows:
-        flow_name = await generate_unique_flow_name(flow.name, current_user.id, session)
-        # Ensure the name is also unique within the current batch;
-        # generate suffixed candidates and verify each against DB
-        base_name = flow_name
-        n = 1
-        while flow_name in used_names_in_batch:
-            candidate = f"{base_name} ({n})"
-            n += 1
-            flow_name = await generate_unique_flow_name(candidate, current_user.id, session)
-        used_names_in_batch.add(flow_name)
-        flow.name = flow_name
-        flow.user_id = current_user.id
-        flow.folder_id = new_project.id
-
-    return await create_flows(session=session, flow_list=flow_list, current_user=current_user)
+    return await upload_project_flows(session=session, file=file, current_user=current_user)
