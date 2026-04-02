@@ -145,13 +145,15 @@ jest.mock("../../../../../components/common/genericIconComponent", () => ({
 }));
 
 jest.mock("../../../../../components/ui/select-custom", () => ({
-  Select: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SelectContentWithoutPortal: ({
-    children,
-  }: {
-    children: React.ReactNode;
-  }) => <div>{children}</div>,
-  SelectItem: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Select: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  SelectContentWithoutPortal: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  SelectItem: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
   SelectTrigger: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),

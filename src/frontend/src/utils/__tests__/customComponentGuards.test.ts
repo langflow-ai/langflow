@@ -6,8 +6,10 @@ let mockComponentsToUpdate: Array<{
   userEdited: boolean;
 }> = [];
 let mockNodes: Array<{ id: string; data: { type: string } }> = [];
-let mockTemplates: Record<string, { template?: { code?: { value?: string } } }> =
-  {};
+let mockTemplates: Record<
+  string,
+  { template?: { code?: { value?: string } } }
+> = {};
 
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,

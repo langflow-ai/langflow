@@ -101,8 +101,9 @@ jest.mock("../../../stores/alertStore", () => ({
 }));
 
 jest.mock("../../../stores/flowStore", () => {
-  const useFlowStore = (selector?: (state: typeof mockFlowStoreState) => unknown) =>
-    selector ? selector(mockFlowStoreState) : mockFlowStoreState;
+  const useFlowStore = (
+    selector?: (state: typeof mockFlowStoreState) => unknown,
+  ) => (selector ? selector(mockFlowStoreState) : mockFlowStoreState);
   useFlowStore.getState = () => mockFlowStoreState;
 
   return {

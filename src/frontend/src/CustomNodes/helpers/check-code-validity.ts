@@ -73,9 +73,7 @@ export const checkCodeValidity = (
   const hasNodeCode =
     typeof thisNodesCode === "string" && thisNodesCode.length > 0;
   const isBlockedCustomComponent =
-    hasNodeCode &&
-    data.type === "CustomComponent" &&
-    !allowCustomComponents;
+    hasNodeCode && data.type === "CustomComponent" && !allowCustomComponents;
   const isBlocked = isBlockedCustomComponent || (hasNodeCode && !template);
 
   if (isBlocked) {
