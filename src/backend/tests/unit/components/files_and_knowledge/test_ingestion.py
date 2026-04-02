@@ -488,17 +488,17 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         """Test _scalar_notna handles numpy arrays without raising ambiguous truth value errors."""
         component = component_class(**default_kwargs)
 
-        # Empty array — should be False (no valid data)
-        assert component._scalar_notna(np.array([])) is False
+        # Empty array — should be falsy (no valid data)
+        assert not component._scalar_notna(np.array([]))
 
-        # Array with valid values — should be True
-        assert component._scalar_notna(np.array([1, 2, 3])) is True
+        # Array with valid values — should be truthy
+        assert component._scalar_notna(np.array([1, 2, 3]))
 
-        # Array containing NaN — should be False (not all values are non-NA)
-        assert component._scalar_notna(np.array([1, float("nan"), 3])) is False
+        # Array containing NaN — should be falsy (not all values are non-NA)
+        assert not component._scalar_notna(np.array([1, float("nan"), 3]))
 
-        # Array of strings — should be True
-        assert component._scalar_notna(np.array(["a", "b"])) is True
+        # Array of strings — should be truthy
+        assert component._scalar_notna(np.array(["a", "b"]))
 
     def test_scalar_notna_with_lists(self, component_class, default_kwargs):
         """Test _scalar_notna handles plain lists safely."""
