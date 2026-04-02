@@ -250,7 +250,10 @@ class TestNotifyDone:
 
         mock_client.post = AsyncMock(side_effect=RuntimeError("Network error"))
 
-        with patch("lfx.mcp.server._get_client", return_value=mock_client):
+        with (
+            patch("lfx.mcp.server._get_client", return_value=mock_client),
+            patch("lfx.mcp.server.logger"),
+        ):
             result = await notify_done("flow-123", "Done")
 
         assert result["status"] == "warning"
