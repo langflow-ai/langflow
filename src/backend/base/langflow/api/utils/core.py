@@ -1,32 +1,24 @@
 from __future__ import annotations
 
-import uuid
-from ast import literal_eval
+import json as _json
 from datetime import timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import Depends, HTTPException, Path, Query
 from fastapi_pagination import Params
-from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
-from lfx.services.deps import injectable_session_scope, injectable_session_scope_readonly, session_scope
+from lfx.services.deps import injectable_session_scope, injectable_session_scope_readonly
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
-from sqlalchemy import delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth.utils import get_current_active_user, get_current_active_user_mcp
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.flow_version.model import FlowVersion
-from langflow.services.database.models.message.model import MessageTable
-from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User
-from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.store.utils import get_lf_version_from_pypi
 from langflow.utils.constants import LANGFLOW_GLOBAL_VAR_HEADER_PREFIX
 
 if TYPE_CHECKING:
-    from langflow.services.chat.service import ChatService
     from langflow.services.store.schema import StoreComponentCreate
 
 
@@ -43,29 +35,25 @@ DbSession = Annotated[AsyncSession, Depends(injectable_session_scope)]
 DbSessionReadOnly = Annotated[AsyncSession, Depends(injectable_session_scope_readonly)]
 
 
-def _get_validated_file_name(file_name: str = Path()) -> str:
-    """Validate file_name path parameter to prevent path traversal attacks."""
-    if ".." in file_name or "/" in file_name or "\\" in file_name:
+def _get_validated_path_segment(value: str, *, label: str = "name") -> str:
+    """Validate a path segment to prevent path traversal attacks."""
+    if ".." in value or "/" in value or "\\" in value:
         raise HTTPException(
             status_code=400,
-            detail="Invalid file name. Use a simple file name without directory paths or '..'.",
+            detail=f"Invalid {label}. Use a simple {label} without directory paths or '..'.",
         )
-    return file_name
+    return value
 
 
-ValidatedFileName = Annotated[str, Depends(_get_validated_file_name)]
+def _get_validated_file_name(file_name: str = Path()) -> str:
+    return _get_validated_path_segment(file_name, label="file name")
 
 
 def _get_validated_folder_name(folder_name: str = Path()) -> str:
-    """Validate folder_name path parameter to prevent path traversal attacks."""
-    if ".." in folder_name or "/" in folder_name or "\\" in folder_name:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid folder name. Use a simple folder name without directory paths or '..'.",
-        )
-    return folder_name
+    return _get_validated_path_segment(folder_name, label="folder name")
 
 
+ValidatedFileName = Annotated[str, Depends(_get_validated_file_name)]
 ValidatedFolderName = Annotated[str, Depends(_get_validated_folder_name)]
 
 # Message to raise if we're in an Astra cloud environment and a component or endpoint is not supported
@@ -112,6 +100,112 @@ def remove_api_keys(flow: dict):
     return flow
 
 
+# ---------------------------------------------------------------------------
+# Export normalisation
+# ---------------------------------------------------------------------------
+
+# Top-level fields that vary between instances / users without changing logic.
+_VOLATILE_TOP_LEVEL: frozenset[str] = frozenset(
+    {"updated_at", "created_at", "user_id", "folder_id", "access_type", "gradient"}
+)
+
+# Node-level fields that track UI interaction state (position, drag, selection).
+_VOLATILE_NODE_FIELDS: frozenset[str] = frozenset({"positionAbsolute", "dragging", "selected"})
+
+
+def _split_code_to_lines(flow: dict) -> None:
+    """In-place: split code template field values from strings to line arrays.
+
+    Converts ``template.<field>.value`` from a single string to a
+    ``list[str]`` (one element per line) when the field type is ``"code"``.
+    This gives git line-level diffs instead of a single opaque blob.
+    """
+    for node in flow.get("data", {}).get("nodes", []):
+        template = node.get("data", {}).get("node", {}).get("template", {})
+        if not isinstance(template, dict):
+            continue
+        for field_data in template.values():
+            if not isinstance(field_data, dict):
+                continue
+            if field_data.get("type") == "code":
+                value = field_data.get("value")
+                if isinstance(value, str):
+                    # split("\n") — not splitlines() — so that the trailing newline
+                    # is preserved as a final empty string, keeping the round-trip
+                    # lossless: "\n".join(s.split("\n")) == s for any string s.
+                    field_data["value"] = value.split("\n")
+
+
+def _join_code_from_lines(flow: dict) -> None:
+    """In-place: rejoin code template line arrays back to strings.
+
+    Inverse of :func:`_split_code_to_lines`.  Safe to call on flows that
+    already use the string format — ``isinstance`` guard means it's a no-op.
+    """
+    for node in flow.get("data", {}).get("nodes", []):
+        template = node.get("data", {}).get("node", {}).get("template", {})
+        if not isinstance(template, dict):
+            continue
+        for field_data in template.values():
+            if not isinstance(field_data, dict):
+                continue
+            if field_data.get("type") == "code":
+                value = field_data.get("value")
+                if isinstance(value, list):
+                    field_data["value"] = "\n".join(value)
+
+
+def normalize_flow_for_export(flow: dict) -> dict:
+    """Return a git-friendly, deterministic copy of a flow dict.
+
+    Applied to every flow before it is written into a download ZIP.
+
+    Transformations
+    ---------------
+    * Strips volatile top-level fields (``updated_at``, ``created_at``,
+      ``user_id``, ``folder_id``, ``access_type``, ``gradient``) — these
+      change between instances / users without affecting flow logic.
+    * Strips node UI-state fields (``positionAbsolute``, ``dragging``,
+      ``selected``) — these change on every canvas interaction.
+    * Converts ``template.<field>.value`` strings to ``list[str]`` for
+      ``type == "code"`` fields, enabling line-level git diffs.
+
+    Key sorting is handled at serialisation time via
+    ``orjson_dumps(sort_keys=True)``.
+    """
+    import copy
+
+    flow = copy.deepcopy(flow)
+
+    # Strip volatile top-level metadata
+    for key in _VOLATILE_TOP_LEVEL:
+        flow.pop(key, None)
+
+    # Strip node UI state
+    for node in flow.get("data", {}).get("nodes", []):
+        for key in _VOLATILE_NODE_FIELDS:
+            node.pop(key, None)
+
+    # Code → line arrays
+    _split_code_to_lines(flow)
+
+    return flow
+
+
+def normalize_code_for_import(flow: dict) -> dict:
+    """Rejoin code-as-lines back to strings for backward-compatible import.
+
+    Accepts both the list format produced by :func:`normalize_flow_for_export`
+    and the legacy single-string format, so this function is safe to call
+    unconditionally on every uploaded flow.
+    """
+    import copy
+
+    flow = copy.deepcopy(flow)
+    _join_code_from_lines(flow)
+    return flow
+
+
 def build_input_keys_response(langchain_object, artifacts):
     """Build the input keys response."""
     input_keys_response = {
@@ -142,7 +236,13 @@ def build_input_keys_response(langchain_object, artifacts):
     return input_keys_response
 
 
-def validate_is_component(flows: list[Flow]):
+def validate_is_component(flows: list[Flow]) -> list[Flow]:
+    """Return flows with ``is_component`` inferred from flow data when unset.
+
+    Note: mutates the ORM instances in-place because SQLAlchemy requires
+    mutation for dirty-tracking.  This is an intentional exception to the
+    immutability guideline — creating copies would detach them from the session.
+    """
     for flow in flows:
         if not flow.data or flow.is_component is not None:
             continue
@@ -200,68 +300,6 @@ def format_elapsed_time(elapsed_time: float) -> str:
     minutes_unit = "minute" if minutes == 1 else "minutes"
     seconds_unit = "second" if seconds == 1 else "seconds"
     return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
-
-
-async def _get_flow_name(flow_id: uuid.UUID) -> str:
-    async with session_scope() as session:
-        flow = await session.get(Flow, flow_id)
-        if flow is None:
-            msg = f"Flow {flow_id} not found"
-            raise ValueError(msg)
-    return flow.name
-
-
-async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwargs):
-    """Build and cache the graph."""
-    # Get flow name
-    if "flow_name" not in kwargs:
-        flow_name = await _get_flow_name(flow_id if isinstance(flow_id, uuid.UUID) else uuid.UUID(flow_id))
-    else:
-        flow_name = kwargs["flow_name"]
-    str_flow_id = str(flow_id)
-    session_id = kwargs.get("session_id") or str_flow_id
-
-    graph = Graph.from_payload(payload, str_flow_id, flow_name, kwargs.get("user_id"))
-    for vertex_id in graph.has_session_id_vertices:
-        vertex = graph.get_vertex(vertex_id)
-        if vertex is None:
-            msg = f"Vertex {vertex_id} not found"
-            raise ValueError(msg)
-        if not vertex.raw_params.get("session_id"):
-            vertex.update_raw_params({"session_id": session_id}, overwrite=True)
-
-    graph.session_id = session_id
-    await graph.initialize_run()
-    return graph
-
-
-async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession, **kwargs):
-    """Build and cache the graph."""
-    flow: Flow | None = await session.get(Flow, flow_id)
-    if not flow or not flow.data:
-        msg = "Invalid flow ID"
-        raise ValueError(msg)
-    kwargs["user_id"] = kwargs.get("user_id") or str(flow.user_id)
-    return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, **kwargs)
-
-
-async def build_graph_from_db(flow_id: uuid.UUID, session: AsyncSession, chat_service: ChatService, **kwargs):
-    graph = await build_graph_from_db_no_cache(flow_id=flow_id, session=session, **kwargs)
-    await chat_service.set_cache(str(flow_id), graph)
-    return graph
-
-
-async def build_and_cache_graph_from_data(
-    flow_id: uuid.UUID | str,
-    chat_service: ChatService,
-    graph_data: dict,
-):  # -> Graph | Any:
-    """Build and cache the graph."""
-    # Convert flow_id to str if it's UUID
-    str_flow_id = str(flow_id) if isinstance(flow_id, uuid.UUID) else flow_id
-    graph = Graph.from_payload(graph_data, str_flow_id)
-    await chat_service.set_cache(str_flow_id, graph)
-    return graph
 
 
 def format_syntax_error_message(exc: SyntaxError) -> str:
@@ -344,29 +382,11 @@ def parse_value(value: Any, input_type: str) -> Any:
         if isinstance(value, dict):
             return value
         try:
-            return literal_eval(value) if value is not None else {}
-        except (ValueError, SyntaxError):
+            parsed = _json.loads(value) if value is not None else {}
+            return parsed if isinstance(parsed, dict) else {}
+        except (ValueError, TypeError):
             return {}
     return value
-
-
-async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None:
-    try:
-        # TODO: Verify if deleting messages is safe in terms of session id relevance
-        # If we delete messages directly, rather than setting flow_id to null,
-        # it might cause unexpected behaviors because the session id could still be
-        # used elsewhere to search for these messages.
-        await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
-        await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))
-        await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
-        # Explicit delete despite FK CASCADE — SQLite doesn't enforce FK cascades
-        # by default (requires PRAGMA foreign_keys = ON), and this function follows
-        # the existing pattern of explicitly deleting all child records.
-        await session.exec(delete(FlowVersion).where(FlowVersion.flow_id == flow_id))
-        await session.exec(delete(Flow).where(Flow.id == flow_id))
-    except Exception as e:
-        msg = f"Unable to cascade delete flow: {flow_id}"
-        raise RuntimeError(msg, e) from e
 
 
 def custom_params(
@@ -376,66 +396,6 @@ def custom_params(
     if page is None and size is None:
         return None
     return Params(page=page or MIN_PAGE_SIZE, size=size or MAX_PAGE_SIZE)
-
-
-async def verify_public_flow_and_get_user(flow_id: uuid.UUID, client_id: str | None) -> tuple[User, uuid.UUID]:
-    """Verify a public flow request and generate a deterministic flow ID.
-
-    This utility function:
-    1. Checks that a client_id cookie is provided
-    2. Verifies the flow exists and is marked as PUBLIC
-    3. Creates a deterministic UUID based on client_id and original flow_id
-    4. Retrieves the flow owner user for permission purposes
-
-    This function is used to support public flow endpoints that don't require
-    authentication but still need to operate within the permission model.
-
-    Args:
-        flow_id: The original flow ID to verify
-        client_id: The client ID from the request cookie
-
-    Returns:
-        tuple: (flow owner user, deterministic flow ID for tracking)
-
-    Raises:
-        HTTPException:
-            - 400 if no client_id is provided
-            - 403 if flow doesn't exist or isn't public
-            - 403 if unable to retrieve the flow owner user
-            - 403 if user is not found for public flow
-    """
-    if not client_id:
-        raise HTTPException(status_code=400, detail="No client_id cookie found")
-
-    # Check if the flow is public
-    async with session_scope() as session:
-        from sqlmodel import select
-
-        from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
-
-        flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
-        if not flow or flow.access_type is not AccessTypeEnum.PUBLIC:
-            raise HTTPException(status_code=403, detail="Flow is not public")
-
-    # Create a new flow ID using the client_id and flow_id
-    new_id = f"{client_id}_{flow_id}"
-    new_flow_id = uuid.uuid5(uuid.NAMESPACE_DNS, new_id)
-
-    # Get the user associated with the flow
-    try:
-        from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
-
-        user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
-
-    except Exception as exc:
-        await logger.aexception(f"Error getting user for public flow {flow_id}")
-        raise HTTPException(status_code=403, detail="Flow is not accessible") from exc
-
-    if not user:
-        msg = f"User not found for public flow {flow_id}"
-        raise HTTPException(status_code=403, detail=msg)
-
-    return user, new_flow_id
 
 
 def extract_global_variables_from_headers(headers) -> dict[str, str]:

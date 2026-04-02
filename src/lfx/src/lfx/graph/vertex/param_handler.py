@@ -18,6 +18,21 @@ if TYPE_CHECKING:
     from lfx.graph.vertex.base import Vertex
 
 
+def _coerce_str_value(v: Any) -> str:
+    """Coerce a value to string for str-typed fields, handling Message/Data/dict objects."""
+    if isinstance(v, str):
+        return unescape_string(v)
+    if isinstance(v, Data):
+        return unescape_string(v.get_text())
+    if isinstance(v, dict):
+        # Serialized Message or Data -- extract text from nested structure
+        data = v.get("data")
+        nested_text = data.get("text", "") if isinstance(data, dict) else ""
+        text = v.get("text", nested_text)
+        return unescape_string(text) if isinstance(text, str) else str(v)
+    return str(v)
+
+
 class ParameterHandler:
     """Handles parameter processing for vertices."""
 
@@ -307,7 +322,7 @@ class ParameterHandler:
             case "str":
                 match val:
                     case list():
-                        params[field_name] = [unescape_string(v) for v in val]
+                        params[field_name] = [_coerce_str_value(v) for v in val]
                     case str():
                         params[field_name] = unescape_string(val)
                     case Data():

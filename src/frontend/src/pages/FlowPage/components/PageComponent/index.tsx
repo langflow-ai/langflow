@@ -865,11 +865,11 @@ export default function Page({
               onKeyDown={handleKeyDown}
               onNodeContextMenu={onNodeContextMenu}
             >
-              <FlowBuildingComponent />
               <UpdateAllComponents />
               <MemoizedBackground />
               {helperLineEnabled && <HelperLines helperLines={helperLines} />}
             </ReactFlow>
+            <FlowBuildingComponent />
             {isPreviewActive && <VersionPreviewOverlay />}
           </div>
           <div

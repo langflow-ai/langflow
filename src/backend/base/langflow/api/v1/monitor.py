@@ -69,6 +69,7 @@ async def get_message_sessions(
         stmt = select(MessageTable.session_id).distinct()
         stmt = stmt.join(Flow, MessageTable.flow_id == Flow.id)
         stmt = stmt.where(col(MessageTable.session_id).isnot(None))
+        stmt = stmt.where(~col(MessageTable.session_id).startswith("agentic_"))
         stmt = stmt.where(Flow.user_id == current_user.id)
 
         if flow_id:

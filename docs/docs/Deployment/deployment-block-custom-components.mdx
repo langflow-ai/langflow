@@ -1,0 +1,24 @@
+---
+title: Block custom components
+slug: /deployment-block-custom-components
+---
+
+Custom components and the component code editor allow Langflow users to create and execute Python code in the Langflow runtime.
+While this freedom is a feature of Langflow, in some deployments you might want to block the creation of custom Langflow components to prevent arbitrary code execution.
+
+To block custom component creation on a Langflow server, set the following [environment variable](/environment-variables):
+
+```bash
+LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false
+```
+
+When set to `false`, Langflow blocks creating custom components and changing code in the visual editor.
+
+When unset or `true`, Langflow allows custom code.
+Existing Langflow installations will keep the default `true` behavior until you opt in to this restriction.
+
+This environment variable is a beta feature, and should not be your only safeguard in production environments.
+
+In the event that Langflow could execute untrusted or LLM-generated code, run Langflow in an isolated and containerized execution environment.
+
+For more information, see [Security](/security).
