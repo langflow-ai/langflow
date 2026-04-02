@@ -33,9 +33,13 @@ test("user must be able outdated message on error", async ({ page }) => {
 
   await page.getByTestId("list-card").first().click();
 
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .fill("this is a test to crash");
+  // The api_key field may show a global variable badge instead of an input
+  // when OPENAI_API_KEY is in the environment. Either way, we just need to
+  // trigger a run to get the outdated components error message.
+  const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
+  if (await apiKeyInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+    await apiKeyInput.fill("this is a test to crash");
+  }
 
   await page.getByTestId("button_run_chat output").click();
 
