@@ -145,3 +145,36 @@ async def test_nonexistent_flow_returns_404(client: AsyncClient, logged_in_heade
         headers=logged_in_headers,
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_invalid_event_type_returns_422(client: AsyncClient, logged_in_headers):
+    flow_id = await _create_flow(client, logged_in_headers)
+
+    response = await client.post(
+        f"api/v1/flows/{flow_id}/events",
+        json={"type": "invalid_type", "summary": "bad event"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+async def test_missing_event_type_returns_422(client: AsyncClient, logged_in_headers):
+    flow_id = await _create_flow(client, logged_in_headers)
+
+    response = await client.post(
+        f"api/v1/flows/{flow_id}/events",
+        json={"summary": "no type field"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+async def test_summary_max_length_returns_422(client: AsyncClient, logged_in_headers):
+    flow_id = await _create_flow(client, logged_in_headers)
+
+    response = await client.post(
+        f"api/v1/flows/{flow_id}/events",
+        json={"type": "component_added", "summary": "x" * 501},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY

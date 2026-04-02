@@ -1,5 +1,6 @@
 import { Background, Panel } from "@xyflow/react";
-import { memo } from "react";
+import { cloneDeep } from "lodash";
+import { memo, useCallback, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import CanvasControlButton from "@/components/core/canvasControlsComponent/CanvasControlButton";
@@ -7,6 +8,7 @@ import CanvasControls from "@/components/core/canvasControlsComponent/CanvasCont
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
+import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useFlowStore from "@/stores/flowStore";
 import { AllNodeType } from "@/types/flow";
 import { cn } from "@/utils/utils";
@@ -33,10 +35,32 @@ export const MemoizedCanvasControls = memo(
     selectedNode,
     isAgentWorking,
   }: MemoizedCanvasControlsProps) => {
-    const isLocked = useFlowStore(
-      useShallow((state) => state.currentFlow?.locked),
-    );
+    const currentFlow = useFlowStore(useShallow((state) => state.currentFlow));
+    const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
+    const saveFlow = useSaveFlow();
+    const isLocked = currentFlow?.locked ?? false;
     const effectiveLocked = isLocked || isAgentWorking;
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleToggleLock = useCallback(async () => {
+      if (isAgentWorking || isSaving || !currentFlow) return;
+      const newFlow = cloneDeep(currentFlow);
+      newFlow.locked = !isLocked;
+      setIsSaving(true);
+      try {
+        await saveFlow(newFlow);
+        setCurrentFlow(newFlow);
+      } finally {
+        setIsSaving(false);
+      }
+    }, [
+      currentFlow,
+      isLocked,
+      isAgentWorking,
+      isSaving,
+      saveFlow,
+      setCurrentFlow,
+    ]);
 
     return (
       <CanvasControls
@@ -47,8 +71,23 @@ export const MemoizedCanvasControls = memo(
           unstyled
           size="icon"
           data-testid="lock-status"
-          className="flex items-center justify-center px-2 rounded-none gap-1 cursor-default"
-          title={`Lock status: ${effectiveLocked ? "Locked" : "Unlocked"}`}
+          disabled={isAgentWorking || isSaving}
+          className={cn(
+            "flex items-center justify-center px-2 rounded-none gap-1",
+            isAgentWorking || isSaving
+              ? "cursor-default opacity-70"
+              : "cursor-pointer",
+          )}
+          title={
+            isAgentWorking
+              ? "Agent Working"
+              : isSaving
+                ? "Saving..."
+                : isLocked
+                  ? "Unlock flow"
+                  : "Lock flow"
+          }
+          onClick={handleToggleLock}
         >
           <ForwardedIconComponent
             name={effectiveLocked ? "Lock" : "Unlock"}

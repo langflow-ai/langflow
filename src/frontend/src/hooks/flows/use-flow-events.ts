@@ -100,7 +100,23 @@ export function useFlowEvents(flowId: string | undefined): UseFlowEventsReturn {
         }
       }
     } catch (error) {
-      console.warn("[useFlowEvents] Poll failed:", error);
+      const status = (error as { response?: { status?: number } } | undefined)
+        ?.response?.status;
+      if (status === 401 || status === 403 || status === 404) {
+        console.error("[useFlowEvents] Terminal error, stopping poll:", status);
+        clearInterval_();
+        // Clear agent-working state so the UI doesn't stay locked
+        if (isActiveRef.current) {
+          isActiveRef.current = false;
+          setIsAgentWorking(false);
+        }
+        if (settleTimerRef.current) {
+          clearTimeout(settleTimerRef.current);
+          settleTimerRef.current = null;
+        }
+        return;
+      }
+      console.warn("[useFlowEvents] Poll failed (will retry):", error);
     } finally {
       isPollingRef.current = false;
     }

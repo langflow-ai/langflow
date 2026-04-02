@@ -324,6 +324,9 @@ async def create_flow_from_spec(spec: str, *, validate: bool = True) -> dict[str
         if validate:
             await build_flow(flow_id)
     except Exception:
+        # Signal settle so the UI banner doesn't hang
+        with contextlib.suppress(Exception):
+            await _get_client().post_event(flow_id, "flow_settled", "Failed, rolling back")
         # Clean up the partially-built flow (best-effort)
         with contextlib.suppress(Exception):
             await delete_flow(flow_id)
@@ -1221,7 +1224,18 @@ async def notify_done(flow_id: str, summary: str | None = None) -> dict[str, str
         flow_id: The flow UUID you were modifying.
         summary: Optional human-readable summary of what you did (e.g. "Built a RAG pipeline with OpenAI and Pinecone").
     """
-    await _get_client().post_event(flow_id, "flow_settled", summary or "")
+    try:
+        await _get_client().post(
+            f"/flows/{flow_id}/events",
+            json_data={"type": "flow_settled", "summary": summary or ""},
+        )
+    except Exception:  # noqa: BLE001
+        logger.warning("Failed to post flow_settled event", exc_info=True)
+        return {
+            "status": "warning",
+            "flow_id": flow_id,
+            "detail": "Event could not be delivered; UI will update after timeout",
+        }
     return {"status": "ok", "flow_id": flow_id}
 
 

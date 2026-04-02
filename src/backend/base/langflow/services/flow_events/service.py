@@ -1,10 +1,25 @@
 from __future__ import annotations
 
+import json
+import tempfile
 import time
-from dataclasses import dataclass
-from threading import Lock
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Literal
+
+from diskcache import Cache
 
 from langflow.services.base import Service
+
+FLOW_EVENT_TYPES = Literal[
+    "component_added",
+    "component_removed",
+    "component_configured",
+    "connection_added",
+    "connection_removed",
+    "flow_updated",
+    "flow_settled",
+]
 
 
 @dataclass(frozen=True)
@@ -15,22 +30,37 @@ class FlowEvent:
 
 
 class FlowEventsService(Service):
-    """In-memory event queue keyed by flow_id. Thread-safe. TTL-based cleanup."""
+    """Disk-backed event queue keyed by flow_id.
+
+    Uses diskcache for cross-worker visibility (multiple uvicorn/gunicorn workers
+    share the same SQLite-backed cache directory). TTL-based cleanup is handled
+    by diskcache's built-in expiry.
+    """
 
     name = "flow_events_service"
 
     TTL_SECONDS: float = 60.0
     SETTLE_TIMEOUT: float = 10.0
+    MAX_EVENTS_PER_FLOW: int = 1000
 
-    def __init__(self) -> None:
-        self._events: dict[str, list[FlowEvent]] = {}
-        self._lock = Lock()
+    def __init__(self, cache_dir: str | Path | None = None) -> None:
+        if cache_dir is None:
+            cache_dir = Path(tempfile.gettempdir()) / "langflow_flow_events"
+        self._cache = Cache(str(cache_dir))
 
     def append(self, flow_id: str, event_type: str, summary: str = "") -> FlowEvent:
         event = FlowEvent(type=event_type, timestamp=time.time(), summary=summary)
-        with self._lock:
-            self._cleanup(flow_id)
-            self._events.setdefault(flow_id, []).append(event)
+        key = f"flow_events:{flow_id}"
+
+        with self._cache.transact():
+            raw = self._cache.get(key, default=None)
+            events: list[dict] = json.loads(raw) if raw else []
+            events.append(asdict(event))
+            # Trim to max size
+            if len(events) > self.MAX_EVENTS_PER_FLOW:
+                events = events[-self.MAX_EVENTS_PER_FLOW :]
+            self._cache.set(key, json.dumps(events), expire=self.TTL_SECONDS)
+
         return event
 
     def get_since(self, flow_id: str, since: float) -> tuple[list[FlowEvent], bool]:
@@ -41,9 +71,9 @@ class FlowEventsService(Service):
         - A flow_settled event exists after `since`, OR
         - The most recent event is older than SETTLE_TIMEOUT seconds.
         """
-        with self._lock:
-            self._cleanup(flow_id)
-            all_events = list(self._events.get(flow_id, []))
+        key = f"flow_events:{flow_id}"
+        raw = self._cache.get(key, default=None)
+        all_events = [FlowEvent(**e) for e in json.loads(raw)] if raw else []
 
         after = [e for e in all_events if e.timestamp > since]
 
@@ -58,9 +88,5 @@ class FlowEventsService(Service):
 
         return after, settled
 
-    def _cleanup(self, flow_id: str) -> None:
-        cutoff = time.time() - self.TTL_SECONDS
-        if flow_id in self._events:
-            self._events[flow_id] = [e for e in self._events[flow_id] if e.timestamp > cutoff]
-            if not self._events[flow_id]:
-                del self._events[flow_id]
+    async def teardown(self) -> None:
+        self._cache.close()

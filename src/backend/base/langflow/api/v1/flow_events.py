@@ -4,13 +4,13 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlmodel import or_, select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_flow_events_service
-from langflow.services.flow_events import FlowEventsService
+from langflow.services.flow_events import FLOW_EVENT_TYPES, FlowEventsService
 
 router = APIRouter(prefix="/flows", tags=["Flow Events"])
 
@@ -27,8 +27,8 @@ class FlowEventsResponse(BaseModel):
 
 
 class FlowEventCreate(BaseModel):
-    type: str
-    summary: str = ""
+    type: FLOW_EVENT_TYPES
+    summary: str = Field(default="", max_length=500)
 
 
 async def _verify_flow_owner(session: DbSession, flow_id: UUID, user_id: UUID) -> None:

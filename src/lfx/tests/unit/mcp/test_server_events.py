@@ -224,14 +224,17 @@ class TestCreateFlowFromSpecEmitsSettled:
 
 
 class TestNotifyDone:
-    async def test_emits_flow_settled_and_returns_status(self, mock_client):
+    async def test_emits_flow_settled_and_returns_ok(self, mock_client):
         from lfx.mcp.server import notify_done
 
         with patch("lfx.mcp.server._get_client", return_value=mock_client):
             result = await notify_done("flow-123", "Built a RAG pipeline")
 
-        mock_client.post_event.assert_called_once()
-        assert mock_client.post_event.call_args[0][1] == "flow_settled"
+        mock_client.post.assert_called_once()
+        call_args = mock_client.post.call_args
+        assert "/flows/flow-123/events" in call_args[0][0]
+        assert call_args[1]["json_data"]["type"] == "flow_settled"
+        assert call_args[1]["json_data"]["summary"] == "Built a RAG pipeline"
         assert result == {"status": "ok", "flow_id": "flow-123"}
 
     async def test_summary_defaults_to_empty(self, mock_client):
@@ -240,4 +243,52 @@ class TestNotifyDone:
         with patch("lfx.mcp.server._get_client", return_value=mock_client):
             await notify_done("flow-123")
 
-        assert mock_client.post_event.call_args[0][2] == ""
+        assert mock_client.post.call_args[1]["json_data"]["summary"] == ""
+
+    async def test_returns_warning_on_delivery_failure(self, mock_client):
+        from lfx.mcp.server import notify_done
+
+        mock_client.post = AsyncMock(side_effect=RuntimeError("Network error"))
+
+        with patch("lfx.mcp.server._get_client", return_value=mock_client):
+            result = await notify_done("flow-123", "Done")
+
+        assert result["status"] == "warning"
+        assert result["flow_id"] == "flow-123"
+        assert "timeout" in result["detail"]
+
+
+# ---------------------------------------------------------------------------
+# create_flow_from_spec: emits settle on rollback failure
+# ---------------------------------------------------------------------------
+
+
+class TestCreateFlowFromSpecRollback:
+    async def test_emits_settle_on_rollback(self, mock_client, mock_registry):
+        from lfx.mcp.server import create_flow_from_spec
+
+        parsed = {
+            "name": "T",
+            "description": "",
+            "nodes": [{"id": "A", "type": "ChatInput"}],
+            "edges": [],
+            "config": {},
+        }
+        created = {"id": "flow-fail", "name": "T", "description": ""}
+
+        with (
+            patch("lfx.mcp.server._get_client", return_value=mock_client),
+            patch("lfx.mcp.server._get_registry", new_callable=AsyncMock, return_value=mock_registry),
+            patch("lfx.mcp.server.parse_flow_spec", return_value=parsed),
+            patch("lfx.mcp.server.validate_spec_references"),
+            patch("lfx.mcp.server.create_flow", new_callable=AsyncMock, return_value=created),
+            patch("lfx.mcp.server.add_component", new_callable=AsyncMock, side_effect=RuntimeError("Build failed")),
+            patch("lfx.mcp.server.delete_flow", new_callable=AsyncMock),
+            pytest.raises(RuntimeError, match="Build failed"),
+        ):
+            await create_flow_from_spec("nodes:\n  A: ChatInput")
+
+        # Should have emitted flow_settled before the rollback delete
+        mock_client.post_event.assert_called_once()
+        assert mock_client.post_event.call_args[0][0] == "flow-fail"
+        assert mock_client.post_event.call_args[0][1] == "flow_settled"

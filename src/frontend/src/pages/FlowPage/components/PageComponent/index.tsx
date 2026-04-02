@@ -192,6 +192,9 @@ export default function Page({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const prevSettledRef = useRef<number | null>(null);
 
+  const eventsRef = useRef(events);
+  eventsRef.current = events;
+
   useEffect(() => {
     if (
       lastSettledAt &&
@@ -199,14 +202,24 @@ export default function Page({
       currentFlowId
     ) {
       prevSettledRef.current = lastSettledAt;
+      const targetFlowId = currentFlowId;
 
       // Capture events before clearing
-      const settleEvents = [...events];
+      const settleEvents = [...eventsRef.current];
       clearEvents();
 
+      const controller = new AbortController();
+
       api
-        .get<FlowType>(`${getURL("FLOWS")}/${currentFlowId}`)
+        .get<FlowType>(`${getURL("FLOWS")}/${targetFlowId}`, {
+          signal: controller.signal,
+        })
         .then((response) => {
+          // Verify we're still on the same flow
+          if (useFlowsManagerStore.getState().currentFlowId !== targetFlowId) {
+            return;
+          }
+
           applyFlowToCanvas(response.data);
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
@@ -246,14 +259,20 @@ export default function Page({
           }
         })
         .catch((error) => {
-          console.warn(
+          if (error?.name === "CanceledError") return;
+          const isNetwork = error?.response || error?.request;
+          console.error(
             "[FlowPage] Failed to reload flow after agent changes:",
             error,
           );
           setErrorData({
-            title: "Failed to reload flow after agent changes",
+            title: isNetwork
+              ? "Network error reloading flow after agent changes. Try refreshing."
+              : "Error applying agent changes to canvas. Try refreshing.",
           });
         });
+
+      return () => controller.abort();
     }
   }, [
     lastSettledAt,

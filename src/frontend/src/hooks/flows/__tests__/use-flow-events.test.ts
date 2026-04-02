@@ -318,4 +318,76 @@ describe("useFlowEvents", () => {
     expect(result.current.isAgentWorking).toBe(false);
     expect(result.current.events).toEqual([]);
   });
+
+  it("should resume polling after a transient error", async () => {
+    await mountHook();
+
+    // One transient failure
+    apiGetMock.mockRejectedValueOnce(new Error("Network glitch"));
+
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+
+    const callsAfterError = apiGetMock.mock.calls.length;
+
+    // Next interval should still poll
+    apiGetMock.mockResolvedValueOnce(EMPTY_RESPONSE);
+
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+
+    expect(apiGetMock.mock.calls.length).toBeGreaterThan(callsAfterError);
+  });
+
+  it.each([401, 403, 404])(
+    "should stop polling and clear agent state on %d error",
+    async (statusCode) => {
+      const { result } = await mountHook();
+
+      const ts = Date.now() / 1000;
+
+      // First: become active
+      apiGetMock.mockResolvedValueOnce({
+        data: {
+          events: [
+            {
+              type: "component_added",
+              timestamp: ts,
+              summary: "Added A",
+            },
+          ],
+          settled: false,
+        },
+      });
+
+      await act(async () => {
+        jest.advanceTimersByTime(5000);
+      });
+
+      expect(result.current.isAgentWorking).toBe(true);
+
+      // Then: terminal error while agent is active
+      apiGetMock.mockRejectedValueOnce({
+        response: { status: statusCode },
+      });
+
+      await act(async () => {
+        jest.advanceTimersByTime(1000); // active interval
+      });
+
+      // Agent-working should be cleared so UI unlocks
+      expect(result.current.isAgentWorking).toBe(false);
+
+      // Polling should have stopped -- no more calls
+      const callsAfterTerminal = apiGetMock.mock.calls.length;
+
+      await act(async () => {
+        jest.advanceTimersByTime(10000);
+      });
+
+      expect(apiGetMock.mock.calls.length).toBe(callsAfterTerminal);
+    },
+  );
 });
