@@ -268,7 +268,6 @@ async def create_raw_tools_with_bindings(
     raw_tools_to_create: list[RawToolCreatePlan],
     operation_to_provider_app_id: dict[str, str],
     resolved_connections: dict[str, str],
-    resource_prefix: str,
     create_and_upload_tools_fn: Callable[..., Awaitable[list[str]]] = create_and_upload_wxo_flow_tools_with_bindings,
 ) -> RawToolCreateResult:
     if not raw_tools_to_create:
@@ -282,7 +281,6 @@ async def create_raw_tools_with_bindings(
     raw_create_results = await create_and_upload_tools_fn(
         clients=clients,
         tool_bindings=tool_bindings,
-        tool_name_prefix=resource_prefix,
     )
 
     created_tool_ids: list[str] = []

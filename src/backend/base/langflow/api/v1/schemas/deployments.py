@@ -355,6 +355,10 @@ class DeploymentAttachmentItem(BaseModel):
         default=None,
         description="Provider-owned snapshot/tool identifier (e.g. wxO tool ID).",
     )
+    tool_name: str | None = Field(
+        default=None,
+        description="Display name of the tool on the provider.",
+    )
     connection_ids: list[str] = Field(
         default_factory=list,
         description="App/connection IDs bound to this tool via the provider.",

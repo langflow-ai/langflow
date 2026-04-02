@@ -9,6 +9,7 @@ export interface DeploymentAttachmentItem {
   flow_name: string;
   version_tag: string;
   provider_snapshot_id: string | null;
+  tool_name: string | null;
   connection_ids: string[];
   created_at: string | null;
 }

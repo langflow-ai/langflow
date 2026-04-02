@@ -839,6 +839,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             SnapshotItem(
                 id=tool["id"],
                 name=tool.get("name") or tool["id"],
+                provider_data=tool,
             )
             for tool in (tools or [])
             if tool.get("id")

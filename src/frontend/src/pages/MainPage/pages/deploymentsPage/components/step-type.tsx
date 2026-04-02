@@ -135,10 +135,10 @@ export default function StepType() {
               placeholder={llmsLoading ? "Loading models..." : "Select a model"}
             />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="max-h-60 overflow-y-auto">
             {llmModels.map((model) => (
               <SelectItem key={model.model_name} value={model.model_name}>
-                {model.model_name}
+                {model.model_name.replace(/^virtual-model\//, "")}
               </SelectItem>
             ))}
           </SelectContent>

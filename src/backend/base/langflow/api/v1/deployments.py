@@ -1247,8 +1247,9 @@ async def list_deployment_attachment_details(
     # 2) Collect provider_snapshot_ids for connection enrichment
     snapshot_ids = [row.provider_snapshot_id for row in rows if row.provider_snapshot_id]
 
-    # 3) Fetch tool payloads from provider → extract per-tool connection bindings
+    # 3) Fetch tool payloads from provider → extract per-tool connection bindings and names
     connections_by_snapshot: dict[str, list[str]] = {}
+    tool_name_by_snapshot: dict[str, str] = {}
     if snapshot_ids:
         try:
             with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
@@ -1258,10 +1259,13 @@ async def list_deployment_attachment_details(
                     db=session,
                 )
             for snap in snapshot_result.snapshots:
+                snap_id = str(snap.id)
+                if snap.name:
+                    tool_name_by_snapshot[snap_id] = snap.name
                 if snap.provider_data and isinstance(snap.provider_data, dict):
                     conns = snap.provider_data.get("binding", {}).get("langflow", {}).get("connections", {})
                     if isinstance(conns, dict) and conns:
-                        connections_by_snapshot[str(snap.id)] = list(conns.keys())
+                        connections_by_snapshot[snap_id] = list(conns.keys())
         except Exception:  # noqa: BLE001
             logger.warning(
                 "Connection enrichment failed for deployment %s; returning attachments without connection data",
@@ -1276,6 +1280,9 @@ async def list_deployment_attachment_details(
             flow_name=row.flow_name,
             version_tag=f"v{row.version_number}",
             provider_snapshot_id=row.provider_snapshot_id,
+            tool_name=tool_name_by_snapshot.get(row.provider_snapshot_id)
+            if row.provider_snapshot_id
+            else None,
             connection_ids=connections_by_snapshot.get(row.provider_snapshot_id, [])
             if row.provider_snapshot_id
             else [],

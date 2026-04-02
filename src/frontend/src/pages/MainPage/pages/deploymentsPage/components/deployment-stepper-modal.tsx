@@ -65,6 +65,7 @@ export default function DeploymentStepperModal({
     editVersionByFlow,
     editAttachedConnectionByFlow,
     editSnapshotByFlow,
+    editToolNameByFlow,
   } = useMemo(() => {
     if (!isEditMode || !attachmentsData?.attachments?.length) {
       return {
@@ -79,6 +80,7 @@ export default function DeploymentStepperModal({
     >();
     const connectionMap = new Map<string, string[]>();
     const snapshotMap = new Map<string, string>();
+    const toolNameMap = new Map<string, string>();
 
     for (const att of attachmentsData.attachments) {
       versionMap.set(att.flow_id, {
@@ -88,22 +90,19 @@ export default function DeploymentStepperModal({
       if (att.provider_snapshot_id) {
         snapshotMap.set(att.flow_id, att.provider_snapshot_id);
       }
-      // Use the real connection_ids from the provider if available,
-      // otherwise fall back to provider_snapshot_id so the flow shows
-      // as ATTACHED in the list panel.
-      const connIds =
-        att.connection_ids.length > 0
-          ? att.connection_ids
-          : att.provider_snapshot_id
-            ? [att.provider_snapshot_id]
-            : [att.flow_version_id];
-      connectionMap.set(att.flow_id, connIds);
+      if (att.tool_name) {
+        toolNameMap.set(att.flow_id, att.tool_name);
+      }
+      if (att.connection_ids.length > 0) {
+        connectionMap.set(att.flow_id, att.connection_ids);
+      }
     }
 
     return {
       editVersionByFlow: versionMap,
       editAttachedConnectionByFlow: connectionMap,
       editSnapshotByFlow: snapshotMap,
+      editToolNameByFlow: toolNameMap,
     };
   }, [isEditMode, attachmentsData]);
 
@@ -136,6 +135,7 @@ export default function DeploymentStepperModal({
               editingProviderAccount: editingProviderAccount ?? undefined,
               initialAttachedConnectionByFlow: editAttachedConnectionByFlow,
               initialSnapshotByFlow: editSnapshotByFlow,
+              initialToolNameByFlow: editToolNameByFlow,
               initialLlmFromProvider: attachmentsData?.llm ?? undefined,
             }}
           >

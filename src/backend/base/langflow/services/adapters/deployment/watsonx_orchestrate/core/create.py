@@ -51,7 +51,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     build_agent_payload_from_values,
     dedupe_list,
-    resolve_resource_name_prefix,
     validate_wxo_name,
 )
 
@@ -72,8 +71,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(slots=True)
 class ProviderCreatePlan:
-    resource_prefix: str
-    prefixed_deployment_name: str
+    deployment_name: str
     llm: str
     existing_tool_ids: list[str]
     existing_tool_bindings: dict[str, list[str]]
@@ -100,8 +98,6 @@ def build_provider_create_plan(
 ) -> ProviderCreatePlan:
     """Build a deterministic CPU-only plan for provider_data create operations."""
     normalized_deployment_name = validate_wxo_name(deployment_name)
-    resource_prefix = resolve_resource_name_prefix(caller_prefix=provider_create.resource_name_prefix)
-    prefixed_deployment_name = f"{resource_prefix}{normalized_deployment_name}"
 
     # existing_tool_ids: provider tool ids from bind operations that reference
     #   pre-existing tools (via tool_id_with_ref); included in the final agent.
@@ -153,8 +149,7 @@ def build_provider_create_plan(
     ]
 
     return ProviderCreatePlan(
-        resource_prefix=resource_prefix,
-        prefixed_deployment_name=prefixed_deployment_name,
+        deployment_name=normalized_deployment_name,
         llm=provider_create.llm,
         existing_tool_ids=existing_tool_ids.to_list(),
         existing_tool_bindings={tool_id: app_ids.to_list() for tool_id, app_ids in existing_tool_bindings.items()},
@@ -224,7 +219,6 @@ async def apply_provider_create_plan_with_rollback(
                 raw_tools_to_create=plan.raw_tools_to_create,
                 operation_to_provider_app_id=operation_to_provider_app_id,
                 resolved_connections=resolved_connections,
-                resource_prefix=plan.resource_prefix,
                 create_and_upload_tools_fn=create_and_upload_wxo_flow_tools_with_bindings,
             )
             created_tool_ids.extend(tool_create_result.created_tool_ids)
@@ -260,7 +254,7 @@ async def apply_provider_create_plan_with_rollback(
         agent_create_response = await retry_create(
             create_agent_deployment,
             clients=clients,
-            agent_name=plan.prefixed_deployment_name,
+            agent_name=plan.deployment_name,
             agent_display_name=deployment_spec.name,
             deployment_name=deployment_spec.name,
             description=deployment_spec.description,
@@ -299,7 +293,7 @@ async def apply_provider_create_plan_with_rollback(
         app_ids=created_app_ids,
         tools_with_refs=created_snapshot_bindings,
         tool_app_bindings=created_tool_app_bindings,
-        prefixed_name=plan.prefixed_deployment_name,
+        prefixed_name=plan.deployment_name,
         display_name=deployment_spec.name,
     )
 

@@ -19,7 +19,6 @@ import type {
   ProviderAccount,
   ProviderCredentials,
 } from "../types";
-import { toResourceNamePrefix } from "../types";
 
 interface DeploymentStepperInitialState {
   selectedVersionByFlow?: Map<
@@ -35,6 +34,8 @@ interface DeploymentStepperInitialState {
   initialAttachedConnectionByFlow?: Map<string, string[]>;
   /** Provider tool IDs (provider_snapshot_id) per flow for existing attachments. */
   initialSnapshotByFlow?: Map<string, string>;
+  /** Tool display names from the provider per flow for existing attachments. */
+  initialToolNameByFlow?: Map<string, string>;
   /** LLM model from the provider (fetched via attachments endpoint). */
   initialLlmFromProvider?: string;
 }
@@ -82,6 +83,9 @@ interface DeploymentStepperContextType {
   ) => void;
   attachedConnectionByFlow: Map<string, string[]>;
   setAttachedConnectionByFlow: Dispatch<SetStateAction<Map<string, string[]>>>;
+  /** User-provided tool names per flow. Key = flowId. */
+  toolNameByFlow: Map<string, string>;
+  setToolNameByFlow: Dispatch<SetStateAction<Map<string, string>>>;
   /** Flow IDs that were originally attached but the user chose to remove. */
   removedFlowIds: Set<string>;
   /** Detach an existing flow (edit mode only). */
@@ -156,6 +160,9 @@ export function DeploymentStepperProvider({
   const [selectedVersionByFlow, setSelectedVersionByFlow] = useState<
     Map<string, { versionId: string; versionTag: string }>
   >(initialState?.selectedVersionByFlow ?? new Map());
+  const [toolNameByFlow, setToolNameByFlow] = useState<Map<string, string>>(
+    initialState?.initialToolNameByFlow ?? new Map(),
+  );
   const [connections, setConnections] = useState<ConnectionItem[]>([]);
   const initialAttachedRef = useMemo(
     () =>
@@ -334,10 +341,12 @@ export function DeploymentStepperProvider({
         [];
       for (const [flowId, versionEntry] of Array.from(selectedVersionByFlow)) {
         const connectionIds = attachedConnectionByFlow.get(flowId) ?? [];
+        const customToolName = toolNameByFlow.get(flowId)?.trim();
         operations.push({
           op: "bind",
           flow_version_id: versionEntry.versionId,
           app_ids: connectionIds,
+          ...(customToolName && { tool_name: customToolName }),
         });
       }
 
@@ -350,7 +359,6 @@ export function DeploymentStepperProvider({
         },
         provider_data: {
           llm: selectedLlm,
-          resource_name_prefix: toResourceNamePrefix(deploymentName),
           operations,
           connections: {
             existing_app_ids: existingAppIds,
@@ -367,6 +375,7 @@ export function DeploymentStepperProvider({
       deploymentType,
       selectedLlm,
       selectedVersionByFlow,
+      toolNameByFlow,
     ],
   );
 
@@ -398,7 +407,7 @@ export function DeploymentStepperProvider({
       // PATCH /snapshots/{id} (getSnapshotUpdates), NOT here.
       // This payload only handles:
       //   - Brand new flows → bind (creates new tool)
-      //   - Removed flows → remove_tool_by_id (detaches existing tool)
+      //   - Removed flows → remove_tool (detaches existing tool + deletes DB attachment)
       const operations: Array<Record<string, unknown>> = [];
       const initialVersionByFlow = initialState?.selectedVersionByFlow;
       const snapshotByFlow = initialState?.initialSnapshotByFlow;
@@ -412,19 +421,41 @@ export function DeploymentStepperProvider({
         }
         // Brand new flow → bind (with or without connections)
         const connectionIds = attachedConnectionByFlow.get(flowId) ?? [];
+        const customToolName = toolNameByFlow.get(flowId)?.trim();
         operations.push({
           op: "bind",
           flow_version_id: versionEntry.versionId,
           app_ids: connectionIds,
+          ...(customToolName && { tool_name: customToolName }),
         });
       }
 
-      // Emit remove_tool operations for flows the user fully detached.
-      // Always use flow_version_id-based remove_tool so the BE mapper can
-      // resolve it to both: (a) provider-side tool detach and (b) DB
-      // attachment row deletion.
+      // Emit operations for flows in removedFlowIds.
       for (const flowId of Array.from(removedFlowIds)) {
         const originalVersion = initialVersionByFlow?.get(flowId);
+
+        if (selectedVersionByFlow.has(flowId)) {
+          // User removed then re-attached — need to remove the old tool
+          // AND bind the new one (may be different version / tool name).
+          if (originalVersion) {
+            operations.push({
+              op: "remove_tool",
+              flow_version_id: originalVersion.versionId,
+            });
+          }
+          const versionEntry = selectedVersionByFlow.get(flowId)!;
+          const connectionIds = attachedConnectionByFlow.get(flowId) ?? [];
+          const customToolName = toolNameByFlow.get(flowId)?.trim();
+          operations.push({
+            op: "bind",
+            flow_version_id: versionEntry.versionId,
+            app_ids: connectionIds,
+            ...(customToolName && { tool_name: customToolName }),
+          });
+          continue;
+        }
+
+        // Fully detached — just remove
         if (originalVersion) {
           operations.push({
             op: "remove_tool",
@@ -473,8 +504,8 @@ export function DeploymentStepperProvider({
         }
       });
 
-      // Always build provider_data with the current LLM (required by Watsonx)
-      // and any operations / connection changes.
+      // Build provider_data with the current LLM and any operations / connection changes.
+      // Watsonx requires LLM whenever provider_data is sent.
       const hasOperations = operations.length > 0;
       const hasConnections =
         existingAppIds.length > 0 || rawPayloads.length > 0;
@@ -483,11 +514,7 @@ export function DeploymentStepperProvider({
       if (llmToSend || hasOperations || hasConnections) {
         result.provider_data = {
           ...(llmToSend && { llm: llmToSend }),
-          // resource_name_prefix is required by Watsonx when bind operations are present
-          ...(hasOperations && {
-            resource_name_prefix: toResourceNamePrefix(deploymentName),
-            operations,
-          }),
+          ...(hasOperations && { operations }),
           ...(hasConnections && {
             connections: {
               existing_app_ids: existingAppIds,
@@ -513,6 +540,7 @@ export function DeploymentStepperProvider({
       initialAttachedRef,
       removedFlowIds,
       selectedVersionByFlow,
+      toolNameByFlow,
       attachedConnectionByFlow,
       connections,
     ]);
@@ -576,6 +604,8 @@ export function DeploymentStepperProvider({
       setConnections,
       selectedVersionByFlow,
       handleSelectVersion,
+      toolNameByFlow,
+      setToolNameByFlow,
       attachedConnectionByFlow,
       setAttachedConnectionByFlow,
       removedFlowIds,
@@ -606,6 +636,7 @@ export function DeploymentStepperProvider({
       connections,
       selectedVersionByFlow,
       handleSelectVersion,
+      toolNameByFlow,
       attachedConnectionByFlow,
       removedFlowIds,
       handleRemoveAttachedFlow,
