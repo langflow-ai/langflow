@@ -1299,6 +1299,8 @@ class Component(CustomComponent):
             return (
                 self.status if self.status is not None else "No text available"
             )  # Provide a default message if .text_key is missing
+        if isinstance(result, pd.DataFrame | pd.Series):
+            return result
         if hasattr(result, "data"):
             return result.data
         if hasattr(result, "model_dump"):
