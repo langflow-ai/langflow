@@ -347,8 +347,8 @@ class Settings(BaseSettings):
     # Custom Component Security
     allow_custom_components: bool = True
     """If set to False, blocks execution of components whose code does not match a known
-    server template. 
-    
+    server template.
+
     The server validates node code against its component template cache;
     when the cache is not yet loaded (e.g., during startup), all flow execution is blocked
     as a safety measure.

@@ -85,10 +85,11 @@ async def aload_flow_from_json(
     except CustomComponentValidationError:
         raise
     except Exception as exc:
-        raise CustomComponentValidationError(
+        msg = (
             "Failed to load component templates for validation. "
             "Ensure the server is fully initialized before loading flows."
-        ) from exc
+        )
+        raise CustomComponentValidationError(msg) from exc
 
     from lfx.graph.graph.base import Graph
 

@@ -213,10 +213,11 @@ def validate_flow_for_current_settings(target: Mapping[str, Any] | Any | None) -
     # extract any flow data from it, fail fast rather than silently skipping
     # validation — the caller passed something we can't verify.
     if not allow_custom_components and target is not None and normalized_flow_data is None:
-        raise CustomComponentValidationError(
+        msg = (
             "Flow validation failed: could not extract graph data from the provided target. "
             "Ensure the flow payload or Graph object contains valid graph data."
         )
+        raise CustomComponentValidationError(msg)
 
     type_to_current_hash = get_component_hash_lookups_for_validation() if not allow_custom_components else None
 
