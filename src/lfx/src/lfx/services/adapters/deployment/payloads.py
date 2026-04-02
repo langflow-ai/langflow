@@ -75,6 +75,8 @@ T_ConfigListResultModel = TypeVar("T_ConfigListResultModel", bound=BaseModel, de
 T_SnapshotListResult = TypeVar("T_SnapshotListResult", default=AdapterPayload)
 T_SnapshotListResultModel = TypeVar("T_SnapshotListResultModel", bound=BaseModel, default=BaseModel)
 
+T_SnapshotUpdateResult = TypeVar("T_SnapshotUpdateResult", default=AdapterPayload)
+
 T_ExecutionResult = TypeVar("T_ExecutionResult", default=AdapterPayload)
 T_ExecutionResultModel = TypeVar("T_ExecutionResultModel", bound=BaseModel, default=BaseModel)
 T_ExecutionCreateResult = TypeVar("T_ExecutionCreateResult", default=AdapterPayload)

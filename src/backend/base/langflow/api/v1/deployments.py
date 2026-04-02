@@ -26,11 +26,13 @@ from langflow.api.v1.mappers.deployments.helpers import (
     attach_flow_versions,
     deployment_pagination_params,
     fetch_provider_snapshot_keys,
+    flow_version_ids_for_flows,
     get_deployment_row_or_404,
     get_owned_provider_account_or_404,
     handle_adapter_errors,
     list_deployment_flow_versions_synced,
     list_deployments_synced,
+    normalize_flow_ids_query,
     normalize_flow_version_query_ids,
     page_offset,
     raise_http_for_value_error,
@@ -75,6 +77,7 @@ from langflow.api.v1.schemas.deployments import (
     ExecutionCreateRequest,
     ExecutionCreateResponse,
     ExecutionStatusResponse,
+    FlowIdsQuery,
     FlowVersionIdsQuery,
     SnapshotUpdateRequest,
     SnapshotUpdateResponse,
@@ -613,17 +616,48 @@ async def list_deployments(
                 "Optional Langflow flow version ids (pass as repeated query params, "
                 "e.g. ?flow_version_ids=id1&flow_version_ids=id2). When provided, "
                 "deployments are filtered to those with at least one matching "
-                "attachment (OR semantics across ids)."
+                "attachment (OR semantics across ids). "
+                "Mutually exclusive with flow_ids."
+            )
+        ),
+    ] = None,
+    flow_ids: Annotated[
+        FlowIdsQuery,
+        Query(
+            description=(
+                "Optional flow ids (pass as repeated query params, "
+                "e.g. ?flow_ids=id1). Currently limited to 1 value. "
+                "When provided, deployments are filtered to those attached "
+                "to versions of the specified flow(s). "
+                "Mutually exclusive with flow_version_ids."
             )
         ),
     ] = None,
 ):
     normalized_flow_version_ids = normalize_flow_version_query_ids(flow_version_ids)
+    normalized_flow_ids = normalize_flow_ids_query(flow_ids)
+    if normalized_flow_ids and normalized_flow_version_ids:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="flow_ids and flow_version_ids are mutually exclusive.",
+        )
     if load_from_provider and normalized_flow_version_ids:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="flow_version_ids filtering is not supported when load_from_provider=true.",
         )
+    if load_from_provider and normalized_flow_ids:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="flow_ids filtering is not supported when load_from_provider=true.",
+        )
+    if normalized_flow_ids:
+        resolved = await flow_version_ids_for_flows(session, flow_ids=normalized_flow_ids, user_id=current_user.id)
+        if not resolved:
+            return DeploymentListResponse(
+                deployments=[], page=params.page, size=params.size, total=0, deployment_type=deployment_type
+            )
+        normalized_flow_version_ids = resolved
     provider_account = await get_owned_provider_account_or_404(
         provider_id=provider_id, user_id=current_user.id, db=session
     )
@@ -655,7 +689,7 @@ async def list_deployments(
         )
     deployments = deployment_mapper.shape_deployment_list_items(
         rows_with_counts=rows_with_counts,
-        matched_flow_version_filter_ids=normalized_flow_version_ids or None,
+        has_flow_filter=bool(normalized_flow_version_ids),
     )
     return DeploymentListResponse(
         deployments=deployments,
@@ -973,26 +1007,30 @@ async def update_snapshot(
         user_id=current_user.id,
         db=session,
     )
-    # NOTE: update_snapshot is currently only implemented on the WXO adapter.
-    # If additional adapters are added, this method should be promoted to the
-    # adapter protocol / base class.
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
+    deployment_mapper = get_deployment_mapper(provider_account.provider_key)
 
-    flow_definition = dict(flow_version.data)
-    flow_definition["id"] = str(flow_version.flow_id)
+    from langflow.services.database.models.flow.model import Flow
+
+    flow_row = await session.get(Flow, flow_version.flow_id)
+
+    flow_artifact = deployment_mapper.resolve_snapshot_update_artifact(
+        flow_version=flow_version,
+        flow_row=flow_row,
+        deployment=deployment,
+    )
 
     with handle_adapter_errors(), deployment_provider_scope(deployment.deployment_provider_account_id):
         await deployment_adapter.update_snapshot(
             user_id=current_user.id,
             db=session,
-            provider_snapshot_id=snapshot_id,
-            flow_definition=flow_definition,
-            project_id=str(deployment.project_id),
+            snapshot_id=snapshot_id,
+            flow_artifact=flow_artifact,
         )
 
     # Provider mutation succeeded — update the local attachment record.
     # If the DB flush fails, attempt a best-effort compensating re-upload
-    # of the previous flow version's artifact
+    # of the previous flow version's artifact.
     previous_flow_version_id = attachment.flow_version_id
     attachment.flow_version_id = body.flow_version_id
     session.add(attachment)
@@ -1008,15 +1046,17 @@ async def update_snapshot(
                 user_id=current_user.id,
             )
             if prev_version and prev_version.data:
-                prev_definition = dict(prev_version.data)
-                prev_definition["id"] = str(prev_version.flow_id)
+                prev_artifact = deployment_mapper.resolve_snapshot_update_artifact(
+                    flow_version=prev_version,
+                    flow_row=flow_row,
+                    deployment=deployment,
+                )
                 with deployment_provider_scope(deployment.deployment_provider_account_id):
                     await deployment_adapter.update_snapshot(
                         user_id=current_user.id,
                         db=session,
-                        provider_snapshot_id=snapshot_id,
-                        flow_definition=prev_definition,
-                        project_id=str(deployment.project_id),
+                        snapshot_id=snapshot_id,
+                        flow_artifact=prev_artifact,
                     )
                 logger.info(
                     "Restored provider snapshot '%s' to previous flow_version_id=%s after DB commit failure.",

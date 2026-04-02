@@ -29,6 +29,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar
 from uuid import UUID
 
+from fastapi import HTTPException, status
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadFields
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentDataUpdate,
@@ -65,6 +66,7 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentFlowVersionListItem,
     DeploymentFlowVersionListResponse,
     DeploymentListItem,
+    DeploymentListItemAttachment,
     DeploymentListResponse,
     DeploymentLlmListResponse,
     DeploymentProviderAccountCreateRequest,
@@ -93,6 +95,7 @@ if TYPE_CHECKING:
 
     from langflow.services.database.models.deployment.model import Deployment
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+    from langflow.services.database.models.flow.model import Flow
     from langflow.services.database.models.flow_version.model import FlowVersion
     from langflow.services.database.models.flow_version_deployment_attachment.model import (
         FlowVersionDeploymentAttachment,
@@ -255,6 +258,49 @@ class BaseDeploymentMapper:
     async def resolve_snapshot_list_params(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
         return self._validate_slot(self.api_payloads.snapshot_list_params, raw)
 
+    def resolve_snapshot_update_artifact(
+        self,
+        *,
+        flow_version: FlowVersion,
+        flow_row: Flow | None,
+        deployment: Deployment,
+    ) -> BaseFlowArtifact:
+        """Build a ``BaseFlowArtifact`` for a snapshot content update.
+
+        The base implementation assembles the artifact from the flow version
+        data and the parent flow's metadata.  Provider-specific mappers
+        override this to inject ``provider_data``.
+
+        Raises ``HTTPException(422)`` when the artifact cannot be built
+        (e.g. the parent flow has been deleted or the data is malformed).
+        """
+        from pydantic import ValidationError
+
+        flow_name = getattr(flow_row, "name", None) or ""
+        if not flow_name:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    f"Cannot build deployment artifact: the parent flow for version "
+                    f"'{flow_version.id}' has been deleted or has no name."
+                ),
+            )
+        try:
+            return BaseFlowArtifact(
+                id=flow_version.flow_id,
+                name=flow_name,
+                description=getattr(flow_row, "description", None),
+                data=flow_version.data,
+            )
+        except ValidationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    f"Flow version '{flow_version.id}' cannot be used as a deployment "
+                    f"artifact: {exc.errors()[0]['msg']}"
+                ),
+            ) from exc
+
     async def resolve_config_list_adapter_params(
         self,
         *,
@@ -284,8 +330,8 @@ class BaseDeploymentMapper:
     def shape_deployment_list_items(
         self,
         *,
-        rows_with_counts: list[tuple[Deployment, int, list[str]]],
-        matched_flow_version_filter_ids: list[UUID] | None = None,
+        rows_with_counts: list[tuple[Deployment, int, list[tuple[UUID, str | None]]]],
+        has_flow_filter: bool = False,
     ) -> list[DeploymentListItem]:
         return [
             DeploymentListItem(
@@ -297,11 +343,17 @@ class BaseDeploymentMapper:
                 attached_count=attached_count,
                 created_at=row.created_at,
                 updated_at=row.updated_at,
-                provider_data={"matched_flow_version_ids": matched_flow_versions}
-                if matched_flow_version_filter_ids
+                matched_attachments=[
+                    DeploymentListItemAttachment(
+                        flow_version_id=fv_id,
+                        provider_snapshot_id=snap_id,
+                    )
+                    for fv_id, snap_id in matched_attachments
+                ]
+                if has_flow_filter
                 else None,
             )
-            for row, attached_count, matched_flow_versions in rows_with_counts
+            for row, attached_count, matched_attachments in rows_with_counts
         ]
 
     def shape_flow_version_list_result(

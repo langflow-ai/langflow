@@ -404,6 +404,28 @@ def normalize_flow_version_query_ids(flow_version_ids: list[str] | None) -> list
     return normalized
 
 
+def normalize_flow_ids_query(flow_ids: list[UUID] | None) -> list[UUID]:
+    """Return a deduplicated list from an already-validated ``flow_ids`` query param.
+
+    ``FlowIdsQuery`` (Pydantic) handles UUID parsing and max-length
+    validation, so this is intentionally thin.
+    """
+    if not flow_ids:
+        return []
+    return list(dict.fromkeys(flow_ids))
+
+
+async def flow_version_ids_for_flows(db, *, flow_ids: list[UUID], user_id: UUID) -> list[UUID]:
+    """Return all flow-version IDs belonging to the given flows and user."""
+    if not flow_ids:
+        return []
+    stmt = select(FlowVersion.id).where(
+        col(FlowVersion.flow_id).in_(flow_ids),
+        FlowVersion.user_id == user_id,
+    )
+    return list((await db.exec(stmt)).all())
+
+
 async def get_owned_provider_account_or_404(
     *,
     provider_id: UUID,
@@ -933,14 +955,14 @@ async def list_deployments_synced(
     size: int,
     deployment_type: DeploymentType | None,
     flow_version_ids: list[UUID] | None = None,
-) -> tuple[list[tuple[Deployment, int, list[str]]], int]:
+) -> tuple[list[tuple[Deployment, int, list[tuple[UUID, str | None]]]], int]:
     """Return a page of deployments, deleting any DB rows the provider doesn't recognise.
 
     Fetches DB rows in batches, sends each batch's resource keys to the
     provider for validation, and deletes stale rows inline. The cursor does
     not advance for deleted rows (deletion shifts subsequent offsets down).
     """
-    accepted: list[tuple[Deployment, int, list[str]]] = []
+    accepted: list[tuple[Deployment, int, list[tuple[UUID, str | None]]]] = []
     cursor = page_offset(page, size)
     guard = 0
     while len(accepted) < size and guard < (size * 4 + 20):

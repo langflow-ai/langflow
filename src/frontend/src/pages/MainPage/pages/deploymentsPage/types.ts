@@ -50,6 +50,11 @@ export function toResourceNamePrefix(name: string): string {
 
 export type DeploymentType = "agent" | "mcp";
 
+export interface DeploymentMatchedAttachment {
+  flow_version_id: string;
+  provider_snapshot_id: string | null;
+}
+
 export interface Deployment {
   id: string;
   name: string;
@@ -60,4 +65,12 @@ export interface Deployment {
   provider_data: Record<string, unknown> | null;
   resource_key: string;
   attached_count: number;
+  matched_attachments: DeploymentMatchedAttachment[] | null;
+  /** Populated client-side when merging deployments from multiple providers. */
+  provider_account_id?: string;
+}
+
+export interface SnapshotUpdateResponse {
+  flow_version_id: string;
+  provider_snapshot_id: string;
 }

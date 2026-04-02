@@ -149,7 +149,13 @@ async def list_deployments_page(
     offset: int,
     limit: int,
     flow_version_ids: list[UUID] | None = None,
-) -> list[tuple[Deployment, int, list[str]]]:
+) -> list[tuple[Deployment, int, list[tuple[UUID, str | None]]]]:
+    """Return a page of deployments with attachment counts and matched attachments.
+
+    The third tuple element contains ``(flow_version_id, provider_snapshot_id)``
+    pairs for attachments that matched the ``flow_version_ids`` filter (empty
+    list when no filter is active).
+    """
     if offset < 0:
         msg = "offset must be greater than or equal to 0"
         raise ValueError(msg)
@@ -203,6 +209,7 @@ async def list_deployments_page(
             select(
                 FlowVersionDeploymentAttachment.deployment_id,
                 FlowVersionDeploymentAttachment.flow_version_id,
+                FlowVersionDeploymentAttachment.provider_snapshot_id,
             ).where(
                 FlowVersionDeploymentAttachment.user_id == user_id,
                 col(FlowVersionDeploymentAttachment.deployment_id).in_(deployment_ids),
@@ -210,18 +217,18 @@ async def list_deployments_page(
             )
         )
     ).all()
-    matched_flow_version_ids_by_deployment: dict[UUID, list[str]] = {}
-    for deployment_id, flow_version_id in matched_rows:
-        existing = matched_flow_version_ids_by_deployment.setdefault(deployment_id, [])
-        flow_version_id_str = str(flow_version_id)
-        if flow_version_id_str not in existing:
-            existing.append(flow_version_id_str)
+    matched_by_deployment: dict[UUID, list[tuple[UUID, str | None]]] = {}
+    for deployment_id, flow_version_id, provider_snapshot_id in matched_rows:
+        entries = matched_by_deployment.setdefault(deployment_id, [])
+        pair = (flow_version_id, provider_snapshot_id)
+        if pair not in entries:
+            entries.append(pair)
 
     return [
         (
             deployment,
             attached_count,
-            matched_flow_version_ids_by_deployment.get(deployment.id, []),
+            matched_by_deployment.get(deployment.id, []),
         )
         for deployment, attached_count in deployment_rows
     ]

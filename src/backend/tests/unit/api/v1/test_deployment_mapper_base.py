@@ -468,6 +468,70 @@ def test_base_mapper_flow_version_item_data_defaults_to_none() -> None:
     assert shaped.flow_versions[0].provider_data is None
 
 
+def test_shape_deployment_list_items_without_filter() -> None:
+    """Without a flow filter, matched_attachments is None."""
+    mapper = BaseDeploymentMapper()
+    row = SimpleNamespace(
+        id=uuid4(),
+        resource_key="rk-1",
+        deployment_type=DeploymentType.AGENT,
+        name="Dep",
+        description=None,
+        created_at=None,
+        updated_at=None,
+    )
+    items = mapper.shape_deployment_list_items(
+        rows_with_counts=[(row, 0, [])],
+        has_flow_filter=False,
+    )
+    assert len(items) == 1
+    assert items[0].matched_attachments is None
+
+
+def test_shape_deployment_list_items_with_filter() -> None:
+    """With a flow filter, matched_attachments is populated from matched tuples."""
+    mapper = BaseDeploymentMapper()
+    fv_id = uuid4()
+    row = SimpleNamespace(
+        id=uuid4(),
+        resource_key="rk-1",
+        deployment_type=DeploymentType.AGENT,
+        name="Dep",
+        description=None,
+        created_at=None,
+        updated_at=None,
+    )
+    items = mapper.shape_deployment_list_items(
+        rows_with_counts=[(row, 1, [(fv_id, "snap-1")])],
+        has_flow_filter=True,
+    )
+    assert len(items) == 1
+    assert items[0].matched_attachments is not None
+    assert len(items[0].matched_attachments) == 1
+    assert items[0].matched_attachments[0].flow_version_id == fv_id
+    assert items[0].matched_attachments[0].provider_snapshot_id == "snap-1"
+
+
+def test_shape_deployment_list_items_with_filter_empty_matches() -> None:
+    """With a flow filter active but no matches, matched_attachments is an empty list."""
+    mapper = BaseDeploymentMapper()
+    row = SimpleNamespace(
+        id=uuid4(),
+        resource_key="rk-1",
+        deployment_type=DeploymentType.AGENT,
+        name="Dep",
+        description=None,
+        created_at=None,
+        updated_at=None,
+    )
+    items = mapper.shape_deployment_list_items(
+        rows_with_counts=[(row, 0, [])],
+        has_flow_filter=True,
+    )
+    assert len(items) == 1
+    assert items[0].matched_attachments == []
+
+
 def test_base_mapper_execution_provider_data_shapers_passthrough() -> None:
     mapper = BaseDeploymentMapper()
     payload = {"ok": True}
