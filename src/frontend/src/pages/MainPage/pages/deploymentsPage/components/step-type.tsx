@@ -1,3 +1,5 @@
+import { ChevronDown } from "lucide-react";
+import { useCallback, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import {
@@ -41,6 +43,22 @@ export default function StepType() {
     { enabled: !!providerId },
   );
   const llmModels = llmData?.provider_data?.models ?? [];
+
+  const [showScrollHint, setShowScrollHint] = useState(true);
+  const contentRef = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+    // Find the actual scrollable viewport inside Radix SelectContent
+    const viewport = node.querySelector("[data-radix-select-viewport]") ?? node;
+    const checkScroll = () => {
+      const isAtBottom =
+        viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 8;
+      setShowScrollHint(!isAtBottom);
+    };
+    viewport.addEventListener("scroll", checkScroll);
+    // Initial check after items render
+    requestAnimationFrame(checkScroll);
+  }, []);
+
   return (
     <div className="flex w-full flex-col gap-6 overflow-y-auto py-3">
       <h2 className="text-lg font-semibold">Deployment Type</h2>
@@ -108,17 +126,6 @@ export default function StepType() {
       </div>
 
       <div className="flex flex-col">
-        <span className="pb-2 text-sm font-medium">Description</span>
-        <Textarea
-          placeholder="Describe the agent's purpose..."
-          rows={3}
-          className="resize-none bg-muted placeholder:text-placeholder-foreground"
-          value={deploymentDescription}
-          onChange={(e) => setDeploymentDescription(e.target.value)}
-        />
-      </div>
-
-      <div className="flex flex-col">
         <span className="pb-2 text-sm font-medium">
           Model <span className="text-destructive">*</span>
         </span>
@@ -128,14 +135,40 @@ export default function StepType() {
               placeholder={llmsLoading ? "Loading models..." : "Select a model"}
             />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent
+            side="bottom"
+            className="relative max-h-60 overflow-y-auto"
+            ref={contentRef}
+            onOpenAutoFocus={() => setShowScrollHint(true)}
+          >
             {llmModels.map((model) => (
               <SelectItem key={model.model_name} value={model.model_name}>
                 {model.model_name}
               </SelectItem>
             ))}
+            {llmModels.length > 0 && (
+              <div
+                className={cn(
+                  "pointer-events-none sticky -bottom-1 flex justify-center bg-gradient-to-t from-popover from-0% pb-1 pt-2 transition-opacity duration-200",
+                  showScrollHint ? "opacity-100" : "opacity-0",
+                )}
+              >
+                <ChevronDown className="h-4 w-4 animate-bounce text-muted-foreground" />
+              </div>
+            )}
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="flex flex-col">
+        <span className="pb-2 text-sm font-medium">Description</span>
+        <Textarea
+          placeholder="Describe the agent's purpose..."
+          rows={3}
+          className="resize-none bg-muted placeholder:text-placeholder-foreground"
+          value={deploymentDescription}
+          onChange={(e) => setDeploymentDescription(e.target.value)}
+        />
       </div>
     </div>
   );
