@@ -127,6 +127,28 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert metadata["chunk_size"] == 1000
         assert "created_at" in metadata
 
+    def test_update_metadata_metrics_persists_chunk_stats(self, component_class, default_kwargs, tmp_path, active_user):
+        """Test updating the persisted KB metrics from the Chroma collection."""
+        component = component_class(**default_kwargs)
+        kb_path = tmp_path / active_user.username / "test_kb"
+
+        mock_collection = MagicMock()
+        mock_collection.count.return_value = 2
+        mock_collection.get.return_value = {"documents": ["hello world", "foo"]}
+
+        mock_chroma = MagicMock()
+        mock_chroma._collection = mock_collection
+
+        component._update_metadata_metrics(kb_path, mock_chroma)
+        stored_metadata = json.loads((kb_path / "embedding_metadata.json").read_text())
+
+        assert stored_metadata["chunks"] == 2
+        assert stored_metadata["words"] == 3
+        assert stored_metadata["characters"] == 14
+        assert stored_metadata["avg_chunk_size"] == 7.0
+        assert stored_metadata["size"] > 0
+        mock_collection.get.assert_called_once_with(include=["documents"], limit=5000, offset=0)
+
     def test_build_column_metadata(self, component_class, default_kwargs):
         """Test building column metadata."""
         component = component_class(**default_kwargs)
