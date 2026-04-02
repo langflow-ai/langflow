@@ -64,10 +64,14 @@ export default function ModelInputComponent({
       setIsConnectionMode(enabled);
       if (!nodeId) return;
       const store = useFlowStore.getState();
-      store.setNode(nodeId, (node) => ({
-        ...node,
-        data: { ...node.data, _connectionMode: enabled },
-      }), false);
+      store.setNode(
+        nodeId,
+        (node) => ({
+          ...node,
+          data: { ...node.data, _connectionMode: enabled },
+        }),
+        false,
+      );
     },
     [nodeId],
   );
@@ -180,7 +184,11 @@ export default function ModelInputComponent({
 
   useEffect(() => {
     // Only proceed if we have options, haven't selected a value, and NOT in connection mode
-    if (flatOptions.length > 0 && (!value || value.length === 0) && !isConnectionMode) {
+    if (
+      flatOptions.length > 0 &&
+      (!value || value.length === 0) &&
+      !isConnectionMode
+    ) {
       // Check ref to avoid infinite loops
       if (!hasProcessedEmptyRef.current) {
         const firstOption = flatOptions[0];
