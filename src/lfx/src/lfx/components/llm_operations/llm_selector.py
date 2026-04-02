@@ -11,6 +11,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput
 from lfx.schema.data import Data
 from lfx.schema.message import Message
+from lfx.schema.token_usage import accumulate_usage, extract_usage_from_message
 from lfx.template.field.base import Output
 
 
@@ -358,6 +359,7 @@ Return ONLY the index number:"""
             self.status = "Judge LLM analyzing options..."
 
             response = await self.judge_llm.ainvoke([system_message, user_message])
+            self._token_usage = accumulate_usage(self._token_usage, extract_usage_from_message(response))
             selected_index, chosen_model_instance = self._parse_judge_response(response.content.strip())
             self._selected_model_name = get_model_name(chosen_model_instance)
             if self._selected_model_name:
@@ -393,6 +395,9 @@ Return ONLY the index number:"""
             raw_result = get_chat_result(
                 runnable=chosen_model_instance,
                 input_value=input_message_obj,
+                token_usage_callback=lambda msg: setattr(
+                    self, "_token_usage", accumulate_usage(self._token_usage, extract_usage_from_message(msg))
+                ),
             )
             result = Message(text=str(raw_result)) if not isinstance(raw_result, Message) else raw_result
 
@@ -426,6 +431,9 @@ Return ONLY the index number:"""
                 raw_fallback_result = get_chat_result(
                     runnable=chosen_model_instance,
                     input_value=input_message_obj,
+                    token_usage_callback=lambda msg: setattr(
+                        self, "_token_usage", accumulate_usage(self._token_usage, extract_usage_from_message(msg))
+                    ),
                 )
                 if not isinstance(raw_fallback_result, Message):
                     successful_result = Message(text=str(raw_fallback_result))
