@@ -1242,7 +1242,6 @@ def test_build_provider_update_plan_creates_unbound_raw_tools_alongside_bound_ra
     assert plan.raw_tools_to_create[1].app_ids == []
 
 
-
 def test_build_provider_update_plan_put_tools_replaces_agent_tool_list():
     """put_tools standalone path seeds final_existing_tool_ids from the payload, not the agent."""
     provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
@@ -4459,6 +4458,20 @@ def test_create_agent_run_result_with_run_id():
     assert result == {"status": "running", "execution_id": "r-1"}
 
 
+def test_create_agent_run_result_extracts_thread_id():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import create_agent_run_result
+
+    result = create_agent_run_result({"status": "running", "run_id": "r-1", "thread_id": "t-1"})
+    assert result["thread_id"] == "t-1"
+
+
+def test_create_agent_run_result_omits_thread_id_when_absent():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import create_agent_run_result
+
+    result = create_agent_run_result({"status": "running", "run_id": "r-1"})
+    assert "thread_id" not in result
+
+
 # ---------------------------------------------------------------------------
 # Status helper tests
 # ---------------------------------------------------------------------------
@@ -5255,7 +5268,7 @@ def test_build_orchestrate_run_payload_falls_back_to_deployment_id():
 
 
 def test_build_orchestrate_run_payload_excludes_extra_fields():
-    """build_orchestrate_run_payload does not forward extra fields like thread_id."""
+    """build_orchestrate_run_payload does not forward extra fields besides thread_id."""
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import build_orchestrate_run_payload
 
     result = build_orchestrate_run_payload(
@@ -5268,10 +5281,22 @@ def test_build_orchestrate_run_payload_excludes_extra_fields():
         },
         deployment_id="dep-1",
     )
-    assert "thread_id" not in result
+    assert result["thread_id"] == "t-1"
     assert "llm_params" not in result
     assert "guardrails" not in result
     assert "stream" not in result
+    assert len(result) == 3
+
+
+def test_build_orchestrate_run_payload_omits_thread_id_when_absent():
+    """build_orchestrate_run_payload does not include thread_id when not provided."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import build_orchestrate_run_payload
+
+    result = build_orchestrate_run_payload(
+        provider_data={"input": "hi"},
+        deployment_id="dep-1",
+    )
+    assert "thread_id" not in result
     assert len(result) == 2
 
 

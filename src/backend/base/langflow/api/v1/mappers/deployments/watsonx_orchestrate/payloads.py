@@ -41,10 +41,7 @@ class WatsonxApiBindOperation(BaseModel):
     )
     tool_name: str | None = Field(
         default=None,
-        description=(
-            "Optional user-provided tool name. When omitted, the tool name "
-            "is derived from the flow name."
-        ),
+        description=("Optional user-provided tool name. When omitted, the tool name is derived from the flow name."),
     )
 
 
@@ -434,6 +431,7 @@ class _WatsonxApiAgentExecutionResultBase(BaseModel):
 
     execution_id: str | None = None
     agent_id: str | None = None
+    thread_id: str | None = None
     status: str | None = None
     result: Any | None = None
     started_at: str | None = None
