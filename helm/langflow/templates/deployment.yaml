@@ -14,6 +14,10 @@ spec:
       labels:
         {{- include "langflow.selectorLabels" . | nindent 8 }}
     spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
       {{- if .Values.nfs.enabled }}
       initContainers:
         - name: nfs-init
