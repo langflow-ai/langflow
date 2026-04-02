@@ -63,7 +63,7 @@ from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.services.auth.utils import api_key_security
 from langflow.services.database.models.flow.model import FlowRead
-from langflow.services.database.models.jobs.model import Job, JobType
+from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_job_service, get_task_service
 
@@ -491,23 +491,6 @@ async def execute_workflow_background(
         raise WorkflowResourceError from exc
 
 
-def _assert_job_owner(job: Job, api_key_user: UserRead, job_id: UUID) -> None:
-    """Raise 403 if the authenticated user does not own the job.
-
-    Legacy rows with user_id=None are allowed through to preserve backwards compatibility.
-    """
-    if job.user_id is not None and job.user_id != api_key_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={
-                "error": "Forbidden",
-                "code": "FORBIDDEN",
-                "message": "You do not have permission to access this job.",
-                "job_id": str(job_id),
-            },
-        )
-
-
 @router.get(
     "",
     response_model=None,
@@ -586,7 +569,7 @@ async def get_workflow_status(
         )
 
     # Ownership check — raises 403 if the requesting user does not own the job
-    _assert_job_owner(job, api_key_user, job_id)
+    job_service.assert_job_owner(job, api_key_user.id, job_id)
 
     # Store context for exception handling scope
     flow_id_str = str(job.flow_id)
@@ -715,7 +698,7 @@ async def stop_workflow(
         )
 
     # Ownership check — must run before type check to avoid leaking job.type to non-owners
-    _assert_job_owner(job, api_key_user, job_id)
+    job_service.assert_job_owner(job, api_key_user.id, job_id)
 
     # Verify this is a workflow job
     if job.type != JobType.WORKFLOW:

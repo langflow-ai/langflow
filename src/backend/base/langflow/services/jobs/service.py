@@ -10,6 +10,8 @@ if TYPE_CHECKING:
 from datetime import datetime, timezone
 from uuid import UUID
 
+from fastapi import HTTPException, status
+
 from langflow.services.base import Service
 from langflow.services.database.models.jobs.crud import (
     get_job_by_job_id,
@@ -61,6 +63,22 @@ class JobService(Service):
 
         async with session_scope() as session:
             return await get_job_by_job_id(session, job_id)
+
+    def assert_job_owner(self, job: Job, user_id: UUID | None, job_id: UUID) -> None:
+        """Raise 403 if the authenticated user does not own the job.
+
+        Legacy rows with user_id=None are allowed through to preserve backwards compatibility.
+        """
+        if job.user_id is not None and job.user_id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error": "Forbidden",
+                    "code": "FORBIDDEN",
+                    "message": "You do not have permission to access this job.",
+                    "job_id": str(job_id),
+                },
+            )
 
     async def create_job(
         self,
