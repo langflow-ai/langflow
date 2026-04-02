@@ -1345,6 +1345,7 @@ class TestWorkflowStatus:
         with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
             mock_service = MagicMock()
             mock_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
+            mock_service.assert_job_owner = MagicMock()
             mock_get_job_service.return_value = mock_service
 
             headers = {"x-api-key": created_api_key.api_key}
@@ -1395,6 +1396,7 @@ class TestWorkflowStatus:
         with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
             mock_service = MagicMock()
             mock_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
+            mock_service.assert_job_owner = MagicMock()
             mock_get_job_service.return_value = mock_service
 
             headers = {"x-api-key": created_api_key.api_key}
@@ -1429,6 +1431,7 @@ class TestWorkflowStatus:
         ):
             mock_service = MagicMock()
             mock_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
+            mock_service.assert_job_owner = MagicMock()
             mock_get_job_service.return_value = mock_service
 
             mock_flow = MagicMock()
@@ -1465,6 +1468,7 @@ class TestWorkflowStatus:
         with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
             mock_service = MagicMock()
             mock_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
+            mock_service.assert_job_owner = MagicMock()
             mock_get_job_service.return_value = mock_service
 
             headers = {"x-api-key": created_api_key.api_key}
@@ -1514,6 +1518,7 @@ class TestWorkflowStop:
             mock_job_service = MagicMock()
             mock_job_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
             mock_job_service.update_job_status = AsyncMock()
+            mock_job_service.assert_job_owner = MagicMock()
             mock_get_job_service.return_value = mock_job_service
 
             mock_task_service = MagicMock()
@@ -1569,6 +1574,7 @@ class TestWorkflowStop:
         with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
             mock_service = MagicMock()
             mock_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
+            mock_service.assert_job_owner = MagicMock()
             mock_get_job_service.return_value = mock_service
 
             headers = {"x-api-key": created_api_key.api_key}
