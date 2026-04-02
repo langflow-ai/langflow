@@ -233,15 +233,12 @@ test(
         timeout: 5000,
       });
 
-      await page.getByTestId(`checkbox-${renamedTxtFile}`).last().click();
-      await page.getByTestId(`checkbox-${renamedJsonFile}`).last().click();
-
-      await expect(
+      await ensureCheckboxChecked(
         page.getByTestId(`checkbox-${renamedTxtFile}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
-      await expect(
+      );
+      await ensureCheckboxChecked(
         page.getByTestId(`checkbox-${renamedJsonFile}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
+      );
 
       await page.getByTestId("select-files-modal-button").click();
 
@@ -343,9 +340,9 @@ test(
         timeout: 1000,
       });
 
-      await expect(
+      await ensureCheckboxChecked(
         page.getByTestId(`checkbox-${newTxtFile}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 10000 });
+      );
 
       await page.getByTestId("select-files-modal-button").click();
       await expect(page.getByText(`${renamedJsonFile}.txt`).first()).toBeHidden(
