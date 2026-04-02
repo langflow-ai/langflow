@@ -466,8 +466,8 @@ class TracingService(Service):
             return
         component_context = component_context_var.get()
         if component_context is None:
-            msg = "called add_log but no component context found"
-            raise RuntimeError(msg)
+            logger.debug("called add_log but no component context found")
+            return
         component_context.logs[trace_name].append(log)
 
     def set_outputs(
@@ -481,8 +481,8 @@ class TracingService(Service):
             return
         component_context = component_context_var.get()
         if component_context is None:
-            msg = "called set_outputs but no component context found"
-            raise RuntimeError(msg)
+            logger.debug("called set_outputs but no component context found")
+            return
         component_context.outputs[trace_name] |= outputs or {}
         component_context.outputs_metadata[trace_name] |= output_metadata or {}
         trace_context = trace_context_var.get()

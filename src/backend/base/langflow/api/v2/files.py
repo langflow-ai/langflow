@@ -137,6 +137,7 @@ async def upload_user_file(
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
     *,
     append: bool = False,
+    ephemeral: bool = False,
 ) -> UploadFileResponse:
     """Upload a file for the current user and track it in the database."""
     # Get the max allowed file size from settings (in MB)
@@ -299,6 +300,12 @@ async def upload_user_file(
             # General error saving file or getting file size
             raise HTTPException(status_code=500, detail=f"Error accessing file: {e}") from e
 
+        if ephemeral:
+            # Ephemeral uploads: file is saved to storage (servable for chat history)
+            # but no UserFile record is created (won't appear in "My Files")
+            file_path = f"{current_user.id}/{stored_file_name}"
+            return UploadFileResponse(id=file_id, name=root_filename, path=file_path, size=file_size)
+
         if append and existing_file:
             existing_file.size = file_size
             session.add(existing_file)
@@ -337,7 +344,7 @@ async def upload_user_file(
         # Optionally, you could also delete the file from disk if the DB insert fails.
         raise HTTPException(status_code=500, detail=f"Database error: {e}") from e
 
-    return UploadFileResponse(id=new_file.id, name=new_file.name, path=Path(new_file.path), size=new_file.size)
+    return UploadFileResponse(id=new_file.id, name=new_file.name, path=new_file.path, size=new_file.size)
 
 
 async def get_file_by_name(

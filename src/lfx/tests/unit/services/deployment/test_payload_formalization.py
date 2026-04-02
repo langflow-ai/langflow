@@ -19,17 +19,34 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentOperationResult,
     DeploymentStatusResult,
     DeploymentType,
+    DeploymentUpdateResult,
+    ExecutionCreateResult,
     ExecutionResultBase,
+    ExecutionStatusResult,
     ItemResult,
     SnapshotListParams,
     SnapshotListResult,
 )
-from lfx.services.adapters.payload import AdapterPayloadValidationError, PayloadSlot, PayloadSlotPolicy
+from lfx.services.adapters.payload import (
+    AdapterPayloadMissingError,
+    AdapterPayloadValidationError,
+    PayloadSlot,
+    PayloadSlotPolicy,
+)
 from pydantic import BaseModel
 
 
 class _SpecModel(BaseModel):
     region: str
+
+
+class _SpecModelCompat(BaseModel):
+    region: str
+
+
+class _SpecModelWithExtra(BaseModel):
+    region: str
+    zone: str
 
 
 class _StatusModel(BaseModel):
@@ -84,6 +101,29 @@ def test_payload_slot_parse_and_dump_round_trip() -> None:
     assert slot.dump(parsed) == {"region": "us-east-1"}
 
 
+def test_payload_slot_parse_accepts_same_model_instance() -> None:
+    slot = PayloadSlot(_SpecModel)
+
+    parsed = slot.parse(_SpecModel(region="us-east-1"))
+
+    assert isinstance(parsed, _SpecModel)
+    assert parsed.region == "us-east-1"
+
+
+def test_payload_slot_parse_rejects_compatible_model_instance() -> None:
+    slot = PayloadSlot(_SpecModel)
+
+    with pytest.raises(AdapterPayloadValidationError, match="Invalid payload"):
+        slot.parse(_SpecModelCompat(region="us-east-1"))
+
+
+def test_payload_slot_parse_rejects_non_matching_model_instance() -> None:
+    slot = PayloadSlot(_SpecModel)
+
+    with pytest.raises(AdapterPayloadValidationError, match="Invalid payload"):
+        slot.parse(_SpecModelWithExtra(region="us-east-1", zone="1a"))
+
+
 def test_payload_slot_raises_typed_validation_error() -> None:
     slot = PayloadSlot(_SpecModel)
 
@@ -91,6 +131,24 @@ def test_payload_slot_raises_typed_validation_error() -> None:
         slot.parse({"missing": "region"})
     assert exc.value.model_name == "_SpecModel"
     assert exc.value.error is not None
+    assert exc.value.format_first_error() == "Missing required field 'region'."
+
+
+def test_payload_validation_error_formats_non_missing_with_field_path() -> None:
+    slot = PayloadSlot(_ApiLikeConfigModel)
+
+    with pytest.raises(AdapterPayloadValidationError, match="Invalid payload") as exc:
+        slot.parse({"retries": "not-an-int"})
+
+    assert exc.value.format_first_error() == "Invalid value for field 'retries'."
+
+
+def test_payload_slot_raises_typed_missing_error_for_none() -> None:
+    slot = PayloadSlot(_SpecModel)
+
+    with pytest.raises(AdapterPayloadMissingError, match="Missing payload") as exc:
+        slot.parse(None)
+    assert exc.value.model_name == "_SpecModel"
 
 
 def test_payload_slot_dump_json_serializes_uuid_datetime_enum_and_nested_model() -> None:
@@ -179,7 +237,21 @@ def test_generic_parametrization_applies_to_result_and_list_models() -> None:
         id="dep_1",
         provider_result={"external_url": "https://dep.example"},
     )
+    typed_update = DeploymentUpdateResult[_ResultModel](
+        id="dep_1",
+        provider_result={"external_url": "https://dep.example"},
+    )
     typed_execution = ExecutionResultBase[_ExecutionResultModel](
+        execution_id="exec_1",
+        deployment_id="dep_1",
+        provider_result={"status": "running"},
+    )
+    typed_execution_create = ExecutionCreateResult[_ExecutionResultModel](
+        execution_id="exec_1",
+        deployment_id="dep_1",
+        provider_result={"status": "running"},
+    )
+    typed_execution_status = ExecutionStatusResult[_ExecutionResultModel](
         execution_id="exec_1",
         deployment_id="dep_1",
         provider_result={"status": "running"},
@@ -207,7 +279,10 @@ def test_generic_parametrization_applies_to_result_and_list_models() -> None:
 
     assert isinstance(typed_create.provider_result, _ResultModel)
     assert isinstance(typed_operation.provider_result, _ResultModel)
+    assert isinstance(typed_update.provider_result, _ResultModel)
     assert isinstance(typed_execution.provider_result, _ExecutionResultModel)
+    assert isinstance(typed_execution_create.provider_result, _ExecutionResultModel)
+    assert isinstance(typed_execution_status.provider_result, _ExecutionResultModel)
     assert isinstance(typed_item.provider_data, _StatusModel)
     assert isinstance(typed_deployment_list.provider_result, _ResultModel)
     assert isinstance(typed_config_list.provider_result, _ResultModel)
