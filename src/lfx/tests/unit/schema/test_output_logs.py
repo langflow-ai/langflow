@@ -1,7 +1,6 @@
 import pandas as pd
-
-from lfx.custom.custom_component.custom_component import CustomComponent
 from lfx.custom.custom_component.component import Component
+from lfx.custom.custom_component.custom_component import CustomComponent
 from lfx.schema.dataframe import Table
 from lfx.schema.message import Message
 from lfx.schema.schema import build_output_logs
@@ -16,7 +15,6 @@ def test_build_output_logs_table_not_overridden_by_message_status():
 
     build_output_logs must still read per-output results so a Table output stays tabular.
     """
-
     component = _DummyComponent()
     component.status = Message(text="stored")  # simulate "message output happened" state
 

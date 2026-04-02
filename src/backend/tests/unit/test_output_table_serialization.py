@@ -1,5 +1,3 @@
-import pytest
-
 from lfx.schema.dataframe import Table
 from lfx.schema.schema import get_message, get_type
 
