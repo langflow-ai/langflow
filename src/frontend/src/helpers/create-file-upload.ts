@@ -107,13 +107,15 @@ export function createFileUpload(props?: {
     };
 
     const handleFocus = () => {
+      // 500ms delay to avoid race condition on Windows where focus fires
+      // before the change event, causing the upload to resolve with [].
       setTimeout(() => {
         if (!isHandled) {
           isHandled = true;
           cleanup();
           resolve([]);
         }
-      }, 100);
+      }, 500);
     };
 
     input.addEventListener("change", handleChange);

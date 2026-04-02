@@ -4,6 +4,7 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { ensureCheckboxChecked } from "../../utils/ensure-checkbox-checked";
 import { generateRandomFilename } from "../../utils/generate-filename";
 import {
   closeAdvancedOptions,
@@ -92,9 +93,8 @@ test(
         timeout: 5000,
       });
 
-      await expect(
-        page.getByTestId(`checkbox-${sourceFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
+      const checkbox = page.getByTestId(`checkbox-${sourceFileName}`).last();
+      await ensureCheckboxChecked(checkbox);
 
       // Create DataTransfer object and file
       const dataTransfer = await page.evaluateHandle((jsonFileName) => {

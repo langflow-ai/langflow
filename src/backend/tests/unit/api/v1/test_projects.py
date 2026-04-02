@@ -590,13 +590,10 @@ class TestProjectMCPIntegration:
             )
             mock_validate.return_value = mock_validation_result
 
-            # The validation function should raise the HTTPException during project creation
+            # MCP conflict should NOT block project creation — it's a best-effort side effect
             response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
 
-            assert response.status_code == status.HTTP_409_CONFLICT
-            response_data = response.json()
-            assert "detail" in response_data
-            assert mock_validation_result.conflict_message == response_data["detail"]
+            assert response.status_code == status.HTTP_201_CREATED
 
             # Verify validation was called with correct parameters
             mock_validate.assert_called_once()
@@ -637,12 +634,10 @@ class TestProjectMCPIntegration:
             )
             mock_validate.return_value = mock_validation_result
 
+            # MCP conflict should NOT block project creation — it's a best-effort side effect
             response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
 
-            assert response.status_code == status.HTTP_409_CONFLICT
-            response_data = response.json()
-            assert "detail" in response_data
-            assert mock_validation_result.conflict_message == response_data["detail"]
+            assert response.status_code == status.HTTP_201_CREATED
 
             # Verify validation was called with correct parameters
             mock_validate.assert_called_once()

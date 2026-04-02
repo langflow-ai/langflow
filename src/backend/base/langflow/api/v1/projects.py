@@ -140,35 +140,33 @@ async def create_project(
                     operation="create",
                 )
 
-                # Handle conflicts
+                # Handle conflicts — log but don't fail project creation.
+                # MCP server registration is a best-effort side effect;
+                # a name conflict (e.g. from stale data) must not block the user.
                 if validation_result.has_conflict:
-                    await logger.aerror(validation_result.conflict_message)
-                    raise HTTPException(
-                        status_code=409,  # Conflict - semantically correct for name conflicts
-                        detail=validation_result.conflict_message,
+                    await logger.awarning(
+                        f"MCP server conflict for project {new_project.name}, skipping auto-register: "
+                        f"{validation_result.conflict_message}"
                     )
+                else:
+                    # Log if updating existing server
+                    if validation_result.should_skip:
+                        msg = (
+                            f"MCP server '{validation_result.server_name}' "
+                            f"already exists for project {new_project.id}, updating"
+                        )
+                        await logger.adebug(msg)
 
-                # Log if updating existing server
-                if validation_result.should_skip:
-                    msg = (
-                        f"MCP server '{validation_result.server_name}' "
-                        f"already exists for project {new_project.id}, updating"
+                    server_name = validation_result.server_name
+
+                    await update_server(
+                        server_name,
+                        server_config,
+                        current_user,
+                        session,
+                        get_storage_service(),
+                        get_settings_service(),
                     )
-                    await logger.adebug(msg)
-
-                server_name = validation_result.server_name
-
-                await update_server(
-                    server_name,
-                    server_config,
-                    current_user,
-                    session,
-                    get_storage_service(),
-                    get_settings_service(),
-                )
-            except HTTPException:
-                # Re-raise HTTP validation errors (conflicts, etc.)
-                raise
             except NotImplementedError:
                 msg = "OAuth as default MCP authentication type is not yet implemented"
                 await logger.aerror(msg)
