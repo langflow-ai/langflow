@@ -7,7 +7,7 @@ from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 from lfx.field_typing.constants import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, StrInput
-from lfx.io import IntInput, MessageInput, ModelInput, MultilineInput, SecretStrInput, SliderInput
+from lfx.io import IntInput, MessageInput, ModelInput, MultilineInput, SliderInput
 
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
 
@@ -26,15 +26,6 @@ class LanguageModelComponent(LCModelComponent):
             info="Select your model provider",
             real_time_refresh=True,
             required=True,
-        ),
-        SecretStrInput(
-            name="api_key",
-            display_name="API Key",
-            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
-            required=False,
-            show=True,
-            real_time_refresh=True,
-            advanced=True,
         ),
         DropdownInput(
             name="base_url_ibm_watsonx",
@@ -99,7 +90,7 @@ class LanguageModelComponent(LCModelComponent):
         return get_llm(
             model=self.model,
             user_id=self.user_id,
-            api_key=self.api_key,
+            api_key=None,
             temperature=self.temperature,
             stream=self.stream,
             max_tokens=getattr(self, "max_tokens", None),

@@ -159,24 +159,11 @@ class BaseFileComponent(Component, ABC):
             advanced=True,
         ),
         BoolInput(
-            name="silent_errors",
-            display_name="Silent Errors",
-            advanced=True,
-            info="If true, errors will not raise an exception.",
-        ),
-        BoolInput(
             name="delete_server_file_after_processing",
             display_name="Delete Server File After Processing",
             advanced=True,
             value=True,
             info="If true, the Server File Path will be deleted after processing.",
-        ),
-        BoolInput(
-            name="ignore_unsupported_extensions",
-            display_name="Ignore Unsupported Extensions",
-            advanced=True,
-            value=True,
-            info="If true, files with unsupported extensions will not be processed.",
         ),
         BoolInput(
             name="ignore_unspecified_files",
@@ -550,7 +537,7 @@ class BaseFileComponent(Component, ABC):
                 if key is None:
                     msg = f"Data object missing required field '{data_list_field}': {data}"
                     self.log(msg)
-                    if not self.silent_errors:
+                    if not False:
                         msg = f"Data object missing required field '{data_list_field}': {data}"
                         self.log(msg)
                         raise ValueError(msg)
@@ -591,7 +578,7 @@ class BaseFileComponent(Component, ABC):
         elif not isinstance(file_path, list):
             msg = f"Expected list of Data objects in file_path but got {type(file_path)}."
             self.log(msg)
-            if not self.silent_errors:
+            if not False:
                 raise ValueError(msg)
             return []
 
@@ -602,7 +589,7 @@ class BaseFileComponent(Component, ABC):
             if not isinstance(data_obj, Data):
                 msg = f"Expected Data object in file_path but got {type(data_obj)}."
                 self.log(msg)
-                if not self.silent_errors:
+                if not False:
                     raise ValueError(msg)
                 continue
             file_paths.append(data_obj)
@@ -648,7 +635,7 @@ class BaseFileComponent(Component, ABC):
                 if not resolved_path.exists():
                     msg = f"File not found: '{path}' (resolved to: '{resolved_path}'). Please upload the file again."
                     self.log(msg)
-                    if not self.silent_errors:
+                    if not False:
                         raise ValueError(msg)
                 resolved_files.append(
                     BaseFileComponent.BaseFile(data, resolved_path, delete_after_processing=delete_after_processing)
@@ -677,7 +664,7 @@ class BaseFileComponent(Component, ABC):
                 elif not self.ignore_unspecified_files:
                     msg = f"Data object missing '{self.SERVER_FILE_PATH_FIELDNAME}' property."
                     self.log(msg)
-                    if not self.silent_errors:
+                    if not False:
                         raise ValueError(msg)
                 else:
                     msg = f"Ignoring Data object missing '{self.SERVER_FILE_PATH_FIELDNAME}' property:\n{obj}"
@@ -818,14 +805,9 @@ class BaseFileComponent(Component, ABC):
             # Validate file extension
             extension = file.path.suffix[1:].lower() if file.path.suffix else ""
             if extension not in self.valid_extensions:
-                # For local storage, optionally ignore unsupported extensions
-                if not is_s3_storage and self.ignore_unsupported_extensions:
-                    ignored_files.append(file.path.name)
-                    continue
-
                 msg = f"Unsupported file extension: {file.path.suffix}"
                 self.log(msg)
-                if not self.silent_errors:
+                if not False:
                     raise ValueError(msg)
 
             final_files.append(file)

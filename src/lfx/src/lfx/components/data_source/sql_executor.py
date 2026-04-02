@@ -46,7 +46,6 @@ class SQLComponent(ComponentWithCache):
     inputs = [
         MessageTextInput(name="database_url", display_name="Database URL", required=True),
         MultilineInput(name="query", display_name="SQL Query", tool_mode=True, required=True),
-        BoolInput(name="include_columns", display_name="Include Columns", value=True, tool_mode=True, advanced=True),
         BoolInput(
             name="add_error",
             display_name="Add Error",
@@ -67,7 +66,7 @@ class SQLComponent(ComponentWithCache):
         error = None
         self.maybe_create_db()
         try:
-            result = self.db.run(self.query, include_columns=self.include_columns)
+            result = self.db.run(self.query, include_columns=True)
             self.status = result
         except SQLAlchemyError as e:
             msg = f"An error occurred while running the SQL Query: {e}"

@@ -14,13 +14,22 @@ from lfx.io import (
     ModelInput,
     MultilineInput,
     Output,
-    SecretStrInput,
     TableInput,
 )
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.table import EditMode
+
+_DEFAULT_FORMAT_INSTRUCTIONS = (
+    "You are an AI that extracts structured JSON objects from unstructured text. "
+    "Use a predefined schema with expected types (str, int, float, bool, dict). "
+    "Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all. "
+    "Fill missing or ambiguous values with defaults: null for missing values. "
+    "Remove exact duplicates but keep variations that have different field values. "
+    "Always return valid JSON in the expected format, never throw errors. "
+    "If multiple objects can be extracted, return them all in the structured format."
+)
 
 
 class StructuredOutputComponent(Component):
@@ -38,35 +47,12 @@ class StructuredOutputComponent(Component):
             real_time_refresh=True,
             required=True,
         ),
-        SecretStrInput(
-            name="api_key",
-            display_name="API Key",
-            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
-            real_time_refresh=True,
-            advanced=True,
-        ),
         MultilineInput(
             name="input_value",
             display_name="Input Message",
             info="The input message to the language model.",
             tool_mode=True,
             required=True,
-        ),
-        MultilineInput(
-            name="system_prompt",
-            display_name="Format Instructions",
-            info="The instructions to the language model for formatting the output.",
-            value=(
-                "You are an AI that extracts structured JSON objects from unstructured text. "
-                "Use a predefined schema with expected types (str, int, float, bool, dict). "
-                "Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all. "
-                "Fill missing or ambiguous values with defaults: null for missing values. "
-                "Remove exact duplicates but keep variations that have different field values. "
-                "Always return valid JSON in the expected format, never throw errors. "
-                "If multiple objects can be extracted, return them all in the structured format."
-            ),
-            required=True,
-            advanced=True,
         ),
         MessageTextInput(
             name="schema_name",
@@ -146,7 +132,7 @@ class StructuredOutputComponent(Component):
     def build_structured_output_base(self):
         schema_name = self.schema_name or "OutputModel"
 
-        llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
+        llm = get_llm(model=self.model, user_id=self.user_id, api_key=None)
 
         if not hasattr(llm, "with_structured_output"):
             msg = "Language model does not support structured output."
@@ -233,7 +219,7 @@ class StructuredOutputComponent(Component):
             llm_with_structured_output = create_extractor(llm, tools=[schema], tool_choice=schema.__name__)
             result = get_chat_result(
                 runnable=llm_with_structured_output,
-                system_message=self.system_prompt,
+                system_message=_DEFAULT_FORMAT_INSTRUCTIONS,
                 input_value=self.input_value,
                 config=config_dict,
             )
@@ -251,7 +237,7 @@ class StructuredOutputComponent(Component):
             llm_with_structured_output = llm.with_structured_output(schema)
             result = get_chat_result(
                 runnable=llm_with_structured_output,
-                system_message=self.system_prompt,
+                system_message=_DEFAULT_FORMAT_INSTRUCTIONS,
                 input_value=self.input_value,
                 config=config_dict,
             )

@@ -611,7 +611,7 @@ class FileComponent(BaseFileComponent):
             if not resolved_path.exists():
                 msg = f"File or directory not found: {file_path_str}"
                 self.log(msg)
-                if not self.silent_errors:
+                if not False:
                     raise ValueError(msg)
                 return []
 
@@ -1140,7 +1140,7 @@ class FileComponent(BaseFileComponent):
                     )
                     if not is_valid:
                         self.log(error_msg)
-                        if not self.silent_errors:
+                        if not False:
                             raise ValueError(error_msg)
                 except (OSError, FileNotFoundError) as e:
                     self.log(f"Could not read file for validation: {e}")
@@ -1260,7 +1260,7 @@ class FileComponent(BaseFileComponent):
         self.log(f"Starting parallel processing of {len(file_paths)} files with concurrency: {concurrency}.")
         my_data = parallel_load_data(
             file_paths,
-            silent_errors=self.silent_errors,
+            silent_errors=False,
             load_function=process_file_standard,
             max_concurrency=concurrency,
         )

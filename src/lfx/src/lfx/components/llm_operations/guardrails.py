@@ -7,7 +7,7 @@ from lfx.base.models.unified_models import (
 )
 from lfx.custom import Component
 from lfx.field_typing.range_spec import RangeSpec
-from lfx.io import BoolInput, ModelInput, MultilineInput, MultiselectInput, Output, SecretStrInput, SliderInput
+from lfx.io import BoolInput, ModelInput, MultilineInput, MultiselectInput, Output, SliderInput
 from lfx.schema import Data
 from lfx.schema.token_usage import accumulate_usage, extract_usage_from_message
 
@@ -47,13 +47,6 @@ class GuardrailsComponent(Component):
             info="Select your model provider",
             real_time_refresh=True,
             required=True,
-        ),
-        SecretStrInput(
-            name="api_key",
-            display_name="API Key",
-            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
-            real_time_refresh=True,
-            advanced=True,
         ),
         MultiselectInput(
             name="enabled_guardrails",
@@ -516,7 +509,7 @@ Now analyze the user input above and respond according to the instructions:"""
         llm = None
         if hasattr(self, "model") and self.model:
             try:
-                llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
+                llm = get_llm(model=self.model, user_id=self.user_id, api_key=None)
             except (ValueError, TypeError, RuntimeError, KeyError, AttributeError) as e:
                 error_msg = f"Error initializing LLM: {e!s}"
                 self.status = f"ERROR: {error_msg}"

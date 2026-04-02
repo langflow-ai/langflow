@@ -87,7 +87,6 @@ class KnowledgeIngestionComponent(Component):
                         "field_order": [
                             "01_new_kb_name",
                             "02_embedding_model",
-                            "03_api_key",
                         ],
                         "template": {
                             "01_new_kb_name": StrInput(
@@ -102,13 +101,6 @@ class KnowledgeIngestionComponent(Component):
                                 info="Select the embedding model to use for this knowledge base.",
                                 required=True,
                                 model_type="embedding",
-                            ),
-                            "03_api_key": SecretStrInput(
-                                name="api_key",
-                                display_name="Embedding Provider API Key",
-                                info="Optional API key override used to validate and save this knowledge base.",
-                                required=False,
-                                advanced=True,
                             ),
                         },
                     },

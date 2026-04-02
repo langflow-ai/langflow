@@ -1,8 +1,6 @@
 from lfx.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES
 from lfx.base.io.chat import ChatComponent
-from lfx.inputs.inputs import BoolInput
 from lfx.io import (
-    DropdownInput,
     FileInput,
     MessageTextInput,
     MultilineInput,
@@ -10,7 +8,6 @@ from lfx.io import (
 )
 from lfx.schema.message import Message
 from lfx.utils.constants import (
-    MESSAGE_SENDER_AI,
     MESSAGE_SENDER_NAME_USER,
     MESSAGE_SENDER_USER,
 )
@@ -32,21 +29,6 @@ class ChatInput(ChatComponent):
             info="Message to be passed as input.",
             input_types=[],
         ),
-        BoolInput(
-            name="should_store_message",
-            display_name="Store Messages",
-            info="Store the message in the history.",
-            value=True,
-            advanced=True,
-        ),
-        DropdownInput(
-            name="sender",
-            display_name="Sender Type",
-            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],
-            value=MESSAGE_SENDER_USER,
-            info="Type of sender.",
-            advanced=True,
-        ),
         MessageTextInput(
             name="sender_name",
             display_name="Sender Name",
@@ -58,13 +40,6 @@ class ChatInput(ChatComponent):
             name="session_id",
             display_name="Session ID",
             info="The session ID of the chat. If empty, the current session ID parameter will be used.",
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="context_id",
-            display_name="Context ID",
-            info="The context ID of the chat. Adds an extra layer to the local memory.",
-            value="",
             advanced=True,
         ),
         FileInput(
@@ -92,13 +67,13 @@ class ChatInput(ChatComponent):
         session_id = self.session_id or self.graph.session_id or ""
         message = await Message.create(
             text=self.input_value,
-            sender=self.sender,
+            sender=MESSAGE_SENDER_USER,
             sender_name=self.sender_name,
             session_id=session_id,
-            context_id=self.context_id,
+            context_id="",
             files=files,
         )
-        if session_id and isinstance(message, Message) and self.should_store_message:
+        if session_id and isinstance(message, Message):
             stored_message = await self.send_message(
                 message,
             )

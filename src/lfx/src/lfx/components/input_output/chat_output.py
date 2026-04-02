@@ -6,7 +6,7 @@ from fastapi.encoders import jsonable_encoder
 
 from lfx.base.io.chat import ChatComponent
 from lfx.helpers.data import safe_convert
-from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, MessageTextInput
+from lfx.inputs.inputs import BoolInput, HandleInput, MessageTextInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
@@ -15,7 +15,6 @@ from lfx.template.field.base import Output
 from lfx.utils.constants import (
     MESSAGE_SENDER_AI,
     MESSAGE_SENDER_NAME_AI,
-    MESSAGE_SENDER_USER,
 )
 
 
@@ -35,47 +34,11 @@ class ChatOutput(ChatComponent):
             input_types=["Data", "JSON", "DataFrame", "Table", "Message"],
             required=True,
         ),
-        BoolInput(
-            name="should_store_message",
-            display_name="Store Messages",
-            info="Store the message in the history.",
-            value=True,
-            advanced=True,
-        ),
-        DropdownInput(
-            name="sender",
-            display_name="Sender Type",
-            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],
-            value=MESSAGE_SENDER_AI,
-            advanced=True,
-            info="Type of sender.",
-        ),
-        MessageTextInput(
-            name="sender_name",
-            display_name="Sender Name",
-            info="Name of the sender.",
-            value=MESSAGE_SENDER_NAME_AI,
-            advanced=True,
-        ),
         MessageTextInput(
             name="session_id",
             display_name="Session ID",
             info="The session ID of the chat. If empty, the current session ID parameter will be used.",
             advanced=True,
-        ),
-        MessageTextInput(
-            name="context_id",
-            display_name="Context ID",
-            info="The context ID of the chat. Adds an extra layer to the local memory.",
-            value="",
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="data_template",
-            display_name="Data Template",
-            value="{text}",
-            advanced=True,
-            info="Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
         ),
         BoolInput(
             name="clean_data",
@@ -128,18 +91,18 @@ class ChatOutput(ChatComponent):
             existing_session_id = None
 
         # Set message properties
-        message.sender = self.sender
-        message.sender_name = self.sender_name
+        message.sender = MESSAGE_SENDER_AI
+        message.sender_name = MESSAGE_SENDER_NAME_AI
         # Preserve session_id from incoming message, or use component/graph session_id
         message.session_id = (
             self.session_id or existing_session_id or (self.graph.session_id if hasattr(self, "graph") else None) or ""
         )
-        message.context_id = self.context_id
+        message.context_id = ""
         message.flow_id = self.graph.flow_id if hasattr(self, "graph") else None
         message.properties.source = self._build_source(source_id, display_name, source)
 
         # Store message if needed
-        if message.session_id and self.should_store_message:
+        if message.session_id:
             stored_message = await self.send_message(message)
             self.message.value = stored_message
             message = stored_message
@@ -151,7 +114,7 @@ class ChatOutput(ChatComponent):
             accumulated_usage = self._vertex._accumulate_upstream_token_usage()  # noqa: SLF001
             if accumulated_usage:
                 message.properties.usage = accumulated_usage
-                if self.should_store_message and message.get_id():
+                if message.get_id():
                     message = await self._update_stored_message(message)
                     await self._send_message_event(message, id_=message.get_id())
 
