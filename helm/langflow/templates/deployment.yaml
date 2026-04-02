@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "langflow.fullname" . }}
+  labels:
+    {{- include "langflow.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "langflow.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "langflow.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: langflow
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 7860
+          env:
+            - name: KEYCLOAK_ENABLED
+              value: "true"
+            - name: KEYCLOAK_SERVER_URL
+              value: {{ required "keycloak.serverUrl is required" .Values.keycloak.serverUrl | quote }}
+            - name: KEYCLOAK_REALM
+              value: {{ required "keycloak.realm is required" .Values.keycloak.realm | quote }}
+            - name: KEYCLOAK_CLIENT_ID
+              value: {{ required "keycloak.clientId is required" .Values.keycloak.clientId | quote }}
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "langflow.secretName" . }}
+                  key: {{ .Values.keycloak.existingSecretKeys.clientSecret }}
+            - name: KEYCLOAK_REDIRECT_URI
+              value: "http://{{ include "langflow.host" . }}/api/v1/keycloak/callback"
+            - name: KEYCLOAK_SHARED_USERNAME
+              value: "langflow-{{ .Values.empno }}"
+            - name: KEYCLOAK_ALLOWED_EMPLOYEE
+              value: {{ .Values.empno | quote }}
+            - name: KEYCLOAK_EMPLOYEE_CLAIM
+              value: {{ .Values.keycloak.employeeClaim | quote }}
+            - name: KEYCLOAK_BUTTON_TEXT
+              value: {{ .Values.keycloak.buttonText | quote }}
+            - name: LANGFLOW_AUTO_LOGIN
+              value: "false"
+            - name: LANGFLOW_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "langflow.secretName" . }}
+                  key: {{ .Values.keycloak.existingSecretKeys.langflowSecretKey }}
+            - name: LANGFLOW_DATABASE_URL
+              value: "sqlite+aiosqlite:////app/data/langflow.db"
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 7860
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 7860
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "langflow.fullname" . }}-data

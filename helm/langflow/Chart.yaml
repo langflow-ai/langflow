@@ -1,0 +1,6 @@
+apiVersion: v2
+name: langflow
+description: Per-employee Langflow instance with Keycloak SSO
+type: application
+version: 0.1.0
+appVersion: "1.8.0"
