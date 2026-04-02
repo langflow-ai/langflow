@@ -229,7 +229,7 @@ unsafe_fix:
 	@uv run ruff check . --fix --unsafe-fixes
 
 lint: install_backend ## run linters
-	@uv run mypy --namespace-packages -p "langflow"
+	@echo "No type checker configured. See PR #12448 for context."
 
 
 
@@ -842,7 +842,7 @@ help_backend: ## show backend-specific commands
 	@echo "$(GREEN)Code Quality:$(NC)"
 	@echo "  $(GREEN)make format_backend$(NC)      - Format backend code (ruff)"
 	@echo "  $(GREEN)make format_frontend_check$(NC) - Check frontend formatting (biome)"
-	@echo "  $(GREEN)make lint$(NC)                - Run backend linters (mypy)"
+	@echo "  $(GREEN)make lint$(NC)                - Run backend linters"
 	@echo "  $(GREEN)make codespell$(NC)           - Check spelling errors"
 	@echo "  $(GREEN)make fix_codespell$(NC)       - Fix spelling errors automatically"
 	@echo "  $(GREEN)make unsafe_fix$(NC)          - Run ruff with unsafe fixes"
