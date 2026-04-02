@@ -9,15 +9,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useDeleteProviderAccount } from "@/controllers/API/queries/deployment-provider-accounts/use-delete-provider-account";
+import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
+import { useDeleteWithConfirmation } from "../hooks/use-delete-with-confirmation";
 import type { ProviderAccount } from "../types";
+import AddProviderModal from "./add-provider-modal";
 import ProvidersTable from "./providers-table";
+
+const buildProviderDeleteParams = (id: string) => ({ provider_id: id });
 
 interface ProvidersContentProps {
   isLoading: boolean;
   providers: ProviderAccount[];
-  deletingId?: string | null;
-  onAddProvider: () => void;
-  onDeleteProvider?: (provider: ProviderAccount) => void;
+  addProviderOpen: boolean;
+  setAddProviderOpen: (open: boolean) => void;
 }
 
 function ProvidersLoadingSkeleton() {
@@ -80,18 +85,44 @@ function ProvidersEmptyState({ onAddProvider }: { onAddProvider: () => void }) {
 export default function ProvidersContent({
   isLoading,
   providers,
-  deletingId,
-  onAddProvider,
-  onDeleteProvider,
+  addProviderOpen,
+  setAddProviderOpen,
 }: ProvidersContentProps) {
-  if (isLoading) return <ProvidersLoadingSkeleton />;
-  if (providers.length === 0)
-    return <ProvidersEmptyState onAddProvider={onAddProvider} />;
+  const { mutate: deleteProviderAccount } = useDeleteProviderAccount();
+
+  const providerDelete = useDeleteWithConfirmation(
+    deleteProviderAccount,
+    buildProviderDeleteParams,
+    "Error deleting environment",
+  );
+
+  const content = (() => {
+    if (isLoading) return <ProvidersLoadingSkeleton />;
+    if (providers.length === 0)
+      return (
+        <ProvidersEmptyState onAddProvider={() => setAddProviderOpen(true)} />
+      );
+    return (
+      <ProvidersTable
+        providers={providers}
+        deletingId={providerDelete.deletingId}
+        onDeleteProvider={providerDelete.requestDelete}
+      />
+    );
+  })();
+
   return (
-    <ProvidersTable
-      providers={providers}
-      deletingId={deletingId}
-      onDeleteProvider={onDeleteProvider}
-    />
+    <>
+      {content}
+
+      <AddProviderModal open={addProviderOpen} setOpen={setAddProviderOpen} />
+
+      <DeleteConfirmationModal
+        open={!!providerDelete.target}
+        setOpen={providerDelete.setModalOpen}
+        description={`environment "${providerDelete.target?.name}"`}
+        onConfirm={providerDelete.confirmDelete}
+      />
+    </>
   );
 }

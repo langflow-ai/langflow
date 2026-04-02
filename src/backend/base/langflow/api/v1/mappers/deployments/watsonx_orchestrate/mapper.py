@@ -897,6 +897,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         api_provider_result = WatsonxApiAgentExecutionCreateResultData(
             execution_id=adapter_provider_result.execution_id,
             agent_id=adapter_provider_result.agent_id,
+            thread_id=adapter_provider_result.thread_id,
             status=adapter_provider_result.status,
             result=adapter_provider_result.result,
             started_at=adapter_provider_result.started_at,
@@ -927,6 +928,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         api_provider_result = WatsonxApiAgentExecutionStatusResultData(
             execution_id=adapter_provider_result.execution_id,
             agent_id=adapter_provider_result.agent_id,
+            thread_id=adapter_provider_result.thread_id,
             status=adapter_provider_result.status,
             result=adapter_provider_result.result,
             started_at=adapter_provider_result.started_at,

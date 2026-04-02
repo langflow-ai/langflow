@@ -432,6 +432,7 @@ class _WatsonxApiAgentExecutionResultBase(BaseModel):
 
     execution_id: str | None = None
     agent_id: str | None = None
+    thread_id: str | None = None
     status: str | None = None
     result: Any | None = None
     started_at: str | None = None
