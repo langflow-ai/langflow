@@ -41,7 +41,7 @@ export function normalizeServerImagePath(rawPath: string): string | null {
   if (langflowIdx !== -1 && langflowIdx + 1 < parts.length) {
     return parts.slice(langflowIdx + 1).join("/");
   }
-  
+
   const uuidIdx = parts.findIndex((p) => UUID_SEGMENT_REGEX.test(p));
   if (uuidIdx !== -1) {
     return parts.slice(uuidIdx).join("/");
@@ -56,11 +56,7 @@ export function normalizeServerImagePath(rawPath: string): string | null {
  * @returns true if the file is an image
  */
 export function isImageFile(
-  file:
-    | File
-    | { type?: string }
-    | { path: string; type?: string }
-    | string,
+  file: File | { type?: string } | { path: string; type?: string } | string,
 ): boolean {
   if (file instanceof File) {
     // Browser File object
@@ -104,11 +100,7 @@ export function isImageFile(
  * @returns The file name
  */
 export function getFileDisplayName(
-  file:
-    | File
-    | { name?: string }
-    | { path: string; name?: string }
-    | string,
+  file: File | { name?: string } | { path: string; name?: string } | string,
 ): string {
   if (file instanceof File) {
     return file.name;
@@ -152,10 +144,7 @@ export function formatFileName(
  * @returns Preview URL or null if not an image
  */
 export function getFilePreviewUrl(
-  file:
-    | File
-    | { path: string; type?: string;}
-    | string,
+  file: File | { path: string; type?: string } | string,
 ): string | null {
   if (!isImageFile(file)) {
     return null;

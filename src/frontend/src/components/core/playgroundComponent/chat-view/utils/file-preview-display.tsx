@@ -15,10 +15,7 @@ export type FilePreviewDisplayProps = {
    * - Server file path object { path: string; type?: string; name?: string;}
    * - Server file path string
    */
-  file:
-    | File
-    | { path: string; type?: string; name?: string;}
-    | string;
+  file: File | { path: string; type?: string; name?: string } | string;
   /**
    * Loading state (for input context when file is being processed)
    */

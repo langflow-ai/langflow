@@ -74,9 +74,9 @@ describe("file-utils", () => {
 
     it("should_extract_path_from_uuid_segment_when_present", () => {
       const uuid = "c8852b3e-d0c9-42b5-a557-4540272f28f5";
-      expect(
-        normalizeServerImagePath(`/var/tmp/${uuid}/nested/file.png`),
-      ).toBe(`${uuid}/nested/file.png`);
+      expect(normalizeServerImagePath(`/var/tmp/${uuid}/nested/file.png`)).toBe(
+        `${uuid}/nested/file.png`,
+      );
     });
   });
 
@@ -538,7 +538,7 @@ describe("file-utils", () => {
           type: "image/jpeg",
           path: "flow123\\image.jpg",
         });
-      })
+      });
 
       it("should_fall_back_to_path_basename_when_name_missing", () => {
         const fileObj = {
