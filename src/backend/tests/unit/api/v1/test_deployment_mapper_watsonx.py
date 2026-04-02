@@ -193,8 +193,6 @@ def test_watsonx_api_payload_rejects_update_without_llm() -> None:
         )
 
 
-
-
 def test_watsonx_api_payload_accepts_flow_version_unbind_and_remove_contract() -> None:
     flow_version_id = uuid4()
     payload = WatsonxApiDeploymentUpdatePayload.model_validate(
