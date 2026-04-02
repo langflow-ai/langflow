@@ -147,7 +147,40 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert stored_metadata["characters"] == 14
         assert stored_metadata["avg_chunk_size"] == 7.0
         assert stored_metadata["size"] > 0
-        mock_collection.get.assert_called_once_with(include=["documents"], limit=5000, offset=0)
+
+    def test_update_metadata_metrics_no_metadata_file(self, component_class, default_kwargs, tmp_path, active_user):
+        """Test _update_metadata_metrics silently returns when embedding_metadata.json does not exist."""
+        component = component_class(**default_kwargs)
+        kb_path = tmp_path / active_user.username / "no_metadata_kb"
+        kb_path.mkdir(parents=True, exist_ok=True)
+        # Do NOT create embedding_metadata.json
+
+        mock_chroma = MagicMock()
+
+        # Should return without error
+        component._update_metadata_metrics(kb_path, mock_chroma)
+
+        # Metadata file should still not exist
+        assert not (kb_path / "embedding_metadata.json").exists()
+
+    def test_update_metadata_metrics_empty_collection(self, component_class, default_kwargs, tmp_path, active_user):
+        """Test _update_metadata_metrics when Chroma collection has 0 chunks."""
+        component = component_class(**default_kwargs)
+        kb_path = tmp_path / active_user.username / "test_kb"
+
+        mock_collection = MagicMock()
+        mock_collection.count.return_value = 0
+
+        mock_chroma = MagicMock()
+        mock_chroma._collection = mock_collection
+
+        component._update_metadata_metrics(kb_path, mock_chroma)
+        stored_metadata = json.loads((kb_path / "embedding_metadata.json").read_text())
+
+        assert stored_metadata["chunks"] == 0
+        # update_text_metrics does not write words/characters/avg_chunk_size when chunks == 0
+        # unless they were already present — verify no crash occurred
+        mock_collection.get.assert_not_called()
 
     def test_build_column_metadata(self, component_class, default_kwargs):
         """Test building column metadata."""

@@ -283,52 +283,22 @@ class KnowledgeIngestionComponent(Component):
 
         This ensures the Knowledge Base modal displays correct stats after
         component-based ingestion, matching the behavior of API-based ingestion.
+        Delegates to KBAnalysisHelper.update_text_metrics to avoid duplicating
+        the batched metrics counting logic.
         """
+        import chromadb.errors
+        from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBStorageHelper
+
         metadata_path = kb_path / "embedding_metadata.json"
         if not metadata_path.exists():
             return
 
         try:
             metadata = json.loads(metadata_path.read_text())
-            collection = chroma._collection  # noqa: SLF001
-            chunks = collection.count()
-            metadata["chunks"] = chunks
-
-            if chunks > 0:
-                total_words = 0
-                total_characters = 0
-                batch_size = 5000
-
-                for offset in range(0, chunks, batch_size):
-                    results = collection.get(
-                        include=["documents"],
-                        limit=batch_size,
-                        offset=offset,
-                    )
-                    if not results["documents"]:
-                        break
-
-                    text_series = pd.Series(results["documents"]).astype(str).fillna("")
-                    total_characters += int(text_series.str.len().sum())
-                    total_words += int(text_series.str.split().str.len().sum())
-
-                metadata["words"] = total_words
-                metadata["characters"] = total_characters
-                metadata["avg_chunk_size"] = round(total_characters / chunks, 1)
-            else:
-                metadata["words"] = 0
-                metadata["characters"] = 0
-                metadata["avg_chunk_size"] = 0.0
-
-            # Update directory size
-            total_size = 0
-            for file_path in kb_path.rglob("*"):
-                if file_path.is_file():
-                    total_size += file_path.stat().st_size
-            metadata["size"] = total_size
-
+            KBAnalysisHelper.update_text_metrics(kb_path, metadata, chroma)
+            metadata["size"] = KBStorageHelper.get_directory_size(kb_path)
             metadata_path.write_text(json.dumps(metadata, indent=2))
-        except Exception as e:  # noqa: BLE001
+        except (OSError, ValueError, TypeError, json.JSONDecodeError, chromadb.errors.ChromaError) as e:
             self.log(f"Warning: Could not update metadata metrics: {e}")
 
     def _save_kb_files(

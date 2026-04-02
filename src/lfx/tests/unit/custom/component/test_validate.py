@@ -49,6 +49,28 @@ def to_url(path):
     assert execute_function(code, "to_url", "folder name/file.txt") == "folder%20name/file.txt"
 
 
+def test_execute_function_supports_non_aliased_dotted_imports():
+    """Regression test: `import urllib.request` then using `urllib.request.X` in execute_function."""
+    code = dedent("""
+import urllib.request
+
+def to_url(path):
+    return urllib.request.pathname2url(path)
+""")
+    assert execute_function(code, "to_url", "folder name/file.txt") == "folder%20name/file.txt"
+
+
+def test_execute_function_supports_deep_dotted_imports():
+    """Ensure 3+ level dotted imports work (e.g., import xml.etree.ElementTree)."""
+    code = dedent("""
+import xml.etree.ElementTree
+
+def make_root(tag):
+    return xml.etree.ElementTree.Element(tag).tag
+""")
+    assert execute_function(code, "make_root", "root") == "root"
+
+
 def test_create_function_supports_dotted_imports():
     code = dedent("""
 import urllib.request
