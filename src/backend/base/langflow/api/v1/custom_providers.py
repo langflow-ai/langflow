@@ -86,7 +86,7 @@ def _validate_url_no_ssrf(url: str) -> str:
 
     validated_ip: str | None = None
     for _family, _type, _proto, _canonname, sockaddr in results:
-        raw_ip = sockaddr[0]
+        raw_ip = str(sockaddr[0])
         try:
             addr = ipaddress.ip_address(raw_ip)
         except ValueError:
@@ -214,6 +214,7 @@ async def create_custom_provider(
     await session.flush()  # populate cp.id
 
     if body.models:
+        assert cp.id is not None
         _add_models(session, cp.id, body.models)
         await session.flush()
 
