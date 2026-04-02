@@ -260,7 +260,9 @@ class TestLoadGraphFromPython:
             patch("langflow.agentic.services.helpers.flow_loader._temporary_sys_path"),
             patch(
                 "langflow.agentic.services.helpers.flow_loader.validate_flow_for_current_settings",
-                side_effect=CustomComponentValidationError("Flow build blocked: custom components are not allowed: Bad (node)"),
+                side_effect=CustomComponentValidationError(
+                    "Flow build blocked: custom components are not allowed: Bad (node)"
+                ),
             ),
         ):
             mock_spec = MagicMock()
