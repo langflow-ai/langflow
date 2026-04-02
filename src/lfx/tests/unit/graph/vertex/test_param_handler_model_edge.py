@@ -193,7 +193,8 @@ class TestSkipLoadFromDbWhenModelHasEdge:
 
     def test_should_skip_secret_load_from_db_when_connection_mode_active(self):
         """Secret fields must NOT be resolved via load_from_db when the model
-        field has _connection_mode: true (user chose 'Connect other models')."""
+        field has _connection_mode: true (user chose 'Connect other models').
+        """
         # Arrange
         template = {
             "model": {
