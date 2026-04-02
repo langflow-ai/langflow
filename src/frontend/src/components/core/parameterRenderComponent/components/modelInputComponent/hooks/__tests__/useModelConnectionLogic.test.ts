@@ -255,7 +255,11 @@ describe("useModelConnectionLogic", () => {
 
     it("should not change template when _connection_mode is already false", () => {
       const template = {
-        model: { type: "model", value: [{ name: "gpt-4" }], _connection_mode: false },
+        model: {
+          type: "model",
+          value: [{ name: "gpt-4" }],
+          _connection_mode: false,
+        },
       };
 
       const result = exitConnectionMode(template);

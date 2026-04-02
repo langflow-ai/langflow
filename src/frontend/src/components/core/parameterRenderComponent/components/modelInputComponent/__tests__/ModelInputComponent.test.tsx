@@ -40,7 +40,8 @@ jest.mock("@/stores/flowStore", () => {
     nodes: [],
     edges: [],
   };
-  const hook = (selector?: (s: any) => any) => (selector ? selector(state) : state);
+  const hook = (selector?: (s: any) => any) =>
+    selector ? selector(state) : state;
   hook.getState = () => state;
   return { __esModule: true, default: hook };
 });

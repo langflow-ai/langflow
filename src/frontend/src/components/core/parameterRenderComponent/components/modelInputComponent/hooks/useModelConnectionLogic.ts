@@ -74,26 +74,34 @@ export function useModelConnectionLogic({
         // Mark this node as being in connection mode, clear the model value
         // and provider-specific credential fields so the backend cannot
         // execute with stale config when no external model is connected.
-        store.setNode(nodeId, (prevNode) => {
-          const template = { ...prevNode.data.node.template };
-          if (template.model) {
-            template.model = { ...template.model, value: [], _connection_mode: true };
-          }
-          for (const [key, field] of Object.entries(template)) {
-            const f = field as any;
-            if (f?.password || f?._input_type === "SecretStrInput") {
-              template[key] = { ...f, value: "", load_from_db: false };
+        store.setNode(
+          nodeId,
+          (prevNode) => {
+            const template = { ...prevNode.data.node.template };
+            if (template.model) {
+              template.model = {
+                ...template.model,
+                value: [],
+                _connection_mode: true,
+              };
             }
-          }
-          return {
-            ...prevNode,
-            data: {
-              ...prevNode.data,
-              _connectionMode: true,
-              node: { ...prevNode.data.node, template },
-            },
-          };
-        }, true);
+            for (const [key, field] of Object.entries(template)) {
+              const f = field as any;
+              if (f?.password || f?._input_type === "SecretStrInput") {
+                template[key] = { ...f, value: "", load_from_db: false };
+              }
+            }
+            return {
+              ...prevNode,
+              data: {
+                ...prevNode.data,
+                _connectionMode: true,
+                node: { ...prevNode.data.node, template },
+              },
+            };
+          },
+          true,
+        );
 
         // Show compatible handles glow
         store.setFilterEdge(grouped);
