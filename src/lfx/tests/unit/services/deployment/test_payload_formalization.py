@@ -33,7 +33,7 @@ from lfx.services.adapters.payload import (
     PayloadSlot,
     PayloadSlotPolicy,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class _SpecModel(BaseModel):
@@ -74,6 +74,12 @@ class _SnapshotFilterModel(BaseModel):
 
 
 class _ApiLikeConfigModel(BaseModel):
+    retries: int
+
+
+class _StrictApiLikeConfigModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     retries: int
 
 
@@ -141,6 +147,15 @@ def test_payload_validation_error_formats_non_missing_with_field_path() -> None:
         slot.parse({"retries": "not-an-int"})
 
     assert exc.value.format_first_error() == "Invalid value for field 'retries'."
+
+
+def test_payload_validation_error_formats_extra_field_as_invalid_field() -> None:
+    slot = PayloadSlot(_StrictApiLikeConfigModel)
+
+    with pytest.raises(AdapterPayloadValidationError, match="Invalid payload") as exc:
+        slot.parse({"retries": 3, "resource_name_prefix": "lf_"})
+
+    assert exc.value.format_first_error() == "Invalid field 'resource_name_prefix'. Please remove it."
 
 
 def test_payload_slot_raises_typed_missing_error_for_none() -> None:

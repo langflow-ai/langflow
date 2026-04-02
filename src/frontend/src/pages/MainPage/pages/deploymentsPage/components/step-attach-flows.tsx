@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { usePostDetectDeploymentEnvVars } from "@/controllers/API/queries/deployments/use-post-detect-deployment-env-vars";
 import { useGetFlowVersions } from "@/controllers/API/queries/flow-version/use-get-flow-versions";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
+import { usePostDetectEnvVars } from "@/controllers/API/queries/variables/use-post-detect-env-vars";
 import useAlertStore from "@/stores/alertStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
@@ -78,7 +78,7 @@ export default function StepAttachFlows() {
     const detect = async () => {
       try {
         const result = await detectEnvVars({
-          reference_ids: [preSelected.versionId],
+          flow_version_ids: [preSelected.versionId],
         });
         const detected = result.variables ?? [];
         if (detected.length > 0) {
@@ -103,7 +103,7 @@ export default function StepAttachFlows() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const { mutateAsync: detectEnvVars } = usePostDetectDeploymentEnvVars();
+  const { mutateAsync: detectEnvVars } = usePostDetectEnvVars();
   const { data: globalVariables } = useGetGlobalVariables();
   const globalVariableOptions = (globalVariables ?? []).map((v) => v.name);
 
@@ -144,7 +144,9 @@ export default function StepAttachFlows() {
 
       // Auto-detect global variable references via the backend detection endpoint
       try {
-        const result = await detectEnvVars({ reference_ids: [pendingVersion] });
+        const result = await detectEnvVars({
+          flow_version_ids: [pendingVersion],
+        });
         const detected = result.variables ?? [];
         if (detected.length > 0) {
           setDetectedVarCount(detected.length);

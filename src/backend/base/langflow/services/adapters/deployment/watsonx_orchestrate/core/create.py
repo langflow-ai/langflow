@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import copy
-import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import (
     DeploymentError,
     InvalidContentError,
@@ -66,8 +66,6 @@ if TYPE_CHECKING:
 
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 
-logger = logging.getLogger(__name__)
-
 
 @dataclass(slots=True)
 class ProviderCreatePlan:
@@ -105,8 +103,6 @@ def build_provider_create_plan(
     # existing_tool_bindings: per existing tool_id, collects operation app_ids
     #   that should be bound to that tool during creation.
     existing_tool_bindings: dict[str, OrderedUniqueStrs] = {}
-    # existing_app_ids: declared existing connection app_ids (identity-mapped).
-    existing_app_ids = OrderedUniqueStrs.from_values(list(provider_create.connections.existing_app_ids or []))
     # selected_operation_app_ids: all app_ids referenced by any bind operation
     #   (used to determine which connections the create plan needs).
     selected_operation_app_ids = OrderedUniqueStrs()
@@ -133,6 +129,11 @@ def build_provider_create_plan(
         raw_name = str(operation.tool.name_of_raw)
         raw_apps = raw_tool_app_ids.setdefault(raw_name, OrderedUniqueStrs())
         raw_apps.extend(operation.app_ids)
+
+    raw_app_ids = {raw_payload.app_id for raw_payload in (provider_create.connections.raw_payloads or [])}
+    existing_app_ids = OrderedUniqueStrs.from_values(
+        [app_id for app_id in selected_operation_app_ids.to_list() if app_id not in raw_app_ids]
+    )
 
     raw_connections_to_create = [
         RawConnectionCreatePlan(

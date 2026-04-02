@@ -33,7 +33,6 @@ from sqlmodel import col, func, select
 
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
-    DeploymentCreateResponse,
     DeploymentProviderAccountGetResponse,
     DeploymentUpdateRequest,
 )
@@ -347,16 +346,19 @@ def handle_adapter_errors():
         detail = exc.message
         if isinstance(exc, DeploymentConflictError):
             detail = _friendly_conflict_message(exc.message)
+        logger.exception("Adapter error (status=%s): %s", http_status, detail)
         raise HTTPException(
             status_code=http_status,
             detail=detail,
         ) from exc
     except NotImplementedError as exc:
+        logger.exception("Adapter not-implemented error: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
             detail="This operation is not supported by the deployment provider.",
         ) from exc
     except ValueError as exc:
+        logger.exception("Adapter value error: %s", exc)
         raise_http_for_value_error(exc)
     except HTTPException:
         raise
@@ -1205,18 +1207,3 @@ def resolve_added_snapshot_bindings_for_update(
         msg = f"Missing snapshot bindings for added flow versions on update: {missing_source_refs}"
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
     return snapshot_bindings
-
-
-def to_deployment_create_response(
-    result: AdapterDeploymentCreateResult, deployment_row: Deployment
-) -> DeploymentCreateResponse:
-    payload = result.model_dump(exclude_unset=True)
-    return DeploymentCreateResponse(
-        id=deployment_row.id,
-        name=deployment_row.name,
-        description=deployment_row.description,
-        type=deployment_row.deployment_type,
-        created_at=deployment_row.created_at,
-        updated_at=deployment_row.updated_at,
-        provider_data=payload.get("provider_result"),
-    )

@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException, status
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import DeploymentConflictError, InvalidContentError
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import create_config, validate_connection
@@ -35,8 +35,6 @@ if TYPE_CHECKING:
         WatsonxFlowArtifactProviderData,
     )
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
-
-logger = logging.getLogger(__name__)
 
 
 class OrderedUniqueStrs:
@@ -147,8 +145,8 @@ async def create_connection_with_conflict_mapping(
             prefix = f"{error_prefix}: " if error_prefix else ""
             msg = (
                 f"{prefix}A connection with app_id '{app_id}' already exists in the provider. "
-                "Use an existing connection by referencing it in connections.existing_app_ids, "
-                "or choose a different app_id."
+                "Use an existing connection by referencing its app_id in operations[*].app_ids, "
+                "or choose a different app_id for connections.raw_payloads."
             )
             raise DeploymentConflictError(message=msg) from exc
         raise
@@ -313,5 +311,5 @@ async def rollback_created_app_ids(
     for app_id in reversed(created_app_ids):
         try:
             await retry_rollback(delete_config_if_exists, clients, app_id=app_id)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Rollback failed for created app_id=%s — resource may be orphaned", app_id)

@@ -14,6 +14,9 @@ from langflow.api.v1.models import (
     get_model_names_for_provider,
     get_provider_from_variable_name,
 )
+from langflow.api.v1.schemas.deployments import DetectedEnvVar, DetectVarsRequest, DetectVarsResponse
+from langflow.services.database.models.flow_version.crud import get_flow_version_entry_or_raise
+from langflow.services.database.models.flow_version.exceptions import FlowVersionNotFoundError
 from langflow.services.database.models.variable.model import VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
@@ -267,3 +270,88 @@ async def delete_variable(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+def _derive_env_var_name(field_key: str, template: dict) -> str:
+    """Derive a meaningful env var name for a password field without a global variable.
+
+    Looks for a sibling ``model`` field whose selected value carries a ``category``
+    (e.g. ``"OpenAI"``). When found, returns ``{CATEGORY}_API_KEY`` (e.g.
+    ``OPENAI_API_KEY``).  Falls back to the uppercased field key (``API_KEY``).
+    """
+    model_field = template.get("model")
+    if isinstance(model_field, dict):
+        raw = model_field.get("value")
+        if isinstance(raw, str):
+            try:
+                raw = json.loads(raw)
+            except ValueError:
+                raw = None
+        if isinstance(raw, list) and raw and isinstance(raw[0], dict):
+            category = raw[0].get("category", "")
+            if category:
+                prefix = category.upper().replace(" ", "_").replace("-", "_")
+                return f"{prefix}_{field_key.upper()}"
+
+    return field_key.upper()
+
+
+@router.post("/detections", response_model=DetectVarsResponse, include_in_schema=False)
+async def detect_env_vars(
+    payload: DetectVarsRequest,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+):
+    """Detect credential fields used by the given flow version IDs.
+
+    Two tiers of detection:
+    1. Fields with ``load_from_db=True``: the ``value`` is a Langflow global
+       variable name — returned with ``global_variable_name`` set.
+    2. Fields with ``password=True`` and no global variable link: the field
+       key is uppercased and returned as a suggested env var name, with
+       ``global_variable_name`` left as ``None``.
+
+    Results are deduplicated. Global-variable refs take precedence over
+    password-only suggestions when the same key appears in both tiers.
+    """
+    global_var_keys: dict[str, str] = {}
+    password_keys: dict[str, str] = {}
+    unresolved_ids: list[UUID] = []
+
+    for version_id in payload.flow_version_ids:
+        try:
+            version = await get_flow_version_entry_or_raise(
+                session,
+                version_id=version_id,
+                user_id=current_user.id,
+            )
+        except FlowVersionNotFoundError:
+            unresolved_ids.append(version_id)
+            continue
+
+        data = version.data
+        if not isinstance(data, dict):
+            continue
+
+        for node in data.get("nodes", []):
+            template = node.get("data", {}).get("node", {}).get("template", {})
+            if not isinstance(template, dict):
+                continue
+            for field_key, field in template.items():
+                if not isinstance(field, dict):
+                    continue
+                if field.get("load_from_db") is True:
+                    var_name = field.get("value")
+                    if isinstance(var_name, str) and var_name.strip():
+                        global_var_keys[var_name.strip()] = var_name.strip()
+                elif field.get("password") is True:
+                    suggested = _derive_env_var_name(field_key, template)
+                    if suggested not in global_var_keys:
+                        password_keys[suggested] = suggested
+
+    merged: list[DetectedEnvVar] = [DetectedEnvVar(key=k, global_variable_name=k) for k in sorted(global_var_keys)]
+    merged.extend(
+        DetectedEnvVar(key=k, global_variable_name=None) for k in sorted(password_keys) if k not in global_var_keys
+    )
+
+    return DetectVarsResponse(variables=merged, unresolved_ids=unresolved_ids)

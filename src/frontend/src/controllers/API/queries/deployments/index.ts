@@ -6,4 +6,3 @@ export * from "./use-get-deployments-by-providers";
 export * from "./use-patch-snapshot";
 export * from "./use-post-deployment";
 export * from "./use-post-deployment-execution";
-export * from "./use-post-detect-deployment-env-vars";

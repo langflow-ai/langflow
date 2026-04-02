@@ -205,9 +205,8 @@ class TestCreateDeploymentRollback:
         payload.spec.type = "agent"
         payload.spec.description = None
 
-        with patch(f"{ROUTES_MODULE}.to_deployment_create_response") as mock_response:
-            mock_response.return_value = MagicMock()
-            await create_deployment(session=session, payload=payload, current_user=_fake_user())
+        mapper.shape_deployment_create_result.return_value = MagicMock()
+        await create_deployment(session=session, payload=payload, current_user=_fake_user())
 
         mock_rollback.assert_not_awaited()
 
@@ -328,8 +327,8 @@ class TestCreateDeploymentExistingAgent:
         payload.spec.type = "agent"
         payload.spec.description = None
 
-        with patch(f"{ROUTES_MODULE}.to_deployment_create_response", return_value=MagicMock()):
-            await create_deployment(session=session, payload=payload, current_user=_fake_user())
+        mapper.shape_deployment_create_result.return_value = MagicMock()
+        await create_deployment(session=session, payload=payload, current_user=_fake_user())
 
         _ = (mock_name_exists, mock_get_by_resource_key, mock_validate_fv, mock_attach)
         adapter.create.assert_not_awaited()
@@ -389,8 +388,8 @@ class TestCreateDeploymentExistingAgent:
         payload.spec.type = "agent"
         payload.spec.description = "desc"
 
-        with patch(f"{ROUTES_MODULE}.to_deployment_create_response", return_value=MagicMock()):
-            await create_deployment(session=session, payload=payload, current_user=_fake_user())
+        mapper.shape_deployment_create_result.return_value = MagicMock()
+        await create_deployment(session=session, payload=payload, current_user=_fake_user())
 
         _ = (mock_name_exists, mock_get_by_resource_key, mock_validate_fv, mock_attach)
         adapter.create.assert_not_awaited()
@@ -453,8 +452,8 @@ class TestCreateDeploymentExistingAgent:
         payload.spec.type = "agent"
         payload.spec.description = "desc"
 
-        with patch(f"{ROUTES_MODULE}.to_deployment_create_response", return_value=MagicMock()) as mock_response:
-            await create_deployment(session=session, payload=payload, current_user=_fake_user())
+        mapper.shape_deployment_create_result.return_value = MagicMock()
+        await create_deployment(session=session, payload=payload, current_user=_fake_user())
 
         _ = (mock_name_exists, mock_get_by_resource_key, mock_validate_fv, mock_attach)
         adapter.create.assert_not_awaited()
@@ -465,8 +464,7 @@ class TestCreateDeploymentExistingAgent:
             existing_resource_key="existing-agent-1",
             result=adapter.update.return_value,
         )
-        create_result_arg = mock_response.call_args.args[0]
-        assert create_result_arg is mapped_create_result
+        mapper.shape_deployment_create_result.assert_called_once_with(mapped_create_result, dep_row)
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.create_deployment_db", new_callable=AsyncMock)
@@ -1197,6 +1195,178 @@ class TestUpdateDeploymentRollback:
         mock_rollback.assert_not_awaited()
 
 
+class TestUpdateDeploymentAlreadyAttachedFiltering:
+    """Bind operations for flow versions that already have DB attachments.
+
+    These should not be passed to resolve_added_snapshot_bindings_for_update,
+    since the adapter does not return new snapshot bindings for reused tools.
+    """
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.apply_flow_version_patch_attachments", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_added_snapshot_bindings_for_update", return_value=[])
+    @patch(f"{ROUTES_MODULE}.list_deployment_attachments_for_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_flow_version_patch_for_update")
+    @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
+    async def test_already_attached_flow_versions_excluded_from_snapshot_resolution(
+        self,
+        mock_resolve_amm,
+        mock_resolve_fvp,
+        mock_validate_fv,  # noqa: ARG002
+        mock_list_attachments,
+        mock_resolve_snap,
+        mock_apply_patch,  # noqa: ARG002
+    ):
+        """Only truly new flow version IDs are passed to snapshot resolution.
+
+        When some bind flow version IDs already have DB attachments, only the
+        truly new ones are passed to resolve_added_snapshot_bindings_for_update.
+        """
+        from langflow.api.v1.deployments import update_deployment
+
+        dep_row = _fake_deployment_row()
+        adapter = AsyncMock()
+        mapper = MagicMock()
+        update_result = DeploymentUpdateResult(id="provider-dep-1")
+        adapter.update.return_value = update_result
+        mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
+        mapper.shape_deployment_update_result.return_value = MagicMock()
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper)
+
+        reused_fv_id = uuid4()
+        new_fv_id = uuid4()
+        mock_resolve_fvp.return_value = ([reused_fv_id, new_fv_id], [])
+
+        mock_list_attachments.return_value = [
+            SimpleNamespace(flow_version_id=reused_fv_id, provider_snapshot_id="existing-tool-1"),
+        ]
+
+        session = AsyncMock()
+        session.commit.return_value = None
+
+        payload = MagicMock()
+        payload.spec = None
+
+        await update_deployment(
+            deployment_id=dep_row.id,
+            session=session,
+            payload=payload,
+            current_user=_fake_user(),
+        )
+
+        mock_resolve_snap.assert_called_once()
+        resolved_fv_ids = mock_resolve_snap.call_args.kwargs["added_flow_version_ids"]
+        assert resolved_fv_ids == [new_fv_id]
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.apply_flow_version_patch_attachments", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_added_snapshot_bindings_for_update", return_value=[])
+    @patch(f"{ROUTES_MODULE}.list_deployment_attachments_for_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_flow_version_patch_for_update")
+    @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
+    async def test_all_flow_versions_already_attached_passes_empty_list(
+        self,
+        mock_resolve_amm,
+        mock_resolve_fvp,
+        mock_validate_fv,  # noqa: ARG002
+        mock_list_attachments,
+        mock_resolve_snap,
+        mock_apply_patch,  # noqa: ARG002
+    ):
+        """An empty list is passed when all flow versions are already attached.
+
+        When all bind flow versions already have attachments, an empty list
+        is passed to resolve_added_snapshot_bindings_for_update.
+        """
+        from langflow.api.v1.deployments import update_deployment
+
+        dep_row = _fake_deployment_row()
+        adapter = AsyncMock()
+        mapper = MagicMock()
+        update_result = DeploymentUpdateResult(id="provider-dep-1")
+        adapter.update.return_value = update_result
+        mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
+        mapper.shape_deployment_update_result.return_value = MagicMock()
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper)
+
+        fv_id_1 = uuid4()
+        fv_id_2 = uuid4()
+        mock_resolve_fvp.return_value = ([fv_id_1, fv_id_2], [])
+
+        mock_list_attachments.return_value = [
+            SimpleNamespace(flow_version_id=fv_id_1, provider_snapshot_id="tool-1"),
+            SimpleNamespace(flow_version_id=fv_id_2, provider_snapshot_id="tool-2"),
+        ]
+
+        session = AsyncMock()
+        session.commit.return_value = None
+
+        payload = MagicMock()
+        payload.spec = None
+
+        await update_deployment(
+            deployment_id=dep_row.id,
+            session=session,
+            payload=payload,
+            current_user=_fake_user(),
+        )
+
+        resolved_fv_ids = mock_resolve_snap.call_args.kwargs["added_flow_version_ids"]
+        assert resolved_fv_ids == []
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.apply_flow_version_patch_attachments", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_added_snapshot_bindings_for_update", return_value=[])
+    @patch(f"{ROUTES_MODULE}.list_deployment_attachments_for_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_flow_version_patch_for_update")
+    @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
+    async def test_no_existing_attachments_passes_all_flow_versions(
+        self,
+        mock_resolve_amm,
+        mock_resolve_fvp,
+        mock_validate_fv,  # noqa: ARG002
+        mock_list_attachments,
+        mock_resolve_snap,
+        mock_apply_patch,  # noqa: ARG002
+    ):
+        """When no bind flow versions have existing attachments, all are passed through."""
+        from langflow.api.v1.deployments import update_deployment
+
+        dep_row = _fake_deployment_row()
+        adapter = AsyncMock()
+        mapper = MagicMock()
+        update_result = DeploymentUpdateResult(id="provider-dep-1")
+        adapter.update.return_value = update_result
+        mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
+        mapper.shape_deployment_update_result.return_value = MagicMock()
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper)
+
+        fv_id_1 = uuid4()
+        fv_id_2 = uuid4()
+        mock_resolve_fvp.return_value = ([fv_id_1, fv_id_2], [])
+
+        mock_list_attachments.return_value = []
+
+        session = AsyncMock()
+        session.commit.return_value = None
+
+        payload = MagicMock()
+        payload.spec = None
+
+        await update_deployment(
+            deployment_id=dep_row.id,
+            session=session,
+            payload=payload,
+            current_user=_fake_user(),
+        )
+
+        resolved_fv_ids = mock_resolve_snap.call_args.kwargs["added_flow_version_ids"]
+        assert resolved_fv_ids == [fv_id_1, fv_id_2]
+
+
 class TestUpdateDeploymentMetadataPersistence:
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.update_deployment_db", new_callable=AsyncMock)
@@ -1795,8 +1965,8 @@ class TestCreateDeploymentProjectValidation:
         with (
             patch(f"{ROUTES_MODULE}.create_deployment_db", new_callable=AsyncMock, return_value=_fake_deployment_row()),
             patch(f"{ROUTES_MODULE}.attach_flow_versions", new_callable=AsyncMock),
-            patch(f"{ROUTES_MODULE}.to_deployment_create_response", return_value=MagicMock()),
         ):
+            mapper.shape_deployment_create_result.return_value = MagicMock()
             await create_deployment(session=session, payload=payload, current_user=_fake_user())
 
         mock_validate_fv.assert_awaited_once()
@@ -1833,7 +2003,7 @@ class TestCreateDeploymentSchemaValidation:
         mapper.resolve_deployment_create = AsyncMock(
             side_effect=HTTPException(
                 status_code=422,
-                detail="Invalid deployment_create payload: simulated adapter validation failure",
+                detail="Invalid provider_data payload: simulated adapter validation failure",
             )
         )
         mock_get_mapper.return_value = mapper

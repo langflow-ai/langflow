@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import copy
-import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import (
     InvalidContentError,
     InvalidDeploymentOperationError,
@@ -61,8 +61,6 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
-
-logger = logging.getLogger(__name__)
 
 
 class ToolConnectionOps:
@@ -143,6 +141,10 @@ def build_provider_update_plan(
     raw_tool_app_ids: dict[str, OrderedUniqueStrs] = {
         raw_payload.name: OrderedUniqueStrs() for raw_payload in (provider_update.tools.raw_payloads or [])
     }
+    # operation_app_ids: every app_id referenced by bind/unbind operations.
+    #   Used later to derive existing_app_ids by subtracting raw connection
+    #   app_ids declared in connections.raw_payloads.
+    operation_app_ids = OrderedUniqueStrs()
     # existing_tool_refs: source_ref ↔ tool_id correlations (created=False)
     #   collected from all operations that reference existing tools (bind,
     #   unbind, remove_tool). Deduped by tool_id before storing in the plan,
@@ -152,6 +154,7 @@ def build_provider_update_plan(
 
     for operation in provider_update.operations:
         if isinstance(operation, WatsonxBindOperation):
+            operation_app_ids.extend(operation.app_ids)
             if operation.tool.tool_id_with_ref is not None:
                 ref = operation.tool.tool_id_with_ref
                 tool_id = ref.tool_id
@@ -186,6 +189,7 @@ def build_provider_update_plan(
             continue
 
         if isinstance(operation, WatsonxUnbindOperation):
+            operation_app_ids.extend(operation.app_ids)
             tool_id = operation.tool.tool_id
             existing_tool_refs.append(
                 WatsonxResultToolRefBinding(source_ref=operation.tool.source_ref, tool_id=tool_id, created=False)
@@ -235,8 +239,11 @@ def build_provider_update_plan(
         seen_removed_ref_ids.setdefault(ref.tool_id, ref)
     deduped_removed_existing_tool_refs = list(seen_removed_ref_ids.values())
 
+    raw_app_ids = {raw_payload.app_id for raw_payload in (provider_update.connections.raw_payloads or [])}
+    existing_app_ids = [app_id for app_id in operation_app_ids.to_list() if app_id not in raw_app_ids]
+
     return ProviderUpdatePlan(
-        existing_app_ids=list(provider_update.connections.existing_app_ids or []),
+        existing_app_ids=existing_app_ids,
         raw_connections_to_create=raw_connections_to_create,
         existing_tool_deltas=existing_tool_deltas,
         raw_tools_to_create=raw_tools_to_create,
@@ -318,7 +325,7 @@ async def _rollback_agent_update(
         return
     try:
         await retry_rollback(asyncio.to_thread, clients.agent.update, agent_id, rollback_agent_payload)
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.exception("Rollback failed for agent_id=%s — resource may be orphaned", agent_id)
 
 
@@ -423,6 +430,12 @@ async def apply_provider_update_plan_with_rollback(
         if final_update_payload:
             await retry_update(asyncio.to_thread, clients.agent.update, agent_id, final_update_payload)
     except Exception:
+        logger.warning(
+            "Provider update failed for agent_id=%s — initiating rollback (tools=%s, apps=%s)",
+            agent_id,
+            created_tool_ids,
+            created_app_ids,
+        )
         await _rollback_agent_update(
             clients=clients,
             agent_id=agent_id,

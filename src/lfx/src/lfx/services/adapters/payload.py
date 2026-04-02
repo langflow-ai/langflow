@@ -63,8 +63,12 @@ class AdapterPayloadValidationError(ValueError):
         loc = first_error.get("loc") or ()
         loc_path = ".".join(str(part) for part in loc if part != "__root__")
 
-        if first_error.get("type") == "missing" and loc_path:
+        error_type = first_error.get("type")
+
+        if error_type == "missing" and loc_path:
             return f"Missing required field '{loc_path}'."
+        if error_type in {"extra_forbidden", "unexpected_keyword_argument"} and loc_path:
+            return f"Invalid field '{loc_path}'. Please remove it."
         if loc_path:
             return f"Invalid value for field '{loc_path}'."
         # Model-level validator errors (empty loc) contain intentional

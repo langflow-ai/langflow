@@ -19,7 +19,6 @@ export interface DeploymentCreateRequest {
       tool_name?: string;
     }>;
     connections: {
-      existing_app_ids: string[];
       raw_payloads: Array<{
         app_id: string;
         environment_variables: Record<

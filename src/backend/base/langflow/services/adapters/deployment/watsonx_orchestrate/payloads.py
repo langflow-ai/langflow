@@ -61,21 +61,10 @@ class WatsonxUpdateConnections(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    existing_app_ids: list[NormalizedId] | None = Field(
-        default=None,
-        description="Known existing app ids available for operation references.",
-    )
     raw_payloads: list[WatsonxConnectionRawPayload] | None = Field(
         default=None,
         description=("Raw connection payloads keyed by app_id. Newly created connections preserve this app_id."),
     )
-
-    @field_validator("existing_app_ids")
-    @classmethod
-    def dedupe_existing_app_ids(cls, value: list[str] | None) -> list[str] | None:
-        if value is None:
-            return None
-        return list(dict.fromkeys(value))
 
     @model_validator(mode="after")
     def validate_unique_raw_app_ids(self) -> WatsonxUpdateConnections:
@@ -88,23 +77,10 @@ class WatsonxUpdateConnections(BaseModel):
         return self
 
 
-def _validate_declared_app_id_pools(
-    *,
-    existing_app_ids: set[str],
-    raw_app_ids: set[str],
-) -> set[str]:
-    collisions = sorted(existing_app_ids.intersection(raw_app_ids))
-    if collisions:
-        msg = f"connections.existing_app_ids collides with raw app ids from connections.raw_payloads: {collisions}"
-        raise ValueError(msg)
-    return existing_app_ids.union(raw_app_ids)
-
-
 def _validate_bind_operation_references(
     *,
     operations: list[WatsonxBindOperation],
     raw_tool_names: set[str],
-    valid_app_ids: set[str],
 ) -> set[str]:
     referenced_app_ids: set[str] = set()
     for operation in operations:
@@ -113,13 +89,6 @@ def _validate_bind_operation_references(
             raise ValueError(msg)
         for app_id in operation.app_ids:
             referenced_app_ids.add(app_id)
-            if app_id not in valid_app_ids:
-                msg = (
-                    "operation app_ids must be declared in "
-                    "connections.existing_app_ids or connections.raw_payloads[*].app_id: "
-                    f"[{app_id!r}]"
-                )
-                raise ValueError(msg)
     return referenced_app_ids
 
 
@@ -198,14 +167,9 @@ def _validate_overlapping_existing_tool_operations(operations: list[Any]) -> Non
 
 def _validate_all_declared_app_ids_are_referenced(
     *,
-    existing_app_ids: set[str],
     raw_app_ids: set[str],
     referenced_app_ids: set[str],
 ) -> None:
-    unused_existing_app_ids = sorted(existing_app_ids.difference(referenced_app_ids))
-    if unused_existing_app_ids:
-        msg = f"connections.existing_app_ids contains ids not referenced by operations: {unused_existing_app_ids}"
-        raise ValueError(msg)
     unused_raw_app_ids = sorted(raw_app_ids.difference(referenced_app_ids))
     if unused_raw_app_ids:
         msg = f"connections.raw_payloads contains app_id values not referenced by operations: {unused_raw_app_ids}"
@@ -246,8 +210,8 @@ class WatsonxBindOperation(BaseModel):
     app_ids: list[NormalizedId] = Field(
         min_length=1,
         description=(
-            "Operation app ids to bind. Must match declared connection pools "
-            "(connections.existing_app_ids or connections.raw_payloads[*].app_id)."
+            "Operation app ids to bind. app_ids found in connections.raw_payloads "
+            "reference new raw connections; all other app_ids are treated as existing connections."
         ),
     )
 
@@ -266,7 +230,7 @@ class WatsonxUnbindOperation(BaseModel):
     tool: WatsonxToolRefBinding = Field(description="Existing provider tool reference with source_ref correlation.")
     app_ids: list[NormalizedId] = Field(
         min_length=1,
-        description=("Operation app ids to unbind. Must reference connections.existing_app_ids only."),
+        description=("Operation app ids to unbind. Must not reference connections.raw_payloads app_ids."),
     )
 
     @field_validator("app_ids")
@@ -359,12 +323,7 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
     @model_validator(mode="after")
     def validate_has_work(self) -> WatsonxDeploymentUpdatePayload:
         if self.put_tools is not None:
-            has_other = (
-                self.operations
-                or self.tools.raw_payloads
-                or self.connections.existing_app_ids
-                or self.connections.raw_payloads
-            )
+            has_other = self.operations or self.tools.raw_payloads or self.connections.raw_payloads
             if has_other:
                 msg = "put_tools is a standalone full replacement and cannot be combined with other fields."
                 raise ValueError(msg)
@@ -373,7 +332,7 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
             msg = "llm is required for deployment update operations."
             raise ValueError(msg)
         if not self.operations:
-            has_connections = self.connections.existing_app_ids or self.connections.raw_payloads
+            has_connections = self.connections.raw_payloads
             if has_connections:
                 msg = "connections require at least one bind/unbind operation that references app_ids."
                 raise ValueError(msg)
@@ -393,18 +352,11 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
             return self
         raw_tool_names = {payload.name for payload in (self.tools.raw_payloads or [])}
 
-        existing_app_ids = set(self.connections.existing_app_ids or [])
         raw_app_ids = {payload.app_id for payload in (self.connections.raw_payloads or [])}
-        valid_app_ids = _validate_declared_app_id_pools(
-            existing_app_ids=existing_app_ids,
-            raw_app_ids=raw_app_ids,
-        )
-
         bind_operations = [operation for operation in self.operations if isinstance(operation, WatsonxBindOperation)]
         referenced_app_ids = _validate_bind_operation_references(
             operations=bind_operations,
             raw_tool_names=raw_tool_names,
-            valid_app_ids=valid_app_ids,
         )
 
         for operation in self.operations:
@@ -412,19 +364,11 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
                 continue
             for app_id in operation.app_ids:
                 referenced_app_ids.add(app_id)
-                if app_id not in valid_app_ids:
-                    msg = (
-                        "operation app_ids must be declared in "
-                        "connections.existing_app_ids or connections.raw_payloads[*].app_id: "
-                        f"[{app_id!r}]"
-                    )
-                    raise ValueError(msg)
                 if app_id in raw_app_ids:
-                    msg = f"unbind.operation app_ids must reference connections.existing_app_ids only: [{app_id!r}]"
+                    msg = f"unbind.operation app_ids must not reference connections.raw_payloads app_ids: [{app_id!r}]"
                     raise ValueError(msg)
 
         _validate_all_declared_app_ids_are_referenced(
-            existing_app_ids=existing_app_ids,
             raw_app_ids=raw_app_ids,
             referenced_app_ids=referenced_app_ids,
         )
@@ -455,20 +399,13 @@ class WatsonxDeploymentCreatePayload(BaseModel):
     def validate_operation_references(self) -> WatsonxDeploymentCreatePayload:
         raw_tool_names = {payload.name for payload in (self.tools.raw_payloads or [])}
 
-        existing_app_ids = set(self.connections.existing_app_ids or [])
         raw_app_ids = {payload.app_id for payload in (self.connections.raw_payloads or [])}
-        valid_app_ids = _validate_declared_app_id_pools(
-            existing_app_ids=existing_app_ids,
-            raw_app_ids=raw_app_ids,
-        )
         bind_operations = [operation for operation in self.operations if isinstance(operation, WatsonxBindOperation)]
         referenced_app_ids = _validate_bind_operation_references(
             operations=bind_operations,
             raw_tool_names=raw_tool_names,
-            valid_app_ids=valid_app_ids,
         )
         _validate_all_declared_app_ids_are_referenced(
-            existing_app_ids=existing_app_ids,
             raw_app_ids=raw_app_ids,
             referenced_app_ids=referenced_app_ids,
         )

@@ -58,6 +58,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiBindOperation,
     WatsonxApiBindToolOperation,
     WatsonxApiDeploymentCreatePayload,
+    WatsonxApiDeploymentCreateResultData,
     WatsonxApiDeploymentFlowVersionItemData,
     WatsonxApiDeploymentListProviderData,
     WatsonxApiDeploymentLlmListResultData,
@@ -72,6 +73,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
 )
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
+    DeploymentCreateResponse,
     DeploymentFlowVersionListItem,
     DeploymentFlowVersionListResponse,
     DeploymentListResponse,
@@ -407,7 +409,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             detail = str(first_error.get("msg") or exc)
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Invalid {slot_name} payload: {detail}",
+                detail=f"Invalid provider_data payload: {detail}",
             ) from exc
 
     async def resolve_deployment_create(
@@ -490,6 +492,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             flow_version_id: f"{artifact.name}_v{version_number}"
             for flow_version_id, version_number, _project_id, artifact in flow_artifacts
         }
+        # Override with user-provided tool names when present
+        for op in api_provider_payload.operations:
+            if isinstance(op, WatsonxApiBindOperation) and op.tool_name:
+                raw_name_by_flow_version_id[op.flow_version_id] = op.tool_name
         raw_payloads = [
             artifact.model_copy(
                 update={
@@ -536,8 +542,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         reused_fv_ids = {fv for fv in bind_fv_ids if fv in flow_version_snapshot_id_map}
         filtered_raw_payloads = (
             [
-                artifact
-                for flow_version_id, _version_number, _project_id, artifact in flow_artifacts
+                raw_payload
+                for (flow_version_id, _version_number, _project_id, _artifact), raw_payload in zip(
+                    flow_artifacts, raw_payloads, strict=True
+                )
                 if flow_version_id not in reused_fv_ids
             ]
             if reused_fv_ids
@@ -568,7 +576,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             detail = str(first_error.get("msg") or exc)
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Invalid deployment_update payload: {detail}",
+                detail=f"Invalid provider_data payload: {detail}",
             ) from exc
         return AdapterDeploymentUpdate(
             spec=payload.spec,
@@ -631,6 +639,76 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 description=deployment.description or "",
             ),
             provider_data=provider_payload,
+        )
+
+    def shape_deployment_create_result(
+        self,
+        result: DeploymentCreateResult,
+        deployment_row: Deployment,
+    ) -> DeploymentCreateResponse:
+        """Shape create result provider_data with explicit ref-domain semantics.
+
+        ``tools_with_refs[*].source_ref`` can come from two domains:
+        - flow-version-id operations: ``source_ref`` is a Langflow flow_version UUID.
+        - tool-id operations: ``source_ref`` is the provider tool_id (non-UUID).
+
+        The API response normalizes this into ``tool_app_bindings[*].flow_version_id``:
+        UUID source_ref -> parsed UUID, non-UUID source_ref -> None.
+        """
+        adapter_provider_result = self._parse_required_payload_slot(
+            slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_create_result,
+            slot_name="deployment_create_result",
+            raw=result.provider_result,
+            missing_payload_detail="Deployment provider create result is missing provider_result payload.",
+            malformed_payload_detail="Deployment provider create result contains invalid provider_result payload.",
+        )
+        tool_id_to_flow_version: dict[str, UUID | None] = {}
+        for binding in adapter_provider_result.tools_with_refs:
+            tool_id = str(binding.tool_id or "").strip()
+            source_ref = str(binding.source_ref or "").strip()
+            if not tool_id:
+                msg = "Deployment provider create result contains a tool binding with an empty tool_id."
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+            if not source_ref:
+                msg = (
+                    "Deployment provider create result contains a tool binding with an empty source_ref "
+                    f"for tool_id={tool_id!r}."
+                )
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+            try:
+                tool_id_to_flow_version[tool_id] = UUID(source_ref)
+            except ValueError:
+                # Non-UUID source_ref is expected for tool-id-based operations.
+                tool_id_to_flow_version[tool_id] = None
+
+        tool_app_bindings: list[WatsonxApiToolAppBinding] = []
+        for binding in adapter_provider_result.tool_app_bindings:
+            raw_tool_id = str(binding.tool_id or "").strip()
+            if raw_tool_id not in tool_id_to_flow_version:
+                msg = (
+                    f"Deployment provider create result has tool_app_binding tool_id={raw_tool_id!r} "
+                    "with no matching tools_with_refs entry."
+                )
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+            tool_app_bindings.append(
+                WatsonxApiToolAppBinding(
+                    flow_version_id=tool_id_to_flow_version[raw_tool_id],
+                    tool_id=raw_tool_id,
+                    app_ids=list(binding.app_ids),
+                )
+            )
+        provider_api_result = WatsonxApiDeploymentCreateResultData(
+            created_app_ids=list(adapter_provider_result.app_ids),
+            tool_app_bindings=tool_app_bindings or None,
+        )
+        return DeploymentCreateResponse(
+            id=deployment_row.id,
+            name=deployment_row.name,
+            description=deployment_row.description,
+            type=deployment_row.deployment_type,
+            created_at=deployment_row.created_at,
+            updated_at=deployment_row.updated_at,
+            provider_data=provider_api_result.to_api_provider_data(),
         )
 
     def shape_deployment_update_result(
@@ -1050,13 +1128,13 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         except AdapterPayloadMissingError as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Missing {slot_name} payload.",
+                detail="Missing provider_data payload.",
             ) from exc
         except AdapterPayloadValidationError as exc:
             detail = exc.format_first_error()
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Invalid {slot_name} payload: {detail}",
+                detail=f"Invalid provider_data payload: {detail}",
             ) from exc
 
     def _extract_bind_flow_version_ids(self, operations: list[Any]) -> list[UUID]:
@@ -1246,7 +1324,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 "raw_payloads": raw_tool_payloads or None,
             },
             "connections": {
-                "existing_app_ids": connections.existing_app_ids,
                 "raw_payloads": self._dump_raw_connection_payloads(connections.raw_payloads),
             },
             "operations": operations,
