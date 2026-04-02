@@ -10,18 +10,7 @@ from lfx.services.adapters.deployment.schema import BaseFlowArtifact, EnvVarKey,
 from lfx.services.adapters.payload import AdapterPayload, PayloadSlot
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
-from langflow.services.adapters.deployment.watsonx_orchestrate.resource_name_prefix import (
-    validate_resource_name_prefix_for_provider,
-)
-
 RawToolName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
-ResourceNamePrefixInput = Annotated[
-    str,
-    StringConstraints(
-        strip_whitespace=True,
-        min_length=1,
-    ),
-]
 
 
 class WatsonxFlowArtifactProviderData(BaseModel):
@@ -288,26 +277,16 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
 
     Notes:
     - bind/unbind operations[*].app_ids are operation-side ids.
-    - resource_name_prefix is applied only when creating resources
-      (for raw tool names).
-    - resource_name_prefix is a provider-specific naming/deconfliction hint.
     - put_tools performs a standalone full replacement of the agent's tool
       list.  The agent will have exactly these tool IDs and no others.
-      It cannot be combined with operations, tools, connections, or
-      resource_name_prefix (the validator rejects such payloads).
+      It cannot be combined with operations, tools, or connections
+      (the validator rejects such payloads).
       This should only be used by rollback to restore pre-update
       attachment state.
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    resource_name_prefix: ResourceNamePrefixInput | None = Field(
-        default=None,
-        description=(
-            "Provider-specific naming/deconfliction hint applied only when creating resources: "
-            "applied to created tool names."
-        ),
-    )
     tools: WatsonxUpdateTools = Field(default_factory=WatsonxUpdateTools)
     connections: WatsonxUpdateConnections = Field(default_factory=WatsonxUpdateConnections)
     operations: list[WatsonxUpdateOperation] = Field(default_factory=list)
@@ -316,7 +295,7 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
         description=(
             "Declarative list of existing provider tool IDs the deployment should have. "
             "Performs a standalone full replacement of the agent's tool list — "
-            "cannot be combined with operations, tools, connections, or resource_name_prefix. "
+            "cannot be combined with operations, tools, or connections. "
             "This should only be used by rollback to restore pre-update attachment state."
         ),
     )
@@ -332,14 +311,6 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
             return None
         return list(dict.fromkeys(value))
 
-    @field_validator("resource_name_prefix")
-    @classmethod
-    def validate_resource_name_prefix(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        validate_resource_name_prefix_for_provider(value)
-        return value
-
     @property
     def has_tool_work(self) -> bool:
         """Whether this payload includes tool-level mutations (put_tools, operations, or raw tool creation).
@@ -352,16 +323,11 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
     @model_validator(mode="after")
     def validate_has_work(self) -> WatsonxDeploymentUpdatePayload:
         if self.put_tools is not None:
-            has_other = (
-                self.operations or self.tools.raw_payloads or self.connections.raw_payloads or self.resource_name_prefix
-            )
+            has_other = self.operations or self.tools.raw_payloads or self.connections.raw_payloads
             if has_other:
                 msg = "put_tools is a standalone full replacement and cannot be combined with other fields."
                 raise ValueError(msg)
             return self
-        if self.tools.raw_payloads and self.resource_name_prefix is None:
-            msg = "resource_name_prefix is required when update payload creates raw tools."
-            raise ValueError(msg)
         if self.llm is None:
             msg = "llm is required for deployment update operations."
             raise ValueError(msg)
@@ -370,12 +336,9 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
             if has_connections:
                 msg = "connections require at least one bind/unbind operation that references app_ids."
                 raise ValueError(msg)
-            if self.resource_name_prefix and not self.tools.raw_payloads:
-                msg = "resource_name_prefix without operations requires tools.raw_payloads."
-                raise ValueError(msg)
             # Remaining valid no-operation cases:
-            # - LLM-only update (no raw_payloads, no connections, no prefix).
-            # - raw_payloads + prefix without operations: tools are created and
+            # - LLM-only update (no raw_payloads, no connections).
+            # - raw_payloads without operations: tools are created and
             #   attached to the agent without connection bindings
             #   (connectionless-tool flow). The plan builder auto-creates
             #   entries for all declared raw_payloads even without explicit
@@ -420,22 +383,10 @@ class WatsonxDeploymentCreatePayload(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    resource_name_prefix: ResourceNamePrefixInput = Field(
-        description=(
-            "Provider-specific naming/deconfliction hint applied only when creating resources: "
-            "applied to created tool names and deployment names."
-        )
-    )
     tools: WatsonxUpdateTools = Field(default_factory=WatsonxUpdateTools)
     connections: WatsonxUpdateConnections = Field(default_factory=WatsonxUpdateConnections)
     operations: list[WatsonxCreateOperation] = Field(default_factory=list)
     llm: NormalizedId = Field(description="Provider model identifier to use for the deployment agent.")
-
-    @field_validator("resource_name_prefix")
-    @classmethod
-    def validate_resource_name_prefix(cls, value: str) -> str:
-        validate_resource_name_prefix_for_provider(value)
-        return value
 
     @model_validator(mode="after")
     def validate_has_work(self) -> WatsonxDeploymentCreatePayload:
@@ -647,7 +598,7 @@ class WatsonxProviderCreateApplyResult(BaseModel):
     app_ids: list[NormalizedId] = Field(default_factory=list)
     tools_with_refs: list[WatsonxToolRefBinding] = Field(default_factory=list)
     tool_app_bindings: list[WatsonxToolAppBinding] = Field(default_factory=list)
-    prefixed_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    deployment_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
     display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 

@@ -12,6 +12,7 @@ export default function StepReview() {
     selectedLlm,
     connections,
     selectedVersionByFlow,
+    toolNameByFlow,
     attachedConnectionByFlow,
   } = useDeploymentStepper();
 
@@ -38,26 +39,23 @@ export default function StepReview() {
         .map((cid) => connections.find((c) => c.id === cid))
         .filter((c): c is (typeof connections)[number] => c != null);
 
-      // Collect unique env var keys across this flow's connections
-      const seenKeys = new Set<string>();
-      const envVars: Array<{ key: string; masked: string }> = [];
-      for (const conn of flowConnections) {
-        if (conn.environmentVariables) {
-          for (const key of Object.keys(conn.environmentVariables)) {
-            if (!seenKeys.has(key)) {
-              seenKeys.add(key);
-              envVars.push({ key, masked: "••••••••" });
-            }
-          }
-        }
-      }
+      const connectionDetails = flowConnections.map((conn) => {
+        const envVars = conn.environmentVariables
+          ? Object.keys(conn.environmentVariables).map((key) => ({
+              key,
+              masked: "••••••••",
+            }))
+          : [];
+        return { name: conn.name, envVars };
+      });
 
+      const flowName = flow?.name ?? "Unknown";
       return {
         flowId,
-        flowName: flow?.name ?? "Unknown",
+        flowName,
+        toolName: toolNameByFlow.get(flowId)?.trim() || flowName,
         versionLabel: versionTag || versionId,
-        connectionNames: flowConnections.map((c) => c.name),
-        envVars,
+        connectionDetails,
       };
     },
   );
@@ -120,7 +118,7 @@ export default function StepReview() {
                 reviewFlows.map((item) => (
                   <div key={item.flowId} className="flex items-center gap-1.5">
                     <ForwardedIconComponent
-                      name="Link"
+                      name="Workflow"
                       className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
                     />
                     <span className="text-sm text-foreground">
@@ -150,64 +148,71 @@ export default function StepReview() {
               className="rounded-xl border border-border bg-background p-4"
             >
               <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2">
-                  <ForwardedIconComponent
-                    name="Link"
-                    className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
-                  />
-                  <span className="text-sm font-medium text-foreground">
-                    {item.flowName}
-                  </span>
-                  <Badge
-                    variant="secondaryStatic"
-                    size="tag"
-                    className="bg-accent-purple-muted text-accent-purple-muted-foreground"
-                  >
-                    {item.versionLabel}
-                  </Badge>
-                </div>
-
-                {item.connectionNames.length > 0 && (
+                <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      Connections
-                    </span>
-                    <span className="text-xs text-foreground">
-                      {item.connectionNames.join(", ")}
+                    <ForwardedIconComponent
+                      name="Wrench"
+                      className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                    />
+                    <span className="text-sm font-medium text-foreground">
+                      {item.toolName}
                     </span>
                   </div>
-                )}
+                  <div className="flex items-center gap-2 pl-5">
+                    <ForwardedIconComponent
+                      name="Workflow"
+                      className="h-3 w-3 shrink-0 text-muted-foreground"
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {item.flowName}
+                    </span>
+                    <Badge
+                      variant="secondaryStatic"
+                      size="tag"
+                      className="bg-accent-purple-muted text-accent-purple-muted-foreground"
+                    >
+                      {item.versionLabel}
+                    </Badge>
+                  </div>
+                </div>
 
-                {item.envVars.length > 0 && (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        Env Variables
-                      </span>
-                      <span className="text-xs text-foreground">
-                        {item.envVars.length}{" "}
-                        {item.envVars.length === 1 ? "variable" : "variables"}
-                      </span>
-                    </div>
-                    <div className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border">
-                      {item.envVars.map(({ key, masked }) => (
-                        <div
-                          key={key}
-                          className="flex items-center justify-between bg-muted/40 px-3 py-2"
-                        >
-                          <span className="font-mono text-xs text-foreground">
-                            {key}
+                {item.connectionDetails.length > 0 && (
+                  <div className="flex flex-col gap-3">
+                    {item.connectionDetails.map((conn) => (
+                      <div key={conn.name} className="flex flex-col gap-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-muted-foreground">
+                            Connection:
                           </span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground">=</span>
-                            <span className="font-mono text-xs text-muted-foreground">
-                              {masked}
-                            </span>
-                          </div>
+                          <span className="text-xs font-medium text-foreground">
+                            {conn.name}
+                          </span>
                         </div>
-                      ))}
-                    </div>
-                  </>
+                        {conn.envVars.length > 0 && (
+                          <div className="flex flex-col divide-y divide-border overflow-hidden rounded-md border border-border">
+                            {conn.envVars.map(({ key, masked }) => (
+                              <div
+                                key={key}
+                                className="flex items-center justify-between bg-muted/40 px-3 py-1.5"
+                              >
+                                <span className="font-mono text-xs text-foreground">
+                                  {key}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-muted-foreground">
+                                    =
+                                  </span>
+                                  <span className="font-mono text-xs text-muted-foreground">
+                                    {masked}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>

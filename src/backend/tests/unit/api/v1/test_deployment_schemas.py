@@ -354,9 +354,9 @@ class TestSharedKernelProviderPayloadCompatibility:
                 "description": "",
                 "type": "agent",
             },
-            provider_data={"resource_name_prefix": "lf_test_", "operations": []},
+            provider_data={"operations": []},
         )
-        assert request.provider_data == {"resource_name_prefix": "lf_test_", "operations": []}
+        assert request.provider_data == {"operations": []}
 
     def test_config_create_accepts_provider_config_dict_through_strict_wrapper(self):
         payload = DeploymentConfigCreate(

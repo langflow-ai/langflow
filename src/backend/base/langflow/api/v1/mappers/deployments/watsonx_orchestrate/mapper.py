@@ -373,6 +373,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             reference_ids=flow_version_ids,
         )
         raw_name_by_flow_version_id = {flow_version_id: artifact.name for flow_version_id, artifact in flow_artifacts}
+        # Override with user-provided tool names when present
+        for op in api_provider_payload.operations:
+            if isinstance(op, WatsonxApiBindOperation) and op.tool_name:
+                raw_name_by_flow_version_id[op.flow_version_id] = op.tool_name
         provider_operations = self._build_provider_operations(
             operations=api_provider_payload.operations,
             raw_name_by_flow_version_id=raw_name_by_flow_version_id,
@@ -384,10 +388,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             return slot.apply(
                 self._build_provider_payload_body(
                     llm=api_provider_payload.llm,
-                    resource_name_prefix=api_provider_payload.resource_name_prefix,
                     raw_tool_payloads=[
                         artifact.model_copy(
                             update={
+                                "name": raw_name_by_flow_version_id[flow_version_id],
                                 "provider_data": self.util_create_flow_artifact_provider_data(
                                     project_id=project_id,
                                     flow_version_id=flow_version_id,
@@ -556,7 +560,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             provider_payload: AdapterPayload = update_slot.apply(
                 self._build_provider_payload_body(
                     llm=api_provider_payload.llm,
-                    resource_name_prefix=api_provider_payload.resource_name_prefix,
                     raw_tool_payloads=[artifact.model_dump(exclude_none=True) for artifact in filtered_raw_payloads],
                     connections=api_provider_payload.connections,
                     operations=provider_operations,
@@ -1303,14 +1306,12 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         self,
         *,
         llm: str,
-        resource_name_prefix: str | None,
         raw_tool_payloads: list[dict[str, Any]],
         connections: Any,
         operations: list[AdapterPayload],
     ) -> dict[str, Any]:
         return {
             "llm": llm,
-            "resource_name_prefix": resource_name_prefix,
             "tools": {
                 "raw_payloads": raw_tool_payloads or None,
             },

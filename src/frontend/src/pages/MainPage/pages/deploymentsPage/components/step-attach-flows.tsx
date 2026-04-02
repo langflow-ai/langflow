@@ -22,6 +22,8 @@ export default function StepAttachFlows() {
     setConnections,
     selectedVersionByFlow,
     handleSelectVersion: onSelectVersion,
+    toolNameByFlow,
+    setToolNameByFlow,
     attachedConnectionByFlow,
     setAttachedConnectionByFlow: onAttachConnection,
   } = useDeploymentStepper();
@@ -46,7 +48,6 @@ export default function StepAttachFlows() {
         (f.folder_id === currentFolderId || f.id === initialFlowId),
     );
   }, [flowsData, currentFolderId, initialFlowId]);
-  // TODO: replace with real API data
 
   const [selectedFlowId, setSelectedFlowId] = useState<string | null>(
     initialFlowId ?? null,
@@ -105,6 +106,12 @@ export default function StepAttachFlows() {
   const { mutateAsync: detectEnvVars } = usePostDetectDeploymentEnvVars();
   const { data: globalVariables } = useGetGlobalVariables();
   const globalVariableOptions = (globalVariables ?? []).map((v) => v.name);
+
+  const isDuplicateConnectionName = useMemo(() => {
+    const trimmed = newConnectionName.trim().toLowerCase();
+    if (!trimmed) return false;
+    return connections.some((c) => c.name.trim().toLowerCase() === trimmed);
+  }, [newConnectionName, connections]);
 
   const effectiveFlowId = selectedFlowId ?? flows[0]?.id ?? null;
 
@@ -197,8 +204,13 @@ export default function StepAttachFlows() {
         globalVarKeys.add(key);
       }
     }
+    const sanitizedId = newConnectionName
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/[^a-z0-9_]/g, "");
     const newConn = {
-      id: `conn_${crypto.randomUUID().replace(/-/g, "_")}`,
+      id: sanitizedId,
       name: newConnectionName.trim(),
       variableCount: filteredVars.length,
       isNew: true,
@@ -307,6 +319,24 @@ export default function StepAttachFlows() {
               isLoadingVersions={isLoadingVersions}
               pendingVersion={pendingVersion}
               selectedVersionByFlow={selectedVersionByFlow}
+              toolName={
+                effectiveFlowId
+                  ? (toolNameByFlow.get(effectiveFlowId) ?? "")
+                  : ""
+              }
+              onToolNameChange={(name) => {
+                if (effectiveFlowId) {
+                  setToolNameByFlow((prev) => {
+                    const next = new Map(prev);
+                    if (name) {
+                      next.set(effectiveFlowId, name);
+                    } else {
+                      next.delete(effectiveFlowId);
+                    }
+                    return next;
+                  });
+                }
+              }}
               onSelectPending={setPendingVersion}
               onAttach={handleAttachFlow}
             />
@@ -337,6 +367,7 @@ export default function StepAttachFlows() {
               onSkipConnection={handleSkipConnection}
               onAttachConnection={handleAttachConnection}
               onCreateConnection={handleCreateConnection}
+              isDuplicateName={isDuplicateConnectionName}
             />
           )}
         </div>

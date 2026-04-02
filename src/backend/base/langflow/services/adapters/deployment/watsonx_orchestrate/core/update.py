@@ -49,7 +49,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     dedupe_list,
     extract_agent_tool_ids,
-    resolve_resource_name_prefix,
     validate_wxo_name,
 )
 
@@ -87,7 +86,6 @@ def _get_or_create_tool_connection_ops(
 
 @dataclass(slots=True)
 class ProviderUpdatePlan:
-    resource_prefix: str
     existing_app_ids: list[str]
     raw_connections_to_create: list[RawConnectionCreatePlan]
     existing_tool_deltas: dict[str, ToolConnectionOps]
@@ -118,7 +116,6 @@ def build_provider_update_plan(
     # (no operations accompany it).
     if provider_update.put_tools is not None:
         return ProviderUpdatePlan(
-            resource_prefix="",
             existing_app_ids=[],
             raw_connections_to_create=[],
             existing_tool_deltas={},
@@ -129,11 +126,6 @@ def build_provider_update_plan(
             existing_tool_refs=[],
         )
 
-    resource_prefix = (
-        resolve_resource_name_prefix(caller_prefix=provider_update.resource_name_prefix)
-        if provider_update.resource_name_prefix is not None
-        else ""
-    )
     agent_tool_ids = extract_agent_tool_ids(agent)
     final_existing_tool_ids = OrderedUniqueStrs.from_values(agent_tool_ids)
 
@@ -253,7 +245,6 @@ def build_provider_update_plan(
     existing_app_ids = [app_id for app_id in operation_app_ids.to_list() if app_id not in raw_app_ids]
 
     return ProviderUpdatePlan(
-        resource_prefix=resource_prefix,
         existing_app_ids=existing_app_ids,
         raw_connections_to_create=raw_connections_to_create,
         existing_tool_deltas=existing_tool_deltas,
@@ -409,7 +400,6 @@ async def apply_provider_update_plan_with_rollback(
                 raw_tools_to_create=plan.raw_tools_to_create,
                 operation_to_provider_app_id=operation_to_provider_app_id,
                 resolved_connections=resolved_connections,
-                resource_prefix=plan.resource_prefix,
                 create_and_upload_tools_fn=create_and_upload_wxo_flow_tools_with_bindings,
             )
             created_tool_ids.extend(tool_create_result.created_tool_ids)

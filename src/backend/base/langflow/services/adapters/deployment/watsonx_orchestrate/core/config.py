@@ -112,15 +112,15 @@ def validate_config_create_input(config: ConfigItem | None) -> None:
 
 def resolve_create_app_id(
     *,
-    prefixed_deployment_name: str,
+    deployment_name: str,
     config: ConfigItem | None,
 ) -> str:
     validate_config_create_input(config)
     if config is None or config.raw_payload is None:
-        return f"{prefixed_deployment_name}_app_id"
+        return f"{deployment_name}_app_id"
 
     normalized_config_name = validate_wxo_name(config.raw_payload.name)
-    return f"{prefixed_deployment_name}_{normalized_config_name}_app_id"
+    return f"{deployment_name}_{normalized_config_name}_app_id"
 
 
 async def validate_connection(connections_client: ConnectionsClient, *, app_id: str) -> GetConnectionResponse:

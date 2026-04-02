@@ -40,14 +40,6 @@ export interface ProviderCredentials {
   api_key: string;
 }
 
-export function toResourceNamePrefix(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 50);
-}
-
 export type DeploymentType = "agent" | "mcp";
 
 export interface DeploymentMatchedAttachment {

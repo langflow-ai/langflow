@@ -48,7 +48,7 @@ class _ApiUpdate(BaseModel):
 
 
 class _ApiCreate(BaseModel):
-    resource_name_prefix: str
+    label: str
 
 
 class _ApiExecutionInput(BaseModel):
@@ -181,7 +181,7 @@ async def test_base_mapper_resolve_deployment_create_passthrough_without_flow_ve
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
         spec={"name": "create-deploy", "description": "", "type": "agent"},
-        provider_data={"resource_name_prefix": "lf_test_"},
+        provider_data={"some_key": "some_value"},
     )
 
     resolved = await mapper.resolve_deployment_create(
@@ -193,7 +193,7 @@ async def test_base_mapper_resolve_deployment_create_passthrough_without_flow_ve
 
     assert resolved.snapshot is None
     assert resolved.config is None
-    assert resolved.provider_data == {"resource_name_prefix": "lf_test_"}
+    assert resolved.provider_data == {"some_key": "some_value"}
 
 
 @pytest.mark.asyncio
@@ -202,7 +202,7 @@ async def test_base_mapper_resolve_deployment_create_validates_provider_data_whe
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
         spec={"name": "create-deploy", "description": "", "type": "agent"},
-        provider_data={"resource_name_prefix": "lf_test_"},
+        provider_data={"some_key": "some_value"},
     )
 
     resolved = await mapper.resolve_deployment_create(
@@ -212,7 +212,7 @@ async def test_base_mapper_resolve_deployment_create_validates_provider_data_whe
         payload=payload,
     )
 
-    assert resolved.provider_data == {"resource_name_prefix": "lf_test_"}
+    assert resolved.provider_data == {"some_key": "some_value"}
 
 
 @pytest.mark.asyncio
