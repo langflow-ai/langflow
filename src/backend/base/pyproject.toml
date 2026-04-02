@@ -106,24 +106,14 @@ dependencies = [
 dev = [
     "asgi-lifespan>=2.1.0",
     "pytest-github-actions-annotate-failures>=0.2.0",
-    "types-aiofiles>=24.1.0.20240626",
-    "types-redis>=4.6.0.5",
     "ipykernel>=6.29.0",
-    "mypy>=1.11.0",
     "ruff>=0.12.7",
     "httpx[http2]>=0.27",
     "pytest>=8.2.0",
-    "types-requests>=2.33.0",
     "requests>=2.33.0",
     "pytest-cov>=5.0.0",
-    "pandas-stubs>=2.1.4.231227",
-    "types-pillow>=10.2.0.20240213",
-    "types-pyyaml>=6.0.12.8",
-    "types-passlib>=1.7.7.13",
     "pytest-mock>=3.14.0",
     "pytest-xdist>=3.6.0",
-    "types-pywin32>=306.0.0.4",
-    "types-google-cloud-ndb>=2.2.0.0",
     "pytest-sugar>=1.0.0",
     "respx>=0.21.1",
     "pytest-instafail>=0.5.0",
@@ -135,7 +125,6 @@ dev = [
     "pytest-split>=0.9.0",
     "devtools>=0.12.2",
     "pytest-flakefinder>=1.1.0",
-    "types-markdown>=3.7.0.20240822",
 ]
 
 
@@ -154,28 +143,10 @@ markers = ["async_test"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
-[tool.mypy]
-plugins = ["pydantic.mypy"]
-follow_imports = "skip"
-disable_error_code = ["type-var"]
-namespace_packages = true
-mypy_path = "langflow"
-ignore_missing_imports = true
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
-
-# TODO(WXO): Remove testpypi index and uv.sources once the ibm-watsonx-orchestrate
-# packages publish their official release to PyPI (expected late March 2026).
-[[tool.uv.index]]
-name = "testpypi"
-url = "https://test.pypi.org/simple"
-explicit = true
-
-[tool.uv.sources]
-ibm-watsonx-orchestrate-core = [{ index = "testpypi" }]
-ibm-watsonx-orchestrate-clients = [{ index = "testpypi" }]
 
 [project.urls]
 Repository = "https://github.com/langflow-ai/langflow"
@@ -350,7 +321,10 @@ fastparquet = ["fastparquet>=2024.11.0,<2025.0.0"]
 
 # Vision / ML
 vlmrun = ["vlmrun[all]>=0.2.0"]
-cuga = ["cuga>=0.2.10"]
+cuga = [
+    "cuga>=0.2.10; sys_platform != 'darwin'",
+    "cuga>=0.2.10; sys_platform == 'darwin' and platform_machine == 'arm64'",
+]
 mlx = [
     "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
     "mlx-vlm~=0.3.9; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
@@ -369,16 +343,12 @@ astrapy = ["astrapy>=2.1.0,<3.0.0"]
 gassist = ["gassist>=0.0.1; sys_platform == 'win32'"]
 
 # SDKs for IBM watsonx Orchestrate deployment adapter.
-# TODO(WXO): Pin to stable versions once official PyPI releases land (late March 2026).
-ibm-watsonx = [
+ibm-watsonx-clients = [
     "ibm-cloud-sdk-core~=3.24.4",
-    "ibm-watsonx-orchestrate-clients==2.3.2.dev5117; python_version >= '3.11'",
-    "ibm-watsonx-orchestrate-core==2.3.2.dev5117; python_version >= '3.11'",
-    "rich",
-    "PyYAML"
+    "ibm-watsonx-orchestrate-core~=2.7.0; python_version >= '3.11'",
+    "ibm-watsonx-orchestrate-clients~=2.7.0; python_version >= '3.11'",
 ]
 
-# Complete installation (excluding ibm-watsonx for now)
 complete = [
     "langflow-base[couchbase]",
     "langflow-base[cassandra]",
@@ -491,9 +461,8 @@ complete = [
     "langflow-base[astrapy]",
     # Windows-specific
     "langflow-base[gassist]",
-    # wxO deployment adapter intentionally excluded from `complete` for now:
-    # its dependencies are currently distributed outside stable public indexes.
-    # Install explicitly with `langflow-base[ibm-watsonx]` when available.
+    # wxO deployment adapter,
+    "langflow-base[ibm-watsonx-clients]"
 ]
 
 all = [

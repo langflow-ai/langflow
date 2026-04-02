@@ -41,7 +41,7 @@ For information about accepted values and functionality, see the [Elasticsearch 
 | elasticsearch_url | String | Input parameter. Elasticsearch server URL. |
 | cloud_id | String | Input parameter. Elasticsearch Cloud ID. |
 | index_name | String | Input parameter. Name of the Elasticsearch index. |
-| ingest_data | Data | Input parameter. Records to load into the vector store. |
+| ingest_data | JSON | Input parameter. Records to load into the vector store. |
 | search_query | String | Input parameter. Query string for similarity search. |
 | cache_vector_store | Boolean | Input parameter. If `true`, the component caches the vector store in memory for faster reads. Default: Enabled (`true`). |
 | username | String | Input parameter. Username for Elasticsearch authentication. Required for all local deployments. Required for cloud deployments if `api_key` is empty. |
@@ -78,7 +78,7 @@ For information about accepted values and functionality, see the [OpenSearch doc
 |------|------|-------------|
 | opensearch_url | String | Input parameter. URL for OpenSearch cluster, such as `https://192.168.1.1:9200`. |
 | index_name | String | Input parameter. The index name where the vectors are stored in OpenSearch cluster. Default: `langflow`. |
-| ingest_data | Data | Input parameter. The data to be ingested into the vector store. |
+| ingest_data | JSON | Input parameter. The data to be ingested into the vector store. |
 | search_input | String | Input parameter. Enter a search query. Leave empty to retrieve all documents or if hybrid search is being used. |
 | cache_vector_store | Boolean | Input parameter. If `true`, the component caches the vector store in memory for faster reads. Default: Enabled (`true`). |
 | embedding | Embeddings | Input parameter. Attach an [embedding model component](/components-embedding-models) to use to generate an embedding from the search query. |

@@ -60,4 +60,4 @@ def format_token_event(chunk: str) -> str:
 
 def format_cancelled_event() -> str:
     """Format SSE cancelled event when client disconnects."""
-    return f"data: {json.dumps({'event': 'cancelled'})}\n\n"
+    return f"data: {json.dumps({'event': 'cancelled', 'message': 'Generation cancelled by user'})}\n\n"
