@@ -258,7 +258,7 @@ class TestValidateFlowForCurrentSettings:
     def test_validator_blocks_unknown_type(self, monkeypatch):
         settings_service = SimpleNamespace(settings=SimpleNamespace(allow_custom_components=False))
         monkeypatch.setattr(
-            "langflow.services.deps.get_settings_service",
+            "lfx.services.deps.get_settings_service",
             lambda: settings_service,
         )
         monkeypatch.setattr(
@@ -283,10 +283,11 @@ class TestValidateFlowForCurrentSettings:
     def test_validator_fail_closed_when_component_hashes_missing(self, monkeypatch):
         settings_service = SimpleNamespace(settings=SimpleNamespace(allow_custom_components=False))
         monkeypatch.setattr(
-            "langflow.services.deps.get_settings_service",
+            "lfx.services.deps.get_settings_service",
             lambda: settings_service,
         )
         monkeypatch.setattr(component_cache, "type_to_current_hash", None)
+        monkeypatch.setattr(component_cache, "all_types_dict", None)
 
         with pytest.raises(
             ValueError,

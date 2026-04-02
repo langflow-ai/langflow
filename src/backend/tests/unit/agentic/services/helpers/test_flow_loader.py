@@ -183,6 +183,7 @@ class TestLoadGraphFromPython:
             patch("importlib.util.spec_from_file_location") as mock_spec_from_file,
             patch("importlib.util.module_from_spec") as mock_module_from_spec,
             patch("langflow.agentic.services.helpers.flow_loader._temporary_sys_path"),
+            patch("langflow.agentic.services.helpers.flow_loader.validate_flow_for_current_settings"),
             patch.object(inspect, "signature", return_value=inspect.signature(mock_get_graph)),
         ):
             mock_spec = MagicMock()
@@ -214,6 +215,7 @@ class TestLoadGraphFromPython:
             patch("importlib.util.spec_from_file_location") as mock_spec_from_file,
             patch("importlib.util.module_from_spec") as mock_module_from_spec,
             patch("langflow.agentic.services.helpers.flow_loader._temporary_sys_path"),
+            patch("langflow.agentic.services.helpers.flow_loader.validate_flow_for_current_settings"),
         ):
             mock_spec = MagicMock()
             mock_spec.loader = MagicMock()
@@ -334,6 +336,7 @@ class TestLoadGraphFromPython:
             patch("importlib.util.spec_from_file_location") as mock_spec_from_file,
             patch("importlib.util.module_from_spec") as mock_module_from_spec,
             patch("langflow.agentic.services.helpers.flow_loader._temporary_sys_path"),
+            patch("langflow.agentic.services.helpers.flow_loader.validate_flow_for_current_settings"),
             patch.dict(sys.modules, {}, clear=False),
         ):
             mock_spec = MagicMock()
