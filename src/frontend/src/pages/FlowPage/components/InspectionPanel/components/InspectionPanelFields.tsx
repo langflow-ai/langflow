@@ -52,7 +52,12 @@ export default function InspectionPanelFields({
         const template = data.node?.template[templateField];
         if (isInternalField(templateField)) return false;
         if (HIDDEN_FIELDS[data.type]?.includes(templateField)) return false;
-        if (data.type === "APIRequest" && templateField === "body" && data.node?.template?.method?.value === "GET") return false;
+        if (
+          data.type === "APIRequest" &&
+          templateField === "body" &&
+          data.node?.template?.method?.value === "GET"
+        )
+          return false;
         if (!template?.show) return false;
         if (isCodeField(templateField, template)) return false;
         if (isToolModeEnabled(template) && isToolMode) return false;
@@ -81,7 +86,12 @@ export default function InspectionPanelFields({
       .filter((templateField) => {
         const template = data.node?.template[templateField];
         if (HIDDEN_FIELDS[data.type]?.includes(templateField)) return false;
-        if (data.type === "APIRequest" && templateField === "body" && data.node?.template?.method?.value === "GET") return false;
+        if (
+          data.type === "APIRequest" &&
+          templateField === "body" &&
+          data.node?.template?.method?.value === "GET"
+        )
+          return false;
         return shouldRenderInspectionPanelField(
           templateField,
           template,
