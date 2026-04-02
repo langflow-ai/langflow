@@ -14,7 +14,7 @@ from lfx.graph.vertex.param_handler import ParameterHandler
 class TestSkipLoadFromDbWhenModelHasEdge:
     """Tests for _process_direct_type_field skipping load_from_db for secrets when model has edge."""
 
-    def _create_handler_with_template(self, template: dict, model_has_edge: bool = False) -> ParameterHandler:
+    def _create_handler_with_template(self, template: dict, *, model_has_edge: bool = False) -> ParameterHandler:
         """Create a ParameterHandler with the given template and optional model edge."""
         mock_vertex = MagicMock()
         mock_vertex.data = {"node": {"template": template}}

@@ -2516,8 +2516,10 @@ class TestSnakeToCamelConversion:
 
 
 class TestStripNoneRecursive:
-    """Tests for _strip_none_recursive — ensures null values are removed
-    from nested dicts and arrays before sending arguments to MCP servers.
+    """Tests for _strip_none_recursive.
+
+    Ensures null values are removed from nested dicts and arrays before
+    sending arguments to MCP servers.
 
     Bug: antvis/mcp-server-chart returns "Expected string, received null"
     because LLMs send explicit null for optional fields inside arrays of objects.
@@ -2615,7 +2617,8 @@ class TestStripNoneRecursive:
 
         assert _strip_none_recursive("hello") == "hello"
         assert _strip_none_recursive(42) == 42
-        assert _strip_none_recursive(True) is True
+        bool_val = True
+        assert _strip_none_recursive(bool_val) is True
 
     def test_should_handle_empty_structures(self):
         """Empty dict and empty list return empty."""

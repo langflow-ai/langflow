@@ -1,5 +1,3 @@
-import { describe, it, expect } from "vitest";
-
 /**
  * Unit tests for muted handle state in HandleRenderComponent.
  *
