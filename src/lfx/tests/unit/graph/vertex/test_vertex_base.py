@@ -49,6 +49,8 @@ def mock_vertex() -> Mock:
     }
     vertex.id = "test-vertex-id"
     vertex.display_name = "Test Vertex"
+    # Default: no incoming edges for any field
+    vertex.get_incoming_edge_by_target_param = Mock(return_value=None)
     return vertex
 
 
