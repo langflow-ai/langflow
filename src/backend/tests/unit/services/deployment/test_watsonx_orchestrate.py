@@ -1240,6 +1240,7 @@ def test_build_provider_update_plan_creates_unbound_raw_tools_alongside_bound_ra
     assert plan.raw_tools_to_create[1].app_ids == []
 
 
+
 def test_build_provider_update_plan_put_tools_replaces_agent_tool_list():
     """put_tools standalone path seeds final_existing_tool_ids from the payload, not the agent."""
     provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
@@ -3953,7 +3954,7 @@ async def test_create_and_upload_wxo_flow_tools_with_bindings_journals_created_i
     monkeypatch.setattr(
         tools_module,
         "create_wxo_flow_tool",
-        lambda flow_payload, connections: (
+        lambda flow_payload, _connections: (
             {"name": flow_payload.name, "description": flow_payload.description},
             b"artifact",
         ),

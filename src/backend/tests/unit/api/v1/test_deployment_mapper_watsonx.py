@@ -193,6 +193,7 @@ def test_watsonx_api_payload_rejects_update_without_llm() -> None:
         )
 
 
+
 def test_watsonx_api_payload_accepts_flow_version_unbind_and_remove_contract() -> None:
     flow_version_id = uuid4()
     payload = WatsonxApiDeploymentUpdatePayload.model_validate(
@@ -1741,7 +1742,7 @@ def test_watsonx_create_payload_accepts_bind_tool_operation() -> None:
 
 def test_watsonx_create_payload_bind_tool_without_prefix() -> None:
     """bind_tool on create accepts minimal payload."""
-    payload = WatsonxApiDeploymentCreatePayload.model_validate(
+    _payload = WatsonxApiDeploymentCreatePayload.model_validate(
         {
             "llm": TEST_WXO_LLM,
             "operations": [
