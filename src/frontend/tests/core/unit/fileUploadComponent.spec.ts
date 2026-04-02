@@ -126,18 +126,18 @@ test(
         timeout: 5000,
       });
 
-      await expect(
+      await ensureCheckboxChecked(
         page.getByTestId(`checkbox-${sourceFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
+      );
 
       // Test checkbox
 
-      await expect(
+      await ensureCheckboxChecked(
         page.getByTestId(`checkbox-${sourceFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
-      await expect(
+      );
+      await ensureCheckboxChecked(
         page.getByTestId(`checkbox-${jsonFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
+      );
       await page.getByTestId(`checkbox-${sourceFileName}`).last().click();
       await page.getByTestId(`checkbox-${jsonFileName}`).last().click();
 

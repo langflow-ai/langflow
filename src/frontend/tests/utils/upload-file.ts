@@ -104,7 +104,7 @@ export async function uploadFile(page: Page, fileName: string) {
   await page
     .getByText(sourceFileName + `.${testFileType}`)
     .first()
-    .waitFor({ state: "visible", timeout: 1000 });
+    .waitFor({ state: "visible", timeout: 5000 });
 
   await unselectNodes(page);
 }

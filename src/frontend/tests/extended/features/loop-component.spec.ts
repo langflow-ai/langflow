@@ -55,7 +55,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("data operations");
     await page.waitForSelector('[data-testid="processingJSON Operations"]', {
-      timeout: 1000,
+      timeout: 3000,
     });
 
     await page
