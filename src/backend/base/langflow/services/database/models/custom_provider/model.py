@@ -173,7 +173,9 @@ class CustomProviderUpdate(SQLModel):
 
     @field_validator("models")
     @classmethod
-    def validate_unique_models(cls, v: list[CustomProviderModelSchema] | None) -> list[CustomProviderModelSchema] | None:
+    def validate_unique_models(
+        cls, v: list[CustomProviderModelSchema] | None
+    ) -> list[CustomProviderModelSchema] | None:
         if v is not None:
             return _validate_unique_model_names(v)
         return v

@@ -1061,10 +1061,7 @@ def get_language_model_options(
     # Append custom provider models (per-user, from DB)
     custom_options = get_custom_provider_options(user_id)
     if tool_calling is not None:
-        custom_options = [
-            opt for opt in custom_options
-            if opt.get("metadata", {}).get("tool_calling") == tool_calling
-        ]
+        custom_options = [opt for opt in custom_options if opt.get("metadata", {}).get("tool_calling") == tool_calling]
     options.extend(custom_options)
 
     # Add disabled providers (providers that exist in metadata but have no enabled models)
