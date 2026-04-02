@@ -21,7 +21,7 @@ spec:
           command:
             - sh
             - -c
-            - mkdir -p /mnt/nfs/{{ .Values.empno }} && chmod 777 /mnt/nfs/{{ .Values.empno }}
+            - mkdir -p /mnt/nfs/langflow-{{ .Values.empno }} && chmod 777 /mnt/nfs/langflow-{{ .Values.empno }}
           volumeMounts:
             - name: data
               mountPath: /mnt/nfs
@@ -75,7 +75,7 @@ spec:
             - name: data
               mountPath: /app/data
               {{- if .Values.nfs.enabled }}
-              subPath: {{ .Values.empno }}
+              subPath: langflow-{{ .Values.empno }}
               {{- end }}
             {{- if .Values.ssl.enabled }}
             - name: ca-cert
