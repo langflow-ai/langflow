@@ -17,7 +17,7 @@ spec:
       {{- if .Values.nfs.enabled }}
       initContainers:
         - name: nfs-init
-          image: busybox:1.36
+          image: {{ .Values.nfs.initImage }}
           command:
             - sh
             - -c
