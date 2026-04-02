@@ -1,17 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Input } from "@/components/ui/input";
 import { useGetProviderAccounts } from "@/controllers/API/queries/deployment-provider-accounts/use-get-provider-accounts";
 import { cn } from "@/utils/utils";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
-import type {
-  DeploymentProvider,
-  ProviderAccount,
-  ProviderCredentials,
-} from "../types";
+import type { DeploymentProvider, ProviderAccount } from "../types";
+import ProviderCredentialsForm from "./provider-credentials-form";
 import { RadioSelectItem } from "./radio-select-item";
 
-// TODO: replace with real API data when multi-provider support is added
 const PROVIDERS: DeploymentProvider[] = [
   {
     id: "watsonx",
@@ -100,96 +95,6 @@ function EnvironmentList({
   );
 }
 
-function NewEnvironmentForm({
-  provider,
-  credentials,
-  onCredentialsChange,
-}: {
-  provider: DeploymentProvider;
-  credentials: ProviderCredentials;
-  onCredentialsChange: (credentials: ProviderCredentials) => void;
-}) {
-  const [showApiKey, setShowApiKey] = useState(false);
-
-  return (
-    <div className="flex flex-col gap-4">
-      <p className="text-sm text-muted-foreground">
-        Configure your {provider.name} credentials below. Sign in or sign up to{" "}
-        <span className="font-semibold text-foreground">
-          find your credentials
-        </span>
-        .
-      </p>
-      <div className="flex flex-col">
-        <span className="pb-2 text-sm font-medium">
-          Name <span className="text-destructive">*</span>
-        </span>
-        <Input
-          type="text"
-          placeholder="e.g. Production"
-          className="bg-muted"
-          value={credentials.name}
-          onChange={(e) =>
-            onCredentialsChange({
-              ...credentials,
-              name: e.target.value,
-            })
-          }
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col">
-          <span className="pb-2 text-sm font-medium">
-            API Key <span className="text-destructive">*</span>
-          </span>
-          <div className="relative">
-            <Input
-              type={showApiKey ? "text" : "password"}
-              placeholder="Enter your API key"
-              className="bg-muted pr-10"
-              value={credentials.api_key}
-              onChange={(e) =>
-                onCredentialsChange({
-                  ...credentials,
-                  api_key: e.target.value,
-                })
-              }
-            />
-            <button
-              type="button"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              onClick={() => setShowApiKey((prev) => !prev)}
-              tabIndex={-1}
-            >
-              <ForwardedIconComponent
-                name={showApiKey ? "EyeOff" : "Eye"}
-                className="h-4 w-4"
-              />
-            </button>
-          </div>
-        </div>
-        <div className="flex flex-col">
-          <span className="pb-2 text-sm font-medium">
-            Service Environment URL <span className="text-destructive">*</span>
-          </span>
-          <Input
-            type="url"
-            placeholder="https://api.example.com"
-            className="bg-muted"
-            value={credentials.provider_url}
-            onChange={(e) =>
-              onCredentialsChange({
-                ...credentials,
-                provider_url: e.target.value,
-              })
-            }
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function StepProvider() {
   const {
     setSelectedProvider,
@@ -203,19 +108,18 @@ export default function StepProvider() {
 
   useEffect(() => {
     setSelectedProvider(PROVIDERS[0]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setSelectedProvider]);
 
   const provider = PROVIDERS[0];
   const hasEnvironments = environments.length > 0;
 
   const [environmentTab, setEnvironmentTab] = useState<EnvironmentTab>("new");
-  const hasSetTabRef = useRef(false);
 
-  if (!hasSetTabRef.current && environments.length > 0) {
-    hasSetTabRef.current = true;
-    setEnvironmentTab("existing");
-  }
+  useEffect(() => {
+    if (environments.length > 0) {
+      setEnvironmentTab("existing");
+    }
+  }, [environments.length]);
 
   return (
     <div className="flex h-full w-full flex-col gap-6 overflow-y-auto py-3">
@@ -242,18 +146,18 @@ export default function StepProvider() {
               onSelectEnvironment={setSelectedInstance}
             />
           ) : (
-            <NewEnvironmentForm
-              provider={provider}
+            <ProviderCredentialsForm
               credentials={credentials}
               onCredentialsChange={setCredentials}
+              layout="two-column"
             />
           )}
         </div>
       ) : (
-        <NewEnvironmentForm
-          provider={provider}
+        <ProviderCredentialsForm
           credentials={credentials}
           onCredentialsChange={setCredentials}
+          layout="two-column"
         />
       )}
     </div>

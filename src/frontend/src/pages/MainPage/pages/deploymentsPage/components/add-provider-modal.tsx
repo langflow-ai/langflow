@@ -7,10 +7,10 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { usePostProviderAccount } from "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account";
-import useAlertStore from "@/stores/alertStore";
+import { useErrorAlert } from "../hooks/use-error-alert";
 import type { ProviderCredentials } from "../types";
+import ProviderCredentialsForm from "./provider-credentials-form";
 
 interface AddProviderModalProps {
   open: boolean;
@@ -31,10 +31,9 @@ export default function AddProviderModal({
   const [credentials, setCredentials] =
     useState<ProviderCredentials>(EMPTY_CREDENTIALS);
   const [isSaving, setIsSaving] = useState(false);
-  const [showApiKey, setShowApiKey] = useState(false);
 
   const { mutateAsync: createProviderAccount } = usePostProviderAccount();
-  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const showError = useErrorAlert();
 
   const canSave =
     credentials.name.trim() !== "" &&
@@ -44,7 +43,6 @@ export default function AddProviderModal({
   function handleClose() {
     if (isSaving) return;
     setCredentials(EMPTY_CREDENTIALS);
-    setShowApiKey(false);
     setOpen(false);
   }
 
@@ -61,12 +59,7 @@ export default function AddProviderModal({
       setCredentials(EMPTY_CREDENTIALS);
       setOpen(false);
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Something went wrong";
-      setErrorData({
-        title: "Failed to create environment",
-        list: [message],
-      });
+      showError("Failed to create environment", err);
     } finally {
       setIsSaving(false);
     }
@@ -89,67 +82,10 @@ export default function AddProviderModal({
             <span className="text-sm font-medium">watsonx Orchestrate</span>
           </div>
 
-          <div className="flex flex-col">
-            <span className="pb-2 text-sm font-medium">
-              Name <span className="text-destructive">*</span>
-            </span>
-            <Input
-              type="text"
-              placeholder="e.g. Production"
-              className="bg-muted"
-              value={credentials.name}
-              onChange={(e) =>
-                setCredentials({ ...credentials, name: e.target.value })
-              }
-            />
-          </div>
-
-          <div className="flex flex-col">
-            <span className="pb-2 text-sm font-medium">
-              API Key <span className="text-destructive">*</span>
-            </span>
-            <div className="relative">
-              <Input
-                type={showApiKey ? "text" : "password"}
-                placeholder="Enter your API key"
-                className="bg-muted pr-10"
-                value={credentials.api_key}
-                onChange={(e) =>
-                  setCredentials({ ...credentials, api_key: e.target.value })
-                }
-              />
-              <button
-                type="button"
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                onClick={() => setShowApiKey((prev) => !prev)}
-                tabIndex={-1}
-              >
-                <ForwardedIconComponent
-                  name={showApiKey ? "EyeOff" : "Eye"}
-                  className="h-4 w-4"
-                />
-              </button>
-            </div>
-          </div>
-
-          <div className="flex flex-col">
-            <span className="pb-2 text-sm font-medium">
-              Service Environment URL{" "}
-              <span className="text-destructive">*</span>
-            </span>
-            <Input
-              type="url"
-              placeholder="https://api.example.com"
-              className="bg-muted"
-              value={credentials.provider_url}
-              onChange={(e) =>
-                setCredentials({
-                  ...credentials,
-                  provider_url: e.target.value,
-                })
-              }
-            />
-          </div>
+          <ProviderCredentialsForm
+            credentials={credentials}
+            onCredentialsChange={setCredentials}
+          />
         </div>
 
         <div className="flex items-center justify-end gap-3 pt-4">

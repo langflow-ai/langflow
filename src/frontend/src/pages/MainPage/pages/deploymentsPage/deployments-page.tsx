@@ -1,13 +1,19 @@
-import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useDeleteProviderAccount } from "@/controllers/API/queries/deployment-provider-accounts/use-delete-provider-account";
 import { useGetProviderAccounts } from "@/controllers/API/queries/deployment-provider-accounts/use-get-provider-accounts";
 import { useDeleteDeployment } from "@/controllers/API/queries/deployments/use-delete-deployment";
-import { useGetDeployments } from "@/controllers/API/queries/deployments/use-get-deployments";
+import { useGetDeploymentsByProviders } from "@/controllers/API/queries/deployments/use-get-deployments-by-providers";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
-import useAlertStore from "@/stores/alertStore";
 import AddProviderModal from "./components/add-provider-modal";
 import DeploymentStepperModal from "./components/deployment-stepper-modal";
 import DeploymentsContent from "./components/deployments-content";
@@ -16,11 +22,15 @@ import SubTabToggle, {
   type DeploymentSubTab,
 } from "./components/sub-tab-toggle";
 import TestDeploymentModal from "./components/test-deployment-modal/test-deployment-modal";
+import { useErrorAlert } from "./hooks/use-error-alert";
 import type { Deployment, ProviderAccount } from "./types";
+
+const ALL_PROVIDERS = "all";
 
 export default function DeploymentsPage() {
   const [activeSubTab, setActiveSubTab] =
     useState<DeploymentSubTab>("deployments");
+  const [selectedProviderId, setSelectedProviderId] = useState(ALL_PROVIDERS);
   const [stepperOpen, setStepperOpen] = useState(false);
   const [addProviderOpen, setAddProviderOpen] = useState(false);
   const [testTarget, setTestTarget] = useState<{
@@ -37,7 +47,8 @@ export default function DeploymentsPage() {
   );
 
   const location = useLocation();
-  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const navigate = useNavigate();
+  const showError = useErrorAlert();
 
   // Auto-open test modal when navigated from canvas deploy button
   useEffect(() => {
@@ -48,67 +59,103 @@ export default function DeploymentsPage() {
     if (state?.testDeployment && state?.testProviderId) {
       setTestTarget(state.testDeployment);
       setTestProviderId(state.testProviderId);
-      // Clear the state so it doesn't re-trigger on re-renders
-      window.history.replaceState({}, "");
+      navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location.state]);
+  }, [location.state, location.pathname, navigate]);
 
   const { data: providersData, isLoading: isLoadingProviders } =
     useGetProviderAccounts({});
   const providers = providersData?.providers ?? [];
-  const firstProviderId = providers[0]?.id ?? "";
 
-  const { data, isLoading } = useGetDeployments(
-    { provider_id: firstProviderId },
-    { enabled: !!firstProviderId },
+  // Build provider id -> name lookup
+  const providerMap = useMemo(
+    () =>
+      Object.fromEntries(providers.map((p) => [p.id, p.name])) as Record<
+        string,
+        string
+      >,
+    [providers],
   );
-  const deployments = data?.deployments ?? [];
-  const isEmpty = !firstProviderId || deployments.length === 0;
+
+  // Determine which provider IDs to query
+  const providerIdsToQuery = useMemo(() => {
+    if (selectedProviderId !== ALL_PROVIDERS) return [selectedProviderId];
+    return providers.map((p) => p.id);
+  }, [selectedProviderId, providers]);
+
+  // Reset filter when the selected provider no longer exists
+  useEffect(() => {
+    if (
+      selectedProviderId !== ALL_PROVIDERS &&
+      providers.length > 0 &&
+      !providers.some((p) => p.id === selectedProviderId)
+    ) {
+      setSelectedProviderId(ALL_PROVIDERS);
+    }
+  }, [providers, selectedProviderId]);
+
+  // Fetch deployments for each selected provider in parallel
+  const { deployments, isLoading: isLoadingDeployments } =
+    useGetDeploymentsByProviders(providerIdsToQuery);
+
+  const hasProviders = providers.length > 0;
+  const isEmpty = !hasProviders || deployments.length === 0;
 
   const { mutate: deleteDeployment } = useDeleteDeployment();
   const { mutate: deleteProviderAccount } = useDeleteProviderAccount();
 
-  function handleConfirmDelete(
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent>,
-  ) {
-    e.stopPropagation();
-    if (!deleteTarget) return;
-    setDeletingId(deleteTarget.id);
-    setDeleteTarget(null);
-    deleteDeployment(
-      { deployment_id: deleteTarget.id },
-      {
-        onError: () => {
-          setErrorData({
-            title: "Error deleting deployment",
-            list: [`Failed to delete "${deleteTarget.name}"`],
-          });
+  const handleConfirmDelete = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+      e.stopPropagation();
+      if (!deleteTarget) return;
+      const target = deleteTarget;
+      setDeletingId(target.id);
+      setDeleteTarget(null);
+      deleteDeployment(
+        { deployment_id: target.id },
+        {
+          onError: (error: unknown) => {
+            showError("Error deleting deployment", error);
+          },
+          onSettled: () => setDeletingId(null),
         },
-        onSettled: () => setDeletingId(null),
-      },
-    );
-  }
+      );
+    },
+    [deleteTarget, deleteDeployment, showError],
+  );
 
-  function handleConfirmDeleteProvider(
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent>,
-  ) {
-    e.stopPropagation();
-    if (!deleteProviderTarget) return;
-    setDeletingProviderId(deleteProviderTarget.id);
-    setDeleteProviderTarget(null);
-    deleteProviderAccount(
-      { provider_id: deleteProviderTarget.id },
-      {
-        onError: () => {
-          setErrorData({
-            title: "Error deleting environment",
-            list: [`Failed to delete "${deleteProviderTarget.name}"`],
-          });
+  const handleConfirmDeleteProvider = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+      e.stopPropagation();
+      if (!deleteProviderTarget) return;
+      const target = deleteProviderTarget;
+      setDeletingProviderId(target.id);
+      setDeleteProviderTarget(null);
+      deleteProviderAccount(
+        { provider_id: target.id },
+        {
+          onError: (error: unknown) => {
+            showError("Error deleting environment", error);
+          },
+          onSettled: () => setDeletingProviderId(null),
         },
-        onSettled: () => setDeletingProviderId(null),
-      },
-    );
-  }
+      );
+    },
+    [deleteProviderTarget, deleteProviderAccount, showError],
+  );
+
+  const handleTestDeployment = useCallback((deployment: Deployment) => {
+    setTestTarget(deployment);
+    setTestProviderId(deployment.provider_account_id ?? "");
+  }, []);
+
+  const handleTestFromStepper = useCallback(
+    (deployment: { id: string; name: string }, providerId: string) => {
+      setTestTarget(deployment);
+      setTestProviderId(providerId);
+    },
+    [],
+  );
 
   return (
     <div className="flex flex-col gap-4 pt-4">
@@ -132,19 +179,43 @@ export default function DeploymentsPage() {
       </div>
 
       {activeSubTab === "deployments" && (
-        <DeploymentsContent
-          isLoading={isLoading}
-          isEmpty={isEmpty}
-          deployments={deployments}
-          providerName={providers[0]?.name ?? ""}
-          deletingId={deletingId}
-          onCreateDeployment={() => setStepperOpen(true)}
-          onTestDeployment={(deployment) => {
-            setTestTarget(deployment);
-            setTestProviderId(firstProviderId);
-          }}
-          onDeleteDeployment={setDeleteTarget}
-        />
+        <>
+          {providers.length > 1 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                Environment:
+              </span>
+              <Select
+                value={selectedProviderId}
+                onValueChange={setSelectedProviderId}
+              >
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_PROVIDERS}>
+                    All environments
+                  </SelectItem>
+                  {providers.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <DeploymentsContent
+            isLoading={isLoadingProviders || isLoadingDeployments}
+            isEmpty={isEmpty}
+            deployments={deployments}
+            providerMap={providerMap}
+            deletingId={deletingId}
+            onCreateDeployment={() => setStepperOpen(true)}
+            onTestDeployment={handleTestDeployment}
+            onDeleteDeployment={setDeleteTarget}
+          />
+        </>
       )}
 
       {activeSubTab === "providers" && (
@@ -160,10 +231,7 @@ export default function DeploymentsPage() {
       <DeploymentStepperModal
         open={stepperOpen}
         setOpen={setStepperOpen}
-        onTestDeployment={(deployment, providerId) => {
-          setTestTarget(deployment);
-          setTestProviderId(providerId);
-        }}
+        onTestDeployment={handleTestFromStepper}
       />
 
       <TestDeploymentModal

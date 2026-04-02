@@ -22,7 +22,10 @@ export interface DeploymentCreateRequest {
       existing_app_ids: string[];
       raw_payloads: Array<{
         app_id: string;
-        environment_variables: Record<string, { value: string; source: "raw" | "variable" }>;
+        environment_variables: Record<
+          string,
+          { value: string; source: "raw" | "variable" }
+        >;
       }>;
     };
   };

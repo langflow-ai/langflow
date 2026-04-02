@@ -572,6 +572,109 @@ class TestListDeploymentsLoadFromProvider:
             )
         assert exc_info.value.status_code == 422
 
+    @pytest.mark.asyncio
+    async def test_load_from_provider_rejects_flow_ids_filter(self):
+        from langflow.api.v1.deployments import list_deployments
+
+        with pytest.raises(HTTPException) as exc_info:
+            await list_deployments(
+                provider_id=uuid4(),
+                session=AsyncMock(),
+                current_user=_fake_user(),
+                params=SimpleNamespace(page=1, size=20),
+                deployment_type=None,
+                load_from_provider=True,
+                flow_ids=[str(uuid4())],
+            )
+        assert exc_info.value.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# list_deployments: flow_ids filter
+# ---------------------------------------------------------------------------
+
+
+class TestListDeploymentsFlowIdsFilter:
+    @pytest.mark.asyncio
+    async def test_flow_ids_and_flow_version_ids_mutually_exclusive(self):
+        from langflow.api.v1.deployments import list_deployments
+
+        with pytest.raises(HTTPException) as exc_info:
+            await list_deployments(
+                provider_id=uuid4(),
+                session=AsyncMock(),
+                current_user=_fake_user(),
+                params=SimpleNamespace(page=1, size=20),
+                deployment_type=None,
+                load_from_provider=False,
+                flow_version_ids=[str(uuid4())],
+                flow_ids=[str(uuid4())],
+            )
+        assert exc_info.value.status_code == 422
+        assert "mutually exclusive" in exc_info.value.detail
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.flow_version_ids_for_flows", new_callable=AsyncMock, return_value=[])
+    async def test_flow_ids_no_versions_returns_empty(self, mock_fv_for_flows):
+        from langflow.api.v1.deployments import list_deployments
+
+        result = await list_deployments(
+            provider_id=uuid4(),
+            session=AsyncMock(),
+            current_user=_fake_user(),
+            params=SimpleNamespace(page=1, size=20),
+            deployment_type=None,
+            load_from_provider=False,
+            flow_ids=[str(uuid4())],
+        )
+
+        assert result.deployments == []
+        assert result.total == 0
+        mock_fv_for_flows.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.flow_version_ids_for_flows", new_callable=AsyncMock)
+    async def test_flow_ids_resolves_to_flow_version_ids(
+        self,
+        mock_fv_for_flows,
+        mock_get_pa,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_list_synced,
+    ):
+        from langflow.api.v1.deployments import list_deployments
+
+        fv_id = uuid4()
+        mock_fv_for_flows.return_value = [fv_id]
+
+        pa = _fake_provider_account()
+        mock_get_pa.return_value = pa
+        mock_resolve_adapter.return_value = AsyncMock()
+
+        mapper = MagicMock()
+        mapper.shape_deployment_list_items.return_value = []
+        mock_get_mapper.return_value = mapper
+
+        mock_list_synced.return_value = ([], 0)
+
+        await list_deployments(
+            provider_id=pa.id,
+            session=AsyncMock(),
+            current_user=_fake_user(),
+            params=SimpleNamespace(page=1, size=20),
+            deployment_type=None,
+            load_from_provider=False,
+            flow_ids=[str(uuid4())],
+        )
+
+        mock_list_synced.assert_awaited_once()
+        call_kwargs = mock_list_synced.call_args.kwargs
+        assert call_kwargs["flow_version_ids"] == [fv_id]
+
 
 # ---------------------------------------------------------------------------
 # config/snapshot passthrough listing routes

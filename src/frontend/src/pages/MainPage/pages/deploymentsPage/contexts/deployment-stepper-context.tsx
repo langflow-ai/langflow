@@ -25,11 +25,15 @@ interface DeploymentStepperInitialState {
     { versionId: string; versionTag: string }
   >;
   initialFlowId?: string;
+  initialProvider?: DeploymentProvider;
+  initialInstance?: ProviderAccount;
+  initialStep?: number;
 }
 
 interface DeploymentStepperContextType {
   // Navigation
   currentStep: number;
+  minStep: number;
   canGoNext: boolean;
   handleNext: () => void;
   handleBack: () => void;
@@ -81,11 +85,12 @@ export function DeploymentStepperProvider({
   children: ReactNode;
   initialState?: DeploymentStepperInitialState;
 }) {
-  const [currentStep, setCurrentStep] = useState(1);
+  const minStep = initialState?.initialStep ?? 1;
+  const [currentStep, setCurrentStep] = useState(minStep);
   const [selectedProvider, setSelectedProviderState] =
-    useState<DeploymentProvider | null>(null);
+    useState<DeploymentProvider | null>(initialState?.initialProvider ?? null);
   const [selectedInstance, setSelectedInstance] =
-    useState<ProviderAccount | null>(null);
+    useState<ProviderAccount | null>(initialState?.initialInstance ?? null);
   const [credentials, setCredentials] = useState<ProviderCredentials>({
     name: "",
     provider_key: "",
@@ -124,8 +129,8 @@ export function DeploymentStepperProvider({
   }, []);
 
   const handleBack = useCallback(() => {
-    setCurrentStep((prev) => (prev > 1 ? prev - 1 : prev));
-  }, []);
+    setCurrentStep((prev) => (prev > minStep ? prev - 1 : prev));
+  }, [minStep]);
 
   const setSelectedProvider = useCallback((provider: DeploymentProvider) => {
     setSelectedProviderState(provider);
@@ -246,6 +251,7 @@ export function DeploymentStepperProvider({
   const value = useMemo<DeploymentStepperContextType>(
     () => ({
       currentStep,
+      minStep,
       canGoNext,
       handleNext,
       handleBack,
@@ -276,6 +282,7 @@ export function DeploymentStepperProvider({
     }),
     [
       currentStep,
+      minStep,
       canGoNext,
       handleNext,
       handleBack,

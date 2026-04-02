@@ -14,10 +14,13 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
     DeploymentFlowVersionListItem,
     DeploymentFlowVersionListResponse,
+    DeploymentListItem,
+    DeploymentListItemAttachment,
     DeploymentProviderAccountCreateRequest,
     DeploymentProviderAccountGetResponse,
     DeploymentProviderAccountUpdateRequest,
     DeploymentUpdateRequest,
+    FlowIdsQuery,
     FlowVersionsAttach,
     FlowVersionsPatch,
 )
@@ -462,3 +465,106 @@ class TestDeploymentFlowVersionListSchemas:
         assert response.page == 2
         assert response.size == 5
         assert response.total == 9
+
+
+# ---------------------------------------------------------------------------
+# FlowIdsQuery validation
+# ---------------------------------------------------------------------------
+
+
+class TestFlowIdsQueryValidation:
+    """Validate the FlowIdsQuery annotated type used for the list_deployments filter."""
+
+    def test_none_passes_through(self):
+        from pydantic import TypeAdapter
+
+        adapter = TypeAdapter(FlowIdsQuery)
+        assert adapter.validate_python(None) is None
+
+    def test_single_valid_uuid(self):
+        from pydantic import TypeAdapter
+
+        uid = uuid4()
+        adapter = TypeAdapter(FlowIdsQuery)
+        result = adapter.validate_python([uid])
+        assert result == [uid]
+
+    def test_accepts_string_uuid(self):
+        from pydantic import TypeAdapter
+
+        uid = uuid4()
+        adapter = TypeAdapter(FlowIdsQuery)
+        result = adapter.validate_python([str(uid)])
+        assert result == [uid]
+
+    def test_rejects_more_than_one(self):
+        from pydantic import TypeAdapter, ValidationError
+
+        adapter = TypeAdapter(FlowIdsQuery)
+        with pytest.raises(ValidationError, match="at most 1"):
+            adapter.validate_python([uuid4(), uuid4()])
+
+    def test_rejects_invalid_uuid(self):
+        from pydantic import TypeAdapter, ValidationError
+
+        adapter = TypeAdapter(FlowIdsQuery)
+        with pytest.raises(ValidationError):
+            adapter.validate_python(["not-a-uuid"])
+
+    def test_rejects_empty_list(self):
+        from pydantic import TypeAdapter, ValidationError
+
+        adapter = TypeAdapter(FlowIdsQuery)
+        with pytest.raises(ValidationError, match="flow_ids"):
+            adapter.validate_python([])
+
+    def test_deduplicates(self):
+        from pydantic import TypeAdapter
+
+        uid = uuid4()
+        adapter = TypeAdapter(FlowIdsQuery)
+        result = adapter.validate_python([uid, uid])
+        assert result == [uid]
+
+
+# ---------------------------------------------------------------------------
+# DeploymentListItemAttachment / matched_attachments
+# ---------------------------------------------------------------------------
+
+
+class TestDeploymentListItemAttachment:
+    def test_basic_construction(self):
+        fv_id = uuid4()
+        att = DeploymentListItemAttachment(flow_version_id=fv_id, provider_snapshot_id="snap-1")
+        assert att.flow_version_id == fv_id
+        assert att.provider_snapshot_id == "snap-1"
+
+    def test_provider_snapshot_id_defaults_to_none(self):
+        fv_id = uuid4()
+        att = DeploymentListItemAttachment(flow_version_id=fv_id)
+        assert att.provider_snapshot_id is None
+
+
+class TestDeploymentListItemMatchedAttachments:
+    def _make_item(self, **kwargs):
+        defaults = {"id": uuid4(), "name": "dep", "type": "agent", "resource_key": "rk-1"}
+        defaults.update(kwargs)
+        return DeploymentListItem(**defaults)
+
+    def test_defaults_to_none(self):
+        item = self._make_item()
+        assert item.matched_attachments is None
+
+    def test_accepts_attachment_list(self):
+        fv_id = uuid4()
+        item = self._make_item(
+            matched_attachments=[
+                DeploymentListItemAttachment(flow_version_id=fv_id, provider_snapshot_id="snap-1"),
+            ],
+        )
+        assert len(item.matched_attachments) == 1
+        assert item.matched_attachments[0].flow_version_id == fv_id
+
+    def test_accepts_empty_list(self):
+        item = self._make_item(matched_attachments=[])
+        assert item.matched_attachments == []

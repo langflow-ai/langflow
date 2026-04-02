@@ -33,6 +33,7 @@ from lfx.services.adapters.deployment.payloads import (
     T_SnapshotItemData,
     T_SnapshotListParams,
     T_SnapshotListResult,
+    T_SnapshotUpdateResult,
     T_VerifyCredentials,
     T_VerifyCredentialsResult,
 )
@@ -416,6 +417,12 @@ class SnapshotListResult(
     """Model representing a result for a snapshot list operation."""
 
     snapshots: list[SnapshotItem[T_SnapshotItemData]] = Field(description="The list of snapshots")
+
+
+class SnapshotUpdateResult(ProviderResultModel[T_SnapshotUpdateResult]):
+    """Model representing a result for a snapshot update operation."""
+
+    snapshot_id: str = Field(description="The provider-owned snapshot identifier")
 
 
 class _BaseListParams(BaseModel, Generic[T_ListParamsPayload]):
