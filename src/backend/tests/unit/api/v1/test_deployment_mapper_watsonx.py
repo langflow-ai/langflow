@@ -1354,7 +1354,7 @@ def test_wxo_mapper_resolve_verify_credentials_rejects_extra_fields() -> None:
 
 @pytest.mark.asyncio
 async def test_watsonx_mapper_create_preserves_env_var_source_in_connection_payloads() -> None:
-    """Connections with environment_variables should preserve source (raw vs variable) through to the adapter payload."""
+    """Connections with environment_variables preserve source (raw vs variable) in adapter payloads."""
     mapper = WatsonxOrchestrateDeploymentMapper()
     flow_version_id = uuid4()
     flow_id = uuid4()
