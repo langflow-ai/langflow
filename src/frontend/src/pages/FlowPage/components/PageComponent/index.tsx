@@ -158,6 +158,7 @@ export default function Page({
 
   // Keep banner mounted during exit animation, preserve last text
   const [bannerVisible, setBannerVisible] = useState(false);
+  const bannerVisibleRef = useRef(false);
   const [bannerExiting, setBannerExiting] = useState(false);
   const [bannerText, setBannerText] = useState(
     "Agent is working on this flow...",
@@ -177,11 +178,13 @@ export default function Page({
     if (isAgentWorking) {
       setBannerExiting(false);
       setBannerVisible(true);
-    } else if (bannerVisible) {
+      bannerVisibleRef.current = true;
+    } else if (bannerVisibleRef.current) {
       // bannerText is already frozen - don't update it during exit
       setBannerExiting(true);
       const timer = setTimeout(() => {
         setBannerVisible(false);
+        bannerVisibleRef.current = false;
         setBannerExiting(false);
         setBannerText("Agent is working on this flow...");
       }, 350);

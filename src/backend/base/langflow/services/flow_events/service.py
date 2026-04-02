@@ -5,7 +5,7 @@ import tempfile
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, get_args
 
 from diskcache import Cache
 
@@ -35,6 +35,12 @@ class FlowEventsService(Service):
     Uses diskcache for cross-worker visibility (multiple uvicorn/gunicorn workers
     share the same SQLite-backed cache directory). TTL-based cleanup is handled
     by diskcache's built-in expiry.
+
+    Limitations:
+    - Events are ephemeral: lost on disk cleanup or container restart.
+      This is acceptable since events only drive transient UI state (banner, canvas lock).
+    - Multiple browser tabs polling the same flow will each see events independently
+      but may show slightly different banner/lock state due to independent polling cycles.
     """
 
     name = "flow_events_service"
@@ -48,7 +54,12 @@ class FlowEventsService(Service):
             cache_dir = Path(tempfile.gettempdir()) / "langflow_flow_events"
         self._cache = Cache(str(cache_dir))
 
+    _VALID_EVENT_TYPES: frozenset[str] = frozenset(get_args(FLOW_EVENT_TYPES))
+
     def append(self, flow_id: str, event_type: str, summary: str = "") -> FlowEvent:
+        if event_type not in self._VALID_EVENT_TYPES:
+            msg = f"Invalid event type: {event_type!r}. Must be one of {sorted(self._VALID_EVENT_TYPES)}"
+            raise ValueError(msg)
         event = FlowEvent(type=event_type, timestamp=time.time(), summary=summary)
         key = f"flow_events:{flow_id}"
 
