@@ -10,6 +10,7 @@ from sqlmodel import Field, SQLModel
 class JobStatus(str, Enum):
     QUEUED = "queued"
     IN_PROGRESS = "in_progress"
+    PAUSED = "paused"
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"

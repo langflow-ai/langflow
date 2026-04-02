@@ -134,6 +134,34 @@ def get_transaction_service() -> TransactionServiceProtocol | None:
     return get_service(ServiceType.TRANSACTION_SERVICE)
 
 
+_default_checkpoint_store = None
+
+
+def get_checkpoint_service():
+    """Retrieves the checkpoint service instance.
+
+    Returns a module-level singleton InMemoryCheckpointStore if no checkpoint
+    service is registered. This ensures the same store is used across the
+    executor (which saves checkpoints) and the API (which loads them).
+
+    WARNING: The default InMemoryCheckpointStore only works with a single
+    server worker. Checkpoints are lost on restart and invisible to other
+    workers. Register a DatabaseCheckpointStore via the service manager
+    for production multi-worker deployments.
+    """
+    global _default_checkpoint_store  # noqa: PLW0603
+
+    service = get_service(ServiceType.CHECKPOINT_SERVICE)
+    if service is not None:
+        return service
+
+    if _default_checkpoint_store is None:
+        from lfx.services.checkpoint.service import InMemoryCheckpointStore
+
+        _default_checkpoint_store = InMemoryCheckpointStore()
+    return _default_checkpoint_store
+
+
 def get_auth_service() -> AuthServiceProtocol | None:
     """Retrieves the auth service instance.
 
