@@ -269,7 +269,6 @@ def create_wxo_flow_tool(
             msg = "Unable to determine running Langflow version for snapshot creation."
             raise InvalidContentError(message=msg)
         flow_definition["last_tested_version"] = detected_version
-
     tool: LangflowTool = create_langflow_tool(
         tool_definition=flow_definition,
         connections=connections,

@@ -24,6 +24,7 @@ deployment mapper layer.
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse, urlunparse
 
@@ -35,13 +36,27 @@ from langflow.services.database.utils import validate_non_empty_string
 
 _ALLOWED_URL_SCHEMES = frozenset({"https"})
 _MAX_URL_LENGTH = 2048
+_WXO_LOCAL_DEV_ENV = "LANGFLOW_WXO_LOCAL_DEV"
+_LOCAL_HTTP_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
+
+
+def _wxo_local_dev_enabled() -> bool:
+    return os.getenv(_WXO_LOCAL_DEV_ENV, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _http_localhost_allowed(hostname: str) -> bool:
+    if not _wxo_local_dev_enabled():
+        return False
+    host = (hostname or "").lower()
+    return host in _LOCAL_HTTP_HOSTS
 
 
 def validate_provider_url(v: str, info: object) -> str:
     """Validate and normalize a provider URL.
 
-    Enforces HTTPS-only, rejects embedded credentials, validates the URL
-    structure, and normalises scheme + host to lowercase.
+    Enforces HTTPS-only (except ``http://`` on loopback when
+    ``LANGFLOW_WXO_LOCAL_DEV`` is enabled), rejects embedded credentials,
+    validates the URL structure, and normalises scheme + host to lowercase.
     """
     stripped = validate_non_empty_string(v, info)
     field = getattr(info, "field_name", "Field")
@@ -51,8 +66,11 @@ def validate_provider_url(v: str, info: object) -> str:
         raise ValueError(msg)
 
     parsed = urlparse(stripped)
-
-    if parsed.scheme.lower() not in _ALLOWED_URL_SCHEMES:
+    scheme_l = parsed.scheme.lower()
+    hostname = parsed.hostname
+    if scheme_l == "http" and _http_localhost_allowed(hostname or ""):
+        pass
+    elif scheme_l not in _ALLOWED_URL_SCHEMES:
         msg = f"{field} must use the https scheme"
         raise ValueError(msg)
 
@@ -60,7 +78,6 @@ def validate_provider_url(v: str, info: object) -> str:
         msg = f"{field} must not contain user credentials"
         raise ValueError(msg)
 
-    hostname = parsed.hostname
     if not hostname:
         msg = f"{field} must contain a valid hostname"
         raise ValueError(msg)
@@ -107,6 +124,12 @@ def check_provider_url_allowed(url: str, provider_key: str | DeploymentProviderK
         raise ValueError(msg)
 
     hostname = urlparse(url).hostname or ""
+    if (
+        key == DeploymentProviderKey.WATSONX_ORCHESTRATE
+        and _wxo_local_dev_enabled()
+        and hostname.lower() in _LOCAL_HTTP_HOSTS
+    ):
+        return
     if any(hostname == s.lstrip(".") or hostname.endswith(s) for s in suffixes):
         return
 

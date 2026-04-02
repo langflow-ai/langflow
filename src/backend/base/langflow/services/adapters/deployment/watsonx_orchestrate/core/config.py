@@ -36,7 +36,6 @@ async def create_config(
 ) -> str:
     """Create/update a wxO draft key-value connection config plus runtime credentials."""
     app_id = validate_wxo_name(config.name)
-
     await asyncio.to_thread(clients.connections.create, payload={"app_id": app_id})
 
     wxo_config = ConnectionConfiguration(

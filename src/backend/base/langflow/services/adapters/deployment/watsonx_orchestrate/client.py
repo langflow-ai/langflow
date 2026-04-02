@@ -27,6 +27,12 @@ from lfx.services.adapters.deployment.schema import EnvVarSource, EnvVarValueSpe
 
 from langflow.services.adapters.deployment.context import DeploymentProviderIDContext
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import WxOAuthURL
+from langflow.services.adapters.deployment.watsonx_orchestrate.local_dev import (
+    StaticJwtAuthenticator,
+    is_wxo_local_instance_url,
+    resolve_wxo_local_bearer_token,
+    wxo_local_dev_enabled,
+)
 from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient, WxOCredentials
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.deployment_provider_account.crud import get_provider_account_by_id
@@ -136,6 +142,23 @@ def get_authenticator(instance_url: str, api_key: str) -> IAMAuthenticator | MCS
     raise AuthSchemeError(message=msg)
 
 
+def resolve_wxo_authenticator(
+    instance_url: str,
+    api_key: str,
+) -> IAMAuthenticator | MCSPAuthenticator | StaticJwtAuthenticator:
+    """Resolve authenticator for wxO, including optional local loopback + JWT dev mode."""
+    if wxo_local_dev_enabled() and is_wxo_local_instance_url(instance_url):
+        token = resolve_wxo_local_bearer_token(api_key=api_key)
+        if not token:
+            msg = (
+                "Local Watsonx Orchestrate requires JWT auth: set WXO_MCSP_LOCAL_TOKEN "
+                "or paste a JWT as the provider API key."
+            )
+            raise AuthSchemeError(message=msg)
+        return StaticJwtAuthenticator(token)
+    return get_authenticator(instance_url=instance_url, api_key=api_key)
+
+
 async def resolve_wxo_client_credentials(
     *,
     user_id: UUID | str,
@@ -159,7 +182,15 @@ async def resolve_wxo_client_credentials(
 
         instance_url = (provider_account.provider_url or "").strip()
         api_key = auth_utils.decrypt_api_key((provider_account.api_key or "").strip())
-        if not instance_url or not api_key:
+        if not instance_url:
+            msg = "Watsonx Orchestrate backend URL and API key must be configured."
+            raise CredentialResolutionError(message=msg)
+        local_bearer_ok = (
+            wxo_local_dev_enabled()
+            and is_wxo_local_instance_url(instance_url)
+            and bool(resolve_wxo_local_bearer_token(api_key=api_key))
+        )
+        if not api_key and not local_bearer_ok:
             msg = "Watsonx Orchestrate backend URL and API key must be configured."
             raise CredentialResolutionError(message=msg)
 
@@ -169,7 +200,7 @@ async def resolve_wxo_client_credentials(
         msg = "An unexpected error occurred while resolving Watsonx Orchestrate client credentials."
         raise CredentialResolutionError(message=msg) from exc
 
-    authenticator = get_authenticator(instance_url=instance_url, api_key=api_key)
+    authenticator = resolve_wxo_authenticator(instance_url=instance_url, api_key=api_key)
     return WxOCredentials(instance_url=instance_url, authenticator=authenticator)
 
 

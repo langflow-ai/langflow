@@ -15,6 +15,11 @@ from ibm_watsonx_orchestrate_clients.common.base_client import BaseWXOClient
 from ibm_watsonx_orchestrate_clients.connections.connections_client import ConnectionsClient
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ToolClient
 
+from langflow.services.adapters.deployment.watsonx_orchestrate.local_dev import (
+    is_wxo_local_instance_url,
+    wxo_local_api_root_override,
+)
+
 if TYPE_CHECKING:
     from ibm_cloud_sdk_core.authenticators import Authenticator
 
@@ -43,10 +48,23 @@ class WxOClient:
             raise ValueError(msg)
         # Use object.__setattr__ because the dataclass is frozen.
         object.__setattr__(self, "instance_url", url)
-        object.__setattr__(self, "base", BaseWXOClient(base_url=url, authenticator=self.authenticator))
-        object.__setattr__(self, "tool", ToolClient(base_url=url, authenticator=self.authenticator))
-        object.__setattr__(self, "connections", ConnectionsClient(base_url=url, authenticator=self.authenticator))
-        object.__setattr__(self, "agent", AgentClient(base_url=url, authenticator=self.authenticator))
+        is_local = is_wxo_local_instance_url(url)
+        client_kw: dict[str, Any] = {"base_url": url, "authenticator": self.authenticator}
+        if is_local:
+            client_kw["is_local"] = True
+        base = BaseWXOClient(**client_kw)
+        tool = ToolClient(**client_kw)
+        connections = ConnectionsClient(**client_kw)
+        agent = AgentClient(**client_kw)
+        api_root = wxo_local_api_root_override()
+        if api_root:
+            normalized_root = api_root.rstrip("/")
+            for client in (base, tool, connections, agent):
+                client.base_url = normalized_root
+        object.__setattr__(self, "base", base)
+        object.__setattr__(self, "tool", tool)
+        object.__setattr__(self, "connections", connections)
+        object.__setattr__(self, "agent", agent)
 
     # -- SDK private-method wrappers ------------------------------------------
     # Centralise access to SDK-internal _get/_post so breakage from SDK

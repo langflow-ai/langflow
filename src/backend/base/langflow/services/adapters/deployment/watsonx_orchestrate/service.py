@@ -59,7 +59,10 @@ from lfx.services.adapters.deployment.schema import (
 )
 from lfx.services.adapters.payload import AdapterPayloadMissingError, AdapterPayloadValidationError
 
-from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_authenticator, get_provider_clients
+from langflow.services.adapters.deployment.watsonx_orchestrate.client import (
+    get_provider_clients,
+    resolve_wxo_authenticator,
+)
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
     SUPPORTED_ADAPTER_DEPLOYMENT_TYPES,
     ErrorPrefix,
@@ -923,7 +926,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         )
 
         try:
-            authenticator = get_authenticator(
+            authenticator = resolve_wxo_authenticator(
                 instance_url=payload.base_url,
                 api_key=provider_creds.api_key,
             )
