@@ -29,6 +29,7 @@ RUN apt-get update \
 # Copy only backend source (excludes frontend)
 COPY ./src/backend ./src/backend
 COPY ./src/lfx ./src/lfx
+COPY ./src/sdk ./src/sdk
 
 # Create venv and install langflow-base with dependencies
 # Using uv pip instead of uv sync to avoid workspace complexities
@@ -37,7 +38,7 @@ ENV PATH="/app/.venv/bin:$PATH"
 ENV VIRTUAL_ENV="/app/.venv"
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install ./src/lfx "./src/backend/base[complete,postgresql]"
+    uv pip install ./src/sdk ./src/lfx "./src/backend/base[complete,postgresql]"
 
 ################################
 # RUNTIME

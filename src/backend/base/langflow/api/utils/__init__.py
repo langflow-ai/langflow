@@ -5,7 +5,7 @@ from the core module. This ensures existing imports continue to work while
 allowing for better code organization.
 """
 
-# Re-export everything from core module to maintain backward compatibility
+# Re-export everything from core and flow_utils modules to maintain backward compatibility
 from langflow.api.utils.core import (
     API_WORDS,
     MAX_PAGE_SIZE,
@@ -17,12 +17,7 @@ from langflow.api.utils.core import (
     EventDeliveryType,
     ValidatedFileName,
     ValidatedFolderName,
-    build_and_cache_graph_from_data,
-    build_graph_from_data,
-    build_graph_from_db,
-    build_graph_from_db_no_cache,
     build_input_keys_response,
-    cascade_delete_flow,
     check_langflow_version,
     custom_params,
     extract_global_variables_from_headers,
@@ -34,11 +29,20 @@ from langflow.api.utils.core import (
     get_suggestion_message,
     get_top_level_vertices,
     has_api_terms,
+    normalize_code_for_import,
+    normalize_flow_for_export,
     parse_exception,
     parse_value,
     raise_error_if_astra_cloud_env,
     remove_api_keys,
     validate_is_component,
+)
+from langflow.api.utils.flow_utils import (
+    build_and_cache_graph_from_data,
+    build_graph_from_data,
+    build_graph_from_db,
+    build_graph_from_db_no_cache,
+    cascade_delete_flow,
     verify_public_flow_and_get_user,
 )
 
@@ -75,6 +79,8 @@ __all__ = [
     "get_top_level_vertices",
     # Functions
     "has_api_terms",
+    "normalize_code_for_import",
+    "normalize_flow_for_export",
     "parse_exception",
     "parse_value",
     "raise_error_if_astra_cloud_env",

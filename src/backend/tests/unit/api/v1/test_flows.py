@@ -151,6 +151,75 @@ async def test_update_flow(client: AsyncClient, logged_in_headers):
     assert result["name"] == updated_name, "The name must be updated"
 
 
+async def test_patch_flow_keeps_existing_endpoint_when_not_provided(client: AsyncClient, logged_in_headers):
+    """Test that PATCH preserves endpoint_name when the field is omitted."""
+    initial_flow = {
+        "name": "patch_endpoint_flow",
+        "endpoint_name": "keep_patch_endpoint",
+        "data": {},
+    }
+    create_response = await client.post("api/v1/flows/", json=initial_flow, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"name": "patch_endpoint_flow_updated"},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["endpoint_name"] == "keep_patch_endpoint"
+
+
+async def test_patch_flow_allows_clearing_endpoint_with_null(client: AsyncClient, logged_in_headers):
+    """Test that PATCH clears endpoint_name when it is explicitly set to null."""
+    initial_flow = {
+        "name": "patch_clear_endpoint_flow",
+        "endpoint_name": "clear_patch_endpoint",
+        "data": {},
+    }
+    create_response = await client.post("api/v1/flows/", json=initial_flow, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"endpoint_name": None},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["endpoint_name"] is None
+
+
+async def test_patch_flow_updates_access_and_action_fields(client: AsyncClient, logged_in_headers):
+    """PATCH should persist public-sharing and MCP action metadata fields."""
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": "patch_access_type_flow", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={
+            "access_type": "PUBLIC",
+            "action_name": "shared_action",
+            "action_description": "Shared flow action",
+        },
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+    assert result["access_type"] == "PUBLIC"
+    assert result["action_name"] == "shared_action"
+    assert result["action_description"] == "Shared flow action"
+
+
 async def test_create_flows(client: AsyncClient, logged_in_headers):
     amount_flows = 10
     basic_case = {
@@ -716,6 +785,48 @@ async def test_upsert_flow_keeps_existing_folder_on_update_when_not_provided(cli
     assert response.status_code == status.HTTP_200_OK
     result = response.json()
     assert result["folder_id"] == original_folder_id  # Folder unchanged
+
+
+async def test_upsert_flow_keeps_existing_endpoint_when_not_provided(client: AsyncClient, logged_in_headers):
+    """Test that PUT preserves endpoint_name when it is omitted during update."""
+    initial_flow = {
+        "name": "upsert_endpoint_flow",
+        "endpoint_name": "keep_upsert_endpoint",
+        "data": {},
+    }
+    create_response = await client.post("api/v1/flows/", json=initial_flow, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+
+    response = await client.put(
+        f"api/v1/flows/{flow_id}",
+        json={"name": "upsert_endpoint_flow_updated", "data": {}},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["endpoint_name"] == "keep_upsert_endpoint"
+
+
+async def test_upsert_flow_allows_clearing_endpoint_with_null(client: AsyncClient, logged_in_headers):
+    """Test that PUT clears endpoint_name when it is explicitly set to null."""
+    initial_flow = {
+        "name": "upsert_clear_endpoint_flow",
+        "endpoint_name": "clear_upsert_endpoint",
+        "data": {},
+    }
+    create_response = await client.post("api/v1/flows/", json=initial_flow, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+
+    response = await client.put(
+        f"api/v1/flows/{flow_id}",
+        json={"name": "upsert_clear_endpoint_flow", "endpoint_name": None, "data": {}},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["endpoint_name"] is None
 
 
 async def test_upsert_flow_ignores_user_id_from_body(client: AsyncClient, logged_in_headers, active_user):
