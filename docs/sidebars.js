@@ -476,6 +476,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "API-Reference/flow-devops-sdk",
+          label: "Flow DevOps Toolkit SDK",
+        },
+        {
+          type: "doc",
           id: "API-Reference/api-flows-run",
           label: "Flow trigger endpoints",
         },
