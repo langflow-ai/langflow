@@ -126,6 +126,7 @@ def test_watsonx_mapper_shapes_flow_version_list_result_with_enrichment() -> Non
         (
             SimpleNamespace(provider_snapshot_id="tool-1", created_at=attached_at),
             SimpleNamespace(id=flow_version_id, flow_id=flow_id, version_number=3),
+            "Flow A",
         )
     ]
     snapshot_result = SnapshotListResult(
@@ -150,6 +151,7 @@ def test_watsonx_mapper_shapes_flow_version_list_result_with_enrichment() -> Non
     assert len(shaped.flow_versions) == 1
     assert shaped.flow_versions[0].id == flow_version_id
     assert shaped.flow_versions[0].flow_id == flow_id
+    assert shaped.flow_versions[0].flow_name == "Flow A"
     assert shaped.flow_versions[0].version_number == 3
     assert shaped.flow_versions[0].attached_at == attached_at
     assert shaped.flow_versions[0].provider_snapshot_id == "tool-1"
@@ -162,6 +164,7 @@ def test_watsonx_mapper_flow_version_list_result_degrades_when_snapshot_result_m
         (
             SimpleNamespace(provider_snapshot_id="tool-1", created_at=datetime.now(tz=timezone.utc)),
             SimpleNamespace(id=uuid4(), flow_id=uuid4(), version_number=1),
+            "Flow A",
         )
     ]
 
@@ -185,6 +188,7 @@ def test_watsonx_mapper_flow_version_list_result_degrades_when_required_snapshot
         (
             SimpleNamespace(provider_snapshot_id="tool-1", created_at=datetime.now(tz=timezone.utc)),
             SimpleNamespace(id=uuid4(), flow_id=uuid4(), version_number=1),
+            "Flow A",
         )
     ]
     snapshot_result = SnapshotListResult(
@@ -220,6 +224,7 @@ def test_watsonx_mapper_flow_version_list_result_fails_fast_on_invalid_attachmen
         (
             SimpleNamespace(provider_snapshot_id=provider_snapshot_id, created_at=datetime.now(tz=timezone.utc)),
             SimpleNamespace(id=uuid4(), flow_id=uuid4(), version_number=1),
+            "Flow A",
         )
     ]
 
@@ -1493,7 +1498,10 @@ def test_wxo_mapper_resolve_verify_credentials_rejects_extra_fields() -> None:
 
 @pytest.mark.asyncio
 async def test_watsonx_mapper_create_preserves_env_var_source_in_connection_payloads() -> None:
-    """Connections with environment_variables should preserve source (raw vs variable) through to the adapter payload."""
+    """Connections with environment_variables should preserve source.
+
+    Preserve raw-vs-variable semantics all the way to the adapter payload.
+    """
     mapper = WatsonxOrchestrateDeploymentMapper()
     flow_version_id = uuid4()
     flow_id = uuid4()

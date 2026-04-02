@@ -1030,7 +1030,7 @@ async def list_deployment_flow_versions_synced(
     db: DbSession,
     page: int,
     size: int,
-) -> tuple[list[tuple[FlowVersionDeploymentAttachment, FlowVersion]], int, SnapshotListResult | None]:
+) -> tuple[list[tuple[FlowVersionDeploymentAttachment, FlowVersion, str | None]], int, SnapshotListResult | None]:
     """Return a paginated deployment attachment view synced against provider snapshots.
 
     Uses attachment-tracked ``provider_snapshot_id`` values to verify provider

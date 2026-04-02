@@ -349,6 +349,10 @@ class DeploymentFlowVersionListItem(BaseModel):
 
     id: UUID = Field(description="Langflow flow version UUID (`flow_version.id`).")
     flow_id: UUID = Field(description="Langflow flow UUID (`flow.id`) for this version.")
+    flow_name: str | None = Field(
+        default=None,
+        description="Name of the flow owning this version (`flow.name`).",
+    )
     version_number: int = Field(ge=1, description="Flow version number.")
     attached_at: datetime | None = Field(
         default=None,

@@ -110,6 +110,7 @@ if TYPE_CHECKING:
 class _NormalizedAttachmentRow:
     attachment: FlowVersionDeploymentAttachment
     flow_version: FlowVersion
+    flow_name: str | None
     snapshot_id: str
 
 
@@ -896,7 +897,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     def shape_flow_version_list_result(
         self,
         *,
-        rows: list[tuple[FlowVersionDeploymentAttachment, FlowVersion]],
+        rows: list[tuple[FlowVersionDeploymentAttachment, FlowVersion, str | None]],
         snapshot_result: SnapshotListResult | None,
         page: int,
         size: int,
@@ -911,6 +912,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             DeploymentFlowVersionListItem(
                 id=row.flow_version.id,
                 flow_id=row.flow_version.flow_id,
+                flow_name=row.flow_name,
                 version_number=row.flow_version.version_number,
                 attached_at=row.attachment.created_at,
                 provider_snapshot_id=row.snapshot_id,
@@ -928,10 +930,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
 
     def _normalize_flow_version_attachment_rows(
         self,
-        rows: list[tuple[FlowVersionDeploymentAttachment, FlowVersion]],
+        rows: list[tuple[FlowVersionDeploymentAttachment, FlowVersion, str | None]],
     ) -> list[_NormalizedAttachmentRow]:
         normalized_rows: list[_NormalizedAttachmentRow] = []
-        for attachment, flow_version in rows:
+        for attachment, flow_version, flow_name in rows:
             snapshot_id = (attachment.provider_snapshot_id or "").strip()
             if not snapshot_id:
                 msg = "Flow version attachment has an invalid provider_snapshot_id."
@@ -940,6 +942,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 _NormalizedAttachmentRow(
                     attachment=attachment,
                     flow_version=flow_version,
+                    flow_name=flow_name,
                     snapshot_id=snapshot_id,
                 )
             )

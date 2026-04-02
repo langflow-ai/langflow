@@ -307,7 +307,7 @@ class BaseDeploymentMapper:
     def shape_flow_version_list_result(
         self,
         *,
-        rows: list[tuple[FlowVersionDeploymentAttachment, FlowVersion]],
+        rows: list[tuple[FlowVersionDeploymentAttachment, FlowVersion, str | None]],
         snapshot_result: SnapshotListResult | None,
         page: int,
         size: int,
@@ -318,12 +318,13 @@ class BaseDeploymentMapper:
             DeploymentFlowVersionListItem(
                 id=flow_version.id,
                 flow_id=flow_version.flow_id,
+                flow_name=flow_name,
                 version_number=flow_version.version_number,
                 attached_at=attachment.created_at,
                 provider_snapshot_id=(attachment.provider_snapshot_id or "").strip() or None,
                 provider_data=None,
             )
-            for attachment, flow_version in rows
+            for attachment, flow_version, flow_name in rows
         ]
         return DeploymentFlowVersionListResponse(
             flow_versions=flow_versions,

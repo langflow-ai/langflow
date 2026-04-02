@@ -410,6 +410,7 @@ def test_base_mapper_shapes_flow_version_list_result() -> None:
         (
             SimpleNamespace(provider_snapshot_id=" tool-1 ", created_at=attached_at),
             SimpleNamespace(id=flow_version_id, flow_id=flow_id, version_number=4),
+            "Flow A",
         )
     ]
     snapshot_result = SnapshotListResult(
@@ -436,6 +437,7 @@ def test_base_mapper_shapes_flow_version_list_result() -> None:
     assert len(shaped.flow_versions) == 1
     assert shaped.flow_versions[0].id == flow_version_id
     assert shaped.flow_versions[0].flow_id == flow_id
+    assert shaped.flow_versions[0].flow_name == "Flow A"
     assert shaped.flow_versions[0].version_number == 4
     assert shaped.flow_versions[0].attached_at == attached_at
     assert shaped.flow_versions[0].provider_snapshot_id == "tool-1"
@@ -448,6 +450,7 @@ def test_base_mapper_flow_version_item_data_defaults_to_none() -> None:
         (
             SimpleNamespace(provider_snapshot_id=None, created_at=None),
             SimpleNamespace(id=uuid4(), flow_id=uuid4(), version_number=1),
+            None,
         )
     ]
 
@@ -460,6 +463,7 @@ def test_base_mapper_flow_version_item_data_defaults_to_none() -> None:
     )
 
     assert len(shaped.flow_versions) == 1
+    assert shaped.flow_versions[0].flow_name is None
     assert shaped.flow_versions[0].provider_snapshot_id is None
     assert shaped.flow_versions[0].provider_data is None
 

@@ -90,16 +90,18 @@ async def list_deployment_attachments_with_versions(
     deployment_id: UUID,
     offset: int,
     limit: int,
-) -> list[tuple[FlowVersionDeploymentAttachment, FlowVersion]]:
-    """Return paginated attachment rows joined with their flow version metadata."""
+) -> list[tuple[FlowVersionDeploymentAttachment, FlowVersion, str | None]]:
+    """Return paginated attachment rows joined with version metadata and flow name."""
+    from langflow.services.database.models.flow.model import Flow
     from langflow.services.database.models.flow_version.model import FlowVersion
 
     if limit <= 0:
         return []
 
     stmt = (
-        select(FlowVersionDeploymentAttachment, FlowVersion)
+        select(FlowVersionDeploymentAttachment, FlowVersion, Flow.name.label("flow_name"))
         .join(FlowVersion, FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id)
+        .join(Flow, Flow.id == FlowVersion.flow_id)
         .where(
             FlowVersionDeploymentAttachment.user_id == user_id,
             FlowVersionDeploymentAttachment.deployment_id == deployment_id,
