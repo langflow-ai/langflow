@@ -77,9 +77,7 @@ class CustomProviderModel(SQLModel, table=True):  # type: ignore[call-arg]
 
     id: UUID | None = Field(default_factory=uuid4, primary_key=True)
     provider_id: UUIDstr = Field(
-        sa_column=Column(
-            sa.Uuid(), ForeignKey("custom_provider.id", ondelete="CASCADE"), nullable=False, index=True
-        )
+        sa_column=Column(sa.Uuid(), ForeignKey("custom_provider.id", ondelete="CASCADE"), nullable=False, index=True)
     )
     name: str = Field(max_length=_MODEL_NAME_MAX_LEN)
     tool_calling: bool = Field(default=False)
