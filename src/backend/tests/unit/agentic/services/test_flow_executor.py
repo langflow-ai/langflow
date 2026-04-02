@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
+from lfx.utils.flow_validation import CustomComponentValidationError
 from langflow.agentic.services.flow_executor import (
     _run_graph_with_events,
     execute_flow_file,
@@ -318,7 +319,7 @@ class TestExecuteFlowFile:
             patch(
                 "langflow.agentic.services.flow_executor.load_graph_for_execution",
                 new_callable=AsyncMock,
-                side_effect=ValueError(validation_error),
+                side_effect=CustomComponentValidationError(validation_error),
             ),
             pytest.raises(HTTPException) as exc_info,
         ):
@@ -744,7 +745,7 @@ class TestTracingIntegration:
             patch(
                 "langflow.agentic.services.flow_executor.load_graph_for_execution",
                 new_callable=AsyncMock,
-                side_effect=ValueError(validation_error),
+                side_effect=CustomComponentValidationError(validation_error),
             ),
             pytest.raises(HTTPException) as exc_info,
         ):
