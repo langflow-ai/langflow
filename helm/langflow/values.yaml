@@ -10,7 +10,6 @@ ingress:
   enabled: true
   domain: aipp02.skhynix.com
   annotations: {}
-    # nginx.ingress.kubernetes.io/proxy-body-size: "50m"
 
 keycloak:
   serverUrl: ""          # e.g. https://keycloak.skhynix.com
@@ -19,21 +18,26 @@ keycloak:
   clientSecret: ""       # ignored if existingSecret is set
   employeeClaim: preferred_username
   buttonText: "SK하이닉스 SSO 로그인"
-  # -- Use an existing K8s secret instead of creating one
+  # -- Use an existing K8s secret for clientSecret & langflow secretKey
   existingSecret: ""
-  # -- Keys inside the existing secret
   existingSecretKeys:
     clientSecret: client-secret
     langflowSecretKey: langflow-secret-key
+
+# -- SSL CA certificate for Keycloak (corporate PKI)
+ssl:
+  # -- Enable to mount a CA cert and set SSL_CERT_FILE + REQUESTS_CA_BUNDLE
+  enabled: false
+  # -- Option 1: provide CA cert PEM content directly
+  caCert: ""
+  # -- Option 2: use an existing ConfigMap or Secret containing the CA cert
+  existingConfigMap: ""
+  existingSecret: ""
+  # -- Key name inside the ConfigMap/Secret
+  key: ca.crt
 
 langflow:
   secretKey: ""          # ignored if existingSecret is set
   storage: 5Gi
 
 resources: {}
-  # limits:
-  #   cpu: "2"
-  #   memory: 4Gi
-  # requests:
-  #   cpu: 500m
-  #   memory: 1Gi

@@ -24,3 +24,17 @@ app.kubernetes.io/instance: {{ include "langflow.fullname" . }}
 {{- define "langflow.host" -}}
 langflow-{{ .Values.empno }}.{{ .Values.ingress.domain }}
 {{- end }}
+
+{{/* SSL CA cert volume source */}}
+{{- define "langflow.sslVolume" -}}
+{{- if .Values.ssl.existingConfigMap -}}
+configMap:
+  name: {{ .Values.ssl.existingConfigMap }}
+{{- else if .Values.ssl.existingSecret -}}
+secret:
+  secretName: {{ .Values.ssl.existingSecret }}
+{{- else -}}
+configMap:
+  name: {{ include "langflow.fullname" . }}-ca-cert
+{{- end }}
+{{- end }}

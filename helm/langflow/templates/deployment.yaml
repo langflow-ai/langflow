@@ -53,9 +53,20 @@ spec:
                   key: {{ .Values.keycloak.existingSecretKeys.langflowSecretKey }}
             - name: LANGFLOW_DATABASE_URL
               value: "sqlite+aiosqlite:////app/data/langflow.db"
+            {{- if .Values.ssl.enabled }}
+            - name: SSL_CERT_FILE
+              value: /etc/ssl/custom/{{ .Values.ssl.key }}
+            - name: REQUESTS_CA_BUNDLE
+              value: /etc/ssl/custom/{{ .Values.ssl.key }}
+            {{- end }}
           volumeMounts:
             - name: data
               mountPath: /app/data
+            {{- if .Values.ssl.enabled }}
+            - name: ca-cert
+              mountPath: /etc/ssl/custom
+              readOnly: true
+            {{- end }}
           readinessProbe:
             httpGet:
               path: /health
@@ -76,3 +87,7 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: {{ include "langflow.fullname" . }}-data
+        {{- if .Values.ssl.enabled }}
+        - name: ca-cert
+          {{- include "langflow.sslVolume" . | nindent 10 }}
+        {{- end }}
