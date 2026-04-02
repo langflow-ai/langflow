@@ -59,13 +59,8 @@ const CustomProviderForm = ({ provider, onDone }: CustomProviderFormProps) => {
   const isEditing = provider !== null;
 
   // Discover models — only usable for existing providers
-  const {
-    refetch: discoverRefetch,
-    isFetching: isDiscovering,
-  } = useDiscoverModels(
-    { providerId: provider?.id ?? "" },
-    { enabled: false },
-  );
+  const { refetch: discoverRefetch, isFetching: isDiscovering } =
+    useDiscoverModels({ providerId: provider?.id ?? "" }, { enabled: false });
 
   // Populate form when provider changes
   useEffect(() => {
@@ -118,7 +113,9 @@ const CustomProviderForm = ({ provider, onDone }: CustomProviderFormProps) => {
       onDone();
     } catch (error: any) {
       setErrorData({
-        title: isEditing ? "Error Updating Provider" : "Error Creating Provider",
+        title: isEditing
+          ? "Error Updating Provider"
+          : "Error Creating Provider",
         list: [
           error?.response?.data?.detail ||
             error?.message ||
@@ -267,7 +264,10 @@ const CustomProviderForm = ({ provider, onDone }: CustomProviderFormProps) => {
                 loading={isDiscovering}
                 disabled={isDiscovering || isSaving}
               >
-                <ForwardedIconComponent name="Search" className="h-3 w-3 mr-1" />
+                <ForwardedIconComponent
+                  name="Search"
+                  className="h-3 w-3 mr-1"
+                />
                 Discover Models
               </Button>
             )}

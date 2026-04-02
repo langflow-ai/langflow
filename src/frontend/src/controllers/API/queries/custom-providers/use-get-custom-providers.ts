@@ -17,14 +17,10 @@ export const useGetCustomProviders: useQueryFunctionType<
     return res.data;
   };
 
-  const queryResult = query(
-    ["useGetCustomProviders"],
-    getCustomProvidersFn,
-    {
-      refetchOnWindowFocus: false,
-      ...options,
-    },
-  );
+  const queryResult = query(["useGetCustomProviders"], getCustomProvidersFn, {
+    refetchOnWindowFocus: false,
+    ...options,
+  });
 
   return queryResult;
 };
