@@ -347,7 +347,6 @@ def test_mapper_has_shape_method_for_all_outbound_slots() -> None:
 @pytest.mark.parametrize(
     "method_name",
     [
-        "shape_deployment_create_result",
         "shape_deployment_operation_result",
         "shape_deployment_item_data",
         "shape_deployment_status_data",
