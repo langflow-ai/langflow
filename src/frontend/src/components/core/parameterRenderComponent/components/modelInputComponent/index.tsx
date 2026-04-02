@@ -7,6 +7,7 @@ import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-t
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ModelProviderModal from "@/modals/modelProviderModal";
 import useAlertStore from "@/stores/alertStore";
+import useFlowStore from "@/stores/flowStore";
 import type { APIClassType } from "@/types/api";
 import { useModelConnectionLogic } from "./hooks/useModelConnectionLogic";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
@@ -49,6 +50,7 @@ export default function ModelInputComponent({
     useState(false);
   const [isRefreshingAfterClose, setIsRefreshingAfterClose] = useState(false);
   const [refreshOptions, setRefreshOptions] = useState(false);
+  const [isConnectionMode, setIsConnectionMode] = useState(false);
   const { refreshAllModelInputs } = useRefreshModelInputs();
 
   // Ref to track if we've already processed the empty options state
@@ -64,7 +66,7 @@ export default function ModelInputComponent({
   const { handleExternalOptions } = useModelConnectionLogic({
     nodeId: nodeId || "",
     closePopover: () => setOpen(false),
-    clearSelection: () => handleOnNewValue({ value: "connect_other_models" }),
+    clearSelection: () => setIsConnectionMode(true),
   });
 
   const modelType =
@@ -115,8 +117,6 @@ export default function ModelInputComponent({
     () => Object.values(groupedOptions).flat(),
     [groupedOptions],
   );
-
-  const isConnectionMode = value === "connect_other_models";
 
   // Derive the currently selected model from the value prop
   const selectedModel = useMemo(() => {
@@ -177,6 +177,15 @@ export default function ModelInputComponent({
    */
   const handleModelSelect = useCallback(
     (modelName: string) => {
+      setIsConnectionMode(false);
+      // Clear connection mode flag on node data
+      if (nodeId) {
+        const store = useFlowStore.getState();
+        store.setNode(nodeId, (node) => ({
+          ...node,
+          data: { ...node.data, _connectionMode: false },
+        }), false);
+      }
       const selectedOption = flatOptions.find(
         (option) => option.name === modelName,
       );

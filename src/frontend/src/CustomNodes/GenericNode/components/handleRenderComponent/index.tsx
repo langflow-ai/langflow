@@ -190,13 +190,13 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
 
   const edges = useFlowStore((state) => state.edges);
 
-  // Check if this node's model field is in "connect other models" mode
+  // Check if this node is in "connect other models" mode
   const isInConnectionMode = useFlowStore(
     useCallback(
       (state) => {
         if (id?.type !== "model" || !left) return false;
         const node = state.getNode(nodeId);
-        return node?.data?.node?.template?.model?.value === "connect_other_models";
+        return node?.data?._connectionMode === true;
       },
       [nodeId, id?.type, left],
     ),

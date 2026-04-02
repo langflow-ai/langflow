@@ -71,6 +71,12 @@ export function useModelConnectionLogic({
           color: "datatype-fuchsia",
         } as any;
 
+        // Mark this node as being in connection mode so the handle stays visible
+        store.setNode(nodeId, (node) => ({
+          ...node,
+          data: { ...node.data, _connectionMode: true },
+        }), false);
+
         // Show compatible handles glow
         store.setFilterEdge(grouped);
         store.setFilterType(filterObj);
