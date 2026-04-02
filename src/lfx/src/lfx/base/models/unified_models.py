@@ -1060,6 +1060,11 @@ def get_language_model_options(
 
     # Append custom provider models (per-user, from DB)
     custom_options = get_custom_provider_options(user_id)
+    if tool_calling is not None:
+        custom_options = [
+            opt for opt in custom_options
+            if opt.get("metadata", {}).get("tool_calling") == tool_calling
+        ]
     options.extend(custom_options)
 
     # Add disabled providers (providers that exist in metadata but have no enabled models)
@@ -1332,11 +1337,13 @@ def get_embedding_model_options(
 
 def normalize_model_names_to_dicts(
     model_names: list[str] | str,
+    user_id: UUID | str | None = None,
 ) -> list[dict[str, Any]]:
     """Convert simple model name(s) to list of dicts format.
 
     Args:
         model_names: A string or list of strings representing model names
+        user_id: Optional user ID to look up custom provider models
 
     Returns:
         A list of dicts with full model metadata including runtime info
@@ -1403,6 +1410,13 @@ def normalize_model_names_to_dicts(
                 "provider": provider,
                 "metadata": full_metadata,
             }
+
+    # Also include custom provider models so rehydration preserves their metadata
+    custom_options = get_custom_provider_options(user_id) if user_id else []
+    for opt in custom_options:
+        model_name = opt.get("name")
+        if model_name and model_name not in model_lookup:
+            model_lookup[model_name] = opt
 
     # Convert string list to dict list
     result = []

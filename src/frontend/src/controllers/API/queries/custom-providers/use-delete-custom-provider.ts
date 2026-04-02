@@ -19,8 +19,9 @@ export const useDeleteCustomProvider: useMutationFunctionType<
     deleteCustomProviderFn,
     {
       ...options,
-      onSettled: () => {
+      onSettled: (...args) => {
         queryClient.refetchQueries({ queryKey: ["useGetCustomProviders"] });
+        options?.onSettled?.(...args);
       },
     },
   );

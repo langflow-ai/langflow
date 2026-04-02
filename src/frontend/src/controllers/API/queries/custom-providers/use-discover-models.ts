@@ -15,8 +15,11 @@ export const useDiscoverModels: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const discoverModelsFn = async (): Promise<DiscoverModelsResponse> => {
+    if (!params?.providerId) {
+      throw new Error("providerId is required for model discovery");
+    }
     const res = await api.get<DiscoverModelsResponse>(
-      `${getURL("CUSTOM_PROVIDERS")}/${params!.providerId}/discover-models`,
+      `${getURL("CUSTOM_PROVIDERS")}/${params.providerId}/discover-models`,
     );
     return res.data;
   };

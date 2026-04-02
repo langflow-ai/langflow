@@ -113,6 +113,32 @@ class CustomProviderModelSchema(SQLModel):
     name: str
     tool_calling: bool = False
 
+    @field_validator("name")
+    @classmethod
+    def validate_model_name(cls, v: str) -> str:
+        stripped = v.strip() if isinstance(v, str) else v
+        if not stripped:
+            msg = "model name must not be empty"
+            raise ValueError(msg)
+        if len(stripped) > _MODEL_NAME_MAX_LEN:
+            msg = f"model name must not exceed {_MODEL_NAME_MAX_LEN} characters"
+            raise ValueError(msg)
+        if not _MODEL_NAME_RE.match(stripped):
+            msg = "model name must only contain letters, digits, and the characters . _ : / -"
+            raise ValueError(msg)
+        return stripped
+
+
+def _validate_unique_model_names(models: list[CustomProviderModelSchema]) -> list[CustomProviderModelSchema]:
+    """Raise ValueError if model names are not unique."""
+    seen: set[str] = set()
+    for m in models:
+        if m.name in seen:
+            msg = f"Duplicate model name: {m.name}"
+            raise ValueError(msg)
+        seen.add(m.name)
+    return models
+
 
 class CustomProviderCreate(SQLModel):
     name: str
@@ -120,12 +146,39 @@ class CustomProviderCreate(SQLModel):
     api_key: str
     models: list[CustomProviderModelSchema] = Field(default_factory=list)
 
+    @field_validator("name", "base_url", "api_key")
+    @classmethod
+    def validate_non_empty(cls, v: str, info: object) -> str:
+        return validate_non_empty_string(v, info)
+
+    @field_validator("models")
+    @classmethod
+    def validate_unique_models(cls, v: list[CustomProviderModelSchema]) -> list[CustomProviderModelSchema]:
+        return _validate_unique_model_names(v)
+
 
 class CustomProviderUpdate(SQLModel):
     name: str | None = None
     base_url: str | None = None
     api_key: str | None = None
     models: list[CustomProviderModelSchema] | None = None
+
+    @field_validator("name", "base_url", "api_key", mode="before")
+    @classmethod
+    def validate_non_empty_if_set(cls, v: str | None) -> str | None:
+        if v is not None:
+            stripped = v.strip() if isinstance(v, str) else v
+            if not stripped:
+                msg = "value must not be empty when provided"
+                raise ValueError(msg)
+        return v
+
+    @field_validator("models")
+    @classmethod
+    def validate_unique_models(cls, v: list[CustomProviderModelSchema] | None) -> list[CustomProviderModelSchema] | None:
+        if v is not None:
+            return _validate_unique_model_names(v)
+        return v
 
 
 class CustomProviderModelRead(SQLModel):

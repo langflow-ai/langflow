@@ -35,8 +35,9 @@ export const usePatchCustomProvider: useMutationFunctionType<
     PatchCustomProviderParams
   > = mutate(["usePatchCustomProvider"], patchCustomProviderFn, {
     ...options,
-    onSettled: () => {
+    onSettled: (...args) => {
       queryClient.refetchQueries({ queryKey: ["useGetCustomProviders"] });
+      options?.onSettled?.(...args);
     },
   });
 

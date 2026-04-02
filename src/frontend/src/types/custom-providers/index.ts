@@ -24,7 +24,7 @@ export interface CustomProviderCreate {
   name: string;
   base_url: string;
   api_key: string;
-  models: CustomProviderModelSchema[];
+  models?: CustomProviderModelSchema[];
 }
 
 export interface CustomProviderUpdate {

@@ -30,13 +30,19 @@ const modelsToText = (
   return models.map((m) => m.name).join("\n");
 };
 
-/** Convert newline-delimited text to model schema array */
-const textToModels = (text: string): CustomProviderModelSchema[] => {
+/** Convert newline-delimited text to model schema array, preserving existing tool_calling flags */
+const textToModels = (
+  text: string,
+  existingModels?: Array<{ name: string; tool_calling?: boolean }>,
+): CustomProviderModelSchema[] => {
+  const lookup = new Map(
+    (existingModels ?? []).map((m) => [m.name, m.tool_calling ?? false]),
+  );
   return text
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)
-    .map((name) => ({ name, tool_calling: false }));
+    .map((name) => ({ name, tool_calling: lookup.get(name) ?? false }));
 };
 
 const CustomProviderForm = ({ provider, onDone }: CustomProviderFormProps) => {
@@ -98,7 +104,7 @@ const CustomProviderForm = ({ provider, onDone }: CustomProviderFormProps) => {
         const body: Record<string, any> = {
           name: name.trim(),
           base_url: baseUrl.trim(),
-          models: textToModels(modelsText),
+          models: textToModels(modelsText, provider.models),
         };
         if (apiKey.trim()) {
           body.api_key = apiKey.trim();
@@ -173,6 +179,13 @@ const CustomProviderForm = ({ provider, onDone }: CustomProviderFormProps) => {
         setErrorData({
           title: "Discovery Failed",
           list: [data.error],
+        });
+      } else if (data?.discovery_supported === false) {
+        setErrorData({
+          title: "Discovery Not Supported",
+          list: [
+            "This provider does not expose a /models endpoint. Please add models manually.",
+          ],
         });
       } else {
         setErrorData({

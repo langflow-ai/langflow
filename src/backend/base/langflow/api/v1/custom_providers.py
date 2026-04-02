@@ -41,9 +41,11 @@ _BLOCKED_NETWORKS = [
     ipaddress.ip_network("169.254.0.0/16"),
     ipaddress.ip_network("::1/128"),
     ipaddress.ip_network("fc00::/7"),
+    ipaddress.ip_network("fe80::/10"),
 ]
 
 _MAX_DISCOVERED_MODELS = 500
+_HTTP_ERROR_STATUS = 400
 
 
 # ---------------------------------------------------------------------------
@@ -51,8 +53,12 @@ _MAX_DISCOVERED_MODELS = 500
 # ---------------------------------------------------------------------------
 
 
-def _validate_url_no_ssrf(url: str) -> None:
-    """Raise HTTPException(400) if *url* targets an internal/loopback address.
+def _validate_url_no_ssrf(url: str) -> str:
+    """Validate *url* against SSRF and return a safe URL that uses the resolved IP.
+
+    Returns a URL where the hostname is replaced with the resolved IP address,
+    preventing DNS rebinding attacks. The original hostname should be sent via
+    the ``Host`` header.
 
     Checks:
     1. Scheme must be http or https.
@@ -71,13 +77,14 @@ def _validate_url_no_ssrf(url: str) -> None:
 
     # Allow private/internal URLs when explicitly opted in
     if os.environ.get("LANGFLOW_ALLOW_PRIVATE_URLS", "").lower() in ("true", "1", "yes"):
-        return
+        return url
 
     try:
         results = socket.getaddrinfo(hostname, None)
     except socket.gaierror as exc:
         raise HTTPException(status_code=400, detail=f"Could not resolve hostname: {hostname}") from exc
 
+    validated_ip: str | None = None
     for _family, _type, _proto, _canonname, sockaddr in results:
         raw_ip = sockaddr[0]
         try:
@@ -90,11 +97,33 @@ def _validate_url_no_ssrf(url: str) -> None:
                     status_code=400,
                     detail=f"base_url resolves to a private/loopback address ({raw_ip}), which is not allowed",
                 )
+        if validated_ip is None:
+            validated_ip = raw_ip
+
+    if validated_ip is None:
+        raise HTTPException(status_code=400, detail=f"Could not resolve hostname: {hostname}")
+
+    # Replace hostname with the validated IP to prevent DNS rebinding.
+    # Callers must set Host header to the original hostname.
+    port_suffix = f":{parsed.port}" if parsed.port else ""
+    ip_for_url = f"[{validated_ip}]" if ":" in validated_ip else validated_ip
+    safe_url = f"{parsed.scheme}://{ip_for_url}{port_suffix}{parsed.path}"
+    if parsed.query:
+        safe_url += f"?{parsed.query}"
+    return safe_url
 
 
 # ---------------------------------------------------------------------------
 # Helper
 # ---------------------------------------------------------------------------
+
+
+def _original_hostname(url: str) -> str:
+    """Extract the hostname (with port if present) from a URL for the Host header."""
+    parsed = urlparse(url)
+    if parsed.port and parsed.port not in (80, 443):
+        return f"{parsed.hostname}:{parsed.port}"
+    return parsed.hostname or ""
 
 
 def _build_read(cp: CustomProvider) -> CustomProviderRead:
@@ -156,7 +185,7 @@ async def create_custom_provider(
     # Normalize base_url
     body.base_url = body.base_url.rstrip("/")
 
-    # SSRF check
+    # SSRF check (return value unused for create — we store the original URL)
     _validate_url_no_ssrf(body.base_url)
 
     # Duplicate name check (scoped to user)
@@ -369,15 +398,16 @@ async def validate_custom_provider(
     if not cp:
         raise HTTPException(status_code=404, detail="Custom provider not found")
 
-    _validate_url_no_ssrf(cp.base_url)
+    safe_base = _validate_url_no_ssrf(cp.base_url)
+    host = _original_hostname(cp.base_url)
 
     api_key = auth_utils.decrypt_api_key(cp.api_key)
-    url = f"{cp.base_url}/models"
+    url = f"{safe_base}/models"
 
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(5.0, connect=3.0)) as client:
-            response = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})
-        if response.status_code < 400:
+            response = await client.get(url, headers={"Authorization": f"Bearer {api_key}", "Host": host})
+        if response.status_code < _HTTP_ERROR_STATUS:
             return {"valid": True, "error": None}
         return {"valid": False, "error": f"HTTP {response.status_code}: {response.text[:200]}"}
     except httpx.TimeoutException:
@@ -409,14 +439,15 @@ async def discover_models(
     if not cp:
         raise HTTPException(status_code=404, detail="Custom provider not found")
 
-    _validate_url_no_ssrf(cp.base_url)
+    safe_base = _validate_url_no_ssrf(cp.base_url)
+    host = _original_hostname(cp.base_url)
 
     api_key = auth_utils.decrypt_api_key(cp.api_key)
-    url = f"{cp.base_url}/models"
+    url = f"{safe_base}/models"
 
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(5.0, connect=3.0)) as client:
-            response = await client.get(url, headers={"Authorization": f"Bearer {api_key}"})
+            response = await client.get(url, headers={"Authorization": f"Bearer {api_key}", "Host": host})
     except httpx.TimeoutException:
         return DiscoverModelsResponse(models=[], discovery_supported=False, error="Request timed out")
     except httpx.RequestError as exc:
@@ -426,7 +457,7 @@ async def discover_models(
     if response.status_code in {404, 405}:
         return DiscoverModelsResponse(models=[], discovery_supported=False)
 
-    if response.status_code >= 400:
+    if response.status_code >= _HTTP_ERROR_STATUS:
         return DiscoverModelsResponse(
             models=[],
             discovery_supported=False,

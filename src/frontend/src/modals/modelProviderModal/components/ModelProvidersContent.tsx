@@ -149,16 +149,18 @@ const ModelProvidersContent = ({
               : null
           }
         />
-        <CustomProviderSection
-          selectedCustomProviderId={
-            selectionMode === "custom"
-              ? (selectedCustomProvider?.id ?? null)
-              : selectionMode === "new-custom"
-                ? "new"
-                : null
-          }
-          onSelect={handleCustomProviderSelect}
-        />
+        {modelType !== "embeddings" && (
+          <CustomProviderSection
+            selectedCustomProviderId={
+              selectionMode === "custom"
+                ? (selectedCustomProvider?.id ?? null)
+                : selectionMode === "new-custom"
+                  ? "new"
+                  : null
+            }
+            onSelect={handleCustomProviderSelect}
+          />
+        )}
       </div>
 
       <div
@@ -215,13 +217,14 @@ const ModelProvidersContent = ({
           </>
         )}
 
-        {(selectionMode === "custom" || selectionMode === "new-custom") && (
-          <CustomProviderForm
-            key={selectedCustomProvider?.id ?? "new"}
-            provider={selectedCustomProvider}
-            onDone={handleCustomProviderDone}
-          />
-        )}
+        {modelType !== "embeddings" &&
+          (selectionMode === "custom" || selectionMode === "new-custom") && (
+            <CustomProviderForm
+              key={selectedCustomProvider?.id ?? "new"}
+              provider={selectedCustomProvider}
+              onDone={handleCustomProviderDone}
+            />
+          )}
       </div>
     </div>
   );

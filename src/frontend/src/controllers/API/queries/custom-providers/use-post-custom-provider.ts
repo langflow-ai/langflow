@@ -30,8 +30,9 @@ export const usePostCustomProvider: useMutationFunctionType<
     CustomProviderCreate
   > = mutate(["usePostCustomProvider"], postCustomProviderFn, {
     ...options,
-    onSettled: () => {
+    onSettled: (...args) => {
       queryClient.refetchQueries({ queryKey: ["useGetCustomProviders"] });
+      options?.onSettled?.(...args);
     },
   });
 
