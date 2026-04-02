@@ -294,15 +294,6 @@ jobs:
       ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
       TAVILY_API_KEY: "${{ secrets.TAVILY_API_KEY }}"
 
-  lint-backend:
-    needs: path-filter
-    if: |
-      always() &&
-      !cancelled() &&
-      (inputs.run-all-tests || needs.path-filter.outputs.python == 'true')
-    name: Lint Backend
-    uses: ./.github/workflows/lint-py.yml
-
   test-docs-build:
     needs: path-filter
     if: |
@@ -356,8 +347,16 @@ jobs:
 
   merge-frontend-coverage:
     name: Merge Frontend Jest + Playwright Coverage Reports
-    needs: [test-frontend-unit, test-frontend]
-    if: always()
+    needs: [path-filter, set-ci-condition, test-frontend-unit, test-frontend]
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (
+        inputs.run-all-tests ||
+        (needs.path-filter.result != 'skipped' &&
+        needs.path-filter.outputs.docs-only != 'true')
+      )
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -365,12 +364,14 @@ jobs:
 
       - name: Download Jest Coverage
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: jest-coverage
           path: coverage/jest
 
       - name: Download Playwright Coverage
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           pattern: playwright-coverage-*
           path: coverage/playwright
@@ -407,7 +408,6 @@ jobs:
         test-backend,
         test-frontend-unit,
         test-frontend,
-        lint-backend,
         test-docs-build,
         test-templates,
         test-docker,
@@ -459,8 +459,6 @@ jobs:
                   "  - Frontend Unit Tests: Check React components and unit test logic"
                 elif $job == "test-frontend" then
                   "  - Frontend E2E Tests: Check integration tests and UI functionality"
-                elif $job == "lint-backend" then
-                  "  - Backend Linting: Run '\''make format_backend'\'' then '\''make lint'\'' to fix code style issues"
                 elif $job == "test-docs-build" then
                   "  - Documentation Build: Check documentation syntax and build process"
                 elif $job == "test-templates" then

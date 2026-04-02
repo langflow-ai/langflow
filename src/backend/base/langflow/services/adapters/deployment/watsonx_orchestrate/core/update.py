@@ -38,6 +38,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import
     to_writable_tool_payload,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
+    WatsonxAttachToolOperation,
     WatsonxBindOperation,
     WatsonxDeploymentUpdatePayload,
     WatsonxProviderUpdateApplyResult,
@@ -92,7 +93,8 @@ class ProviderUpdatePlan:
     existing_tool_deltas: dict[str, ToolConnectionOps]
     raw_tools_to_create: list[RawToolCreatePlan]
     final_existing_tool_ids: list[str]
-    bind_existing_tool_ids: list[str]
+    added_existing_tool_refs: list[WatsonxResultToolRefBinding]
+    removed_existing_tool_refs: list[WatsonxResultToolRefBinding]
     existing_tool_refs: list[WatsonxResultToolRefBinding]
 
 
@@ -122,7 +124,8 @@ def build_provider_update_plan(
             existing_tool_deltas={},
             raw_tools_to_create=[],
             final_existing_tool_ids=list(dict.fromkeys(provider_update.put_tools)),
-            bind_existing_tool_ids=[],
+            added_existing_tool_refs=[],
+            removed_existing_tool_refs=[],
             existing_tool_refs=[],
         )
 
@@ -136,12 +139,18 @@ def build_provider_update_plan(
 
     # existing_tool_deltas: per existing tool_id, tracks app_ids to bind/unbind.
     existing_tool_deltas: dict[str, ToolConnectionOps] = {}
-    # bind_existing_tool_ids: existing tool_ids explicitly referenced by bind
-    #   operations (used for added-snapshot reporting in the result).
-    bind_existing_tool_ids = OrderedUniqueStrs()
+    # added_existing_tool_refs: existing refs newly attached to this agent by
+    #   bind(existing)/attach_tool operations (i.e. not in agent_tool_ids at
+    #   plan start).
+    added_existing_tool_refs: list[WatsonxResultToolRefBinding] = []
+    # removed_existing_tool_refs: existing refs detached by remove_tool.
+    removed_existing_tool_refs: list[WatsonxResultToolRefBinding] = []
     # raw_tool_app_ids: per raw tool name, collects operation app_ids to bind
-    #   when the raw tool is created.
-    raw_tool_app_ids: dict[str, OrderedUniqueStrs] = {}
+    #   when the raw tool is created. Initialize with all declared raw tools so
+    #   unbound tools are still created and attached with empty connections.
+    raw_tool_app_ids: dict[str, OrderedUniqueStrs] = {
+        raw_payload.name: OrderedUniqueStrs() for raw_payload in (provider_update.tools.raw_payloads or [])
+    }
     # existing_tool_refs: source_ref ↔ tool_id correlations (created=False)
     #   collected from all operations that reference existing tools (bind,
     #   unbind, remove_tool). Deduped by tool_id before storing in the plan,
@@ -154,18 +163,34 @@ def build_provider_update_plan(
             if operation.tool.tool_id_with_ref is not None:
                 ref = operation.tool.tool_id_with_ref
                 tool_id = ref.tool_id
-                bind_existing_tool_ids.add(tool_id)
+                if tool_id not in agent_tool_ids:
+                    added_existing_tool_refs.append(
+                        WatsonxResultToolRefBinding(source_ref=ref.source_ref, tool_id=tool_id, created=False)
+                    )
                 final_existing_tool_ids.add(tool_id)
                 existing_tool_refs.append(
                     WatsonxResultToolRefBinding(source_ref=ref.source_ref, tool_id=tool_id, created=False)
                 )
-                delta = _get_or_create_tool_connection_ops(existing_tool_deltas, tool_id=tool_id)
-                delta.bind.extend(operation.app_ids)
+                if operation.app_ids:
+                    delta = _get_or_create_tool_connection_ops(existing_tool_deltas, tool_id=tool_id)
+                    delta.bind.extend(operation.app_ids)
                 continue
 
             raw_name = str(operation.tool.name_of_raw)
             raw_apps = raw_tool_app_ids.setdefault(raw_name, OrderedUniqueStrs())
             raw_apps.extend(operation.app_ids)
+            continue
+
+        if isinstance(operation, WatsonxAttachToolOperation):
+            tool_id = operation.tool.tool_id
+            if tool_id not in agent_tool_ids:
+                added_existing_tool_refs.append(
+                    WatsonxResultToolRefBinding(source_ref=operation.tool.source_ref, tool_id=tool_id, created=False)
+                )
+            final_existing_tool_ids.add(tool_id)
+            existing_tool_refs.append(
+                WatsonxResultToolRefBinding(source_ref=operation.tool.source_ref, tool_id=tool_id, created=False)
+            )
             continue
 
         if isinstance(operation, WatsonxUnbindOperation):
@@ -178,13 +203,13 @@ def build_provider_update_plan(
             continue
 
         if isinstance(operation, WatsonxRemoveToolOperation):
-            existing_tool_refs.append(
-                WatsonxResultToolRefBinding(
-                    source_ref=operation.tool.source_ref,
-                    tool_id=operation.tool.tool_id,
-                    created=False,
-                )
+            removed_ref = WatsonxResultToolRefBinding(
+                source_ref=operation.tool.source_ref,
+                tool_id=operation.tool.tool_id,
+                created=False,
             )
+            removed_existing_tool_refs.append(removed_ref)
+            existing_tool_refs.append(removed_ref)
             final_existing_tool_ids.discard(operation.tool.tool_id)
             continue
 
@@ -208,6 +233,16 @@ def build_provider_update_plan(
         seen_ref_ids.setdefault(ref.tool_id, ref)
     deduped_existing_tool_refs = list(seen_ref_ids.values())
 
+    seen_added_ref_ids: dict[str, WatsonxResultToolRefBinding] = {}
+    for ref in added_existing_tool_refs:
+        seen_added_ref_ids.setdefault(ref.tool_id, ref)
+    deduped_added_existing_tool_refs = list(seen_added_ref_ids.values())
+
+    seen_removed_ref_ids: dict[str, WatsonxResultToolRefBinding] = {}
+    for ref in removed_existing_tool_refs:
+        seen_removed_ref_ids.setdefault(ref.tool_id, ref)
+    deduped_removed_existing_tool_refs = list(seen_removed_ref_ids.values())
+
     return ProviderUpdatePlan(
         resource_prefix=resource_prefix,
         existing_app_ids=list(provider_update.connections.existing_app_ids or []),
@@ -215,7 +250,8 @@ def build_provider_update_plan(
         existing_tool_deltas=existing_tool_deltas,
         raw_tools_to_create=raw_tools_to_create,
         final_existing_tool_ids=final_existing_tool_ids.to_list(),
-        bind_existing_tool_ids=bind_existing_tool_ids.to_list(),
+        added_existing_tool_refs=deduped_added_existing_tool_refs,
+        removed_existing_tool_refs=deduped_removed_existing_tool_refs,
         existing_tool_refs=deduped_existing_tool_refs,
     )
 
@@ -275,7 +311,7 @@ def _build_agent_rollback_payload(*, agent: dict[str, Any], final_update_payload
     rollback_payload: dict[str, Any] = {}
     if "tools" in final_update_payload:
         rollback_payload["tools"] = extract_agent_tool_ids(agent)
-    for update_field in ("name", "display_name", "description"):
+    for update_field in ("name", "display_name", "description", "llm"):
         if update_field in final_update_payload and update_field in agent:
             rollback_payload[update_field] = agent[update_field]
     return rollback_payload
@@ -318,13 +354,21 @@ async def apply_provider_update_plan_with_rollback(
     # - resolved_connections: provider_app_id → connection_id map for bind/update calls.
     # - operation_to_provider_app_id: operation app_id → provider app_id
     #     (identity mapping for both existing and raw-created connections).
-    # - added_snapshot_ids: snapshot/tool ids to return in the update result.
+    # - created_snapshot_ids: snapshot/tool ids created during this update.
+    # - added_snapshot_ids: snapshot/tool ids newly attached to the agent by
+    #     this update (created + newly attached existing).
     # - created_snapshot_bindings: source_ref ↔ tool_id bindings for newly
-    #     created tools (created=True); combined with existing refs in the result.
+    #     created tools (created=True).
+    # - added_snapshot_bindings: source_ref ↔ tool_id bindings for newly
+    #     attached tools (created + newly attached existing).
+    # - removed_snapshot_bindings: source_ref ↔ tool_id bindings detached from
+    #     the agent by this update.
+    # - referenced_snapshot_bindings: full operation correlation set.
     # - final_update_payload: outbound agent patch payload (spec + tools).
     # - rollback_agent_payload: best-effort restore payload for agent rollback.
     resolved_connections: dict[str, str] = {}
     operation_to_provider_app_id: dict[str, str] = {app_id: app_id for app_id in plan.existing_app_ids}
+    created_snapshot_ids: list[str] = []
     added_snapshot_ids: list[str] = []
     created_snapshot_bindings: list[WatsonxResultToolRefBinding] = []
     final_update_payload = dict(update_payload)
@@ -360,10 +404,12 @@ async def apply_provider_update_plan_with_rollback(
                 create_and_upload_tools_fn=create_and_upload_wxo_flow_tools_with_bindings,
             )
             created_tool_ids.extend(tool_create_result.created_tool_ids)
+            created_snapshot_ids.extend(tool_create_result.created_tool_ids)
             added_snapshot_ids.extend(tool_create_result.created_tool_ids)
             created_snapshot_bindings.extend(tool_create_result.snapshot_bindings)
         except ToolUploadBatchError as exc:
             created_tool_ids.extend(exc.created_tool_ids)
+            created_snapshot_ids.extend(exc.created_tool_ids)
             added_snapshot_ids.extend(exc.created_tool_ids)
             log_batch_errors(error_label="Tool upload batch error", errors=exc.errors)
             raise exc.errors[0] from exc
@@ -377,7 +423,7 @@ async def apply_provider_update_plan_with_rollback(
                 original_tools=original_tools,
             )
 
-        added_snapshot_ids.extend(plan.bind_existing_tool_ids)
+        added_snapshot_ids.extend(ref.tool_id for ref in plan.added_existing_tool_refs)
         final_tools = dedupe_list([*plan.final_existing_tool_ids, *created_tool_ids])
         final_update_payload["tools"] = final_tools
         rollback_agent_payload = _build_agent_rollback_payload(
@@ -406,25 +452,35 @@ async def apply_provider_update_plan_with_rollback(
 
     return WatsonxProviderUpdateApplyResult(
         created_app_ids=dedupe_list(created_app_ids),
+        created_snapshot_ids=dedupe_list(created_snapshot_ids),
         added_snapshot_ids=dedupe_list(added_snapshot_ids),
-        added_snapshot_bindings=[*plan.existing_tool_refs, *created_snapshot_bindings],
+        created_snapshot_bindings=created_snapshot_bindings,
+        added_snapshot_bindings=[*plan.added_existing_tool_refs, *created_snapshot_bindings],
+        removed_snapshot_bindings=plan.removed_existing_tool_refs,
+        referenced_snapshot_bindings=[*plan.existing_tool_refs, *created_snapshot_bindings],
     )
 
 
-def build_update_payload_from_spec(spec: BaseDeploymentDataUpdate | None) -> dict[str, Any]:
-    """Build agent update payload from deployment spec updates."""
-    update_payload: dict[str, Any] = {}
-    if not spec:
-        return update_payload
+def build_update_payload_from_spec(spec: BaseDeploymentDataUpdate | None, *, llm: str | None = None) -> dict[str, Any]:
+    """Build agent update payload from deployment spec updates.
 
-    spec_updates = spec.model_dump(exclude_unset=True)
-    if "name" in spec_updates:
-        update_payload.update(
-            {
-                "name": validate_wxo_name(spec_updates["name"]),
-                "display_name": spec_updates["name"],
-            }
-        )
-    if "description" in spec_updates:
-        update_payload["description"] = spec_updates["description"]
+    Uses ``exclude_unset=True`` so that fields the caller did not explicitly
+    provide are left untouched on the provider side (e.g. sending
+    ``description=None`` clears the description, while *omitting* description
+    leaves it unchanged).
+    """
+    update_payload: dict[str, Any] = {}
+    if spec:
+        spec_updates = spec.model_dump(exclude_unset=True)
+        if "name" in spec_updates and spec_updates["name"] is not None:
+            update_payload.update(
+                {
+                    "name": validate_wxo_name(spec_updates["name"]),
+                    "display_name": spec_updates["name"],
+                }
+            )
+        if "description" in spec_updates:
+            update_payload["description"] = spec_updates["description"]
+    if llm is not None:
+        update_payload["llm"] = llm
     return update_payload
