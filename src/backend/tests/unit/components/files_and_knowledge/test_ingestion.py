@@ -504,8 +504,8 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         """Test _scalar_notna handles plain lists safely."""
         component = component_class(**default_kwargs)
 
-        assert component._scalar_notna([]) is False
-        assert component._scalar_notna([1, 2]) is True
+        assert not component._scalar_notna([])
+        assert component._scalar_notna([1, 2])
 
     async def test_convert_df_to_data_objects_with_array_cells(self, component_class, default_kwargs):
         """Test that _convert_df_to_data_objects handles DataFrame rows containing numpy arrays.
