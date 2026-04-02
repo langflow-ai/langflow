@@ -67,6 +67,9 @@ interface DeploymentStepperContextType {
   ) => void;
   attachedConnectionByFlow: Map<string, string[]>;
   setAttachedConnectionByFlow: Dispatch<SetStateAction<Map<string, string[]>>>;
+  /** User-provided tool names per flow. Key = flowId. */
+  toolNameByFlow: Map<string, string>;
+  setToolNameByFlow: Dispatch<SetStateAction<Map<string, string>>>;
 
   // Deploy
   needsProviderAccountCreation: boolean;
@@ -104,6 +107,9 @@ export function DeploymentStepperProvider({
     Map<string, { versionId: string; versionTag: string }>
   >(initialState?.selectedVersionByFlow ?? new Map());
   const [connections, setConnections] = useState<ConnectionItem[]>([]);
+  const [toolNameByFlow, setToolNameByFlow] = useState<Map<string, string>>(
+    new Map(),
+  );
   const [attachedConnectionByFlow, setAttachedConnectionByFlow] = useState<
     Map<string, string[]>
   >(new Map());
@@ -211,10 +217,12 @@ export function DeploymentStepperProvider({
         [];
       for (const [flowId, versionEntry] of Array.from(selectedVersionByFlow)) {
         const connectionIds = attachedConnectionByFlow.get(flowId) ?? [];
+        const customToolName = toolNameByFlow.get(flowId)?.trim();
         operations.push({
           op: "bind",
           flow_version_id: versionEntry.versionId,
           app_ids: connectionIds,
+          ...(customToolName && { tool_name: customToolName }),
         });
       }
 
@@ -243,6 +251,7 @@ export function DeploymentStepperProvider({
       deploymentType,
       selectedLlm,
       selectedVersionByFlow,
+      toolNameByFlow,
     ],
   );
 
@@ -272,6 +281,8 @@ export function DeploymentStepperProvider({
       setConnections,
       selectedVersionByFlow,
       handleSelectVersion,
+      toolNameByFlow,
+      setToolNameByFlow,
       attachedConnectionByFlow,
       setAttachedConnectionByFlow,
       needsProviderAccountCreation,
@@ -295,6 +306,7 @@ export function DeploymentStepperProvider({
       connections,
       selectedVersionByFlow,
       handleSelectVersion,
+      toolNameByFlow,
       attachedConnectionByFlow,
       needsProviderAccountCreation,
       buildProviderAccountPayload,

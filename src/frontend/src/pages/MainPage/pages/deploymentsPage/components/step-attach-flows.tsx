@@ -22,6 +22,8 @@ export default function StepAttachFlows() {
     setConnections,
     selectedVersionByFlow,
     handleSelectVersion: onSelectVersion,
+    toolNameByFlow,
+    setToolNameByFlow,
     attachedConnectionByFlow,
     setAttachedConnectionByFlow: onAttachConnection,
   } = useDeploymentStepper();
@@ -307,6 +309,24 @@ export default function StepAttachFlows() {
               isLoadingVersions={isLoadingVersions}
               pendingVersion={pendingVersion}
               selectedVersionByFlow={selectedVersionByFlow}
+              toolName={
+                effectiveFlowId
+                  ? toolNameByFlow.get(effectiveFlowId) ?? ""
+                  : ""
+              }
+              onToolNameChange={(name) => {
+                if (effectiveFlowId) {
+                  setToolNameByFlow((prev) => {
+                    const next = new Map(prev);
+                    if (name) {
+                      next.set(effectiveFlowId, name);
+                    } else {
+                      next.delete(effectiveFlowId);
+                    }
+                    return next;
+                  });
+                }
+              }}
               onSelectPending={setPendingVersion}
               onAttach={handleAttachFlow}
             />
