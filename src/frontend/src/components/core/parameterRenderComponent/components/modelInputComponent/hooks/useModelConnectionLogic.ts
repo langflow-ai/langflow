@@ -76,12 +76,9 @@ export function useModelConnectionLogic({
         // execute with stale config when no external model is connected.
         store.setNode(nodeId, (prevNode) => {
           const template = { ...prevNode.data.node.template };
-          // Clear model selection and mark as connection mode so the backend
-          // doesn't auto-select a model or re-populate credentials on reload.
           if (template.model) {
             template.model = { ...template.model, value: [], _connection_mode: true };
           }
-          // Clear credential fields
           for (const [key, field] of Object.entries(template)) {
             const f = field as any;
             if (f?.password || f?._input_type === "SecretStrInput") {

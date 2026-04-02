@@ -210,21 +210,14 @@ export default function ModelInputComponent({
       if (nodeId) {
         const store = useFlowStore.getState();
         const node = store.getNode(nodeId);
-        const modelField = node?.data?.node?.template?.model;
+        const modelField = (node?.data as any)?.node?.template?.model;
         if (modelField?._connection_mode) {
-          store.setNode(nodeId, (prev) => ({
-            ...prev,
-            data: {
-              ...prev.data,
-              node: {
-                ...prev.data.node,
-                template: {
-                  ...prev.data.node.template,
-                  model: { ...prev.data.node.template.model, _connection_mode: false },
-                },
-              },
-            },
-          }), false);
+          store.setNode(nodeId, (prev) => {
+            const data = prev.data as any;
+            data._connectionMode = false;
+            data.node.template.model._connection_mode = false;
+            return { ...prev, data };
+          }, false);
         }
       }
       const selectedOption = flatOptions.find(
