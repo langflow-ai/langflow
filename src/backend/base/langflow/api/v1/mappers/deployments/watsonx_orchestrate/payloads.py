@@ -458,7 +458,7 @@ class WatsonxApiDeploymentFlowVersionItemData(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    app_ids: list[str] = Field(min_length=1)
+    app_ids: list[str] = Field(default_factory=list)
 
     @field_validator("app_ids", mode="before")
     @classmethod

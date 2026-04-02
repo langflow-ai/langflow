@@ -974,8 +974,8 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     ) -> dict[str, Any] | None:
         if not snapshot_data:
             return None
-        raw_connections = snapshot_data.get("connections", {})
-        if not isinstance(raw_connections, dict) or not raw_connections:
+        raw_connections = snapshot_data.get("connections")
+        if raw_connections is None or not isinstance(raw_connections, dict):
             return None
         try:
             return self._validate_slot(

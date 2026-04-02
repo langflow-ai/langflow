@@ -107,13 +107,13 @@ def test_watsonx_mapper_shapes_flow_version_item_data_from_connections() -> None
     assert shaped == {"app_ids": ["cfg-1", "cfg-2"]}
 
 
-def test_watsonx_mapper_flow_version_item_data_returns_none_for_missing_or_invalid_connections() -> None:
+def test_watsonx_mapper_flow_version_item_data_handles_missing_invalid_and_empty_connections() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
 
     assert mapper.shape_deployment_flow_version_item_data(None) is None
     assert mapper.shape_deployment_flow_version_item_data({}) is None
     assert mapper.shape_deployment_flow_version_item_data({"connections": []}) is None
-    assert mapper.shape_deployment_flow_version_item_data({"connections": {}}) is None
+    assert mapper.shape_deployment_flow_version_item_data({"connections": {}}) == {"app_ids": []}
 
 
 def test_watsonx_mapper_shapes_flow_version_list_result_with_enrichment() -> None:
@@ -156,6 +156,39 @@ def test_watsonx_mapper_shapes_flow_version_list_result_with_enrichment() -> Non
     assert shaped.flow_versions[0].attached_at == attached_at
     assert shaped.flow_versions[0].provider_snapshot_id == "tool-1"
     assert shaped.flow_versions[0].provider_data == {"app_ids": ["cfg-1"]}
+
+
+def test_watsonx_mapper_flow_version_list_result_returns_empty_app_ids_when_snapshot_has_no_connections() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    rows = [
+        (
+            SimpleNamespace(provider_snapshot_id="tool-1", created_at=datetime.now(tz=timezone.utc)),
+            SimpleNamespace(id=uuid4(), flow_id=uuid4(), version_number=1),
+            "Flow A",
+        )
+    ]
+    snapshot_result = SnapshotListResult(
+        snapshots=[
+            SnapshotItem(
+                id="tool-1",
+                name="Tool 1",
+                provider_data={"connections": {}},
+            )
+        ]
+    )
+
+    shaped = mapper.shape_flow_version_list_result(
+        rows=rows,
+        snapshot_result=snapshot_result,
+        page=1,
+        size=20,
+        total=1,
+    )
+
+    assert shaped.total == 1
+    assert len(shaped.flow_versions) == 1
+    assert shaped.flow_versions[0].provider_snapshot_id == "tool-1"
+    assert shaped.flow_versions[0].provider_data == {"app_ids": []}
 
 
 def test_watsonx_mapper_flow_version_list_result_degrades_when_snapshot_result_missing() -> None:
