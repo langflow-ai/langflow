@@ -8,13 +8,14 @@ import warnings
 from contextlib import asynccontextmanager, suppress
 from http import HTTPStatus
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlencode
 
 import anyio
 import httpx
 import sqlalchemy
 from fastapi import FastAPI, HTTPException, Request, Response, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -76,6 +77,11 @@ async def log_exception_to_telemetry(exc: Exception, context: str) -> None:
         await telemetry_service.log_exception(exc, context)
     except (httpx.HTTPError, asyncio.QueueFull):
         await logger.awarning(f"Failed to log {context} exception to telemetry")
+
+
+def _sanitize_validation_errors(errors: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Strip request payload echoes from validation errors to avoid leaking submitted data."""
+    return [{key: value for key, value in error.items() if key != "input"} for error in errors]
 
 
 class RequestCancelledMiddleware(BaseHTTPMiddleware):
@@ -559,6 +565,13 @@ def create_app():
 
     # Discover and register additional routers from plugins (langflow.plugins entry-point)
     load_plugin_routes(app)
+
+    @app.exception_handler(RequestValidationError)
+    async def request_validation_exception_handler(_request: Request, exc: RequestValidationError):
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"detail": _sanitize_validation_errors(exc.errors())},
+        )
 
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
