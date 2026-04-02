@@ -278,7 +278,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
 
         metadata = {
             "embedding_provider": "Google Generative AI",
-            "embedding_model": "models/embedding-001",
+            "embedding_model": "models/gemini-embedding-001",
             "chunk_size": 1000,
         }
 
@@ -288,7 +288,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         result = component._build_embeddings(metadata, api_key="test-google-key")
 
         mock_google_embeddings.assert_called_once_with(
-            model="models/embedding-001",
+            model="models/gemini-embedding-001",
             google_api_key="test-google-key",  # pragma:allowlist secret
         )
         assert result == mock_embeddings
@@ -299,7 +299,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
 
         metadata = {
             "embedding_provider": "Google Generative AI",
-            "embedding_model": "models/embedding-001",
+            "embedding_model": "models/gemini-embedding-001",
             "chunk_size": 1000,
         }
 

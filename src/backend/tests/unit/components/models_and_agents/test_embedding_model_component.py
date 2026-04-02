@@ -160,7 +160,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
         component = component_class(
             model=[
                 {
-                    "name": "models/text-embedding-004",
+                    "name": "models/gemini-embedding-001",
                     "provider": "Google Generative AI",
                     "metadata": {
                         "embedding_class": "GoogleGenerativeAIEmbeddings",
@@ -192,7 +192,7 @@ class TestEmbeddingModelComponent(ComponentTestBaseWithoutClient):
 
         # Verify the GoogleGenerativeAIEmbeddings was called with the correct parameters
         mock_google_class.assert_called_once_with(
-            model="models/text-embedding-004",
+            model="models/gemini-embedding-001",
             google_api_key="test-google-key",
         )
 

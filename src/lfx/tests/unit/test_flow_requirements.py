@@ -307,7 +307,7 @@ class TestDetectProviders:
                 "value": [{"provider": "OpenAI", "name": "gpt-4o"}],
             },
             "embeddings_model": {
-                "value": [{"provider": "Google Generative AI", "name": "embedding-001"}],
+                "value": [{"provider": "Google Generative AI", "name": "gemini-embedding-001"}],
             },
         }
         result = _detect_providers_from_template(template)
@@ -561,7 +561,7 @@ class TestGenerateRequirementsFromFlow:
             "Embeddings",
             "",
             template_extra={
-                "embeddings_model": {"value": [{"provider": "Google Generative AI", "name": "embedding-001"}]},
+                "embeddings_model": {"value": [{"provider": "Google Generative AI", "name": "gemini-embedding-001"}]},
             },
         )
         flow = _make_flow(node1, node2)

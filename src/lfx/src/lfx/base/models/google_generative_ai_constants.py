@@ -100,8 +100,7 @@ GOOGLE_GENERATIVE_AI_MODELS = [metadata["name"] for metadata in GOOGLE_GENERATIV
 
 # Google Generative AI Embedding Models
 GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS = [
-    "models/text-embedding-004",
-    "models/embedding-001",
+    "models/gemini-embedding-001",
 ]
 
 # Embedding models as detailed metadata
