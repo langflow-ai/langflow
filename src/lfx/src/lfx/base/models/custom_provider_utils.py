@@ -1,4 +1,5 @@
 """Helpers to load custom provider models into the unified model system."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -21,9 +22,9 @@ def get_custom_provider_options(user_id: UUID | str | None) -> list[dict[str, An
 
 async def _fetch_options(user_id: UUID | str) -> list[dict[str, Any]]:
     try:
+        from langflow.services.deps import session_scope
         from sqlalchemy.orm import selectinload
         from sqlmodel import select
-        from langflow.services.deps import session_scope
     except ImportError:
         return []
 
@@ -41,31 +42,31 @@ async def _fetch_options(user_id: UUID | str) -> list[dict[str, Any]]:
 
             for cp in providers:
                 for idx, model in enumerate(cp.models):
-                    options.append({
-                        "name": model.name,
-                        "icon": "Bot",
-                        "category": cp.name,
-                        "provider": cp.name,
-                        "metadata": {
-                            "model_class": "ChatOpenAI",
-                            "model_name_param": "model",
-                            "api_key_param": "api_key",
-                            "base_url_param": "base_url",
-                            "custom_provider_id": str(cp.id),
-                            "is_custom_provider": True,
-                            "tool_calling": model.tool_calling,
-                            "default": idx < 5,
-                        },
-                    })
+                    options.append(
+                        {
+                            "name": model.name,
+                            "icon": "Bot",
+                            "category": cp.name,
+                            "provider": cp.name,
+                            "metadata": {
+                                "model_class": "ChatOpenAI",
+                                "model_name_param": "model",
+                                "api_key_param": "api_key",
+                                "base_url_param": "base_url",
+                                "custom_provider_id": str(cp.id),
+                                "is_custom_provider": True,
+                                "tool_calling": model.tool_calling,
+                                "default": idx < 5,
+                            },
+                        }
+                    )
     except Exception as e:  # noqa: BLE001
         logger.debug(f"Error fetching custom providers: {e}")
 
     return options
 
 
-def get_custom_provider_credentials(
-    custom_provider_id: str, user_id: UUID | str
-) -> tuple[str, str] | None:
+def get_custom_provider_credentials(custom_provider_id: str, user_id: UUID | str) -> tuple[str, str] | None:
     """Fetch (base_url, decrypted_api_key) for a custom provider. Returns None if not found."""
     try:
         return run_until_complete(_fetch_credentials(custom_provider_id, user_id))

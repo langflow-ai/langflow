@@ -162,7 +162,9 @@ async def create_custom_provider(
     # Duplicate name check (scoped to user)
     existing = (
         await session.exec(
-            select(CustomProvider).options(selectinload(CustomProvider.models)).where(
+            select(CustomProvider)
+            .options(selectinload(CustomProvider.models))
+            .where(
                 CustomProvider.user_id == current_user.id,
                 CustomProvider.name == body.name,
             )
@@ -190,7 +192,9 @@ async def create_custom_provider(
     # (DbSession auto-commits at end of request)
     cp = (
         await session.exec(
-            select(CustomProvider).options(selectinload(CustomProvider.models)).where(
+            select(CustomProvider)
+            .options(selectinload(CustomProvider.models))
+            .where(
                 CustomProvider.id == cp.id,
             )
         )
@@ -226,7 +230,9 @@ async def get_custom_provider(
     """Get a single custom provider."""
     cp = (
         await session.exec(
-            select(CustomProvider).options(selectinload(CustomProvider.models)).where(
+            select(CustomProvider)
+            .options(selectinload(CustomProvider.models))
+            .where(
                 CustomProvider.id == provider_id,
                 CustomProvider.user_id == current_user.id,
             )
@@ -312,19 +318,20 @@ async def update_custom_provider(
         ]
     else:
         # No model changes — query current models
-        models = (
-            await session.exec(
-                select(CustomProviderModel).where(CustomProviderModel.provider_id == cp.id)
-            )
-        ).all()
+        models = (await session.exec(select(CustomProviderModel).where(CustomProviderModel.provider_id == cp.id))).all()
         model_reads = [
             CustomProviderModelRead(id=m.id, provider_id=m.provider_id, name=m.name, tool_calling=m.tool_calling)
             for m in models
         ]
 
     return CustomProviderRead(
-        id=cp.id, user_id=cp.user_id, name=cp.name, base_url=cp.base_url,
-        models=model_reads, created_at=cp.created_at, updated_at=cp.updated_at,
+        id=cp.id,
+        user_id=cp.user_id,
+        name=cp.name,
+        base_url=cp.base_url,
+        models=model_reads,
+        created_at=cp.created_at,
+        updated_at=cp.updated_at,
     )
 
 
@@ -338,7 +345,9 @@ async def delete_custom_provider(
     """Delete a custom provider (and its models via cascade)."""
     cp = (
         await session.exec(
-            select(CustomProvider).options(selectinload(CustomProvider.models)).where(
+            select(CustomProvider)
+            .options(selectinload(CustomProvider.models))
+            .where(
                 CustomProvider.id == provider_id,
                 CustomProvider.user_id == current_user.id,
             )
@@ -360,7 +369,9 @@ async def validate_custom_provider(
     """Probe the provider's /models endpoint to verify connectivity and credentials."""
     cp = (
         await session.exec(
-            select(CustomProvider).options(selectinload(CustomProvider.models)).where(
+            select(CustomProvider)
+            .options(selectinload(CustomProvider.models))
+            .where(
                 CustomProvider.id == provider_id,
                 CustomProvider.user_id == current_user.id,
             )
@@ -400,7 +411,9 @@ async def discover_models(
     """
     cp = (
         await session.exec(
-            select(CustomProvider).options(selectinload(CustomProvider.models)).where(
+            select(CustomProvider)
+            .options(selectinload(CustomProvider.models))
+            .where(
                 CustomProvider.id == provider_id,
                 CustomProvider.user_id == current_user.id,
             )
@@ -435,13 +448,9 @@ async def discover_models(
 
     try:
         data = response.json()
-        model_ids: list[str] = [
-            item["id"] for item in data.get("data", []) if isinstance(item, dict) and "id" in item
-        ]
+        model_ids: list[str] = [item["id"] for item in data.get("data", []) if isinstance(item, dict) and "id" in item]
         model_ids = model_ids[:_MAX_DISCOVERED_MODELS]
     except Exception as exc:  # noqa: BLE001
-        return DiscoverModelsResponse(
-            models=[], discovery_supported=True, error=f"Failed to parse response: {exc}"
-        )
+        return DiscoverModelsResponse(models=[], discovery_supported=True, error=f"Failed to parse response: {exc}")
 
     return DiscoverModelsResponse(models=model_ids, discovery_supported=True)

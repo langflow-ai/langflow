@@ -1,5 +1,9 @@
 from .api_key import ApiKey
 from .auth import SSOConfig, SSOUserProfile
+
+# CustomProvider must be imported AFTER User to ensure SQLAlchemy can resolve
+# the "User" string reference in CustomProvider.user relationship.
+from .custom_provider import CustomProvider, CustomProviderModel
 from .deployment import Deployment
 from .deployment_provider_account import DeploymentProviderAccount
 from .file import File
@@ -12,10 +16,6 @@ from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
 from .user import User
 from .variable import Variable
-
-# CustomProvider must be imported AFTER User to ensure SQLAlchemy can resolve
-# the "User" string reference in CustomProvider.user relationship.
-from .custom_provider import CustomProvider, CustomProviderModel
 
 __all__ = [
     "ApiKey",
