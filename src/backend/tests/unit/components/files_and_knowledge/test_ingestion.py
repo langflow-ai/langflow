@@ -1,6 +1,7 @@
 import json
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
@@ -471,6 +472,74 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         # Should raise a RuntimeError wrapping a ValueError with a clear message
         with pytest.raises(RuntimeError, match="no longer recognized"):
             await component.build_kb_info()
+
+    def test_scalar_notna_with_scalar_values(self, component_class, default_kwargs):
+        """Test _scalar_notna returns correct results for scalar values."""
+        component = component_class(**default_kwargs)
+
+        assert component._scalar_notna("hello") is True
+        assert component._scalar_notna(42) is True
+        assert component._scalar_notna(0) is True
+        assert component._scalar_notna("") is True
+        assert component._scalar_notna(None) is False
+        assert component._scalar_notna(float("nan")) is False
+
+    def test_scalar_notna_with_numpy_arrays(self, component_class, default_kwargs):
+        """Test _scalar_notna handles numpy arrays without raising ambiguous truth value errors."""
+        component = component_class(**default_kwargs)
+
+        # Empty array — should be False (no valid data)
+        assert component._scalar_notna(np.array([])) is False
+
+        # Array with valid values — should be True
+        assert component._scalar_notna(np.array([1, 2, 3])) is True
+
+        # Array containing NaN — should be False (not all values are non-NA)
+        assert component._scalar_notna(np.array([1, float("nan"), 3])) is False
+
+        # Array of strings — should be True
+        assert component._scalar_notna(np.array(["a", "b"])) is True
+
+    def test_scalar_notna_with_lists(self, component_class, default_kwargs):
+        """Test _scalar_notna handles plain lists safely."""
+        component = component_class(**default_kwargs)
+
+        assert component._scalar_notna([]) is False
+        assert component._scalar_notna([1, 2]) is True
+
+    async def test_convert_df_to_data_objects_with_array_cells(self, component_class, default_kwargs):
+        """Test that _convert_df_to_data_objects handles DataFrame rows containing numpy arrays.
+
+        This reproduces the bug where Split Text output contains metadata columns with
+        array values, causing 'truth value of an empty array is ambiguous' errors.
+        """
+        # Build a DataFrame with an array-valued metadata column (mimics Split Text output)
+        data_df = DataFrame(
+            {
+                "text": ["chunk 1", "chunk 2"],
+                "source": ["file.txt", "file.txt"],
+                "tags": [np.array([]), np.array(["important"])],
+            }
+        )
+        default_kwargs["input_df"] = data_df
+        default_kwargs["column_config"] = [
+            {"column_name": "text", "vectorize": True, "identifier": False},
+            {"column_name": "source", "vectorize": False, "identifier": True},
+            {"column_name": "tags", "vectorize": False, "identifier": False},
+        ]
+        component = component_class(**default_kwargs)
+        config_list = default_kwargs["column_config"]
+
+        with patch("lfx.components.files_and_knowledge.ingestion.Chroma") as mock_chroma:
+            mock_chroma_instance = MagicMock()
+            mock_chroma_instance.get.return_value = {"metadatas": []}
+            mock_chroma.return_value = mock_chroma_instance
+
+            # This should NOT raise "truth value of an empty array is ambiguous"
+            data_objects = await component._convert_df_to_data_objects(data_df, config_list)
+
+        assert len(data_objects) == 2
+        assert all(isinstance(obj, Data) for obj in data_objects)
 
     def test_build_embedding_metadata_without_api_key(self, component_class, default_kwargs):
         """Test _build_embedding_metadata with no API key stores model_selection for later use."""

@@ -208,6 +208,23 @@ class KnowledgeIngestionComponent(Component):
         """Return the root directory for knowledge bases."""
         return _get_knowledge_bases_root_path()
 
+    @staticmethod
+    def _scalar_notna(value) -> bool:
+        """Check if a value is not NA, safely handling arrays and sequences.
+
+        ``pd.notna`` returns an array when given an array-like input, which
+        cannot be used directly in a boolean context.  This helper collapses the
+        result to a single scalar ``bool``.
+        """
+        result = pd.notna(value)
+        # If result is array-like (numpy array, list, etc.), treat non-empty arrays as "present"
+        if hasattr(result, "__iter__") and not isinstance(result, str):
+            import numpy as np
+
+            arr = np.asarray(result)
+            return arr.size > 0 and arr.all()
+        return bool(result)
+
     def _validate_column_config(self, df_source: pd.DataFrame) -> list[dict[str, Any]]:
         """Validate column configuration using Structured Output patterns."""
         if not self.column_config:
@@ -430,7 +447,7 @@ class KnowledgeIngestionComponent(Component):
         # Convert each row to a Data object
         for _, row in df_source.iterrows():
             # Build content text from identifier columns using list comprehension
-            identifier_parts = [str(row[col]) for col in content_cols if col in row and pd.notna(row[col])]
+            identifier_parts = [str(row[col]) for col in content_cols if col in row and self._scalar_notna(row[col])]
 
             # Join all parts into a single string
             page_content = " ".join(identifier_parts)
@@ -442,12 +459,14 @@ class KnowledgeIngestionComponent(Component):
 
             # Add identifier columns if they exist
             if identifier_cols:
-                identifier_parts = [str(row[col]) for col in identifier_cols if col in row and pd.notna(row[col])]
+                identifier_parts = [
+                    str(row[col]) for col in identifier_cols if col in row and self._scalar_notna(row[col])
+                ]
                 page_content = " ".join(identifier_parts)
 
             # Add metadata columns as simple key-value pairs
             for col in df_source.columns:
-                if col not in content_cols and col in row and pd.notna(row[col]):
+                if col not in content_cols and col in row and self._scalar_notna(row[col]):
                     # Convert to simple types for Chroma metadata
                     value = row[col]
                     data_dict[col] = str(value)  # Convert complex types to string
