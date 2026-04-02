@@ -4,7 +4,9 @@ import {
   formatFileName,
   getFileDisplayName,
   getFilePreviewUrl,
+  isAbsoluteUrl,
   isImageFile,
+  normalizeServerImagePath,
 } from "../file-utils";
 
 // Mock the getBaseUrl function
@@ -19,6 +21,65 @@ beforeEach(() => {
 });
 
 describe("file-utils", () => {
+  describe("isAbsoluteUrl", () => {
+    it("should_return_true_for_http_https_data_blob", () => {
+      expect(isAbsoluteUrl("http://example.com/a.png")).toBe(true);
+      expect(isAbsoluteUrl("https://example.com/a.png")).toBe(true);
+      expect(isAbsoluteUrl("data:image/png;base64,AAAA")).toBe(true);
+      expect(isAbsoluteUrl("blob:https://example.com/123")).toBe(true);
+    });
+
+    it("should_return_false_for_relative_or_path_like_values", () => {
+      expect(isAbsoluteUrl("/files/images/a.png")).toBe(false);
+      expect(isAbsoluteUrl("flow123/a.png")).toBe(false);
+      expect(isAbsoluteUrl("C:/temp/a.png")).toBe(false);
+      expect(isAbsoluteUrl(" ")).toBe(false);
+    });
+  });
+
+  describe("normalizeServerImagePath", () => {
+    it("should_return_null_for_empty_or_whitespace", () => {
+      expect(normalizeServerImagePath("")).toBeNull();
+      expect(normalizeServerImagePath("   ")).toBeNull();
+    });
+
+    it("should_return_absolute_urls_unchanged", () => {
+      expect(normalizeServerImagePath("https://cdn.example.com/a.png")).toBe(
+        "https://cdn.example.com/a.png",
+      );
+      expect(normalizeServerImagePath(" data:image/png;base64,AAAA ")).toBe(
+        "data:image/png;base64,AAAA",
+      );
+    });
+
+    it("should_normalize_windows_separators_and_strip_leading_slashes", () => {
+      expect(normalizeServerImagePath("\\flow123\\image.jpg")).toBe(
+        "flow123/image.jpg",
+      );
+      expect(normalizeServerImagePath("///flow123//image.jpg")).toBe(
+        "flow123//image.jpg",
+      );
+      expect(normalizeServerImagePath("/flow123/sub/image.jpg")).toBe(
+        "flow123/sub/image.jpg",
+      );
+    });
+
+    it("should_extract_path_after_langflow_segment_when_present", () => {
+      expect(
+        normalizeServerImagePath(
+          "/Users/me/Library/Caches/langflow/flow123/sub/image.jpg",
+        ),
+      ).toBe("flow123/sub/image.jpg");
+    });
+
+    it("should_extract_path_from_uuid_segment_when_present", () => {
+      const uuid = "c8852b3e-d0c9-42b5-a557-4540272f28f5";
+      expect(
+        normalizeServerImagePath(`/var/tmp/${uuid}/nested/file.png`),
+      ).toBe(`${uuid}/nested/file.png`);
+    });
+  });
+
   describe("isImageFile", () => {
     describe("File object detection", () => {
       it("should_return_true_for_browser_File_with_image_mime_type", () => {
@@ -246,6 +307,15 @@ describe("file-utils", () => {
         expect(getFilePreviewUrl(windowsPath)).toBe(expected);
       });
 
+      it("should_normalize_macos_cache_absolute_path_to_flow_relative_path", () => {
+        const macosPath =
+          "/Users/langy/Library/Caches/langflow/c8852b3e-d0c9-42b5-a557-4540272f28f5/2026-04-01_18-43-42_image (3).png";
+        const expected =
+          "http://localhost:3000/api/v1/files/images/c8852b3e-d0c9-42b5-a557-4540272f28f5/2026-04-01_18-43-42_image%20(3).png";
+
+        expect(getFilePreviewUrl(macosPath)).toBe(expected);
+      });
+
       it("should_encode_special_characters_in_path_segments", () => {
         const pathWithSpaces = "flow 123\\folder name\\image file.jpg";
         const expected =
@@ -334,9 +404,20 @@ describe("file-utils", () => {
 
         const path = "flow123\\image.jpg";
         const expected =
-          "http://localhost:8000/apifiles/images/flow123/image.jpg";
+          "http://localhost:8000/api/files/images/flow123/image.jpg";
 
         expect(getFilePreviewUrl(path)).toBe(expected);
+      });
+
+      it("should_return_absolute_URL_unchanged", () => {
+        const url = "https://cdn.example.com/images/photo.jpg";
+        expect(getFilePreviewUrl(url)).toBe(url);
+      });
+
+      it("should_not_treat_URL_with_querystring_as_image", () => {
+        const url =
+          "https://cdn.example.com/images/photo.png?X-Amz-Signature=abc&X-Amz-Expires=123";
+        expect(getFilePreviewUrl(url)).toBeNull();
       });
     });
   });
@@ -345,6 +426,11 @@ describe("file-utils", () => {
     it("should_return_unchanged_when_under_limit", () => {
       const name = "short.jpg";
       expect(formatFileName(name)).toBe("short.jpg");
+    });
+
+    it("should_handle_undefined_or_null_name", () => {
+      expect(formatFileName(undefined as any)).toBe("");
+      expect(formatFileName(null as any)).toBe("");
     });
 
     it("should_truncate_long_basename_with_ellipsis", () => {
@@ -449,6 +535,21 @@ describe("file-utils", () => {
 
         expect(result).toEqual({
           name: "my-image.jpg",
+          type: "image/jpeg",
+          path: "flow123\\image.jpg",
+        });
+      })
+
+      it("should_fall_back_to_path_basename_when_name_missing", () => {
+        const fileObj = {
+          path: "flow123\\image.jpg",
+          type: "image/jpeg",
+        };
+
+        const result = extractFileInfo(fileObj as any);
+
+        expect(result).toEqual({
+          name: "image.jpg",
           type: "image/jpeg",
           path: "flow123\\image.jpg",
         });

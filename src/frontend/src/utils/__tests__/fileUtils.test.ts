@@ -43,8 +43,18 @@ describe("fileUtils", () => {
       expect(isAllowedChatAttachmentFile(file)).toBe(true);
     });
 
+    it("allows bmp by extension and mime type", () => {
+      const file = new File(["test"], "photo.bmp", { type: "image/bmp" });
+      expect(isAllowedChatAttachmentFile(file)).toBe(true);
+    });
+
     it("blocks unsupported extension even if mime is empty", () => {
       const file = new File(["test"], "payload.exe", { type: "" });
+      expect(isAllowedChatAttachmentFile(file)).toBe(false);
+    });
+
+    it("blocks unsupported image extension even if mime looks like an image", () => {
+      const file = new File(["test"], "photo.gif", { type: "image/gif" });
       expect(isAllowedChatAttachmentFile(file)).toBe(false);
     });
 

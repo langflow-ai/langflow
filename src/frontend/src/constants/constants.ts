@@ -846,38 +846,42 @@ export const MAX_BATCH_SIZE = 50;
 export const MODAL_CLASSES =
   "nopan nodelete nodrag  noflow fixed inset-0 bottom-0 left-0 right-0 top-0 z-50 overflow-auto bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";
 
-export const ALLOWED_IMAGE_INPUT_EXTENSIONS = ["png", "jpg", "jpeg"];
-export const ALLOWED_IMAGE_INPUT_MIME_TYPES = ["image/png", "image/jpeg"];
-export const CHAT_IMAGE_UPLOAD_ACCEPT = ".png,.jpg,.jpeg,image/png,image/jpeg";
-export const CHAT_IMAGE_UPLOAD_TOOLTIP = "Attach image (png, jpg, jpeg)";
+export const ALLOWED_IMAGE_INPUT_EXTENSIONS = ["png", "jpg", "jpeg", "bmp"];
+export const ALLOWED_IMAGE_INPUT_MIME_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/bmp",
+];
+export const CHAT_IMAGE_UPLOAD_ACCEPT =
+  ".png,.jpg,.jpeg,.bmp,image/png,image/jpeg,image/bmp";
+export const CHAT_IMAGE_UPLOAD_TOOLTIP = "Attach image (png, jpg, jpeg, bmp)";
 
 export const ALLOWED_CHAT_ATTACHMENT_INPUT_EXTENSIONS = [
-  "png",
-  "jpg",
-  "jpeg",
-  "pdf",
   "csv",
   "docx",
+  "json",
+  "pdf",
   "txt",
   "md",
   "mdx",
-  "json",
   "yaml",
   "yml",
   "xml",
   "html",
   "htm",
+  "tsx",
   "py",
   "sh",
   "sql",
   "js",
   "ts",
-  "tsx",
+  "jpg",
+  "jpeg",
+  "png",
+  "bmp",
 ];
 
 export const ALLOWED_CHAT_ATTACHMENT_INPUT_MIME_TYPES = [
-  "image/png",
-  "image/jpeg",
   "application/pdf",
   "text/csv",
   "application/vnd.ms-excel",
@@ -900,10 +904,13 @@ export const ALLOWED_CHAT_ATTACHMENT_INPUT_MIME_TYPES = [
   "text/x-sql",
   "application/x-sh",
   "text/x-python",
+  "image/png",
+  "image/jpeg",
+  "image/bmp",
 ];
 
 export const CHAT_ATTACHMENT_UPLOAD_ACCEPT =
-  ".png,.jpg,.jpeg,.pdf,.csv,.docx,.txt,.md,.mdx,.json,.yaml,.yml,.xml,.html,.htm,.py,.sh,.sql,.js,.ts,.tsx,image/png,image/jpeg,application/pdf,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,application/json,application/x-yaml,application/yaml,text/yaml,application/xml,text/xml,text/html,text/javascript,application/javascript,application/x-sh,text/x-python";
+  ".csv,.json,.pdf,.txt,.md,.mdx,.yaml,.yml,.xml,.html,.htm,.docx,.py,.sh,.sql,.js,.ts,.tsx,.jpg,.jpeg,.png,.bmp,application/pdf,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,application/json,application/x-yaml,application/yaml,text/yaml,application/xml,text/xml,text/html,text/javascript,application/javascript,text/typescript,text/x-typescript,text/x-tsx,application/sql,text/x-sql,application/x-sh,text/x-python,image/png,image/jpeg,image/bmp";
 export const CHAT_ATTACHMENT_UPLOAD_TOOLTIP =
   "Attach file (images, pdf, csv, docx, txt, md, json, yaml, xml, html, code files)";
 

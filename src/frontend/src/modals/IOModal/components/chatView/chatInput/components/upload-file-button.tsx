@@ -42,7 +42,7 @@ const UploadFileButton = ({
           onClick={handleClick}
           unstyled
         >
-          <ForwardedIconComponent className="h-[18px] w-[18px]" name="Image" />
+          <ForwardedIconComponent name="File" />
         </Button>
       </div>
     </ShadTooltip>
