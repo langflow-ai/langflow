@@ -156,22 +156,34 @@ async def keycloak_callback(
         if nonce and id_claims.get("nonce") != nonce:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Nonce mismatch in id_token")
 
-    # 3c. HCP API authorization — check employee number against project roles
-    if s.HCP_API_URL:
-        employee_number = ""
-        # Try id_token claims first, then fall back to access_token
-        if id_claims:
-            employee_number = str(id_claims.get(s.EMPLOYEE_CLAIM, ""))
-        if not employee_number:
-            access_claims = client.verify_and_decode(access_token)
-            employee_number = str(access_claims.get(s.EMPLOYEE_CLAIM, ""))
+    # 3c. Extract employee number from token
+    employee_number = ""
+    if id_claims:
+        employee_number = str(id_claims.get(s.EMPLOYEE_CLAIM, ""))
+    if not employee_number:
+        access_claims = client.verify_and_decode(access_token)
+        employee_number = str(access_claims.get(s.EMPLOYEE_CLAIM, ""))
 
+    # 3d. Per-instance employee check (ingress-based deployment)
+    if s.ALLOWED_EMPLOYEE:
         if not employee_number:
             return RedirectResponse(
                 url="/login?error=no_employee_id",
                 status_code=status.HTTP_302_FOUND,
             )
+        if employee_number.upper() != s.ALLOWED_EMPLOYEE.upper():
+            return RedirectResponse(
+                url=f"/login?error=unauthorized&employee={employee_number}",
+                status_code=status.HTTP_302_FOUND,
+            )
 
+    # 3e. HCP API authorization — check employee number against project roles
+    if s.HCP_API_URL:
+        if not employee_number:
+            return RedirectResponse(
+                url="/login?error=no_employee_id",
+                status_code=status.HTTP_302_FOUND,
+            )
         try:
             allowed = await fetch_allowed_employees(s.HCP_API_URL)
         except Exception:
@@ -179,7 +191,6 @@ async def keycloak_callback(
                 url="/login?error=hcp_unavailable",
                 status_code=status.HTTP_302_FOUND,
             )
-
         if employee_number.upper() not in allowed:
             return RedirectResponse(
                 url=f"/login?error=unauthorized&employee={employee_number}",

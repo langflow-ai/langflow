@@ -53,6 +53,12 @@ class KeycloakSettings(BaseSettings):
     # Which claim in the Keycloak id_token / access_token contains the employee number.
     EMPLOYEE_CLAIM: str = "preferred_username"
 
+    # Per-instance employee restriction.
+    # When set, only this employee number (from the Keycloak token) is allowed to
+    # log into this Langflow instance. Used for per-employee ingress deployments
+    # (e.g. langflow-{empno}.aipp02.skhynix.com).
+    ALLOWED_EMPLOYEE: str = ""
+
     @property
     def token_endpoint(self) -> str:
         return f"{self.SERVER_URL}/realms/{self.REALM}/protocol/openid-connect/token"

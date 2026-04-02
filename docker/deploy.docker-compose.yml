@@ -1,0 +1,46 @@
+# Production deployment: one Langflow instance per employee
+#
+# Usage:
+#   EMPNO=2074795 docker compose -f docker/deploy.docker-compose.yml up -d
+#
+# Ingress: http://langflow-{EMPNO}.aipp02.skhynix.com
+#
+# Required environment variables (set in .env or shell):
+#   EMPNO                    - Employee number (used for ingress, auth, and data isolation)
+#   KEYCLOAK_SERVER_URL      - Keycloak base URL (e.g. https://keycloak.skhynix.com)
+#   KEYCLOAK_REALM           - Keycloak realm name
+#   KEYCLOAK_CLIENT_ID       - Keycloak client ID
+#   KEYCLOAK_CLIENT_SECRET   - Keycloak client secret
+#   LANGFLOW_SECRET_KEY      - Random 32+ char secret for session signing
+#
+# Optional:
+#   IMAGE_TAG                - Docker image tag (default: latest)
+#   KEYCLOAK_EMPLOYEE_CLAIM  - Token claim for employee number (default: preferred_username)
+#   KEYCLOAK_HCP_API_URL     - HCP roles API URL for additional project-level auth
+
+services:
+  langflow:
+    image: ${IMAGE_REGISTRY:-dk02315}/langflow-hynix:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    ports:
+      - "${PORT:-7860}:7860"
+    environment:
+      KEYCLOAK_ENABLED: "true"
+      KEYCLOAK_SERVER_URL: "${KEYCLOAK_SERVER_URL}"
+      KEYCLOAK_REALM: "${KEYCLOAK_REALM}"
+      KEYCLOAK_CLIENT_ID: "${KEYCLOAK_CLIENT_ID}"
+      KEYCLOAK_CLIENT_SECRET: "${KEYCLOAK_CLIENT_SECRET}"
+      KEYCLOAK_REDIRECT_URI: "http://langflow-${EMPNO}.aipp02.skhynix.com/api/v1/keycloak/callback"
+      KEYCLOAK_SHARED_USERNAME: "langflow-${EMPNO}"
+      KEYCLOAK_ALLOWED_EMPLOYEE: "${EMPNO}"
+      KEYCLOAK_EMPLOYEE_CLAIM: "${KEYCLOAK_EMPLOYEE_CLAIM:-preferred_username}"
+      KEYCLOAK_HCP_API_URL: "${KEYCLOAK_HCP_API_URL:-}"
+      KEYCLOAK_BUTTON_TEXT: "SK하이닉스 SSO 로그인"
+      LANGFLOW_AUTO_LOGIN: "false"
+      LANGFLOW_SECRET_KEY: "${LANGFLOW_SECRET_KEY}"
+      LANGFLOW_DATABASE_URL: "sqlite+aiosqlite:////app/data/langflow.db"
+    volumes:
+      - langflow-${EMPNO}-data:/app/data
+
+volumes:
+  langflow-${EMPNO}-data:
