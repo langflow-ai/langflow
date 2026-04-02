@@ -6,51 +6,81 @@ import SimplifiedCodeTabComponent from "@/components/core/codeTabsComponent";
 import { cn } from "@/utils/utils";
 import type { ChatMessage } from "./types";
 
+function formatTraceValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  return JSON.stringify(value, null, 2);
+}
+
+function ToolTraceItem({
+  trace,
+}: {
+  trace: NonNullable<ChatMessage["toolTraces"]>[number];
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="rounded border border-border overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2 px-2 py-1.5 text-left hover:bg-muted/50 transition-colors"
+      >
+        <ForwardedIconComponent
+          name={open ? "ChevronDown" : "ChevronRight"}
+          className="h-3 w-3 flex-shrink-0 text-muted-foreground"
+        />
+        <ForwardedIconComponent
+          name="Wrench"
+          className="h-3 w-3 flex-shrink-0 text-muted-foreground"
+        />
+        <span className="font-medium text-foreground truncate">
+          {trace.toolName}
+        </span>
+        {trace.agentName && (
+          <span className="ml-auto text-muted-foreground truncate text-[10px]">
+            {trace.agentName}
+          </span>
+        )}
+      </button>
+      {open && (
+        <div className="border-t border-border px-2 py-1.5 flex flex-col gap-1.5">
+          {trace.input !== undefined && (
+            <div>
+              <div className="text-muted-foreground mb-0.5 font-medium">
+                Input
+              </div>
+              <pre className="overflow-x-auto rounded bg-muted p-1.5 text-xs whitespace-pre-wrap break-all">
+                {formatTraceValue(trace.input)}
+              </pre>
+            </div>
+          )}
+          {trace.output !== undefined && (
+            <div>
+              <div className="text-muted-foreground mb-0.5 font-medium">
+                Output
+              </div>
+              <pre className="overflow-x-auto rounded bg-muted p-1.5 text-xs whitespace-pre-wrap break-all">
+                {formatTraceValue(trace.output)}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ToolTracesPanel({
   traces,
 }: {
   traces: NonNullable<ChatMessage["toolTraces"]>;
 }) {
-  const [open, setOpen] = useState(false);
-
   return (
-    <div className="mt-2 text-xs">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
-      >
-        <span>{open ? "▾" : "▸"}</span>
-        <span>Tool details ({traces.length})</span>
-      </button>
-      {open && (
-        <div className="mt-1 flex flex-col gap-2">
-          {traces.map((trace, i) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: traces have no stable id
-            <div key={i} className="rounded border border-border p-2">
-              <div className="font-medium text-foreground mb-1">
-                {trace.toolName}
-              </div>
-              {trace.input !== undefined && (
-                <div className="mb-1">
-                  <div className="text-muted-foreground mb-0.5">Input</div>
-                  <pre className="overflow-x-auto rounded bg-muted p-1 text-xs">
-                    {JSON.stringify(trace.input, null, 2)}
-                  </pre>
-                </div>
-              )}
-              {trace.output !== undefined && (
-                <div>
-                  <div className="text-muted-foreground mb-0.5">Output</div>
-                  <pre className="overflow-x-auto rounded bg-muted p-1 text-xs">
-                    {JSON.stringify(trace.output, null, 2)}
-                  </pre>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+    <div className="mt-2 flex flex-col gap-1 text-xs">
+      {traces.map((trace, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: traces have no stable id
+        <ToolTraceItem key={i} trace={trace} />
+      ))}
     </div>
   );
 }

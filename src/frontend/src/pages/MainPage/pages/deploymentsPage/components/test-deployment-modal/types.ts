@@ -2,6 +2,7 @@ export interface ToolTrace {
   toolName: string;
   input: unknown;
   output: unknown;
+  agentName?: string;
 }
 
 export interface ChatMessage {
