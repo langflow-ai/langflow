@@ -3,6 +3,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
+import type { NodeDataType } from "@/types/flow";
 import { nodeColorsName } from "@/utils/styleUtils";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
@@ -196,7 +197,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
       (state) => {
         if (id?.type !== "model" || !left) return false;
         const node = state.getNode(nodeId);
-        return node?.data?._connectionMode === true;
+        return (node?.data as NodeDataType)?._connectionMode === true;
       },
       [nodeId, id?.type, left],
     ),
@@ -353,7 +354,8 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
         };
 
     const isModelType = id?.type === "model";
-    const isMuted = isModelType && !connectedEdge && !filterPresent && !isInConnectionMode;
+    const isMuted =
+      isModelType && !connectedEdge && !filterPresent && !isInConnectionMode;
 
     return {
       sameNode: sameDraggingNode || sameFilterNode,

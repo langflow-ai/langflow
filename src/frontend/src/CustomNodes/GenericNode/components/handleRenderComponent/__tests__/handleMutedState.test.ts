@@ -21,7 +21,9 @@ describe("model handle muted state", () => {
       isInConnectionMode: boolean = false,
     ): boolean => {
       const isModelType = idType === "model";
-      return isModelType && !connectedEdge && !filterPresent && !isInConnectionMode;
+      return (
+        isModelType && !connectedEdge && !filterPresent && !isInConnectionMode
+      );
     };
 
     it("should be muted when model type has no connection, no filter, and not in connection mode", () => {
@@ -81,9 +83,7 @@ describe("model handle muted state", () => {
       filterTargetNodeId: string | undefined,
       nodeId: string,
     ): boolean => {
-      return (
-        idType === "model" && left && filterTargetNodeId === nodeId
-      );
+      return idType === "model" && left && filterTargetNodeId === nodeId;
     };
 
     const NODE_ID = "agent-node-123";
