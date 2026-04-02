@@ -151,6 +151,10 @@ def build_provider_update_plan(
     raw_tool_app_ids: dict[str, OrderedUniqueStrs] = {
         raw_payload.name: OrderedUniqueStrs() for raw_payload in (provider_update.tools.raw_payloads or [])
     }
+    # operation_app_ids: every app_id referenced by bind/unbind operations.
+    #   Used later to derive existing_app_ids by subtracting raw connection
+    #   app_ids declared in connections.raw_payloads.
+    operation_app_ids = OrderedUniqueStrs()
     # existing_tool_refs: source_ref ↔ tool_id correlations (created=False)
     #   collected from all operations that reference existing tools (bind,
     #   unbind, remove_tool). Deduped by tool_id before storing in the plan,
@@ -160,6 +164,7 @@ def build_provider_update_plan(
 
     for operation in provider_update.operations:
         if isinstance(operation, WatsonxBindOperation):
+            operation_app_ids.extend(operation.app_ids)
             if operation.tool.tool_id_with_ref is not None:
                 ref = operation.tool.tool_id_with_ref
                 tool_id = ref.tool_id
@@ -194,6 +199,7 @@ def build_provider_update_plan(
             continue
 
         if isinstance(operation, WatsonxUnbindOperation):
+            operation_app_ids.extend(operation.app_ids)
             tool_id = operation.tool.tool_id
             existing_tool_refs.append(
                 WatsonxResultToolRefBinding(source_ref=operation.tool.source_ref, tool_id=tool_id, created=False)
@@ -243,9 +249,12 @@ def build_provider_update_plan(
         seen_removed_ref_ids.setdefault(ref.tool_id, ref)
     deduped_removed_existing_tool_refs = list(seen_removed_ref_ids.values())
 
+    raw_app_ids = {raw_payload.app_id for raw_payload in (provider_update.connections.raw_payloads or [])}
+    existing_app_ids = [app_id for app_id in operation_app_ids.to_list() if app_id not in raw_app_ids]
+
     return ProviderUpdatePlan(
         resource_prefix=resource_prefix,
-        existing_app_ids=list(provider_update.connections.existing_app_ids or []),
+        existing_app_ids=existing_app_ids,
         raw_connections_to_create=raw_connections_to_create,
         existing_tool_deltas=existing_tool_deltas,
         raw_tools_to_create=raw_tools_to_create,

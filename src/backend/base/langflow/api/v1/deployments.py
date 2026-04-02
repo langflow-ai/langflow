@@ -46,7 +46,6 @@ from langflow.api.v1.mappers.deployments.helpers import (
     rollback_provider_create,
     rollback_provider_update,
     sync_attachment_snapshot_ids,
-    to_deployment_create_response,
     to_provider_account_response,
     validate_project_scoped_flow_version_ids,
 )
@@ -589,7 +588,7 @@ async def create_deployment(
                 db=session,
             )
         raise
-    return to_deployment_create_response(provider_create_result, deployment_row)
+    return deployment_mapper.shape_deployment_create_result(provider_create_result, deployment_row)
 
 
 @router.get("", response_model=DeploymentListResponse)

@@ -147,8 +147,8 @@ async def create_connection_with_conflict_mapping(
             prefix = f"{error_prefix}: " if error_prefix else ""
             msg = (
                 f"{prefix}A connection with app_id '{app_id}' already exists in the provider. "
-                "Use an existing connection by referencing it in connections.existing_app_ids, "
-                "or choose a different app_id."
+                "Use an existing connection by referencing its app_id in operations[*].app_ids, "
+                "or choose a different app_id for connections.raw_payloads."
             )
             raise DeploymentConflictError(message=msg) from exc
         raise

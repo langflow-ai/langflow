@@ -205,9 +205,8 @@ class TestCreateDeploymentRollback:
         payload.spec.type = "agent"
         payload.spec.description = None
 
-        with patch(f"{ROUTES_MODULE}.to_deployment_create_response") as mock_response:
-            mock_response.return_value = MagicMock()
-            await create_deployment(session=session, payload=payload, current_user=_fake_user())
+        mapper.shape_deployment_create_result.return_value = MagicMock()
+        await create_deployment(session=session, payload=payload, current_user=_fake_user())
 
         mock_rollback.assert_not_awaited()
 
@@ -328,8 +327,8 @@ class TestCreateDeploymentExistingAgent:
         payload.spec.type = "agent"
         payload.spec.description = None
 
-        with patch(f"{ROUTES_MODULE}.to_deployment_create_response", return_value=MagicMock()):
-            await create_deployment(session=session, payload=payload, current_user=_fake_user())
+        mapper.shape_deployment_create_result.return_value = MagicMock()
+        await create_deployment(session=session, payload=payload, current_user=_fake_user())
 
         _ = (mock_name_exists, mock_get_by_resource_key, mock_validate_fv, mock_attach)
         adapter.create.assert_not_awaited()
@@ -389,8 +388,8 @@ class TestCreateDeploymentExistingAgent:
         payload.spec.type = "agent"
         payload.spec.description = "desc"
 
-        with patch(f"{ROUTES_MODULE}.to_deployment_create_response", return_value=MagicMock()):
-            await create_deployment(session=session, payload=payload, current_user=_fake_user())
+        mapper.shape_deployment_create_result.return_value = MagicMock()
+        await create_deployment(session=session, payload=payload, current_user=_fake_user())
 
         _ = (mock_name_exists, mock_get_by_resource_key, mock_validate_fv, mock_attach)
         adapter.create.assert_not_awaited()
@@ -453,8 +452,8 @@ class TestCreateDeploymentExistingAgent:
         payload.spec.type = "agent"
         payload.spec.description = "desc"
 
-        with patch(f"{ROUTES_MODULE}.to_deployment_create_response", return_value=MagicMock()) as mock_response:
-            await create_deployment(session=session, payload=payload, current_user=_fake_user())
+        mapper.shape_deployment_create_result.return_value = MagicMock()
+        await create_deployment(session=session, payload=payload, current_user=_fake_user())
 
         _ = (mock_name_exists, mock_get_by_resource_key, mock_validate_fv, mock_attach)
         adapter.create.assert_not_awaited()
@@ -465,8 +464,7 @@ class TestCreateDeploymentExistingAgent:
             existing_resource_key="existing-agent-1",
             result=adapter.update.return_value,
         )
-        create_result_arg = mock_response.call_args.args[0]
-        assert create_result_arg is mapped_create_result
+        mapper.shape_deployment_create_result.assert_called_once_with(mapped_create_result, dep_row)
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.create_deployment_db", new_callable=AsyncMock)
@@ -1692,8 +1690,8 @@ class TestCreateDeploymentProjectValidation:
         with (
             patch(f"{ROUTES_MODULE}.create_deployment_db", new_callable=AsyncMock, return_value=_fake_deployment_row()),
             patch(f"{ROUTES_MODULE}.attach_flow_versions", new_callable=AsyncMock),
-            patch(f"{ROUTES_MODULE}.to_deployment_create_response", return_value=MagicMock()),
         ):
+            mapper.shape_deployment_create_result.return_value = MagicMock()
             await create_deployment(session=session, payload=payload, current_user=_fake_user())
 
         mock_validate_fv.assert_awaited_once()

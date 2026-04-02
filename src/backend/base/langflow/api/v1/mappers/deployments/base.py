@@ -62,6 +62,7 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentConfigListItem,
     DeploymentConfigListResponse,
     DeploymentCreateRequest,
+    DeploymentCreateResponse,
     DeploymentFlowVersionListItem,
     DeploymentFlowVersionListResponse,
     DeploymentListItem,
@@ -333,8 +334,21 @@ class BaseDeploymentMapper:
             total=total,
         )
 
-    def shape_deployment_create_result(self, provider_result: dict[str, Any] | None) -> dict[str, Any] | None:
-        return provider_result
+    def shape_deployment_create_result(
+        self,
+        result: DeploymentCreateResult,
+        deployment_row: Deployment,
+    ) -> DeploymentCreateResponse:
+        provider_data = result.provider_result if isinstance(result.provider_result, dict) else None
+        return DeploymentCreateResponse(
+            id=deployment_row.id,
+            name=deployment_row.name,
+            description=deployment_row.description,
+            type=deployment_row.deployment_type,
+            created_at=deployment_row.created_at,
+            updated_at=deployment_row.updated_at,
+            provider_data=provider_data,
+        )
 
     def shape_deployment_update_result(
         self,

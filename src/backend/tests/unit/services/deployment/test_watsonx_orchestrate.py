@@ -2124,17 +2124,28 @@ async def test_create_provider_data_maps_raw_connection_conflict_to_deployment_c
         (
             {
                 "tools": {},
+                "connections": {
+                    "raw_payloads": [
+                        {
+                            "app_id": "app-in-use",
+                            "environment_variables": {"API_KEY": {"source": "raw", "value": "secret"}},
+                        },
+                        {
+                            "app_id": "app-unused",
+                            "environment_variables": {"API_KEY": {"source": "raw", "value": "secret"}},
+                        },
+                    ]
+                },
                 "llm": TEST_WXO_LLM,
                 "operations": [
                     {
                         "op": "bind",
                         "tool": {"tool_id_with_ref": _tool_ref("tool-1")},
-                        "app_ids": ["undeclared_app_for_bind"],
+                        "app_ids": ["app-in-use"],
                     }
                 ],
             },
-            "operation app_ids must be declared in connections\\.existing_app_ids or "
-            "connections\\.raw_payloads\\[\\*\\]\\.app_id",
+            "connections\\.raw_payloads contains app_id values not referenced by operations",
         ),
     ],
 )
