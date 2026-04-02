@@ -1352,6 +1352,67 @@ def test_wxo_mapper_resolve_verify_credentials_rejects_extra_fields() -> None:
         slot.parse({"api_key": "ok", "unexpected": "field"})  # pragma: allowlist secret
 
 
+@pytest.mark.asyncio
+async def test_watsonx_mapper_create_preserves_env_var_source_in_connection_payloads() -> None:
+    """Connections with environment_variables should preserve source (raw vs variable) through to the adapter payload."""
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    flow_version_id = uuid4()
+    flow_id = uuid4()
+    project_id = uuid4()
+    payload = DeploymentCreateRequest(
+        provider_id=uuid4(),
+        spec={"name": "deploy-with-vars", "description": "", "type": "agent"},
+        provider_data={
+            "resource_name_prefix": "lf_test_",
+            "llm": TEST_WXO_LLM,
+            "connections": {
+                "raw_payloads": [
+                    {
+                        "app_id": "app-new",
+                        "environment_variables": {
+                            "RAW_TOKEN": {"value": "literal-secret", "source": "raw"},  # pragma: allowlist secret
+                            "VAR_REF": {"value": "MY_GLOBAL_VAR", "source": "variable"},
+                        },
+                    }
+                ],
+            },
+            "operations": [
+                {
+                    "op": "bind",
+                    "flow_version_id": str(flow_version_id),
+                    "app_ids": ["app-new"],
+                }
+            ],
+        },
+    )
+    row = SimpleNamespace(
+        flow_version_id=flow_version_id,
+        flow_version_data={"nodes": [], "edges": []},
+        flow_id=flow_id,
+        flow_name="Flow B",
+        flow_description="desc",
+        flow_tags=[],
+    )
+
+    resolved = await mapper.resolve_deployment_create(
+        user_id=uuid4(),
+        project_id=project_id,
+        db=_FakeDb([row]),
+        payload=payload,
+    )
+    provider_data = resolved.provider_data or {}
+
+    conn_raw_payloads = provider_data["connections"]["raw_payloads"]
+    assert conn_raw_payloads is not None
+    assert len(conn_raw_payloads) == 1
+
+    env_vars = conn_raw_payloads[0]["environment_variables"]
+    assert env_vars["RAW_TOKEN"]["value"] == "literal-secret"  # pragma: allowlist secret
+    assert env_vars["RAW_TOKEN"]["source"] == "raw"
+    assert env_vars["VAR_REF"]["value"] == "MY_GLOBAL_VAR"
+    assert env_vars["VAR_REF"]["source"] == "variable"
+
+
 # ---------------------------------------------------------------------------
 # Smart bind: reuse existing tool when attachment exists
 # ---------------------------------------------------------------------------

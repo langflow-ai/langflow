@@ -190,10 +190,14 @@ export function DeploymentStepperProvider({
         if (conn?.isNew) {
           const envVarsWrapped: Record<
             string,
-            { value: string; source: "raw" }
+            { value: string; source: "raw" | "variable" }
           > = {};
           Object.entries(conn.environmentVariables).forEach(([k, v]) => {
-            envVarsWrapped[k] = { value: v, source: "raw" };
+            const isGlobalVar = conn.globalVarKeys?.has(k) ?? false;
+            envVarsWrapped[k] = {
+              value: v,
+              source: isGlobalVar ? "variable" : "raw",
+            };
           });
           rawPayloads.push({
             app_id: id,
