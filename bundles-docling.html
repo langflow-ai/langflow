@@ -25,7 +25,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied"})</script>
 <script>!function(){function e(){if(void 0!==window.truste&&window.truste.cma){var e=window.truste.cma.callApi("getConsent",window.location.href)||{},n=1===e[2],t=1===e[3];gtag("consent","update",{ad_storage:n?"granted":"denied",ad_user_data:n?"granted":"denied",ad_personalization:n?"granted":"denied",analytics_storage:t?"granted":"denied"})}}window.addEventListener&&(window.addEventListener("cm_data_subject_consent_changed",e),window.addEventListener("cm_consent_preferences_set",e)),"complete"===document.readyState?e():window.addEventListener("load",e)}()</script><link rel="stylesheet" href="/assets/css/styles.ba773e30.css">
-<script src="/assets/js/runtime~main.a1651604.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.23b610af.js" defer="defer"></script>
 <script src="/assets/js/main.e8d613fb.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -65,16 +65,23 @@ You might need to restart your computer or Langflow to apply the change.</p>
 The Docling dependency is required to use the Docling components in Langflow.</p>
 <ul>
 <li class="">
-<p><strong>Langflow version 1.6 and later</strong>: The Docling dependency is included by default for all operating systems except macOS Intel (x86_64).</p>
-<p>For macOS Intel (x86_64), use the <a href="https://docling-project.github.io/docling/installation/" target="_blank" rel="noopener noreferrer" class="">Docling installation guide</a> to install the Docling dependency.</p>
+<p><strong>Langflow Desktop</strong>: Set <code>LANGFLOW_DOCLING=True</code> in your <code>.env</code> file to enable Docling dependency installation. For more information, see <a class="" href="/environment-variables#set-environment-variables-for-langflow-desktop">Set environment variables for Langflow Desktop</a>.</p>
 </li>
 <li class="">
-<p><strong>Earlier versions</strong>: Langflow versions earlier than 1.6 don&#x27;t include the Docling dependency.
-For Langflow OSS, install the Docling extra with <code>uv pip install &#x27;langflow[docling]&#x27;</code>.
-For Langflow Desktop, add the Docling dependency to Langflow Desktop&#x27;s <code>requirements.txt</code>.
-For more information, see <a class="" href="/install-custom-dependencies">Install custom dependencies</a>.</p>
+<p><strong>Langflow OSS</strong>:</p>
+<ul>
+<li class="">If you installed <code>langflow</code> (<code>uv pip install langflow</code>), Docling is included automatically through bundled extras.</li>
+<li class="">If you installed <code>langflow-base</code> directly, install Docling with an extra, for example <code>uv pip install &quot;langflow-base[docling]&quot;</code>.</li>
+</ul>
+</li>
+<li class="">
+<p><strong>macOS Intel (x86_64)</strong>: Use the <a href="https://docling-project.github.io/docling/installation/" target="_blank" rel="noopener noreferrer" class="">Docling installation guide</a> to install the Docling dependency.</p>
+</li>
+<li class="">
+<p><strong>Earlier versions</strong>: Langflow versions earlier than 1.6 don&#x27;t include the Docling dependency by default.</p>
 </li>
 </ul>
+<p>For more information, see <a class="" href="/install-custom-dependencies">Install custom dependencies</a>.</p>
 </li>
 </ul>
 <ul>
