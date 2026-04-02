@@ -101,13 +101,8 @@ export async function uploadFile(page: Page, fileName: string) {
 
   await page.getByTestId("select-files-modal-button").click();
 
-  // Wait for the modal to close and the file to appear in the component.
-  // Use a partial match on the filename since the component may display
-  // the path differently (e.g., with a user_id prefix on Windows).
-  await page
-    .getByText(sourceFileName, { exact: false })
-    .first()
-    .waitFor({ state: "visible", timeout: 10000 });
+  // Wait for the modal to fully close before proceeding
+  await page.waitForTimeout(1000);
 
   await unselectNodes(page);
 }

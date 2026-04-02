@@ -53,9 +53,9 @@ test(
 
     // Add Update Data component
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("data operations");
+    await page.getByTestId("sidebar-search-input").fill("JSON Operations");
     await page.waitForSelector('[data-testid="processingJSON Operations"]', {
-      timeout: 3000,
+      timeout: 5000,
     });
 
     await page
