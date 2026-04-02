@@ -39,7 +39,6 @@ try:
     )
     from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
         WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
-        WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH,
     )
     from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
         WatsonxDeploymentUpdateResultData,
@@ -101,7 +100,6 @@ def test_watsonx_api_payload_accepts_flow_version_create_bind_contract() -> None
     flow_version_id = uuid4()
     payload = WatsonxApiDeploymentCreatePayload.model_validate(
         {
-            "resource_name_prefix": "lf_abc_",
             "llm": TEST_WXO_LLM,
             "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
@@ -114,116 +112,6 @@ def test_watsonx_api_payload_accepts_flow_version_create_bind_contract() -> None
         }
     )
     assert payload.operations[0].op == "bind"
-    assert payload.resource_name_prefix == "lf_abc_"
-
-
-def test_watsonx_api_payload_requires_resource_name_prefix_for_existing_agent_operations() -> None:
-    flow_version_id = uuid4()
-    with pytest.raises(
-        ValueError,
-        match=r"resource_name_prefix is required when operations include bind",
-    ):
-        WatsonxApiDeploymentCreatePayload.model_validate(
-            {
-                "llm": TEST_WXO_LLM,
-                "existing_agent_id": "21b2b5a4-ef72-4697-8731-132163669a46",
-                "connections": {"existing_app_ids": ["app-one"]},
-                "operations": [
-                    {
-                        "op": "bind",
-                        "flow_version_id": str(flow_version_id),
-                        "app_ids": ["app-one"],
-                    }
-                ],
-            }
-        )
-
-
-def test_watsonx_api_payload_requires_resource_name_prefix_for_raw_connection_payloads() -> None:
-    flow_version_id = uuid4()
-    with pytest.raises(
-        ValueError,
-        match=r"resource_name_prefix is required when operations include bind",
-    ):
-        WatsonxApiDeploymentCreatePayload.model_validate(
-            {
-                "llm": TEST_WXO_LLM,
-                "existing_agent_id": "21b2b5a4-ef72-4697-8731-132163669a46",
-                "connections": {
-                    "raw_payloads": [
-                        {
-                            "app_id": "app-one",
-                            "environment_variables": {},
-                            "provider_config": {},
-                        }
-                    ]
-                },
-                "operations": [
-                    {
-                        "op": "bind",
-                        "flow_version_id": str(flow_version_id),
-                        "app_ids": ["app-one"],
-                    }
-                ],
-            }
-        )
-
-
-def test_watsonx_api_payload_strips_resource_name_prefix_whitespace() -> None:
-    flow_version_id = uuid4()
-    payload = WatsonxApiDeploymentCreatePayload.model_validate(
-        {
-            "resource_name_prefix": "  custom_prefix  ",
-            "llm": TEST_WXO_LLM,
-            "connections": {"existing_app_ids": ["app-one"]},
-            "operations": [
-                {
-                    "op": "bind",
-                    "flow_version_id": str(flow_version_id),
-                    "app_ids": ["app-one"],
-                }
-            ],
-        }
-    )
-    assert payload.resource_name_prefix == "custom_prefix"
-
-
-def test_watsonx_api_payload_rejects_non_alpha_resource_name_prefix() -> None:
-    flow_version_id = uuid4()
-    with pytest.raises(ValueError, match="must start with a letter"):
-        WatsonxApiDeploymentCreatePayload.model_validate(
-            {
-                "resource_name_prefix": "123_prefix",
-                "llm": TEST_WXO_LLM,
-                "connections": {"existing_app_ids": ["app-one"]},
-                "operations": [
-                    {
-                        "op": "bind",
-                        "flow_version_id": str(flow_version_id),
-                        "app_ids": ["app-one"],
-                    }
-                ],
-            }
-        )
-
-
-def test_watsonx_api_payload_rejects_effective_too_long_resource_name_prefix() -> None:
-    flow_version_id = uuid4()
-    with pytest.raises(ValueError, match="cannot exceed"):
-        WatsonxApiDeploymentCreatePayload.model_validate(
-            {
-                "resource_name_prefix": "a" * (WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH - len("lf_") + 1),
-                "llm": TEST_WXO_LLM,
-                "connections": {"existing_app_ids": ["app-one"]},
-                "operations": [
-                    {
-                        "op": "bind",
-                        "flow_version_id": str(flow_version_id),
-                        "app_ids": ["app-one"],
-                    }
-                ],
-            }
-        )
 
 
 def test_watsonx_api_payload_accepts_flow_version_bind_contract() -> None:
@@ -231,7 +119,6 @@ def test_watsonx_api_payload_accepts_flow_version_bind_contract() -> None:
     payload = WatsonxApiDeploymentUpdatePayload.model_validate(
         {
             "llm": TEST_WXO_LLM,
-            "resource_name_prefix": "lf_abc_",
             "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
                 {
@@ -250,7 +137,6 @@ def test_watsonx_api_payload_accepts_bind_with_empty_app_ids() -> None:
     payload = WatsonxApiDeploymentUpdatePayload.model_validate(
         {
             "llm": TEST_WXO_LLM,
-            "resource_name_prefix": "lf_abc_",
             "operations": [
                 {
                     "op": "bind",
@@ -268,7 +154,6 @@ def test_watsonx_api_payload_rejects_create_without_llm() -> None:
     with pytest.raises(ValidationError, match="llm"):
         WatsonxApiDeploymentCreatePayload.model_validate(
             {
-                "resource_name_prefix": "lf_abc_",
                 "connections": {"existing_app_ids": ["app-one"]},
                 "operations": [
                     {
@@ -291,24 +176,6 @@ def test_watsonx_api_payload_accepts_llm_only_update_contract() -> None:
     assert payload.operations == []
 
 
-def test_watsonx_api_payload_rejects_bind_without_resource_name_prefix() -> None:
-    flow_version_id = uuid4()
-    with pytest.raises(ValidationError, match="resource_name_prefix is required"):
-        WatsonxApiDeploymentUpdatePayload.model_validate(
-            {
-                "llm": TEST_WXO_LLM,
-                "connections": {"existing_app_ids": ["app-one"]},
-                "operations": [
-                    {
-                        "op": "bind",
-                        "flow_version_id": str(flow_version_id),
-                        "app_ids": ["app-one"],
-                    }
-                ],
-            }
-        )
-
-
 def test_watsonx_api_payload_rejects_update_without_llm() -> None:
     flow_version_id = uuid4()
     with pytest.raises(ValidationError, match="llm"):
@@ -326,42 +193,6 @@ def test_watsonx_api_payload_rejects_update_without_llm() -> None:
         )
 
 
-def test_watsonx_update_payload_rejects_non_alpha_resource_name_prefix() -> None:
-    flow_version_id = uuid4()
-    with pytest.raises(ValueError, match="must start with a letter"):
-        WatsonxApiDeploymentUpdatePayload.model_validate(
-            {
-                "resource_name_prefix": "123_prefix",
-                "llm": TEST_WXO_LLM,
-                "connections": {"existing_app_ids": ["app-one"]},
-                "operations": [
-                    {
-                        "op": "bind",
-                        "flow_version_id": str(flow_version_id),
-                        "app_ids": ["app-one"],
-                    }
-                ],
-            }
-        )
-
-
-def test_watsonx_update_payload_rejects_effective_too_long_resource_name_prefix() -> None:
-    flow_version_id = uuid4()
-    with pytest.raises(ValueError, match="cannot exceed"):
-        WatsonxApiDeploymentUpdatePayload.model_validate(
-            {
-                "resource_name_prefix": "a" * (WXO_RESOURCE_NAME_PREFIX_MAX_LENGTH - len("lf_") + 1),
-                "llm": TEST_WXO_LLM,
-                "connections": {"existing_app_ids": ["app-one"]},
-                "operations": [
-                    {
-                        "op": "bind",
-                        "flow_version_id": str(flow_version_id),
-                        "app_ids": ["app-one"],
-                    }
-                ],
-            }
-        )
 
 
 def test_watsonx_api_payload_accepts_flow_version_unbind_and_remove_contract() -> None:
@@ -511,7 +342,6 @@ async def test_watsonx_mapper_translates_create_bind_into_raw_tool_payload() -> 
         provider_id=uuid4(),
         spec={"name": "create-deploy", "description": "", "type": "agent"},
         provider_data={
-            "resource_name_prefix": "lf_test_",
             "llm": TEST_WXO_LLM,
             "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
@@ -540,7 +370,6 @@ async def test_watsonx_mapper_translates_create_bind_into_raw_tool_payload() -> 
     )
     provider_data = resolved.provider_data or {}
 
-    assert provider_data["resource_name_prefix"] == "lf_test_"
     assert provider_data["llm"] == TEST_WXO_LLM
     assert provider_data["tools"]["raw_payloads"][0]["name"] == "Flow A"
     assert provider_data["tools"]["raw_payloads"][0]["provider_data"] == {
@@ -562,7 +391,6 @@ async def test_watsonx_mapper_translates_existing_create_bind_into_update_payloa
         provider_data={
             "llm": TEST_WXO_LLM,
             "existing_agent_id": "21b2b5a4-ef72-4697-8731-132163669a46",
-            "resource_name_prefix": "lf_test_",
             "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
                 {
@@ -592,7 +420,6 @@ async def test_watsonx_mapper_translates_existing_create_bind_into_update_payloa
 
     assert resolved.spec is not None
     assert resolved.spec.name == "existing-create"
-    assert provider_data["resource_name_prefix"] == "lf_test_"
     assert provider_data["tools"]["raw_payloads"][0]["name"] == "Flow A"
     assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow A"
 
@@ -607,7 +434,6 @@ async def test_watsonx_mapper_maps_create_adapter_payload_validation_errors_to_4
         spec={"name": "create-deploy", "description": "", "type": "agent"},
         provider_data={
             "llm": TEST_WXO_LLM,
-            "resource_name_prefix": "lf_test_",
             "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
                 {
@@ -656,7 +482,6 @@ async def test_watsonx_mapper_rejects_top_level_flow_version_and_config_on_creat
         spec={"name": "create-deploy", "description": "", "type": "agent"},
         flow_version_ids=[uuid4()],
         provider_data={
-            "resource_name_prefix": "lf_test_",
             "llm": TEST_WXO_LLM,
             "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
@@ -688,7 +513,6 @@ async def test_watsonx_mapper_create_reports_missing_llm_field_name() -> None:
         provider_id=uuid4(),
         spec={"name": "create-deploy", "description": "", "type": "agent"},
         provider_data={
-            "resource_name_prefix": "lf_test_",
             "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
                 {
@@ -730,7 +554,6 @@ async def test_watsonx_mapper_create_skips_empty_bind_operations_but_keeps_raw_t
         provider_id=uuid4(),
         spec={"name": "create-deploy", "description": "", "type": "agent"},
         provider_data={
-            "resource_name_prefix": "lf_test_",
             "llm": TEST_WXO_LLM,
             "operations": [
                 {
@@ -778,7 +601,6 @@ async def test_watsonx_mapper_translates_flow_version_bind_into_raw_tool_payload
     )
     payload = DeploymentUpdateRequest(
         provider_data={
-            "resource_name_prefix": "lf_test_",
             "llm": TEST_WXO_LLM,
             "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
@@ -801,7 +623,6 @@ async def test_watsonx_mapper_translates_flow_version_bind_into_raw_tool_payload
     )
     provider_data = resolved.provider_data or {}
 
-    assert provider_data["resource_name_prefix"] == "lf_test_"
     assert provider_data["llm"] == TEST_WXO_LLM
     assert provider_data["tools"]["raw_payloads"][0]["name"] == "Flow A_v1"
     assert provider_data["tools"]["raw_payloads"][0]["provider_data"] == {
@@ -840,7 +661,6 @@ async def test_watsonx_mapper_skips_empty_bind_operations_but_keeps_raw_tools() 
     payload = DeploymentUpdateRequest(
         provider_data={
             "llm": TEST_WXO_LLM,
-            "resource_name_prefix": "lf_test_",
             "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
                 {
@@ -1135,7 +955,6 @@ def test_watsonx_mapper_exposes_reconciliation_resolvers() -> None:
         DeploymentUpdateRequest(
             provider_data={
                 "llm": TEST_WXO_LLM,
-                "resource_name_prefix": "lf_test_",
                 "connections": {"existing_app_ids": ["app-one"]},
                 "operations": [
                     {"op": "bind", "flow_version_id": str(add_id), "app_ids": ["app-one"]},
@@ -1363,7 +1182,6 @@ async def test_watsonx_mapper_create_preserves_env_var_source_in_connection_payl
         provider_id=uuid4(),
         spec={"name": "deploy-with-vars", "description": "", "type": "agent"},
         provider_data={
-            "resource_name_prefix": "lf_test_",
             "llm": TEST_WXO_LLM,
             "connections": {
                 "raw_payloads": [
@@ -1461,7 +1279,6 @@ async def test_watsonx_mapper_bind_reuses_existing_tool_when_attachment_exists()
 
     payload = DeploymentUpdateRequest(
         provider_data={
-            "resource_name_prefix": "lf_test_",
             "llm": TEST_WXO_LLM,
             "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
@@ -1510,7 +1327,6 @@ async def test_watsonx_mapper_bind_creates_new_tool_when_no_attachment() -> None
 
     payload = DeploymentUpdateRequest(
         provider_data={
-            "resource_name_prefix": "lf_test_",
             "llm": TEST_WXO_LLM,
             "connections": {"existing_app_ids": ["app-one"]},
             "operations": [
@@ -1561,7 +1377,6 @@ async def test_watsonx_mapper_bind_reuse_with_empty_app_ids_emits_attach_tool() 
     payload = DeploymentUpdateRequest(
         provider_data={
             "llm": TEST_WXO_LLM,
-            "resource_name_prefix": "lf_test_",
             "operations": [
                 {
                     "op": "bind",
@@ -1927,7 +1742,7 @@ def test_watsonx_create_payload_accepts_bind_tool_operation() -> None:
 
 
 def test_watsonx_create_payload_bind_tool_without_prefix() -> None:
-    """bind_tool on create does not require resource_name_prefix."""
+    """bind_tool on create accepts minimal payload."""
     payload = WatsonxApiDeploymentCreatePayload.model_validate(
         {
             "llm": TEST_WXO_LLM,
@@ -1936,4 +1751,3 @@ def test_watsonx_create_payload_bind_tool_without_prefix() -> None:
             ],
         }
     )
-    assert payload.resource_name_prefix is None

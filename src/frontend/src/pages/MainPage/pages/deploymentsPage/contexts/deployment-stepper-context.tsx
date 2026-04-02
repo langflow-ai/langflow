@@ -17,7 +17,6 @@ import type {
   ProviderAccount,
   ProviderCredentials,
 } from "../types";
-import { toResourceNamePrefix } from "../types";
 
 interface DeploymentStepperInitialState {
   selectedVersionByFlow?: Map<
@@ -228,7 +227,6 @@ export function DeploymentStepperProvider({
         },
         provider_data: {
           llm: selectedLlm,
-          resource_name_prefix: toResourceNamePrefix(deploymentName),
           operations,
           connections: {
             existing_app_ids: existingAppIds,

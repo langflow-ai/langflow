@@ -10,17 +10,7 @@ from lfx.services.adapters.deployment.schema import DeploymentType
 from pydantic import BaseModel, Field, StringConstraints, field_validator, model_validator
 
 from langflow.api.v1.mappers.deployments.contracts import CreateFlowArtifactProviderData
-from langflow.services.adapters.deployment.watsonx_orchestrate.resource_name_prefix import (
-    validate_resource_name_prefix_for_provider,
-)
 
-WatsonxApiResourceNamePrefix = Annotated[
-    str,
-    StringConstraints(
-        strip_whitespace=True,
-        min_length=1,
-    ),
-]
 WatsonxApiLlmName = Annotated[
     str,
     StringConstraints(
@@ -273,28 +263,7 @@ class WatsonxApiDeploymentUpdatePayload(WatsonxApiDeploymentPayloadBase):
     """
 
     llm: WatsonxApiLlmName = Field(description="Provider model identifier to use for the deployment agent.")
-    resource_name_prefix: WatsonxApiResourceNamePrefix | None = Field(
-        default=None,
-        description=("Provider-specific naming/deconfliction hint applied only when creating resources."),
-    )
     operations: list[WatsonxApiUpdateOperation] = Field(default_factory=list)
-
-    @field_validator("resource_name_prefix")
-    @classmethod
-    def validate_resource_name_prefix(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        validate_resource_name_prefix_for_provider(value)
-        return value
-
-    @model_validator(mode="after")
-    def validate_prefix_required_for_bind_operations(self) -> WatsonxApiDeploymentUpdatePayload:
-        if any(isinstance(operation, WatsonxApiBindOperation) for operation in self.operations) and (
-            self.resource_name_prefix is None
-        ):
-            msg = "resource_name_prefix is required when update operations include bind."
-            raise ValueError(msg)
-        return self
 
 
 WatsonxApiCreateOperation = Annotated[
@@ -307,13 +276,6 @@ class WatsonxApiDeploymentCreatePayload(WatsonxApiDeploymentPayloadBase):
     """Watsonx provider_data API contract for deployment create operations."""
 
     llm: WatsonxApiLlmName = Field(description="Provider model identifier to use for the deployment agent.")
-    resource_name_prefix: WatsonxApiResourceNamePrefix | None = Field(
-        default=None,
-        description=(
-            "Provider-specific naming/deconfliction hint applied only when creating resources: "
-            "applied to names of created tools and deployments."
-        ),
-    )
     operations: list[WatsonxApiCreateOperation] = Field(default_factory=list)
     existing_agent_id: str | None = Field(
         default=None,
@@ -322,14 +284,6 @@ class WatsonxApiDeploymentCreatePayload(WatsonxApiDeploymentPayloadBase):
             "When provided, operations are optional and may be empty for DB-only onboarding."
         ),
     )
-
-    @field_validator("resource_name_prefix")
-    @classmethod
-    def validate_resource_name_prefix(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        validate_resource_name_prefix_for_provider(value)
-        return value
 
     @field_validator("existing_agent_id")
     @classmethod
@@ -345,14 +299,6 @@ class WatsonxApiDeploymentCreatePayload(WatsonxApiDeploymentPayloadBase):
     @model_validator(mode="after")
     def validate_create_operation_requirements(self) -> WatsonxApiDeploymentCreatePayload:
         has_operations = bool(self.operations)
-        has_raw_connections = bool(self.connections.raw_payloads)
-        has_flow_version_bind = any(isinstance(op, WatsonxApiBindOperation) for op in self.operations)
-        if (has_flow_version_bind or has_raw_connections) and self.resource_name_prefix is None:
-            msg = (
-                "resource_name_prefix is required when operations include bind "
-                "or connections.raw_payloads are provided."
-            )
-            raise ValueError(msg)
         if self.existing_agent_id is None and not has_operations:
             msg = "operations must include at least one bind or bind_tool operation for new agent creation."
             raise ValueError(msg)
