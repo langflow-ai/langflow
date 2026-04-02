@@ -319,7 +319,7 @@ def run(
                 settings_service.set(arg, values[arg])
             elif hasattr(settings_service.auth_settings, arg):
                 settings_service.auth_settings.set(arg, values[arg])
-            logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
+            logger.debug("Loading config from cli parameter '%s'", arg)
 
         # Get final values from settings
         host = settings_service.settings.host

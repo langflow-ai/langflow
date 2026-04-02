@@ -433,6 +433,7 @@ See [Telemetry](/contributing-telemetry).
 | `LANGFLOW_AUTO_SAVING_INTERVAL` | Integer | `1000` | Set the auto-save interval in milliseconds if `LANGFLOW_AUTO_SAVING=True`. |
 | `LANGFLOW_BUNDLE_URLS` | List[String] | `[]` | A list of URLs from which to load custom bundles. Supports GitHub URLs. If `LANGFLOW_AUTO_LOGIN=True`, flows from these bundles are loaded into the database. |
 | `LANGFLOW_COMPONENTS_PATH` | String | Not set | Path to a directory containing custom components. Typically used if you have local custom components or you are building a Docker image with custom components. |
+| `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` | Boolean | `True` | If `false`, disables custom components and in-editor editing of component code. This feature is in beta. For more information, see [Block custom components](../Deployment/deployment-block-custom-components.mdx). |
 | `LANGFLOW_LOAD_FLOWS_PATH` | String | Not set | Path to a directory containing flow JSON files to be loaded on startup. Typically used when creating a Docker image with prepackaged flows. Requires `LANGFLOW_AUTO_LOGIN=True`. |
 | `LANGFLOW_CREATE_STARTER_PROJECTS` | Boolean | `True` | Whether to create templates during initialization. If `false`, Langflow doesn't create templates, and `LANGFLOW_UPDATE_STARTER_PROJECTS` is treated as `false`. |
 | `LANGFLOW_UPDATE_STARTER_PROJECTS` | Boolean | `True` | Whether to update templates with the latest component versions when initializing after an upgrade. |

@@ -7,11 +7,18 @@ for non-blocking operations inside the MCP server.
 from __future__ import annotations
 
 import asyncio
+import json
+import logging
 import os
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 from starlette.status import HTTP_204_NO_CONTENT
+
+logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 class LangflowClient:
@@ -87,6 +94,24 @@ class LangflowClient:
         except (httpx.ConnectError, httpx.TimeoutException) as exc:
             msg = f"POST {path} failed: {exc}"
             raise RuntimeError(msg) from exc
+
+    async def stream_post(
+        self, path: str, json_data: Any = None, timeout: float = 300.0
+    ) -> AsyncIterator[dict[str, Any]]:
+        """POST with streaming SSE response. Yields parsed event dicts."""
+        url = self._url(path)
+        client = await self._client()
+        async with client.stream("POST", url, headers=self._headers(), json=json_data, timeout=timeout) as resp:
+            resp.raise_for_status()
+            async for raw_line in resp.aiter_lines():
+                line = raw_line.strip()
+                if not line:
+                    continue
+                try:
+                    yield json.loads(line)
+                except json.JSONDecodeError:
+                    logger.debug("stream_post: skipping non-JSON SSE line: %s", line[:200])
+                    continue
 
     async def patch(self, path: str, json_data: Any = None, **kwargs: Any) -> Any:
         url = self._url(path)

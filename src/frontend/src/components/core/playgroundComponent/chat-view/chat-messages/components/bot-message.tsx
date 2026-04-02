@@ -3,6 +3,7 @@ import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import IconComponent, {
   ForwardedIconComponent,
 } from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import { CustomMarkdownField } from "@/customization/components/custom-markdown-field";
@@ -10,6 +11,7 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { chatMessagePropsType } from "@/types/components";
+import { formatTokenCount } from "@/utils/format-token-count";
 import { cn } from "@/utils/utils";
 import { useMessageDuration } from "../hooks/use-message-duration";
 import { useStreamingMessage } from "../hooks/use-streaming-message";
@@ -125,6 +127,42 @@ export const BotMessage = memo(
         ? persistedDuration
         : liveDisplayTime;
 
+    const formattedTokenCount = formatTokenCount(
+      chat.properties?.usage?.total_tokens,
+    );
+
+    const tokenTooltipContent =
+      displayTime > 0 ? (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center text-xxs text-secondary-foreground">
+            <div>Last run:</div>
+            <div className="ml-1">{chat.timestamp}</div>
+          </div>
+          <div className="flex items-center text-xxs text-secondary-foreground">
+            <div>Duration:</div>
+            <div className="ml-auto">{formatSeconds(displayTime)}</div>
+          </div>
+          {chat.properties?.usage?.input_tokens != null && (
+            <div className="flex items-center text-xxs text-secondary-foreground">
+              <div>Input:</div>
+              <div className="ml-auto flex items-center gap-1 font-mono text-xs">
+                <ForwardedIconComponent name="Coins" className="h-3 w-3" />
+                {formatTokenCount(chat.properties.usage.input_tokens)}
+              </div>
+            </div>
+          )}
+          {chat.properties?.usage?.output_tokens != null && (
+            <div className="flex items-center text-xxs text-secondary-foreground">
+              <div>Output:</div>
+              <div className="ml-auto flex items-center gap-1 font-mono text-xs">
+                <ForwardedIconComponent name="Coins" className="h-3 w-3" />
+                {formatTokenCount(chat.properties.usage.output_tokens)}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null;
+
     return (
       <>
         <div className="w-full word-break-break-word mt-2">
@@ -151,20 +189,44 @@ export const BotMessage = memo(
               )}
 
               <div className="flex w-full flex-col min-w-0">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-0.5">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   {!thinkingActive && displayTime > 0 && (
                     <ForwardedIconComponent
                       name="Check"
                       className="h-4 w-4 text-emerald-400"
                     />
                   )}
-                  <span>
+                  <span className="w-full flex justify-between">
                     {thinkingActive && displayTime > 0 ? (
                       <span>Running... {formatSeconds(displayTime)}</span>
                     ) : !thinkingActive && displayTime > 0 ? (
-                      <span className="text-muted-foreground">
-                        Finished in {formatSeconds(displayTime)}
-                      </span>
+                      <>
+                        <span className="text-muted-foreground">
+                          Finished in
+                        </span>
+                        <ShadTooltip
+                          content={tokenTooltipContent}
+                          styleClasses="border rounded-xl p-2 bg-zinc-700"
+                          side="bottom"
+                        >
+                          <span className="flex cursor-help items-center gap-1 font-mono text-xs text-accent-emerald-foreground">
+                            {formattedTokenCount && (
+                              <span
+                                className="flex items-center gap-1"
+                                data-testid="chat-message-token-usage"
+                              >
+                                <ForwardedIconComponent
+                                  name="Coins"
+                                  className="h-3 w-3 text-muted-foreground"
+                                />
+                                <span>{formattedTokenCount}</span>
+                                <span className="text-muted-foreground">|</span>
+                              </span>
+                            )}
+                            <span>{formatSeconds(displayTime)}</span>
+                          </span>
+                        </ShadTooltip>
+                      </>
                     ) : null}
                   </span>
                 </div>
@@ -234,7 +296,7 @@ export const BotMessage = memo(
             </div>
 
             {!editMessage && (
-              <div className="invisible absolute -top-4 right-0 group-hover:visible">
+              <div className="invisible absolute bottom-full right-0 group-hover:visible">
                 <EditMessageButton
                   onCopy={() => navigator.clipboard.writeText(chatMessage)}
                   onEdit={() => setEditMessage(true)}

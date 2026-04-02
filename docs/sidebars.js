@@ -272,6 +272,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/deployment-block-custom-components",
+          label: "Block custom components",
+        },
+        {
+          type: "doc",
           id: "Deployment/security",
           label: "Security",
         },

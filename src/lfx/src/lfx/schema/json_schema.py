@@ -50,16 +50,23 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
     defs: dict[str, dict[str, Any]] = schema.get("$defs", {})
     model_cache: dict[str, type[BaseModel]] = {}
+    # Tracks $def names currently being built to detect self-referential schemas
+    building: set[str] = set()
 
     def resolve_ref(s: dict[str, Any] | None) -> dict[str, Any]:
         """Follow a $ref chain until you land on a real subschema."""
         if s is None:
             return {}
+        visited: set[str] = set()
         while "$ref" in s:
             ref_name = s["$ref"].split("/")[-1]
+            if ref_name in visited:
+                logger.warning("Parsing input schema: Circular $ref detected for '%s', treating as string", ref_name)
+                return {"type": "string"}
+            visited.add(ref_name)
             s = defs.get(ref_name)
             if s is None:
-                logger.warning(f"Parsing input schema: Definition '{ref_name}' not found")
+                logger.warning("Parsing input schema: Definition '%s' not found", ref_name)
                 return {"type": "string"}
         return s
 
@@ -140,41 +147,57 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             refname = subschema["$ref"].split("/")[-1]
             if refname in model_cache:
                 return model_cache[refname]
+            # Self-referential: this $ref is already being built — fall back to dict
+            if refname in building:
+                logger.warning("Parsing input schema: Self-referential $ref '%s' detected, treating as dict", refname)
+                return dict  # type: ignore[return-value]
             target = defs.get(refname)
             if not target:
                 msg = f"Definition '{refname}' not found"
                 raise ValueError(msg)
-            cls = _build_model(refname, target)
+            building.add(refname)
+            try:
+                cls = _build_model(refname, target)
+            finally:
+                building.discard(refname)
             model_cache[refname] = cls
             return cls
 
         # Named anonymous or inline: avoid clashes by name
         if name in model_cache:
             return model_cache[name]
+        # Self-referential: this model name is already being built — fall back to dict
+        if name in building:
+            logger.warning("Parsing input schema: Self-referential model '%s' detected, treating as dict", name)
+            return dict  # type: ignore[return-value]
 
-        props = subschema.get("properties", {})
-        reqs = {r for r in (subschema.get("required") or []) if isinstance(r, str)}
-        fields: dict[str, Any] = {}
+        building.add(name)
+        try:
+            props = subschema.get("properties", {})
+            reqs = {r for r in (subschema.get("required") or []) if isinstance(r, str)}
+            fields: dict[str, Any] = {}
 
-        for prop_name, prop_schema in props.items():
-            py_type = parse_type(prop_schema)
-            is_required = prop_name in reqs
-            if not is_required:
-                py_type = py_type | None
-                default = prop_schema.get("default", None)
-            else:
-                default = ...  # required by Pydantic
+            for prop_name, prop_schema in props.items():
+                py_type = parse_type(prop_schema)
+                is_required = prop_name in reqs
+                if not is_required:
+                    py_type = py_type | None
+                    default = prop_schema.get("default", None)
+                else:
+                    default = ...  # required by Pydantic
 
-            # Add alias for camelCase if field name is snake_case
-            field_kwargs = {"description": prop_schema.get("description")}
-            if "_" in prop_name:
-                camel_case_name = _snake_to_camel(prop_name)
-                if camel_case_name != prop_name:  # Only add alias if it's different
-                    field_kwargs["validation_alias"] = AliasChoices(prop_name, camel_case_name)
+                # Add alias for camelCase if field name is snake_case
+                field_kwargs = {"description": prop_schema.get("description")}
+                if "_" in prop_name:
+                    camel_case_name = _snake_to_camel(prop_name)
+                    if camel_case_name != prop_name:  # Only add alias if it's different
+                        field_kwargs["validation_alias"] = AliasChoices(prop_name, camel_case_name)
 
-            fields[prop_name] = (py_type, Field(default, **field_kwargs))
+                fields[prop_name] = (py_type, Field(default, **field_kwargs))
 
-        model_cls = create_model(name, **fields)
+            model_cls = create_model(name, **fields)
+        finally:
+            building.discard(name)
         model_cache[name] = model_cls
         return model_cls
 
