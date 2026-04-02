@@ -316,14 +316,14 @@ class TestLoopComponentSubgraphExecution:
 
         assert result == set()
 
-    def test_get_loop_body_start_vertex_without_vertex(self):
-        """Test that _get_loop_body_start_vertex returns None when no vertex context."""
+    def test_get_loop_body_start_vertices_without_vertex(self):
+        """Test that _get_loop_body_start_vertices returns empty list when no vertex context."""
         loop = LoopComponent()
 
-        # Without _vertex attribute, should return None
-        result = loop._get_loop_body_start_vertex()
+        # Without _vertex attribute, should return empty list
+        result = loop._get_loop_body_start_vertices()
 
-        assert result is None
+        assert result == []
 
     def test_extract_loop_output_with_empty_results(self):
         """Test that _extract_loop_output handles empty results."""
@@ -345,13 +345,13 @@ class TestLoopComponentSubgraphExecution:
         # Check that new methods exist
         assert hasattr(loop, "get_loop_body_vertices")
         assert hasattr(loop, "execute_loop_body")
-        assert hasattr(loop, "_get_loop_body_start_vertex")
+        assert hasattr(loop, "_get_loop_body_start_vertices")
         assert hasattr(loop, "_extract_loop_output")
 
         # Check that methods are callable
         assert callable(loop.get_loop_body_vertices)
         assert callable(loop.execute_loop_body)
-        assert callable(loop._get_loop_body_start_vertex)
+        assert callable(loop._get_loop_body_start_vertices)
         assert callable(loop._extract_loop_output)
 
     async def test_event_manager_passed_to_subgraph(self):
@@ -406,7 +406,7 @@ class TestLoopComponentSubgraphExecution:
 
         with (
             patch.object(loop, "get_loop_body_vertices", return_value={"vertex1"}),
-            patch.object(loop, "_get_loop_body_start_vertex", return_value="vertex1"),
+            patch.object(loop, "_get_loop_body_start_vertices", return_value=["vertex1"]),
             patch.object(loop.graph, "create_subgraph", mock_create_subgraph),
         ):
             result = await loop.execute_loop_body(data_list, event_manager=mock_event_manager)
