@@ -36,6 +36,7 @@ jest.mock("@/stores/flowStore", () => ({
   default: {
     getState: () => ({
       getNode: jest.fn(),
+      setNode: jest.fn(),
       setFilterEdge: jest.fn(),
       setFilterType: jest.fn(),
       nodes: [],
