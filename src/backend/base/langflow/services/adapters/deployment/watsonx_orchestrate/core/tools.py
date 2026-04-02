@@ -203,7 +203,6 @@ def build_langflow_artifact_bytes(
     requirements = [lfx_requirement, *requirements]
     requirements = dedupe_list(requirements)
     requirements_content = "\n".join(requirements) + "\n"
-    print("REQUIREMENTS CONTENT:---------------------------> ", requirements_content)
     flow_content = json.dumps(flow_definition, indent=2)
 
     buffer = io.BytesIO()
