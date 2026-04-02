@@ -84,6 +84,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.status impor
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
     build_langflow_artifact_bytes,
+    extract_langflow_connections_binding,
     upload_tool_artifact_bytes,
     verify_tools_by_ids,
 )
@@ -163,6 +164,19 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         except (AdapterPayloadMissingError, AdapterPayloadValidationError) as exc:
             msg = exc.format_first_error() if isinstance(exc, AdapterPayloadValidationError) else str(exc)
             raise InvalidContentError(message=msg) from None
+
+    def _validate_snapshot_item_provider_data(self, raw: dict[str, object]) -> dict[str, object]:
+        """Validate per-item snapshot provider_data via configured slot."""
+        snapshot_item_slot = self.payload_schemas.snapshot_item_data
+        if snapshot_item_slot is None:
+            msg = f"{ErrorPrefix.LIST.value} Required slot 'snapshot_item_data' is not configured."
+            raise DeploymentError(message=msg, error_code="deployment_error")
+
+        try:
+            return snapshot_item_slot.apply(raw)
+        except (AdapterPayloadMissingError, AdapterPayloadValidationError) as exc:
+            detail = exc.format_first_error() if isinstance(exc, AdapterPayloadValidationError) else str(exc)
+            raise InvalidContentError(message=detail) from None
 
     async def create(
         self,
@@ -741,7 +755,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         for tool in tools or []:
             if not isinstance(tool, dict):
                 continue
-            connections: dict = tool.get("binding", {}).get("langflow", {}).get("connections", {})
+            connections = extract_langflow_connections_binding(tool)
             if not connections:
                 continue
             app_ids.update(connections.keys())
@@ -795,7 +809,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 SnapshotItem(
                     id=tool["id"],
                     name=tool.get("name") or tool["id"],
-                    provider_data=tool,
+                    provider_data=self._validate_snapshot_item_provider_data(
+                        {"connections": extract_langflow_connections_binding(tool)}
+                    ),
                 )
                 for tool in (raw_tools or [])
                 if isinstance(tool, dict) and tool.get("id")
@@ -836,12 +852,22 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             SnapshotItem(
                 id=tool["id"],
                 name=tool.get("name") or tool["id"],
+                provider_data=self._validate_snapshot_item_provider_data(
+                    {"connections": extract_langflow_connections_binding(tool)}
+                ),
             )
             for tool in (tools or [])
-            if tool.get("id")
+            if isinstance(tool, dict) and tool.get("id")
         ]
         if not snapshots and requested_tool_ids:
-            snapshots = [SnapshotItem(id=tool_id, name=tool_id) for tool_id in requested_tool_ids]
+            snapshots = [
+                SnapshotItem(
+                    id=tool_id,
+                    name=tool_id,
+                    provider_data=self._validate_snapshot_item_provider_data({"connections": {}}),
+                )
+                for tool_id in requested_tool_ids
+            ]
 
         return SnapshotListResult(
             snapshots=snapshots,
@@ -868,7 +894,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 error_prefix=ErrorPrefix.LIST,
                 log_msg="Unexpected error while verifying wxO tool snapshots by ID",
             )
-        return SnapshotListResult(snapshots=snapshots)
+        return snapshots
 
     async def verify_credentials(
         self,

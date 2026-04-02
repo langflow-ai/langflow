@@ -30,6 +30,7 @@ from langflow.api.v1.mappers.deployments.helpers import (
     get_deployment_row_or_404,
     get_owned_provider_account_or_404,
     handle_adapter_errors,
+    list_deployment_flow_versions_synced,
     list_deployments_synced,
     normalize_flow_ids_query,
     normalize_flow_version_query_ids,
@@ -56,6 +57,7 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
     DeploymentCreateResponse,
     DeploymentDuplicateResponse,
+    DeploymentFlowVersionListResponse,
     DeploymentGetResponse,
     DeploymentListResponse,
     DeploymentLlmListResponse,
@@ -1349,6 +1351,42 @@ async def get_deployment_status(
         created_at=deployment_row.created_at,
         updated_at=deployment_row.updated_at,
         provider_data=health_result.provider_data,
+    )
+
+
+@router.get(
+    "/{deployment_id}/flows",
+    response_model=DeploymentFlowVersionListResponse,
+)
+async def list_deployment_flow_versions(
+    deployment_id: DeploymentIdPath,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    page: Annotated[int, Query(ge=1)] = 1,
+    size: Annotated[int, Query(ge=1, le=50)] = 20,
+):
+    deployment_row, deployment_adapter, deployment_mapper = await resolve_adapter_mapper_from_deployment(
+        deployment_id=deployment_id,
+        user_id=current_user.id,
+        db=session,
+    )
+    with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
+        rows, total, snapshot_result = await list_deployment_flow_versions_synced(
+            deployment_adapter=deployment_adapter,
+            deployment_mapper=deployment_mapper,
+            user_id=current_user.id,
+            provider_id=deployment_row.deployment_provider_account_id,
+            deployment_id=deployment_row.id,
+            db=session,
+            page=page,
+            size=size,
+        )
+    return deployment_mapper.shape_flow_version_list_result(
+        rows=rows,
+        snapshot_result=snapshot_result,
+        page=page,
+        size=size,
+        total=total,
     )
 
 

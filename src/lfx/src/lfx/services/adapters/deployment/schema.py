@@ -30,6 +30,7 @@ from lfx.services.adapters.deployment.payloads import (
     T_ListParamsPayload,
     T_ProviderData,
     T_ProviderResult,
+    T_SnapshotItemData,
     T_SnapshotListParams,
     T_SnapshotListResult,
     T_SnapshotUpdateResult,
@@ -106,12 +107,15 @@ class BaseFlowArtifact(BaseModel, Generic[T_FlowProviderData]):
 SnapshotList = Annotated[list[BaseFlowArtifact[AdapterPayload]], Field(min_length=1)]
 
 
-class SnapshotItem(BaseModel):
+class SnapshotItem(BaseModel, Generic[T_SnapshotItemData]):
     """Model representing a result for a snapshot item."""
 
     id: IdLike = Field(description="The id of the snapshot item")
     name: str = Field(description="The name of the snapshot item")
-    provider_data: dict | None = Field(None, description="The data of the snapshot item from the provider")
+    provider_data: T_SnapshotItemData | None = Field(
+        None,
+        description="The data of the snapshot item from the provider",
+    )
 
 
 class SnapshotItems(BaseModel, Generic[T_FlowProviderData]):
@@ -406,10 +410,13 @@ class ConfigListResult(ProviderResultModel[T_ConfigListResult]):
     configs: list[ConfigListItem] = Field(description="The list of configs")
 
 
-class SnapshotListResult(ProviderResultModel[T_SnapshotListResult]):
+class SnapshotListResult(
+    ProviderResultModel[T_SnapshotListResult],
+    Generic[T_SnapshotListResult, T_SnapshotItemData],
+):
     """Model representing a result for a snapshot list operation."""
 
-    snapshots: list[SnapshotItem] = Field(description="The list of snapshots")
+    snapshots: list[SnapshotItem[T_SnapshotItemData]] = Field(description="The list of snapshots")
 
 
 class SnapshotUpdateResult(ProviderResultModel[T_SnapshotUpdateResult]):

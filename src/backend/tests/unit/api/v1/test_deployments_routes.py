@@ -69,6 +69,17 @@ def test_deployment_status_path_matches_status_endpoint(deployment_routes: list[
     )
 
 
+def test_deployment_flows_path_matches_flow_versions_endpoint(deployment_routes: list[APIRoute]) -> None:
+    deployment_id = uuid4()
+    assert (
+        _resolve_endpoint_name(
+            deployment_routes,
+            path=f"/deployments/{deployment_id}/flows",
+        )
+        == "list_deployment_flow_versions"
+    )
+
+
 def test_include_deployment_router_skips_routes_when_feature_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(api_router_module.FEATURE_FLAGS, "wxo_deployments", False)
 

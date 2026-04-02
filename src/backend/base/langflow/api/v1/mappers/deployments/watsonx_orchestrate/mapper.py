@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -15,6 +16,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentUpdateResult,
     ExecutionCreateResult,
     ExecutionStatusResult,
+    SnapshotListResult,
     VerifyCredentials,
 )
 from lfx.services.adapters.deployment.schema import (
@@ -56,6 +58,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiBindOperation,
     WatsonxApiBindToolOperation,
     WatsonxApiDeploymentCreatePayload,
+    WatsonxApiDeploymentFlowVersionItemData,
     WatsonxApiDeploymentListProviderData,
     WatsonxApiDeploymentLlmListResultData,
     WatsonxApiDeploymentUpdatePayload,
@@ -69,6 +72,8 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
 )
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
+    DeploymentFlowVersionListItem,
+    DeploymentFlowVersionListResponse,
     DeploymentListResponse,
     DeploymentLlmListResponse,
     DeploymentProviderAccountCreateRequest,
@@ -95,6 +100,18 @@ if TYPE_CHECKING:
 
     from langflow.services.database.models.deployment.model import Deployment
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+    from langflow.services.database.models.flow_version.model import FlowVersion
+    from langflow.services.database.models.flow_version_deployment_attachment.model import (
+        FlowVersionDeploymentAttachment,
+    )
+
+
+@dataclass(frozen=True)
+class _NormalizedAttachmentRow:
+    attachment: FlowVersionDeploymentAttachment
+    flow_version: FlowVersion
+    flow_name: str | None
+    snapshot_id: str
 
 
 @register_mapper(AdapterType.DEPLOYMENT, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
@@ -116,6 +133,10 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         ),
         deployment_list_result=PayloadSlot(
             adapter_model=WatsonxApiDeploymentListProviderData,
+            policy=PayloadSlotPolicy.VALIDATE_ONLY,
+        ),
+        deployment_item_data=PayloadSlot(
+            adapter_model=WatsonxApiDeploymentFlowVersionItemData,
             policy=PayloadSlotPolicy.VALIDATE_ONLY,
         ),
         execution_create_result=PayloadSlot(
@@ -872,6 +893,101 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             total=total,
             provider_data=validated_payload,
         )
+
+    def shape_flow_version_list_result(
+        self,
+        *,
+        rows: list[tuple[FlowVersionDeploymentAttachment, FlowVersion, str | None]],
+        snapshot_result: SnapshotListResult | None,
+        page: int,
+        size: int,
+        total: int,
+    ) -> DeploymentFlowVersionListResponse:
+        normalized_rows = self._normalize_flow_version_attachment_rows(rows)
+        snapshot_data_by_id = self._resolve_snapshot_data_by_id(
+            snapshot_result=snapshot_result,
+        )
+
+        flow_versions = [
+            DeploymentFlowVersionListItem(
+                id=row.flow_version.id,
+                flow_id=row.flow_version.flow_id,
+                flow_name=row.flow_name,
+                version_number=row.flow_version.version_number,
+                attached_at=row.attachment.created_at,
+                provider_snapshot_id=row.snapshot_id,
+                provider_data=self.shape_deployment_flow_version_item_data(snapshot_data_by_id.get(row.snapshot_id)),
+            )
+            for row in normalized_rows
+        ]
+
+        return DeploymentFlowVersionListResponse(
+            flow_versions=flow_versions,
+            page=page,
+            size=size,
+            total=total,
+        )
+
+    def _normalize_flow_version_attachment_rows(
+        self,
+        rows: list[tuple[FlowVersionDeploymentAttachment, FlowVersion, str | None]],
+    ) -> list[_NormalizedAttachmentRow]:
+        normalized_rows: list[_NormalizedAttachmentRow] = []
+        for attachment, flow_version, flow_name in rows:
+            snapshot_id = (attachment.provider_snapshot_id or "").strip()
+            if not snapshot_id:
+                msg = "Flow version attachment has an invalid provider_snapshot_id."
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+            normalized_rows.append(
+                _NormalizedAttachmentRow(
+                    attachment=attachment,
+                    flow_version=flow_version,
+                    flow_name=flow_name,
+                    snapshot_id=snapshot_id,
+                )
+            )
+        return normalized_rows
+
+    def _resolve_snapshot_data_by_id(
+        self,
+        *,
+        snapshot_result: SnapshotListResult | None,
+    ) -> dict[str, dict[str, Any] | None]:
+        if snapshot_result is None:
+            return {}
+        if not snapshot_result.snapshots:
+            return {}
+
+        snapshot_data_by_id: dict[str, dict[str, Any] | None] = {}
+        for snapshot in snapshot_result.snapshots:
+            snapshot_id = str(snapshot.id).strip()
+            if not snapshot_id:
+                continue
+            provider_data = snapshot.provider_data
+            snapshot_data_by_id[snapshot_id] = provider_data if isinstance(provider_data, dict) else None
+
+        return snapshot_data_by_id
+
+    def shape_deployment_flow_version_item_data(
+        self,
+        snapshot_data: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        if not snapshot_data:
+            return None
+        raw_connections = snapshot_data.get("connections")
+        if raw_connections is None or not isinstance(raw_connections, dict):
+            return None
+        try:
+            return self._validate_slot(
+                self.api_payloads.deployment_item_data,
+                {"app_ids": list(raw_connections.keys())},
+            )
+        except AdapterPayloadValidationError as exc:
+            detail = exc.format_first_error()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Invalid flow-version provider_data payload: {detail}",
+            ) from exc
 
     def _shape_provider_deployment_list_entry(self, item: Any) -> dict[str, Any]:
         item_provider_data = item.provider_data

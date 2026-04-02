@@ -36,7 +36,9 @@ from lfx.services.adapters.deployment.schema import (
     ExecutionCreate,
     ExecutionCreateResult,
     ExecutionStatusResult,
+    SnapshotItem,
     SnapshotListParams,
+    SnapshotListResult,
 )
 from pydantic import ValidationError
 
@@ -2004,7 +2006,7 @@ async def test_update_provider_data_maps_raw_connection_conflict_to_deployment_c
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
     monkeypatch.setattr(shared_core_module, "create_config", mock_create_config)
 
-    with pytest.raises(DeploymentConflictError, match="error details"):
+    with pytest.raises(DeploymentConflictError, match="already exists in the provider"):
         await service.update(
             user_id="user-1",
             deployment_id="dep-1",
@@ -2068,7 +2070,7 @@ async def test_create_provider_data_maps_raw_connection_conflict_to_deployment_c
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
     monkeypatch.setattr(shared_core_module, "create_config", mock_create_config)
 
-    with pytest.raises(DeploymentConflictError, match="error details"):
+    with pytest.raises(DeploymentConflictError, match="already exists in the provider"):
         await service.create(
             user_id="user-1",
             payload=DeploymentCreate(
@@ -3116,6 +3118,40 @@ async def test_list_snapshots_single_deployment_scope(monkeypatch):
     )
 
     assert [snapshot.id for snapshot in result.snapshots] == ["tool-1", "tool-2"]
+    assert result.snapshots[0].provider_data == {"connections": {}}
+    assert result.snapshots[1].provider_data == {"connections": {}}
+
+
+@pytest.mark.anyio
+async def test_list_snapshots_single_deployment_scope_extracts_connections(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]}),
+        tool=FakeToolClient(
+            [
+                {
+                    "id": "tool-1",
+                    "name": "Tool One",
+                    "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
+                }
+            ]
+        ),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.list_snapshots(
+        user_id="user-1",
+        db=object(),
+        params=SnapshotListParams(deployment_ids=["dep-1"]),
+    )
+
+    assert [snapshot.id for snapshot in result.snapshots] == ["tool-1"]
+    assert result.snapshots[0].provider_data == {"connections": {"cfg-1": "conn-1"}}
 
 
 @pytest.mark.anyio
@@ -3148,7 +3184,7 @@ async def test_list_snapshots_without_deployment_id_lists_tenant_scope(monkeypat
     fake_base = FakeBaseClient(
         get_payloads={
             "/tools": [
-                {"id": "tool-1", "name": "Tool One"},
+                {"id": "tool-1", "name": "Tool One", "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}}},
                 {"id": "tool-2"},
             ]
         }
@@ -3169,7 +3205,180 @@ async def test_list_snapshots_without_deployment_id_lists_tenant_scope(monkeypat
 
     result = await service.list_snapshots(user_id="user-1", db=object(), params=None)
     assert [snapshot.id for snapshot in result.snapshots] == ["tool-1", "tool-2"]
+    assert result.snapshots[0].provider_data == {"connections": {"cfg-1": "conn-1"}}
+    assert result.snapshots[1].provider_data == {"connections": {}}
     assert result.provider_result == {"scope": "tenant"}
+
+
+@pytest.mark.anyio
+async def test_list_snapshots_snapshot_ids_returns_verified_provider_data(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    async def mock_verify_tools_by_ids(clients, snapshot_ids):  # noqa: ARG001
+        return SnapshotListResult(
+            snapshots=[
+                SnapshotItem(
+                    id="tool-1",
+                    name="Tool One",
+                    provider_data={"connections": {"cfg-1": "conn-1"}},
+                )
+            ]
+        )
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+    monkeypatch.setattr(service_module, "verify_tools_by_ids", mock_verify_tools_by_ids)
+
+    result = await service.list_snapshots(
+        user_id="user-1",
+        db=object(),
+        params=SnapshotListParams(snapshot_ids=["tool-1"]),
+    )
+
+    assert [snapshot.id for snapshot in result.snapshots] == ["tool-1"]
+    assert result.snapshots[0].provider_data == {"connections": {"cfg-1": "conn-1"}}
+
+
+@pytest.mark.anyio
+async def test_list_snapshots_snapshot_ids_trusts_verified_results_without_revalidation(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    async def mock_verify_tools_by_ids(clients, snapshot_ids):  # noqa: ARG001
+        return SnapshotListResult(
+            snapshots=[
+                SnapshotItem(
+                    id="tool-1",
+                    name="Tool One",
+                    provider_data={"unexpected": "value"},
+                )
+            ]
+        )
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+    monkeypatch.setattr(service_module, "verify_tools_by_ids", mock_verify_tools_by_ids)
+
+    result = await service.list_snapshots(
+        user_id="user-1",
+        db=object(),
+        params=SnapshotListParams(snapshot_ids=["tool-1"]),
+    )
+
+    assert result.snapshots[0].provider_data == {"unexpected": "value"}
+
+
+@pytest.mark.anyio
+async def test_verify_tools_by_ids_returns_only_connections_provider_data():
+    fake_clients = SimpleNamespace(
+        tool=FakeToolClient(
+            [
+                {
+                    "id": "tool-1",
+                    "name": "Tool One",
+                    "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
+                    "extra": "ignored",
+                },
+                {
+                    "id": "tool-2",
+                    "name": "Tool Two",
+                    "binding": {"langflow": {"connections": {}}},
+                    "extra": "ignored",
+                },
+            ]
+        )
+    )
+
+    result = await tools_module.verify_tools_by_ids(fake_clients, ["tool-1", "tool-2"])
+
+    assert [snapshot.id for snapshot in result.snapshots] == ["tool-1", "tool-2"]
+    assert result.snapshots[0].provider_data == {"connections": {"cfg-1": "conn-1"}}
+    assert result.snapshots[1].provider_data == {"connections": {}}
+
+
+@pytest.mark.anyio
+async def test_verify_tools_by_ids_tolerates_malformed_connections_payload():
+    fake_clients = SimpleNamespace(
+        tool=FakeToolClient(
+            [
+                {
+                    "id": "tool-1",
+                    "name": "Tool One",
+                    "binding": {"langflow": {"connections": ["not-a-dict"]}},
+                }
+            ]
+        )
+    )
+
+    result = await tools_module.verify_tools_by_ids(fake_clients, ["tool-1"])
+
+    assert len(result.snapshots) == 1
+    assert result.snapshots[0].id == "tool-1"
+    assert result.snapshots[0].provider_data == {"connections": {}}
+
+
+@pytest.mark.anyio
+async def test_verify_tools_by_ids_tolerates_malformed_connection_values():
+    fake_clients = SimpleNamespace(
+        tool=FakeToolClient(
+            [
+                {
+                    "id": "tool-1",
+                    "name": "Tool One",
+                    "binding": {"langflow": {"connections": {"cfg-1": "   "}}},
+                }
+            ]
+        )
+    )
+
+    result = await tools_module.verify_tools_by_ids(fake_clients, ["tool-1"])
+
+    assert len(result.snapshots) == 1
+    assert result.snapshots[0].id == "tool-1"
+    assert result.snapshots[0].provider_data == {"connections": {}}
+
+
+@pytest.mark.anyio
+async def test_verify_tools_by_ids_rejects_mixed_connections_payload():
+    fake_clients = SimpleNamespace(
+        tool=FakeToolClient(
+            [
+                {
+                    "id": "tool-1",
+                    "name": "Tool One",
+                    "binding": {
+                        "langflow": {
+                            "connections": {
+                                "cfg-1": "conn-1",
+                                "cfg-2": "   ",
+                                "   ": "conn-3",
+                                "cfg-4": 123,
+                            }
+                        }
+                    },
+                }
+            ]
+        )
+    )
+
+    result = await tools_module.verify_tools_by_ids(fake_clients, ["tool-1"])
+
+    assert len(result.snapshots) == 1
+    assert result.snapshots[0].id == "tool-1"
+    assert result.snapshots[0].provider_data == {"connections": {}}
 
 
 # ---------------------------------------------------------------------------

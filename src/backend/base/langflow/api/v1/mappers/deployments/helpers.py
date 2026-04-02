@@ -21,6 +21,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentType,
     DeploymentUpdateResult,
     SnapshotListParams,
+    SnapshotListResult,
 )
 from lfx.services.adapters.deployment.schema import (
     DeploymentCreateResult as AdapterDeploymentCreateResult,
@@ -54,10 +55,13 @@ from langflow.services.database.models.deployment_provider_account.model import 
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
+    count_deployment_attachments,
     create_deployment_attachment,
     delete_deployment_attachment,
     get_deployment_attachment,
     list_attachments_by_deployment_ids,
+    list_deployment_attachments,
+    list_deployment_attachments_with_versions,
     update_deployment_attachment_provider_snapshot_id,
 )
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
@@ -1036,6 +1040,73 @@ async def list_deployments_synced(
         flow_version_ids=flow_version_ids,
     )
     return accepted, total
+
+
+async def list_deployment_flow_versions_synced(
+    *,
+    deployment_adapter: DeploymentServiceProtocol,
+    deployment_mapper: BaseDeploymentMapper,
+    user_id: UUID,
+    provider_id: UUID,
+    deployment_id: UUID,
+    db: DbSession,
+    page: int,
+    size: int,
+) -> tuple[list[tuple[FlowVersionDeploymentAttachment, FlowVersion, str | None]], int, SnapshotListResult | None]:
+    """Return a paginated deployment attachment view synced against provider snapshots.
+
+    Uses attachment-tracked ``provider_snapshot_id`` values to verify provider
+    snapshot existence in one batched adapter call. Stale attachments are
+    deleted before pagination is applied.
+    """
+    attachments = await list_deployment_attachments(
+        db,
+        user_id=user_id,
+        deployment_id=deployment_id,
+    )
+    snapshot_result: SnapshotListResult | None = None
+    snapshot_ids = list(dict.fromkeys(deployment_mapper.util_snapshot_ids_to_verify(attachments)))
+    if snapshot_ids:
+        try:
+            snapshot_result = await deployment_adapter.list_snapshots(
+                user_id=user_id,
+                db=db,
+                params=SnapshotListParams(snapshot_ids=snapshot_ids),
+            )
+            known_snapshot_ids = {str(item.id) for item in snapshot_result.snapshots if item.id}
+
+            async with db.begin_nested():
+                await sync_attachment_snapshot_ids(
+                    user_id=user_id,
+                    deployment_ids=[deployment_id],
+                    attachments=attachments,
+                    known_snapshot_ids=known_snapshot_ids,
+                    db=db,
+                )
+        except Exception:  # noqa: BLE001
+            snapshot_result = None
+            logger.warning(
+                "Snapshot-level sync failed while listing deployment flow versions for deployment %s "
+                "(provider %s); "
+                "returning DB rows without provider enrichment",
+                deployment_id,
+                provider_id,
+                exc_info=True,
+            )
+
+    rows = await list_deployment_attachments_with_versions(
+        db,
+        user_id=user_id,
+        deployment_id=deployment_id,
+        offset=page_offset(page, size),
+        limit=size,
+    )
+    total = await count_deployment_attachments(
+        db,
+        user_id=user_id,
+        deployment_id=deployment_id,
+    )
+    return rows, total, snapshot_result
 
 
 async def attach_flow_versions(

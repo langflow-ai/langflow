@@ -104,6 +104,22 @@ def ensure_langflow_connections_binding(tool_payload: dict[str, Any]) -> dict[st
     return _ensure_dict(langflow, "connections")
 
 
+def extract_langflow_connections_binding(tool_payload: dict[str, Any]) -> dict[str, str]:
+    """Extract ``binding.langflow.connections`` from a provider tool payload.
+
+    Read-path helper: returns ``{}`` for missing or malformed nested shapes
+    without mutating the input payload.
+    """
+    binding = tool_payload.get("binding")
+    if not isinstance(binding, dict):
+        return {}
+    langflow = binding.get("langflow")
+    if not isinstance(langflow, dict):
+        return {}
+    connections = langflow.get("connections")
+    return connections if isinstance(connections, dict) else {}
+
+
 async def update_existing_tool_connection_bindings(
     *,
     clients: WxOClient,
@@ -500,13 +516,33 @@ async def verify_tools_by_ids(
             log_msg="Unexpected error while verifying wxO tool snapshots by ID",
         )
 
-    return SnapshotListResult(
-        snapshots=[
+    snapshots: list[SnapshotItem] = []
+    for tool in tools or []:
+        if not isinstance(tool, dict) or not tool.get("id"):
+            continue
+        connections = extract_langflow_connections_binding(tool)
+        normalized_connections: dict[str, str] = {
+            key: value
+            for raw_key, raw_value in connections.items()
+            if isinstance(raw_key, str)
+            and isinstance(raw_value, str)
+            and (key := raw_key.strip())
+            and (value := raw_value.strip())
+        }
+
+        if len(normalized_connections) < len(connections):
+            logger.warning(
+                "Tool %s returned malformed langflow connection bindings; defaulting to empty mapping",
+                tool["id"],
+            )
+            provider_data: dict[str, dict[str, str]] = {"connections": {}}
+        else:
+            provider_data = {"connections": normalized_connections}
+        snapshots.append(
             SnapshotItem(
                 id=tool["id"],
                 name=tool.get("name") or tool["id"],
+                provider_data=provider_data,
             )
-            for tool in (tools or [])
-            if isinstance(tool, dict) and tool.get("id")
-        ],
-    )
+        )
+    return SnapshotListResult(snapshots=snapshots)

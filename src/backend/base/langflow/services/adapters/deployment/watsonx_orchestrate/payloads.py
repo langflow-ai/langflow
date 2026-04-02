@@ -672,6 +672,14 @@ class WatsonxDeploymentLlmListResultData(BaseModel):
     models: list[WatsonxModelOut] = Field(default_factory=list)
 
 
+class WatsonxSnapshotConnectionsProviderData(BaseModel):
+    """Provider data contract for snapshot list items in snapshot-ids mode."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    connections: dict[NormalizedId, NormalizedId] = Field(default_factory=dict)
+
+
 class WatsonxProviderUpdateApplyResult(BaseModel):
     """Public adapter contract for update helper apply results.
 
@@ -718,6 +726,7 @@ class WatsonxVerifyCredentialsPayload(BaseModel):
 PAYLOAD_SCHEMAS = DeploymentPayloadSchemas(
     deployment_create=PayloadSlot(WatsonxDeploymentCreatePayload),
     flow_artifact=PayloadSlot(WatsonxFlowArtifactProviderData),
+    snapshot_item_data=PayloadSlot(WatsonxSnapshotConnectionsProviderData),
     deployment_create_result=PayloadSlot(WatsonxDeploymentCreateResultData),
     deployment_update=PayloadSlot(WatsonxDeploymentUpdatePayload),
     deployment_update_result=PayloadSlot(WatsonxDeploymentUpdateResultData),
