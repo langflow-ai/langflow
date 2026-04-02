@@ -1,0 +1,20 @@
+{{- if .Values.nfs.enabled }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ include "langflow.fullname" . }}-data
+  labels:
+    {{- include "langflow.labels" . | nindent 4 }}
+spec:
+  capacity:
+    storage: {{ .Values.langflow.storage }}
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.langflow.storageClass }}
+  storageClassName: {{ .Values.langflow.storageClass }}
+  {{- end }}
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: {{ required "nfs.server is required when nfs.enabled=true" .Values.nfs.server }}
+    path: {{ required "nfs.basePath is required when nfs.enabled=true" .Values.nfs.basePath }}/{{ .Values.empno }}
+{{- end }}

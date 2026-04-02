@@ -1,0 +1,31 @@
+services:
+  langflow:
+    image: dk02315/langflow-hynix:v1.8.0-hynix-rc2
+    ports:
+      - "${LANGFLOW_PORT:-7860}:7860"
+    environment:
+      - LANGFLOW_DATABASE_URL=sqlite+aiosqlite:////app/data/langflow.db
+      - LANGFLOW_AUTO_LOGIN=false
+      - LANGFLOW_SECRET_KEY=${LANGFLOW_SECRET_KEY:?required}
+      - KEYCLOAK_ENABLED=true
+      - KEYCLOAK_SERVER_URL=${KEYCLOAK_SERVER_URL:?required}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:?required}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:?required}
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:?required}
+      - KEYCLOAK_REDIRECT_URI=${KEYCLOAK_REDIRECT_URI:?required}
+      - KEYCLOAK_SHARED_USERNAME=langflow-${EMPNO:?required}
+      - KEYCLOAK_ALLOWED_EMPLOYEE=${EMPNO}
+      - KEYCLOAK_EMPLOYEE_CLAIM=${KEYCLOAK_EMPLOYEE_CLAIM:-preferred_username}
+      - KEYCLOAK_BUTTON_TEXT=${KEYCLOAK_BUTTON_TEXT:-SK하이닉스 SSO 로그인}
+    volumes:
+      - langflow-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  langflow-data:
