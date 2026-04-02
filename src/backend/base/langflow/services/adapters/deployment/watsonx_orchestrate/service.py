@@ -401,6 +401,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         return get_deployment_detail_metadata(
             data=agent,
             deployment_type=DeploymentType.AGENT,
+            provider_data={
+                **({"llm": agent["llm"]} if isinstance(agent, dict) and agent.get("llm") else {}),
+            }
+            or None,
         )
 
     async def update(

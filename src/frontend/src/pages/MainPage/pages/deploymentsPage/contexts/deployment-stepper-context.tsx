@@ -10,8 +10,10 @@ import {
 } from "react";
 import type { ProviderAccountCreateRequest } from "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account";
 import type { DeploymentCreateRequest } from "@/controllers/API/queries/deployments/use-post-deployment";
+import type { DeploymentUpdateRequest } from "@/controllers/API/queries/deployments/use-patch-deployment";
 import type {
   ConnectionItem,
+  Deployment,
   DeploymentProvider,
   DeploymentType,
   ProviderAccount,
@@ -27,17 +29,26 @@ interface DeploymentStepperInitialState {
   initialProvider?: DeploymentProvider;
   initialInstance?: ProviderAccount;
   initialStep?: number;
+  /** When provided, the stepper opens in edit mode. */
+  editingDeployment?: Deployment;
+  /** Pre-populated initial LLM from provider (edit mode). */
+  initialLlm?: string;
 }
 
 interface DeploymentStepperContextType {
+  // Mode
+  isEditMode: boolean;
+  editingDeployment: Deployment | null;
+
   // Navigation
   currentStep: number;
+  totalSteps: number;
   minStep: number;
   canGoNext: boolean;
   handleNext: () => void;
   handleBack: () => void;
 
-  // Step 1: Provider
+  // Step 1: Provider (create mode only)
   selectedProvider: DeploymentProvider | null;
   setSelectedProvider: (provider: DeploymentProvider) => void;
   selectedInstance: ProviderAccount | null;
@@ -70,11 +81,16 @@ interface DeploymentStepperContextType {
   /** User-provided tool names per flow. Key = flowId. */
   toolNameByFlow: Map<string, string>;
   setToolNameByFlow: Dispatch<SetStateAction<Map<string, string>>>;
+  /** Flow IDs that were originally attached but the user chose to detach (edit mode). */
+  removedFlowIds: Set<string>;
+  handleRemoveAttachedFlow: (flowId: string) => void;
+  handleUndoRemoveFlow: (flowId: string) => void;
 
-  // Deploy
+  // Deploy / Update
   needsProviderAccountCreation: boolean;
   buildProviderAccountPayload: () => ProviderAccountCreateRequest | null;
   buildDeploymentPayload: (providerId: string) => DeploymentCreateRequest;
+  buildDeploymentUpdatePayload: () => DeploymentUpdateRequest;
 }
 
 const DeploymentStepperContext =
@@ -87,8 +103,14 @@ export function DeploymentStepperProvider({
   children: ReactNode;
   initialState?: DeploymentStepperInitialState;
 }) {
+  const editingDeployment = initialState?.editingDeployment ?? null;
+  const isEditMode = editingDeployment !== null;
+
+  // In edit mode: 3 steps (Type → Attach → Review), skip Provider.
+  const totalSteps = isEditMode ? 3 : 4;
   const minStep = initialState?.initialStep ?? 1;
   const [currentStep, setCurrentStep] = useState(minStep);
+
   const [selectedProvider, setSelectedProviderState] =
     useState<DeploymentProvider | null>(initialState?.initialProvider ?? null);
   const [selectedInstance, setSelectedInstance] =
@@ -99,10 +121,21 @@ export function DeploymentStepperProvider({
     provider_url: "",
     api_key: "",
   });
-  const [deploymentType, setDeploymentType] = useState<DeploymentType>("agent");
-  const [deploymentName, setDeploymentName] = useState("");
-  const [deploymentDescription, setDeploymentDescription] = useState("");
-  const [selectedLlm, setSelectedLlm] = useState("");
+
+  // Pre-fill from editing deployment when in edit mode.
+  const [deploymentType, setDeploymentType] = useState<DeploymentType>(
+    editingDeployment?.type ?? "agent",
+  );
+  const [deploymentName, setDeploymentName] = useState(
+    editingDeployment?.name ?? "",
+  );
+  const [deploymentDescription, setDeploymentDescription] = useState(
+    editingDeployment?.description ?? "",
+  );
+  const [selectedLlm, setSelectedLlm] = useState(
+    initialState?.initialLlm ?? "",
+  );
+
   const [selectedVersionByFlow, setSelectedVersionByFlow] = useState<
     Map<string, { versionId: string; versionTag: string }>
   >(initialState?.selectedVersionByFlow ?? new Map());
@@ -114,24 +147,90 @@ export function DeploymentStepperProvider({
     Map<string, string[]>
   >(new Map());
 
+  // Edit mode: track which pre-existing flows the user wants to detach.
+  const [removedFlowIds, setRemovedFlowIds] = useState<Set<string>>(new Set());
+  // Cache removed flow data so undo can restore it.
+  const initialVersionByFlow = useMemo(
+    () => initialState?.selectedVersionByFlow ?? new Map(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const handleRemoveAttachedFlow = useCallback((flowId: string) => {
+    setRemovedFlowIds((prev) => new Set([...Array.from(prev), flowId]));
+    setSelectedVersionByFlow((prev) => {
+      const next = new Map(prev);
+      next.delete(flowId);
+      return next;
+    });
+    setAttachedConnectionByFlow((prev) => {
+      const next = new Map(prev);
+      next.delete(flowId);
+      return next;
+    });
+  }, []);
+
+  const handleUndoRemoveFlow = useCallback(
+    (flowId: string) => {
+      setRemovedFlowIds((prev) => {
+        const next = new Set(prev);
+        next.delete(flowId);
+        return next;
+      });
+      const originalVersion = initialVersionByFlow.get(flowId);
+      if (originalVersion) {
+        setSelectedVersionByFlow((prev) => {
+          const next = new Map(prev);
+          next.set(flowId, originalVersion);
+          return next;
+        });
+      }
+    },
+    [initialVersionByFlow],
+  );
+
   const hasValidCredentials =
     credentials.name.trim() !== "" &&
     credentials.api_key.trim() !== "" &&
     credentials.provider_url.trim() !== "";
 
-  const canGoNext =
-    (currentStep === 1 &&
-      selectedProvider !== null &&
-      (selectedInstance !== null || hasValidCredentials)) ||
-    (currentStep === 2 &&
-      deploymentName.trim() !== "" &&
-      selectedLlm.trim() !== "") ||
-    (currentStep === 3 && selectedVersionByFlow.size > 0) ||
-    currentStep === 4;
+  // In edit mode, steps are shifted: 1=Type, 2=Attach, 3=Review.
+  const getLogicalStep = useCallback(
+    (step: number) => (isEditMode ? step + 1 : step),
+    [isEditMode],
+  );
+
+  const canGoNext = useMemo(() => {
+    const logical = getLogicalStep(currentStep);
+    if (logical === 1) {
+      return (
+        selectedProvider !== null &&
+        (selectedInstance !== null || hasValidCredentials)
+      );
+    }
+    if (logical === 2) {
+      return deploymentName.trim() !== "" && selectedLlm.trim() !== "";
+    }
+    if (logical === 3) {
+      // In edit mode, user can proceed without new attachments (may just change desc/LLM).
+      return isEditMode || selectedVersionByFlow.size > 0;
+    }
+    return true;
+  }, [
+    currentStep,
+    getLogicalStep,
+    selectedProvider,
+    selectedInstance,
+    hasValidCredentials,
+    deploymentName,
+    selectedLlm,
+    selectedVersionByFlow,
+    isEditMode,
+  ]);
 
   const handleNext = useCallback(() => {
-    setCurrentStep((prev) => (prev < 4 ? prev + 1 : prev));
-  }, []);
+    setCurrentStep((prev) => (prev < totalSteps ? prev + 1 : prev));
+  }, [totalSteps]);
 
   const handleBack = useCallback(() => {
     setCurrentStep((prev) => (prev > minStep ? prev - 1 : prev));
@@ -167,7 +266,6 @@ export function DeploymentStepperProvider({
       if (!hasValidCredentials) return null;
       return {
         name: credentials.name.trim(),
-        // derive from selectedProvider.id when multi-provider support is added
         provider_key: "watsonx-orchestrate",
         provider_url: credentials.provider_url.trim(),
         provider_data: { api_key: credentials.api_key.trim() },
@@ -178,9 +276,7 @@ export function DeploymentStepperProvider({
     (providerId: string): DeploymentCreateRequest => {
       const allConnectionIds = new Set<string>();
       Array.from(attachedConnectionByFlow.values()).forEach((ids) => {
-        ids.forEach((id) => {
-          allConnectionIds.add(id);
-        });
+        ids.forEach((id) => allConnectionIds.add(id));
       });
 
       const rawPayloads: Array<{
@@ -253,9 +349,142 @@ export function DeploymentStepperProvider({
     ],
   );
 
+  const buildDeploymentUpdatePayload =
+    useCallback((): DeploymentUpdateRequest => {
+      if (!editingDeployment) {
+        throw new Error(
+          "buildDeploymentUpdatePayload called outside edit mode",
+        );
+      }
+
+      const result: DeploymentUpdateRequest = {
+        deployment_id: editingDeployment.id,
+      };
+
+      // Spec changes (description only — name is not editable after creation).
+      const descriptionChanged =
+        deploymentDescription !== (editingDeployment.description ?? "");
+      if (descriptionChanged) {
+        result.spec = { description: deploymentDescription };
+      }
+
+      // Build provider_data with operations for attach/detach + LLM.
+      const operations: Array<Record<string, unknown>> = [];
+
+      // New flows attached during this edit session.
+      for (const [flowId, versionEntry] of Array.from(selectedVersionByFlow)) {
+        if (initialVersionByFlow.has(flowId)) continue; // pre-existing, skip
+        const connectionIds = attachedConnectionByFlow.get(flowId) ?? [];
+        const customToolName = toolNameByFlow.get(flowId)?.trim();
+        operations.push({
+          op: "bind",
+          flow_version_id: versionEntry.versionId,
+          app_ids: connectionIds,
+          ...(customToolName && { tool_name: customToolName }),
+        });
+      }
+
+      // Detached flows.
+      for (const flowId of Array.from(removedFlowIds)) {
+        const originalVersion = initialVersionByFlow.get(flowId);
+        if (originalVersion) {
+          operations.push({
+            op: "remove_tool",
+            flow_version_id: originalVersion.versionId,
+          });
+        }
+      }
+
+      // Collect connection details for new binds.
+      const newConnectionIds = new Set<string>();
+      const bindFlowVersionIds = new Set(
+        operations
+          .filter((o) => o.op === "bind")
+          .map((o) => o.flow_version_id as string),
+      );
+      for (const [flowId, connectionIds] of Array.from(
+        attachedConnectionByFlow,
+      )) {
+        const versionEntry = selectedVersionByFlow.get(flowId);
+        if (!versionEntry || !bindFlowVersionIds.has(versionEntry.versionId))
+          continue;
+        connectionIds.forEach((id) => newConnectionIds.add(id));
+      }
+
+      const existingAppIds: string[] = [];
+      const rawPayloads: Array<{
+        app_id: string;
+        environment_variables: Record<
+          string,
+          { value: string; source: "raw" | "variable" }
+        >;
+      }> = [];
+
+      Array.from(newConnectionIds).forEach((id) => {
+        const conn = connections.find((c) => c.id === id);
+        if (conn?.isNew) {
+          const envVarsWrapped: Record<
+            string,
+            { value: string; source: "raw" | "variable" }
+          > = {};
+          Object.entries(conn.environmentVariables).forEach(([k, v]) => {
+            const isGlobalVar = conn.globalVarKeys?.has(k) ?? false;
+            envVarsWrapped[k] = {
+              value: v,
+              source: isGlobalVar ? "variable" : "raw",
+            };
+          });
+          rawPayloads.push({
+            app_id: id,
+            environment_variables: envVarsWrapped,
+          });
+        } else {
+          existingAppIds.push(id);
+        }
+      });
+
+      const hasOperations = operations.length > 0;
+      const hasConnections =
+        existingAppIds.length > 0 || rawPayloads.length > 0;
+      const llmToSend = selectedLlm;
+
+      if (llmToSend || hasOperations || hasConnections) {
+        result.provider_data = {
+          ...(llmToSend && { llm: llmToSend }),
+          ...(hasOperations && { operations }),
+          ...(hasConnections && {
+            connections: {
+              existing_app_ids: existingAppIds,
+              raw_payloads: rawPayloads,
+            },
+          }),
+        };
+      }
+
+      // Backend requires at least one field.
+      if (!result.spec && !result.provider_data) {
+        result.spec = { description: deploymentDescription };
+      }
+
+      return result;
+    }, [
+      editingDeployment,
+      deploymentDescription,
+      selectedLlm,
+      initialVersionByFlow,
+      removedFlowIds,
+      selectedVersionByFlow,
+      toolNameByFlow,
+      attachedConnectionByFlow,
+      connections,
+    ]);
+
   const value = useMemo<DeploymentStepperContextType>(
     () => ({
+      isEditMode,
+      editingDeployment,
       currentStep,
+      totalSteps,
       minStep,
       canGoNext,
       handleNext,
@@ -283,12 +512,19 @@ export function DeploymentStepperProvider({
       setToolNameByFlow,
       attachedConnectionByFlow,
       setAttachedConnectionByFlow,
+      removedFlowIds,
+      handleRemoveAttachedFlow,
+      handleUndoRemoveFlow,
       needsProviderAccountCreation,
       buildProviderAccountPayload,
       buildDeploymentPayload,
+      buildDeploymentUpdatePayload,
     }),
     [
+      isEditMode,
+      editingDeployment,
       currentStep,
+      totalSteps,
       minStep,
       canGoNext,
       handleNext,
@@ -306,9 +542,13 @@ export function DeploymentStepperProvider({
       handleSelectVersion,
       toolNameByFlow,
       attachedConnectionByFlow,
+      removedFlowIds,
+      handleRemoveAttachedFlow,
+      handleUndoRemoveFlow,
       needsProviderAccountCreation,
       buildProviderAccountPayload,
       buildDeploymentPayload,
+      buildDeploymentUpdatePayload,
     ],
   );
 

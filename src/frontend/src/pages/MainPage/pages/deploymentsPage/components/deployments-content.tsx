@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Select,
   SelectContent,
@@ -11,7 +12,7 @@ import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import { useDeleteWithConfirmation } from "../hooks/use-delete-with-confirmation";
 import { ALL_PROVIDERS, useProviderFilter } from "../hooks/use-provider-filter";
 import { useTestDeploymentModal } from "../hooks/use-test-deployment-modal";
-import type { ProviderAccount } from "../types";
+import type { Deployment, ProviderAccount } from "../types";
 import DeploymentStepperModal from "./deployment-stepper-modal";
 import DeploymentsEmptyState from "./deployments-empty-state";
 import DeploymentsLoadingSkeleton from "./deployments-loading-skeleton";
@@ -53,6 +54,10 @@ export default function DeploymentsContent({
     "Error deleting deployment",
   );
 
+  const [editingDeployment, setEditingDeployment] = useState<Deployment | null>(
+    null,
+  );
+
   const isLoading = isLoadingProviders || isLoadingDeployments;
   const hasProviders = providers.length > 0;
   const isEmpty = !hasProviders || deployments.length === 0;
@@ -71,6 +76,10 @@ export default function DeploymentsContent({
         providerMap={providerMap}
         deletingId={deploymentDelete.deletingId}
         onTestDeployment={testModal.handleTestDeployment}
+        onUpdateDeployment={(deployment) => {
+          setEditingDeployment(deployment);
+          setStepperOpen(true);
+        }}
         onDeleteDeployment={deploymentDelete.requestDelete}
       />
     );
@@ -104,8 +113,19 @@ export default function DeploymentsContent({
 
       <DeploymentStepperModal
         open={stepperOpen}
-        setOpen={setStepperOpen}
+        setOpen={(open) => {
+          setStepperOpen(open);
+          if (!open) setEditingDeployment(null);
+        }}
         onTestDeployment={testModal.handleTestFromStepper}
+        editingDeployment={editingDeployment}
+        initialInstance={
+          editingDeployment?.provider_account_id
+            ? providers.find(
+                (p) => p.id === editingDeployment.provider_account_id,
+              )
+            : undefined
+        }
       />
 
       <TestDeploymentModal

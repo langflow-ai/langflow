@@ -93,7 +93,7 @@ export const VersionPanel = memo(function VersionPanel({
             })
           )}
         </div>
-        {pendingVersion && (
+        {pendingVersion && !attachedEntry && (
           <div className="flex flex-col gap-1 pb-2">
             <span className="text-xs font-medium text-muted-foreground">
               Tool Name

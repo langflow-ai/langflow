@@ -9,10 +9,9 @@ jest.mock(
   "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account",
   () => ({ usePostProviderAccount: jest.fn() }),
 );
-jest.mock(
-  "@/controllers/API/queries/deployments/use-post-deployment",
-  () => ({ usePostDeployment: jest.fn() }),
-);
+jest.mock("@/controllers/API/queries/deployments/use-post-deployment", () => ({
+  usePostDeployment: jest.fn(),
+}));
 
 function renderStepperHook() {
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -30,13 +29,9 @@ describe("Custom tool naming", () => {
   it("setToolNameByFlow updates the map", () => {
     const { result } = renderStepperHook();
     act(() => {
-      result.current.setToolNameByFlow(
-        new Map([["flow-1", "My Custom Tool"]]),
-      );
+      result.current.setToolNameByFlow(new Map([["flow-1", "My Custom Tool"]]));
     });
-    expect(result.current.toolNameByFlow.get("flow-1")).toBe(
-      "My Custom Tool",
-    );
+    expect(result.current.toolNameByFlow.get("flow-1")).toBe("My Custom Tool");
   });
 
   it("buildDeploymentPayload includes tool_name when set", () => {
@@ -47,9 +42,7 @@ describe("Custom tool naming", () => {
       result.current.setDeploymentName("Test Agent");
       result.current.setSelectedLlm("test-model");
       result.current.handleSelectVersion("flow-1", "ver-1", "v1");
-      result.current.setToolNameByFlow(
-        new Map([["flow-1", "My Custom Tool"]]),
-      );
+      result.current.setToolNameByFlow(new Map([["flow-1", "My Custom Tool"]]));
     });
 
     const payload = result.current.buildDeploymentPayload("provider-1");

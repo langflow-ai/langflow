@@ -99,7 +99,7 @@ async def list_deployment_attachments_with_versions(
         return []
 
     stmt = (
-        select(FlowVersionDeploymentAttachment, FlowVersion, Flow.name.label("flow_name"))
+        select(FlowVersionDeploymentAttachment, FlowVersion, col(Flow.name).label("flow_name"))
         .join(FlowVersion, FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id)
         .join(Flow, Flow.id == FlowVersion.flow_id)
         .where(
