@@ -649,39 +649,6 @@ async def test_watsonx_mapper_maps_create_adapter_payload_validation_errors_to_4
     assert exc_info.value.detail == "Invalid provider_data payload: simulated adapter validation failure"
 
 
-@pytest.mark.asyncio
-async def test_watsonx_mapper_rejects_top_level_flow_version_and_config_on_create() -> None:
-    mapper = WatsonxOrchestrateDeploymentMapper()
-    payload = DeploymentCreateRequest(
-        provider_id=uuid4(),
-        spec={"name": "create-deploy", "description": "", "type": "agent"},
-        flow_version_ids=[uuid4()],
-        provider_data={
-            "llm": TEST_WXO_LLM,
-            "connections": {},
-            "operations": [
-                {
-                    "op": "bind",
-                    "flow_version_id": str(uuid4()),
-                    "app_ids": ["app-one"],
-                }
-            ],
-        },
-    )
-
-    with pytest.raises(
-        HTTPException,
-        match="Watsonx create does not support top-level 'config' or 'flow_version_ids'",
-    ):
-        await mapper.resolve_deployment_create(
-            user_id=uuid4(),
-            project_id=uuid4(),
-            db=_FakeDb([]),
-            payload=payload,
-        )
-
-
-@pytest.mark.asyncio
 async def test_watsonx_mapper_create_reports_missing_llm_field_name() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     payload = DeploymentCreateRequest(
@@ -830,12 +797,12 @@ async def test_watsonx_mapper_translates_flow_version_bind_into_raw_tool_payload
     provider_data = resolved.provider_data or {}
 
     assert provider_data["llm"] == TEST_WXO_LLM
-    assert provider_data["tools"]["raw_payloads"][0]["name"] == "Flow A_v1"
+    assert provider_data["tools"]["raw_payloads"][0]["name"] == "Flow A"
     assert provider_data["tools"]["raw_payloads"][0]["provider_data"] == {
         "project_id": str(project_id),
         "source_ref": str(flow_version_id),
     }
-    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow A_v1"
+    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow A"
 
 
 @pytest.mark.asyncio
@@ -894,12 +861,9 @@ async def test_watsonx_mapper_skips_empty_bind_operations_but_keeps_raw_tools() 
     provider_data = resolved.provider_data or {}
 
     assert len(provider_data["tools"]["raw_payloads"]) == 2
-    assert sorted(item["name"] for item in provider_data["tools"]["raw_payloads"]) == [
-        "Flow Bound_v2",
-        "Flow Unbound_v1",
-    ]
+    assert sorted(item["name"] for item in provider_data["tools"]["raw_payloads"]) == ["Flow Bound", "Flow Unbound"]
     assert len(provider_data["operations"]) == 1
-    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow Bound_v2"
+    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow Bound"
     assert provider_data["operations"][0]["app_ids"] == ["app-one"]
 
 
@@ -920,23 +884,6 @@ async def test_watsonx_mapper_translates_llm_only_update_payload() -> None:
     assert provider_data["operations"] == []
     assert provider_data["tools"]["raw_payloads"] is None
     assert provider_data["connections"] == {"raw_payloads": None}
-
-
-@pytest.mark.asyncio
-async def test_watsonx_mapper_rejects_top_level_config_updates() -> None:
-    mapper = WatsonxOrchestrateDeploymentMapper()
-    payload = DeploymentUpdateRequest(config={"config_id": "cfg-1"})
-
-    with pytest.raises(
-        HTTPException,
-        match="Watsonx update does not support top-level 'config'",
-    ):
-        await mapper.resolve_deployment_update(
-            user_id=uuid4(),
-            deployment_db_id=uuid4(),
-            db=_FakeDb([]),
-            payload=payload,
-        )
 
 
 @pytest.mark.asyncio
@@ -1557,7 +1504,7 @@ async def test_watsonx_mapper_bind_creates_new_tool_when_no_attachment() -> None
     )
     provider_data = resolved.provider_data or {}
 
-    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow B_v1"
+    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow B"
 
 
 @pytest.mark.asyncio

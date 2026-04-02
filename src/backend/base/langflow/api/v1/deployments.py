@@ -54,7 +54,6 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentConfigListResponse,
     DeploymentCreateRequest,
     DeploymentCreateResponse,
-    DeploymentDuplicateResponse,
     DeploymentFlowVersionListResponse,
     DeploymentGetResponse,
     DeploymentListResponse,
@@ -63,7 +62,6 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentProviderAccountGetResponse,
     DeploymentProviderAccountListResponse,
     DeploymentProviderAccountUpdateRequest,
-    DeploymentRedeployResponse,
     DeploymentSnapshotListResponse,
     DeploymentStatusResponse,
     DeploymentTypeListResponse,
@@ -159,7 +157,10 @@ def _field_was_explicitly_set(model: object, field_name: str) -> bool:
 def _raise_http_for_provider_account_value_error(exc: ValueError) -> None:
     message = str(exc).lower()
     if "already exists" in message or "conflicts with an existing record" in message:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Provider account is already tracked by user.",
+        ) from exc
     raise_http_for_value_error(exc)
 
 
@@ -638,10 +639,7 @@ async def list_deployments(
                 db=session,
                 params=None if deployment_type is None else DeploymentListParams(deployment_types=[deployment_type]),
             )
-        return deployment_mapper.shape_deployment_list_result(
-            provider_view,
-            deployment_type=deployment_type,
-        )
+        return deployment_mapper.shape_deployment_list_result(provider_view)
 
     with handle_adapter_errors(), deployment_provider_scope(provider_id):
         rows_with_counts, total = await list_deployments_synced(
@@ -661,7 +659,6 @@ async def list_deployments(
     )
     return DeploymentListResponse(
         deployments=deployments,
-        deployment_type=deployment_type,
         page=params.page,
         size=params.size,
         total=total,
@@ -1364,32 +1361,3 @@ async def list_deployment_flow_versions(
         size=size,
         total=total,
     )
-
-
-@router.post(
-    "/{deployment_id}/redeploy",
-    response_model=DeploymentRedeployResponse,
-)
-async def redeploy_deployment(
-    deployment_id: DeploymentIdPath,
-    session: DbSessionReadOnly,
-    current_user: CurrentActiveUser,
-):
-    """Redeploy a deployment."""
-    _ = (deployment_id, session, current_user)
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")
-
-
-@router.post(
-    "/{deployment_id}/duplicate",
-    response_model=DeploymentDuplicateResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-async def duplicate_deployment(
-    deployment_id: DeploymentIdPath,
-    session: DbSessionReadOnly,
-    current_user: CurrentActiveUser,
-):
-    """Duplicate a deployment."""
-    _ = (deployment_id, session, current_user)
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented.")

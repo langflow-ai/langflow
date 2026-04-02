@@ -4381,23 +4381,17 @@ def test_raise_as_deployment_error_maps_forbidden_to_authorization_error():
         )
 
 
-def test_build_agent_payload_requires_provider_spec():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import build_agent_payload
+def test_build_agent_payload_from_values_structure():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import build_agent_payload_from_values
 
-    data = SimpleNamespace(provider_spec=None, description="desc", name="test")
-    with pytest.raises(InvalidContentError, match="provider_spec"):
-        build_agent_payload(data=data, tool_ids=[], llm=TEST_WXO_LLM)
-
-
-def test_build_agent_payload_structure():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import build_agent_payload
-
-    data = SimpleNamespace(
-        provider_spec={"name": "agent_name", "display_name": "Agent Name"},
+    payload = build_agent_payload_from_values(
+        agent_name="agent_name",
+        agent_display_name="Agent Name",
+        deployment_name="test",
         description="test description",
-        name="test",
+        tool_ids=["tool-1", "tool-2"],
+        llm=TEST_WXO_LLM,
     )
-    payload = build_agent_payload(data=data, tool_ids=["tool-1", "tool-2"], llm=TEST_WXO_LLM)
     assert payload["name"] == "agent_name"
     assert payload["display_name"] == "Agent Name"
     assert payload["description"] == "test description"

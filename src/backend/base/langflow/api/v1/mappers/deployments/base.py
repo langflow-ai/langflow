@@ -32,21 +32,18 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadFields
 from lfx.services.adapters.deployment.schema import (
+    BaseDeploymentData,
     BaseDeploymentDataUpdate,
     BaseFlowArtifact,
-    ConfigDeploymentBindingUpdate,
-    ConfigItem,
     ConfigListParams,
     ConfigListResult,
     DeploymentCreateResult,
     DeploymentListLlmsResult,
     DeploymentListResult,
-    DeploymentType,
     DeploymentUpdateResult,
     ExecutionCreate,
     ExecutionCreateResult,
     ExecutionStatusResult,
-    SnapshotItems,
     SnapshotListParams,
     SnapshotListResult,
     VerifyCredentials,
@@ -89,7 +86,7 @@ from .contracts import (
     FlowVersionPatch,
     UpdateSnapshotBindings,
 )
-from .helpers import build_project_scoped_flow_artifacts_from_flow_versions, page_offset
+from .helpers import page_offset
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -154,38 +151,14 @@ class BaseDeploymentMapper:
         db: AsyncSession,
         payload: DeploymentCreateRequest,
     ) -> AdapterDeploymentCreate:
-        snapshot_payloads: list[BaseFlowArtifact] | None = None
-        if payload.flow_version_ids:
-            flow_artifacts = await build_project_scoped_flow_artifacts_from_flow_versions(
-                reference_ids=payload.flow_version_ids,
-                user_id=user_id,
-                project_id=project_id,
-                db=db,
-            )
-            snapshot_payloads = [
-                artifact.model_copy(
-                    update={
-                        "provider_data": self.util_create_flow_artifact_provider_data(
-                            project_id=project_id,
-                            flow_version_id=flow_version_id,
-                        ).model_dump(exclude_none=True),
-                    }
-                )
-                for flow_version_id, artifact in flow_artifacts
-            ]
-        adapter_snapshot = SnapshotItems(raw_payloads=snapshot_payloads) if snapshot_payloads else None
-        adapter_config = (
-            ConfigItem(reference_id=payload.config.reference_id)
-            if payload.config is not None and payload.config.reference_id is not None
-            else ConfigItem(raw_payload=payload.config.raw_payload)
-            if payload.config is not None
-            else None
-        )
+        _ = (user_id, project_id)
         provider_data = self._validate_slot(self.api_payloads.deployment_create, payload.provider_data)
         return AdapterDeploymentCreate(
-            spec=payload.spec,
-            snapshot=adapter_snapshot,
-            config=adapter_config,
+            spec=BaseDeploymentData(
+                name=payload.spec.name,
+                description=payload.spec.description,
+                type=payload.spec.type,
+            ),
             provider_data=provider_data,
         )
 
@@ -221,15 +194,17 @@ class BaseDeploymentMapper:
         payload: DeploymentUpdateRequest,
     ) -> AdapterDeploymentUpdate:
         _ = (user_id, deployment_db_id)
-        adapter_config = (
-            ConfigDeploymentBindingUpdate(**payload.config.model_dump(exclude_unset=True))
-            if payload.config is not None
+        adapter_spec = (
+            BaseDeploymentDataUpdate(
+                name=payload.spec.name,
+                description=payload.spec.description,
+            )
+            if payload.spec is not None
             else None
         )
         provider_data = self._validate_slot(self.api_payloads.deployment_update, payload.provider_data)
         return AdapterDeploymentUpdate(
-            spec=payload.spec,
-            config=adapter_config,
+            spec=adapter_spec,
             provider_data=provider_data,
         )
 
@@ -528,7 +503,8 @@ class BaseDeploymentMapper:
 
     def util_create_flow_version_ids(self, payload: DeploymentCreateRequest) -> list[UUID]:
         """Resolve flow-version ids referenced by create payload."""
-        return list(payload.flow_version_ids or [])
+        _ = payload
+        return []
 
     def util_existing_deployment_resource_key_for_create(
         self,
@@ -616,10 +592,8 @@ class BaseDeploymentMapper:
 
         Contract schema: ``FlowVersionPatch``.
         """
-        return FlowVersionPatch(
-            add_flow_version_ids=list(payload.add_flow_version_ids or []),
-            remove_flow_version_ids=list(payload.remove_flow_version_ids or []),
-        )
+        _ = payload
+        return FlowVersionPatch()
 
     def util_snapshot_ids_to_verify(
         self,
@@ -666,8 +640,6 @@ class BaseDeploymentMapper:
     def shape_deployment_list_result(
         self,
         result: DeploymentListResult,
-        *,
-        deployment_type: DeploymentType | None,
     ) -> DeploymentListResponse:
         entries = [
             {
@@ -686,7 +658,6 @@ class BaseDeploymentMapper:
         ]
         return DeploymentListResponse(
             deployments=[],
-            deployment_type=deployment_type,
             page=1,
             size=len(entries),
             total=len(entries),

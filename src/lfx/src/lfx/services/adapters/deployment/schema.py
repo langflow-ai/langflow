@@ -18,7 +18,6 @@ from lfx.services.adapters.deployment.payloads import (
     T_DeploymentListResult,
     T_DeploymentLlmListResult,
     T_DeploymentOperationResult,
-    T_DeploymentSpec,
     T_DeploymentStatusData,
     T_DeploymentUpdate,
     T_DeploymentUpdateResult,
@@ -336,13 +335,7 @@ class ProviderResultModel(BaseModel, Generic[T_ProviderResult]):
     provider_result: T_ProviderResult | None = Field(None, description="The result from the provider")
 
 
-class ProviderSpecModel(BaseModel, Generic[T_DeploymentSpec]):
-    """Base model for provider-specific input payloads."""
-
-    provider_spec: T_DeploymentSpec | None = Field(None, description="The data of the deployment from the provider")
-
-
-class BaseDeploymentData(ProviderSpecModel[T_DeploymentSpec]):
+class BaseDeploymentData(BaseModel):
     """Model representing a data for a deployment."""
 
     name: str = Field(description="The name of the deployment")

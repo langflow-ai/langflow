@@ -8,11 +8,11 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from lfx.services.adapters.deployment.schema import (
+    BaseDeploymentData,
     BaseDeploymentDataUpdate,
     DeploymentCreateResult,
     DeploymentListLlmsResult,
     DeploymentListResult,
-    DeploymentType,
     DeploymentUpdateResult,
     ExecutionCreateResult,
     ExecutionStatusResult,
@@ -350,12 +350,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         slot: PayloadSlot | None,
         slot_name: str,
     ) -> AdapterPayload:
-        if payload.config is not None or payload.flow_version_ids is not None:
-            msg = (
-                "Watsonx create does not support top-level 'config' or 'flow_version_ids'. "
-                "Use provider_data.operations instead."
-            )
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
         if payload.provider_data is None:
             msg = "Watsonx create requires provider_data operations."
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
@@ -429,7 +423,11 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             slot_name="deployment_create",
         )
         return AdapterDeploymentCreate(
-            spec=payload.spec,
+            spec=BaseDeploymentData(
+                name=payload.spec.name,
+                description=payload.spec.description,
+                type=payload.spec.type,
+            ),
             provider_data=provider_payload,
         )
 
@@ -465,16 +463,16 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         db: AsyncSession,
         payload: DeploymentUpdateRequest,
     ) -> AdapterDeploymentUpdate:
-        if (
-            payload.config is not None
-            or payload.add_flow_version_ids is not None
-            or payload.remove_flow_version_ids is not None
-        ):
-            msg = "Watsonx update does not support top-level 'config'. Use provider_data.operations instead."
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
-
+        adapter_spec = (
+            BaseDeploymentDataUpdate(
+                name=payload.spec.name,
+                description=payload.spec.description,
+            )
+            if payload.spec is not None
+            else None
+        )
         if payload.provider_data is None:  # pure metadata update, e.g., name, description
-            return AdapterDeploymentUpdate(spec=payload.spec, provider_data=None)
+            return AdapterDeploymentUpdate(spec=adapter_spec, provider_data=None)
 
         api_provider_payload: WatsonxApiDeploymentUpdatePayload = self._parse_api_payload_slot(
             slot=self.api_payloads.deployment_update,
@@ -578,7 +576,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 detail=f"Invalid provider_data payload: {detail}",
             ) from exc
         return AdapterDeploymentUpdate(
-            spec=payload.spec,
+            spec=adapter_spec,
             provider_data=provider_payload,
         )
 
@@ -854,12 +852,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         return UpdateSnapshotBindings(snapshot_bindings=flow_version_bindings)
 
     def util_flow_version_patch(self, payload: DeploymentUpdateRequest) -> FlowVersionPatch:
-        if payload.add_flow_version_ids is not None or payload.remove_flow_version_ids is not None:
-            msg = (
-                "Watsonx flow version patch must be expressed via provider_data.operations. "
-                "Top-level 'add_flow_version_ids'/'remove_flow_version_ids' are not supported for this provider."
-            )
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
         if payload.provider_data is None:
             return FlowVersionPatch()
         api_provider_payload: WatsonxApiDeploymentUpdatePayload = self._parse_api_payload_slot(
@@ -945,8 +937,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     def shape_deployment_list_result(
         self,
         result: DeploymentListResult,
-        *,
-        deployment_type: DeploymentType | None,
     ) -> DeploymentListResponse:
         provider_result = {
             "entries": [
@@ -969,7 +959,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         total = len(validated_payload.get("entries", []))
         return DeploymentListResponse(
             deployments=[],
-            deployment_type=deployment_type,
             page=1,
             size=total,
             total=total,

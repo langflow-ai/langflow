@@ -686,10 +686,17 @@ def test_resolve_flow_version_patch_for_update_watsonx_operations():
     add_id = uuid4()
     remove_id = uuid4()
     add_ids, remove_ids = resolve_flow_version_patch_for_update(
-        deployment_mapper=_FakeMapper(),
+        deployment_mapper=WatsonxOrchestrateDeploymentMapper(),
         payload=DeploymentUpdateRequest(
-            add_flow_version_ids=[add_id],
-            remove_flow_version_ids=[remove_id],
+            provider_data={
+                "llm": "test-llm",
+                "resource_name_prefix": "lf_test_",
+                "connections": {"existing_app_ids": ["app-one"]},
+                "operations": [
+                    {"op": "bind", "flow_version_id": str(add_id), "app_ids": ["app-one"]},
+                    {"op": "unbind", "flow_version_id": str(remove_id), "app_ids": ["app-one"]},
+                ],
+            }
         ),
     )
 

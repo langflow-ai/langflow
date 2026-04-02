@@ -4,7 +4,6 @@ Covers the integration behaviour of the FastAPI route handlers:
 - Rollback on commit failure (create / update)
 - GET single-deployment synchronization (deployment-level and snapshot-level)
 - Project-scoped flow-version validation (create / update)
-- Stubbed 501 routes (redeploy / duplicate)
 - resolve_deployment_adapter edge cases
 """
 
@@ -978,6 +977,7 @@ class TestProviderAccountRoutes:
             )
 
         assert exc_info.value.status_code == 409
+        assert exc_info.value.detail == "Provider account is already tracked by user."
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.update_provider_account_row", new_callable=AsyncMock)
@@ -1015,6 +1015,7 @@ class TestProviderAccountRoutes:
             )
 
         assert exc_info.value.status_code == 409
+        assert exc_info.value.detail == "Provider account is already tracked by user."
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.delete_provider_account_row", new_callable=AsyncMock)
@@ -2144,39 +2145,6 @@ class TestListDeploymentLlms:
 
         assert exc_info.value.status_code == 503
         mapper.shape_llm_list_result.assert_not_called()
-
-
-# ---------------------------------------------------------------------------
-# Stubbed 501 routes
-# ---------------------------------------------------------------------------
-
-
-class TestStubbedRoutes:
-    @pytest.mark.asyncio
-    async def test_redeploy_returns_501(self):
-        from langflow.api.v1.deployments import redeploy_deployment
-
-        with pytest.raises(HTTPException) as exc_info:
-            await redeploy_deployment(
-                deployment_id=uuid4(),
-                session=AsyncMock(),
-                current_user=_fake_user(),
-            )
-
-        assert exc_info.value.status_code == 501
-
-    @pytest.mark.asyncio
-    async def test_duplicate_returns_501(self):
-        from langflow.api.v1.deployments import duplicate_deployment
-
-        with pytest.raises(HTTPException) as exc_info:
-            await duplicate_deployment(
-                deployment_id=uuid4(),
-                session=AsyncMock(),
-                current_user=_fake_user(),
-            )
-
-        assert exc_info.value.status_code == 501
 
 
 # ---------------------------------------------------------------------------

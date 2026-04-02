@@ -202,7 +202,7 @@ async def test_base_mapper_resolve_deployment_create_validates_provider_data_whe
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
         spec={"name": "create-deploy", "description": "", "type": "agent"},
-        provider_data={"some_key": "some_value"},
+        provider_data={"label": "some_value"},
     )
 
     resolved = await mapper.resolve_deployment_create(
@@ -212,7 +212,7 @@ async def test_base_mapper_resolve_deployment_create_validates_provider_data_whe
         payload=payload,
     )
 
-    assert resolved.provider_data == {"some_key": "some_value"}
+    assert resolved.provider_data == {"label": "some_value"}
 
 
 @pytest.mark.asyncio
@@ -347,7 +347,6 @@ def test_mapper_has_shape_method_for_all_outbound_slots() -> None:
 @pytest.mark.parametrize(
     "method_name",
     [
-        "shape_deployment_create_result",
         "shape_deployment_operation_result",
         "shape_deployment_item_data",
         "shape_deployment_status_data",
@@ -359,6 +358,28 @@ def test_base_mapper_shapers_passthrough_provider_payload(method_name: str) -> N
     shaper = getattr(mapper, method_name)
     shaped = shaper(payload)
     assert shaped is payload
+
+
+def test_base_mapper_shapes_deployment_create_result() -> None:
+    mapper = BaseDeploymentMapper()
+    timestamp = datetime.now(tz=timezone.utc)
+    deployment_id = uuid4()
+    result = DeploymentCreateResult(id="provider-id", provider_result={"ok": True})
+    deployment_row = SimpleNamespace(
+        id=deployment_id,
+        name="Deployment 1",
+        description="desc",
+        deployment_type=DeploymentType.AGENT,
+        created_at=timestamp,
+        updated_at=timestamp,
+    )
+
+    shaped = mapper.shape_deployment_create_result(result, deployment_row=deployment_row)
+
+    assert shaped.id == deployment_id
+    assert shaped.name == "Deployment 1"
+    assert shaped.type == DeploymentType.AGENT
+    assert shaped.provider_data == {"ok": True}
 
 
 def test_base_mapper_shapes_deployment_list_result() -> None:
@@ -377,12 +398,8 @@ def test_base_mapper_shapes_deployment_list_result() -> None:
         ]
     )
 
-    shaped = mapper.shape_deployment_list_result(
-        result,
-        deployment_type=DeploymentType.AGENT,
-    )
+    shaped = mapper.shape_deployment_list_result(result)
 
-    assert shaped.deployment_type == DeploymentType.AGENT
     assert shaped.page == 1
     assert shaped.size == 1
     assert shaped.total == 1
@@ -604,17 +621,14 @@ def test_base_mapper_shapes_execution_status_result_with_none_execution_id() -> 
 
 def test_base_mapper_exposes_reconciliation_resolvers() -> None:
     mapper = BaseDeploymentMapper()
-    add_id = uuid4()
-    remove_id = uuid4()
     payload = DeploymentUpdateRequest(
-        add_flow_version_ids=[add_id],
-        remove_flow_version_ids=[remove_id],
+        provider_data={"operations": []},
     )
     patch = mapper.util_flow_version_patch(payload)
     assert isinstance(patch, FlowVersionPatch)
     add_ids, remove_ids = patch.add_flow_version_ids, patch.remove_flow_version_ids
-    assert add_ids == [add_id]
-    assert remove_ids == [remove_id]
+    assert add_ids == []
+    assert remove_ids == []
 
     create_result = DeploymentCreateResult(
         id="provider-id",
