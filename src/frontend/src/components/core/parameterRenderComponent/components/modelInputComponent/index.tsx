@@ -50,7 +50,27 @@ export default function ModelInputComponent({
     useState(false);
   const [isRefreshingAfterClose, setIsRefreshingAfterClose] = useState(false);
   const [refreshOptions, setRefreshOptions] = useState(false);
-  const [isConnectionMode, setIsConnectionMode] = useState(false);
+
+  // Connection mode: local state for reactivity, persisted in node data for reload
+  const [isConnectionMode, setIsConnectionMode] = useState(() => {
+    if (!nodeId) return false;
+    const node = useFlowStore.getState().nodes.find((n) => n.id === nodeId);
+    return (node?.data as any)?._connectionMode === true;
+  });
+
+  const setConnectionMode = useCallback(
+    (enabled: boolean) => {
+      setIsConnectionMode(enabled);
+      if (!nodeId) return;
+      const store = useFlowStore.getState();
+      store.setNode(nodeId, (node) => ({
+        ...node,
+        data: { ...node.data, _connectionMode: enabled },
+      }), false);
+    },
+    [nodeId],
+  );
+
   const { refreshAllModelInputs } = useRefreshModelInputs();
 
   // Ref to track if we've already processed the empty options state
@@ -66,7 +86,14 @@ export default function ModelInputComponent({
   const { handleExternalOptions } = useModelConnectionLogic({
     nodeId: nodeId || "",
     closePopover: () => setOpen(false),
-    clearSelection: () => setIsConnectionMode(true),
+    clearSelection: () => {
+      // Only set the _connectionMode flag on the node data.
+      // Don't call handleOnNewValue — it triggers a backend round-trip
+      // that tries to resolve __default_language_model__ and fails.
+      // The credential fields are cleared by useModelConnectionLogic
+      // directly in the node template via setNode.
+      setConnectionMode(true);
+    },
   });
 
   const modelType =
@@ -151,8 +178,8 @@ export default function ModelInputComponent({
   }, [value, flatOptions, isConnectionMode, externalOptions]);
 
   useEffect(() => {
-    // Only proceed if we have options and haven't selected a value
-    if (flatOptions.length > 0 && (!value || value.length === 0)) {
+    // Only proceed if we have options, haven't selected a value, and NOT in connection mode
+    if (flatOptions.length > 0 && (!value || value.length === 0) && !isConnectionMode) {
       // Check ref to avoid infinite loops
       if (!hasProcessedEmptyRef.current) {
         const firstOption = flatOptions[0];
@@ -177,14 +204,28 @@ export default function ModelInputComponent({
    */
   const handleModelSelect = useCallback(
     (modelName: string) => {
-      setIsConnectionMode(false);
-      // Clear connection mode flag on node data
+      setConnectionMode(false);
+      // Clear the _connection_mode flag from the model field template
+      // so the backend resumes normal update_build_config behavior.
       if (nodeId) {
         const store = useFlowStore.getState();
-        store.setNode(nodeId, (node) => ({
-          ...node,
-          data: { ...node.data, _connectionMode: false },
-        }), false);
+        const node = store.getNode(nodeId);
+        const modelField = node?.data?.node?.template?.model;
+        if (modelField?._connection_mode) {
+          store.setNode(nodeId, (prev) => ({
+            ...prev,
+            data: {
+              ...prev.data,
+              node: {
+                ...prev.data.node,
+                template: {
+                  ...prev.data.node.template,
+                  model: { ...prev.data.node.template.model, _connection_mode: false },
+                },
+              },
+            },
+          }), false);
+        }
       }
       const selectedOption = flatOptions.find(
         (option) => option.name === modelName,

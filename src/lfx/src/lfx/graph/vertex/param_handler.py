@@ -216,7 +216,11 @@ class ParameterHandler:
                 and "model" in self.template_dict
                 and self.vertex.get_incoming_edge_by_target_param("model") is not None
             )
-            if not has_incoming_edge and not model_has_edge:
+            # Skip credential fields when the node is in "Connect other models" mode
+            # (user chose to wire an external model instead of the built-in provider)
+            model_field = self.template_dict.get("model", {})
+            in_connection_mode = is_secret and model_field.get("_connection_mode", False)
+            if not has_incoming_edge and not model_has_edge and not in_connection_mode:
                 load_from_db_fields.append(field_name)
 
         return params, load_from_db_fields

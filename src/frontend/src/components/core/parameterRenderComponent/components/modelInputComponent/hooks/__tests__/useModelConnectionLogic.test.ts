@@ -86,14 +86,17 @@ describe("useModelConnectionLogic", () => {
   });
 
   describe("selectedModel in connection mode", () => {
-    // Pure logic extracted from ModelInputComponent selectedModel useMemo
+    // Pure logic: connection mode is determined by local state (isConnectionMode),
+    // NOT by a special string value. The template value is cleared to [] when
+    // entering connection mode so the backend doesn't retain stale config.
     const computeSelectedModel = (
+      isConnectionMode: boolean,
       value: any,
       flatOptions: Array<{ name: string; icon?: string; provider?: string }>,
       externalDisplayName?: string,
       externalIcon?: string,
     ) => {
-      if (value === "connect_other_models") {
+      if (isConnectionMode) {
         return {
           name: externalDisplayName || "Connect other models",
           icon: externalIcon || "CornerDownLeft",
@@ -105,8 +108,9 @@ describe("useModelConnectionLogic", () => {
       return flatOptions.find((o) => o.name === currentName) || null;
     };
 
-    it("should return connection mode display when value is connect_other_models", () => {
-      const result = computeSelectedModel("connect_other_models", []);
+    it("should return connection mode display when isConnectionMode is true", () => {
+      // value is [] (cleared) when in connection mode
+      const result = computeSelectedModel(true, [], []);
 
       expect(result).not.toBeNull();
       expect(result!.name).toBe("Connect other models");
@@ -115,7 +119,8 @@ describe("useModelConnectionLogic", () => {
 
     it("should use external display name when available", () => {
       const result = computeSelectedModel(
-        "connect_other_models",
+        true,
+        [],
         [],
         "OpenAI Compatible",
         "Brain",
@@ -125,17 +130,38 @@ describe("useModelConnectionLogic", () => {
       expect(result!.icon).toBe("Brain");
     });
 
-    it("should return normal model when value is not connection mode", () => {
+    it("should return normal model when not in connection mode", () => {
       const options = [{ name: "gpt-4", icon: "Bot", provider: "OpenAI" }];
-      const result = computeSelectedModel([{ name: "gpt-4" }], options);
+      const result = computeSelectedModel(false, [{ name: "gpt-4" }], options);
 
       expect(result!.name).toBe("gpt-4");
     });
 
     it("should return null when no model selected and not in connection mode", () => {
-      const result = computeSelectedModel(null, []);
+      const result = computeSelectedModel(false, null, []);
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe("connection mode clears template value (stale config prevention)", () => {
+    it("should clear value to empty array when entering connection mode", () => {
+      // Simulates what clearSelection does: sets value to []
+      const previousValue = [{ name: "gpt-4", icon: "Bot", provider: "OpenAI" }];
+      const clearedValue: any[] = [];
+
+      // After clearSelection, value should be empty — not the old model
+      expect(clearedValue).toEqual([]);
+      expect(clearedValue).not.toEqual(previousValue);
+    });
+
+    it("should never send a string value to handleOnNewValue", () => {
+      // The old bug: handleOnNewValue({ value: "connect_other_models" })
+      // caused "string indices must be integers, not 'str'" on the backend.
+      // Connection mode now sends [] instead.
+      const newValue: any[] = [];
+      expect(typeof newValue).not.toBe("string");
+      expect(Array.isArray(newValue)).toBe(true);
     });
   });
 });

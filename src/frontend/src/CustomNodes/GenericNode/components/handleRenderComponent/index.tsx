@@ -196,7 +196,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     useCallback(
       (state) => {
         if (id?.type !== "model" || !left) return false;
-        const node = state.getNode(nodeId);
+        const node = state.nodes.find((n) => n.id === nodeId);
         return (node?.data as NodeDataType)?._connectionMode === true;
       },
       [nodeId, id?.type, left],

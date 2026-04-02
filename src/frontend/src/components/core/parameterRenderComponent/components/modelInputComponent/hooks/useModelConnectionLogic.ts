@@ -71,11 +71,32 @@ export function useModelConnectionLogic({
           color: "datatype-fuchsia",
         } as any;
 
-        // Mark this node as being in connection mode so the handle stays visible
-        store.setNode(nodeId, (node) => ({
-          ...node,
-          data: { ...node.data, _connectionMode: true },
-        }), false);
+        // Mark this node as being in connection mode, clear the model value
+        // and provider-specific credential fields so the backend cannot
+        // execute with stale config when no external model is connected.
+        store.setNode(nodeId, (prevNode) => {
+          const template = { ...prevNode.data.node.template };
+          // Clear model selection and mark as connection mode so the backend
+          // doesn't auto-select a model or re-populate credentials on reload.
+          if (template.model) {
+            template.model = { ...template.model, value: [], _connection_mode: true };
+          }
+          // Clear credential fields
+          for (const [key, field] of Object.entries(template)) {
+            const f = field as any;
+            if (f?.password || f?._input_type === "SecretStrInput") {
+              template[key] = { ...f, value: "", load_from_db: false };
+            }
+          }
+          return {
+            ...prevNode,
+            data: {
+              ...prevNode.data,
+              _connectionMode: true,
+              node: { ...prevNode.data.node, template },
+            },
+          };
+        }, true);
 
         // Show compatible handles glow
         store.setFilterEdge(grouped);

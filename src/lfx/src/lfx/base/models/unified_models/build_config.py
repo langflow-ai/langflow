@@ -313,6 +313,11 @@ def handle_model_input_update(
     if field_name in provider_mapped_fields:
         return build_config
 
+    # If the model field is in connection mode (user chose "Connect other models"),
+    # skip auto-selection and provider re-population so credentials stay cleared.
+    if build_config.get(model_field_name, {}).get("_connection_mode"):
+        return build_config
+
     # When the user changes the model selection, we need to reset/hide fields that may no longer apply
     if field_name == model_field_name:
         options = build_config[model_field_name].get("options", [])
