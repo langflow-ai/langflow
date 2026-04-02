@@ -141,7 +141,7 @@ def _validate_tool_ref_consistency(operations: list[Any]) -> None:
         ref: WatsonxToolRefBinding | None = None
         if isinstance(operation, WatsonxBindOperation):
             ref = operation.tool.tool_id_with_ref
-        elif isinstance(operation, (WatsonxUnbindOperation, WatsonxRemoveToolOperation)):
+        elif isinstance(operation, (WatsonxUnbindOperation, WatsonxRemoveToolOperation, WatsonxAttachToolOperation)):
             ref = operation.tool
         if ref is None:
             continue
@@ -150,6 +150,61 @@ def _validate_tool_ref_consistency(operations: list[Any]) -> None:
             msg = f"Conflicting source_ref for tool_id={ref.tool_id!r}: {existing_source_ref!r} vs {ref.source_ref!r}"
             raise ValueError(msg)
         seen[ref.tool_id] = ref.source_ref
+
+
+def _validate_overlapping_existing_tool_operations(operations: list[Any]) -> None:
+    bind_app_ids_by_tool: dict[str, set[str]] = {}
+    unbind_app_ids_by_tool: dict[str, set[str]] = {}
+    attach_tool_ids: set[str] = set()
+    remove_tool_ids: set[str] = set()
+
+    for operation in operations:
+        if isinstance(operation, WatsonxBindOperation):
+            ref = operation.tool.tool_id_with_ref
+            if ref is None:
+                continue
+            bind_app_ids_by_tool.setdefault(ref.tool_id, set()).update(operation.app_ids)
+            continue
+
+        if isinstance(operation, WatsonxAttachToolOperation):
+            tool_id = operation.tool.tool_id
+            if tool_id in attach_tool_ids:
+                msg = f"Duplicate attach_tool operation for tool_id: [{tool_id!r}]"
+                raise ValueError(msg)
+            attach_tool_ids.add(tool_id)
+            continue
+
+        if isinstance(operation, WatsonxUnbindOperation):
+            unbind_app_ids_by_tool.setdefault(operation.tool.tool_id, set()).update(operation.app_ids)
+            continue
+
+        if isinstance(operation, WatsonxRemoveToolOperation):
+            tool_id = operation.tool.tool_id
+            if tool_id in remove_tool_ids:
+                msg = f"Duplicate remove_tool operation for tool_id: [{tool_id!r}]"
+                raise ValueError(msg)
+            remove_tool_ids.add(tool_id)
+            continue
+
+    bind_tool_ids = set(bind_app_ids_by_tool)
+    overlap_attach_bind = sorted(attach_tool_ids.intersection(bind_tool_ids))
+    if overlap_attach_bind:
+        msg = (
+            "attach_tool cannot be combined with bind.tool.tool_id_with_ref for the same tool_id(s): "
+            f"{overlap_attach_bind}"
+        )
+        raise ValueError(msg)
+
+    for tool_id in sorted(remove_tool_ids):
+        if tool_id in bind_tool_ids or tool_id in attach_tool_ids or tool_id in unbind_app_ids_by_tool:
+            msg = f"remove_tool cannot be combined with bind/attach_tool/unbind for the same tool_id: [{tool_id!r}]"
+            raise ValueError(msg)
+
+    for tool_id, bind_app_ids in bind_app_ids_by_tool.items():
+        overlap_app_ids = sorted(bind_app_ids.intersection(unbind_app_ids_by_tool.get(tool_id, set())))
+        if overlap_app_ids:
+            msg = f"bind and unbind app_ids overlap for the same tool_id [{tool_id!r}]: {overlap_app_ids}"
+            raise ValueError(msg)
 
 
 def _validate_all_declared_app_ids_are_referenced(
@@ -193,7 +248,7 @@ class WatsonxToolReference(BaseModel):
 
 
 class WatsonxBindOperation(BaseModel):
-    """Bind a selected tool to a selected app id."""
+    """Bind a selected tool to app ids."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -242,8 +297,24 @@ class WatsonxRemoveToolOperation(BaseModel):
     )
 
 
+class WatsonxAttachToolOperation(BaseModel):
+    """Attach an existing tool to the deployment without connection bindings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    op: Literal["attach_tool"]
+    tool: WatsonxToolRefBinding = Field(
+        description="Existing provider tool reference with source_ref correlation.",
+    )
+
+
 WatsonxUpdateOperation = Annotated[
-    WatsonxBindOperation | WatsonxUnbindOperation | WatsonxRemoveToolOperation,
+    WatsonxBindOperation | WatsonxUnbindOperation | WatsonxRemoveToolOperation | WatsonxAttachToolOperation,
+    Field(discriminator="op"),
+]
+
+WatsonxCreateOperation = Annotated[
+    WatsonxBindOperation | WatsonxAttachToolOperation,
     Field(discriminator="op"),
 ]
 
@@ -252,7 +323,7 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
     """Watsonx provider_data contract for deployment update patch operations.
 
     Notes:
-    - operations[*].app_ids are operation-side ids.
+    - bind/unbind operations[*].app_ids are operation-side ids.
     - resource_name_prefix is applied only when creating resources
       (for raw tool names).
     - resource_name_prefix is a provider-specific naming/deconfliction hint.
@@ -285,6 +356,10 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
             "This should only be used by rollback to restore pre-update attachment state."
         ),
     )
+    llm: NormalizedId | None = Field(
+        default=None,
+        description=("Provider language model identifier to use for the deployment agent."),
+    )
 
     @field_validator("put_tools")
     @classmethod
@@ -301,6 +376,15 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
         validate_resource_name_prefix_for_provider(value)
         return value
 
+    @property
+    def has_tool_work(self) -> bool:
+        """Whether this payload includes tool-level mutations (put_tools, operations, or raw tool creation).
+
+        The service layer uses this to decide between the lightweight
+        spec-only update path and the full provider-plan path.
+        """
+        return bool(self.put_tools is not None or self.operations or self.tools.raw_payloads)
+
     @model_validator(mode="after")
     def validate_has_work(self) -> WatsonxDeploymentUpdatePayload:
         if self.put_tools is not None:
@@ -315,9 +399,28 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
                 msg = "put_tools is a standalone full replacement and cannot be combined with other fields."
                 raise ValueError(msg)
             return self
-        if not self.operations:
-            msg = "At least one of 'operations' or 'put_tools' must be provided."
+        if self.tools.raw_payloads and self.resource_name_prefix is None:
+            msg = "resource_name_prefix is required when update payload creates raw tools."
             raise ValueError(msg)
+        if self.llm is None:
+            msg = "llm is required for deployment update operations."
+            raise ValueError(msg)
+        if not self.operations:
+            has_connections = self.connections.existing_app_ids or self.connections.raw_payloads
+            if has_connections:
+                msg = "connections require at least one bind/unbind operation that references app_ids."
+                raise ValueError(msg)
+            if self.resource_name_prefix and not self.tools.raw_payloads:
+                msg = "resource_name_prefix without operations requires tools.raw_payloads."
+                raise ValueError(msg)
+            # Remaining valid no-operation cases:
+            # - LLM-only update (no raw_payloads, no connections, no prefix).
+            # - raw_payloads + prefix without operations: tools are created and
+            #   attached to the agent without connection bindings
+            #   (connectionless-tool flow). The plan builder auto-creates
+            #   entries for all declared raw_payloads even without explicit
+            #   bind/attach_tool operations referencing them.
+            return self
         return self
 
     @model_validator(mode="after")
@@ -362,6 +465,7 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
             referenced_app_ids=referenced_app_ids,
         )
         _validate_tool_ref_consistency(self.operations)
+        _validate_overlapping_existing_tool_operations(self.operations)
 
         return self
 
@@ -379,13 +483,21 @@ class WatsonxDeploymentCreatePayload(BaseModel):
     )
     tools: WatsonxUpdateTools = Field(default_factory=WatsonxUpdateTools)
     connections: WatsonxUpdateConnections = Field(default_factory=WatsonxUpdateConnections)
-    operations: list[WatsonxBindOperation] = Field(min_length=1)
+    operations: list[WatsonxCreateOperation] = Field(default_factory=list)
+    llm: NormalizedId = Field(description="Provider model identifier to use for the deployment agent.")
 
     @field_validator("resource_name_prefix")
     @classmethod
     def validate_resource_name_prefix(cls, value: str) -> str:
         validate_resource_name_prefix_for_provider(value)
         return value
+
+    @model_validator(mode="after")
+    def validate_has_work(self) -> WatsonxDeploymentCreatePayload:
+        if not self.operations and not self.tools.raw_payloads:
+            msg = "At least one bind/attach_tool operation or tools.raw_payloads entry must be provided for create."
+            raise ValueError(msg)
+        return self
 
     @model_validator(mode="after")
     def validate_operation_references(self) -> WatsonxDeploymentCreatePayload:
@@ -397,8 +509,9 @@ class WatsonxDeploymentCreatePayload(BaseModel):
             existing_app_ids=existing_app_ids,
             raw_app_ids=raw_app_ids,
         )
+        bind_operations = [operation for operation in self.operations if isinstance(operation, WatsonxBindOperation)]
         referenced_app_ids = _validate_bind_operation_references(
-            operations=self.operations,
+            operations=bind_operations,
             raw_tool_names=raw_tool_names,
             valid_app_ids=valid_app_ids,
         )
@@ -408,6 +521,7 @@ class WatsonxDeploymentCreatePayload(BaseModel):
             referenced_app_ids=referenced_app_ids,
         )
         _validate_tool_ref_consistency(self.operations)
+        _validate_overlapping_existing_tool_operations(self.operations)
         return self
 
 
@@ -469,13 +583,36 @@ class WatsonxToolAppBinding(BaseModel):
 
 
 class WatsonxDeploymentUpdateResultData(BaseModel):
-    """Normalized provider result payload for deployment update."""
+    """Normalized provider result payload for deployment update.
+
+    Semantics:
+    - ``created_snapshot_ids``: IDs of snapshot/tools created during this update.
+    - ``added_snapshot_ids``: IDs of snapshot/tools newly attached to the agent
+      by this update (includes ``created_snapshot_ids`` and newly attached
+      pre-existing tools).
+    - ``created_snapshot_bindings``: ``source_ref -> tool_id`` bindings for
+      snapshots/tools created during this update.
+    - ``added_snapshot_bindings``: ``source_ref -> tool_id`` bindings for
+      snapshots/tools newly attached to the agent by this update.
+    - ``removed_snapshot_bindings``: ``source_ref -> tool_id`` bindings for
+      snapshots/tools detached from the agent by this update.
+    - ``referenced_snapshot_bindings``: all operation-referenced bindings used
+      for correlation/response shaping (includes created, added-existing,
+      removed, and other touched existing refs).
+    """
 
     model_config = ConfigDict(extra="ignore")
 
     created_app_ids: list[NormalizedId] = Field(default_factory=list)
     created_snapshot_ids: list[NormalizedId] = Field(default_factory=list)
+    added_snapshot_ids: list[NormalizedId] = Field(default_factory=list)
+    created_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
+    # Newly attached snapshot/tool refs (created + newly attached existing).
     added_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
+    # Detached snapshot/tool refs.
+    removed_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
+    # Full operation correlation set (created + existing refs).
+    referenced_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
     tool_app_bindings: list[WatsonxToolAppBinding] | None = None
 
     @field_validator("created_app_ids", mode="before")
@@ -488,6 +625,13 @@ class WatsonxDeploymentUpdateResultData(BaseModel):
     @field_validator("created_snapshot_ids", mode="before")
     @classmethod
     def normalize_created_snapshot_ids(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        return [str(snapshot_id).strip() for snapshot_id in value if str(snapshot_id).strip()]
+
+    @field_validator("added_snapshot_ids", mode="before")
+    @classmethod
+    def normalize_added_snapshot_ids(cls, value: Any) -> list[str]:
         if value is None:
             return []
         return [str(snapshot_id).strip() for snapshot_id in value if str(snapshot_id).strip()]
@@ -512,14 +656,40 @@ class WatsonxAgentExecutionResultData(BaseModel):
     last_error: str | None = None
 
 
+class WatsonxModelOut(BaseModel):
+    """Model metadata returned by wxO model catalog endpoints."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    model_name: NormalizedId
+
+
+class WatsonxDeploymentLlmListResultData(BaseModel):
+    """Normalized provider result payload for deployment LLM listing."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    models: list[WatsonxModelOut] = Field(default_factory=list)
+
+
 class WatsonxProviderUpdateApplyResult(BaseModel):
-    """Public adapter contract for update helper apply results."""
+    """Public adapter contract for update helper apply results.
+
+    Field semantics match ``WatsonxDeploymentUpdateResultData``.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     created_app_ids: list[NormalizedId] = Field(default_factory=list)
+    created_snapshot_ids: list[NormalizedId] = Field(default_factory=list)
     added_snapshot_ids: list[NormalizedId] = Field(default_factory=list)
+    created_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
+    # Newly attached snapshot/tool refs (created + newly attached existing).
     added_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
+    # Detached snapshot/tool refs.
+    removed_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
+    # Full operation correlation set (created + existing refs).
+    referenced_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
 
 
 class WatsonxProviderCreateApplyResult(BaseModel):
@@ -553,5 +723,6 @@ PAYLOAD_SCHEMAS = DeploymentPayloadSchemas(
     deployment_update_result=PayloadSlot(WatsonxDeploymentUpdateResultData),
     execution_create_result=PayloadSlot(WatsonxAgentExecutionResultData),
     execution_status_result=PayloadSlot(WatsonxAgentExecutionResultData),
+    deployment_llm_list_result=PayloadSlot(WatsonxDeploymentLlmListResultData),
     verify_credentials=PayloadSlot(WatsonxVerifyCredentialsPayload),
 )

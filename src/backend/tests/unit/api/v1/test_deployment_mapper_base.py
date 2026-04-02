@@ -21,10 +21,12 @@ from langflow.api.v1.schemas.deployments import DeploymentCreateRequest, Deploym
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadSchemas
 from lfx.services.adapters.deployment.schema import (
     DeploymentCreateResult,
+    DeploymentListResult,
     DeploymentType,
     DeploymentUpdateResult,
     ExecutionCreateResult,
     ExecutionStatusResult,
+    ItemResult,
 )
 from lfx.services.adapters.payload import AdapterPayloadValidationError, PayloadSlot, PayloadSlotPolicy
 from lfx.services.adapters.schema import AdapterType
@@ -345,9 +347,6 @@ def test_mapper_has_shape_method_for_all_outbound_slots() -> None:
     [
         "shape_deployment_create_result",
         "shape_deployment_operation_result",
-        "shape_deployment_list_result",
-        "shape_config_list_result",
-        "shape_snapshot_list_result",
         "shape_deployment_item_data",
         "shape_deployment_status_data",
     ],
@@ -358,6 +357,46 @@ def test_base_mapper_shapers_passthrough_provider_payload(method_name: str) -> N
     shaper = getattr(mapper, method_name)
     shaped = shaper(payload)
     assert shaped is payload
+
+
+def test_base_mapper_shapes_deployment_list_result() -> None:
+    mapper = BaseDeploymentMapper()
+    timestamp = datetime.now(tz=timezone.utc)
+    result = DeploymentListResult(
+        deployments=[
+            ItemResult(
+                id="dep-1",
+                name="Deployment 1",
+                type=DeploymentType.AGENT,
+                created_at=timestamp,
+                updated_at=timestamp,
+                provider_data={"ok": True},
+            )
+        ]
+    )
+
+    shaped = mapper.shape_deployment_list_result(
+        result,
+        deployment_type=DeploymentType.AGENT,
+    )
+
+    assert shaped.deployment_type == DeploymentType.AGENT
+    assert shaped.page == 1
+    assert shaped.size == 1
+    assert shaped.total == 1
+    assert shaped.provider_data == {
+        "entries": [
+            {
+                "resource_key": "dep-1",
+                "name": "Deployment 1",
+                "type": DeploymentType.AGENT,
+                "description": None,
+                "created_at": timestamp,
+                "updated_at": timestamp,
+                "provider_data": {"ok": True},
+            }
+        ]
+    }
 
 
 def test_base_mapper_execution_provider_data_shapers_passthrough() -> None:

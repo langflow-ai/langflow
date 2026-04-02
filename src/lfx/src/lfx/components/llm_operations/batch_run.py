@@ -23,6 +23,7 @@ from lfx.io import (
 )
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
+from lfx.schema.token_usage import accumulate_usage, extract_usage_from_message
 
 
 class BatchRunComponent(Component):
@@ -231,7 +232,9 @@ class BatchRunComponent(Component):
             for idx, (original_row, response) in enumerate(
                 zip(df.to_dict(orient="records"), responses_with_idx, strict=False)
             ):
-                response_text = response[1].content if hasattr(response[1], "content") else str(response[1])
+                response_msg = response[1]
+                self._token_usage = accumulate_usage(self._token_usage, extract_usage_from_message(response_msg))
+                response_text = response_msg.content if hasattr(response_msg, "content") else str(response_msg)
                 row = self._create_base_row(
                     cast("dict[str, Any]", original_row), model_response=response_text, batch_index=idx
                 )
