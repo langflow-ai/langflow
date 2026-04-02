@@ -202,7 +202,7 @@ async def test_base_mapper_resolve_deployment_create_validates_provider_data_whe
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
         spec={"name": "create-deploy", "description": "", "type": "agent"},
-        provider_data={"some_key": "some_value"},
+        provider_data={"label": "some_value"},
     )
 
     resolved = await mapper.resolve_deployment_create(
@@ -212,7 +212,7 @@ async def test_base_mapper_resolve_deployment_create_validates_provider_data_whe
         payload=payload,
     )
 
-    assert resolved.provider_data == {"some_key": "some_value"}
+    assert resolved.provider_data == {"label": "some_value"}
 
 
 @pytest.mark.asyncio
