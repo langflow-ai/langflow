@@ -9,7 +9,8 @@ image:
 ingress:
   enabled: true
   domain: aipp02.skhynix.com
-  annotations: {}
+  annotations:
+    kubernetes.io/ingress.class: nginx
 
 keycloak:
   serverUrl: ""          # e.g. https://keycloak.skhynix.com
