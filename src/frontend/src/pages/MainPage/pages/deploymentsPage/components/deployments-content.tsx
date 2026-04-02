@@ -54,8 +54,9 @@ export default function DeploymentsContent({
     "Error deleting deployment",
   );
 
-  const [editingDeployment, setEditingDeployment] =
-    useState<Deployment | null>(null);
+  const [editingDeployment, setEditingDeployment] = useState<Deployment | null>(
+    null,
+  );
 
   const isLoading = isLoadingProviders || isLoadingDeployments;
   const hasProviders = providers.length > 0;

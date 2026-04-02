@@ -19,8 +19,7 @@ export const DEPLOYMENT_STEPS = CREATE_STEPS;
 export default function DeploymentStepper() {
   const { currentStep, isEditMode } = useDeploymentStepper();
   const steps = isEditMode ? EDIT_STEPS : CREATE_STEPS;
-  const progressPercent =
-    ((currentStep - 1) / (steps.length - 1)) * 100;
+  const progressPercent = ((currentStep - 1) / (steps.length - 1)) * 100;
 
   return (
     <div className="relative mx-auto h-[52px] w-full max-w-[700px]">

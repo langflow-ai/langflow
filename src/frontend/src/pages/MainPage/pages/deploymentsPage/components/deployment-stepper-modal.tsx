@@ -118,12 +118,11 @@ export default function DeploymentStepperModal({
                 initialVersionByFlow ?? editInitialState?.versionMap,
               initialProvider,
               initialInstance,
-              initialStep:
-                isEditMode
-                  ? 1
-                  : initialProvider && initialInstance
-                    ? 2
-                    : 1,
+              initialStep: isEditMode
+                ? 1
+                : initialProvider && initialInstance
+                  ? 2
+                  : 1,
               editingDeployment: editingDeployment ?? undefined,
               initialLlm: editInitialState?.llm,
             }}

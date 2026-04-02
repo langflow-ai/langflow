@@ -148,9 +148,7 @@ export function DeploymentStepperProvider({
   >(new Map());
 
   // Edit mode: track which pre-existing flows the user wants to detach.
-  const [removedFlowIds, setRemovedFlowIds] = useState<Set<string>>(
-    new Set(),
-  );
+  const [removedFlowIds, setRemovedFlowIds] = useState<Set<string>>(new Set());
   // Cache removed flow data so undo can restore it.
   const initialVersionByFlow = useMemo(
     () => initialState?.selectedVersionByFlow ?? new Map(),
@@ -215,10 +213,7 @@ export function DeploymentStepperProvider({
     }
     if (logical === 3) {
       // In edit mode, user can proceed without new attachments (may just change desc/LLM).
-      return (
-        isEditMode ||
-        selectedVersionByFlow.size > 0
-      );
+      return isEditMode || selectedVersionByFlow.size > 0;
     }
     return true;
   }, [
