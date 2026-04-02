@@ -1,0 +1,82 @@
+{{- if .Values.nfs.enabled }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ include "langflow.fullname" . }}-nfs-init
+  labels:
+    {{- include "langflow.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.langflow.storageClass }}
+  storageClassName: {{ .Values.langflow.storageClass }}
+  {{- end }}
+  persistentVolumeReclaimPolicy: Delete
+  {{- if .Values.nfs.mountOptions }}
+  mountOptions:
+    {{- toYaml .Values.nfs.mountOptions | nindent 4 }}
+  {{- end }}
+  nfs:
+    server: {{ .Values.nfs.server }}
+    path: {{ .Values.nfs.basePath }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "langflow.fullname" . }}-nfs-init
+  labels:
+    {{- include "langflow.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "-9"
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.langflow.storageClass }}
+  storageClassName: {{ .Values.langflow.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: 1Gi
+  volumeName: {{ include "langflow.fullname" . }}-nfs-init
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "langflow.fullname" . }}-nfs-init
+  labels:
+    {{- include "langflow.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "langflow.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: nfs-init
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - mkdir -p /mnt/nfs/{{ .Values.empno }} && chmod 777 /mnt/nfs/{{ .Values.empno }}
+          volumeMounts:
+            - name: nfs-root
+              mountPath: /mnt/nfs
+      volumes:
+        - name: nfs-root
+          persistentVolumeClaim:
+            claimName: {{ include "langflow.fullname" . }}-nfs-init
+{{- end }}
