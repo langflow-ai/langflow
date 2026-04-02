@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from lfx.components import (
         FAISS,
         Notion,
+        ag2,
         agentql,
         aiml,
         altk,
@@ -112,6 +113,7 @@ if TYPE_CHECKING:
 # Dynamic imports mapping - maps both modules and individual components
 _dynamic_imports = {
     # Category modules (existing functionality)
+    "ag2": "__module__",
     "agentql": "__module__",
     "aiml": "__module__",
     "altk": "__module__",
@@ -245,6 +247,7 @@ def _discover_components_from_module(module_name):
 __all__ = [
     "FAISS",
     "Notion",
+    "ag2",
     "agentql",
     "aiml",
     "altk",
