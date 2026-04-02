@@ -50,6 +50,7 @@ class KeycloakClient:
             token,
             signing_key.key,
             algorithms=["RS256", "RS512", "ES256", "ES384", "ES512"],
+            leeway=30,
             options={"verify_exp": True, "verify_aud": False},
         )
         return payload
