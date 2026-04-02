@@ -214,7 +214,9 @@ async def create_custom_provider(
     await session.flush()  # populate cp.id
 
     if body.models:
-        assert cp.id is not None
+        if cp.id is None:
+            msg = "cp.id is unexpectedly None after flush"
+            raise RuntimeError(msg)
         _add_models(session, cp.id, body.models)
         await session.flush()
 
