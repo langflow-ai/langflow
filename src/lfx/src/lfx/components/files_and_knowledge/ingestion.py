@@ -315,6 +315,10 @@ class KnowledgeIngestionComponent(Component):
                 metadata["words"] = total_words
                 metadata["characters"] = total_characters
                 metadata["avg_chunk_size"] = round(total_characters / chunks, 1)
+            else:
+                metadata["words"] = 0
+                metadata["characters"] = 0
+                metadata["avg_chunk_size"] = 0.0
 
             # Update directory size
             total_size = 0
