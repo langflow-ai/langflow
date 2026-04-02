@@ -89,4 +89,60 @@ describe("useModelConnectionLogic", () => {
       expect(shouldActivateConnectionMode("connect")).toBe(false);
     });
   });
+
+  describe("selectedModel in connection mode", () => {
+    // Pure logic extracted from ModelInputComponent selectedModel useMemo
+    const computeSelectedModel = (
+      value: any,
+      flatOptions: Array<{ name: string; icon?: string; provider?: string }>,
+      externalDisplayName?: string,
+      externalIcon?: string,
+    ) => {
+      if (value === "connect_other_models") {
+        return {
+          name: externalDisplayName || "Connect other models",
+          icon: externalIcon || "CornerDownLeft",
+          provider: "",
+        };
+      }
+      const currentName = value?.[0]?.name;
+      if (!currentName) return null;
+      return flatOptions.find((o) => o.name === currentName) || null;
+    };
+
+    it("should return connection mode display when value is connect_other_models", () => {
+      const result = computeSelectedModel("connect_other_models", []);
+
+      expect(result).not.toBeNull();
+      expect(result!.name).toBe("Connect other models");
+      expect(result!.icon).toBe("CornerDownLeft");
+    });
+
+    it("should use external display name when available", () => {
+      const result = computeSelectedModel(
+        "connect_other_models",
+        [],
+        "OpenAI Compatible",
+        "Brain",
+      );
+
+      expect(result!.name).toBe("OpenAI Compatible");
+      expect(result!.icon).toBe("Brain");
+    });
+
+    it("should return normal model when value is not connection mode", () => {
+      const options = [
+        { name: "gpt-4", icon: "Bot", provider: "OpenAI" },
+      ];
+      const result = computeSelectedModel([{ name: "gpt-4" }], options);
+
+      expect(result!.name).toBe("gpt-4");
+    });
+
+    it("should return null when no model selected and not in connection mode", () => {
+      const result = computeSelectedModel(null, []);
+
+      expect(result).toBeNull();
+    });
+  });
 });

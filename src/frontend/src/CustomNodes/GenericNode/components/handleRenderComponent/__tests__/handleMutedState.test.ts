@@ -20,14 +20,15 @@ describe("model handle muted state", () => {
       idType: string | undefined,
       connectedEdge: boolean,
       filterPresent: boolean,
+      isInConnectionMode: boolean = false,
     ): boolean => {
       const isModelType = idType === "model";
-      return isModelType && !connectedEdge && !filterPresent;
+      return isModelType && !connectedEdge && !filterPresent && !isInConnectionMode;
     };
 
-    it("should be muted when model type has no connection and no filter", () => {
+    it("should be muted when model type has no connection, no filter, and not in connection mode", () => {
       // Arrange & Act
-      const result = computeIsMuted("model", false, false);
+      const result = computeIsMuted("model", false, false, false);
 
       // Assert
       expect(result).toBe(true);
@@ -35,7 +36,7 @@ describe("model handle muted state", () => {
 
     it("should not be muted when model type has a connected edge", () => {
       // Arrange & Act
-      const result = computeIsMuted("model", true, false);
+      const result = computeIsMuted("model", true, false, false);
 
       // Assert
       expect(result).toBe(false);
@@ -43,7 +44,7 @@ describe("model handle muted state", () => {
 
     it("should not be muted when model type has an active filter", () => {
       // Arrange & Act
-      const result = computeIsMuted("model", false, true);
+      const result = computeIsMuted("model", false, true, false);
 
       // Assert
       expect(result).toBe(false);
@@ -51,18 +52,26 @@ describe("model handle muted state", () => {
 
     it("should not be muted when model type has both connection and filter", () => {
       // Arrange & Act
-      const result = computeIsMuted("model", true, true);
+      const result = computeIsMuted("model", true, true, false);
 
       // Assert
       expect(result).toBe(false);
     });
 
+    it("should not be muted when in connection mode (Connect other models selected)", () => {
+      // Arrange & Act — no edge, no filter, but connection mode is active
+      const result = computeIsMuted("model", false, false, true);
+
+      // Assert — handle must stay visible so user can drag a wire to it
+      expect(result).toBe(false);
+    });
+
     it("should never be muted for non-model types", () => {
       // Arrange & Act & Assert
-      expect(computeIsMuted("str", false, false)).toBe(false);
-      expect(computeIsMuted("Message", false, false)).toBe(false);
-      expect(computeIsMuted(undefined, false, false)).toBe(false);
-      expect(computeIsMuted("", false, false)).toBe(false);
+      expect(computeIsMuted("str", false, false, false)).toBe(false);
+      expect(computeIsMuted("Message", false, false, false)).toBe(false);
+      expect(computeIsMuted(undefined, false, false, false)).toBe(false);
+      expect(computeIsMuted("", false, false, false)).toBe(false);
     });
   });
 

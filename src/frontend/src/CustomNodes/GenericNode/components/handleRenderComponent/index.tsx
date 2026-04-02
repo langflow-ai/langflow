@@ -190,6 +190,18 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
 
   const edges = useFlowStore((state) => state.edges);
 
+  // Check if this node's model field is in "connect other models" mode
+  const isInConnectionMode = useFlowStore(
+    useCallback(
+      (state) => {
+        if (id?.type !== "model" || !left) return false;
+        const node = state.getNode(nodeId);
+        return node?.data?.node?.template?.model?.value === "connect_other_models";
+      },
+      [nodeId, id?.type, left],
+    ),
+  );
+
   const {
     setHandleDragging,
     setFilterType,
@@ -341,7 +353,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
         };
 
     const isModelType = id?.type === "model";
-    const isMuted = isModelType && !connectedEdge && !filterPresent;
+    const isMuted = isModelType && !connectedEdge && !filterPresent && !isInConnectionMode;
 
     return {
       sameNode: sameDraggingNode || sameFilterNode,
@@ -367,6 +379,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     tooltipTitle,
     edges,
     id,
+    isInConnectionMode,
   ]);
 
   const handleMouseDown = useCallback(

@@ -64,7 +64,7 @@ export default function ModelInputComponent({
   const { handleExternalOptions } = useModelConnectionLogic({
     nodeId: nodeId || "",
     closePopover: () => setOpen(false),
-    clearSelection: () => {},
+    clearSelection: () => handleOnNewValue({ value: "connect_other_models" }),
   });
 
   const modelType =
@@ -116,11 +116,19 @@ export default function ModelInputComponent({
     [groupedOptions],
   );
 
+  const isConnectionMode = value === "connect_other_models";
+
   // Derive the currently selected model from the value prop
   const selectedModel = useMemo(() => {
-    // If we're in connection mode, we don't have a normal selected model
-    if (value === "connect_other_models") {
-      return null;
+    // If we're in connection mode, show the connection option as selected
+    if (isConnectionMode) {
+      return {
+        name:
+          externalOptions?.fields?.data?.node?.display_name ||
+          "Connect other models",
+        icon: externalOptions?.fields?.data?.node?.icon || "CornerDownLeft",
+        provider: "",
+      } as SelectedModel;
     }
 
     const currentName = value?.[0]?.name;
@@ -140,7 +148,7 @@ export default function ModelInputComponent({
       // Or keep displaying the stale one? Original logic selected first available.
       (flatOptions.length > 0 ? flatOptions[0] : null)
     );
-  }, [value, flatOptions]);
+  }, [value, flatOptions, isConnectionMode, externalOptions]);
 
   useEffect(() => {
     // Only proceed if we have options and haven't selected a value
