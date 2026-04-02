@@ -84,6 +84,10 @@ from langflow.services.database.models.deployment.crud import (
 from langflow.services.database.models.deployment.crud import (
     update_deployment as update_deployment_db,
 )
+from langflow.services.database.models.deployment.exceptions import (
+    DeploymentGuardError,
+    parse_deployment_guard_error,
+)
 from langflow.services.database.models.deployment_provider_account.crud import (
     count_provider_accounts as count_provider_account_rows,
 )
@@ -398,8 +402,15 @@ async def update_provider_account(
             provider_account=provider_account,
             **update_kwargs,
         )
+    except DeploymentGuardError:
+        raise
     except ValueError as exc:
         _raise_http_for_provider_account_value_error(exc)
+    except Exception as exc:
+        guard_error = parse_deployment_guard_error(exc)
+        if guard_error:
+            raise guard_error from exc
+        raise
     return to_provider_account_response(updated)
 
 

@@ -168,6 +168,35 @@ def _upgrade_postgresql() -> None:
 
     op.execute(
         """
+        CREATE FUNCTION prevent_deployment_provider_account_identity_update()
+        RETURNS TRIGGER
+        AS $$
+        BEGIN
+            IF OLD.provider_tenant_id IS DISTINCT FROM NEW.provider_tenant_id
+               OR OLD.provider_url IS DISTINCT FROM NEW.provider_url
+               OR OLD.provider_key IS DISTINCT FROM NEW.provider_key THEN
+                RAISE EXCEPTION '%',
+                    'DEPLOYMENT_GUARD:DEPLOYMENT_PROVIDER_ACCOUNT_IDENTITY_UPDATE:'
+                    || 'Cannot modify provider key, provider tenant id, or provider URL '
+                    || 'on an existing deployment provider account. '
+                    || 'Re-create the account instead.';
+            END IF;
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+        """
+    )
+    op.execute(
+        """
+        CREATE TRIGGER trg_prevent_deployment_provider_account_identity_update
+        BEFORE UPDATE ON deployment_provider_account
+        FOR EACH ROW
+        EXECUTE FUNCTION prevent_deployment_provider_account_identity_update();
+        """
+    )
+
+    op.execute(
+        """
         CREATE FUNCTION prevent_cross_project_attachment()
         RETURNS TRIGGER
         AS $$
@@ -292,6 +321,24 @@ def _upgrade_sqlite() -> None:
     )
 
     op.execute(
+        "CREATE TRIGGER trg_prevent_deployment_provider_account_identity_update\n"
+        "BEFORE UPDATE OF provider_key, provider_tenant_id, provider_url ON deployment_provider_account\n"
+        "FOR EACH ROW\n"
+        "WHEN OLD.provider_tenant_id IS NOT NEW.provider_tenant_id\n"
+        "  OR OLD.provider_url IS NOT NEW.provider_url\n"
+        "  OR OLD.provider_key IS NOT NEW.provider_key\n"
+        "BEGIN\n"
+        "    SELECT RAISE(\n"
+        "        ABORT,\n"
+        "        'DEPLOYMENT_GUARD:DEPLOYMENT_PROVIDER_ACCOUNT_IDENTITY_UPDATE:"
+        "Cannot modify provider key, provider tenant id, or provider URL "
+        "on an existing deployment provider account. "
+        "Re-create the account instead.'\n"
+        "    );\n"
+        "END;\n"
+    )
+
+    op.execute(
         "CREATE TRIGGER trg_prevent_cross_project_attachment\n"
         "BEFORE INSERT ON flow_version_deployment_attachment\n"
         "FOR EACH ROW\n"
@@ -317,6 +364,9 @@ def _upgrade_sqlite() -> None:
 
 def _downgrade_postgresql() -> None:
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_cross_project_attachment ON flow_version_deployment_attachment;")
+    op.execute(
+        "DROP TRIGGER IF EXISTS trg_prevent_deployment_provider_account_identity_update ON deployment_provider_account;"
+    )
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_deployment_provider_account_move ON deployment;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_deployment_project_move ON deployment;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_flow_move_if_deployed ON flow;")
@@ -325,6 +375,7 @@ def _downgrade_postgresql() -> None:
 
     # LIFO order: last function created in upgrade is dropped first
     op.execute("DROP FUNCTION IF EXISTS prevent_cross_project_attachment();")
+    op.execute("DROP FUNCTION IF EXISTS prevent_deployment_provider_account_identity_update();")
     op.execute("DROP FUNCTION IF EXISTS prevent_deployment_provider_account_move();")
     op.execute("DROP FUNCTION IF EXISTS prevent_deployment_project_move();")
     op.execute("DROP FUNCTION IF EXISTS prevent_flow_move_if_deployed();")
@@ -334,6 +385,7 @@ def _downgrade_postgresql() -> None:
 
 def _downgrade_sqlite() -> None:
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_cross_project_attachment;")
+    op.execute("DROP TRIGGER IF EXISTS trg_prevent_deployment_provider_account_identity_update;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_deployment_provider_account_move;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_deployment_project_move;")
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_flow_move_if_deployed;")

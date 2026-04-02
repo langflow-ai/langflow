@@ -22,6 +22,7 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentProviderAccountUpdateRequest,
     DeploymentUpdateRequest,
 )
+from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 from lfx.services.adapters.deployment.exceptions import (
     AuthenticationError,
@@ -841,6 +842,46 @@ class TestProviderAccountRoutes:
             )
 
         assert exc_info.value.status_code == 409
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.update_provider_account_row", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    async def test_update_provider_account_guard_error_translates_to_deployment_guard_error(
+        self,
+        mock_get_provider_account,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_update_provider_account,
+    ):
+        """PATCH translates raw provider-account DB guard exceptions into DeploymentGuardError."""
+        from langflow.api.v1.deployments import update_provider_account
+
+        existing_account = _fake_provider_account()
+        mock_get_provider_account.return_value = existing_account
+
+        mapper = MagicMock()
+        mapper.resolve_verify_credentials_for_update.return_value = None
+        mapper.resolve_provider_account_update.return_value = {"provider_tenant_id": "tenant-renamed"}
+        mock_get_mapper.return_value = mapper
+        mock_resolve_adapter.return_value = AsyncMock()
+        mock_update_provider_account.side_effect = Exception(
+            "DEPLOYMENT_GUARD:DEPLOYMENT_PROVIDER_ACCOUNT_IDENTITY_UPDATE:"
+            "Cannot modify provider key, provider tenant id, or provider URL "
+            "on an existing deployment provider account. "
+            "Re-create the account instead."
+        )
+
+        with pytest.raises(
+            DeploymentGuardError, match="Cannot modify provider key, provider tenant id, or provider URL"
+        ):
+            await update_provider_account(
+                provider_id=existing_account.id,
+                session=AsyncMock(),
+                payload=DeploymentProviderAccountUpdateRequest(provider_tenant_id="tenant-renamed"),
+                current_user=_fake_user(),
+            )
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.delete_provider_account_row", new_callable=AsyncMock)

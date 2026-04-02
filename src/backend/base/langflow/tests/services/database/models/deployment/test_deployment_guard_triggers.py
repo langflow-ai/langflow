@@ -475,6 +475,53 @@ async def test_trigger_blocks_deployment_provider_account_move(
 
 
 @pytest.mark.asyncio
+async def test_trigger_blocks_deployment_provider_account_identity_update(
+    db: AsyncSession,
+    provider_account: DeploymentProviderAccount,
+) -> None:
+    with pytest.raises(DBAPIError) as exc_info:
+        await _execute_and_commit(
+            db,
+            update(DeploymentProviderAccount)
+            .where(DeploymentProviderAccount.id == provider_account.id)
+            .values(provider_tenant_id="tenant-renamed"),
+        )
+    await db.rollback()
+
+    _assert_guard(
+        exc_info.value,
+        "DEPLOYMENT_PROVIDER_ACCOUNT_IDENTITY_UPDATE",
+        "Cannot modify provider key, provider tenant id, or provider URL "
+        "on an existing deployment provider account. "
+        "Re-create the account instead.",
+    )
+
+
+@pytest.mark.asyncio
+async def test_trigger_blocks_deployment_provider_account_provider_key_update(
+    db: AsyncSession,
+    provider_account: DeploymentProviderAccount,
+) -> None:
+    """Changing provider_key on an existing account must be blocked by the guard."""
+    with pytest.raises(DBAPIError) as exc_info:
+        await _execute_and_commit(
+            db,
+            update(DeploymentProviderAccount)
+            .where(DeploymentProviderAccount.id == provider_account.id)
+            .values(provider_key=None),
+        )
+    await db.rollback()
+
+    _assert_guard(
+        exc_info.value,
+        "DEPLOYMENT_PROVIDER_ACCOUNT_IDENTITY_UPDATE",
+        "Cannot modify provider key, provider tenant id, or provider URL "
+        "on an existing deployment provider account. "
+        "Re-create the account instead.",
+    )
+
+
+@pytest.mark.asyncio
 async def test_trigger_blocks_cross_project_attachment(
     db: AsyncSession,
     user: User,
@@ -541,6 +588,31 @@ async def test_deployment_provider_account_update_with_same_value_succeeds(
     row = (await db.exec(select(Deployment).where(Deployment.id == deployment.id))).first()
     assert row is not None
     assert row.deployment_provider_account_id == deployment.deployment_provider_account_id
+
+
+@pytest.mark.asyncio
+async def test_provider_account_identity_update_with_same_values_succeeds(
+    db: AsyncSession,
+    provider_account: DeploymentProviderAccount,
+) -> None:
+    """Updating provider identity columns to current values must not trigger the guard."""
+    await _execute_and_commit(
+        db,
+        update(DeploymentProviderAccount)
+        .where(DeploymentProviderAccount.id == provider_account.id)
+        .values(
+            provider_key=provider_account.provider_key,
+            provider_tenant_id=provider_account.provider_tenant_id,
+            provider_url=provider_account.provider_url,
+        ),
+    )
+    row = (
+        await db.exec(select(DeploymentProviderAccount).where(DeploymentProviderAccount.id == provider_account.id))
+    ).first()
+    assert row is not None
+    assert row.provider_key == provider_account.provider_key
+    assert row.provider_tenant_id == provider_account.provider_tenant_id
+    assert row.provider_url == provider_account.provider_url
 
 
 @pytest.mark.asyncio
