@@ -62,6 +62,10 @@ spec:
               value: {{ .Values.keycloak.buttonText | quote }}
             - name: LANGFLOW_AUTO_LOGIN
               value: "false"
+            - name: LANGFLOW_REFRESH_SECURE
+              value: {{ .Values.langflow.refreshSecure | quote }}
+            - name: LANGFLOW_REFRESH_SAME_SITE
+              value: {{ .Values.langflow.refreshSameSite | quote }}
             - name: LANGFLOW_SECRET_KEY
               valueFrom:
                 secretKeyRef:

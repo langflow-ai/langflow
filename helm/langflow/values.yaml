@@ -40,6 +40,8 @@ langflow:
   secretKey: ""          # ignored if existingSecret is set
   storage: 5Gi
   storageClass: ""       # e.g. sc-nfs-app-retain
+  refreshSecure: "false"       # set "true" if using HTTPS
+  refreshSameSite: "lax"       # "none" requires HTTPS + Secure=true
 
 # -- NFS PersistentVolume (created automatically when nfs.enabled=true)
 nfs:
