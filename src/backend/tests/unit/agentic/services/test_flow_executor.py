@@ -11,7 +11,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
-from lfx.utils.flow_validation import CustomComponentValidationError
 from langflow.agentic.services.flow_executor import (
     _run_graph_with_events,
     execute_flow_file,
@@ -25,6 +24,7 @@ from langflow.agentic.services.flow_types import (
     FlowExecutionResult,
 )
 from langflow.agentic.services.helpers.event_consumer import parse_event_data
+from lfx.utils.flow_validation import CustomComponentValidationError
 
 MODULE = "langflow.agentic.services.flow_executor"
 
