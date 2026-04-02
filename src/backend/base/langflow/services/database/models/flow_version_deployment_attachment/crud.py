@@ -200,6 +200,51 @@ async def list_attachments_for_flow_with_provider_info(
     return [(attachment, provider_account_id, provider_key) for attachment, provider_account_id, provider_key in rows]
 
 
+async def list_attachments_for_flow_with_deployment_info(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    flow_id: UUID,
+) -> list[tuple[FlowVersionDeploymentAttachment, str, str, str]]:
+    """Return deployed attachments for all versions of a flow, with deployment context.
+
+    Each tuple contains:
+      - the attachment row
+      - the deployment's ``name``
+      - the deployment's ``deployment_type`` value
+      - the provider account's ``provider_key``
+
+    Only attachments with a non-null ``provider_snapshot_id`` are returned
+    (i.e. those that have actually been materialized on the provider).
+    Results are ordered by ``updated_at`` descending so the most recent
+    attachment per deployment comes first.
+    """
+    from langflow.services.database.models.deployment.model import Deployment
+    from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+    from langflow.services.database.models.flow_version.model import FlowVersion
+
+    stmt = (
+        select(
+            FlowVersionDeploymentAttachment,
+            Deployment.name,
+            Deployment.deployment_type,
+            DeploymentProviderAccount.provider_key,
+        )
+        .join(Deployment, Deployment.id == FlowVersionDeploymentAttachment.deployment_id)
+        .join(DeploymentProviderAccount, DeploymentProviderAccount.id == Deployment.deployment_provider_account_id)
+        .where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            FlowVersionDeploymentAttachment.provider_snapshot_id.is_not(None),  # type: ignore[union-attr]
+            col(FlowVersionDeploymentAttachment.flow_version_id).in_(
+                select(FlowVersion.id).where(FlowVersion.flow_id == flow_id)
+            ),
+        )
+        .order_by(FlowVersionDeploymentAttachment.updated_at.desc())  # type: ignore[union-attr]
+    )
+    rows = (await db.exec(stmt)).all()
+    return [(att, name, dtype.value, pkey) for att, name, dtype, pkey in rows]
+
+
 async def get_attachment_by_provider_snapshot_id(
     db: AsyncSession,
     *,

@@ -232,7 +232,8 @@ class TestListDeploymentsSynced:
         """Rows whose resource_key is in the provider's known set are kept."""
         row1 = _mock_deployment_row("rk-1")
         row2 = _mock_deployment_row("rk-2")
-        mock_list.side_effect = [[(row1, 0, []), (row2, 1, ["fv-1"])], []]
+        fv_id = uuid4()
+        mock_list.side_effect = [[(row1, 0, []), (row2, 1, [(fv_id, "snap-1")])], []]
         mock_fetch.return_value = {"rk-1", "rk-2"}
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
