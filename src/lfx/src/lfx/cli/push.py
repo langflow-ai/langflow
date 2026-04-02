@@ -197,11 +197,17 @@ def _find_or_create_project(
 
 
 def _find_project_root() -> Path | None:
-    """Return the project root (directory containing .lfx/ or .git/), or None."""
+    """Return the lfx project root (directory containing .lfx/), or None.
+
+    Only the ``.lfx`` marker is used — ``.git`` is intentionally excluded so
+    that the containment check doesn't reject paths when running inside a
+    larger monorepo or outside any lfx project.
+    """
     cwd = Path.cwd()
     for directory in (cwd, *cwd.parents):
-        if (directory / ".lfx").is_dir() or (directory / ".git").is_dir():
+        if (directory / ".lfx").is_dir():
             return directory
+        # Stop at a filesystem root
         if directory.parent == directory:
             break
     return None
