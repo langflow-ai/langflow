@@ -7,6 +7,7 @@ import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
 
 export default function StepReview() {
   const {
+    isEditMode,
     deploymentType,
     deploymentName,
     selectedLlm,
@@ -14,6 +15,7 @@ export default function StepReview() {
     selectedVersionByFlow,
     toolNameByFlow,
     attachedConnectionByFlow,
+    removedFlowIds,
   } = useDeploymentStepper();
 
   const { folderId } = useParams();
@@ -217,6 +219,48 @@ export default function StepReview() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Existing provider tools */}
+      {/* Detaching section (edit mode) */}
+      {isEditMode && removedFlowIds.size > 0 && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+          <div className="flex flex-col gap-3">
+            <span className="text-sm font-medium text-destructive">
+              Detaching
+            </span>
+            <div className="flex flex-col gap-2">
+              {Array.from(removedFlowIds).map((flowId) => {
+                const flow = allFlows.find((f) => f.id === flowId);
+                return (
+                  <div
+                    key={flowId}
+                    className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-background p-3"
+                  >
+                    <ForwardedIconComponent
+                      name="Workflow"
+                      className="h-3.5 w-3.5 shrink-0 text-destructive/60"
+                    />
+                    <span className="text-sm text-foreground">
+                      {flow?.name ?? "Unknown flow"}
+                    </span>
+                    <Badge
+                      variant="secondaryStatic"
+                      size="tag"
+                      className="bg-destructive/10 text-destructive"
+                    >
+                      removing
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              These tools will be detached from the agent. They will remain
+              available on your provider tenant.
+            </p>
+          </div>
         </div>
       )}
     </div>

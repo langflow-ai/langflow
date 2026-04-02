@@ -26,6 +26,7 @@ const TYPE_OPTIONS = [
 
 export default function StepType() {
   const {
+    isEditMode,
     deploymentType,
     setDeploymentType,
     deploymentName,
@@ -122,7 +123,13 @@ export default function StepType() {
           className="bg-muted"
           value={deploymentName}
           onChange={(e) => setDeploymentName(e.target.value)}
+          disabled={isEditMode}
         />
+        {isEditMode && (
+          <span className="mt-1 text-xs text-muted-foreground">
+            Name cannot be changed after creation.
+          </span>
+        )}
       </div>
 
       <div className="flex flex-col">
