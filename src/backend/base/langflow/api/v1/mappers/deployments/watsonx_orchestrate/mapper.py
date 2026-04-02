@@ -409,7 +409,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             detail = str(first_error.get("msg") or exc)
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Invalid {slot_name} payload: {detail}",
+                detail=f"Invalid provider_data payload: {detail}",
             ) from exc
 
     async def resolve_deployment_create(
@@ -570,7 +570,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             detail = str(first_error.get("msg") or exc)
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Invalid deployment_update payload: {detail}",
+                detail=f"Invalid provider_data payload: {detail}",
             ) from exc
         return AdapterDeploymentUpdate(
             spec=payload.spec,
@@ -1120,13 +1120,13 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         except AdapterPayloadMissingError as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Missing {slot_name} payload.",
+                detail="Missing provider_data payload.",
             ) from exc
         except AdapterPayloadValidationError as exc:
             detail = exc.format_first_error()
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Invalid {slot_name} payload: {detail}",
+                detail=f"Invalid provider_data payload: {detail}",
             ) from exc
 
     def _extract_bind_flow_version_ids(self, operations: list[Any]) -> list[UUID]:

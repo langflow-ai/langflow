@@ -1831,7 +1831,7 @@ class TestCreateDeploymentSchemaValidation:
         mapper.resolve_deployment_create = AsyncMock(
             side_effect=HTTPException(
                 status_code=422,
-                detail="Invalid deployment_create payload: simulated adapter validation failure",
+                detail="Invalid provider_data payload: simulated adapter validation failure",
             )
         )
         mock_get_mapper.return_value = mapper

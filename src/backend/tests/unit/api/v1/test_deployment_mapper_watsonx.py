@@ -646,7 +646,7 @@ async def test_watsonx_mapper_maps_create_adapter_payload_validation_errors_to_4
             payload=payload,
         )
     assert exc_info.value.status_code == 422
-    assert exc_info.value.detail == "Invalid deployment_create payload: simulated adapter validation failure"
+    assert exc_info.value.detail == "Invalid provider_data payload: simulated adapter validation failure"
 
 
 @pytest.mark.asyncio
@@ -708,7 +708,38 @@ async def test_watsonx_mapper_create_reports_missing_llm_field_name() -> None:
         )
 
     assert exc.value.status_code == 422
-    assert exc.value.detail == "Invalid deployment_create payload: Missing required field 'llm'."
+    assert exc.value.detail == "Invalid provider_data payload: Missing required field 'llm'."
+
+
+@pytest.mark.asyncio
+async def test_watsonx_mapper_create_reports_unknown_field_name() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    payload = DeploymentCreateRequest(
+        provider_id=uuid4(),
+        spec={"name": "create-deploy", "description": "", "type": "agent"},
+        provider_data={
+            "llm": TEST_WXO_LLM,
+            "resource_name_prefix": "lf_test_",
+            "operations": [
+                {
+                    "op": "bind_tool",
+                    "tool_id": "existing-tool",
+                    "app_ids": [],
+                }
+            ],
+        },
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await mapper.resolve_deployment_create(
+            user_id=uuid4(),
+            project_id=uuid4(),
+            db=_FakeDb([]),
+            payload=payload,
+        )
+
+    assert exc.value.status_code == 422
+    assert exc.value.detail == "Invalid provider_data payload: Invalid field 'resource_name_prefix'. Please remove it."
 
 
 @pytest.mark.asyncio
