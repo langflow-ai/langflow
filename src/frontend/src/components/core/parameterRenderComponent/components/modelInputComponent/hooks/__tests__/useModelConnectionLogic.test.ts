@@ -40,10 +40,7 @@ describe("useModelConnectionLogic", () => {
   describe("filter object construction", () => {
     const NODE_ID = "agent-node-123";
 
-    const buildFilterObj = (
-      nodeId: string,
-      targetHandle: string,
-    ) => ({
+    const buildFilterObj = (nodeId: string, targetHandle: string) => ({
       source: undefined,
       sourceHandle: undefined,
       target: nodeId,
@@ -129,9 +126,7 @@ describe("useModelConnectionLogic", () => {
     });
 
     it("should return normal model when value is not connection mode", () => {
-      const options = [
-        { name: "gpt-4", icon: "Bot", provider: "OpenAI" },
-      ];
+      const options = [{ name: "gpt-4", icon: "Bot", provider: "OpenAI" }];
       const result = computeSelectedModel([{ name: "gpt-4" }], options);
 
       expect(result!.name).toBe("gpt-4");

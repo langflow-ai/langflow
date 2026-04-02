@@ -196,7 +196,9 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
       (state) => {
         if (id?.type !== "model" || !left) return false;
         const node = state.getNode(nodeId);
-        return node?.data?.node?.template?.model?.value === "connect_other_models";
+        return (
+          node?.data?.node?.template?.model?.value === "connect_other_models"
+        );
       },
       [nodeId, id?.type, left],
     ),
@@ -353,7 +355,8 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
         };
 
     const isModelType = id?.type === "model";
-    const isMuted = isModelType && !connectedEdge && !filterPresent && !isInConnectionMode;
+    const isMuted =
+      isModelType && !connectedEdge && !filterPresent && !isInConnectionMode;
 
     return {
       sameNode: sameDraggingNode || sameFilterNode,
