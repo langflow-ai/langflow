@@ -110,37 +110,24 @@ async def create_project(
                 # legacy SSE URL
                 # sse_url = await get_project_sse_url(new_project.id)
 
-                # Prepare server config based on auth type same as new project
+                # Prepare server config using URL-based format for direct HTTP connection.
+                # This avoids spawning mcp-proxy subprocesses which can cause ClosedResourceError
+                # on Windows and adds unnecessary overhead for internal server-to-server communication.
                 if default_auth.get("auth_type", "none") == "apikey":
                     # Create API key for API key authentication
                     api_key_name = f"MCP Project {new_project.name} - default"
                     unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), current_user.id)
-                    # Starting v>=1.7.1, we use Streamable HTTP transport by default
-                    command = "uvx"
-                    args = [
-                        "mcp-proxy",
-                        "--transport",
-                        "streamablehttp",
-                        "--headers",
-                        "x-api-key",
-                        unmasked_api_key.api_key,
-                        streamable_http_url,
-                    ]
+                    server_config = {
+                        "url": streamable_http_url,
+                        "headers": {"x-api-key": unmasked_api_key.api_key},
+                    }
                 elif default_auth.get("auth_type", "none") == "oauth":
                     msg = "OAuth authentication is not yet implemented for MCP server creation during project creation."
                     logger.warning(msg)
                     raise HTTPException(status_code=501, detail=msg)
                 else:  # default_auth_type == "none"
                     # No authentication - direct connection
-                    command = "uvx"
-                    args = [
-                        "mcp-proxy",
-                        "--transport",
-                        "streamablehttp",
-                        streamable_http_url,
-                    ]
-
-                server_config = {"command": command, "args": args}
+                    server_config = {"url": streamable_http_url}
 
                 # Validate MCP server for this project
                 validation_result = await validate_mcp_server_for_project(

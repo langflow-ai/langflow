@@ -347,7 +347,7 @@ jobs:
       - name: Execute Playwright Tests
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 12
+          timeout_minutes: 20
           max_attempts: 2
           command: |
             cd src/frontend

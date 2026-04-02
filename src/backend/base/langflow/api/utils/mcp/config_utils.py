@@ -360,8 +360,13 @@ async def auto_configure_starter_projects_mcp(session):
                     # Check if the URL needs updating (e.g., server port changed at restart)
                     expected_url = await get_project_streamable_http_url(user_starter_folder.id)
                     existing_config = validation_result.existing_config or {}
-                    existing_args = existing_config.get("args", [])
-                    existing_urls = await extract_urls_from_strings(existing_args)
+                    # Support both URL-based and stdio-command config formats
+                    existing_url = existing_config.get("url", "")
+                    if not existing_url:
+                        existing_args = existing_config.get("args", [])
+                        existing_urls = await extract_urls_from_strings(existing_args)
+                    else:
+                        existing_urls = [existing_url]
 
                     if any(expected_url == url for url in existing_urls):
                         await logger.adebug(
@@ -409,32 +414,21 @@ async def auto_configure_starter_projects_mcp(session):
                 # Build connection URLs for THIS USER'S starter folder (unique ID per user)
                 streamable_http_url = await get_project_streamable_http_url(user_starter_folder.id)
 
-                # Prepare server config (similar to new project creation)
+                # Prepare server config using URL-based format for direct HTTP connection.
+                # This avoids spawning mcp-proxy subprocesses which can cause ClosedResourceError
+                # on Windows and adds unnecessary overhead for internal server-to-server communication.
                 if default_auth.get("auth_type", "none") == "apikey":
-                    command = "uvx"
-                    args = [
-                        "mcp-proxy",
-                        "--transport",
-                        "streamablehttp",
-                        "--headers",
-                        "x-api-key",
-                        unmasked_api_key.api_key,
-                        streamable_http_url,
-                    ]
+                    server_config = {
+                        "url": streamable_http_url,
+                        "headers": {"x-api-key": unmasked_api_key.api_key},
+                    }
                 elif default_auth.get("auth_type", "none") == "oauth":
                     msg = "OAuth authentication is not yet implemented for MCP server creation during project creation."
                     logger.warning(msg)
                     raise HTTPException(status_code=501, detail=msg)
                 else:  # default_auth_type == "none"
                     # No authentication - direct connection
-                    command = "uvx"
-                    args = [
-                        "mcp-proxy",
-                        "--transport",
-                        "streamablehttp",
-                        streamable_http_url,
-                    ]
-                server_config = {"command": command, "args": args}
+                    server_config = {"url": streamable_http_url}
 
                 # Add to user's MCP servers configuration
                 await logger.adebug(f"Adding MCP server '{server_name}' for user {user.username}")
