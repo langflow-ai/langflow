@@ -46,5 +46,6 @@ nfs:
   enabled: false
   server: ""             # e.g. 10.0.0.1
   basePath: ""           # e.g. /nfs/langflow  (subdirectory /<empno> is appended automatically)
+  mountOptions: []       # e.g. ["nfsvers=3"] for older NFS servers
 
 resources: {}
