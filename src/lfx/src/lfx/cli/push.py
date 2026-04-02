@@ -196,6 +196,29 @@ def _find_or_create_project(
     return project.id
 
 
+def _project_root() -> Path:
+    """Return the project root (directory containing .lfx/ or .git/), or cwd."""
+    cwd = Path.cwd()
+    for directory in (cwd, *cwd.parents):
+        if (directory / ".lfx").is_dir() or (directory / ".git").is_dir():
+            return directory
+        if directory.parent == directory:
+            break
+    return cwd
+
+
+def _check_path_containment(p: Path, root: Path) -> None:
+    """Ensure *p* is inside *root*; raise Exit otherwise."""
+    try:
+        p.resolve().relative_to(root.resolve())
+    except ValueError:
+        console.print(
+            f"[red]Error:[/red] Path {p} is outside the project root ({root}). "
+            "Refusing to push files from outside the project."
+        )
+        raise typer.Exit(1)  # noqa: B904
+
+
 def _collect_flow_files(sources: list[str], dir_path: str | None) -> list[Path]:
     """Resolve the set of flow JSON files to push.
 
@@ -203,12 +226,14 @@ def _collect_flow_files(sources: list[str], dir_path: str | None) -> list[Path]:
     ``flows/`` — mirroring the behaviour of ``lfx pull``.
     """
     paths: list[Path] = []
+    root = _project_root()
 
     # Default to flows/ when nothing is specified, just like lfx pull does.
     effective_dir = dir_path or (None if sources else "flows")
 
     if effective_dir:
         d = Path(effective_dir)
+        _check_path_containment(d, root)
         if not d.is_dir():
             console.print(f"[red]Error:[/red] Directory not found: {d}")
             raise typer.Exit(1)
@@ -218,6 +243,7 @@ def _collect_flow_files(sources: list[str], dir_path: str | None) -> list[Path]:
 
     for s in sources:
         p = Path(s)
+        _check_path_containment(p, root)
         if not p.exists():
             console.print(f"[red]Error:[/red] File not found: {p}")
             raise typer.Exit(1)

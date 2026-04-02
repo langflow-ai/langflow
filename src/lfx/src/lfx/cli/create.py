@@ -65,6 +65,19 @@ def _slugify(name: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _is_lfx_project() -> bool:
+    """Return True if cwd (or a parent up to .git) contains .lfx/environments.yaml."""
+    cwd = Path.cwd()
+    for directory in (cwd, *cwd.parents):
+        if (directory / ".lfx" / "environments.yaml").is_file():
+            return True
+        if (directory / ".lfx" / "environments.yml").is_file():
+            return True
+        if (directory / ".git").is_dir() or directory.parent == directory:
+            break
+    return False
+
+
 def create_command(
     name: str,
     *,
@@ -77,6 +90,12 @@ def create_command(
     Returns the path of the written file.
     Raises ``typer.Exit`` on user-facing errors so the CLI reports them cleanly.
     """
+    if not _is_lfx_project():
+        console.print(
+            "[yellow]Warning:[/yellow] No .lfx/environments.yaml found in this project. "
+            "Run [bold]lfx init[/bold] first to scaffold a project."
+        )
+
     available = list_templates()
     if not available:
         console.print("[red]Error:[/red] No flow templates found in the lfx package.")

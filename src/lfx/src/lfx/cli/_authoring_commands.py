@@ -122,6 +122,12 @@ def register(app: typer.Typer) -> None:
             default=None,
             help="Path(s) to Langflow flow JSON file(s) or directories to validate. Defaults to flows/.",
         ),
+        dir_path: str | None = typer.Option(
+            None,
+            "--dir",
+            "-d",
+            help="Directory of flow JSON files to validate (validates all *.json files). Defaults to flows/.",
+        ),
         level: int = typer.Option(
             4,
             "--level",
@@ -182,8 +188,13 @@ def register(app: typer.Typer) -> None:
         """Validate Langflow flow JSON files without executing them (lazy-loaded)."""
         from lfx.cli.validate import validate_command
 
+        # Merge --dir into positional paths for a consistent interface with push
+        effective_paths = list(flow_paths or [])
+        if dir_path is not None:
+            effective_paths.append(dir_path)
+
         validate_command(
-            flow_paths=flow_paths or [],
+            flow_paths=effective_paths,
             level=level,
             skip_components=skip_components,
             skip_edge_types=skip_edge_types,

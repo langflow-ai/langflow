@@ -73,6 +73,52 @@ Configure these in **Settings → CI/CD → Variables**:
 
 ---
 
+## Shell scripts (`ci/`)
+
+The `shell/` templates (`ci-validate.sh`, `ci-test.sh`, `ci-push.sh`) work with
+any CI system (Jenkins, CircleCI, Bitbucket Pipelines, Azure Pipelines, etc.).
+They are copied to `ci/` by `lfx init`.
+
+### Environment variables
+
+#### `ci-validate.sh`
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `FLOWS_DIR` | `flows/` | Directory containing flow JSON files |
+| `VALIDATE_LEVEL` | `4` | Validation depth (1–4) |
+| `VALIDATE_FORMAT` | `text` | Output format: `text` or `json` |
+| `LFX_VERSION` | *(latest)* | PEP 508 version specifier for `lfx`, e.g. `>=0.4,<1` or `==1.2.3` |
+
+#### `ci-test.sh`
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LANGFLOW_URL` | — | URL of target Langflow instance (Approach A) |
+| `LANGFLOW_API_KEY` | — | API key for target instance (Approach A) |
+| `LANGFLOW_ENV` | — | Environment name from config (Approach B) |
+| `LANGFLOW_ENVIRONMENTS_FILE` | `langflow-environments.toml` | Path to environments config (Approach B) |
+| `TESTS_DIR` | `tests/` | Directory containing test files |
+| `PYTEST_MARKERS` | `integration` | Markers passed to `pytest -m` |
+| `PYTEST_ARGS` | — | Extra arguments forwarded verbatim to pytest |
+| `SDK_VERSION` | *(latest)* | PEP 508 version specifier for `langflow-sdk` |
+
+#### `ci-push.sh`
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LANGFLOW_URL` | — | URL of target Langflow instance (Approach A) |
+| `LANGFLOW_API_KEY` | — | API key for target instance (Approach A) |
+| `LANGFLOW_ENV` | — | Environment name from config (Approach B) |
+| `LANGFLOW_ENVIRONMENTS_FILE` | `langflow-environments.toml` | Path to environments config (Approach B) |
+| `FLOWS_DIR` | `flows/` | Directory containing flow JSON files |
+| `LANGFLOW_PROJECT` | — | Project (folder) name on the remote instance |
+| `LANGFLOW_PROJECT_ID` | — | Project UUID (takes precedence over `LANGFLOW_PROJECT`) |
+| `DRY_RUN` | `false` | Set to `true` to preview without making changes |
+| `LFX_VERSION` | *(latest)* | PEP 508 version specifier for `lfx` |
+
+---
+
 ## How it all fits together
 
 ```

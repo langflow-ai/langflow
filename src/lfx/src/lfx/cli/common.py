@@ -106,8 +106,14 @@ def get_best_access_host(host: str) -> str:
 
 
 def get_api_key() -> str:
-    """Get the API key from environment variable."""
-    api_key = os.getenv("LANGFLOW_API_KEY")
+    """Get the API key from environment variable.
+
+    Used by ``lfx serve`` to set the superuser key on the local server.
+    For *remote* commands (push, pull, login, …), the per-environment key
+    is resolved via :func:`lfx.config.resolve_environment` and the
+    ``api_key_env`` field in ``.lfx/environments.yaml``.
+    """
+    api_key = os.getenv("LANGFLOW_API_KEY") or os.getenv("LFX_API_KEY")
     if not api_key:
         msg = "LANGFLOW_API_KEY environment variable is not set"
         raise ValueError(msg)
