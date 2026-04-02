@@ -21,9 +21,5 @@ export const useGetDeployment: useQueryFunctionType<
     return data;
   };
 
-  return query(
-    ["useGetDeployment", { deploymentId }],
-    fn,
-    options,
-  );
+  return query(["useGetDeployment", { deploymentId }], fn, options);
 };

@@ -43,9 +43,5 @@ export const useGetDeploymentAttachments: useQueryFunctionType<
     return data;
   };
 
-  return query(
-    ["useGetDeploymentAttachments", { deploymentId }],
-    fn,
-    options,
-  );
+  return query(["useGetDeploymentAttachments", { deploymentId }], fn, options);
 };
